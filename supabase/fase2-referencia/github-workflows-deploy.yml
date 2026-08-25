@@ -1,0 +1,124 @@
+# ============================================================
+# BITÁCORA — Pipeline CI/CD
+# Ubicación en el repo: .github/workflows/deploy.yml
+# ============================================================
+# Flujo:
+#  - Push a una rama de feature → corre tests, no despliega
+#  - Merge a "main" → aplica infraestructura + despliega backend/web
+#  - Tag "v*" (ej. v1.2.0) → además dispara build de las apps móviles
+# ============================================================
+
+name: Deploy Bitácora
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+
+env:
+  PROJECT_ID: bitacora-prod
+  REGION: us-central1
+
+jobs:
+
+  # ------------------------------------------------------------
+  # 1. TESTS — corre siempre, incluso en pull requests
+  # ------------------------------------------------------------
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - name: Escaneo de dependencias vulnerables
+        run: npm audit --audit-level=high
+
+  # ------------------------------------------------------------
+  # 2. INFRAESTRUCTURA — solo en main, requiere aprobación manual
+  # ------------------------------------------------------------
+  terraform:
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production # esto exige aprobación manual en GitHub
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - name: Autenticar con GCP
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.TERRAFORM_SA }}
+      - run: terraform -chdir=infra init
+      - run: terraform -chdir=infra plan -out=tfplan
+      - run: terraform -chdir=infra apply tfplan
+
+  # ------------------------------------------------------------
+  # 3. MIGRACIONES DE BASE DE DATOS
+  # ------------------------------------------------------------
+  migrate:
+    needs: terraform
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Conectar via Cloud SQL Auth Proxy y correr migraciones
+        run: |
+          ./cloud-sql-proxy $PROJECT_ID:$REGION:bitacora-db &
+          sleep 5
+          psql -h 127.0.0.1 -f infra/sql/schema.sql
+          psql -h 127.0.0.1 -f infra/sql/logica-negocio.sql
+          psql -h 127.0.0.1 -f infra/sql/ia-imagenes.sql
+          psql -h 127.0.0.1 -f infra/sql/generalizacion.sql
+          psql -h 127.0.0.1 -f infra/sql/seguridad.sql
+
+  # ------------------------------------------------------------
+  # 4. BACKEND WEB — build de imagen + deploy a Cloud Run
+  # ------------------------------------------------------------
+  deploy-backend:
+    needs: migrate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.BACKEND_SA }}
+      - name: Build y push de imagen Docker
+        run: |
+          gcloud builds submit --tag us-central1-docker.pkg.dev/$PROJECT_ID/bitacora/backend:${{ github.sha }}
+      - name: Deploy a Cloud Run
+        run: |
+          gcloud run deploy bitacora-backend \
+            --image us-central1-docker.pkg.dev/$PROJECT_ID/bitacora/backend:${{ github.sha }} \
+            --region $REGION
+
+  # ------------------------------------------------------------
+  # 5. APPS MÓVILES — solo al crear un tag de versión (v1.0.0, etc.)
+  #    Usa EAS (Expo Application Services) para compilar
+  #    Android e iPhone desde el mismo código React Native
+  # ------------------------------------------------------------
+  build-mobile:
+    needs: deploy-backend
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm install -g eas-cli
+      - name: Build Android
+        run: eas build --platform android --non-interactive
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      - name: Build iPhone
+        run: eas build --platform ios --non-interactive
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      # La publicación a las tiendas (App Store / Play Store) se
+      # activa manualmente al inicio, con "eas submit", hasta que
+      # decidas publicar oficialmente

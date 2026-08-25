@@ -1,0 +1,70 @@
+ENCARGO PARA CLAUDE CODE — Proyecto "Bitácora"
+============================================================
+
+CONTEXTO
+Quiero construir "Bitácora", una app SaaS de gestión para pymes de
+servicio en terreno (transporte, técnicos de mantención, instaladores,
+etc. — genérico por rubro, no solo transporte). Web + apps móviles
+(Android + iPhone). Todo el diseño de arquitectura ya está hecho;
+tu trabajo es implementarlo, no rediseñarlo desde cero.
+
+ARCHIVOS ADJUNTOS (ya diseñados, úsalos tal cual):
+1. bitacora-schema.sql              → estructura de base de datos base
+2. bitacora-logica-negocio.sql      → triggers y funciones de negocio
+3. bitacora-ia-imagenes.sql         → análisis de fotos + tiempo real
+4. bitacora-generalizacion.sql      → modelo "trabajos" genérico por rubro
+5. bitacora-seguridad-gcp.sql       → RLS portable + buenas prácticas
+6. infra/main.tf                    → infraestructura como código (Terraform)
+7. .github-workflows-deploy.yml     → pipeline CI/CD completo
+8. Dockerfile                       → backend en contenedor, agnóstico a nube
+9. storage.js                       → capa de storage compatible S3
+
+STACK — FASE 1 (arranque, la de ahora)
+- Backend/DB/Auth/Storage/Realtime: Supabase (plan Pro, ~$25/mes)
+  → usar bitacora-schema.sql tal cual, con auth.uid() nativo de
+  Supabase. NO usar todavía bitacora-seguridad-gcp.sql (es para fase 2).
+- Backend: Node.js en Docker (mismo Dockerfile adjunto), desplegado
+  a Vercel o Render — más simple y barato que Cloud Run a este volumen
+- Web: Next.js + Tailwind
+- Apps móviles: React Native + Expo (Android + iPhone desde un
+  mismo código)
+- Storage de fotos: usar storage.js (capa compatible S3) apuntando
+  al endpoint S3 de Supabase Storage — así queda ya listo para
+  migrar sin tocar código
+- IA: API de Claude — informes ejecutivos + análisis de fotos
+- Sin GitHub Actions ni Terraform todavía (quedan diseñados como
+  referencia para fase 2, no implementar ahora)
+
+STACK — FASE 2 (migración futura a Google Cloud, cuando el
+proyecto esté validado con clientes reales; NO implementar ahora,
+solo dejar el código preparado para esto):
+- Base de datos: exportar Postgres de Supabase → importar a Cloud SQL
+  (mismo schema, sin cambios)
+- Auth: migrar usuarios de Supabase Auth → Firebase Authentication
+  (única pieza que requiere trabajo real de migración)
+- Storage: cambiar variables de entorno de storage.js al endpoint
+  de Cloud Storage — sin tocar código
+- Backend: mismo Docker → redeploy a Cloud Run
+- Activar bitacora-seguridad-gcp.sql (RLS portable) en reemplazo
+  del RLS nativo de Supabase
+- Activar infra/main.tf (Terraform) y .github-workflows-deploy.yml
+
+PRESUPUESTO DE REFERENCIA
+Fase 1 (Supabase): ≈ $27-37 USD/mes.
+Fase 2 (GCP, al migrar): ≈ $60-85 USD/mes.
+
+CÓMO EMPEZAR (ir módulo por módulo, no todo de una vez)
+1. Estructura del proyecto (monorepo: /web, /mobile, /backend,
+   compartiendo tipos de datos y cliente de base de datos)
+2. Levantar Cloud SQL + correr las migraciones en orden (schema →
+   lógica de negocio → ia/imágenes → generalización → seguridad)
+3. Login con Firebase Auth + registro de nueva empresa (multi-tenant)
+4. Dashboard admin en web: trabajos, facturas, informe con IA
+5. App móvil simplificada: ver mis trabajos, check-in/out, subir
+   foto (con análisis de IA automático), formulario que se arma
+   según el tipo_trabajo de cada empresa
+6. Conectar pipeline de GitHub Actions y validar un deploy real
+   de punta a punta
+
+Todo con datos reales de Supabase/Cloud SQL desde el principio,
+no mocks. Empecemos por el paso 1 y 2.
