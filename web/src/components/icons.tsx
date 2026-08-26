@@ -157,3 +157,46 @@ export function IconPlus(props: SVGProps<SVGSVGElement>) {
     </Icon>
   );
 }
+
+export function IconTag(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M11 3h6a2 2 0 0 1 2 2v6l-9.5 9.5a1.5 1.5 0 0 1-2 0l-6-6a1.5 1.5 0 0 1 0-2Z" />
+      <circle cx="15" cy="7" r="1.4" fill="currentColor" stroke="none" />
+    </Icon>
+  );
+}
+
+export function IconClock(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 7.5V12l3 2" />
+    </Icon>
+  );
+}
+
+export function IconPaperclip(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M17 8.5 8.5 17a3 3 0 0 1-4.2-4.2l9-9a2 2 0 0 1 2.8 2.8l-8.6 8.6a1 1 0 0 1-1.4-1.4L14 6" />
+    </Icon>
+  );
+}
+
+export function IconStar(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props} strokeLinejoin="round">
+      <path d="M12 3.5 14.6 9l6 .87-4.3 4.2 1 6-5.3-2.8-5.3 2.8 1-6-4.3-4.2 6-.87Z" />
+    </Icon>
+  );
+}
+
+export function IconHome(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M4 11.5 12 4l8 7.5" />
+      <path d="M6 10v9a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-9" />
+    </Icon>
+  );
+}

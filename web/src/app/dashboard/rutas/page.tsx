@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { Usuario } from "@bitacora/shared";
+import type { RutaPlanificada, Usuario } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Card, ErrorText, Label, Select, buttonClass } from "@/components/ui";
+import { Badge, Card, ErrorText, Label, Select, buttonClass } from "@/components/ui";
 import { IconMapPin, IconRoute } from "@/components/icons";
 import { MapaRutas, type Parada } from "@/components/MapaRutas";
 
@@ -24,6 +25,7 @@ export default function RutasPage() {
   const router = useRouter();
   const [usuario, setUsuario] = useState<UsuarioShell | null>(null);
   const [equipo, setEquipo] = useState<Usuario[]>([]);
+  const [rutasGuardadas, setRutasGuardadas] = useState<RutaPlanificada[]>([]);
   const [responsableId, setResponsableId] = useState("");
   const [fecha, setFecha] = useState(() => new Date().toISOString().slice(0, 10));
   const [paradas, setParadas] = useState<Parada[] | null>(null);
@@ -37,7 +39,11 @@ export default function RutasPage() {
         router.replace("/login");
         return;
       }
-      const [resMe, resUsuarios] = await Promise.all([apiFetch("/api/me"), apiFetch("/api/usuarios")]);
+      const [resMe, resUsuarios, resRutas] = await Promise.all([
+        apiFetch("/api/me"),
+        apiFetch("/api/usuarios"),
+        apiFetch("/api/rutas-planificadas"),
+      ]);
       if (resMe.ok) {
         const { usuario: u } = await resMe.json();
         if (u) setUsuario({ nombre: u.nombre, rol: u.rol, empresaNombre: u.empresa?.nombre ?? "", empresaLogoUrl: u.empresa?.logo_url ?? null });
@@ -47,6 +53,7 @@ export default function RutasPage() {
         setEquipo(lista);
         if (lista.length > 0) setResponsableId(lista[0].id);
       }
+      if (resRutas.ok) setRutasGuardadas(await resRutas.json());
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -76,12 +83,48 @@ export default function RutasPage() {
 
   return (
     <DashboardShell usuario={usuario}>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight text-foreground">
+          <IconRoute className="h-6 w-6 text-brand" />
+          Rutas
+        </h1>
+        <Link href="/dashboard/rutas/nueva" className={buttonClass("primary")}>
+          Nueva ruta
+        </Link>
+      </div>
+
+      {rutasGuardadas.length > 0 && (
+        <Card className="mb-6 overflow-x-auto p-0">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-border text-xs text-muted">
+                <th className="px-5 py-3 font-medium">Ruta</th>
+                <th className="px-5 py-3 font-medium">Fecha</th>
+                <th className="px-5 py-3 font-medium">Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rutasGuardadas.map((r) => (
+                <tr key={r.id} className="border-b border-border last:border-0 hover:bg-brand-soft/40">
+                  <td className="px-5 py-3">
+                    <Link href={`/dashboard/rutas/${r.id}`} className="font-medium text-brand hover:underline">
+                      {r.nombre || equipo.find((u) => u.id === r.responsable_id)?.nombre || "Ruta"}
+                    </Link>
+                  </td>
+                  <td className="px-5 py-3 text-muted">{r.fecha_inicio}</td>
+                  <td className="px-5 py-3">
+                    <Badge value={r.estado} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Card>
+      )}
+
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight text-foreground">
-            <IconRoute className="h-6 w-6 text-brand" />
-            Planificación de rutas
-          </h1>
+          <h2 className="text-sm font-semibold text-foreground">Vista rápida del día</h2>
           <p className="mt-1 text-sm text-muted">
             Trabajos del día de un responsable, en el orden que quedaron registrados.
           </p>

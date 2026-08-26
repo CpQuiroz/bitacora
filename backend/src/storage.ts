@@ -75,14 +75,16 @@ export async function subirFirma(
 }
 
 // ------------------------------------------------------------
-// Genera una URL firmada temporal para ver la foto
-// (nunca buckets públicos — buena práctica de seguridad)
+// Genera una URL firmada temporal para ver la foto (o cualquier
+// otro archivo en un bucket privado — nunca buckets públicos para
+// esto, buena práctica de seguridad)
 // ------------------------------------------------------------
 export async function urlFirmada(
   key: string,
-  minutosValidez = 15
+  minutosValidez = 15,
+  bucket: string = BUCKET
 ): Promise<string> {
-  const command = new GetObjectCommand({ Bucket: BUCKET, Key: key });
+  const command = new GetObjectCommand({ Bucket: bucket, Key: key });
   return getSignedUrl(client, command, { expiresIn: minutosValidez * 60 });
 }
 
@@ -113,4 +115,37 @@ export async function subirLogo(
 
   // ?v= evita que quede cacheada una versión vieja tras resubir el logo.
   return `${env.SUPABASE_URL}/storage/v1/object/public/${BUCKET_LOGOS}/${key}?v=${Date.now()}`;
+}
+
+// ------------------------------------------------------------
+// Anexos de una tarea (documentos, fotos adicionales, etc. — hasta
+// 20MB). Bucket privado, igual que fotos-trabajos: se ve con URL
+// firmada, nunca público.
+// ------------------------------------------------------------
+const BUCKET_ANEXOS = "anexos";
+
+export async function subirAnexo(
+  empresaId: string,
+  trabajoId: string,
+  nombreOriginal: string,
+  archivo: Buffer | Uint8Array,
+  contentType: string
+): Promise<string> {
+  const nombreSeguro = nombreOriginal.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const key = `${empresaId}/trabajos/${trabajoId}/${Date.now()}-${nombreSeguro}`;
+
+  await client.send(
+    new PutObjectCommand({
+      Bucket: BUCKET_ANEXOS,
+      Key: key,
+      Body: archivo,
+      ContentType: contentType,
+    })
+  );
+
+  return key; // se guarda en trabajos.anexos[].key
+}
+
+export function urlFirmadaAnexo(key: string, minutosValidez = 15): Promise<string> {
+  return urlFirmada(key, minutosValidez, BUCKET_ANEXOS);
 }

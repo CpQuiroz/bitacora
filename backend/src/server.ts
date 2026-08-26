@@ -13,6 +13,8 @@ import { usuariosRouter } from "./routes/usuarios";
 import { clientesRouter } from "./routes/clientes";
 import { rutasRouter } from "./routes/rutas";
 import { miEmpresaRouter } from "./routes/miEmpresa";
+import { rutasPlanificadasRouter } from "./routes/rutasPlanificadas";
+import { encuestaPublicaRouter } from "./routes/encuestaPublica";
 import { ah } from "./asyncHandler";
 
 const RUBROS: Rubro[] = ["transporte", "servicio_tecnico", "otro"];
@@ -110,6 +112,9 @@ app.use("/api/usuarios", requiereAuth, requiereEmpresa, usuariosRouter);
 app.use("/api/clientes", requiereAuth, requiereEmpresa, clientesRouter);
 app.use("/api/rutas", requiereAuth, requiereEmpresa, rutasRouter);
 app.use("/api/empresa", requiereAuth, requiereEmpresa, miEmpresaRouter);
+app.use("/api/rutas-planificadas", requiereAuth, requiereEmpresa, rutasPlanificadasRouter);
+// Sin auth a propósito — la abre un cliente anónimo desde el correo.
+app.use("/api/encuesta", encuestaPublicaRouter);
 
 // Handler de errores global: cualquier excepción sin capturar en una
 // ruta async (vía ah()) termina acá en vez de tumbar el proceso.

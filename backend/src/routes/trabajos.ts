@@ -1,16 +1,19 @@
 import { Router } from "express";
 import multer from "multer";
-import type { EstadoTrabajo, ItemChecklist, Trabajo } from "@bitacora/shared";
+import type { EstadoTrabajo, ItemChecklist, Prioridad, TipoCheckin, Trabajo } from "@bitacora/shared";
 import { supabase } from "../supabase";
 import { subirFirma, subirFoto, urlFirmada } from "../storage";
 import { analizarFoto } from "../claude";
 import { obtenerOCrearOrden } from "../ordenes";
+import { enviarEncuestaSatisfaccion } from "../email";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
 
 export const trabajosRouter = Router();
 
 const ESTADOS: EstadoTrabajo[] = ["en_curso", "completado", "cancelado"];
+const PRIORIDADES: Prioridad[] = ["alta", "media", "baja"];
+const TIPOS_CHECKIN: TipoCheckin[] = ["manual", "ubicacion"];
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -102,7 +105,18 @@ trabajosRouter.get(
 trabajosRouter.patch(
   "/:id",
   ah<RequestConEmpresa>(async (req, res) => {
-    const { datos, estado, tipo_trabajo_id } = req.body ?? {};
+    const {
+      datos,
+      estado,
+      tipo_trabajo_id,
+      ruta_id,
+      descripcion,
+      prioridad,
+      etiquetas,
+      duracion_estimada_min,
+      tipo_checkin,
+      encuesta_email,
+    } = req.body ?? {};
     const cambios: Partial<Trabajo> = {};
 
     if (datos !== undefined) {
@@ -126,6 +140,54 @@ trabajosRouter.patch(
       }
       cambios.tipo_trabajo_id = tipo_trabajo_id;
     }
+    // ruta_id: para "incluir tarea ya creada" en una ruta (o
+    // desvincularla pasando null).
+    if (ruta_id !== undefined) {
+      if (ruta_id !== null) {
+        const { data: ruta } = await supabase
+          .from("rutas_planificadas")
+          .select("id")
+          .eq("empresa_id", req.empresaId!)
+          .eq("id", ruta_id)
+          .maybeSingle();
+        if (!ruta) {
+          res.status(400).json({ error: "ruta_id inválido" });
+          return;
+        }
+      }
+      cambios.ruta_id = ruta_id;
+    }
+    if (descripcion !== undefined) cambios.descripcion = descripcion?.trim() || null;
+    if (prioridad !== undefined) {
+      if (!PRIORIDADES.includes(prioridad)) {
+        res.status(400).json({ error: `prioridad debe ser una de: ${PRIORIDADES.join(", ")}` });
+        return;
+      }
+      cambios.prioridad = prioridad;
+    }
+    if (etiquetas !== undefined) {
+      if (!Array.isArray(etiquetas) || !etiquetas.every((e) => typeof e === "string")) {
+        res.status(400).json({ error: "etiquetas debe ser un arreglo de texto" });
+        return;
+      }
+      cambios.etiquetas = etiquetas;
+    }
+    if (duracion_estimada_min !== undefined) {
+      const n = Number(duracion_estimada_min);
+      if (Number.isNaN(n) || n <= 0) {
+        res.status(400).json({ error: "duracion_estimada_min inválido" });
+        return;
+      }
+      cambios.duracion_estimada_min = n;
+    }
+    if (tipo_checkin !== undefined) {
+      if (!TIPOS_CHECKIN.includes(tipo_checkin)) {
+        res.status(400).json({ error: `tipo_checkin debe ser uno de: ${TIPOS_CHECKIN.join(", ")}` });
+        return;
+      }
+      cambios.tipo_checkin = tipo_checkin;
+    }
+    if (encuesta_email !== undefined) cambios.encuesta_email = encuesta_email?.trim() || null;
     if (Object.keys(cambios).length === 0) {
       res.status(400).json({ error: "Nada que actualizar" });
       return;
@@ -148,6 +210,27 @@ trabajosRouter.patch(
       return;
     }
     res.json(data);
+  })
+);
+
+trabajosRouter.delete(
+  "/:id",
+  ah<RequestConEmpresa>(async (req, res) => {
+    const { error, count } = await supabase
+      .from("trabajos")
+      .delete({ count: "exact" })
+      .eq("empresa_id", req.empresaId!)
+      .eq("id", req.params.id);
+
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    if (!count) {
+      res.status(404).json({ error: "Trabajo no encontrado" });
+      return;
+    }
+    res.status(204).end();
   })
 );
 
@@ -251,6 +334,28 @@ trabajosRouter.post(
       res.status(500).json({ error: error.message });
       return;
     }
+
+    // Al cerrar con check-out, si la tarea tiene email de encuesta y
+    // todavía no se le mandó, dispara el correo de satisfacción. No
+    // bloquea la respuesta si Resend no está configurado o falla.
+    if (item === "Check-out") {
+      const { data: tarea } = await supabase
+        .from("trabajos")
+        .select("cliente, encuesta_email, encuesta_enviada_en")
+        .eq("id", req.params.id)
+        .single();
+      if (tarea?.encuesta_email && !tarea.encuesta_enviada_en) {
+        enviarEncuestaSatisfaccion(tarea.encuesta_email, req.params.id, tarea.cliente)
+          .then(() =>
+            supabase
+              .from("trabajos")
+              .update({ encuesta_enviada_en: new Date().toISOString() })
+              .eq("id", req.params.id)
+          )
+          .catch((err) => console.error("Error mandando encuesta de satisfacción:", err));
+      }
+    }
+
     res.json(data);
   })
 );

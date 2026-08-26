@@ -11,6 +11,12 @@ export type Parada = {
   lng: number | null;
 };
 
+export type PuntoBase = {
+  direccion: string;
+  lat: number | null;
+  lng: number | null;
+};
+
 // Ícono propio (círculo numerado) — evita el problema clásico de
 // Leaflet con los íconos por defecto, cuyas rutas de imagen no
 // resuelven bien con bundlers como Turbopack/Webpack.
@@ -27,7 +33,28 @@ function iconoParada(L: typeof import("leaflet"), numero: number) {
   });
 }
 
-export function MapaRutas({ paradas }: { paradas: Parada[] }) {
+function iconoPuntoBase(L: typeof import("leaflet")) {
+  return L.divIcon({
+    className: "",
+    html: `<div style="
+      background:#16161f;color:#fff;width:30px;height:30px;border-radius:9999px;
+      display:flex;align-items:center;justify-content:center;font:600 15px system-ui;
+      box-shadow:0 1px 4px rgba(0,0,0,.35);border:2px solid #fff;
+    ">🏠</div>`,
+    iconSize: [30, 30],
+    iconAnchor: [15, 15],
+  });
+}
+
+export function MapaRutas({
+  paradas,
+  puntoBase,
+  mostrarLinea = false,
+}: {
+  paradas: Parada[];
+  puntoBase?: PuntoBase;
+  mostrarLinea?: boolean;
+}) {
   const contenedorRef = useRef<HTMLDivElement>(null);
   const mapaRef = useRef<import("leaflet").Map | null>(null);
 
@@ -51,18 +78,30 @@ export function MapaRutas({ paradas }: { paradas: Parada[] }) {
       const mapa = mapaRef.current;
 
       mapa.eachLayer((layer) => {
-        if (layer instanceof L.Marker) mapa.removeLayer(layer);
+        if (layer instanceof L.Marker || layer instanceof L.Polyline) mapa.removeLayer(layer);
       });
 
-      if (conCoords.length === 0) return;
+      const puntos: [number, number][] = [];
 
-      const puntos: [number, number][] = conCoords.map((p) => [p.lat, p.lng]);
+      if (puntoBase?.lat != null && puntoBase.lng != null) {
+        L.marker([puntoBase.lat, puntoBase.lng], { icon: iconoPuntoBase(L) })
+          .addTo(mapa)
+          .bindPopup(`<strong>Punto base</strong><br/>${puntoBase.direccion}`);
+        puntos.push([puntoBase.lat, puntoBase.lng]);
+      }
+
       conCoords.forEach((p, i) => {
         L.marker([p.lat, p.lng], { icon: iconoParada(L, i + 1) })
           .addTo(mapa)
           .bindPopup(`<strong>${p.cliente_nombre}</strong><br/>${p.direccion}`);
+        puntos.push([p.lat, p.lng]);
       });
 
+      if (mostrarLinea && puntos.length > 1) {
+        L.polyline(puntos, { color: "#4338ca", weight: 3, opacity: 0.6, dashArray: "6 6" }).addTo(mapa);
+      }
+
+      if (puntos.length === 0) return;
       if (puntos.length === 1) {
         mapa.setView(puntos[0], 14);
       } else {
@@ -73,7 +112,7 @@ export function MapaRutas({ paradas }: { paradas: Parada[] }) {
     return () => {
       cancelado = true;
     };
-  }, [paradas]);
+  }, [paradas, puntoBase, mostrarLinea]);
 
   useEffect(() => {
     return () => {

@@ -14,6 +14,17 @@ export type Rol = "admin" | "contador" | "chofer";
 export type Rubro = "transporte" | "servicio_tecnico" | "otro";
 export type Plan = "trial" | "basico" | "pro";
 export type EstadoTrabajo = "en_curso" | "completado" | "cancelado";
+export type Prioridad = "alta" | "media" | "baja";
+export type TipoCheckin = "manual" | "ubicacion";
+export type EstadoRuta = "borrador" | "finalizada";
+export type DiaSemana =
+  | "lunes"
+  | "martes"
+  | "miercoles"
+  | "jueves"
+  | "viernes"
+  | "sabado"
+  | "domingo";
 export type EstadoFactura = "pendiente" | "pagada" | "vencida";
 export type EstadoAnalisisFoto = "procesando" | "listo" | "error";
 export type TipoGasto = "negocio" | "personal";
@@ -49,6 +60,12 @@ export type TipoTrabajo = {
   creado_en: string;
 };
 
+export type Anexo = {
+  nombre: string;
+  key: string;
+  tamano_bytes: number;
+};
+
 export type Trabajo = {
   id: string;
   empresa_id: string;
@@ -63,6 +80,39 @@ export type Trabajo = {
   monto: number;
   estado: EstadoTrabajo;
   datos: Record<string, unknown>;
+  descripcion: string | null;
+  ruta_id: string | null;
+  orden_en_ruta: number | null;
+  hora_estimada_llegada: string | null;
+  duracion_estimada_min: number | null;
+  prioridad: Prioridad;
+  etiquetas: string[];
+  tipo_checkin: TipoCheckin;
+  anexos: Anexo[];
+  encuesta_email: string | null;
+  encuesta_enviada_en: string | null;
+  calificacion_satisfaccion: number | null;
+  encuesta_respondida_en: string | null;
+  creado_en: string;
+};
+
+export type RutaPlanificada = {
+  id: string;
+  empresa_id: string;
+  responsable_id: string;
+  nombre: string | null;
+  punto_base_direccion: string;
+  punto_base_lat: number | null;
+  punto_base_lng: number | null;
+  fecha_inicio: string;
+  dias_semana: DiaSemana[];
+  hora_inicio: string;
+  hora_fin: string;
+  almuerzo_inicio: string | null;
+  almuerzo_fin: string | null;
+  estado: EstadoRuta;
+  distancia_total_km: number | null;
+  duracion_total_min: number | null;
   creado_en: string;
 };
 
@@ -165,6 +215,7 @@ export type Database = {
       inventario: Tabla<Inventario>;
       gastos_fijos: Tabla<GastoFijo>;
       analisis_fotos: Tabla<AnalisisFoto>;
+      rutas_planificadas: Tabla<RutaPlanificada>;
     };
     Views: Record<string, never>;
     Functions: {

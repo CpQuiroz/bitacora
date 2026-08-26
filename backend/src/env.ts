@@ -22,4 +22,8 @@ export const env = {
   STORAGE_SECRET_KEY: requerido("STORAGE_SECRET_KEY"),
   STORAGE_BUCKET: requerido("STORAGE_BUCKET"),
   ANTHROPIC_API_KEY: requerido("ANTHROPIC_API_KEY"),
+  // Opcionales: sin esto, el envío de la encuesta de satisfacción se
+  // omite silenciosamente (no bloquea el resto del backend).
+  RESEND_API_KEY: process.env.RESEND_API_KEY ?? null,
+  RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL ?? null,
 };

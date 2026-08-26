@@ -65,9 +65,9 @@ export function Select(props: SelectHTMLAttributes<HTMLSelectElement>) {
   );
 }
 
-export function Label({ children }: { children: ReactNode }) {
+export function Label({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
-    <label className="mb-1.5 block text-sm font-medium text-foreground">
+    <label className={`mb-1.5 block text-sm font-medium text-foreground ${className}`}>
       {children}
     </label>
   );
@@ -118,6 +118,10 @@ const badgeStyles: Record<string, string> = {
   admin: "bg-brand-soft text-brand",
   contador: "bg-warning-soft text-warning",
   chofer: "bg-success-soft text-success",
+  // prioridad de tareas
+  alta: "bg-danger-soft text-danger",
+  media: "bg-warning-soft text-warning",
+  baja: "bg-success-soft text-success",
 };
 
 export function Badge({ value }: { value: string }) {
