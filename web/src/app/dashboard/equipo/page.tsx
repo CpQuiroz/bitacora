@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import type { Rol, Usuario } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
-import { DashboardShell } from "@/components/DashboardShell";
+import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import {
   Badge,
   Button,
@@ -27,7 +27,7 @@ const ROLES: { value: Rol; label: string }[] = [
 
 export default function EquipoPage() {
   const router = useRouter();
-  const [usuario, setUsuario] = useState<{ nombre: string; rol: string; empresaNombre: string } | null>(null);
+  const [usuario, setUsuario] = useState<UsuarioShell | null>(null);
   const [usuarios, setUsuarios] = useState<Usuario[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
@@ -50,7 +50,7 @@ export default function EquipoPage() {
     ]);
     if (resMe.ok) {
       const { usuario: u } = await resMe.json();
-      if (u) setUsuario({ nombre: u.nombre, rol: u.rol, empresaNombre: u.empresa?.nombre ?? "" });
+      if (u) setUsuario({ nombre: u.nombre, rol: u.rol, empresaNombre: u.empresa?.nombre ?? "", empresaLogoUrl: u.empresa?.logo_url ?? null });
     }
     if (!resUsuarios.ok) {
       setError("No se pudo cargar el equipo");

@@ -23,6 +23,7 @@ export type Empresa = {
   nombre: string;
   rubro: Rubro;
   plan: Plan;
+  logo_url: string | null;
   creado_en: string;
 };
 
@@ -176,6 +177,20 @@ export type Database = {
           p_dias_plazo?: number;
         };
         Returns: string; // uuid de la factura creada
+      };
+      trabajos_del_dia: {
+        Args: {
+          p_empresa_id: string;
+          p_responsable_id: string;
+          p_fecha: string;
+        };
+        Returns: {
+          trabajo_id: string;
+          cliente_nombre: string;
+          direccion: string;
+          lat: number | null;
+          lng: number | null;
+        }[];
       };
     };
   };

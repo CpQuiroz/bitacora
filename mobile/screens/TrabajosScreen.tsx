@@ -14,9 +14,11 @@ import { supabase } from "../lib/supabase";
 
 export default function TrabajosScreen({
   onSeleccionar,
+  onVerRuta,
   senalRecarga,
 }: {
   onSeleccionar: (id: string) => void;
+  onVerRuta: () => void;
   senalRecarga: number;
 }) {
   const [trabajos, setTrabajos] = useState<Trabajo[]>([]);
@@ -55,9 +57,14 @@ export default function TrabajosScreen({
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.titulo}>Mis trabajos</Text>
-        <TouchableOpacity onPress={cerrarSesion}>
-          <Text style={styles.salir}>Salir</Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: "row", gap: 16, alignItems: "center" }}>
+          <TouchableOpacity onPress={onVerRuta}>
+            <Text style={styles.ruta}>Mi ruta</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={cerrarSesion}>
+            <Text style={styles.salir}>Salir</Text>
+          </TouchableOpacity>
+        </View>
       </View>
       {error && <Text style={styles.error}>{error}</Text>}
       <FlatList
@@ -92,6 +99,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   titulo: { fontSize: 24, fontWeight: "600" },
+  ruta: { color: "#007aff", fontWeight: "500" },
   salir: { color: "#c00" },
   error: { color: "#c00", textAlign: "center", marginBottom: 8 },
   vacio: { textAlign: "center", color: "#666", marginTop: 40 },

@@ -2,7 +2,7 @@ import { Router } from "express";
 import multer from "multer";
 import type { EstadoTrabajo, ItemChecklist, Trabajo } from "@bitacora/shared";
 import { supabase } from "../supabase";
-import { subirFoto, urlFirmada } from "../storage";
+import { subirFirma, subirFoto, urlFirmada } from "../storage";
 import { analizarFoto } from "../claude";
 import { obtenerOCrearOrden } from "../ordenes";
 import type { RequestConEmpresa } from "../empresa";
@@ -40,6 +40,16 @@ async function tipoTrabajoExiste(empresaId: string, tipoTrabajoId: string) {
     .select("id")
     .eq("empresa_id", empresaId)
     .eq("id", tipoTrabajoId)
+    .maybeSingle();
+  return Boolean(data);
+}
+
+async function clienteExiste(empresaId: string, clienteId: string) {
+  const { data } = await supabase
+    .from("clientes")
+    .select("id")
+    .eq("empresa_id", empresaId)
+    .eq("id", clienteId)
     .maybeSingle();
   return Boolean(data);
 }
@@ -144,8 +154,17 @@ trabajosRouter.patch(
 trabajosRouter.post(
   "/",
   ah<RequestConEmpresa>(async (req, res) => {
-    const { cliente, fecha, monto, ubicacion, codigo, estado, tipo_trabajo_id, responsable_id } =
-      req.body ?? {};
+    const {
+      cliente,
+      cliente_id,
+      fecha,
+      monto,
+      ubicacion,
+      codigo,
+      estado,
+      tipo_trabajo_id,
+      responsable_id,
+    } = req.body ?? {};
 
     if (typeof cliente !== "string" || !cliente.trim()) {
       res.status(400).json({ error: "Falta cliente" });
@@ -164,6 +183,13 @@ trabajosRouter.post(
       res.status(400).json({ error: "tipo_trabajo_id inválido" });
       return;
     }
+    // cliente_id vincula a un cliente con coordenadas — lo usa la
+    // planificación de rutas. Es opcional, "cliente" (texto) sigue
+    // siendo el nombre a mostrar/facturar.
+    if (cliente_id && !(await clienteExiste(req.empresaId!, cliente_id))) {
+      res.status(400).json({ error: "cliente_id inválido" });
+      return;
+    }
     const estadoFinal: EstadoTrabajo = ESTADOS.includes(estado) ? estado : "completado";
 
     const { data, error } = await supabase
@@ -171,6 +197,7 @@ trabajosRouter.post(
       .insert({
         empresa_id: req.empresaId!,
         cliente: cliente.trim(),
+        cliente_id: cliente_id || null,
         fecha,
         monto: montoNum,
         ubicacion: ubicacion?.trim() || null,
@@ -246,7 +273,47 @@ trabajosRouter.get(
       res.status(500).json({ error: error.message });
       return;
     }
-    res.json(data);
+    if (!data) {
+      res.json(null);
+      return;
+    }
+    const firmaUrl = data.firma_url ? await urlFirmada(data.firma_url, 15) : null;
+    res.json({ ...data, firma_url_firmada: firmaUrl });
+  })
+);
+
+// Guarda la firma del cliente al cerrar la orden de servicio (viene
+// como PNG en base64, capturado del lienzo de firma en la app).
+trabajosRouter.post(
+  "/:id/firma",
+  ah<RequestConEmpresa>(async (req, res) => {
+    const { firma_base64 } = req.body ?? {};
+    if (typeof firma_base64 !== "string" || !firma_base64) {
+      res.status(400).json({ error: "Falta firma_base64" });
+      return;
+    }
+    if (!(await trabajoExiste(req.empresaId!, req.params.id))) {
+      res.status(404).json({ error: "Trabajo no encontrado" });
+      return;
+    }
+
+    const orden = await obtenerOCrearOrden(req.empresaId!, req.params.id);
+    const buffer = Buffer.from(firma_base64, "base64");
+    const key = await subirFirma(req.empresaId!, req.params.id, buffer);
+
+    const { data, error } = await supabase
+      .from("ordenes_servicio")
+      .update({ firma_url: key })
+      .eq("id", orden.id)
+      .select()
+      .single();
+
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    const firmaUrl = await urlFirmada(key, 15);
+    res.json({ ...data, firma_url_firmada: firmaUrl });
   })
 );
 

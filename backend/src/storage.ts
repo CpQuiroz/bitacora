@@ -53,6 +53,28 @@ export async function subirFoto(
 }
 
 // ------------------------------------------------------------
+// Sube la firma del cliente al cerrar una orden de servicio.
+// ------------------------------------------------------------
+export async function subirFirma(
+  empresaId: string,
+  trabajoId: string,
+  archivo: Buffer | Uint8Array
+): Promise<string> {
+  const key = `${empresaId}/trabajos/${trabajoId}/firma-${Date.now()}.png`;
+
+  await client.send(
+    new PutObjectCommand({
+      Bucket: BUCKET,
+      Key: key,
+      Body: archivo,
+      ContentType: "image/png",
+    })
+  );
+
+  return key; // se guarda en ordenes_servicio.firma_url
+}
+
+// ------------------------------------------------------------
 // Genera una URL firmada temporal para ver la foto
 // (nunca buckets públicos — buena práctica de seguridad)
 // ------------------------------------------------------------
@@ -62,4 +84,33 @@ export async function urlFirmada(
 ): Promise<string> {
   const command = new GetObjectCommand({ Bucket: BUCKET, Key: key });
   return getSignedUrl(client, command, { expiresIn: minutosValidez * 60 });
+}
+
+// ------------------------------------------------------------
+// Sube el logo de una empresa. A diferencia de las fotos de
+// trabajos, este bucket es público — un logo no es información
+// sensible y se muestra todo el tiempo en la interfaz, así que
+// no vale la pena firmar la URL cada vez.
+// ------------------------------------------------------------
+const BUCKET_LOGOS = "logos";
+
+export async function subirLogo(
+  empresaId: string,
+  archivo: Buffer | Uint8Array,
+  contentType: string
+): Promise<string> {
+  const extension = contentType === "image/png" ? "png" : contentType === "image/webp" ? "webp" : "jpg";
+  const key = `${empresaId}.${extension}`;
+
+  await client.send(
+    new PutObjectCommand({
+      Bucket: BUCKET_LOGOS,
+      Key: key,
+      Body: archivo,
+      ContentType: contentType,
+    })
+  );
+
+  // ?v= evita que quede cacheada una versión vieja tras resubir el logo.
+  return `${env.SUPABASE_URL}/storage/v1/object/public/${BUCKET_LOGOS}/${key}?v=${Date.now()}`;
 }

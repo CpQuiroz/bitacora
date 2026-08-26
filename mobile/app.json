@@ -28,7 +28,8 @@
           "photosPermission": "Bitácora necesita acceso a tus fotos para adjuntarlas a un trabajo.",
           "cameraPermission": "Bitácora necesita la cámara para tomar fotos de un trabajo."
         }
-      ]
+      ],
+      "expo-maps"
     ]
   }
 }

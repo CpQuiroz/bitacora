@@ -2,10 +2,10 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import type { EstadoTrabajo, Trabajo } from "@bitacora/shared";
+import type { Cliente, EstadoTrabajo, Trabajo, Usuario } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
-import { DashboardShell } from "@/components/DashboardShell";
+import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import {
   Badge,
   Button,
@@ -19,16 +19,21 @@ import {
 import { IconBriefcase, IconPlus } from "@/components/icons";
 
 const ESTADOS: EstadoTrabajo[] = ["en_curso", "completado", "cancelado"];
+const SIN_CLIENTE_GUARDADO = "";
 
 export default function TrabajosPage() {
   const router = useRouter();
-  const [usuario, setUsuario] = useState<{ nombre: string; rol: string; empresaNombre: string } | null>(null);
+  const [usuario, setUsuario] = useState<UsuarioShell | null>(null);
   const [trabajos, setTrabajos] = useState<Trabajo[] | null>(null);
+  const [equipo, setEquipo] = useState<Usuario[]>([]);
+  const [clientesGuardados, setClientesGuardados] = useState<Cliente[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
 
+  const [clienteId, setClienteId] = useState(SIN_CLIENTE_GUARDADO);
   const [cliente, setCliente] = useState("");
+  const [responsableId, setResponsableId] = useState("");
   const [fecha, setFecha] = useState(() => new Date().toISOString().slice(0, 10));
   const [monto, setMonto] = useState("");
   const [ubicacion, setUbicacion] = useState("");
@@ -41,14 +46,22 @@ export default function TrabajosPage() {
       router.replace("/login");
       return;
     }
-    const [resMe, resTrabajos] = await Promise.all([
+    const [resMe, resTrabajos, resEquipo, resClientes] = await Promise.all([
       apiFetch("/api/me"),
       apiFetch("/api/trabajos"),
+      apiFetch("/api/usuarios"),
+      apiFetch("/api/clientes"),
     ]);
     if (resMe.ok) {
       const { usuario: u } = await resMe.json();
-      if (u) setUsuario({ nombre: u.nombre, rol: u.rol, empresaNombre: u.empresa?.nombre ?? "" });
+      if (u) setUsuario({ nombre: u.nombre, rol: u.rol, empresaNombre: u.empresa?.nombre ?? "", empresaLogoUrl: u.empresa?.logo_url ?? null });
     }
+    if (resEquipo.ok) {
+      const lista: Usuario[] = await resEquipo.json();
+      setEquipo(lista);
+      setResponsableId((actual) => actual || lista[0]?.id || "");
+    }
+    if (resClientes.ok) setClientesGuardados(await resClientes.json());
     if (!resTrabajos.ok) {
       setError("No se pudieron cargar los trabajos");
       return;
@@ -61,13 +74,31 @@ export default function TrabajosPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  function onSeleccionarClienteGuardado(id: string) {
+    setClienteId(id);
+    const c = clientesGuardados.find((c) => c.id === id);
+    if (c) {
+      setCliente(c.nombre);
+      setUbicacion(c.direccion);
+    }
+  }
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setFormError(null);
     setGuardando(true);
     const res = await apiFetch("/api/trabajos", {
       method: "POST",
-      body: JSON.stringify({ cliente, fecha, monto: Number(monto || 0), ubicacion, codigo, estado }),
+      body: JSON.stringify({
+        cliente,
+        cliente_id: clienteId || undefined,
+        responsable_id: responsableId || undefined,
+        fecha,
+        monto: Number(monto || 0),
+        ubicacion,
+        codigo,
+        estado,
+      }),
     });
     setGuardando(false);
     if (!res.ok) {
@@ -75,6 +106,7 @@ export default function TrabajosPage() {
       setFormError(body.error ?? "No se pudo crear el trabajo");
       return;
     }
+    setClienteId(SIN_CLIENTE_GUARDADO);
     setCliente("");
     setMonto("");
     setUbicacion("");
@@ -96,9 +128,35 @@ export default function TrabajosPage() {
         </h2>
         <form onSubmit={onSubmit} className="flex flex-col gap-4">
           <div className="grid gap-4 sm:grid-cols-2">
+            {clientesGuardados.length > 0 && (
+              <div className="sm:col-span-2">
+                <Label>Cliente guardado (opcional)</Label>
+                <Select
+                  value={clienteId}
+                  onChange={(e) => onSeleccionarClienteGuardado(e.target.value)}
+                >
+                  <option value={SIN_CLIENTE_GUARDADO}>Sin cliente guardado — solo texto</option>
+                  {clientesGuardados.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.nombre}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            )}
             <div>
               <Label>Cliente</Label>
               <Input type="text" required value={cliente} onChange={(e) => setCliente(e.target.value)} />
+            </div>
+            <div>
+              <Label>Responsable</Label>
+              <Select value={responsableId} onChange={(e) => setResponsableId(e.target.value)}>
+                {equipo.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.nombre}
+                  </option>
+                ))}
+              </Select>
             </div>
             <div>
               <Label>Fecha</Label>
@@ -155,7 +213,11 @@ export default function TrabajosPage() {
             </thead>
             <tbody>
               {trabajos.map((t) => (
-                <tr key={t.id} className="border-b border-border last:border-0 hover:bg-brand-soft/40">
+                <tr
+                  key={t.id}
+                  onClick={() => router.push(`/dashboard/trabajos/${t.id}`)}
+                  className="cursor-pointer border-b border-border last:border-0 hover:bg-brand-soft/40"
+                >
                   <td className="px-5 py-3">{t.fecha}</td>
                   <td className="px-5 py-3 font-medium text-foreground">{t.cliente}</td>
                   <td className="px-5 py-3">${t.monto.toLocaleString("es-CL")}</td>

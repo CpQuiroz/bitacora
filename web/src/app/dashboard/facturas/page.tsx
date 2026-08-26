@@ -6,13 +6,13 @@ import { useRouter } from "next/navigation";
 import type { Factura, Trabajo } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
-import { DashboardShell } from "@/components/DashboardShell";
+import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Badge, Button, Card, ErrorText, Input, Label, PageHeader } from "@/components/ui";
 import { IconPlus, IconReceipt } from "@/components/icons";
 
 export default function FacturasPage() {
   const router = useRouter();
-  const [usuario, setUsuario] = useState<{ nombre: string; rol: string; empresaNombre: string } | null>(null);
+  const [usuario, setUsuario] = useState<UsuarioShell | null>(null);
   const [facturas, setFacturas] = useState<Factura[] | null>(null);
   const [trabajos, setTrabajos] = useState<Trabajo[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -37,7 +37,7 @@ export default function FacturasPage() {
     ]);
     if (resMe.ok) {
       const { usuario: u } = await resMe.json();
-      if (u) setUsuario({ nombre: u.nombre, rol: u.rol, empresaNombre: u.empresa?.nombre ?? "" });
+      if (u) setUsuario({ nombre: u.nombre, rol: u.rol, empresaNombre: u.empresa?.nombre ?? "", empresaLogoUrl: u.empresa?.logo_url ?? null });
     }
     if (!resFacturas.ok || !resTrabajos.ok) {
       setError("No se pudieron cargar las facturas");

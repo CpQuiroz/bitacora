@@ -131,6 +131,25 @@ export function IconTruck(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function IconMapPin(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21Z" />
+      <circle cx="12" cy="9.5" r="2.3" />
+    </Icon>
+  );
+}
+
+export function IconRoute(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <circle cx="6" cy="6" r="2.3" />
+      <circle cx="18" cy="18" r="2.3" />
+      <path d="M6 8.3V13a4 4 0 0 0 4 4h4" strokeDasharray="2.5 2.5" />
+    </Icon>
+  );
+}
+
 export function IconPlus(props: SVGProps<SVGSVGElement>) {
   return (
     <Icon {...props}>

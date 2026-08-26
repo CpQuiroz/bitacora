@@ -10,6 +10,9 @@ import { facturasRouter } from "./routes/facturas";
 import { informeRouter } from "./routes/informe";
 import { tiposTrabajoRouter } from "./routes/tiposTrabajo";
 import { usuariosRouter } from "./routes/usuarios";
+import { clientesRouter } from "./routes/clientes";
+import { rutasRouter } from "./routes/rutas";
+import { miEmpresaRouter } from "./routes/miEmpresa";
 import { ah } from "./asyncHandler";
 
 const RUBROS: Rubro[] = ["transporte", "servicio_tecnico", "otro"];
@@ -104,6 +107,9 @@ app.use("/api/facturas", requiereAuth, requiereEmpresa, facturasRouter);
 app.use("/api/informe", requiereAuth, requiereEmpresa, informeRouter);
 app.use("/api/tipos-trabajo", requiereAuth, requiereEmpresa, tiposTrabajoRouter);
 app.use("/api/usuarios", requiereAuth, requiereEmpresa, usuariosRouter);
+app.use("/api/clientes", requiereAuth, requiereEmpresa, clientesRouter);
+app.use("/api/rutas", requiereAuth, requiereEmpresa, rutasRouter);
+app.use("/api/empresa", requiereAuth, requiereEmpresa, miEmpresaRouter);
 
 // Handler de errores global: cualquier excepción sin capturar en una
 // ruta async (vía ah()) termina acá en vez de tumbar el proceso.

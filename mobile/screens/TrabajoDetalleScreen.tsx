@@ -13,9 +13,11 @@ import {
 } from "react-native";
 import type { AnalisisFoto, ItemChecklist, OrdenServicio, Trabajo, TipoTrabajo } from "@bitacora/shared";
 import { apiFetch } from "../lib/api";
+import { SignaturePad } from "../components/SignaturePad";
 
 type TrabajoConTipo = Trabajo & { tipo_trabajo: TipoTrabajo | null };
 type AnalisisFotoConUrl = AnalisisFoto & { url: string };
+type OrdenConFirma = OrdenServicio & { firma_url_firmada: string | null };
 
 export default function TrabajoDetalleScreen({
   trabajoId,
@@ -25,7 +27,7 @@ export default function TrabajoDetalleScreen({
   onVolver: () => void;
 }) {
   const [trabajo, setTrabajo] = useState<TrabajoConTipo | null>(null);
-  const [orden, setOrden] = useState<OrdenServicio | null>(null);
+  const [orden, setOrden] = useState<OrdenConFirma | null>(null);
   const [fotos, setFotos] = useState<AnalisisFotoConUrl[]>([]);
   const [cargando, setCargando] = useState(true);
   const [subiendoFoto, setSubiendoFoto] = useState(false);
@@ -106,6 +108,19 @@ export default function TrabajoDetalleScreen({
       return;
     }
     cargar();
+  }
+
+  async function guardarFirma(base64Png: string) {
+    const res = await apiFetch(`/api/trabajos/${trabajoId}/firma`, {
+      method: "POST",
+      body: JSON.stringify({ firma_base64: base64Png }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      Alert.alert("Error", body.error ?? "No se pudo guardar la firma");
+      return;
+    }
+    setOrden(await res.json());
   }
 
   async function guardarDatos() {
@@ -212,6 +227,16 @@ export default function TrabajoDetalleScreen({
           <Text style={styles.resumenFoto}>{f.resumen}</Text>
         </View>
       ))}
+
+      <Text style={styles.seccion}>Firma del cliente</Text>
+      {orden?.firma_url_firmada ? (
+        <View style={styles.tarjetaFoto}>
+          <Image source={{ uri: orden.firma_url_firmada }} style={styles.firmaGuardada} resizeMode="contain" />
+          <Text style={styles.resumenFoto}>Firma registrada ✓</Text>
+        </View>
+      ) : (
+        <SignaturePad onGuardar={guardarFirma} />
+      )}
     </ScrollView>
   );
 }
@@ -232,6 +257,7 @@ const styles = StyleSheet.create({
   input: { borderWidth: 1, borderColor: "#ccc", borderRadius: 8, padding: 10 },
   tarjetaFoto: { marginTop: 14, borderWidth: 1, borderColor: "#eee", borderRadius: 8, padding: 10 },
   foto: { width: "100%", height: 200, borderRadius: 6, marginBottom: 8 },
+  firmaGuardada: { width: "100%", height: 120, marginBottom: 8, backgroundColor: "#fff" },
   resumenFoto: { color: "#333" },
   alerta: { color: "#b00", fontWeight: "600", marginBottom: 4 },
 });

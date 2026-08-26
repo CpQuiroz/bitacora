@@ -6,17 +6,20 @@ import { supabase } from "./lib/supabase";
 import LoginScreen from "./screens/LoginScreen";
 import TrabajosScreen from "./screens/TrabajosScreen";
 import TrabajoDetalleScreen from "./screens/TrabajoDetalleScreen";
+import RutaScreen from "./screens/RutaScreen";
+
+type Pantalla = { tipo: "trabajos" } | { tipo: "detalle"; trabajoId: string } | { tipo: "ruta" };
 
 export default function App() {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
-  const [trabajoSeleccionado, setTrabajoSeleccionado] = useState<string | null>(null);
+  const [pantalla, setPantalla] = useState<Pantalla>({ tipo: "trabajos" });
   const [senalRecarga, setSenalRecarga] = useState(0);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
     const { data: sub } = supabase.auth.onAuthStateChange((_event, nuevaSesion) => {
       setSession(nuevaSesion);
-      setTrabajoSeleccionado(null);
+      setPantalla({ tipo: "trabajos" });
     });
     return () => sub.subscription.unsubscribe();
   }, []);
@@ -41,16 +44,22 @@ export default function App() {
 
   return (
     <View style={styles.container}>
-      {trabajoSeleccionado ? (
+      {pantalla.tipo === "detalle" ? (
         <TrabajoDetalleScreen
-          trabajoId={trabajoSeleccionado}
+          trabajoId={pantalla.trabajoId}
           onVolver={() => {
-            setTrabajoSeleccionado(null);
+            setPantalla({ tipo: "trabajos" });
             setSenalRecarga((n) => n + 1);
           }}
         />
+      ) : pantalla.tipo === "ruta" ? (
+        <RutaScreen onVolver={() => setPantalla({ tipo: "trabajos" })} />
       ) : (
-        <TrabajosScreen onSeleccionar={setTrabajoSeleccionado} senalRecarga={senalRecarga} />
+        <TrabajosScreen
+          onSeleccionar={(trabajoId) => setPantalla({ tipo: "detalle", trabajoId })}
+          onVerRuta={() => setPantalla({ tipo: "ruta" })}
+          senalRecarga={senalRecarga}
+        />
       )}
       <StatusBar style="auto" />
     </View>

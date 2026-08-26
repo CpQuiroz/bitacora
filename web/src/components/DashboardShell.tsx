@@ -8,22 +8,33 @@ import { supabase } from "@/lib/supabase";
 import {
   IconBriefcase,
   IconLogOut,
+  IconMapPin,
   IconReceipt,
+  IconRoute,
   IconSparkle,
   IconUsers,
 } from "./icons";
 
 const NAV = [
   { href: "/dashboard/trabajos", label: "Trabajos", icon: IconBriefcase },
+  { href: "/dashboard/clientes", label: "Clientes", icon: IconMapPin },
+  { href: "/dashboard/rutas", label: "Rutas", icon: IconRoute },
   { href: "/dashboard/facturas", label: "Facturas", icon: IconReceipt },
   { href: "/dashboard/informe", label: "Informe IA", icon: IconSparkle },
 ];
+
+export type UsuarioShell = {
+  nombre: string;
+  rol: string;
+  empresaNombre: string;
+  empresaLogoUrl: string | null;
+};
 
 export function DashboardShell({
   usuario,
   children,
 }: {
-  usuario: { nombre: string; rol: string; empresaNombre: string };
+  usuario: UsuarioShell;
   children: ReactNode;
 }) {
   const pathname = usePathname();
@@ -63,6 +74,14 @@ export function DashboardShell({
             })}
           </nav>
           <div className="flex items-center gap-3">
+            {usuario.empresaLogoUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={usuario.empresaLogoUrl}
+                alt={`Logo de ${usuario.empresaNombre}`}
+                className="h-8 w-8 rounded-lg border border-border object-cover"
+              />
+            )}
             <div className="hidden text-right text-sm sm:block">
               <p className="font-medium text-foreground">{usuario.nombre}</p>
               <p className="text-xs text-muted capitalize">{usuario.rol}</p>
