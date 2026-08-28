@@ -6,7 +6,7 @@ import { supabase } from "./supabase";
 import { requiereAuth, type RequestConUsuario } from "./auth";
 import { requiereEmpresa } from "./empresa";
 import { trabajosRouter } from "./routes/trabajos";
-import { facturasRouter } from "./routes/facturas";
+import { cobrosRouter } from "./routes/cobros";
 import { informeRouter } from "./routes/informe";
 import { tiposTrabajoRouter } from "./routes/tiposTrabajo";
 import { usuariosRouter } from "./routes/usuarios";
@@ -14,7 +14,24 @@ import { clientesRouter } from "./routes/clientes";
 import { rutasRouter } from "./routes/rutas";
 import { miEmpresaRouter } from "./routes/miEmpresa";
 import { rutasPlanificadasRouter } from "./routes/rutasPlanificadas";
+import { ordenesServicioRouter } from "./routes/ordenesServicio";
+import { dashboardRouter } from "./routes/dashboard";
+import { informesRouter } from "./routes/informes";
+import { gastosRouter } from "./routes/gastos";
+import { cotizacionesRouter } from "./routes/cotizaciones";
+import { plantillasRouter } from "./routes/plantillas";
+import { checklistsRouter } from "./routes/checklists";
+import { tiposOsRouter } from "./routes/tiposOs";
+import { integracionesRouter } from "./routes/integraciones";
+import { categoriasGastoRouter } from "./routes/categoriasGasto";
+import { centrosCostoRouter } from "./routes/centrosCosto";
+import { notificacionesRouter } from "./routes/notificaciones";
 import { encuestaPublicaRouter } from "./routes/encuestaPublica";
+import { equiposRouter } from "./routes/equipos";
+import { catalogoRouter } from "./routes/catalogo";
+import { inventarioRouter } from "./routes/inventario";
+import { proveedoresRouter } from "./routes/proveedores";
+import { asistenteRouter } from "./routes/asistente";
 import { ah } from "./asyncHandler";
 
 const RUBROS: Rubro[] = ["transporte", "servicio_tecnico", "otro"];
@@ -74,9 +91,16 @@ app.post("/api/registro-empresa", requiereAuth, ah<RequestConUsuario>(async (req
     return;
   }
 
+  const pruebaTerminaEn = new Date();
+  pruebaTerminaEn.setDate(pruebaTerminaEn.getDate() + 14);
+
   const { data: empresa, error: errorEmpresa } = await supabase
     .from("empresas")
-    .insert({ nombre: nombre_empresa.trim(), rubro })
+    .insert({
+      nombre: nombre_empresa.trim(),
+      rubro,
+      prueba_termina_en: pruebaTerminaEn.toISOString().slice(0, 10),
+    })
     .select()
     .single();
   if (errorEmpresa) {
@@ -105,7 +129,7 @@ app.post("/api/registro-empresa", requiereAuth, ah<RequestConUsuario>(async (req
 }));
 
 app.use("/api/trabajos", requiereAuth, requiereEmpresa, trabajosRouter);
-app.use("/api/facturas", requiereAuth, requiereEmpresa, facturasRouter);
+app.use("/api/cobros", requiereAuth, requiereEmpresa, cobrosRouter);
 app.use("/api/informe", requiereAuth, requiereEmpresa, informeRouter);
 app.use("/api/tipos-trabajo", requiereAuth, requiereEmpresa, tiposTrabajoRouter);
 app.use("/api/usuarios", requiereAuth, requiereEmpresa, usuariosRouter);
@@ -113,6 +137,23 @@ app.use("/api/clientes", requiereAuth, requiereEmpresa, clientesRouter);
 app.use("/api/rutas", requiereAuth, requiereEmpresa, rutasRouter);
 app.use("/api/empresa", requiereAuth, requiereEmpresa, miEmpresaRouter);
 app.use("/api/rutas-planificadas", requiereAuth, requiereEmpresa, rutasPlanificadasRouter);
+app.use("/api/ordenes-servicio", requiereAuth, requiereEmpresa, ordenesServicioRouter);
+app.use("/api/dashboard", requiereAuth, requiereEmpresa, dashboardRouter);
+app.use("/api/informes", requiereAuth, requiereEmpresa, informesRouter);
+app.use("/api/gastos", requiereAuth, requiereEmpresa, gastosRouter);
+app.use("/api/cotizaciones", requiereAuth, requiereEmpresa, cotizacionesRouter);
+app.use("/api/plantillas", requiereAuth, requiereEmpresa, plantillasRouter);
+app.use("/api/checklists", requiereAuth, requiereEmpresa, checklistsRouter);
+app.use("/api/tipos-os", requiereAuth, requiereEmpresa, tiposOsRouter);
+app.use("/api/integraciones", requiereAuth, requiereEmpresa, integracionesRouter);
+app.use("/api/categorias-gasto", requiereAuth, requiereEmpresa, categoriasGastoRouter);
+app.use("/api/centros-costo", requiereAuth, requiereEmpresa, centrosCostoRouter);
+app.use("/api/notificaciones", requiereAuth, requiereEmpresa, notificacionesRouter);
+app.use("/api/equipos", requiereAuth, requiereEmpresa, equiposRouter);
+app.use("/api/catalogo", requiereAuth, requiereEmpresa, catalogoRouter);
+app.use("/api/inventario", requiereAuth, requiereEmpresa, inventarioRouter);
+app.use("/api/proveedores", requiereAuth, requiereEmpresa, proveedoresRouter);
+app.use("/api/asistente", requiereAuth, requiereEmpresa, asistenteRouter);
 // Sin auth a propósito — la abre un cliente anónimo desde el correo.
 app.use("/api/encuesta", encuestaPublicaRouter);
 

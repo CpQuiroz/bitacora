@@ -2,25 +2,67 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { AsistenteChat } from "./AsistenteChat";
 import { Logo } from "./Logo";
 import { supabase } from "@/lib/supabase";
+import { asegurarFuenteCargada, fuenteDe } from "@/lib/fuentes";
 import {
-  IconBriefcase,
+  IconCalendar,
+  IconChat,
+  IconChevronRight,
+  IconClipboardCheck,
+  IconCreditCard,
+  IconHelp,
+  IconHome,
   IconLogOut,
   IconMapPin,
-  IconReceipt,
-  IconRoute,
+  IconMenu,
+  IconSettings,
   IconSparkle,
-  IconUsers,
+  IconWallet,
 } from "./icons";
 
-const NAV = [
-  { href: "/dashboard/trabajos", label: "Trabajos", icon: IconBriefcase },
-  { href: "/dashboard/clientes", label: "Clientes", icon: IconMapPin },
-  { href: "/dashboard/rutas", label: "Rutas", icon: IconRoute },
-  { href: "/dashboard/facturas", label: "Facturas", icon: IconReceipt },
-  { href: "/dashboard/informe", label: "Informe IA", icon: IconSparkle },
+type NavLeaf = { href: string; label: string };
+type NavItem =
+  | { href: string; label: string; icon: typeof IconHome; children?: undefined }
+  | { label: string; icon: typeof IconHome; children: NavLeaf[]; href?: undefined };
+
+const NAV: NavItem[] = [
+  { href: "/dashboard", label: "Dashboard", icon: IconHome },
+  { href: "/dashboard/agenda", label: "Agenda", icon: IconCalendar },
+  {
+    label: "Órdenes de Servicio",
+    icon: IconClipboardCheck,
+    children: [
+      { href: "/dashboard/ordenes", label: "Todas las OS" },
+      { href: "/dashboard/ordenes/nueva", label: "Nueva OS" },
+      { href: "/dashboard/trabajos", label: "Trabajos" },
+      { href: "/dashboard/rutas", label: "Rutas" },
+    ],
+  },
+  {
+    label: "Registros",
+    icon: IconMapPin,
+    children: [
+      { href: "/dashboard/registros/clientes", label: "Clientes" },
+      { href: "/dashboard/registros/equipos", label: "Equipos" },
+      { href: "/dashboard/registros/catalogo", label: "Catálogo" },
+      { href: "/dashboard/registros/inventario", label: "Inventario" },
+      { href: "/dashboard/registros/proveedores", label: "Proveedores" },
+    ],
+  },
+  {
+    label: "Financiero",
+    icon: IconWallet,
+    children: [
+      { href: "/dashboard/financiero/cotizaciones", label: "Cotizaciones" },
+      { href: "/dashboard/gastos", label: "Gastos" },
+      { href: "/dashboard/financiero/cobros", label: "Cobros" },
+    ],
+  },
+  { href: "/dashboard/informes", label: "Informes", icon: IconSparkle },
+  { href: "/dashboard/informe", label: "Informe IA", icon: IconChat },
 ];
 
 export type UsuarioShell = {
@@ -28,92 +70,313 @@ export type UsuarioShell = {
   rol: string;
   empresaNombre: string;
   empresaLogoUrl: string | null;
+  colorPrimario?: string | null;
+  colorPrimarioForeground?: string | null;
+  colorSecundario?: string | null;
+  fuente?: string | null;
+  moneda?: string;
 };
 
-export function DashboardShell({
-  usuario,
-  children,
-}: {
-  usuario: UsuarioShell;
-  children: ReactNode;
-}) {
+const CLAVE_COLAPSADO = "bitacora:sidebar-colapsado";
+
+function iniciales(nombre: string) {
+  return nombre
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() ?? "")
+    .join("");
+}
+
+export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
 
-  const nav = usuario.rol === "admin" ? [...NAV, { href: "/dashboard/equipo", label: "Equipo", icon: IconUsers }] : NAV;
+  const [colapsado, setColapsado] = useState(false);
+  const [menuMovilAbierto, setMenuMovilAbierto] = useState(false);
+  const [dropdownAbierto, setDropdownAbierto] = useState(false);
+  const [gruposAbiertos, setGruposAbiertos] = useState<Set<string>>(new Set());
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (window.localStorage.getItem(CLAVE_COLAPSADO) === "1") setColapsado(true);
+  }, []);
+
+  useEffect(() => {
+    asegurarFuenteCargada(usuario.fuente);
+  }, [usuario.fuente]);
+
+  useEffect(() => {
+    setGruposAbiertos((prev) => {
+      const next = new Set(prev);
+      for (const item of NAV) {
+        if (item.children?.some((c) => pathname.startsWith(c.href))) next.add(item.label);
+      }
+      return next;
+    });
+  }, [pathname]);
+
+  useEffect(() => {
+    function onClickFuera(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) setDropdownAbierto(false);
+    }
+    document.addEventListener("mousedown", onClickFuera);
+    return () => document.removeEventListener("mousedown", onClickFuera);
+  }, []);
+
+  function alternarColapsado() {
+    setColapsado((prev) => {
+      const next = !prev;
+      window.localStorage.setItem(CLAVE_COLAPSADO, next ? "1" : "0");
+      return next;
+    });
+  }
+
+  function alternarGrupo(label: string) {
+    setGruposAbiertos((prev) => {
+      const next = new Set(prev);
+      if (next.has(label)) next.delete(label);
+      else next.add(label);
+      return next;
+    });
+  }
+
+  const fuenteInfo = fuenteDe(usuario.fuente);
+  const temaStyle: CSSProperties = {
+    // font-family (no solo la custom property) para que el valor local
+    // de --font-sans efectivamente se aplique acá y herede hacia abajo —
+    // solo sobreescribir la variable no alcanza porque <body> ya resolvió
+    // la suya con el valor de :root, más arriba en el árbol.
+    fontFamily: "var(--font-sans)",
+    ...(usuario.colorPrimario
+      ? {
+          "--brand": usuario.colorPrimario,
+          "--brand-foreground": usuario.colorPrimarioForeground || "#ffffff",
+          "--brand-soft": `color-mix(in srgb, ${usuario.colorPrimario} 14%, var(--surface))`,
+        }
+      : {}),
+    ...(usuario.colorSecundario ? { "--accent": usuario.colorSecundario } : {}),
+    ...(usuario.fuente && usuario.fuente !== "sistema" ? { "--font-sans": fuenteInfo.pila } : {}),
+  } as CSSProperties;
 
   async function cerrarSesion() {
     await supabase.auth.signOut();
     router.push("/login");
   }
 
-  return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-10 border-b border-border bg-surface/80 backdrop-blur">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-6 py-3">
-          <Link href="/dashboard" className="shrink-0">
-            <Logo markClassName="h-7 w-7" />
-          </Link>
-          <nav className="hidden flex-1 items-center gap-1 sm:flex">
-            {nav.map((item) => {
-              const activo = pathname.startsWith(item.href);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                    activo
-                      ? "bg-brand-soft text-brand"
-                      : "text-muted hover:bg-brand-soft hover:text-brand"
+  function renderNav(compacto: boolean) {
+    return (
+      <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-2 py-3">
+        {NAV.map((item) => {
+          if (item.children) {
+            const activo = item.children.some((c) => pathname.startsWith(c.href));
+            const abierto = !compacto && (gruposAbiertos.has(item.label) || activo);
+            return (
+              <div key={item.label}>
+                <button
+                  type="button"
+                  onClick={() => alternarGrupo(item.label)}
+                  title={compacto ? item.label : undefined}
+                  className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                    activo ? "bg-brand-soft text-brand" : "text-muted hover:bg-brand-soft hover:text-brand"
                   }`}
                 >
-                  <item.icon className="h-4 w-4" />
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
-          <div className="flex items-center gap-3">
-            {usuario.empresaLogoUrl && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={usuario.empresaLogoUrl}
-                alt={`Logo de ${usuario.empresaNombre}`}
-                className="h-8 w-8 rounded-lg border border-border object-cover"
-              />
-            )}
-            <div className="hidden text-right text-sm sm:block">
-              <p className="font-medium text-foreground">{usuario.nombre}</p>
-              <p className="text-xs text-muted capitalize">{usuario.rol}</p>
-            </div>
-            <button
-              onClick={cerrarSesion}
-              title="Cerrar sesión"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-muted transition-colors hover:bg-brand-soft hover:text-brand"
-            >
-              <IconLogOut className="h-4.5 w-4.5" />
-            </button>
-          </div>
-        </div>
-        <nav className="flex gap-1 overflow-x-auto border-t border-border px-4 py-1.5 sm:hidden">
-          {nav.map((item) => {
-            const activo = pathname.startsWith(item.href);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium ${
-                  activo ? "bg-brand-soft text-brand" : "text-muted"
-                }`}
-              >
-                <item.icon className="h-4 w-4" />
-                {item.label}
-              </Link>
+                  <item.icon className="h-4.5 w-4.5 shrink-0" />
+                  {!compacto && (
+                    <>
+                      <span className="flex-1 text-left">{item.label}</span>
+                      <IconChevronRight className={`h-3.5 w-3.5 shrink-0 transition-transform ${abierto ? "rotate-90" : ""}`} />
+                    </>
+                  )}
+                </button>
+                {abierto && (
+                  <div className="ml-4 mt-0.5 flex flex-col gap-0.5 border-l border-border pl-3">
+                    {item.children.map((c) => {
+                      const activoHijo = pathname.startsWith(c.href);
+                      return (
+                        <Link
+                          key={c.href}
+                          href={c.href}
+                          onClick={() => setMenuMovilAbierto(false)}
+                          className={`rounded-lg px-3 py-1.5 text-sm transition-colors ${
+                            activoHijo ? "font-medium text-brand" : "text-muted hover:text-brand"
+                          }`}
+                        >
+                          {c.label}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             );
-          })}
-        </nav>
-      </header>
-      <main className="mx-auto max-w-5xl px-6 py-10">{children}</main>
+          }
+          const activo = item.href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(item.href);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={() => setMenuMovilAbierto(false)}
+              title={compacto ? item.label : undefined}
+              className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                activo ? "bg-brand-soft text-brand" : "text-muted hover:bg-brand-soft hover:text-brand"
+              }`}
+            >
+              <item.icon className="h-4.5 w-4.5 shrink-0" />
+              {!compacto && item.label}
+            </Link>
+          );
+        })}
+      </nav>
+    );
+  }
+
+  function renderPie(compacto: boolean) {
+    return (
+      <div className="flex flex-col gap-0.5 border-t border-border p-2">
+        <Link
+          href="/dashboard/configuracion/cuenta"
+          onClick={() => setMenuMovilAbierto(false)}
+          title={compacto ? "Configuración" : undefined}
+          className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+            pathname.startsWith("/dashboard/configuracion") ? "bg-brand-soft text-brand" : "text-muted hover:bg-brand-soft hover:text-brand"
+          }`}
+        >
+          <IconSettings className="h-4.5 w-4.5 shrink-0" />
+          {!compacto && "Configuración"}
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex min-h-screen bg-background" style={temaStyle}>
+      {/* Sidebar de escritorio */}
+      <aside
+        className={`sticky top-0 hidden h-screen shrink-0 flex-col border-r border-border bg-surface transition-[width] duration-150 print:hidden sm:flex ${
+          colapsado ? "w-[68px]" : "w-64"
+        }`}
+      >
+        <Link href="/dashboard" className="flex min-w-0 items-center gap-2 border-b border-border px-4 py-4">
+          {usuario.empresaLogoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={usuario.empresaLogoUrl} alt={usuario.empresaNombre} className="h-8 w-8 shrink-0 rounded-lg object-cover" />
+          ) : (
+            <Logo markClassName="h-8 w-8 shrink-0" />
+          )}
+          {!colapsado && <span className="truncate text-sm font-semibold text-foreground">{usuario.empresaNombre}</span>}
+        </Link>
+
+        {renderNav(colapsado)}
+        {renderPie(colapsado)}
+
+        <button
+          type="button"
+          onClick={alternarColapsado}
+          className="flex items-center justify-center gap-2 border-t border-border py-2.5 text-xs font-medium text-muted transition-colors hover:bg-brand-soft hover:text-brand"
+        >
+          <IconChevronRight className={`h-3.5 w-3.5 transition-transform ${colapsado ? "" : "rotate-180"}`} />
+          {!colapsado && "Contraer"}
+        </button>
+      </aside>
+
+      {/* Drawer móvil */}
+      {menuMovilAbierto && (
+        <div className="fixed inset-0 z-40 sm:hidden">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setMenuMovilAbierto(false)} />
+          <aside className="absolute inset-y-0 left-0 flex w-72 flex-col bg-surface shadow-xl">
+            <Link href="/dashboard" onClick={() => setMenuMovilAbierto(false)} className="flex items-center gap-2 border-b border-border px-4 py-4">
+              {usuario.empresaLogoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={usuario.empresaLogoUrl} alt={usuario.empresaNombre} className="h-8 w-8 rounded-lg object-cover" />
+              ) : (
+                <Logo markClassName="h-8 w-8" />
+              )}
+              <span className="truncate text-sm font-semibold text-foreground">{usuario.empresaNombre}</span>
+            </Link>
+            {renderNav(false)}
+            {renderPie(false)}
+          </aside>
+        </div>
+      )}
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-surface/80 px-4 py-3 backdrop-blur print:hidden sm:px-6">
+          <button
+            type="button"
+            onClick={() => setMenuMovilAbierto(true)}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-muted hover:bg-brand-soft hover:text-brand sm:hidden"
+          >
+            <IconMenu className="h-5 w-5" />
+          </button>
+
+          <div className="relative ml-auto" ref={dropdownRef}>
+            <button
+              type="button"
+              onClick={() => setDropdownAbierto((v) => !v)}
+              className="flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-brand-soft"
+            >
+              <span className="hidden text-right text-sm sm:block">
+                <span className="block font-medium text-foreground">{usuario.nombre}</span>
+                <span className="block text-xs text-muted capitalize">{usuario.rol}</span>
+              </span>
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand text-xs font-semibold text-brand-foreground">
+                {iniciales(usuario.nombre)}
+              </span>
+            </button>
+
+            {dropdownAbierto && (
+              <div className="absolute right-0 top-full mt-2 w-52 overflow-hidden rounded-lg border border-border bg-surface py-1 shadow-lg">
+                <Link
+                  href="/dashboard/perfil"
+                  onClick={() => setDropdownAbierto(false)}
+                  className="block px-4 py-2 text-sm text-foreground hover:bg-brand-soft hover:text-brand"
+                >
+                  Perfil
+                </Link>
+                <Link
+                  href="/dashboard/plan"
+                  onClick={() => setDropdownAbierto(false)}
+                  className="flex items-center gap-2 px-4 py-2 text-sm text-foreground hover:bg-brand-soft hover:text-brand"
+                >
+                  <IconCreditCard className="h-4 w-4" />
+                  Plan
+                </Link>
+                <Link
+                  href="/dashboard/configuracion/cuenta"
+                  onClick={() => setDropdownAbierto(false)}
+                  className="flex items-center gap-2 px-4 py-2 text-sm text-foreground hover:bg-brand-soft hover:text-brand"
+                >
+                  <IconSettings className="h-4 w-4" />
+                  Configuración
+                </Link>
+                <Link
+                  href="/dashboard/ayuda"
+                  onClick={() => setDropdownAbierto(false)}
+                  className="flex items-center gap-2 px-4 py-2 text-sm text-foreground hover:bg-brand-soft hover:text-brand"
+                >
+                  <IconHelp className="h-4 w-4" />
+                  Ayuda
+                </Link>
+                <div className="my-1 border-t border-border" />
+                <button
+                  type="button"
+                  onClick={cerrarSesion}
+                  className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-danger hover:bg-danger-soft"
+                >
+                  <IconLogOut className="h-4 w-4" />
+                  Cerrar sesión
+                </button>
+              </div>
+            )}
+          </div>
+        </header>
+        <main className="flex-1">
+          <div className="mx-auto max-w-6xl px-6 py-10">{children}</div>
+        </main>
+      </div>
+
+      <AsistenteChat />
     </div>
   );
 }

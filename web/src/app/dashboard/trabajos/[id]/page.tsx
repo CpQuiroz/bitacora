@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import type { AnalisisFoto, ItemChecklist, OrdenServicio, Trabajo, TipoTrabajo } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
+import { comprimirImagen } from "@/lib/comprimirImagen";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Badge, Button, Card, ErrorText, PageHeader } from "@/components/ui";
 import { IconCamera, IconChevronLeft, IconClipboardCheck } from "@/components/icons";
@@ -40,7 +41,7 @@ export default function TrabajoDetallePage() {
     ]);
     if (resMe.ok) {
       const { usuario: u } = await resMe.json();
-      if (u) setUsuario({ nombre: u.nombre, rol: u.rol, empresaNombre: u.empresa?.nombre ?? "", empresaLogoUrl: u.empresa?.logo_url ?? null });
+      if (u) setUsuario({ nombre: u.nombre, rol: u.rol, empresaNombre: u.empresa?.nombre ?? "", empresaLogoUrl: u.empresa?.logo_url ?? null, colorPrimario: u.empresa?.color_primario ?? null, colorPrimarioForeground: u.empresa?.color_primario_foreground ?? null, colorSecundario: u.empresa?.color_secundario ?? null, fuente: u.empresa?.fuente ?? null, moneda: u.empresa?.moneda ?? "CLP" });
     }
     if (!resTrabajo.ok) {
       setError("No se pudo cargar el trabajo");
@@ -60,8 +61,9 @@ export default function TrabajoDetallePage() {
     if (!archivo) return;
     setError(null);
     setSubiendo(true);
+    const comprimida = await comprimirImagen(archivo);
     const formData = new FormData();
-    formData.append("foto", archivo);
+    formData.append("foto", comprimida);
     const res = await apiFetch(`/api/trabajos/${params.id}/fotos`, { method: "POST", body: formData });
     setSubiendo(false);
     if (inputRef.current) inputRef.current.value = "";

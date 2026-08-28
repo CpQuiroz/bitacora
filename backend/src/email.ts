@@ -59,3 +59,46 @@ export async function enviarEncuestaSatisfaccion(
     console.error(`Resend respondió ${res.status} al mandar la encuesta: ${texto}`);
   }
 }
+
+// Envía el PDF de una orden de servicio ya finalizada como adjunto.
+// Lanza si Resend no está configurado o si la API responde con error
+// — a diferencia de la encuesta (que es "best effort" en segundo
+// plano), esto es una acción que el usuario dispara a propósito
+// desde el panel y necesita saber si falló.
+export async function enviarPdfOS(
+  destinatario: string,
+  empresaNombre: string,
+  folio: number,
+  pdfBuffer: Buffer
+): Promise<void> {
+  if (!env.RESEND_API_KEY || !env.RESEND_FROM_EMAIL) {
+    throw new Error(
+      "El envío de correo no está configurado (RESEND_API_KEY/RESEND_FROM_EMAIL)"
+    );
+  }
+
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${env.RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: env.RESEND_FROM_EMAIL,
+      to: destinatario,
+      subject: `Orden de Servicio N° ${folio} — ${empresaNombre}`,
+      html: `<div style="font-family:sans-serif;"><p>Adjuntamos la Orden de Servicio N° ${folio}.</p></div>`,
+      attachments: [
+        {
+          filename: `OS-${folio}.pdf`,
+          content: pdfBuffer.toString("base64"),
+        },
+      ],
+    }),
+  });
+
+  if (!res.ok) {
+    const texto = await res.text().catch(() => "");
+    throw new Error(`Resend respondió ${res.status} al mandar el PDF: ${texto}`);
+  }
+}

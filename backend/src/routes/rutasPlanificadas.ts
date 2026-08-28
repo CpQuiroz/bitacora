@@ -5,6 +5,7 @@ import { supabase } from "../supabase";
 import { geocodificarDireccion } from "../geocodificar";
 import { subirAnexo, urlFirmadaAnexo } from "../storage";
 import { asignarHorarios, secuenciarNearestNeighbor } from "../optimizarRuta";
+import { crearOrdenServicio } from "../ordenes";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
 
@@ -292,6 +293,9 @@ rutasPlanificadasRouter.post(
       res.status(500).json({ error: error.message });
       return;
     }
+
+    await crearOrdenServicio(req.empresaId!, data.id);
+
     res.status(201).json(data);
   })
 );

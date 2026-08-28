@@ -1,11 +1,12 @@
 import { Router } from "express";
 import multer from "multer";
-import type { EstadoTrabajo, ItemChecklist, Prioridad, TipoCheckin, Trabajo } from "@bitacora/shared";
+import type { EstadoOS, EstadoTrabajo, ItemChecklist, OrdenServicio, Prioridad, TipoCheckin, Trabajo } from "@bitacora/shared";
 import { supabase } from "../supabase";
 import { subirFirma, subirFoto, urlFirmada } from "../storage";
 import { analizarFoto } from "../claude";
-import { obtenerOCrearOrden } from "../ordenes";
-import { enviarEncuestaSatisfaccion } from "../email";
+import { crearOrdenServicio, obtenerOCrearOrden } from "../ordenes";
+import { enviarEncuestaSatisfaccion, enviarPdfOS } from "../email";
+import { generarPdfOS } from "../generarPdfOS";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
 
@@ -47,6 +48,11 @@ async function tipoTrabajoExiste(empresaId: string, tipoTrabajoId: string) {
   return Boolean(data);
 }
 
+async function tipoOsExiste(empresaId: string, tipoOsId: string) {
+  const { data } = await supabase.from("tipos_os").select("id").eq("empresa_id", empresaId).eq("id", tipoOsId).maybeSingle();
+  return Boolean(data);
+}
+
 async function clienteExiste(empresaId: string, clienteId: string) {
   const { data } = await supabase
     .from("clientes")
@@ -55,6 +61,25 @@ async function clienteExiste(empresaId: string, clienteId: string) {
     .eq("id", clienteId)
     .maybeSingle();
   return Boolean(data);
+}
+
+async function ordenDeTrabajo(empresaId: string, trabajoId: string) {
+  const { data } = await supabase
+    .from("ordenes_servicio")
+    .select("*")
+    .eq("empresa_id", empresaId)
+    .eq("trabajo_id", trabajoId)
+    .maybeSingle();
+  return data;
+}
+
+// Una OS finalizada bloquea checklist/fotos/firma/edición — el botón
+// "Finalizar OS" del celular es la única forma de deshacerlo (no hay
+// forma de deshacerlo: es intencional, es la garantía de que el PDF
+// ya entregado no cambia por debajo).
+async function trabajoBloqueado(empresaId: string, trabajoId: string) {
+  const orden = await ordenDeTrabajo(empresaId, trabajoId);
+  return Boolean(orden?.finalizada_en);
 }
 
 trabajosRouter.get(
@@ -192,6 +217,10 @@ trabajosRouter.patch(
       res.status(400).json({ error: "Nada que actualizar" });
       return;
     }
+    if (await trabajoBloqueado(req.empresaId!, req.params.id)) {
+      res.status(403).json({ error: "La orden de servicio ya fue finalizada y no se puede editar" });
+      return;
+    }
 
     const { data, error } = await supabase
       .from("trabajos")
@@ -216,6 +245,10 @@ trabajosRouter.patch(
 trabajosRouter.delete(
   "/:id",
   ah<RequestConEmpresa>(async (req, res) => {
+    if (await trabajoBloqueado(req.empresaId!, req.params.id)) {
+      res.status(403).json({ error: "La orden de servicio ya fue finalizada y no se puede eliminar" });
+      return;
+    }
     const { error, count } = await supabase
       .from("trabajos")
       .delete({ count: "exact" })
@@ -246,7 +279,12 @@ trabajosRouter.post(
       codigo,
       estado,
       tipo_trabajo_id,
+      tipo_os_id,
       responsable_id,
+      descripcion,
+      prioridad,
+      hora_programada,
+      items,
     } = req.body ?? {};
 
     if (typeof cliente !== "string" || !cliente.trim()) {
@@ -266,6 +304,10 @@ trabajosRouter.post(
       res.status(400).json({ error: "tipo_trabajo_id inválido" });
       return;
     }
+    if (tipo_os_id && !(await tipoOsExiste(req.empresaId!, tipo_os_id))) {
+      res.status(400).json({ error: "tipo_os_id inválido" });
+      return;
+    }
     // cliente_id vincula a un cliente con coordenadas — lo usa la
     // planificación de rutas. Es opcional, "cliente" (texto) sigue
     // siendo el nombre a mostrar/facturar.
@@ -273,7 +315,32 @@ trabajosRouter.post(
       res.status(400).json({ error: "cliente_id inválido" });
       return;
     }
+    if (hora_programada !== undefined && hora_programada !== null && hora_programada !== "") {
+      if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(hora_programada)) {
+        res.status(400).json({ error: "hora_programada inválida (usa HH:MM)" });
+        return;
+      }
+    }
+    let itemsParseados: { descripcion: string; cantidad: number; precio_unitario: number }[] = [];
+    if (typeof items === "string" && items.trim()) {
+      try {
+        const parsed = JSON.parse(items);
+        if (!Array.isArray(parsed)) throw new Error();
+        itemsParseados = parsed.map((it) => ({
+          descripcion: String(it.descripcion ?? "").trim(),
+          cantidad: Number(it.cantidad ?? 1),
+          precio_unitario: Number(it.precio_unitario ?? 0),
+        }));
+        if (itemsParseados.some((it) => !it.descripcion || Number.isNaN(it.cantidad) || Number.isNaN(it.precio_unitario))) {
+          throw new Error();
+        }
+      } catch {
+        res.status(400).json({ error: "items inválido" });
+        return;
+      }
+    }
     const estadoFinal: EstadoTrabajo = ESTADOS.includes(estado) ? estado : "completado";
+    const prioridadFinal: Prioridad = PRIORIDADES.includes(prioridad) ? prioridad : "media";
 
     const { data, error } = await supabase
       .from("trabajos")
@@ -282,11 +349,15 @@ trabajosRouter.post(
         cliente: cliente.trim(),
         cliente_id: cliente_id || null,
         fecha,
+        hora_programada: hora_programada || null,
         monto: montoNum,
         ubicacion: ubicacion?.trim() || null,
         codigo: codigo?.trim() || null,
         estado: estadoFinal,
+        descripcion: descripcion?.trim() || null,
+        prioridad: prioridadFinal,
         tipo_trabajo_id: tipo_trabajo_id || null,
+        tipo_os_id: tipo_os_id || null,
         responsable_id: responsable_id || req.userId!,
       })
       .select()
@@ -296,7 +367,22 @@ trabajosRouter.post(
       res.status(500).json({ error: error.message });
       return;
     }
-    res.status(201).json(data);
+
+    const orden = await crearOrdenServicio(req.empresaId!, data.id);
+
+    if (itemsParseados.length > 0) {
+      await supabase.from("os_items").insert(
+        itemsParseados.map((it) => ({
+          empresa_id: req.empresaId!,
+          trabajo_id: data.id,
+          descripcion: it.descripcion,
+          cantidad: it.cantidad,
+          precio_unitario: it.precio_unitario,
+        }))
+      );
+    }
+
+    res.status(201).json({ ...data, folio: orden.folio });
   })
 );
 
@@ -314,6 +400,10 @@ trabajosRouter.post(
       res.status(404).json({ error: "Trabajo no encontrado" });
       return;
     }
+    if (await trabajoBloqueado(req.empresaId!, req.params.id)) {
+      res.status(403).json({ error: "La orden de servicio ya fue finalizada y no se puede editar" });
+      return;
+    }
 
     const orden = await obtenerOCrearOrden(req.empresaId!, req.params.id);
     const checklist: ItemChecklist[] = orden.checklist ?? [];
@@ -323,9 +413,18 @@ trabajosRouter.post(
       ? checklist.map((c) => (c.item === item ? { ...c, hecho: true, hora: ahora } : c))
       : [...checklist, { item, hecho: true, hora: ahora }];
 
+    // Check-in avanza la OS a "en_proceso"; check-out la deja
+    // "completada" (queda "firmada" recién al finalizar con la firma).
+    const cambios: Partial<OrdenServicio> = { checklist: nuevoChecklist };
+    if (item === "Check-in" && (["pendiente", "enviada"] as EstadoOS[]).includes(orden.estado_os)) {
+      cambios.estado_os = "en_proceso";
+    } else if (item === "Check-out" && orden.estado_os === "en_proceso") {
+      cambios.estado_os = "completada";
+    }
+
     const { data, error } = await supabase
       .from("ordenes_servicio")
-      .update({ checklist: nuevoChecklist })
+      .update(cambios)
       .eq("id", orden.id)
       .select()
       .single();
@@ -392,13 +491,17 @@ trabajosRouter.get(
 trabajosRouter.post(
   "/:id/firma",
   ah<RequestConEmpresa>(async (req, res) => {
-    const { firma_base64 } = req.body ?? {};
+    const { firma_base64, firmante_nombre, firmante_documento, observaciones_cierre } = req.body ?? {};
     if (typeof firma_base64 !== "string" || !firma_base64) {
       res.status(400).json({ error: "Falta firma_base64" });
       return;
     }
     if (!(await trabajoExiste(req.empresaId!, req.params.id))) {
       res.status(404).json({ error: "Trabajo no encontrado" });
+      return;
+    }
+    if (await trabajoBloqueado(req.empresaId!, req.params.id)) {
+      res.status(403).json({ error: "La orden de servicio ya fue finalizada y no se puede editar" });
       return;
     }
 
@@ -408,7 +511,12 @@ trabajosRouter.post(
 
     const { data, error } = await supabase
       .from("ordenes_servicio")
-      .update({ firma_url: key })
+      .update({
+        firma_url: key,
+        firmante_nombre: firmante_nombre?.trim() || null,
+        firmante_documento: firmante_documento?.trim() || null,
+        observaciones_cierre: observaciones_cierre?.trim() || null,
+      })
       .eq("id", orden.id)
       .select()
       .single();
@@ -435,6 +543,10 @@ trabajosRouter.post(
     }
     if (!(await trabajoExiste(req.empresaId!, req.params.id))) {
       res.status(404).json({ error: "Trabajo no encontrado" });
+      return;
+    }
+    if (await trabajoBloqueado(req.empresaId!, req.params.id)) {
+      res.status(403).json({ error: "La orden de servicio ya fue finalizada y no se puede editar" });
       return;
     }
 
@@ -510,5 +622,143 @@ trabajosRouter.get(
       (fotos ?? []).map(async (f) => ({ ...f, url: await urlFirmada(f.foto_url, 15) }))
     );
     res.json(conUrl);
+  })
+);
+
+// Cierra la OS: exige firma ya guardada y check-out ya marcado.
+// A partir de acá el trabajo queda de solo lectura (trabajoBloqueado).
+trabajosRouter.post(
+  "/:id/finalizar",
+  ah<RequestConEmpresa>(async (req, res) => {
+    const orden = await ordenDeTrabajo(req.empresaId!, req.params.id);
+    if (!orden) {
+      res.status(404).json({ error: "Este trabajo todavía no tiene una orden de servicio" });
+      return;
+    }
+    if (orden.finalizada_en) {
+      res.status(403).json({ error: "La orden de servicio ya estaba finalizada" });
+      return;
+    }
+    if (!orden.firma_url) {
+      res.status(400).json({ error: "Falta la firma antes de finalizar la OS" });
+      return;
+    }
+    const checkOutHecho = (orden.checklist as ItemChecklist[]).find(
+      (c) => c.item === "Check-out"
+    )?.hecho;
+    if (!checkOutHecho) {
+      res.status(400).json({ error: "Falta marcar el check-out antes de finalizar la OS" });
+      return;
+    }
+
+    const ahora = new Date().toISOString();
+    const { data, error } = await supabase
+      .from("ordenes_servicio")
+      .update({ estado_os: "firmada", finalizada_en: ahora })
+      .eq("id", orden.id)
+      .select()
+      .single();
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    await supabase.from("trabajos").update({ estado: "completado" }).eq("id", req.params.id);
+
+    res.json(data);
+  })
+);
+
+// Junta todo lo necesario para el PDF de una OS — lo usan tanto la
+// descarga directa como el envío por correo.
+async function armarDatosPdf(empresaId: string, trabajoId: string) {
+  const { data: trabajo } = await supabase
+    .from("trabajos")
+    .select("*, responsable:usuarios(nombre)")
+    .eq("empresa_id", empresaId)
+    .eq("id", trabajoId)
+    .maybeSingle();
+  if (!trabajo) return null;
+
+  const orden = await ordenDeTrabajo(empresaId, trabajoId);
+  if (!orden) return null;
+
+  const { data: empresa } = await supabase
+    .from("empresas")
+    .select("nombre, logo_url, color_primario")
+    .eq("id", empresaId)
+    .single();
+
+  const { data: items } = await supabase
+    .from("os_items")
+    .select("*")
+    .eq("empresa_id", empresaId)
+    .eq("trabajo_id", trabajoId)
+    .order("creado_en");
+
+  const { data: fotos } = await supabase
+    .from("analisis_fotos")
+    .select("foto_url")
+    .eq("orden_servicio_id", orden.id)
+    .order("creado_en", { ascending: false });
+
+  const fotoUrls = await Promise.all((fotos ?? []).map((f) => urlFirmada(f.foto_url, 15)));
+  const firmaUrl = orden.firma_url ? await urlFirmada(orden.firma_url, 15) : null;
+
+  return {
+    empresaNombre: empresa?.nombre ?? "",
+    empresaLogoUrl: empresa?.logo_url ?? null,
+    colorPrimario: empresa?.color_primario ?? null,
+    folio: orden.folio,
+    fecha: trabajo.fecha,
+    horaProgramada: trabajo.hora_programada,
+    clienteNombre: trabajo.cliente,
+    direccion: trabajo.ubicacion,
+    colaboradorNombre: (trabajo as unknown as { responsable: { nombre: string } | null }).responsable?.nombre ?? "—",
+    descripcion: trabajo.descripcion,
+    observacionesCierre: orden.observaciones_cierre,
+    items: (items ?? []).map((it) => ({
+      descripcion: it.descripcion,
+      cantidad: it.cantidad,
+      precio_unitario: it.precio_unitario,
+    })),
+    fotoUrls,
+    firmaUrl,
+    firmanteNombre: orden.firmante_nombre,
+    firmanteDocumento: orden.firmante_documento,
+    folioTexto: `OS-${orden.folio ?? trabajoId.slice(0, 8)}`,
+  };
+}
+
+trabajosRouter.get(
+  "/:id/pdf",
+  ah<RequestConEmpresa>(async (req, res) => {
+    const datos = await armarDatosPdf(req.empresaId!, req.params.id);
+    if (!datos) {
+      res.status(404).json({ error: "Trabajo u orden de servicio no encontrada" });
+      return;
+    }
+    const pdf = await generarPdfOS(datos);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename="${datos.folioTexto}.pdf"`);
+    res.send(pdf);
+  })
+);
+
+trabajosRouter.post(
+  "/:id/pdf/enviar",
+  ah<RequestConEmpresa>(async (req, res) => {
+    const { destinatario } = req.body ?? {};
+    if (typeof destinatario !== "string" || !destinatario.trim()) {
+      res.status(400).json({ error: "Falta destinatario" });
+      return;
+    }
+    const datos = await armarDatosPdf(req.empresaId!, req.params.id);
+    if (!datos) {
+      res.status(404).json({ error: "Trabajo u orden de servicio no encontrada" });
+      return;
+    }
+    const pdf = await generarPdfOS(datos);
+    await enviarPdfOS(destinatario.trim(), datos.empresaNombre, datos.folio ?? 0, pdf);
+    res.json({ ok: true });
   })
 );

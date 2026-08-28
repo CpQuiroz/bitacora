@@ -118,6 +118,32 @@ export async function subirLogo(
 }
 
 // ------------------------------------------------------------
+// Foto de perfil de un usuario — reutiliza el bucket público de
+// logos (mismo tipo de contenido: imagen no sensible que se
+// muestra todo el tiempo), con prefijo "avatars/" para no
+// pisarse con los logos de empresa.
+// ------------------------------------------------------------
+export async function subirFotoPerfil(
+  usuarioId: string,
+  archivo: Buffer | Uint8Array,
+  contentType: string
+): Promise<string> {
+  const extension = contentType === "image/png" ? "png" : contentType === "image/webp" ? "webp" : "jpg";
+  const key = `avatars/${usuarioId}.${extension}`;
+
+  await client.send(
+    new PutObjectCommand({
+      Bucket: BUCKET_LOGOS,
+      Key: key,
+      Body: archivo,
+      ContentType: contentType,
+    })
+  );
+
+  return `${env.SUPABASE_URL}/storage/v1/object/public/${BUCKET_LOGOS}/${key}?v=${Date.now()}`;
+}
+
+// ------------------------------------------------------------
 // Anexos de una tarea (documentos, fotos adicionales, etc. — hasta
 // 20MB). Bucket privado, igual que fotos-trabajos: se ve con URL
 // firmada, nunca público.
@@ -147,5 +173,36 @@ export async function subirAnexo(
 }
 
 export function urlFirmadaAnexo(key: string, minutosValidez = 15): Promise<string> {
+  return urlFirmada(key, minutosValidez, BUCKET_ANEXOS);
+}
+
+// ------------------------------------------------------------
+// Comprobante/factura de un gasto (imagen o PDF). Bucket privado
+// como anexos — un comprobante de compra es información financiera
+// sensible, se ve con URL firmada.
+// ------------------------------------------------------------
+export async function subirComprobante(
+  empresaId: string,
+  gastoId: string,
+  nombreOriginal: string,
+  archivo: Buffer | Uint8Array,
+  contentType: string
+): Promise<string> {
+  const nombreSeguro = nombreOriginal.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const key = `${empresaId}/gastos/${gastoId}/${Date.now()}-${nombreSeguro}`;
+
+  await client.send(
+    new PutObjectCommand({
+      Bucket: BUCKET_ANEXOS,
+      Key: key,
+      Body: archivo,
+      ContentType: contentType,
+    })
+  );
+
+  return key; // se guarda en gastos.comprobante_url
+}
+
+export function urlFirmadaComprobante(key: string, minutosValidez = 15): Promise<string> {
   return urlFirmada(key, minutosValidez, BUCKET_ANEXOS);
 }

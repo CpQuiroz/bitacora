@@ -28,6 +28,18 @@ export type DiaSemana =
 export type EstadoFactura = "pendiente" | "pagada" | "vencida";
 export type EstadoAnalisisFoto = "procesando" | "listo" | "error";
 export type TipoGasto = "negocio" | "personal";
+export type EstadoOS = "pendiente" | "enviada" | "en_proceso" | "completada" | "firmada";
+export type EstadoGasto = "pagado" | "pendiente";
+export type EstadoPresupuesto = "borrador" | "enviado" | "aprobado" | "rechazado" | "expirado";
+export type TipoInforme = "financiero" | "operativo" | "clientes" | "colaboradores" | "personalizado";
+export type SeccionInforme = "financiero" | "ventas" | "operaciones" | "servicios" | "clientes" | "gastos";
+
+export type TipoCuenta = "corriente" | "vista" | "ahorro";
+export type TipoPlantilla = "cotizacion" | "orden_servicio" | "cobranza" | "terminos_aceptacion";
+export type PosicionLogo = "izquierda" | "centro" | "derecha";
+export type ProveedorIntegracion = "webpay" | "flow" | "mercadopago" | "whatsapp" | "anthropic" | "google_document_ai";
+export type CategoriaIntegracion = "pagos" | "comunicacion" | "ia";
+export type TipoMensajePersonalizado = "cotizacion" | "orden_servicio" | "cobranza";
 
 export type Empresa = {
   id: string;
@@ -35,6 +47,30 @@ export type Empresa = {
   rubro: Rubro;
   plan: Plan;
   logo_url: string | null;
+  siguiente_folio_os: number;
+  siguiente_numero_cotizacion: number;
+  color_primario: string | null;
+  color_primario_foreground: string | null;
+  color_secundario: string | null;
+  fuente: string | null;
+  moneda: string;
+  razon_social: string | null;
+  rut: string | null;
+  correo_empresa: string | null;
+  telefono_empresa: string | null;
+  whatsapp: string | null;
+  region: string | null;
+  comuna: string | null;
+  direccion_calle: string | null;
+  direccion_numero: string | null;
+  direccion_depto: string | null;
+  pago_activado: boolean;
+  pago_banco: string | null;
+  pago_tipo_cuenta: TipoCuenta | null;
+  pago_numero_cuenta: string | null;
+  pago_titular: string | null;
+  prueba_termina_en: string | null;
+  inventario_activado: boolean;
   creado_en: string;
 };
 
@@ -43,6 +79,11 @@ export type Usuario = {
   empresa_id: string;
   nombre: string;
   rol: Rol;
+  telefono: string | null;
+  idioma: string;
+  pais: string;
+  huso_horario: string;
+  foto_url: string | null;
   creado_en: string;
 };
 
@@ -70,6 +111,7 @@ export type Trabajo = {
   id: string;
   empresa_id: string;
   tipo_trabajo_id: string | null;
+  tipo_os_id: string | null;
   codigo: string | null;
   fecha: string;
   semana: number | null;
@@ -93,6 +135,7 @@ export type Trabajo = {
   encuesta_enviada_en: string | null;
   calificacion_satisfaccion: number | null;
   encuesta_respondida_en: string | null;
+  hora_programada: string | null;
   creado_en: string;
 };
 
@@ -121,21 +164,30 @@ export type Cliente = {
   empresa_id: string;
   nombre: string;
   direccion: string;
+  comuna: string | null;
   lat: number | null;
   lng: number | null;
   telefono: string | null;
+  correo: string | null;
   notas: string | null;
+  activo: boolean;
   creado_en: string;
 };
+
+export type MedioPago = "webpay" | "flow" | "mercadopago" | "transferencia" | "efectivo" | "otro";
 
 export type Factura = {
   id: string;
   empresa_id: string;
   cliente: string;
+  cliente_id: string | null;
   semana_facturada: string | null;
   monto: number;
   fecha_emision: string;
   fecha_vencimiento: string;
+  fecha_pago: string | null;
+  medio_pago: MedioPago | null;
+  link_pago: string | null;
   estado: EstadoFactura;
   trabajo_ids: string[] | null;
   creado_en: string;
@@ -154,6 +206,22 @@ export type OrdenServicio = {
   checklist: ItemChecklist[];
   fotos: string[] | null;
   firma_url: string | null;
+  folio: number | null;
+  estado_os: EstadoOS;
+  firmante_nombre: string | null;
+  firmante_documento: string | null;
+  observaciones_cierre: string | null;
+  finalizada_en: string | null;
+  creado_en: string;
+};
+
+export type OsItem = {
+  id: string;
+  empresa_id: string;
+  trabajo_id: string;
+  descripcion: string;
+  cantidad: number;
+  precio_unitario: number;
   creado_en: string;
 };
 
@@ -177,6 +245,251 @@ export type GastoFijo = {
   dia_vencimiento: number | null;
   activo: boolean;
   creado_en: string;
+};
+
+export type Gasto = {
+  id: string;
+  empresa_id: string;
+  categoria: string;
+  categoria_gasto_id: string | null;
+  centro_costo_id: string | null;
+  proveedor_id: string | null;
+  trabajo_id: string | null;
+  comprobante_url: string | null;
+  comprobante_nombre: string | null;
+  descripcion: string | null;
+  monto: number;
+  fecha: string;
+  estado: EstadoGasto;
+  fecha_pago: string | null;
+  creado_en: string;
+};
+
+export type Presupuesto = {
+  id: string;
+  empresa_id: string;
+  cliente_id: string | null;
+  descripcion: string | null;
+  monto: number;
+  fecha: string;
+  estado: EstadoPresupuesto;
+  trabajo_id: string | null;
+  numero: number | null;
+  subtotal: number | null;
+  iva: number | null;
+  fecha_vencimiento: string | null;
+  creado_en: string;
+};
+
+export type PresupuestoItem = {
+  id: string;
+  empresa_id: string;
+  presupuesto_id: string;
+  catalogo_item_id: string | null;
+  descripcion: string;
+  cantidad: number;
+  precio_unitario: number;
+  creado_en: string;
+};
+
+export type Equipo = {
+  id: string;
+  empresa_id: string;
+  cliente_id: string;
+  nombre: string;
+  marca: string | null;
+  modelo: string | null;
+  numero_serie: string | null;
+  categoria: string | null;
+  notas: string | null;
+  activo: boolean;
+  creado_en: string;
+};
+
+export type TipoCatalogoItem = "producto" | "servicio" | "kit";
+
+export type CatalogoItem = {
+  id: string;
+  empresa_id: string;
+  tipo: TipoCatalogoItem;
+  nombre: string;
+  sku: string | null;
+  categoria: string | null;
+  unidad: string;
+  precio_base: number;
+  stock_actual: number | null;
+  stock_minimo: number | null;
+  activo: boolean;
+  creado_en: string;
+};
+
+export type CatalogoKitItem = {
+  id: string;
+  empresa_id: string;
+  kit_id: string;
+  item_id: string;
+  cantidad: number;
+};
+
+export type TipoMovimientoInventario = "entrada" | "salida" | "ajuste";
+
+export type InventarioMovimiento = {
+  id: string;
+  empresa_id: string;
+  catalogo_item_id: string;
+  tipo: TipoMovimientoInventario;
+  cantidad: number;
+  stock_resultante: number;
+  motivo: string | null;
+  creado_en: string;
+};
+
+export type Proveedor = {
+  id: string;
+  empresa_id: string;
+  nombre: string;
+  razon_social: string | null;
+  rut: string | null;
+  telefono: string | null;
+  correo: string | null;
+  categoria_gasto_id: string | null;
+  activo: boolean;
+  creado_en: string;
+};
+
+export type InformeGenerado = {
+  id: string;
+  empresa_id: string;
+  usuario_id: string | null;
+  tipo: TipoInforme;
+  desde: string;
+  hasta: string;
+  pregunta: string | null;
+  resultado: string | null;
+  datos_agregados: Record<string, unknown>;
+  secciones: SeccionInforme[] | null;
+  personalizado_id: string | null;
+  nombre: string | null;
+  creado_en: string;
+};
+
+export type InformePersonalizado = {
+  id: string;
+  empresa_id: string;
+  nombre: string;
+  secciones: SeccionInforme[];
+  pregunta: string | null;
+  creado_por: string | null;
+  creado_en: string;
+  actualizado_en: string;
+};
+
+export type RolMensajeAsistente = "user" | "assistant";
+
+export type MensajeAsistente = {
+  id: string;
+  empresa_id: string;
+  usuario_id: string;
+  rol: RolMensajeAsistente;
+  contenido: string;
+  creado_en: string;
+};
+
+export type PlantillaDocumento = {
+  id: string;
+  empresa_id: string;
+  tipo: TipoPlantilla;
+  mostrar_logo: boolean;
+  posicion_logo: PosicionLogo;
+  color_primario: string | null;
+  color_secundario: string | null;
+  texto_encabezado: string | null;
+  texto_pie: string | null;
+  mensaje_predeterminado: string | null;
+  terminos_condiciones: string | null;
+  mostrar_firma: boolean;
+  actualizado_en: string;
+};
+
+export type SeccionChecklist = {
+  nombre: string;
+  preguntas: string[];
+};
+
+export type ChecklistTemplate = {
+  id: string;
+  empresa_id: string;
+  nombre: string;
+  descripcion: string | null;
+  activo: boolean;
+  version: number;
+  secciones: SeccionChecklist[];
+  creado_en: string;
+  actualizado_en: string;
+};
+
+export type TipoOS = {
+  id: string;
+  empresa_id: string;
+  nombre: string;
+  descripcion: string | null;
+  color: string;
+  checklist_template_id: string | null;
+  activo: boolean;
+  creado_en: string;
+};
+
+// credenciales nunca viaja al frontend con valores reales — el
+// backend siempre devuelve un objeto vacío/enmascarado en su lugar.
+export type Integracion = {
+  id: string;
+  empresa_id: string;
+  proveedor: ProveedorIntegracion;
+  categoria: CategoriaIntegracion;
+  credenciales: Record<string, unknown>;
+  conectado: boolean;
+  conectado_en: string | null;
+  actualizado_en: string;
+};
+
+export type CategoriaGasto = {
+  id: string;
+  empresa_id: string;
+  nombre: string;
+  color: string;
+  creado_en: string;
+};
+
+export type CentroCosto = {
+  id: string;
+  empresa_id: string;
+  nombre: string;
+  categoria_gasto_ids: string[];
+  creado_en: string;
+};
+
+export type NotificacionesConfig = {
+  id: string;
+  empresa_id: string;
+  correo_activado: boolean;
+  cotizacion_creada: boolean;
+  cotizacion_aprobada: boolean;
+  cotizacion_rechazada: boolean;
+  os_creada: boolean;
+  os_completada: boolean;
+  cobranza_recibida: boolean;
+  cobranza_atrasada: boolean;
+  actualizado_en: string;
+};
+
+export type MensajePersonalizado = {
+  id: string;
+  empresa_id: string;
+  tipo: TipoMensajePersonalizado;
+  mensaje_whatsapp: string | null;
+  asunto_correo: string | null;
+  cuerpo_correo: string | null;
+  actualizado_en: string;
 };
 
 export type AnalisisFoto = {
@@ -216,6 +529,26 @@ export type Database = {
       gastos_fijos: Tabla<GastoFijo>;
       analisis_fotos: Tabla<AnalisisFoto>;
       rutas_planificadas: Tabla<RutaPlanificada>;
+      os_items: Tabla<OsItem>;
+      gastos: Tabla<Gasto>;
+      presupuestos: Tabla<Presupuesto>;
+      informes_generados: Tabla<InformeGenerado>;
+      plantillas_documento: Tabla<PlantillaDocumento>;
+      checklist_templates: Tabla<ChecklistTemplate>;
+      tipos_os: Tabla<TipoOS>;
+      integraciones: Tabla<Integracion>;
+      categorias_gasto: Tabla<CategoriaGasto>;
+      centros_costo: Tabla<CentroCosto>;
+      notificaciones_config: Tabla<NotificacionesConfig>;
+      mensajes_personalizados: Tabla<MensajePersonalizado>;
+      informes_personalizados: Tabla<InformePersonalizado>;
+      asistente_mensajes: Tabla<MensajeAsistente>;
+      equipos: Tabla<Equipo>;
+      catalogo_items: Tabla<CatalogoItem>;
+      catalogo_kit_items: Tabla<CatalogoKitItem>;
+      inventario_movimientos: Tabla<InventarioMovimiento>;
+      proveedores: Tabla<Proveedor>;
+      presupuesto_items: Tabla<PresupuestoItem>;
     };
     Views: Record<string, never>;
     Functions: {
@@ -228,6 +561,14 @@ export type Database = {
           p_dias_plazo?: number;
         };
         Returns: string; // uuid de la factura creada
+      };
+      siguiente_folio_os: {
+        Args: { p_empresa_id: string };
+        Returns: number;
+      };
+      siguiente_numero_cotizacion: {
+        Args: { p_empresa_id: string };
+        Returns: number;
       };
       trabajos_del_dia: {
         Args: {

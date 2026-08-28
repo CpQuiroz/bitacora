@@ -122,6 +122,34 @@ const badgeStyles: Record<string, string> = {
   alta: "bg-danger-soft text-danger",
   media: "bg-warning-soft text-warning",
   baja: "bg-success-soft text-success",
+  // estado de la orden de servicio
+  enviada: "bg-brand-soft text-brand",
+  en_proceso: "bg-warning-soft text-warning",
+  completada: "bg-success-soft text-success",
+  firmada: "bg-success-soft text-success",
+  // gastos
+  pagado: "bg-success-soft text-success",
+  vencido: "bg-danger-soft text-danger",
+  // cotizaciones (presupuestos)
+  borrador: "bg-border text-muted",
+  enviado: "bg-brand-soft text-brand",
+  aprobado: "bg-success-soft text-success",
+  rechazado: "bg-danger-soft text-danger",
+  expirado: "bg-warning-soft text-warning",
+  // agenda (estado derivado, no es una columna propia)
+  agendado: "bg-brand-soft text-brand",
+  en_progreso: "bg-warning-soft text-warning",
+  // activo/inactivo (checklists, tipos de OS, etc.)
+  activo: "bg-success-soft text-success",
+  inactivo: "bg-border text-muted",
+  // inventario: estado de stock
+  en_stock: "bg-success-soft text-success",
+  stock_bajo: "bg-warning-soft text-warning",
+  sin_stock: "bg-danger-soft text-danger",
+  // inventario: tipo de movimiento
+  entrada: "bg-success-soft text-success",
+  salida: "bg-danger-soft text-danger",
+  ajuste: "bg-warning-soft text-warning",
 };
 
 export function Badge({ value }: { value: string }) {
