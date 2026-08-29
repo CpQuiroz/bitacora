@@ -1,6 +1,6 @@
 import { Router } from "express";
 import Anthropic from "@anthropic-ai/sdk";
-import { claude } from "../claude";
+import { crearMensajeIA } from "../claude";
 import { supabase } from "../supabase";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
@@ -180,7 +180,7 @@ asistenteRouter.post(
     let respuestaFinal = "";
     try {
       for (let i = 0; i < MAX_ITERACIONES_HERRAMIENTA; i++) {
-        const response = await claude.messages.create({
+        const response = await crearMensajeIA(req.empresaId!, "asistente", {
           model: "claude-sonnet-5",
           max_tokens: 1024,
           system: systemPrompt(),

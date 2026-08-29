@@ -1,7 +1,48 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { env } from "./env";
+import { supabase } from "./supabase";
 
 export const claude = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
+
+// Etiquetas de feature para ia_uso — una por cada punto de llamada real
+// a Claude en el backend (ver Panel de Super-Admin, consumo por empresa).
+export type FeatureIA =
+  | "analisis_foto"
+  | "informe_os"
+  | "extraer_guia"
+  | "informe_libre"
+  | "informe_estructurado"
+  | "informe_personalizado"
+  | "asistente";
+
+// Nunca bloquea la respuesta si falla — mismo criterio que notificar().
+async function registrarUsoIA(empresaId: string, feature: FeatureIA, modelo: string, tokensEntrada: number, tokensSalida: number) {
+  try {
+    const { error } = await supabase.from("ia_uso").insert({
+      empresa_id: empresaId,
+      feature,
+      modelo,
+      tokens_entrada: tokensEntrada,
+      tokens_salida: tokensSalida,
+    });
+    if (error) console.error("Error registrando uso de IA:", error);
+  } catch (err) {
+    console.error("Error en registrarUsoIA():", err);
+  }
+}
+
+// Único punto que llama a la API de Claude en todo el backend — así el
+// consumo por empresa (Panel de Super-Admin) se instrumenta una sola
+// vez en vez de en cada uno de los call sites.
+export async function crearMensajeIA(
+  empresaId: string,
+  feature: FeatureIA,
+  params: Anthropic.MessageCreateParamsNonStreaming
+): Promise<Anthropic.Message> {
+  const response = await claude.messages.create(params);
+  void registrarUsoIA(empresaId, feature, response.model, response.usage.input_tokens, response.usage.output_tokens);
+  return response;
+}
 
 export interface AnalisisFotoIA {
   resumen: string;
@@ -18,10 +59,11 @@ false (true si se ve algo que requiere atención: daño, mala instalación, incu
 riesgo de seguridad, etc.), "detalle_alerta": "qué se detectó, o null si alerta es false"}`;
 
 export async function analizarFoto(
+  empresaId: string,
   base64: string,
   mediaType: "image/jpeg" | "image/png" | "image/webp"
 ): Promise<AnalisisFotoIA> {
-  const response = await claude.messages.create({
+  const response = await crearMensajeIA(empresaId, "analisis_foto", {
     model: "claude-sonnet-5",
     max_tokens: 512,
     messages: [
@@ -70,9 +112,9 @@ el estado, simplemente omítelo — no agregues una nota aparte señalando qué 
 sección fuera de las 4 de arriba. Sé conciso — es un informe que un cliente va a leer, no un \
 reporte interno.`;
 
-export async function generarInformeOS(contexto: string): Promise<string | null> {
+export async function generarInformeOS(empresaId: string, contexto: string): Promise<string | null> {
   try {
-    const response = await claude.messages.create({
+    const response = await crearMensajeIA(empresaId, "informe_os", {
       model: "claude-sonnet-5",
       max_tokens: 1024,
       system: PROMPT_INFORME_OS,
@@ -105,10 +147,11 @@ con esta forma exacta:
 No inventes ningún dato — si un campo no se lee con claridad, va null.`;
 
 export async function extraerDatosGuia(
+  empresaId: string,
   base64: string,
   mediaType: "image/jpeg" | "image/png" | "image/webp"
 ): Promise<DatosGuiaIA> {
-  const response = await claude.messages.create({
+  const response = await crearMensajeIA(empresaId, "extraer_guia", {
     model: "claude-sonnet-5",
     max_tokens: 512,
     messages: [

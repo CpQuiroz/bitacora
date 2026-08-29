@@ -198,10 +198,28 @@ app.use("/api/portal", portalRouter);
 app.use("/api/superadmin", superadminRouter);
 
 // Handler de errores global: cualquier excepción sin capturar en una
-// ruta async (vía ah()) termina acá en vez de tumbar el proceso.
-app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+// ruta async (vía ah()) termina acá en vez de tumbar el proceso. Único
+// punto por el que pasan TODAS las rutas — se aprovecha para loguear
+// en errores_backend (Panel de Super-Admin), sin tocar cada ruta.
+app.use((err: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error(err);
   const mensaje = err instanceof Error ? err.message : "Error interno";
+
+  const empresaId = (req as express.Request & { empresaId?: string }).empresaId ?? null;
+  void (async () => {
+    try {
+      const { error } = await supabase.from("errores_backend").insert({
+        empresa_id: empresaId,
+        ruta: req.path,
+        metodo: req.method,
+        mensaje: mensaje.slice(0, 500),
+      });
+      if (error) console.error("Error registrando en errores_backend:", error);
+    } catch (err) {
+      console.error("Error registrando en errores_backend:", err);
+    }
+  })();
+
   res.status(500).json({ error: mensaje });
 });
 

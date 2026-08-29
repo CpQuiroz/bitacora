@@ -57,7 +57,7 @@ async function manejarFoto(chofer: { id: string; empresa_id: string }, mensaje: 
 
   let datos;
   try {
-    datos = await extraerDatosGuia(media.buffer.toString("base64"), mimeType);
+    datos = await extraerDatosGuia(chofer.empresa_id, media.buffer.toString("base64"), mimeType);
   } catch (err) {
     // Falla de la API de Claude (rate limit, red, etc.) — no de
     // extracción. Sin este mensaje el conductor queda esperando una

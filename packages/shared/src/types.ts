@@ -107,6 +107,25 @@ export type SuperAdminAuditoria = {
   creado_en: string;
 };
 
+export type IaUso = {
+  id: string;
+  empresa_id: string;
+  feature: string;
+  modelo: string;
+  tokens_entrada: number;
+  tokens_salida: number;
+  creado_en: string;
+};
+
+export type ErrorBackend = {
+  id: string;
+  empresa_id: string | null;
+  ruta: string;
+  metodo: string;
+  mensaje: string;
+  creado_en: string;
+};
+
 export type Usuario = {
   id: string; // = auth.users.id
   empresa_id: string;
@@ -849,6 +868,8 @@ export type Database = {
       tareas: Tabla<Tarea>;
       super_admins: Tabla<SuperAdmin>;
       super_admin_auditoria: Tabla<SuperAdminAuditoria>;
+      ia_uso: Tabla<IaUso>;
+      errores_backend: Tabla<ErrorBackend>;
     };
     Views: Record<string, never>;
     Functions: {

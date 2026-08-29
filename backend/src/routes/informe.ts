@@ -2,7 +2,7 @@ import { Router } from "express";
 import multer from "multer";
 import Anthropic from "@anthropic-ai/sdk";
 import type { InformePersonalizado, SeccionInforme, TipoInforme } from "@bitacora/shared";
-import { claude } from "../claude";
+import { crearMensajeIA } from "../claude";
 import { supabase } from "../supabase";
 import {
   clientesPorComuna,
@@ -126,7 +126,7 @@ informeRouter.post(
     ];
 
     try {
-      const response = await claude.messages.create({
+      const response = await crearMensajeIA(req.empresaId!, "informe_libre", {
         model: "claude-sonnet-5",
         max_tokens: 2048,
         system: SYSTEM_PROMPT,
@@ -336,7 +336,7 @@ informeRouter.post(
     // rompe la pantalla por un problema de la API de IA).
     let resultado: string | null = null;
     try {
-      const response = await claude.messages.create({
+      const response = await crearMensajeIA(req.empresaId!, "informe_estructurado", {
         model: "claude-sonnet-5",
         max_tokens: 2048,
         system: SYSTEM_PROMPT_ESTRUCTURADO,
@@ -453,7 +453,7 @@ informeRouter.post(
 
     let resultadoTexto: string | null = null;
     try {
-      const response = await claude.messages.create({
+      const response = await crearMensajeIA(req.empresaId!, "informe_personalizado", {
         model: "claude-sonnet-5",
         max_tokens: 2560,
         system: SYSTEM_PROMPT_PERSONALIZADO,

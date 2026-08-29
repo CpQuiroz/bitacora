@@ -115,24 +115,44 @@ superadminRouter.get(
     inicioMes.setHours(0, 0, 0, 0);
     const inicioMesIso = inicioMes.toISOString();
 
-    const [{ data: ultimoAcceso }, { data: accesosDelMes }, { count: osDelMes }, usoStorage] = await Promise.all([
-      supabase
-        .from("accesos_usuario")
-        .select("creado_en")
-        .eq("empresa_id", empresaId)
-        .order("creado_en", { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-      supabase.from("accesos_usuario").select("usuario_id").eq("empresa_id", empresaId).gte("creado_en", inicioMesIso),
-      supabase
-        .from("ordenes_servicio")
-        .select("id", { count: "exact", head: true })
-        .eq("empresa_id", empresaId)
-        .gte("creado_en", inicioMesIso),
-      medirUsoStorage(empresaId).catch(() => ({ bytesTotal: 0, incluyeAvatares: false as const })),
-    ]);
+    const [{ data: ultimoAcceso }, { data: accesosDelMes }, { count: osDelMes }, usoStorage, { data: usoIaDelMes }, { data: erroresRecientes }] =
+      await Promise.all([
+        supabase
+          .from("accesos_usuario")
+          .select("creado_en")
+          .eq("empresa_id", empresaId)
+          .order("creado_en", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+        supabase.from("accesos_usuario").select("usuario_id").eq("empresa_id", empresaId).gte("creado_en", inicioMesIso),
+        supabase
+          .from("ordenes_servicio")
+          .select("id", { count: "exact", head: true })
+          .eq("empresa_id", empresaId)
+          .gte("creado_en", inicioMesIso),
+        medirUsoStorage(empresaId).catch(() => ({ bytesTotal: 0, incluyeAvatares: false as const })),
+        supabase.from("ia_uso").select("feature, tokens_entrada, tokens_salida").eq("empresa_id", empresaId).gte("creado_en", inicioMesIso),
+        supabase
+          .from("errores_backend")
+          .select("ruta, mensaje, creado_en")
+          .eq("empresa_id", empresaId)
+          .order("creado_en", { ascending: false })
+          .limit(10),
+      ]);
 
     const usuariosActivosMes = new Set((accesosDelMes ?? []).map((a) => a.usuario_id)).size;
+
+    const porFeature: Record<string, { tokens_entrada: number; tokens_salida: number }> = {};
+    let tokensEntradaTotal = 0;
+    let tokensSalidaTotal = 0;
+    for (const fila of usoIaDelMes ?? []) {
+      tokensEntradaTotal += fila.tokens_entrada;
+      tokensSalidaTotal += fila.tokens_salida;
+      const actual = porFeature[fila.feature] ?? { tokens_entrada: 0, tokens_salida: 0 };
+      actual.tokens_entrada += fila.tokens_entrada;
+      actual.tokens_salida += fila.tokens_salida;
+      porFeature[fila.feature] = actual;
+    }
 
     await registrarAuditoria(req.superAdminId!, "ver_salud_empresa", { empresaId, ip: req.ip ?? null });
 
@@ -142,6 +162,8 @@ superadminRouter.get(
       usuarios_activos_mes: usuariosActivosMes,
       os_creadas_mes: osDelMes ?? 0,
       almacenamiento_bytes: usoStorage.bytesTotal,
+      consumo_ia_mes: { tokens_entrada: tokensEntradaTotal, tokens_salida: tokensSalidaTotal, por_feature: porFeature },
+      errores_recientes: erroresRecientes ?? [],
       almacenamiento_incluye_avatares: usoStorage.incluyeAvatares,
     });
   })

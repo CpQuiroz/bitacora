@@ -15,6 +15,22 @@ type Salud = {
   os_creadas_mes: number;
   almacenamiento_bytes: number;
   almacenamiento_incluye_avatares: boolean;
+  consumo_ia_mes: {
+    tokens_entrada: number;
+    tokens_salida: number;
+    por_feature: Record<string, { tokens_entrada: number; tokens_salida: number }>;
+  };
+  errores_recientes: { ruta: string; mensaje: string; creado_en: string }[];
+};
+
+const ETIQUETA_FEATURE: Record<string, string> = {
+  analisis_foto: "Análisis de fotos",
+  informe_os: "Informe de OS",
+  extraer_guia: "Guía de despacho (WhatsApp)",
+  informe_libre: "Informe con IA (libre)",
+  informe_estructurado: "Informe con IA (estructurado)",
+  informe_personalizado: "Informe con IA (personalizado)",
+  asistente: "Asistente",
 };
 
 function formatearBytes(bytes: number): string {
@@ -84,6 +100,56 @@ export default function SuperAdminSaludEmpresaPage() {
               <p className="mt-1 text-lg font-semibold text-foreground">{formatearBytes(salud.almacenamiento_bytes)}</p>
               {!salud.almacenamiento_incluye_avatares && (
                 <p className="mt-1 text-[11px] text-muted">No incluye fotos de perfil (volumen marginal)</p>
+              )}
+            </Card>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Card>
+              <h2 className="mb-3 text-sm font-semibold text-foreground">Consumo de Claude este mes</h2>
+              <div className="flex gap-6">
+                <div>
+                  <p className="text-xs text-muted">Tokens de entrada</p>
+                  <p className="text-lg font-semibold text-foreground">{salud.consumo_ia_mes.tokens_entrada.toLocaleString("es-CL")}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted">Tokens de salida</p>
+                  <p className="text-lg font-semibold text-foreground">{salud.consumo_ia_mes.tokens_salida.toLocaleString("es-CL")}</p>
+                </div>
+              </div>
+              {Object.keys(salud.consumo_ia_mes.por_feature).length > 0 && (
+                <div className="mt-4 flex flex-col gap-1.5 border-t border-border pt-3">
+                  {Object.entries(salud.consumo_ia_mes.por_feature).map(([feature, tokens]) => (
+                    <div key={feature} className="flex items-center justify-between text-xs">
+                      <span className="text-muted">{ETIQUETA_FEATURE[feature] ?? feature}</span>
+                      <span className="text-foreground">
+                        {(tokens.tokens_entrada + tokens.tokens_salida).toLocaleString("es-CL")} tokens
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <p className="mt-3 text-[11px] text-muted">
+                El costo exacto depende del precio vigente por token — revisa console.anthropic.com para calcularlo.
+              </p>
+            </Card>
+
+            <Card>
+              <h2 className="mb-3 text-sm font-semibold text-foreground">Errores recientes</h2>
+              {salud.errores_recientes.length === 0 ? (
+                <p className="text-sm text-muted">Sin errores recientes.</p>
+              ) : (
+                <div className="flex flex-col divide-y divide-border">
+                  {salud.errores_recientes.map((e, i) => (
+                    <div key={i} className="py-2 text-xs">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium text-foreground">{e.ruta}</span>
+                        <span className="text-muted">{new Date(e.creado_en).toLocaleString("es-CL")}</span>
+                      </div>
+                      <p className="mt-0.5 text-muted">{e.mensaje}</p>
+                    </div>
+                  ))}
+                </div>
               )}
             </Card>
           </div>

@@ -618,7 +618,7 @@ trabajosRouter.post(
     const key = await subirFoto(req.empresaId!, req.params.id, req.file.buffer, req.file.mimetype);
 
     const mediaType = req.file.mimetype as "image/jpeg" | "image/png" | "image/webp";
-    const analisis = await analizarFoto(req.file.buffer.toString("base64"), mediaType);
+    const analisis = await analizarFoto(req.empresaId!, req.file.buffer.toString("base64"), mediaType);
 
     const { data: fotoGuardada, error: errorAnalisis } = await supabase
       .from("analisis_fotos")
@@ -958,7 +958,7 @@ trabajosRouter.post(
     if (orden.observaciones_cierre) contexto += `Observaciones del técnico:\n${orden.observaciones_cierre}\n\n`;
     if (fotosTexto) contexto += `Fotos tomadas en terreno:\n${fotosTexto}\n\n`;
 
-    const informe = await generarInformeOS(contexto);
+    const informe = await generarInformeOS(req.empresaId!, contexto);
     if (!informe) {
       res.status(502).json({ error: "No se pudo generar el informe con IA, intenta de nuevo" });
       return;
