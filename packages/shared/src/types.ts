@@ -788,11 +788,12 @@ export type NotificacionesConfig = {
   tecnico_en_camino: boolean;
   cobro_pendiente: boolean;
   cita_agendada: boolean;
+  whatsapp_activado: boolean;
   actualizado_en: string;
 };
 
-// Los 7 eventos que efectivamente le mandan un correo al CLIENTE
-// (distinto de TipoNotificacion, que es el feed interno del equipo).
+// Los 7 eventos que efectivamente le mandan un correo o WhatsApp al
+// CLIENTE (distinto de TipoNotificacion, que es el feed interno del equipo).
 export type TipoNotificacionCliente =
   | "cotizacion_enviada"
   | "cotizacion_por_vencer"
@@ -804,6 +805,8 @@ export type TipoNotificacionCliente =
 
 export type EntidadNotificacionCliente = "cotizacion" | "trabajo" | "factura" | "tarea";
 
+export type CanalNotificacionCliente = "correo" | "whatsapp";
+
 export type NotificacionClienteLog = {
   id: string;
   empresa_id: string;
@@ -811,6 +814,7 @@ export type NotificacionClienteLog = {
   destinatario: string;
   entidad_tipo: EntidadNotificacionCliente;
   entidad_id: string;
+  canal: CanalNotificacionCliente;
   exito: boolean;
   error: string | null;
   creado_en: string;

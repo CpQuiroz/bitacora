@@ -1,19 +1,28 @@
 // ============================================================
-// BITÁCORA — Notificaciones automáticas al CLIENTE por correo.
-// Distinto de notificar.ts (feed interno del equipo): esto le manda
-// un email real a un cliente externo, respeta los switches de
-// Configuración > Notificaciones y el mensaje personalizado si existe.
+// BITÁCORA — Notificaciones automáticas al CLIENTE, por correo y/o
+// WhatsApp. Distinto de notificar.ts (feed interno del equipo): esto
+// le manda un aviso real a un cliente externo, respeta los switches
+// de Configuración > Notificaciones (por tipo y por canal) y el
+// mensaje personalizado si existe.
 //
 // Mismo criterio que notificar(): nunca lanza — un envío al cliente
 // que falla no puede romper el flujo que lo disparó (marcar una OS
 // como firmada, enviar una cotización, etc.), solo queda registrado
-// en notificaciones_cliente_log para poder reenviarlo a mano.
+// en notificaciones_cliente_log (una fila por canal intentado) para
+// poder reenviarlo a mano.
 // ============================================================
-import type { EntidadNotificacionCliente, NotificacionesConfig, TipoMensajePersonalizado, TipoNotificacionCliente } from "@bitacora/shared";
+import type {
+  CanalNotificacionCliente,
+  EntidadNotificacionCliente,
+  NotificacionesConfig,
+  TipoMensajePersonalizado,
+  TipoNotificacionCliente,
+} from "@bitacora/shared";
 import { sustituirVariables } from "@bitacora/shared";
 import { supabase } from "./supabase";
 import { env } from "./env";
 import { enviarConReintento } from "./email";
+import { enviarMensajeWhatsapp } from "./whatsapp";
 
 const ASUNTOS_DEFAULT: Record<TipoNotificacionCliente, string> = {
   cotizacion_enviada: "Tu cotización de {empresa}",
@@ -36,6 +45,18 @@ const CUERPOS_DEFAULT: Record<TipoNotificacionCliente, string> = {
     "<p>Hola {cliente}, tienes una cita agendada con {empresa} el {fecha}{hora}. Confírmala o cancélala desde tu portal.</p>",
 };
 
+// Mismo contenido que CUERPOS_DEFAULT pero en texto plano (sin HTML) —
+// WhatsApp no renderiza etiquetas.
+const WHATSAPP_DEFAULT: Record<TipoNotificacionCliente, string> = {
+  cotizacion_enviada: "Hola {cliente}, te enviamos tu cotización de {empresa}.",
+  cotizacion_por_vencer: "Hola {cliente}, tu cotización de {empresa} vence el {fecha} — contáctanos si tienes dudas.",
+  tecnico_en_camino: "Hola {cliente}, nuestro técnico {tecnico} va en camino a tu dirección.",
+  os_completada: "Hola {cliente}, tu servicio con {empresa} fue completado.",
+  cobro_pendiente: "Hola {cliente}, tienes un cobro pendiente de {monto} con vencimiento el {fecha}.",
+  cobro_vencido: "Hola {cliente}, tu cobro de {monto} venció el {fecha}. Contáctanos para regularizarlo.",
+  cita_agendada: "Hola {cliente}, tienes una cita agendada con {empresa} el {fecha}{hora}. Confírmala o cancélala desde tu portal.",
+};
+
 // Algunos eventos comparten el mismo "tipo" de mensaje personalizado
 // (ej. cobro pendiente y vencido usan el mismo texto de "cobranza").
 const TIPO_MENSAJE: Record<TipoNotificacionCliente, TipoMensajePersonalizado> = {
@@ -48,11 +69,13 @@ const TIPO_MENSAJE: Record<TipoNotificacionCliente, TipoMensajePersonalizado> = 
   cita_agendada: "cita_agendada",
 };
 
-function activado(config: NotificacionesConfig | null, tipo: TipoNotificacionCliente): boolean {
+// "¿Este TIPO de evento está prendido?" — independiente del canal (el
+// canal se apaga/prende aparte, ver correoActivado/whatsappActivado
+// más abajo). Antes este chequeo venía mezclado con correo_activado.
+function tipoActivado(config: NotificacionesConfig | null, tipo: TipoNotificacionCliente): boolean {
   // Sin fila de config = todavía nadie tocó Configuración > Notificaciones
   // — mismo criterio que notificar() interno: por defecto activado.
   if (!config) return true;
-  if (!config.correo_activado) return false;
   switch (tipo) {
     case "cotizacion_enviada":
       return config.cotizacion_enviada;
@@ -77,6 +100,7 @@ async function registrar(
   destinatario: string,
   entidadTipo: EntidadNotificacionCliente,
   entidadId: string,
+  canal: CanalNotificacionCliente,
   exito: boolean,
   error: string | null
 ): Promise<void> {
@@ -86,6 +110,7 @@ async function registrar(
     destinatario,
     entidad_tipo: entidadTipo,
     entidad_id: entidadId,
+    canal,
     exito,
     error,
   });
@@ -94,7 +119,7 @@ async function registrar(
 
 // Eventos que apuntan a un documento concreto que vale la pena poder
 // revisar de nuevo después — se les agrega un link al Portal de
-// Cliente en el correo. "técnico en camino" queda afuera: es un aviso
+// Cliente en el aviso. "técnico en camino" queda afuera: es un aviso
 // de estado, no un documento.
 const ENTIDAD_PORTAL: Partial<Record<TipoNotificacionCliente, "trabajo" | "cotizacion" | "factura" | "tarea">> = {
   cotizacion_enviada: "cotizacion",
@@ -132,29 +157,22 @@ export type OpcionesNotificarCliente = {
   entidadId: string;
   variables: Record<string, string>;
   adjunto?: { filename: string; buffer: Buffer };
+  // Si viene y el canal WhatsApp está activado para la empresa, se
+  // manda también por WhatsApp — independiente de si hay correo.
+  telefono?: string | null;
 };
 
-export async function notificarCliente(
+async function enviarPorCorreo(
   empresaId: string,
   tipo: TipoNotificacionCliente,
   destinatario: string,
-  opciones: OpcionesNotificarCliente
+  opciones: OpcionesNotificarCliente,
+  personalizado: { asunto_correo: string | null; cuerpo_correo: string | null } | null,
+  url: string | null
 ): Promise<void> {
   try {
-    const { data: config } = await supabase.from("notificaciones_config").select("*").eq("empresa_id", empresaId).maybeSingle();
-    if (!activado(config, tipo)) return;
-
-    const { data: personalizado } = await supabase
-      .from("mensajes_personalizados")
-      .select("asunto_correo, cuerpo_correo")
-      .eq("empresa_id", empresaId)
-      .eq("tipo", TIPO_MENSAJE[tipo])
-      .maybeSingle();
-
     const asunto = sustituirVariables(personalizado?.asunto_correo || ASUNTOS_DEFAULT[tipo], opciones.variables);
     let cuerpo = sustituirVariables(personalizado?.cuerpo_correo || CUERPOS_DEFAULT[tipo], opciones.variables);
-
-    const url = await linkPortal(empresaId, opciones.clienteId, tipo, opciones.entidadId);
     if (url) {
       cuerpo += `<p style="margin-top:20px;"><a href="${url}" style="display:inline-block;padding:10px 18px;background:#4338ca;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;">Ver en mi portal</a></p>`;
     }
@@ -170,10 +188,53 @@ export async function notificarCliente(
     }
 
     await enviarConReintento(body, tipo);
-    await registrar(empresaId, tipo, destinatario, opciones.entidadTipo, opciones.entidadId, true, null);
+    await registrar(empresaId, tipo, destinatario, opciones.entidadTipo, opciones.entidadId, "correo", true, null);
   } catch (err) {
     const mensaje = err instanceof Error ? err.message : String(err);
-    console.error(`Error notificando al cliente (${tipo}):`, mensaje);
-    await registrar(empresaId, tipo, destinatario, opciones.entidadTipo, opciones.entidadId, false, mensaje);
+    console.error(`Error notificando al cliente por correo (${tipo}):`, mensaje);
+    await registrar(empresaId, tipo, destinatario, opciones.entidadTipo, opciones.entidadId, "correo", false, mensaje);
+  }
+}
+
+async function enviarPorWhatsapp(
+  empresaId: string,
+  tipo: TipoNotificacionCliente,
+  telefono: string,
+  opciones: OpcionesNotificarCliente,
+  mensajeWhatsapp: string | null | undefined,
+  url: string | null
+): Promise<void> {
+  let texto = sustituirVariables(mensajeWhatsapp || WHATSAPP_DEFAULT[tipo], opciones.variables);
+  if (url) texto += `\n\nVer más: ${url}`;
+  const resultado = await enviarMensajeWhatsapp(telefono, texto);
+  await registrar(empresaId, tipo, telefono, opciones.entidadTipo, opciones.entidadId, "whatsapp", resultado.ok, resultado.error ?? null);
+}
+
+export async function notificarCliente(
+  empresaId: string,
+  tipo: TipoNotificacionCliente,
+  destinatario: string | null,
+  opciones: OpcionesNotificarCliente
+): Promise<void> {
+  const { data: config } = await supabase.from("notificaciones_config").select("*").eq("empresa_id", empresaId).maybeSingle();
+  if (!tipoActivado(config, tipo)) return;
+
+  const { data: personalizado } = await supabase
+    .from("mensajes_personalizados")
+    .select("asunto_correo, cuerpo_correo, mensaje_whatsapp")
+    .eq("empresa_id", empresaId)
+    .eq("tipo", TIPO_MENSAJE[tipo])
+    .maybeSingle();
+
+  const url = await linkPortal(empresaId, opciones.clienteId, tipo, opciones.entidadId);
+
+  const correoActivado = config?.correo_activado ?? true;
+  const whatsappActivado = config?.whatsapp_activado ?? true;
+
+  if (destinatario && correoActivado) {
+    await enviarPorCorreo(empresaId, tipo, destinatario, opciones, personalizado, url);
+  }
+  if (opciones.telefono && whatsappActivado) {
+    await enviarPorWhatsapp(empresaId, tipo, opciones.telefono, opciones, personalizado?.mensaje_whatsapp, url);
   }
 }

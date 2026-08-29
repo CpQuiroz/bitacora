@@ -2,10 +2,10 @@ import { Router } from "express";
 import type { EstadoTarea, Prioridad, Tarea } from "@bitacora/shared";
 import { supabase } from "../supabase";
 import { notificar } from "../notificar";
-import { notificarCliente } from "../notificarCliente";
+import { avisarCitaAgendada } from "../agendaProAvisos";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
-import { requiereModulo, empresaTieneModulo } from "../permisos";
+import { requiereModulo } from "../permisos";
 
 export const tareasRouter = Router();
 
@@ -128,31 +128,12 @@ tareasRouter.post(
       });
     }
 
-    // Aviso de cita al cliente — solo si la empresa tiene Agenda Pro y
-    // el cliente tiene correo. No bloquea la respuesta si falla (mismo
-    // criterio que "técnico en camino" en trabajos.ts).
+    // Aviso de cita al cliente (correo y/o WhatsApp según lo que tenga
+    // y lo que esté activado) — solo si la empresa tiene Agenda Pro. No
+    // bloquea la respuesta si falla (mismo criterio que "técnico en
+    // camino" en trabajos.ts).
     if (data.cliente_id) {
-      const clienteIdTarea = data.cliente_id;
-      void (async () => {
-        if (!(await empresaTieneModulo(req.empresaId!, "agenda_pro"))) return;
-        // tenant-ok: clienteIdTarea === data.cliente_id, ya validado por
-        // clienteExiste(req.empresaId!, cliente_id) más arriba en este
-        // mismo handler antes del insert.
-        const { data: cliente } = await supabase.from("clientes").select("nombre, correo").eq("id", clienteIdTarea).maybeSingle();
-        if (!cliente?.correo) return;
-        const { data: empresa } = await supabase.from("empresas").select("nombre").eq("id", req.empresaId!).single();
-        await notificarCliente(req.empresaId!, "cita_agendada", cliente.correo, {
-          clienteId: clienteIdTarea,
-          entidadTipo: "tarea",
-          entidadId: data.id,
-          variables: {
-            cliente: cliente.nombre ?? "",
-            empresa: empresa?.nombre ?? "",
-            fecha: data.fecha,
-            hora: data.hora ? ` a las ${data.hora}` : "",
-          },
-        });
-      })();
+      void avisarCitaAgendada(req.empresaId!, data.id, data.fecha, data.hora, data.cliente_id);
     }
 
     res.status(201).json(data);

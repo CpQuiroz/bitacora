@@ -32,10 +32,16 @@ export function verificarFirmaWebhook(rawBody: Buffer, firmaHeader: string | und
   }
 }
 
-export async function enviarMensajeWhatsapp(to: string, texto: string): Promise<void> {
+// Devuelve { ok, error } en vez de lanzar — mismo criterio "no-throw"
+// del resto del archivo, pero el resultado sí se propaga (a diferencia
+// de antes) para que un llamador que necesite registrar el intento
+// (ej. notificarCliente.ts) pueda distinguir éxito de fallo sin tener
+// que duplicar la llamada a fetch.
+export async function enviarMensajeWhatsapp(to: string, texto: string): Promise<{ ok: boolean; error?: string }> {
   if (!env.WHATSAPP_ACCESS_TOKEN || !env.WHATSAPP_PHONE_NUMBER_ID) {
-    console.warn("WhatsApp no configurado — se omite el envío de:", texto);
-    return;
+    const error = "WhatsApp no configurado (falta WHATSAPP_ACCESS_TOKEN/WHATSAPP_PHONE_NUMBER_ID)";
+    console.warn(`${error} — se omite el envío de:`, texto);
+    return { ok: false, error };
   }
   try {
     const res = await fetch(`${GRAPH_URL}/${env.WHATSAPP_PHONE_NUMBER_ID}/messages`, {
@@ -52,10 +58,14 @@ export async function enviarMensajeWhatsapp(to: string, texto: string): Promise<
       }),
     });
     if (!res.ok) {
-      console.error("Error enviando mensaje de WhatsApp:", res.status, await res.text().catch(() => ""));
+      const detalle = await res.text().catch(() => "");
+      console.error("Error enviando mensaje de WhatsApp:", res.status, detalle);
+      return { ok: false, error: `Meta respondió ${res.status}: ${detalle.slice(0, 200)}` };
     }
+    return { ok: true };
   } catch (err) {
     console.error("Error de red enviando mensaje de WhatsApp:", err);
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
   }
 }
 

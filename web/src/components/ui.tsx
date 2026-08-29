@@ -175,6 +175,9 @@ const badgeStyles: Record<string, string> = {
   // paquetes de sesiones (Agenda Pro): saldo restante
   disponible: "bg-success-soft text-success",
   agotado: "bg-danger-soft text-danger",
+  // notificaciones al cliente: canal de envío
+  correo: "bg-brand-soft text-brand",
+  whatsapp: "bg-success-soft text-success",
 };
 
 export function Badge({ value }: { value: string }) {

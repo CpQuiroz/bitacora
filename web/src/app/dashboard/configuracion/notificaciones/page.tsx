@@ -73,7 +73,6 @@ export default function NotificacionesPage() {
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
-  const [whatsappConectado, setWhatsappConectado] = useState(false);
 
   const [historial, setHistorial] = useState<NotificacionClienteLog[] | null>(null);
   const [errorHistorial, setErrorHistorial] = useState<string | null>(null);
@@ -81,7 +80,7 @@ export default function NotificacionesPage() {
 
   const cargar = useCallback(async () => {
     setError(null);
-    const [res, resIntegraciones] = await Promise.all([apiFetch("/api/notificaciones"), apiFetch("/api/integraciones")]);
+    const res = await apiFetch("/api/notificaciones");
     if (!res.ok) {
       setError("No se pudo cargar la configuración");
       return;
@@ -89,10 +88,6 @@ export default function NotificacionesPage() {
     const body = await res.json();
     setConfig(body.config);
     setMensajes(body.mensajes);
-    if (resIntegraciones.ok) {
-      const lista = await resIntegraciones.json();
-      setWhatsappConectado(Boolean(lista.find((i: { proveedor: string; conectado: boolean }) => i.proveedor === "whatsapp")?.conectado));
-    }
   }, []);
 
   const cargarHistorial = useCallback(async () => {
@@ -133,6 +128,7 @@ export default function NotificacionesPage() {
       method: "PATCH",
       body: JSON.stringify({
         correo_activado: config.correo_activado,
+        whatsapp_activado: config.whatsapp_activado,
         cotizacion_creada: config.cotizacion_creada,
         cotizacion_enviada: config.cotizacion_enviada,
         cotizacion_aprobada: config.cotizacion_aprobada,
@@ -145,6 +141,7 @@ export default function NotificacionesPage() {
         cobranza_recibida: config.cobranza_recibida,
         cobro_pendiente: config.cobro_pendiente,
         cobranza_atrasada: config.cobranza_atrasada,
+        cita_agendada: config.cita_agendada,
       }),
     });
     setGuardando(false);
@@ -257,17 +254,41 @@ export default function NotificacionesPage() {
 
       {tab === "whatsapp" && (
         <Card>
-          <p className="text-sm text-foreground">
-            {whatsappConectado ? "WhatsApp está conectado." : "WhatsApp todavía no está conectado."}
+          <div className="mb-5 flex items-center justify-between">
+            <div>
+              <p className="font-medium text-foreground">Notificaciones por WhatsApp</p>
+              <p className="text-sm text-muted">Apaga esto para silenciar todos los avisos por WhatsApp a clientes.</p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={config.whatsapp_activado}
+              onClick={() => actualizarToggle("whatsapp_activado", !config.whatsapp_activado)}
+              className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${config.whatsapp_activado ? "bg-brand" : "bg-border"}`}
+            >
+              <span
+                className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${config.whatsapp_activado ? "translate-x-5" : "translate-x-0.5"}`}
+              />
+            </button>
+          </div>
+          <p className="text-sm text-muted">
+            Usa los mismos eventos que ya prendiste en la pestaña Correo — un cliente con teléfono recibe el aviso por
+            WhatsApp además del correo (o en su lugar, si no dejó correo). Edita el texto del mensaje en “Mensajes
+            personalizados” más abajo.
           </p>
-          <p className="mt-1 text-sm text-muted">
-            Los envíos por WhatsApp usan los mismos eventos configurados en la pestaña Correo — conecta la integración
-            en{" "}
-            <a href="/dashboard/configuracion/integraciones" className="font-medium text-brand hover:underline">
-              Integraciones
-            </a>{" "}
-            y edita el texto del mensaje en “Mensajes personalizados” más abajo.
-          </p>
+          {error && (
+            <div className="mt-4">
+              <ErrorText>{error}</ErrorText>
+            </div>
+          )}
+          {aviso && (
+            <div className="mt-4">
+              <SuccessText>{aviso}</SuccessText>
+            </div>
+          )}
+          <Button type="button" onClick={onGuardarPreferencias} disabled={guardando} className="mt-4">
+            {guardando ? "Guardando…" : "Guardar"}
+          </Button>
         </Card>
       )}
 
@@ -317,6 +338,7 @@ export default function NotificacionesPage() {
               loading={historial === null && !errorHistorial}
               columns={[
                 { header: "Evento", cell: (h) => ETIQUETA_TIPO_LOG[h.tipo] ?? h.tipo },
+                { header: "Canal", cell: (h) => <Badge value={h.canal} /> },
                 { header: "Destinatario", cell: (h) => <span className="text-muted">{h.destinatario}</span> },
                 { header: "Fecha", cell: (h) => <span className="text-muted">{new Date(h.creado_en).toLocaleString("es-CL")}</span> },
                 { header: "Estado", cell: (h) => <Badge value={h.exito ? "exito" : "fallido"} /> },

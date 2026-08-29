@@ -64,6 +64,7 @@ notificacionesRouter.patch(
       "tecnico_en_camino",
       "cobro_pendiente",
       "cita_agendada",
+      "whatsapp_activado",
     ];
     const cambios: Partial<NotificacionesConfig> = { actualizado_en: new Date().toISOString() };
     for (const campo of camposBooleanos) {

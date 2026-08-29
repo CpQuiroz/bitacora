@@ -10,6 +10,7 @@ import type { TipoNotificacionCliente } from "@bitacora/shared";
 import { supabase } from "../supabase";
 import { requiereModulo } from "../permisos";
 import { notificarCliente } from "../notificarCliente";
+import { avisarCitaAgendada } from "../agendaProAvisos";
 import { armarDatosPdfCotizacion } from "./cotizaciones";
 import { generarPdfCotizacion } from "../generarPdfCotizacion";
 import { armarDatosPdf } from "./trabajos";
@@ -103,6 +104,22 @@ notificacionesClienteRouter.post(
         entidadId: fila.entidad_id,
         variables: { cliente: trabajo.cliente, tecnico, empresa: empresa?.nombre ?? "" },
       });
+    } else if (tipo === "cita_agendada") {
+      // No existía rama para este tipo — el botón "Reenviar" quedaba en
+      // no-op silencioso. Reusa avisarCitaAgendada tal cual (reintenta
+      // ambos canales configurados, no solo el que falló — aceptable
+      // acá, evita duplicar la lógica de armar variables/canal por canal).
+      const { data: tarea } = await supabase
+        .from("tareas")
+        .select("fecha, hora, cliente_id")
+        .eq("empresa_id", req.empresaId!)
+        .eq("id", fila.entidad_id)
+        .maybeSingle();
+      if (!tarea || !tarea.cliente_id) {
+        res.status(404).json({ error: "La cita ya no existe" });
+        return;
+      }
+      await avisarCitaAgendada(req.empresaId!, fila.entidad_id, tarea.fecha, tarea.hora, tarea.cliente_id);
     } else if (tipo === "cobro_pendiente" || tipo === "cobro_vencido") {
       const { data: factura } = await supabase
         .from("facturas")
