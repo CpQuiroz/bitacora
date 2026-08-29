@@ -21,10 +21,12 @@ import {
   IconLogOut,
   IconMapPin,
   IconMenu,
-  IconPaperclip,
+  IconReceipt,
+  IconRoute,
   IconSettings,
   IconShield,
   IconSparkle,
+  IconTag,
   IconTruck,
   IconUsers,
   IconWallet,
@@ -34,60 +36,84 @@ type NavLeaf = { href: string; label: string };
 type NavItem =
   | { href: string; label: string; icon: typeof IconHome; modulo: Modulo | null; children?: undefined }
   | { label: string; icon: typeof IconHome; children: NavLeaf[]; modulo: Modulo | null; href?: undefined };
+type NavGroup = { titulo: string; items: NavItem[] };
 
 // modulo: null = siempre visible (la página misma decide qué mostrarle a
 // cada rol, ej. Dashboard). Todo lo demás se filtra con puedeVerModulo.
-const NAV: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", icon: IconHome, modulo: null },
-  { href: "/dashboard/mis-documentos", label: "Mis Documentos", icon: IconPaperclip, modulo: null },
-  { href: "/dashboard/agenda", label: "Agenda", icon: IconCalendar, modulo: "agenda" },
+// Agrupado en bloques visuales (encabezado sutil, no acordeón) — un grupo
+// entero se oculta si ningún ítem suyo es visible para el rol actual.
+const NAV_GROUPS: NavGroup[] = [
   {
-    label: "Órdenes de Trabajo/Servicio",
-    icon: IconClipboardCheck,
-    modulo: "ordenes_servicio",
-    children: [
-      { href: "/dashboard/ordenes", label: "Todas las OS" },
-      { href: "/dashboard/ordenes/nueva", label: "Nueva OS" },
-      { href: "/dashboard/trabajos", label: "Trabajos" },
-      { href: "/dashboard/rutas", label: "Rutas" },
-    ],
-  },
-  { href: "/dashboard/viajes", label: "Viajes", icon: IconTruck, modulo: "viajes" },
-  {
-    label: "Registros",
-    icon: IconMapPin,
-    modulo: "registros",
-    children: [
-      { href: "/dashboard/registros/clientes", label: "Clientes" },
-      { href: "/dashboard/registros/equipos", label: "Equipos" },
-      { href: "/dashboard/registros/catalogo", label: "Catálogo" },
-      { href: "/dashboard/registros/inventario", label: "Inventario" },
-      { href: "/dashboard/registros/proveedores", label: "Proveedores" },
+    titulo: "Operación",
+    items: [
+      { href: "/dashboard", label: "Dashboard", icon: IconHome, modulo: null },
+      { href: "/dashboard/agenda", label: "Agenda", icon: IconCalendar, modulo: "agenda" },
+      {
+        label: "Órdenes de Servicio",
+        icon: IconClipboardCheck,
+        modulo: "ordenes_servicio",
+        children: [
+          { href: "/dashboard/ordenes", label: "Todas las OS" },
+          { href: "/dashboard/ordenes/nueva", label: "Nueva OS" },
+          { href: "/dashboard/trabajos", label: "Trabajos" },
+        ],
+      },
+      // Módulo propio "rutas" (distinto de "ordenes_servicio") — antes vivía
+      // anidado dentro de Órdenes de Servicio y se gateaba con el módulo del
+      // padre, no el suyo.
+      { href: "/dashboard/rutas", label: "Rutas", icon: IconRoute, modulo: "rutas" },
+      { href: "/dashboard/viajes", label: "Viajes", icon: IconTruck, modulo: "viajes" },
     ],
   },
   {
-    label: "Financiero",
-    icon: IconWallet,
-    modulo: "financiero",
-    children: [
-      { href: "/dashboard/financiero/cotizaciones", label: "Cotizaciones" },
-      { href: "/dashboard/gastos", label: "Gastos" },
-      { href: "/dashboard/financiero/cobros", label: "Cobros" },
+    titulo: "Datos",
+    items: [
+      {
+        label: "Registros",
+        icon: IconMapPin,
+        modulo: "registros",
+        children: [
+          { href: "/dashboard/registros/clientes", label: "Clientes" },
+          { href: "/dashboard/registros/equipos", label: "Equipos" },
+          { href: "/dashboard/registros/catalogo", label: "Catálogo" },
+          { href: "/dashboard/registros/inventario", label: "Inventario" },
+          { href: "/dashboard/registros/proveedores", label: "Proveedores" },
+        ],
+      },
+      {
+        label: "Flota",
+        icon: IconUsers,
+        modulo: "flota",
+        children: [
+          { href: "/dashboard/flota/colaboradores", label: "Colaboradores" },
+          { href: "/dashboard/flota/vehiculos", label: "Vehículos" },
+          { href: "/dashboard/flota/documentos-por-vencer", label: "Documentos por vencer" },
+        ],
+      },
     ],
   },
   {
-    label: "Flota",
-    icon: IconUsers,
-    modulo: "flota",
-    children: [
-      { href: "/dashboard/flota/colaboradores", label: "Colaboradores" },
-      { href: "/dashboard/flota/vehiculos", label: "Vehículos" },
-      { href: "/dashboard/flota/documentos-por-vencer", label: "Documentos por vencer" },
+    titulo: "Financiero",
+    items: [
+      { href: "/dashboard/financiero/cotizaciones", label: "Cotizaciones", icon: IconTag, modulo: "financiero" },
+      { href: "/dashboard/gastos", label: "Gastos", icon: IconWallet, modulo: "financiero" },
+      { href: "/dashboard/financiero/cobros", label: "Cobros", icon: IconReceipt, modulo: "financiero" },
     ],
   },
-  { href: "/dashboard/informes", label: "Informes", icon: IconSparkle, modulo: "informes" },
-  { href: "/dashboard/informe", label: "Informe IA", icon: IconChat, modulo: "informe_ia" },
-  { href: "/dashboard/equipo", label: "Gestión y Control", icon: IconShield, modulo: "gestion_control" },
+  {
+    titulo: "Análisis",
+    items: [
+      { href: "/dashboard/informes", label: "Informes", icon: IconSparkle, modulo: "informes" },
+      { href: "/dashboard/informe", label: "Generar con IA", icon: IconChat, modulo: "informe_ia" },
+    ],
+  },
+  {
+    titulo: "Administración",
+    items: [
+      { href: "/dashboard/equipo", label: "Gestión y Control", icon: IconShield, modulo: "gestion_control" },
+      { href: "/dashboard/configuracion/cuenta", label: "Configuración", icon: IconSettings, modulo: null },
+    ],
+  },
 ];
 
 export type UsuarioShell = {
@@ -134,7 +160,7 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
   useEffect(() => {
     setGruposAbiertos((prev) => {
       const next = new Set(prev);
-      for (const item of NAV) {
+      for (const item of NAV_GROUPS.flatMap((g) => g.items)) {
         if (item.children?.some((c) => pathname.startsWith(c.href))) next.add(item.label);
       }
       return next;
@@ -189,12 +215,47 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
     router.push("/login");
   }
 
-  const navVisible = NAV.filter((item) => item.modulo === null || puedeVerModulo(usuario.rol, item.modulo));
+  // Un grupo entero se oculta si, tras filtrar por módulo, no le queda
+  // ningún ítem visible (ej. "Datos" para un rol contador) — nunca se
+  // muestra un encabezado de sección flotando sin nada debajo.
+  const gruposVisibles = NAV_GROUPS.map((g) => ({
+    ...g,
+    items: g.items.filter((item) => item.modulo === null || puedeVerModulo(usuario.rol, item.modulo)),
+  })).filter((g) => g.items.length > 0);
+
+  function esActivoLeaf(href: string): boolean {
+    if (href === "/dashboard") return pathname === "/dashboard";
+    // Configuración enlaza a /cuenta pero debe verse activo en cualquiera
+    // de sus subsecciones (seguridad, empresa, plantillas, etc.).
+    if (href === "/dashboard/configuracion/cuenta") return pathname.startsWith("/dashboard/configuracion");
+    return pathname.startsWith(href);
+  }
 
   function renderNav(compacto: boolean) {
     return (
       <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-2 py-3">
-        {navVisible.map((item) => {
+        {gruposVisibles.map((grupo, i) =>
+          compacto ? (
+            <div key={grupo.titulo} className={i > 0 ? "mt-2 border-t border-border pt-2" : ""}>
+              {renderItems(grupo.items, compacto)}
+            </div>
+          ) : (
+            <div key={grupo.titulo}>
+              <p className={`px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted ${i > 0 ? "pt-4" : "pt-1"}`}>
+                {grupo.titulo}
+              </p>
+              {renderItems(grupo.items, compacto)}
+            </div>
+          )
+        )}
+      </nav>
+    );
+  }
+
+  function renderItems(items: NavItem[], compacto: boolean) {
+    return (
+      <div className="flex flex-col gap-0.5">
+        {items.map((item) => {
           if (item.children) {
             const activo = item.children.some((c) => pathname.startsWith(c.href));
             const abierto = !compacto && (gruposAbiertos.has(item.label) || activo);
@@ -238,7 +299,7 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
               </div>
             );
           }
-          const activo = item.href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(item.href);
+          const activo = esActivoLeaf(item.href);
           return (
             <Link
               key={item.href}
@@ -254,24 +315,6 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
             </Link>
           );
         })}
-      </nav>
-    );
-  }
-
-  function renderPie(compacto: boolean) {
-    return (
-      <div className="flex flex-col gap-0.5 border-t border-border p-2">
-        <Link
-          href="/dashboard/configuracion/cuenta"
-          onClick={() => setMenuMovilAbierto(false)}
-          title={compacto ? "Configuración" : undefined}
-          className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-            pathname.startsWith("/dashboard/configuracion") ? "bg-brand-soft text-brand" : "text-muted hover:bg-brand-soft hover:text-brand"
-          }`}
-        >
-          <IconSettings className="h-4.5 w-4.5 shrink-0" />
-          {!compacto && "Configuración"}
-        </Link>
       </div>
     );
   }
@@ -295,7 +338,6 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
         </Link>
 
         {renderNav(colapsado)}
-        {renderPie(colapsado)}
 
         <button
           type="button"
@@ -322,7 +364,6 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
               <span className="truncate text-sm font-semibold text-foreground">{usuario.empresaNombre}</span>
             </Link>
             {renderNav(false)}
-            {renderPie(false)}
           </aside>
         </div>
       )}
