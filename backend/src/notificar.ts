@@ -17,6 +17,7 @@ const TITULOS: Record<TipoNotificacion, string> = {
   licencia_por_vencer: "Licencia próxima a vencer",
   email_fallido: "No se pudo enviar un correo",
   cotizacion_aprobada: "Cotización aprobada por el cliente",
+  tarea_asignada: "Nueva tarea de agenda asignada",
 };
 
 export async function notificar(

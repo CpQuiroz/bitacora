@@ -1,14 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { OrdenServicio, Trabajo } from "@bitacora/shared";
+import type { Cliente, EstadoTarea, OrdenServicio, Prioridad, Tarea, Trabajo, Usuario } from "@bitacora/shared";
+import { puedeVerModulo } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Badge, Card, ErrorText, buttonClass } from "@/components/ui";
-import { IconCalendar, IconChevronLeft, IconChevronRight, IconPlus } from "@/components/icons";
+import { Badge, Button, Card, ErrorText, Input, Label, Select, Textarea, buttonClass } from "@/components/ui";
+import { IconCalendar, IconChevronLeft, IconChevronRight, IconClipboardCheck, IconPlus } from "@/components/icons";
 
 type OrdenListado = Trabajo & {
   cliente_info: { nombre: string } | null;
@@ -16,7 +17,23 @@ type OrdenListado = Trabajo & {
   orden: OrdenServicio | null;
 };
 
+type TareaListado = Tarea & {
+  cliente: { nombre: string } | null;
+  responsable: { nombre: string } | null;
+};
+
 type EstadoAgenda = "agendado" | "en_progreso" | "completado" | "cancelado";
+
+type EventoAgenda = {
+  id: string;
+  tipo: "os" | "tarea";
+  fecha: string;
+  hora: string | null;
+  estadoAgenda: EstadoAgenda;
+  titulo: string;
+  subtitulo: string;
+  origen: OrdenListado | TareaListado;
+};
 
 const ESTADOS_AGENDA: { valor: EstadoAgenda; etiqueta: string; clase: string }[] = [
   { valor: "agendado", etiqueta: "Agendado", clase: "bg-brand-soft text-brand" },
@@ -24,6 +41,14 @@ const ESTADOS_AGENDA: { valor: EstadoAgenda; etiqueta: string; clase: string }[]
   { valor: "completado", etiqueta: "Completado", clase: "bg-success-soft text-success" },
   { valor: "cancelado", etiqueta: "Cancelado", clase: "bg-danger-soft text-danger" },
 ];
+
+const ESTADO_TAREA_A_AGENDA: Record<EstadoTarea, EstadoAgenda> = {
+  pendiente: "agendado",
+  completada: "completado",
+  cancelada: "cancelado",
+};
+
+const PRIORIDADES: Prioridad[] = ["alta", "media", "baja"];
 
 // Estado "de agenda" derivado — no es una columna propia, se calcula a
 // partir de trabajos.estado + ordenes_servicio.estado_os, que ya cubren
@@ -35,6 +60,32 @@ function estadoAgendaDe(t: OrdenListado): EstadoAgenda {
     return "completado";
   }
   return "agendado";
+}
+
+function eventoDeOrden(o: OrdenListado): EventoAgenda {
+  return {
+    id: o.id,
+    tipo: "os",
+    fecha: o.fecha,
+    hora: o.hora_programada,
+    estadoAgenda: estadoAgendaDe(o),
+    titulo: o.cliente_info?.nombre ?? o.cliente,
+    subtitulo: o.responsable?.nombre ?? "—",
+    origen: o,
+  };
+}
+
+function eventoDeTarea(t: TareaListado): EventoAgenda {
+  return {
+    id: t.id,
+    tipo: "tarea",
+    fecha: t.fecha,
+    hora: t.hora,
+    estadoAgenda: ESTADO_TAREA_A_AGENDA[t.estado],
+    titulo: t.titulo,
+    subtitulo: t.cliente?.nombre ?? t.responsable?.nombre ?? "—",
+    origen: t,
+  };
 }
 
 // Evita el desfase de un día que da toISOString() (usa UTC) al convertir
@@ -63,21 +114,41 @@ export default function AgendaPage() {
   const [vista, setVista] = useState<"mes" | "dia">("mes");
   const [fechaActual, setFechaActual] = useState(() => new Date());
   const [ordenes, setOrdenes] = useState<OrdenListado[] | null>(null);
+  const [tareas, setTareas] = useState<TareaListado[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [filtros, setFiltros] = useState<Set<EstadoAgenda>>(new Set());
   const [diaSeleccionado, setDiaSeleccionado] = useState<string | null>(null);
+
+  const [formTareaAbierto, setFormTareaAbierto] = useState(false);
+  const [tareaEditandoId, setTareaEditandoId] = useState<string | null>(null);
+  const [tituloTarea, setTituloTarea] = useState("");
+  const [descripcionTarea, setDescripcionTarea] = useState("");
+  const [fechaTarea, setFechaTarea] = useState("");
+  const [horaTarea, setHoraTarea] = useState("");
+  const [clienteIdTarea, setClienteIdTarea] = useState("");
+  const [responsableIdTarea, setResponsableIdTarea] = useState("");
+  const [prioridadTarea, setPrioridadTarea] = useState<Prioridad>("media");
+  const [estadoTarea, setEstadoTarea] = useState<EstadoTarea>("pendiente");
+  const [guardandoTarea, setGuardandoTarea] = useState(false);
+  const [errorTarea, setErrorTarea] = useState<string | null>(null);
+  const [clientesOpciones, setClientesOpciones] = useState<Cliente[]>([]);
+  const [usuariosOpciones, setUsuariosOpciones] = useState<Usuario[]>([]);
 
   const cargar = useCallback(async () => {
     setError(null);
     const primerDia = new Date(fechaActual.getFullYear(), fechaActual.getMonth(), 1);
     const ultimoDia = new Date(fechaActual.getFullYear(), fechaActual.getMonth() + 1, 0);
     const params = new URLSearchParams({ desde: fmtLocal(primerDia), hasta: fmtLocal(ultimoDia) });
-    const res = await apiFetch(`/api/ordenes-servicio?${params.toString()}`);
-    if (!res.ok) {
+    const [resOrdenes, resTareas] = await Promise.all([
+      apiFetch(`/api/ordenes-servicio?${params.toString()}`),
+      apiFetch(`/api/tareas?${params.toString()}`),
+    ]);
+    if (!resOrdenes.ok) {
       setError("No se pudieron cargar las órdenes de servicio");
       return;
     }
-    setOrdenes(await res.json());
+    setOrdenes(await resOrdenes.json());
+    if (resTareas.ok) setTareas(await resTareas.json());
   }, [fechaActual]);
 
   useEffect(() => {
@@ -110,24 +181,27 @@ export default function AgendaPage() {
     cargar();
   }, [cargar]);
 
-  const ordenesFiltradas = useMemo(() => {
-    if (!ordenes) return [];
-    if (filtros.size === 0) return ordenes;
-    return ordenes.filter((o) => filtros.has(estadoAgendaDe(o)));
-  }, [ordenes, filtros]);
+  const eventos = useMemo(() => {
+    return [...(ordenes ?? []).map(eventoDeOrden), ...(tareas ?? []).map(eventoDeTarea)];
+  }, [ordenes, tareas]);
 
-  const ordenesPorDia = useMemo(() => {
-    const mapa = new Map<string, OrdenListado[]>();
-    for (const o of ordenesFiltradas) {
-      const lista = mapa.get(o.fecha) ?? [];
-      lista.push(o);
-      mapa.set(o.fecha, lista);
+  const eventosFiltrados = useMemo(() => {
+    if (filtros.size === 0) return eventos;
+    return eventos.filter((e) => filtros.has(e.estadoAgenda));
+  }, [eventos, filtros]);
+
+  const eventosPorDia = useMemo(() => {
+    const mapa = new Map<string, EventoAgenda[]>();
+    for (const e of eventosFiltrados) {
+      const lista = mapa.get(e.fecha) ?? [];
+      lista.push(e);
+      mapa.set(e.fecha, lista);
     }
     for (const lista of mapa.values()) {
-      lista.sort((a, b) => (a.hora_programada ?? "").localeCompare(b.hora_programada ?? ""));
+      lista.sort((a, b) => (a.hora ?? "").localeCompare(b.hora ?? ""));
     }
     return mapa;
-  }, [ordenesFiltradas]);
+  }, [eventosFiltrados]);
 
   function alternarFiltro(estado: EstadoAgenda) {
     setFiltros((prev) => {
@@ -150,8 +224,99 @@ export default function AgendaPage() {
     });
   }
 
+  async function cargarOpcionesFormTarea() {
+    if (clientesOpciones.length > 0 && usuariosOpciones.length > 0) return;
+    const [resClientes, resUsuarios] = await Promise.all([apiFetch("/api/clientes"), apiFetch("/api/usuarios")]);
+    if (resClientes.ok) setClientesOpciones(await resClientes.json());
+    if (resUsuarios.ok) setUsuariosOpciones(await resUsuarios.json());
+  }
+
+  function abrirNuevaTarea() {
+    setTareaEditandoId(null);
+    setTituloTarea("");
+    setDescripcionTarea("");
+    setFechaTarea(diaSeleccionado ?? fmtLocal(new Date()));
+    setHoraTarea("");
+    setClienteIdTarea("");
+    setResponsableIdTarea("");
+    setPrioridadTarea("media");
+    setEstadoTarea("pendiente");
+    setErrorTarea(null);
+    setFormTareaAbierto(true);
+    cargarOpcionesFormTarea();
+  }
+
+  function abrirEdicionTarea(t: TareaListado) {
+    setTareaEditandoId(t.id);
+    setTituloTarea(t.titulo);
+    setDescripcionTarea(t.descripcion ?? "");
+    setFechaTarea(t.fecha);
+    setHoraTarea(t.hora ?? "");
+    setClienteIdTarea(t.cliente_id ?? "");
+    setResponsableIdTarea(t.responsable_id ?? "");
+    setPrioridadTarea(t.prioridad);
+    setEstadoTarea(t.estado);
+    setErrorTarea(null);
+    setFormTareaAbierto(true);
+    cargarOpcionesFormTarea();
+  }
+
+  function abrirEvento(e: EventoAgenda) {
+    if (e.tipo === "os") {
+      router.push(`/dashboard/ordenes/${e.id}`);
+    } else {
+      abrirEdicionTarea(e.origen as TareaListado);
+    }
+  }
+
+  async function onGuardarTarea(e: FormEvent) {
+    e.preventDefault();
+    setErrorTarea(null);
+    if (!tituloTarea.trim()) {
+      setErrorTarea("Falta título");
+      return;
+    }
+    if (!fechaTarea) {
+      setErrorTarea("Falta fecha");
+      return;
+    }
+    setGuardandoTarea(true);
+    const body = {
+      titulo: tituloTarea,
+      descripcion: descripcionTarea || null,
+      fecha: fechaTarea,
+      hora: horaTarea || null,
+      cliente_id: clienteIdTarea || null,
+      responsable_id: responsableIdTarea || null,
+      prioridad: prioridadTarea,
+      ...(tareaEditandoId ? { estado: estadoTarea } : {}),
+    };
+    const res = tareaEditandoId
+      ? await apiFetch(`/api/tareas/${tareaEditandoId}`, { method: "PATCH", body: JSON.stringify(body) })
+      : await apiFetch("/api/tareas", { method: "POST", body: JSON.stringify(body) });
+    setGuardandoTarea(false);
+    if (!res.ok) {
+      const b = await res.json().catch(() => ({}));
+      setErrorTarea(b.error ?? "No se pudo guardar la tarea");
+      return;
+    }
+    setFormTareaAbierto(false);
+    cargar();
+  }
+
+  async function onEliminarTarea() {
+    if (!tareaEditandoId) return;
+    if (!confirm("¿Eliminar esta tarea?")) return;
+    const res = await apiFetch(`/api/tareas/${tareaEditandoId}`, { method: "DELETE" });
+    if (res.ok) {
+      setFormTareaAbierto(false);
+      cargar();
+    }
+  }
+
   if (!usuario) return null;
 
+  const puedeGestionarAgenda = puedeVerModulo(usuario.rol, "agenda");
   const hoy = fmtLocal(new Date());
 
   const primerDiaMes = new Date(fechaActual.getFullYear(), fechaActual.getMonth(), 1);
@@ -166,8 +331,8 @@ export default function AgendaPage() {
   const tituloMes = `${NOMBRES_MES[fechaActual.getMonth()]} ${fechaActual.getFullYear()}`;
   const tituloDia = `${fechaActual.getDate()} de ${NOMBRES_MES[fechaActual.getMonth()]}, ${fechaActual.getFullYear()}`;
 
-  const ordenesDiaSeleccionado = diaSeleccionado ? ordenesPorDia.get(diaSeleccionado) ?? [] : [];
-  const ordenesDelDiaVista = vista === "dia" ? ordenesPorDia.get(fmtLocal(fechaActual)) ?? [] : [];
+  const eventosDiaSeleccionado = diaSeleccionado ? eventosPorDia.get(diaSeleccionado) ?? [] : [];
+  const eventosDelDiaVista = vista === "dia" ? eventosPorDia.get(fmtLocal(fechaActual)) ?? [] : [];
 
   return (
     <DashboardShell usuario={usuario}>
@@ -197,12 +362,100 @@ export default function AgendaPage() {
               Día
             </button>
           </div>
+          {puedeGestionarAgenda && (
+            <Button type="button" variant="outline" onClick={abrirNuevaTarea}>
+              <IconClipboardCheck className="h-4 w-4" />
+              Nueva Tarea
+            </Button>
+          )}
           <Link href="/dashboard/ordenes/nueva" className={buttonClass("primary")}>
             <IconPlus className="h-4 w-4" />
             Nueva OS
           </Link>
         </div>
       </div>
+
+      {formTareaAbierto && (
+        <Card className="mb-6">
+          <h2 className="mb-4 text-sm font-semibold text-foreground">{tareaEditandoId ? "Editar tarea" : "Nueva tarea"}</h2>
+          <form onSubmit={onGuardarTarea} className="flex flex-col gap-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <Label>Título</Label>
+                <Input type="text" required value={tituloTarea} onChange={(e) => setTituloTarea(e.target.value)} />
+              </div>
+              <div>
+                <Label>Fecha</Label>
+                <Input type="date" required value={fechaTarea} onChange={(e) => setFechaTarea(e.target.value)} />
+              </div>
+              <div>
+                <Label>Hora (opcional)</Label>
+                <Input type="time" value={horaTarea} onChange={(e) => setHoraTarea(e.target.value)} />
+              </div>
+              <div>
+                <Label>Cliente (opcional)</Label>
+                <Select value={clienteIdTarea} onChange={(e) => setClienteIdTarea(e.target.value)}>
+                  <option value="">Sin cliente</option>
+                  {clientesOpciones.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.nombre}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              <div>
+                <Label>Responsable (opcional)</Label>
+                <Select value={responsableIdTarea} onChange={(e) => setResponsableIdTarea(e.target.value)}>
+                  <option value="">Sin asignar</option>
+                  {usuariosOpciones.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.nombre}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              <div>
+                <Label>Prioridad</Label>
+                <Select value={prioridadTarea} onChange={(e) => setPrioridadTarea(e.target.value as Prioridad)}>
+                  {PRIORIDADES.map((p) => (
+                    <option key={p} value={p}>
+                      {p}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              {tareaEditandoId && (
+                <div>
+                  <Label>Estado</Label>
+                  <Select value={estadoTarea} onChange={(e) => setEstadoTarea(e.target.value as EstadoTarea)}>
+                    <option value="pendiente">Pendiente</option>
+                    <option value="completada">Completada</option>
+                    <option value="cancelada">Cancelada</option>
+                  </Select>
+                </div>
+              )}
+              <div className="sm:col-span-2">
+                <Label>Descripción (opcional)</Label>
+                <Textarea rows={3} value={descripcionTarea} onChange={(e) => setDescripcionTarea(e.target.value)} />
+              </div>
+            </div>
+            {errorTarea && <ErrorText>{errorTarea}</ErrorText>}
+            <div className="flex items-center gap-2">
+              <Button type="submit" disabled={guardandoTarea} className="self-start">
+                {guardandoTarea ? "Guardando…" : tareaEditandoId ? "Guardar cambios" : "Crear tarea"}
+              </Button>
+              <Button type="button" variant="ghost" onClick={() => setFormTareaAbierto(false)}>
+                Cancelar
+              </Button>
+              {tareaEditandoId && (
+                <Button type="button" variant="danger" className="ml-auto" onClick={onEliminarTarea}>
+                  Eliminar
+                </Button>
+              )}
+            </div>
+          </form>
+        </Card>
+      )}
 
       <Card className="mb-6">
         <div className="mb-4 flex flex-wrap items-center gap-2">
@@ -265,7 +518,7 @@ export default function AgendaPage() {
                 if (!dia) return <div key={i} className="min-h-[6.5rem] border-b border-r border-border last:border-r-0" />;
                 const clave = fmtLocal(dia);
                 const esHoy = clave === hoy;
-                const ordenesDia = ordenesPorDia.get(clave) ?? [];
+                const eventosDia = eventosPorDia.get(clave) ?? [];
                 const seleccionado = diaSeleccionado === clave;
                 return (
                   <button
@@ -284,17 +537,23 @@ export default function AgendaPage() {
                       {dia.getDate()}
                     </span>
                     <div className="flex flex-col gap-1">
-                      {ordenesDia.slice(0, 2).map((o) => {
-                        const est = ESTADOS_AGENDA.find((e) => e.valor === estadoAgendaDe(o))!;
+                      {eventosDia.slice(0, 2).map((e) => {
+                        const est = ESTADOS_AGENDA.find((x) => x.valor === e.estadoAgenda)!;
                         return (
-                          <span key={o.id} className={`truncate rounded px-1.5 py-0.5 text-[11px] font-medium ${est.clase}`}>
-                            {o.hora_programada ? `${o.hora_programada} ` : ""}
-                            {o.cliente_info?.nombre ?? o.cliente}
+                          <span
+                            key={`${e.tipo}-${e.id}`}
+                            className={`flex items-center gap-1 truncate rounded px-1.5 py-0.5 text-[11px] font-medium ${est.clase}`}
+                          >
+                            {e.tipo === "tarea" && <IconClipboardCheck className="h-3 w-3 shrink-0" />}
+                            <span className="truncate">
+                              {e.hora ? `${e.hora} ` : ""}
+                              {e.titulo}
+                            </span>
                           </span>
                         );
                       })}
-                      {ordenesDia.length > 2 && (
-                        <span className="text-[11px] font-medium text-muted">+{ordenesDia.length - 2} más</span>
+                      {eventosDia.length > 2 && (
+                        <span className="text-[11px] font-medium text-muted">+{eventosDia.length - 2} más</span>
                       )}
                     </div>
                   </button>
@@ -313,24 +572,27 @@ export default function AgendaPage() {
                     month: "long",
                   })}
                 </h3>
-                {ordenesDiaSeleccionado.length === 0 ? (
-                  <p className="text-sm text-muted">Sin OS agendadas este día.</p>
+                {eventosDiaSeleccionado.length === 0 ? (
+                  <p className="text-sm text-muted">Sin eventos agendados este día.</p>
                 ) : (
                   <div className="flex flex-col divide-y divide-border">
-                    {ordenesDiaSeleccionado.map((o) => (
+                    {eventosDiaSeleccionado.map((e) => (
                       <button
-                        key={o.id}
+                        key={`${e.tipo}-${e.id}`}
                         type="button"
-                        onClick={() => router.push(`/dashboard/ordenes/${o.id}`)}
+                        onClick={() => abrirEvento(e)}
                         className="flex items-center justify-between gap-2 py-2.5 text-left hover:text-brand"
                       >
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-medium text-foreground">{o.cliente_info?.nombre ?? o.cliente}</p>
+                          <p className="flex items-center gap-1.5 truncate text-sm font-medium text-foreground">
+                            {e.tipo === "tarea" && <IconClipboardCheck className="h-3.5 w-3.5 shrink-0 text-muted" />}
+                            {e.titulo}
+                          </p>
                           <p className="text-xs text-muted">
-                            {o.hora_programada ?? "Sin hora"} · {o.responsable?.nombre ?? "—"}
+                            {e.hora ?? "Sin hora"} · {e.subtitulo}
                           </p>
                         </div>
-                        <Badge value={estadoAgendaDe(o)} />
+                        <Badge value={e.estadoAgenda} />
                       </button>
                     ))}
                   </div>
@@ -343,28 +605,30 @@ export default function AgendaPage() {
         </div>
       ) : (
         <Card>
-          {ordenesDelDiaVista.length === 0 ? (
+          {eventosDelDiaVista.length === 0 ? (
             <div className="flex flex-col items-center gap-3 py-16 text-center">
               <IconCalendar className="h-8 w-8 text-muted" />
-              <p className="text-sm text-muted">Sin OS agendadas este día.</p>
+              <p className="text-sm text-muted">Sin eventos agendados este día.</p>
             </div>
           ) : (
             <div className="flex flex-col divide-y divide-border">
-              {ordenesDelDiaVista.map((o) => (
+              {eventosDelDiaVista.map((e) => (
                 <button
-                  key={o.id}
+                  key={`${e.tipo}-${e.id}`}
                   type="button"
-                  onClick={() => router.push(`/dashboard/ordenes/${o.id}`)}
+                  onClick={() => abrirEvento(e)}
                   className="flex items-center justify-between gap-3 py-3 text-left hover:text-brand"
                 >
                   <div className="min-w-0">
-                    <p className="truncate font-medium text-foreground">{o.cliente_info?.nombre ?? o.cliente}</p>
+                    <p className="flex items-center gap-1.5 truncate font-medium text-foreground">
+                      {e.tipo === "tarea" && <IconClipboardCheck className="h-3.5 w-3.5 shrink-0 text-muted" />}
+                      {e.titulo}
+                    </p>
                     <p className="text-xs text-muted">
-                      {o.hora_programada ?? "Sin hora"} · {o.responsable?.nombre ?? "—"}
-                      {o.descripcion ? ` · ${o.descripcion}` : ""}
+                      {e.hora ?? "Sin hora"} · {e.subtitulo}
                     </p>
                   </div>
-                  <Badge value={estadoAgendaDe(o)} />
+                  <Badge value={e.estadoAgenda} />
                 </button>
               ))}
             </div>

@@ -18,6 +18,7 @@ const TIPO_LABEL: Record<TipoNotificacion, string> = {
   licencia_por_vencer: "Licencia próxima a vencer",
   email_fallido: "No se pudo enviar un correo (encuesta, PDF)",
   cotizacion_aprobada: "Cotización aprobada por el cliente",
+  tarea_asignada: "Nueva tarea de agenda asignada a mí",
 };
 
 const IDIOMAS = [

@@ -12,6 +12,7 @@ const RUTA_POR_ENTIDAD: Record<string, (id: string) => string> = {
   ruta: () => `/dashboard/rutas`,
   usuario: () => `/dashboard/equipo`,
   cotizacion: (id) => `/dashboard/financiero/cotizaciones/${id}`,
+  tarea: () => `/dashboard/agenda`,
 };
 
 function tiempoRelativo(iso: string) {

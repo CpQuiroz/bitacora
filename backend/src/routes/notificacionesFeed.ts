@@ -161,6 +161,7 @@ export const TIPOS_NOTIFICACION: TipoNotificacion[] = [
   "licencia_por_vencer",
   "email_fallido",
   "cotizacion_aprobada",
+  "tarea_asignada",
 ];
 
 // Preferencias por-usuario (canal "dentro de la app" ya funciona; el

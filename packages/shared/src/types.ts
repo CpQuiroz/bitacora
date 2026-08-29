@@ -186,9 +186,10 @@ export type TipoNotificacion =
   | "tarea_retrasada"
   | "licencia_por_vencer"
   | "email_fallido"
-  | "cotizacion_aprobada";
+  | "cotizacion_aprobada"
+  | "tarea_asignada";
 
-export type EntidadNotificacion = "trabajo" | "factura" | "ruta" | "usuario" | "cotizacion";
+export type EntidadNotificacion = "trabajo" | "factura" | "ruta" | "usuario" | "cotizacion" | "tarea";
 
 export type Notificacion = {
   id: string;
@@ -262,6 +263,26 @@ export type Trabajo = {
   encuesta_respondida_en: string | null;
   hora_programada: string | null;
   creado_en: string;
+};
+
+// Evento de Agenda liviano — no requiere una Orden de Servicio (a
+// diferencia de Trabajo/trabajos, que sí la crea eagerly). Para
+// recordatorios y visitas técnicas sueltas.
+export type EstadoTarea = "pendiente" | "completada" | "cancelada";
+
+export type Tarea = {
+  id: string;
+  empresa_id: string;
+  titulo: string;
+  descripcion: string | null;
+  fecha: string;
+  hora: string | null;
+  responsable_id: string | null;
+  cliente_id: string | null;
+  prioridad: Prioridad;
+  estado: EstadoTarea;
+  creado_en: string;
+  actualizado_en: string;
 };
 
 export type RutaPlanificada = {
@@ -795,6 +816,7 @@ export type Database = {
       inventario_movimientos: Tabla<InventarioMovimiento>;
       proveedores: Tabla<Proveedor>;
       presupuesto_items: Tabla<PresupuestoItem>;
+      tareas: Tabla<Tarea>;
     };
     Views: Record<string, never>;
     Functions: {
