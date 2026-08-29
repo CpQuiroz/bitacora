@@ -17,6 +17,8 @@ import { rutasPlanificadasRouter } from "./routes/rutasPlanificadas";
 import { ordenesServicioRouter } from "./routes/ordenesServicio";
 import { tareasRouter } from "./routes/tareas";
 import { paquetesSesionesRouter } from "./routes/paquetesSesiones";
+import { agendaProConfigRouter } from "./routes/agendaProConfig";
+import { reservaPublicaRouter } from "./routes/reservaPublica";
 import { dashboardRouter } from "./routes/dashboard";
 import { informesRouter } from "./routes/informes";
 import { gastosRouter } from "./routes/gastos";
@@ -166,6 +168,7 @@ app.use("/api/rutas-planificadas", requiereAuth, requiereEmpresa, rutasPlanifica
 app.use("/api/ordenes-servicio", requiereAuth, requiereEmpresa, ordenesServicioRouter);
 app.use("/api/tareas", requiereAuth, requiereEmpresa, tareasRouter);
 app.use("/api/paquetes-sesiones", requiereAuth, requiereEmpresa, paquetesSesionesRouter);
+app.use("/api/agenda-pro/config", requiereAuth, requiereEmpresa, agendaProConfigRouter);
 app.use("/api/dashboard", requiereAuth, requiereEmpresa, dashboardRouter);
 app.use("/api/informes", requiereAuth, requiereEmpresa, requiereModulo("informes"), informesRouter);
 app.use("/api/gastos", requiereAuth, requiereEmpresa, requiereModulo("financiero"), gastosRouter);
@@ -191,6 +194,7 @@ app.use("/api/vehiculos", requiereAuth, requiereEmpresa, requiereModulo("flota")
 app.use("/api/documentos", requiereAuth, requiereEmpresa, documentosRouter);
 // Sin auth a propósito — la abre un cliente anónimo desde el correo.
 app.use("/api/encuesta", encuestaPublicaRouter);
+app.use("/api/reserva-publica", reservaPublicaRouter);
 // Sin auth a propósito — lo llama Meta directamente; se autentica con
 // la firma HMAC del webhook (ver whatsapp.ts), no con un usuario.
 app.use("/api/whatsapp", whatsappRouter);

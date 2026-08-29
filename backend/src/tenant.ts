@@ -5,13 +5,14 @@ import { supabase } from "./supabase";
 // acá (empresas, whatsapp_mensajes_procesados, notificaciones_preferencias)
 // se acotan por otra columna, no por empresa_id.
 export const TABLAS_POR_EMPRESA = [
-  "accesos_usuario", "analisis_fotos", "asistente_mensajes", "auditoria_usuarios",
+  "accesos_usuario", "agenda_pro_config", "agenda_pro_horarios", "analisis_fotos",
+  "asistente_mensajes", "auditoria_usuarios",
   "catalogo_items", "catalogo_kit_items", "categorias_gasto", "centros_costo",
-  "checklist_templates", "clientes", "documentos", "equipos", "facturas",
+  "checklist_templates", "clientes", "documentos", "empresa_modulos", "equipos", "facturas",
   "gastos", "gastos_fijos", "informes_generados", "informes_personalizados",
   "integraciones", "inventario", "inventario_movimientos", "mensajes_personalizados",
   "notificaciones", "notificaciones_cliente_log", "notificaciones_config",
-  "ordenes_servicio", "os_items", "plantillas_documento", "portal_accesos",
+  "ordenes_servicio", "os_items", "paquetes_sesiones", "plantillas_documento", "portal_accesos",
   "portal_codigos", "presupuesto_items", "presupuestos", "proveedores",
   "rutas_planificadas", "tareas", "tipos_documento", "tipos_os", "tipos_trabajo",
   "trabajos", "unidades_medida", "usuarios", "vehiculo_asignaciones", "vehiculos",

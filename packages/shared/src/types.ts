@@ -344,6 +344,7 @@ export type Tarea = {
   estado: EstadoTarea;
   paquete_id: string | null;
   sesiones_consumidas: number;
+  origen: "manual" | "reserva_publica";
   creado_en: string;
   actualizado_en: string;
 };
@@ -363,6 +364,24 @@ export type PaqueteSesiones = {
 };
 
 export type PaqueteSesionesConSaldo = PaqueteSesiones & { saldo: number };
+
+// Agenda Pro — reserva online pública: horario único por empresa
+// (ver backend/src/routes/reservaPublica.ts).
+export type AgendaProConfig = {
+  empresa_id: string;
+  duracion_slot_min: number;
+  anticipacion_min_horas: number;
+  dias_max_adelante: number;
+  actualizado_en: string;
+};
+
+export type AgendaProHorario = {
+  id: string;
+  empresa_id: string;
+  dia_semana: number; // 0=domingo .. 6=sábado
+  hora_inicio: string; // "HH:MM:SS"
+  hora_fin: string;
+};
 
 export type RutaPlanificada = {
   id: string;
@@ -908,6 +927,8 @@ export type Database = {
       errores_backend: Tabla<ErrorBackend>;
       empresa_modulos: Tabla<EmpresaModulo>;
       paquetes_sesiones: Tabla<PaqueteSesiones>;
+      agenda_pro_config: Tabla<AgendaProConfig>;
+      agenda_pro_horarios: Tabla<AgendaProHorario>;
     };
     Views: Record<string, never>;
     Functions: {

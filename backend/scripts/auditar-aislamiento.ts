@@ -18,13 +18,14 @@ import { join } from "path";
 // notificaciones_preferencias) se acotan por otra columna, no por
 // empresa_id — no aplica este chequeo.
 const TABLAS_POR_EMPRESA = [
-  "accesos_usuario", "analisis_fotos", "asistente_mensajes", "auditoria_usuarios",
+  "accesos_usuario", "agenda_pro_config", "agenda_pro_horarios", "analisis_fotos",
+  "asistente_mensajes", "auditoria_usuarios",
   "catalogo_items", "catalogo_kit_items", "categorias_gasto", "centros_costo",
-  "checklist_templates", "clientes", "documentos", "equipos", "facturas",
+  "checklist_templates", "clientes", "documentos", "empresa_modulos", "equipos", "facturas",
   "gastos", "gastos_fijos", "informes_generados", "informes_personalizados",
   "integraciones", "inventario", "inventario_movimientos", "mensajes_personalizados",
   "notificaciones", "notificaciones_cliente_log", "notificaciones_config",
-  "ordenes_servicio", "os_items", "plantillas_documento", "portal_accesos",
+  "ordenes_servicio", "os_items", "paquetes_sesiones", "plantillas_documento", "portal_accesos",
   "portal_codigos", "presupuesto_items", "presupuestos", "proveedores",
   "rutas_planificadas", "tareas", "tipos_documento", "tipos_os", "tipos_trabajo",
   "trabajos", "unidades_medida", "usuarios", "vehiculo_asignaciones", "vehiculos",
@@ -37,6 +38,7 @@ const ARCHIVOS_EXCLUIDOS: Record<string, string> = {
   "encuestaPublica.ts": "público a propósito (link de encuesta por correo), se acota por id de trabajo, no por empresa",
   "portal.ts": "Portal de Cliente — se acota por el token/código propio, no por req.empresaId",
   "whatsapp.ts": "webhook entrante del bot — se acota resolviendo el chofer por teléfono, no por req.empresaId",
+  "reservaPublica.ts": "reserva online pública, sin cuenta de Bitácora — se acota por :empresaId del path (validado vía empresaHabilitada), no por req.empresaId",
 };
 
 const VENTANA = 25; // líneas hacia adelante y atrás a inspeccionar

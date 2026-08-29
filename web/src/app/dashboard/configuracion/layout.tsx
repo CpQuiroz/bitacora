@@ -12,6 +12,7 @@ import {
   IconBell,
   IconBox,
   IconBriefcase,
+  IconCalendar,
   IconClipboardCheck,
   IconCreditCard,
   IconLayers,
@@ -44,6 +45,7 @@ const SECCIONES: { valor: string; label: string; icon: typeof IconUser; modulo: 
   { valor: "categorias-gastos", label: "Categorías de Gastos", icon: IconWallet, modulo: "configuracion" },
   { valor: "centros-costo", label: "Centros de Costo", icon: IconLayers, modulo: "configuracion" },
   { valor: "tipos-documento", label: "Tipos de Documento", icon: IconPaperclip, modulo: "flota" },
+  { valor: "agenda-pro", label: "Reserva online", icon: IconCalendar, modulo: "agenda_pro" },
   { valor: "notificaciones", label: "Notificaciones", icon: IconBell, modulo: "configuracion" },
   { valor: "seguridad", label: "Seguridad", icon: IconShield, modulo: null },
 ];
