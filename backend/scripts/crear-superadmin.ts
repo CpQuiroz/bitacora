@@ -16,6 +16,28 @@ import { cifrarJson } from "../src/crypto";
 import { hashPassword } from "../src/superadmin/passwords";
 import { generarSecretoTotp, otpauthUri } from "../src/superadmin/totp";
 
+// Enmascara lo que se tipea con "*" — readline no lo hace por
+// default. Usa el truco estándar de la comunidad Node (interceptar
+// _writeToOutput, no documentado pero estable hace años) para no
+// sumar una dependencia solo para esto.
+async function preguntarPasswordOculto(pregunta: string): Promise<string> {
+  const rl = createInterface({ input: stdin, output: stdout });
+  const rlInterno = rl as unknown as { _writeToOutput: (s: string) => void; output: NodeJS.WritableStream };
+  let promptYaEscrito = false;
+  rlInterno._writeToOutput = (fragmento: string) => {
+    if (!promptYaEscrito) {
+      rlInterno.output.write(fragmento);
+      if (fragmento === pregunta) promptYaEscrito = true;
+    } else {
+      rlInterno.output.write("*");
+    }
+  };
+  const respuesta = await rl.question(pregunta);
+  rl.close();
+  stdout.write("\n");
+  return respuesta;
+}
+
 async function main() {
   const [correo, ...resto] = process.argv.slice(2);
   const nombre = resto.join(" ");
@@ -24,9 +46,7 @@ async function main() {
     process.exit(1);
   }
 
-  const rl = createInterface({ input: stdin, output: stdout });
-  const password = await rl.question("Password (mínimo 12 caracteres): ");
-  rl.close();
+  const password = await preguntarPasswordOculto("Password (mínimo 12 caracteres): ");
   if (password.length < 12) {
     console.error("El password debe tener al menos 12 caracteres.");
     process.exit(1);
