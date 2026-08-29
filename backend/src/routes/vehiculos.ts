@@ -7,8 +7,8 @@ import { ah } from "../asyncHandler";
 export const vehiculosRouter = Router();
 
 // Vehículo actualmente asignado a cada uno (sin "hasta", o "hasta" en el
-// futuro) — se usa acá y también en Ruteo/Viajes cuando lo necesiten.
-async function asignacionVigentePorVehiculo(empresaId: string, vehiculoIds: string[]) {
+// futuro) — se usa acá y también en Ruteo/notificacionesFeed.
+export async function asignacionVigentePorVehiculo(empresaId: string, vehiculoIds: string[]) {
   if (vehiculoIds.length === 0) return new Map<string, { colaborador_id: string; colaborador_nombre: string }>();
   const hoy = new Date().toISOString().slice(0, 10);
   const { data } = await supabase
@@ -27,6 +27,23 @@ async function asignacionVigentePorVehiculo(empresaId: string, vehiculoIds: stri
     mapa.set(a.vehiculo_id, { colaborador_id: a.colaborador_id, colaborador_nombre: colaboradorNombre });
   }
   return mapa;
+}
+
+// Sentido inverso — el vehículo (si hay alguno) asignado hoy a un
+// colaborador puntual. Usado en Ruteo (Nueva ruta) y en /api/usuarios/me/vehiculo.
+export async function vehiculoAsignadoAColaborador(empresaId: string, colaboradorId: string): Promise<Vehiculo | null> {
+  const hoy = new Date().toISOString().slice(0, 10);
+  const { data } = await supabase
+    .from("vehiculo_asignaciones")
+    .select("vehiculo:vehiculos(*)")
+    .eq("empresa_id", empresaId)
+    .eq("colaborador_id", colaboradorId)
+    .lte("desde", hoy)
+    .or(`hasta.is.null,hasta.gte.${hoy}`)
+    .order("desde", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return (data as unknown as { vehiculo: Vehiculo } | null)?.vehiculo ?? null;
 }
 
 vehiculosRouter.get(

@@ -5,8 +5,10 @@
 // ============================================================
 import { Router } from "express";
 import type { TipoNotificacion } from "@bitacora/shared";
+import { estadoDocumento } from "@bitacora/shared";
 import { supabase } from "../supabase";
 import { notificar, notificarGerencia } from "../notificar";
+import { asignacionVigentePorVehiculo } from "./vehiculos";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
 
@@ -49,19 +51,51 @@ async function generarVencimientosPerezosos(empresaId: string) {
     });
   }
 
-  const { data: usuarios } = await supabase
-    .from("usuarios")
-    .select("id, nombre, fecha_vencimiento_licencia")
+  // Documentos de colaboradores y vehículos (licencias, revisión
+  // técnica, seguros, etc. — todo lo que carga la ficha de Flota).
+  // Reemplaza el chequeo viejo sobre usuarios.fecha_vencimiento_licencia:
+  // esa columna quedó de Entrega 1 pero la UI de Flota ya no la toca,
+  // así que dejó de ser fuente de verdad.
+  const { data: documentos } = await supabase
+    .from("documentos")
+    .select("id, entidad_tipo, entidad_id, fecha_vencimiento, tipo:tipos_documento(nombre)")
     .eq("empresa_id", empresaId)
-    .eq("activo", true)
-    .not("fecha_vencimiento_licencia", "is", null)
-    .lte("fecha_vencimiento_licencia", en7Dias);
+    .not("fecha_vencimiento", "is", null)
+    .lte("fecha_vencimiento", en7Dias);
 
-  for (const u of usuarios ?? []) {
-    if (await yaNotificado(empresaId, "licencia_por_vencer", u.id)) continue;
-    const cuerpo = `Licencia de ${u.nombre} vence ${u.fecha_vencimiento_licencia}`;
-    await notificar(empresaId, u.id, "licencia_por_vencer", { cuerpo, entidadTipo: "usuario", entidadId: u.id });
-    await notificarGerencia(empresaId, "licencia_por_vencer", { cuerpo, entidadTipo: "usuario", entidadId: u.id });
+  if (documentos && documentos.length > 0) {
+    const colaboradorIds = documentos.filter((d) => d.entidad_tipo === "colaborador").map((d) => d.entidad_id);
+    const vehiculoIds = documentos.filter((d) => d.entidad_tipo === "vehiculo").map((d) => d.entidad_id);
+    const [{ data: colaboradores }, { data: vehiculos }, asignaciones] = await Promise.all([
+      colaboradorIds.length
+        ? supabase.from("usuarios").select("id, nombre").in("id", colaboradorIds)
+        : Promise.resolve({ data: [] as { id: string; nombre: string }[] }),
+      vehiculoIds.length
+        ? supabase.from("vehiculos").select("id, patente").in("id", vehiculoIds)
+        : Promise.resolve({ data: [] as { id: string; patente: string }[] }),
+      asignacionVigentePorVehiculo(empresaId, vehiculoIds),
+    ]);
+    const nombreColaborador = new Map((colaboradores ?? []).map((c) => [c.id, c.nombre]));
+    const patenteVehiculo = new Map((vehiculos ?? []).map((v) => [v.id, v.patente]));
+
+    for (const d of documentos) {
+      if (await yaNotificado(empresaId, "documento_por_vencer", d.id)) continue;
+      const estado = estadoDocumento(d.fecha_vencimiento);
+      const tipoNombre = (d as unknown as { tipo: { nombre: string } | null }).tipo?.nombre ?? "Documento";
+      const etiqueta =
+        d.entidad_tipo === "colaborador" ? nombreColaborador.get(d.entidad_id) ?? "—" : patenteVehiculo.get(d.entidad_id) ?? "—";
+      const cuerpo = `${tipoNombre} de ${etiqueta} ${estado === "vencido" ? "venció" : "vence"} ${d.fecha_vencimiento}`;
+
+      if (d.entidad_tipo === "colaborador") {
+        await notificar(empresaId, d.entidad_id, "documento_por_vencer", { cuerpo, entidadTipo: "documento", entidadId: d.id });
+      } else {
+        const colaboradorId = asignaciones.get(d.entidad_id)?.colaborador_id;
+        if (colaboradorId) {
+          await notificar(empresaId, colaboradorId, "documento_por_vencer", { cuerpo, entidadTipo: "documento", entidadId: d.id });
+        }
+      }
+      await notificarGerencia(empresaId, "documento_por_vencer", { cuerpo, entidadTipo: "documento", entidadId: d.id });
+    }
   }
 
   // Tarea retrasada: el día programado ya pasó y sigue "en_curso".
@@ -162,6 +196,7 @@ export const TIPOS_NOTIFICACION: TipoNotificacion[] = [
   "email_fallido",
   "cotizacion_aprobada",
   "tarea_asignada",
+  "documento_por_vencer",
 ];
 
 // Preferencias por-usuario (canal "dentro de la app" ya funciona; el

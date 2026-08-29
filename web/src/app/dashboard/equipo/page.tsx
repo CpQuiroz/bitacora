@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { AuditoriaUsuario, Rol, Usuario } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
@@ -59,7 +60,6 @@ export default function EquipoPage() {
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [editRol, setEditRol] = useState<Rol>("colaborador");
   const [editActivo, setEditActivo] = useState(true);
-  const [editLicencia, setEditLicencia] = useState("");
   const [editError, setEditError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
 
@@ -124,7 +124,6 @@ export default function EquipoPage() {
     setEditandoId(u.id);
     setEditRol(u.rol);
     setEditActivo(u.activo);
-    setEditLicencia(u.fecha_vencimiento_licencia ?? "");
     setEditError(null);
   }
 
@@ -134,7 +133,6 @@ export default function EquipoPage() {
     const cambios: Record<string, unknown> = {};
     if (editRol !== u.rol) cambios.rol = editRol;
     if (editActivo !== u.activo) cambios.activo = editActivo;
-    if (editLicencia !== (u.fecha_vencimiento_licencia ?? "")) cambios.fecha_vencimiento_licencia = editLicencia || null;
 
     if (Object.keys(cambios).length === 0) {
       setEditandoId(null);
@@ -217,7 +215,7 @@ export default function EquipoPage() {
                 <th className="px-5 py-3 font-medium">Nombre</th>
                 <th className="px-5 py-3 font-medium">Rol</th>
                 <th className="px-5 py-3 font-medium">Estado</th>
-                <th className="px-5 py-3 font-medium">Vence licencia</th>
+                <th className="px-5 py-3 font-medium">Documentos</th>
                 <th className="px-5 py-3 font-medium" />
               </tr>
             </thead>
@@ -242,7 +240,9 @@ export default function EquipoPage() {
                       </label>
                     </td>
                     <td className="px-5 py-3">
-                      <Input type="date" value={editLicencia} onChange={(e) => setEditLicencia(e.target.value)} className="min-w-36" />
+                      <Link href={`/dashboard/flota/colaboradores/${u.id}`} className="text-xs font-medium text-brand hover:underline">
+                        Ver documentos →
+                      </Link>
                     </td>
                     <td className="px-5 py-3">
                       <div className="flex flex-col items-end gap-1.5">
@@ -267,7 +267,11 @@ export default function EquipoPage() {
                     <td className="px-5 py-3">
                       <Badge value={u.activo ? "activo" : "inactivo"} />
                     </td>
-                    <td className="px-5 py-3 text-muted">{u.fecha_vencimiento_licencia ?? "—"}</td>
+                    <td className="px-5 py-3">
+                      <Link href={`/dashboard/flota/colaboradores/${u.id}`} className="text-xs font-medium text-brand hover:underline">
+                        Ver documentos →
+                      </Link>
+                    </td>
                     <td className="px-5 py-3 text-right">
                       {u.id !== usuarioId && (
                         <button type="button" onClick={() => iniciarEdicion(u)} className="text-xs font-medium text-brand hover:underline">

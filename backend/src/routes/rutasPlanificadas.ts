@@ -1,15 +1,44 @@
 import { Router } from "express";
 import multer from "multer";
 import type { Anexo, DiaSemana, Prioridad, TipoCheckin } from "@bitacora/shared";
+import { estadoDocumento } from "@bitacora/shared";
 import { supabase } from "../supabase";
 import { geocodificarDireccion } from "../geocodificar";
 import { subirAnexo, urlFirmadaAnexo } from "../storage";
 import { asignarHorarios, secuenciarNearestNeighbor } from "../optimizarRuta";
 import { crearOrdenServicio } from "../ordenes";
+import { vehiculoAsignadoAColaborador } from "./vehiculos";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
 
 export const rutasPlanificadasRouter = Router();
+
+// Advertencias no bloqueantes sobre el vehículo del colaborador
+// responsable — sin vehículo asignado, o con algún documento vencido
+// o por vencer (ventana de 30 días, igual que estadoDocumento()).
+async function advertenciasVehiculo(empresaId: string, responsableId: string) {
+  const vehiculo = await vehiculoAsignadoAColaborador(empresaId, responsableId);
+  if (!vehiculo) return { vehiculo: null, advertencias: ["El colaborador no tiene un vehículo asignado."] };
+
+  const en30dias = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const { data: documentos } = await supabase
+    .from("documentos")
+    .select("fecha_vencimiento, tipo:tipos_documento(nombre)")
+    .eq("empresa_id", empresaId)
+    .eq("entidad_tipo", "vehiculo")
+    .eq("entidad_id", vehiculo.id)
+    .not("fecha_vencimiento", "is", null)
+    .lte("fecha_vencimiento", en30dias);
+
+  const advertencias: string[] = [];
+  for (const d of documentos ?? []) {
+    const estado = estadoDocumento(d.fecha_vencimiento);
+    const tipoNombre = (d as unknown as { tipo: { nombre: string } | null }).tipo?.nombre ?? "Documento";
+    if (estado === "vencido") advertencias.push(`${vehiculo.patente}: ${tipoNombre} vencido.`);
+    else if (estado === "por_vencer") advertencias.push(`${vehiculo.patente}: ${tipoNombre} vence pronto.`);
+  }
+  return { vehiculo, advertencias };
+}
 
 const DIAS_SEMANA: DiaSemana[] = [
   "lunes",
@@ -193,7 +222,8 @@ rutasPlanificadasRouter.post(
       res.status(500).json({ error: error.message });
       return;
     }
-    res.status(201).json({ ...data, geocodificado: coords !== null });
+    const { vehiculo, advertencias } = await advertenciasVehiculo(req.empresaId!, responsable_id);
+    res.status(201).json({ ...data, geocodificado: coords !== null, vehiculo_asignado: vehiculo, advertencias });
   })
 );
 

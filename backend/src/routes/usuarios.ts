@@ -7,6 +7,7 @@ import { env } from "../env";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
 import { requiereModulo } from "../permisos";
+import { vehiculoAsignadoAColaborador } from "./vehiculos";
 
 export const usuariosRouter = Router();
 
@@ -236,18 +237,7 @@ usuariosRouter.get(
 usuariosRouter.get(
   "/me/vehiculo",
   ah<RequestConEmpresa>(async (req, res) => {
-    const hoy = new Date().toISOString().slice(0, 10);
-    const { data } = await supabase
-      .from("vehiculo_asignaciones")
-      .select("vehiculo:vehiculos(*)")
-      .eq("empresa_id", req.empresaId!)
-      .eq("colaborador_id", req.userId!)
-      .lte("desde", hoy)
-      .or(`hasta.is.null,hasta.gte.${hoy}`)
-      .order("desde", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    res.json((data as unknown as { vehiculo: unknown } | null)?.vehiculo ?? null);
+    res.json(await vehiculoAsignadoAColaborador(req.empresaId!, req.userId!));
   })
 );
 

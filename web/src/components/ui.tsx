@@ -105,6 +105,14 @@ export function SuccessText({ children }: { children: ReactNode }) {
   );
 }
 
+export function WarningText({ children }: { children: ReactNode }) {
+  return (
+    <p className="rounded-lg bg-warning-soft px-3 py-2 text-sm text-warning">
+      {children}
+    </p>
+  );
+}
+
 const badgeStyles: Record<string, string> = {
   // trabajos
   completado: "bg-success-soft text-success",

@@ -187,9 +187,10 @@ export type TipoNotificacion =
   | "licencia_por_vencer"
   | "email_fallido"
   | "cotizacion_aprobada"
-  | "tarea_asignada";
+  | "tarea_asignada"
+  | "documento_por_vencer";
 
-export type EntidadNotificacion = "trabajo" | "factura" | "ruta" | "usuario" | "cotizacion" | "tarea";
+export type EntidadNotificacion = "trabajo" | "factura" | "ruta" | "usuario" | "cotizacion" | "tarea" | "documento";
 
 export type Notificacion = {
   id: string;

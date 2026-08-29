@@ -18,6 +18,7 @@ const TITULOS: Record<TipoNotificacion, string> = {
   email_fallido: "No se pudo enviar un correo",
   cotizacion_aprobada: "Cotización aprobada por el cliente",
   tarea_asignada: "Nueva tarea de agenda asignada",
+  documento_por_vencer: "Documento próximo a vencer",
 };
 
 export async function notificar(

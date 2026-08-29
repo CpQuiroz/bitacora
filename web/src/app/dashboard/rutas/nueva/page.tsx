@@ -11,6 +11,7 @@ import type {
   TipoTrabajo,
   Trabajo,
   Usuario,
+  Vehiculo,
 } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
@@ -26,11 +27,13 @@ import {
   Select,
   SuccessText,
   Textarea,
+  WarningText,
 } from "@/components/ui";
 import { IconClock, IconPaperclip, IconPlus, IconRoute, IconTag } from "@/components/icons";
 import { MapaRutas, type Parada } from "@/components/MapaRutas";
 
 type TareaConCliente = Trabajo & { cliente_info: Cliente | null };
+type VehiculoConAsignacion = Vehiculo & { asignacion_vigente: { colaborador_id: string; colaborador_nombre: string } | null };
 
 const DIAS: { valor: DiaSemana; etiqueta: string }[] = [
   { valor: "lunes", etiqueta: "Lun" },
@@ -56,8 +59,9 @@ export default function NuevaRutaPage() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [tiposTrabajo, setTiposTrabajo] = useState<TipoTrabajo[]>([]);
   const [trabajosSinRuta, setTrabajosSinRuta] = useState<Trabajo[]>([]);
+  const [vehiculos, setVehiculos] = useState<VehiculoConAsignacion[]>([]);
 
-  const [ruta, setRuta] = useState<(RutaPlanificada & { geocodificado?: boolean }) | null>(null);
+  const [ruta, setRuta] = useState<(RutaPlanificada & { geocodificado?: boolean; advertencias?: string[] }) | null>(null);
   const [tareas, setTareas] = useState<TareaConCliente[]>([]);
 
   // --- form: datos de la ruta ---
@@ -105,11 +109,12 @@ export default function NuevaRutaPage() {
         router.replace("/login");
         return;
       }
-      const [resMe, resEquipo, resClientes, resTipos] = await Promise.all([
+      const [resMe, resEquipo, resClientes, resTipos, resVehiculos] = await Promise.all([
         apiFetch("/api/me"),
         apiFetch("/api/usuarios"),
         apiFetch("/api/clientes"),
         apiFetch("/api/tipos-trabajo"),
+        apiFetch("/api/vehiculos"),
       ]);
       if (resMe.ok) {
         const { usuario: u } = await resMe.json();
@@ -124,6 +129,7 @@ export default function NuevaRutaPage() {
       }
       if (resClientes.ok) setClientes(await resClientes.json());
       if (resTipos.ok) setTiposTrabajo(await resTipos.json());
+      if (resVehiculos.ok) setVehiculos(await resVehiculos.json());
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -306,6 +312,8 @@ export default function NuevaRutaPage() {
 
   if (!usuario) return null;
 
+  const vehiculoDelResponsable = vehiculos.find((v) => v.asignacion_vigente?.colaborador_id === responsableId) ?? null;
+
   const paradas: Parada[] = tareas.map((t) => ({
     trabajo_id: t.id,
     cliente_nombre: t.cliente,
@@ -338,6 +346,11 @@ export default function NuevaRutaPage() {
                     </option>
                   ))}
                 </Select>
+                <p className="mt-1 text-xs text-muted">
+                  {vehiculoDelResponsable
+                    ? `Vehículo asignado: ${vehiculoDelResponsable.patente}`
+                    : "Sin vehículo asignado"}
+                </p>
               </div>
               <div>
                 <Label>Fecha de la primera tarea</Label>
@@ -407,6 +420,13 @@ export default function NuevaRutaPage() {
           {avisoRuta && (
             <div className="my-4">
               <SuccessText>{avisoRuta}</SuccessText>
+            </div>
+          )}
+          {ruta.advertencias && ruta.advertencias.length > 0 && (
+            <div className="my-4 flex flex-col gap-2">
+              {ruta.advertencias.map((a, i) => (
+                <WarningText key={i}>{a}</WarningText>
+              ))}
             </div>
           )}
 
