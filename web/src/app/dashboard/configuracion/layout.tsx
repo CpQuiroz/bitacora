@@ -52,6 +52,7 @@ export default function ConfiguracionLayout({ children }: { children: ReactNode 
   const router = useRouter();
   const pathname = usePathname();
   const [usuario, setUsuario] = useState<UsuarioConEmpresa | null>(null);
+  const [modulosDeshabilitados, setModulosDeshabilitados] = useState<Modulo[]>([]);
 
   const cargar = useCallback(async () => {
     const { data } = await supabase.auth.getSession();
@@ -70,6 +71,7 @@ export default function ConfiguracionLayout({ children }: { children: ReactNode 
       return;
     }
     setUsuario(body.usuario);
+    setModulosDeshabilitados(body.modulos_deshabilitados ?? []);
   }, [router]);
 
   useEffect(() => {
@@ -78,7 +80,9 @@ export default function ConfiguracionLayout({ children }: { children: ReactNode 
 
   if (!usuario) return null;
 
-  const secciones = SECCIONES.filter((s) => s.modulo === null || puedeVerModulo(usuario.rol, s.modulo));
+  const secciones = SECCIONES.filter(
+    (s) => s.modulo === null || (puedeVerModulo(usuario.rol, s.modulo) && !modulosDeshabilitados.includes(s.modulo))
+  );
 
   return (
     <DashboardShell

@@ -12,6 +12,22 @@ import { obtenerTokenSuperAdmin, superadminFetch } from "@/lib/superadminApi";
 const ESTADOS: EstadoEmpresa[] = ["activa", "suspendida", "dada_de_baja"];
 const PLANES: Plan[] = ["trial", "basico", "pro"];
 
+const ETIQUETA_MODULO: Record<string, string> = {
+  agenda: "Agenda",
+  ordenes_servicio: "Órdenes de servicio",
+  viajes: "Viajes",
+  registros: "Registros",
+  rutas: "Rutas",
+  financiero: "Financiero",
+  informes: "Informes",
+  informe_ia: "Informe con IA",
+  asistente: "Asistente",
+  configuracion: "Configuración",
+  gestion_control: "Gestión y control",
+  flota: "Flota",
+  agenda_pro: "Agenda Pro (paquetes de sesiones y confirmación por el cliente)",
+};
+
 type Salud = {
   empresa: { id: string; nombre: string; estado: EstadoEmpresa; plan: Plan };
   ultima_actividad: string | null;
@@ -60,6 +76,9 @@ export default function SuperAdminSaludEmpresaPage() {
   const [confirmacionEliminar, setConfirmacionEliminar] = useState("");
   const [eliminando, setEliminando] = useState(false);
   const [errorEliminar, setErrorEliminar] = useState<string | null>(null);
+  const [modulos, setModulos] = useState<{ modulo: string; activado: boolean }[] | null>(null);
+  const [guardandoModulo, setGuardandoModulo] = useState<string | null>(null);
+  const [errorModulos, setErrorModulos] = useState<string | null>(null);
 
   async function cargar() {
     const res = await superadminFetch(`/api/superadmin/empresas/${params.id}/salud`);
@@ -77,14 +96,36 @@ export default function SuperAdminSaludEmpresaPage() {
     setPlanSeleccionado(datos.empresa.plan);
   }
 
+  async function cargarModulos() {
+    const res = await superadminFetch(`/api/superadmin/empresas/${params.id}/modulos`);
+    if (res.ok) setModulos(await res.json());
+  }
+
   useEffect(() => {
     if (!obtenerTokenSuperAdmin()) {
       router.replace("/superadmin/login");
       return;
     }
     cargar();
+    cargarModulos();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id]);
+
+  async function onTogglearModulo(modulo: string, activado: boolean) {
+    setErrorModulos(null);
+    setGuardandoModulo(modulo);
+    const res = await superadminFetch(`/api/superadmin/empresas/${params.id}/modulos`, {
+      method: "PATCH",
+      body: JSON.stringify({ modulo, activado }),
+    });
+    setGuardandoModulo(null);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setErrorModulos(body.error ?? "No se pudo cambiar el módulo");
+      return;
+    }
+    cargarModulos();
+  }
 
   async function onCambiarEstado(nuevo: EstadoEmpresa) {
     if (!confirm(`¿Cambiar el estado a "${nuevo.replaceAll("_", " ")}"?`)) return;
@@ -294,6 +335,35 @@ export default function SuperAdminSaludEmpresaPage() {
               <p className="mt-3 text-[11px] text-muted">No hay límites de uso conectados al plan todavía — es solo una etiqueta.</p>
             </Card>
           </div>
+
+          <Card className="mt-4">
+            <h2 className="mb-2 text-sm font-semibold text-foreground">Módulos contratados</h2>
+            <p className="mb-3 text-sm text-muted">
+              Desactivar un módulo lo oculta del menú y bloquea sus rutas para todos los usuarios de esta empresa, sin importar su rol.
+            </p>
+            {!modulos ? (
+              <p className="text-sm text-muted">Cargando…</p>
+            ) : (
+              <div className="grid gap-2 sm:grid-cols-2">
+                {modulos.map((m) => (
+                  <label key={m.modulo} className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={m.activado}
+                      disabled={guardandoModulo === m.modulo}
+                      onChange={(e) => onTogglearModulo(m.modulo, e.target.checked)}
+                    />
+                    <span className="text-foreground">{ETIQUETA_MODULO[m.modulo] ?? m.modulo}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+            {errorModulos && (
+              <div className="mt-3">
+                <ErrorText>{errorModulos}</ErrorText>
+              </div>
+            )}
+          </Card>
 
           <Card className="mt-4">
             <h2 className="mb-2 text-sm font-semibold text-foreground">Exportar datos</h2>

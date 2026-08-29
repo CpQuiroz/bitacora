@@ -1,5 +1,6 @@
 import { Router } from "express";
-import type { EstadoEmpresa, Plan } from "@bitacora/shared";
+import type { EstadoEmpresa, Modulo, Plan } from "@bitacora/shared";
+import { MODULOS, moduloActivadoPorDefecto } from "@bitacora/shared";
 import { supabase } from "../supabase";
 import { env } from "../env";
 import { ah } from "../asyncHandler";
@@ -322,5 +323,56 @@ superadminRouter.delete(
       return;
     }
     res.status(204).end();
+  })
+);
+
+superadminRouter.get(
+  "/empresas/:id/modulos",
+  requiereSuperAdmin,
+  ah<RequestConSuperAdmin>(async (req, res) => {
+    const { data: empresa } = await supabase.from("empresas").select("id").eq("id", req.params.id).maybeSingle();
+    if (!empresa) {
+      res.status(404).json({ error: "Empresa no encontrada" });
+      return;
+    }
+    const { data } = await supabase.from("empresa_modulos").select("modulo, activado").eq("empresa_id", req.params.id);
+    const filas = new Map((data ?? []).map((f) => [f.modulo, f.activado]));
+    res.json(MODULOS.map((m) => ({ modulo: m, activado: filas.has(m) ? filas.get(m)! : moduloActivadoPorDefecto(m) })));
+  })
+);
+
+superadminRouter.patch(
+  "/empresas/:id/modulos",
+  requiereSuperAdmin,
+  ah<RequestConSuperAdmin>(async (req, res) => {
+    const { modulo, activado } = req.body ?? {};
+    if (typeof modulo !== "string" || !MODULOS.includes(modulo as Modulo) || typeof activado !== "boolean") {
+      res.status(400).json({ error: "Falta modulo (válido) o activado (boolean)" });
+      return;
+    }
+    const { data: empresa } = await supabase.from("empresas").select("nombre").eq("id", req.params.id).maybeSingle();
+    if (!empresa) {
+      res.status(404).json({ error: "Empresa no encontrada" });
+      return;
+    }
+
+    const { error } = await supabase
+      .from("empresa_modulos")
+      .upsert(
+        { empresa_id: req.params.id, modulo, activado, actualizado_en: new Date().toISOString() },
+        { onConflict: "empresa_id,modulo" }
+      );
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+
+    await registrarAuditoria(req.superAdminId!, "cambiar_modulo_empresa", {
+      empresaId: req.params.id,
+      ip: req.ip ?? null,
+      detalle: `${empresa.nombre}: ${modulo} → ${activado ? "activado" : "desactivado"}`,
+    });
+
+    res.json({ modulo, activado });
   })
 );

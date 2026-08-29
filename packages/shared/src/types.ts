@@ -126,6 +126,13 @@ export type ErrorBackend = {
   creado_en: string;
 };
 
+export type EmpresaModulo = {
+  empresa_id: string;
+  modulo: string;
+  activado: boolean;
+  actualizado_en: string;
+};
+
 export type Usuario = {
   id: string; // = auth.users.id
   empresa_id: string;
@@ -870,6 +877,7 @@ export type Database = {
       super_admin_auditoria: Tabla<SuperAdminAuditoria>;
       ia_uso: Tabla<IaUso>;
       errores_backend: Tabla<ErrorBackend>;
+      empresa_modulos: Tabla<EmpresaModulo>;
     };
     Views: Record<string, never>;
     Functions: {

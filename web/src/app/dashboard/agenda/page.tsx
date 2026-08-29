@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { Cliente, EstadoTarea, OrdenServicio, Prioridad, Tarea, Trabajo, Usuario } from "@bitacora/shared";
+import type { Cliente, EstadoTarea, Modulo, OrdenServicio, Prioridad, Tarea, Trabajo, Usuario } from "@bitacora/shared";
 import { puedeVerModulo } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
@@ -111,6 +111,7 @@ const NOMBRES_DIA_CORTOS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 export default function AgendaPage() {
   const router = useRouter();
   const [usuario, setUsuario] = useState<UsuarioShell | null>(null);
+  const [modulosDeshabilitados, setModulosDeshabilitados] = useState<Modulo[]>([]);
   const [vista, setVista] = useState<"mes" | "dia">("mes");
   const [fechaActual, setFechaActual] = useState(() => new Date());
   const [ordenes, setOrdenes] = useState<OrdenListado[] | null>(null);
@@ -160,7 +161,7 @@ export default function AgendaPage() {
       }
       const res = await apiFetch("/api/me");
       if (res.ok) {
-        const { usuario: u } = await res.json();
+        const { usuario: u, modulos_deshabilitados: deshabilitados } = await res.json();
         if (u) {
           setUsuario({
             nombre: u.nombre,
@@ -172,6 +173,7 @@ export default function AgendaPage() {
             moneda: u.empresa?.moneda ?? "CLP",
           });
         }
+        setModulosDeshabilitados(deshabilitados ?? []);
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -317,6 +319,7 @@ export default function AgendaPage() {
   if (!usuario) return null;
 
   const puedeGestionarAgenda = puedeVerModulo(usuario.rol, "agenda");
+  const puedeAgendaPro = puedeVerModulo(usuario.rol, "agenda_pro") && !modulosDeshabilitados.includes("agenda_pro");
   const hoy = fmtLocal(new Date());
 
   const primerDiaMes = new Date(fechaActual.getFullYear(), fechaActual.getMonth(), 1);

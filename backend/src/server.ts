@@ -43,7 +43,7 @@ import { superadminRouter } from "./superadmin/routes";
 import { tiposDocumentoRouter } from "./routes/tiposDocumento";
 import { vehiculosRouter } from "./routes/vehiculos";
 import { documentosRouter } from "./routes/documentos";
-import { requiereModulo } from "./permisos";
+import { modulosDeshabilitadosDeEmpresa, requiereModulo } from "./permisos";
 import { ah } from "./asyncHandler";
 
 const RUBROS: Rubro[] = ["transporte", "servicio_tecnico", "otro"];
@@ -82,7 +82,8 @@ app.get("/api/me", requiereAuth, ah<RequestConUsuario>(async (req, res) => {
     res.status(500).json({ error: error.message });
     return;
   }
-  res.json({ usuario });
+  const modulosDeshabilitados = usuario ? await modulosDeshabilitadosDeEmpresa(usuario.empresa_id) : [];
+  res.json({ usuario, modulos_deshabilitados: modulosDeshabilitados });
 }));
 
 // Onboarding multi-tenant: crea la empresa y vincula al usuario ya

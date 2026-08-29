@@ -9,6 +9,7 @@ import { AsistenteChat } from "./AsistenteChat";
 import { Logo } from "./Logo";
 import { NotificacionesBell } from "./NotificacionesBell";
 import { supabase } from "@/lib/supabase";
+import { apiFetch } from "@/lib/api";
 import { asegurarFuenteCargada, fuenteDe } from "@/lib/fuentes";
 import {
   IconCalendar,
@@ -147,10 +148,25 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
   const [menuMovilAbierto, setMenuMovilAbierto] = useState(false);
   const [dropdownAbierto, setDropdownAbierto] = useState(false);
   const [gruposAbiertos, setGruposAbiertos] = useState<Set<string>>(new Set());
+  const [modulosDeshabilitados, setModulosDeshabilitados] = useState<Modulo[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (window.localStorage.getItem(CLAVE_COLAPSADO) === "1") setColapsado(true);
+  }, []);
+
+  // Etapa 5: qué módulos están desactivados para esta empresa (aparte
+  // del rol) — fetch propio, independiente del que ya hizo la página
+  // que renderiza este shell, para no tener que propagar el dato por
+  // props a las ~30 páginas que construyen UsuarioShell.
+  useEffect(() => {
+    (async () => {
+      const res = await apiFetch("/api/me");
+      if (res.ok) {
+        const body = await res.json();
+        setModulosDeshabilitados(body.modulos_deshabilitados ?? []);
+      }
+    })();
   }, []);
 
   useEffect(() => {
@@ -220,7 +236,11 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
   // muestra un encabezado de sección flotando sin nada debajo.
   const gruposVisibles = NAV_GROUPS.map((g) => ({
     ...g,
-    items: g.items.filter((item) => item.modulo === null || puedeVerModulo(usuario.rol, item.modulo)),
+    items: g.items.filter(
+      (item) =>
+        item.modulo === null ||
+        (puedeVerModulo(usuario.rol, item.modulo) && !modulosDeshabilitados.includes(item.modulo))
+    ),
   })).filter((g) => g.items.length > 0);
 
   function esActivoLeaf(href: string): boolean {
@@ -448,7 +468,7 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
         </main>
       </div>
 
-      {puedeVerModulo(usuario.rol, "asistente") && <AsistenteChat />}
+      {puedeVerModulo(usuario.rol, "asistente") && !modulosDeshabilitados.includes("asistente") && <AsistenteChat />}
     </div>
   );
 }
