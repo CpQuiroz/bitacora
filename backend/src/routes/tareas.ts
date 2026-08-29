@@ -22,6 +22,11 @@ async function usuarioExiste(empresaId: string, usuarioId: string) {
   return Boolean(data);
 }
 
+async function paqueteExiste(empresaId: string, paqueteId: string) {
+  const { data } = await supabase.from("paquetes_sesiones").select("id").eq("empresa_id", empresaId).eq("id", paqueteId).maybeSingle();
+  return Boolean(data);
+}
+
 tareasRouter.get(
   "/",
   ah<RequestConEmpresa>(async (req, res) => {
@@ -60,7 +65,7 @@ tareasRouter.post(
   "/",
   requiereModulo("agenda"),
   ah<RequestConEmpresa>(async (req, res) => {
-    const { titulo, descripcion, fecha, hora, responsable_id, cliente_id, prioridad } = req.body ?? {};
+    const { titulo, descripcion, fecha, hora, responsable_id, cliente_id, prioridad, paquete_id, sesiones_consumidas } = req.body ?? {};
 
     if (typeof titulo !== "string" || !titulo.trim()) {
       res.status(400).json({ error: "Falta título" });
@@ -82,6 +87,14 @@ tareasRouter.post(
       res.status(400).json({ error: "cliente_id inválido" });
       return;
     }
+    if (paquete_id && !(await paqueteExiste(req.empresaId!, paquete_id))) {
+      res.status(400).json({ error: "paquete_id inválido" });
+      return;
+    }
+    if (sesiones_consumidas !== undefined && sesiones_consumidas !== null && (!Number.isInteger(sesiones_consumidas) || sesiones_consumidas <= 0)) {
+      res.status(400).json({ error: "sesiones_consumidas debe ser un entero mayor a 0" });
+      return;
+    }
     const prioridadFinal: Prioridad = PRIORIDADES.includes(prioridad) ? prioridad : "media";
 
     const { data, error } = await supabase
@@ -95,6 +108,8 @@ tareasRouter.post(
         responsable_id: responsable_id || null,
         cliente_id: cliente_id || null,
         prioridad: prioridadFinal,
+        paquete_id: paquete_id || null,
+        sesiones_consumidas: paquete_id ? sesiones_consumidas || 1 : 1,
       })
       .select()
       .single();
@@ -120,7 +135,7 @@ tareasRouter.patch(
   "/:id",
   requiereModulo("agenda"),
   ah<RequestConEmpresa>(async (req, res) => {
-    const { titulo, descripcion, fecha, hora, responsable_id, cliente_id, prioridad, estado } = req.body ?? {};
+    const { titulo, descripcion, fecha, hora, responsable_id, cliente_id, prioridad, estado, paquete_id, sesiones_consumidas } = req.body ?? {};
     const cambios: Partial<Tarea> = {};
 
     if (titulo !== undefined) {
@@ -172,6 +187,20 @@ tareasRouter.patch(
         return;
       }
       cambios.estado = estado;
+    }
+    if (paquete_id !== undefined) {
+      if (paquete_id && !(await paqueteExiste(req.empresaId!, paquete_id))) {
+        res.status(400).json({ error: "paquete_id inválido" });
+        return;
+      }
+      cambios.paquete_id = paquete_id || null;
+    }
+    if (sesiones_consumidas !== undefined) {
+      if (!Number.isInteger(sesiones_consumidas) || sesiones_consumidas <= 0) {
+        res.status(400).json({ error: "sesiones_consumidas debe ser un entero mayor a 0" });
+        return;
+      }
+      cambios.sesiones_consumidas = sesiones_consumidas;
     }
 
     if (Object.keys(cambios).length === 0) {

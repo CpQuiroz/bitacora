@@ -3,7 +3,17 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { Cliente, EstadoTarea, Modulo, OrdenServicio, Prioridad, Tarea, Trabajo, Usuario } from "@bitacora/shared";
+import type {
+  Cliente,
+  EstadoTarea,
+  Modulo,
+  OrdenServicio,
+  PaqueteSesionesConSaldo,
+  Prioridad,
+  Tarea,
+  Trabajo,
+  Usuario,
+} from "@bitacora/shared";
 import { puedeVerModulo } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
@@ -135,6 +145,15 @@ export default function AgendaPage() {
   const [clientesOpciones, setClientesOpciones] = useState<Cliente[]>([]);
   const [usuariosOpciones, setUsuariosOpciones] = useState<Usuario[]>([]);
 
+  const [paquetesCliente, setPaquetesCliente] = useState<PaqueteSesionesConSaldo[]>([]);
+  const [paqueteIdTarea, setPaqueteIdTarea] = useState("");
+  const [sesionesConsumidasTarea, setSesionesConsumidasTarea] = useState(1);
+  const [formPaqueteAbierto, setFormPaqueteAbierto] = useState(false);
+  const [nombrePaquete, setNombrePaquete] = useState("");
+  const [cantidadPaquete, setCantidadPaquete] = useState(5);
+  const [guardandoPaquete, setGuardandoPaquete] = useState(false);
+  const [errorPaquete, setErrorPaquete] = useState<string | null>(null);
+
   const cargar = useCallback(async () => {
     setError(null);
     const primerDia = new Date(fechaActual.getFullYear(), fechaActual.getMonth(), 1);
@@ -233,6 +252,23 @@ export default function AgendaPage() {
     if (resUsuarios.ok) setUsuariosOpciones(await resUsuarios.json());
   }
 
+  async function cargarPaquetesCliente(clienteId: string) {
+    if (!clienteId) {
+      setPaquetesCliente([]);
+      return;
+    }
+    const res = await apiFetch(`/api/paquetes-sesiones?cliente_id=${clienteId}`);
+    if (res.ok) setPaquetesCliente(await res.json());
+  }
+
+  function onCambiarClienteTarea(clienteId: string) {
+    setClienteIdTarea(clienteId);
+    setPaqueteIdTarea("");
+    setFormPaqueteAbierto(false);
+    if (puedeAgendaPro) cargarPaquetesCliente(clienteId);
+    else setPaquetesCliente([]);
+  }
+
   function abrirNuevaTarea() {
     setTareaEditandoId(null);
     setTituloTarea("");
@@ -244,6 +280,11 @@ export default function AgendaPage() {
     setPrioridadTarea("media");
     setEstadoTarea("pendiente");
     setErrorTarea(null);
+    setPaqueteIdTarea("");
+    setSesionesConsumidasTarea(1);
+    setPaquetesCliente([]);
+    setFormPaqueteAbierto(false);
+    setErrorPaquete(null);
     setFormTareaAbierto(true);
     cargarOpcionesFormTarea();
   }
@@ -259,8 +300,48 @@ export default function AgendaPage() {
     setPrioridadTarea(t.prioridad);
     setEstadoTarea(t.estado);
     setErrorTarea(null);
+    setPaqueteIdTarea(t.paquete_id ?? "");
+    setSesionesConsumidasTarea(t.sesiones_consumidas ?? 1);
+    setFormPaqueteAbierto(false);
+    setErrorPaquete(null);
     setFormTareaAbierto(true);
     cargarOpcionesFormTarea();
+    if (t.cliente_id && puedeAgendaPro) cargarPaquetesCliente(t.cliente_id);
+    else setPaquetesCliente([]);
+  }
+
+  async function onCrearPaquete(e: FormEvent) {
+    e.preventDefault();
+    setErrorPaquete(null);
+    if (!clienteIdTarea) {
+      setErrorPaquete("Selecciona un cliente primero");
+      return;
+    }
+    if (!nombrePaquete.trim()) {
+      setErrorPaquete("Falta nombre");
+      return;
+    }
+    if (!Number.isInteger(cantidadPaquete) || cantidadPaquete <= 0) {
+      setErrorPaquete("La cantidad debe ser un entero mayor a 0");
+      return;
+    }
+    setGuardandoPaquete(true);
+    const res = await apiFetch("/api/paquetes-sesiones", {
+      method: "POST",
+      body: JSON.stringify({ cliente_id: clienteIdTarea, nombre: nombrePaquete, cantidad_total: cantidadPaquete }),
+    });
+    setGuardandoPaquete(false);
+    if (!res.ok) {
+      const b = await res.json().catch(() => ({}));
+      setErrorPaquete(b.error ?? "No se pudo crear el paquete");
+      return;
+    }
+    const nuevo: PaqueteSesionesConSaldo = await res.json();
+    setPaquetesCliente((prev) => [nuevo, ...prev]);
+    setPaqueteIdTarea(nuevo.id);
+    setFormPaqueteAbierto(false);
+    setNombrePaquete("");
+    setCantidadPaquete(5);
   }
 
   function abrirEvento(e: EventoAgenda) {
@@ -291,6 +372,8 @@ export default function AgendaPage() {
       cliente_id: clienteIdTarea || null,
       responsable_id: responsableIdTarea || null,
       prioridad: prioridadTarea,
+      paquete_id: puedeAgendaPro ? paqueteIdTarea || null : null,
+      sesiones_consumidas: puedeAgendaPro && paqueteIdTarea ? sesionesConsumidasTarea : 1,
       ...(tareaEditandoId ? { estado: estadoTarea } : {}),
     };
     const res = tareaEditandoId
@@ -397,7 +480,7 @@ export default function AgendaPage() {
               </div>
               <div>
                 <Label>Cliente (opcional)</Label>
-                <Select value={clienteIdTarea} onChange={(e) => setClienteIdTarea(e.target.value)}>
+                <Select value={clienteIdTarea} onChange={(e) => onCambiarClienteTarea(e.target.value)}>
                   <option value="">Sin cliente</option>
                   {clientesOpciones.map((c) => (
                     <option key={c.id} value={c.id}>
@@ -406,6 +489,68 @@ export default function AgendaPage() {
                   ))}
                 </Select>
               </div>
+              {puedeAgendaPro && clienteIdTarea && (
+                <div className="sm:col-span-2 rounded-lg border border-border p-3">
+                  <p className="mb-2 text-xs font-semibold text-foreground">Paquete de sesiones (Agenda Pro)</p>
+                  <div className="grid gap-3 sm:grid-cols-[1fr_8rem]">
+                    <div>
+                      <Label>Paquete (opcional)</Label>
+                      <Select value={paqueteIdTarea} onChange={(e) => setPaqueteIdTarea(e.target.value)}>
+                        <option value="">Sin paquete (cita suelta)</option>
+                        {paquetesCliente.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.nombre} — {p.saldo}/{p.cantidad_total} restantes
+                          </option>
+                        ))}
+                      </Select>
+                    </div>
+                    {paqueteIdTarea && (
+                      <div>
+                        <Label>Sesiones a consumir</Label>
+                        <Input
+                          type="number"
+                          min={1}
+                          value={sesionesConsumidasTarea}
+                          onChange={(e) => setSesionesConsumidasTarea(Number(e.target.value) || 1)}
+                        />
+                      </div>
+                    )}
+                  </div>
+                  {!formPaqueteAbierto ? (
+                    <button
+                      type="button"
+                      onClick={() => setFormPaqueteAbierto(true)}
+                      className="mt-2 text-xs font-medium text-brand hover:underline"
+                    >
+                      + Crear paquete nuevo para este cliente
+                    </button>
+                  ) : (
+                    <div className="mt-3 flex flex-col gap-2 border-t border-border pt-3 sm:flex-row sm:items-end">
+                      <div className="flex-1">
+                        <Label>Nombre del paquete</Label>
+                        <Input
+                          type="text"
+                          placeholder="Ej: Pack 10 sesiones"
+                          value={nombrePaquete}
+                          onChange={(e) => setNombrePaquete(e.target.value)}
+                        />
+                      </div>
+                      <div className="w-24">
+                        <Label>Cantidad</Label>
+                        <Input type="number" min={1} value={cantidadPaquete} onChange={(e) => setCantidadPaquete(Number(e.target.value) || 1)} />
+                      </div>
+                      <Button type="button" variant="outline" disabled={guardandoPaquete} onClick={onCrearPaquete}>
+                        {guardandoPaquete ? "Creando…" : "Crear"}
+                      </Button>
+                    </div>
+                  )}
+                  {errorPaquete && (
+                    <div className="mt-2">
+                      <ErrorText>{errorPaquete}</ErrorText>
+                    </div>
+                  )}
+                </div>
+              )}
               <div>
                 <Label>Responsable (opcional)</Label>
                 <Select value={responsableIdTarea} onChange={(e) => setResponsableIdTarea(e.target.value)}>

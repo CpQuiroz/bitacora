@@ -337,9 +337,27 @@ export type Tarea = {
   cliente_id: string | null;
   prioridad: Prioridad;
   estado: EstadoTarea;
+  paquete_id: string | null;
+  sesiones_consumidas: number;
   creado_en: string;
   actualizado_en: string;
 };
+
+// Agenda Pro: pack de N sesiones comprado por un cliente (ej. 5 o 10).
+// El saldo restante no se guarda acá — se calcula siempre a partir de
+// las tareas con este paquete_id (ver backend/src/routes/paquetesSesiones.ts).
+export type PaqueteSesiones = {
+  id: string;
+  empresa_id: string;
+  cliente_id: string;
+  nombre: string;
+  cantidad_total: number;
+  fecha_compra: string;
+  notas: string | null;
+  creado_en: string;
+};
+
+export type PaqueteSesionesConSaldo = PaqueteSesiones & { saldo: number };
 
 export type RutaPlanificada = {
   id: string;
@@ -878,6 +896,7 @@ export type Database = {
       ia_uso: Tabla<IaUso>;
       errores_backend: Tabla<ErrorBackend>;
       empresa_modulos: Tabla<EmpresaModulo>;
+      paquetes_sesiones: Tabla<PaqueteSesiones>;
     };
     Views: Record<string, never>;
     Functions: {
