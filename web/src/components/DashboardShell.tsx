@@ -259,6 +259,13 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
             <div key={grupo.titulo} className={i > 0 ? "mt-2 border-t border-border pt-2" : ""}>
               {renderItems(grupo.items, compacto)}
             </div>
+          ) : grupo.items.length === 1 ? (
+            // Grupo con un solo ítem visible (roles acotados, ej. contador/
+            // colaborador) — se muestra como link suelto, sin encabezado de
+            // sección, para no dejar un título flotando sobre una sola línea.
+            <div key={grupo.titulo} className={i > 0 ? "pt-4" : "pt-1"}>
+              {renderItems(grupo.items, compacto)}
+            </div>
           ) : (
             <div key={grupo.titulo}>
               <p className={`px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted ${i > 0 ? "pt-4" : "pt-1"}`}>
