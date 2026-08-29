@@ -18,7 +18,11 @@ paquetesSesionesRouter.get(
   ah<RequestConEmpresa>(async (req, res) => {
     const { cliente_id } = req.query;
 
-    let query = supabase.from("paquetes_sesiones").select("*").eq("empresa_id", req.empresaId!).order("creado_en", { ascending: false });
+    let query = supabase
+      .from("paquetes_sesiones")
+      .select("*, cliente:clientes(nombre)")
+      .eq("empresa_id", req.empresaId!)
+      .order("creado_en", { ascending: false });
     if (typeof cliente_id === "string" && cliente_id) query = query.eq("cliente_id", cliente_id);
 
     const { data: paquetes, error } = await query;

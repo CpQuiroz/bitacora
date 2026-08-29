@@ -172,6 +172,9 @@ const badgeStyles: Record<string, string> = {
   // notificaciones al cliente: éxito/fallo de un envío
   exito: "bg-success-soft text-success",
   fallido: "bg-danger-soft text-danger",
+  // paquetes de sesiones (Agenda Pro): saldo restante
+  disponible: "bg-success-soft text-success",
+  agotado: "bg-danger-soft text-danger",
 };
 
 export function Badge({ value }: { value: string }) {

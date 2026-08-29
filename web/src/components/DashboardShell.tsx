@@ -12,6 +12,7 @@ import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { asegurarFuenteCargada, fuenteDe } from "@/lib/fuentes";
 import {
+  IconBox,
   IconCalendar,
   IconChat,
   IconChevronRight,
@@ -49,6 +50,11 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/dashboard", label: "Dashboard", icon: IconHome, modulo: null },
       { href: "/dashboard/agenda", label: "Agenda", icon: IconCalendar, modulo: "agenda" },
+      // Superficie propia de Agenda Pro — solo aparece para empresas con el
+      // módulo opt-in activado (ver empresa_modulos / Etapa 5). Ítem aparte
+      // de "Agenda" (no anidado) para no convertir el link directo de
+      // Agenda en un desplegable.
+      { href: "/dashboard/agenda/paquetes", label: "Paquetes", icon: IconBox, modulo: "agenda_pro" },
       {
         label: "Órdenes de Servicio",
         icon: IconClipboardCheck,
