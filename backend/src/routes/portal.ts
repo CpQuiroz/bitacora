@@ -326,6 +326,90 @@ portalRouter.post(
   })
 );
 
+// ---------- Citas (Agenda Pro) ----------
+
+async function resolverTareaDelCliente(clienteId: string, tareaId: string) {
+  const { data } = await supabase.from("tareas").select("*").eq("id", tareaId).maybeSingle();
+  if (!data || data.cliente_id !== clienteId) return null;
+  return data;
+}
+
+portalRouter.get(
+  "/datos/citas",
+  requierePortal,
+  ah<RequestConPortal>(async (req, res) => {
+    const { data, error } = await supabase
+      .from("tareas")
+      .select("id, titulo, descripcion, fecha, hora, estado")
+      .eq("cliente_id", req.clienteId!)
+      .order("fecha", { ascending: false });
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    res.json(data);
+  })
+);
+
+portalRouter.get(
+  "/datos/citas/:id",
+  requierePortal,
+  ah<RequestConPortal>(async (req, res) => {
+    const tarea = await resolverTareaDelCliente(req.clienteId!, req.params.id);
+    if (!tarea) {
+      res.status(404).json({ error: "No encontrada" });
+      return;
+    }
+    res.json(tarea);
+  })
+);
+
+portalRouter.post(
+  "/datos/citas/:id/confirmar",
+  requierePortal,
+  ah<RequestConPortal>(async (req, res) => {
+    const tarea = await resolverTareaDelCliente(req.clienteId!, req.params.id);
+    if (!tarea) {
+      res.status(404).json({ error: "No encontrada" });
+      return;
+    }
+    if (tarea.estado !== "pendiente") {
+      res.status(400).json({ error: "Esta cita ya no está pendiente de confirmación" });
+      return;
+    }
+    await supabase.from("tareas").update({ estado: "confirmada", actualizado_en: new Date().toISOString() }).eq("id", req.params.id);
+    await notificarGerencia(req.empresaId!, "cita_confirmada", {
+      cuerpo: `${tarea.titulo} — ${tarea.fecha} — confirmada por el cliente.`,
+      entidadTipo: "tarea",
+      entidadId: req.params.id,
+    }).catch(() => {});
+    res.json({ ok: true });
+  })
+);
+
+portalRouter.post(
+  "/datos/citas/:id/cancelar",
+  requierePortal,
+  ah<RequestConPortal>(async (req, res) => {
+    const tarea = await resolverTareaDelCliente(req.clienteId!, req.params.id);
+    if (!tarea) {
+      res.status(404).json({ error: "No encontrada" });
+      return;
+    }
+    if (tarea.estado !== "pendiente" && tarea.estado !== "confirmada") {
+      res.status(400).json({ error: "Esta cita ya no se puede cancelar" });
+      return;
+    }
+    await supabase.from("tareas").update({ estado: "cancelada", actualizado_en: new Date().toISOString() }).eq("id", req.params.id);
+    await notificarGerencia(req.empresaId!, "cita_cancelada", {
+      cuerpo: `${tarea.titulo} — ${tarea.fecha} — cancelada por el cliente.`,
+      entidadTipo: "tarea",
+      entidadId: req.params.id,
+    }).catch(() => {});
+    res.json({ ok: true });
+  })
+);
+
 portalRouter.get(
   "/datos/cobros",
   requierePortal,

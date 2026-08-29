@@ -22,6 +22,7 @@ const ASUNTOS_DEFAULT: Record<TipoNotificacionCliente, string> = {
   os_completada: "Tu servicio fue completado",
   cobro_pendiente: "Tienes un cobro pendiente",
   cobro_vencido: "Tienes un cobro vencido",
+  cita_agendada: "Tu cita con {empresa}",
 };
 
 const CUERPOS_DEFAULT: Record<TipoNotificacionCliente, string> = {
@@ -31,6 +32,8 @@ const CUERPOS_DEFAULT: Record<TipoNotificacionCliente, string> = {
   os_completada: "<p>Hola {cliente}, adjuntamos el comprobante de tu servicio con {empresa}.</p>",
   cobro_pendiente: "<p>Hola {cliente}, tienes un cobro pendiente de {monto} con vencimiento el {fecha}.</p>",
   cobro_vencido: "<p>Hola {cliente}, tu cobro de {monto} venció el {fecha}. Contáctanos para regularizarlo.</p>",
+  cita_agendada:
+    "<p>Hola {cliente}, tienes una cita agendada con {empresa} el {fecha}{hora}. Confírmala o cancélala desde tu portal.</p>",
 };
 
 // Algunos eventos comparten el mismo "tipo" de mensaje personalizado
@@ -42,6 +45,7 @@ const TIPO_MENSAJE: Record<TipoNotificacionCliente, TipoMensajePersonalizado> = 
   os_completada: "orden_servicio",
   cobro_pendiente: "cobranza",
   cobro_vencido: "cobranza",
+  cita_agendada: "cita_agendada",
 };
 
 function activado(config: NotificacionesConfig | null, tipo: TipoNotificacionCliente): boolean {
@@ -62,6 +66,8 @@ function activado(config: NotificacionesConfig | null, tipo: TipoNotificacionCli
       return config.cobro_pendiente;
     case "cobro_vencido":
       return config.cobranza_atrasada;
+    case "cita_agendada":
+      return config.cita_agendada;
   }
 }
 
@@ -90,12 +96,13 @@ async function registrar(
 // revisar de nuevo después — se les agrega un link al Portal de
 // Cliente en el correo. "técnico en camino" queda afuera: es un aviso
 // de estado, no un documento.
-const ENTIDAD_PORTAL: Partial<Record<TipoNotificacionCliente, "trabajo" | "cotizacion" | "factura">> = {
+const ENTIDAD_PORTAL: Partial<Record<TipoNotificacionCliente, "trabajo" | "cotizacion" | "factura" | "tarea">> = {
   cotizacion_enviada: "cotizacion",
   cotizacion_por_vencer: "cotizacion",
   os_completada: "trabajo",
   cobro_pendiente: "factura",
   cobro_vencido: "factura",
+  cita_agendada: "tarea",
 };
 
 async function linkPortal(empresaId: string, clienteId: string, tipo: TipoNotificacionCliente, entidadId: string): Promise<string | null> {

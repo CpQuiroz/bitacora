@@ -7,7 +7,7 @@ import { requiereModulo } from "../permisos";
 
 export const notificacionesRouter = Router();
 
-const TIPOS_MENSAJE: TipoMensajePersonalizado[] = ["cotizacion", "orden_servicio", "cobranza", "tecnico_en_camino"];
+const TIPOS_MENSAJE: TipoMensajePersonalizado[] = ["cotizacion", "orden_servicio", "cobranza", "tecnico_en_camino", "cita_agendada"];
 
 function tipoValido(tipo: string): tipo is TipoMensajePersonalizado {
   return (TIPOS_MENSAJE as string[]).includes(tipo);
@@ -63,6 +63,7 @@ notificacionesRouter.patch(
       "cotizacion_por_vencer",
       "tecnico_en_camino",
       "cobro_pendiente",
+      "cita_agendada",
     ];
     const cambios: Partial<NotificacionesConfig> = { actualizado_en: new Date().toISOString() };
     for (const campo of camposBooleanos) {

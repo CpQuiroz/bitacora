@@ -39,6 +39,10 @@ const TOGGLES: { grupo: string; items: { campo: keyof NotificacionesConfig; etiq
       { campo: "cobranza_atrasada", etiqueta: "Cobro vencido" },
     ],
   },
+  {
+    grupo: "Agenda Pro",
+    items: [{ campo: "cita_agendada", etiqueta: "Nueva cita agendada (con link para confirmar o cancelar)" }],
+  },
 ];
 
 const TIPOS_MENSAJE: { valor: TipoMensajePersonalizado; etiqueta: string; variables: string }[] = [
@@ -46,6 +50,7 @@ const TIPOS_MENSAJE: { valor: TipoMensajePersonalizado; etiqueta: string; variab
   { valor: "orden_servicio", etiqueta: "Órdenes de Trabajo/Servicio", variables: "{cliente}, {empresa}, {tecnico}" },
   { valor: "tecnico_en_camino", etiqueta: "Técnico en camino", variables: "{cliente}, {tecnico}, {empresa}" },
   { valor: "cobranza", etiqueta: "Cobranzas", variables: "{cliente}, {fecha}, {monto}, {empresa}" },
+  { valor: "cita_agendada", etiqueta: "Agenda Pro", variables: "{cliente}, {fecha}, {hora}, {empresa}" },
 ];
 
 const ETIQUETA_TIPO_LOG: Record<string, string> = {
@@ -55,6 +60,7 @@ const ETIQUETA_TIPO_LOG: Record<string, string> = {
   os_completada: "OS completada",
   cobro_pendiente: "Cobro pendiente",
   cobro_vencido: "Cobro vencido",
+  cita_agendada: "Cita agendada",
 };
 
 type Mensajes = Record<TipoMensajePersonalizado, MensajePersonalizado | null>;

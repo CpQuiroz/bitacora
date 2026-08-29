@@ -54,6 +54,7 @@ const ESTADOS_AGENDA: { valor: EstadoAgenda; etiqueta: string; clase: string }[]
 
 const ESTADO_TAREA_A_AGENDA: Record<EstadoTarea, EstadoAgenda> = {
   pendiente: "agendado",
+  confirmada: "agendado",
   completada: "completado",
   cancelada: "cancelado",
 };
@@ -577,6 +578,7 @@ export default function AgendaPage() {
                   <Label>Estado</Label>
                   <Select value={estadoTarea} onChange={(e) => setEstadoTarea(e.target.value as EstadoTarea)}>
                     <option value="pendiente">Pendiente</option>
+                    {puedeAgendaPro && <option value="confirmada">Confirmada por el cliente</option>}
                     <option value="completada">Completada</option>
                     <option value="cancelada">Cancelada</option>
                   </Select>

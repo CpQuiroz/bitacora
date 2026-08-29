@@ -19,6 +19,8 @@ const TITULOS: Record<TipoNotificacion, string> = {
   cotizacion_aprobada: "Cotización aprobada por el cliente",
   tarea_asignada: "Nueva tarea de agenda asignada",
   documento_por_vencer: "Documento próximo a vencer",
+  cita_confirmada: "Cliente confirmó una cita",
+  cita_cancelada: "Cliente canceló una cita",
 };
 
 export async function notificar(

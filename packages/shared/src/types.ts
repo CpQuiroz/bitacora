@@ -42,7 +42,7 @@ export type TipoPlantilla = "cotizacion" | "orden_servicio" | "cobranza" | "term
 export type PosicionLogo = "izquierda" | "centro" | "derecha";
 export type ProveedorIntegracion = "webpay" | "flow" | "mercadopago" | "whatsapp" | "anthropic" | "google_document_ai";
 export type CategoriaIntegracion = "pagos" | "comunicacion" | "ia";
-export type TipoMensajePersonalizado = "cotizacion" | "orden_servicio" | "cobranza" | "tecnico_en_camino";
+export type TipoMensajePersonalizado = "cotizacion" | "orden_servicio" | "cobranza" | "tecnico_en_camino" | "cita_agendada";
 
 export type Empresa = {
   id: string;
@@ -243,7 +243,9 @@ export type TipoNotificacion =
   | "email_fallido"
   | "cotizacion_aprobada"
   | "tarea_asignada"
-  | "documento_por_vencer";
+  | "documento_por_vencer"
+  | "cita_confirmada"
+  | "cita_cancelada";
 
 export type EntidadNotificacion = "trabajo" | "factura" | "ruta" | "usuario" | "cotizacion" | "tarea" | "documento";
 
@@ -324,7 +326,10 @@ export type Trabajo = {
 // Evento de Agenda liviano — no requiere una Orden de Servicio (a
 // diferencia de Trabajo/trabajos, que sí la crea eagerly). Para
 // recordatorios y visitas técnicas sueltas.
-export type EstadoTarea = "pendiente" | "completada" | "cancelada";
+// "confirmada" es propia de Agenda Pro — el cliente confirma la cita
+// desde el Portal antes de que llegue la fecha (ver 5c). Sin Agenda
+// Pro las tareas siguen yendo directo de pendiente a completada.
+export type EstadoTarea = "pendiente" | "confirmada" | "completada" | "cancelada";
 
 export type Tarea = {
   id: string;
@@ -395,7 +400,7 @@ export type Cliente = {
   creado_en: string;
 };
 
-export type EntidadPortal = "trabajo" | "cotizacion" | "factura";
+export type EntidadPortal = "trabajo" | "cotizacion" | "factura" | "tarea";
 
 export type PortalAcceso = {
   id: string;
@@ -782,10 +787,11 @@ export type NotificacionesConfig = {
   dias_aviso_vencimiento: number;
   tecnico_en_camino: boolean;
   cobro_pendiente: boolean;
+  cita_agendada: boolean;
   actualizado_en: string;
 };
 
-// Los 6 eventos que efectivamente le mandan un correo al CLIENTE
+// Los 7 eventos que efectivamente le mandan un correo al CLIENTE
 // (distinto de TipoNotificacion, que es el feed interno del equipo).
 export type TipoNotificacionCliente =
   | "cotizacion_enviada"
@@ -793,9 +799,10 @@ export type TipoNotificacionCliente =
   | "tecnico_en_camino"
   | "os_completada"
   | "cobro_pendiente"
-  | "cobro_vencido";
+  | "cobro_vencido"
+  | "cita_agendada";
 
-export type EntidadNotificacionCliente = "cotizacion" | "trabajo" | "factura";
+export type EntidadNotificacionCliente = "cotizacion" | "trabajo" | "factura" | "tarea";
 
 export type NotificacionClienteLog = {
   id: string;

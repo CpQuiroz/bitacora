@@ -5,11 +5,12 @@ import { usePathname, useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { Logo } from "./Logo";
 import { cerrarSesionPortal } from "@/lib/portalApi";
-import { IconClipboardCheck, IconHome, IconLogOut, IconReceipt, IconWallet } from "./icons";
+import { IconCalendar, IconClipboardCheck, IconHome, IconLogOut, IconReceipt, IconWallet } from "./icons";
 
 const NAV = [
   { href: "/portal", label: "Inicio", icon: IconHome },
   { href: "/portal/ordenes", label: "OS", icon: IconClipboardCheck },
+  { href: "/portal/citas", label: "Citas", icon: IconCalendar },
   { href: "/portal/cotizaciones", label: "Cotizaciones", icon: IconReceipt },
   { href: "/portal/cobros", label: "Cobros", icon: IconWallet },
 ];

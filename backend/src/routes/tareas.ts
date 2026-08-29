@@ -2,14 +2,15 @@ import { Router } from "express";
 import type { EstadoTarea, Prioridad, Tarea } from "@bitacora/shared";
 import { supabase } from "../supabase";
 import { notificar } from "../notificar";
+import { notificarCliente } from "../notificarCliente";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
-import { requiereModulo } from "../permisos";
+import { requiereModulo, empresaTieneModulo } from "../permisos";
 
 export const tareasRouter = Router();
 
 const PRIORIDADES: Prioridad[] = ["alta", "media", "baja"];
-const ESTADOS: EstadoTarea[] = ["pendiente", "completada", "cancelada"];
+const ESTADOS: EstadoTarea[] = ["pendiente", "confirmada", "completada", "cancelada"];
 const HORA_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 async function clienteExiste(empresaId: string, clienteId: string) {
@@ -125,6 +126,33 @@ tareasRouter.post(
         entidadTipo: "tarea",
         entidadId: data.id,
       });
+    }
+
+    // Aviso de cita al cliente — solo si la empresa tiene Agenda Pro y
+    // el cliente tiene correo. No bloquea la respuesta si falla (mismo
+    // criterio que "técnico en camino" en trabajos.ts).
+    if (data.cliente_id) {
+      const clienteIdTarea = data.cliente_id;
+      void (async () => {
+        if (!(await empresaTieneModulo(req.empresaId!, "agenda_pro"))) return;
+        // tenant-ok: clienteIdTarea === data.cliente_id, ya validado por
+        // clienteExiste(req.empresaId!, cliente_id) más arriba en este
+        // mismo handler antes del insert.
+        const { data: cliente } = await supabase.from("clientes").select("nombre, correo").eq("id", clienteIdTarea).maybeSingle();
+        if (!cliente?.correo) return;
+        const { data: empresa } = await supabase.from("empresas").select("nombre").eq("id", req.empresaId!).single();
+        await notificarCliente(req.empresaId!, "cita_agendada", cliente.correo, {
+          clienteId: clienteIdTarea,
+          entidadTipo: "tarea",
+          entidadId: data.id,
+          variables: {
+            cliente: cliente.nombre ?? "",
+            empresa: empresa?.nombre ?? "",
+            fecha: data.fecha,
+            hora: data.hora ? ` a las ${data.hora}` : "",
+          },
+        });
+      })();
     }
 
     res.status(201).json(data);
