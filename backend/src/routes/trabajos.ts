@@ -442,6 +442,8 @@ trabajosRouter.post(
       cambios.estado_os = "completada";
     }
 
+    // tenant-ok: trabajoExiste() más arriba ya validó empresa_id; orden
+    // sale de obtenerOCrearOrden() sobre ese mismo trabajo ya validado.
     const { data, error } = await supabase
       .from("ordenes_servicio")
       .update(cambios)
@@ -458,6 +460,8 @@ trabajosRouter.post(
     // tarea" que existe hoy — se usa como disparador de "técnico en
     // camino" (no bloquea la respuesta si el envío falla).
     if (item === "Check-in") {
+      // tenant-ok: trabajoExiste() al inicio del handler ya validó
+      // empresa_id para req.params.id; clienteId sale de ese mismo trabajo.
       void (async () => {
         const { data: tarea } = await supabase
           .from("trabajos")
@@ -483,6 +487,8 @@ trabajosRouter.post(
     // todavía no se le mandó, dispara el correo de satisfacción. No
     // bloquea la respuesta si Resend no está configurado o falla.
     if (item === "Check-out") {
+      // tenant-ok: trabajoExiste() al inicio del handler ya validó
+      // empresa_id para req.params.id (los 2 .from de acá abajo).
       const { data: tarea } = await supabase
         .from("trabajos")
         .select("cliente, encuesta_email, encuesta_enviada_en")
@@ -564,6 +570,8 @@ trabajosRouter.post(
     const buffer = Buffer.from(firma_base64, "base64");
     const key = await subirFirma(req.empresaId!, req.params.id, buffer);
 
+    // tenant-ok: trabajoExiste() arriba ya validó empresa_id; orden sale
+    // de obtenerOCrearOrden() sobre ese mismo trabajo ya validado.
     const { data, error } = await supabase
       .from("ordenes_servicio")
       .update({
@@ -706,6 +714,9 @@ trabajosRouter.post(
       return;
     }
 
+    // tenant-ok (los 3 .from de acá abajo): ordenDeTrabajo() arriba ya
+    // validó empresa_id para req.params.id/orden.id; trabajoActualizado.
+    // cliente_id sale de ese mismo trabajo ya validado.
     const ahora = new Date().toISOString();
     const { data, error } = await supabase
       .from("ordenes_servicio")
@@ -734,6 +745,8 @@ trabajosRouter.post(
     // "/firma" solo guarda la firma) — se le manda el PDF al cliente
     // si tiene correo. No bloquea la respuesta si el envío falla.
     if (trabajoActualizado?.cliente_id) {
+      // tenant-ok: cliente_id sale de trabajoActualizado, ya validado
+      // arriba vía ordenDeTrabajo()/req.params.id.
       void (async () => {
         const { data: cliente } = await supabase.from("clientes").select("correo").eq("id", trabajoActualizado.cliente_id!).maybeSingle();
         if (!cliente?.correo) return;

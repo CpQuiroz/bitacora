@@ -286,6 +286,8 @@ usuariosRouter.patch(
       return;
     }
 
+    // tenant-ok: acota por req.userId!, más estricto que empresa_id
+    // (solo la propia fila del usuario logueado, no toda la empresa).
     const { data, error } = await supabase
       .from("usuarios")
       .update(cambios)
@@ -302,6 +304,7 @@ usuariosRouter.patch(
 );
 
 // Historial de accesos propio — Seguridad. Cada quien ve solo el suyo.
+// tenant-ok: acota por req.userId! (más estricto que empresa_id).
 usuariosRouter.get(
   "/me/accesos",
   ah<RequestConEmpresa>(async (req, res) => {
@@ -330,6 +333,7 @@ usuariosRouter.post(
 
     const fotoUrl = await subirFotoPerfil(req.userId!, req.file.buffer, req.file.mimetype);
 
+    // tenant-ok: acota por req.userId! (más estricto que empresa_id).
     const { data, error } = await supabase
       .from("usuarios")
       .update({ foto_url: fotoUrl })

@@ -390,6 +390,9 @@ rutasPlanificadasRouter.post(
       })),
     ];
 
+    // tenant-ok (los 4 .from de acá abajo): rutaExiste() y la consulta de
+    // "tareas" más arriba en este handler ya scopearon por empresa_id —
+    // u.id/ruta.id salen de ahí, no de input sin validar.
     await Promise.all(
       actualizaciones.map((u) =>
         supabase
@@ -413,6 +416,7 @@ rutasPlanificadasRouter.post(
       .select("*")
       .eq("id", ruta.id)
       .single();
+    // tenant-ok: ruta.id sale de rutaExiste() (ya validado más arriba).
     const { data: tareasFinal } = await supabase
       .from("trabajos")
       .select("*, cliente_info:clientes(*)")

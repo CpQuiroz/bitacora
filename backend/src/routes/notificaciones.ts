@@ -77,6 +77,7 @@ notificacionesRouter.patch(
       cambios.dias_aviso_vencimiento = dias;
     }
 
+    // tenant-ok: obtenerOCrearConfig() arriba ya scopeó por empresa_id.
     const { data, error } = await supabase
       .from("notificaciones_config")
       .update(cambios)

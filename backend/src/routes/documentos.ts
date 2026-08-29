@@ -206,6 +206,7 @@ documentosRouter.delete(
       res.status(404).json({ error: "Documento no encontrado" });
       return;
     }
+    // tenant-ok: documentoAutorizado() arriba ya validó empresa_id.
     const { error } = await supabase.from("documentos").delete().eq("id", req.params.id);
     if (error) {
       res.status(500).json({ error: error.message });

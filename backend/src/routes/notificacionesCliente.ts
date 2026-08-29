@@ -89,6 +89,7 @@ notificacionesClienteRouter.post(
       const { data: trabajo } = await supabase
         .from("trabajos")
         .select("cliente, cliente_id, responsable:usuarios(nombre)")
+        .eq("empresa_id", req.empresaId!)
         .eq("id", fila.entidad_id)
         .maybeSingle();
       if (!trabajo || !trabajo.cliente_id) {
@@ -106,6 +107,7 @@ notificacionesClienteRouter.post(
       const { data: factura } = await supabase
         .from("facturas")
         .select("monto, fecha_vencimiento, cliente_id, cliente_info:clientes(nombre)")
+        .eq("empresa_id", req.empresaId!)
         .eq("id", fila.entidad_id)
         .maybeSingle();
       if (!factura || !factura.cliente_id) {
