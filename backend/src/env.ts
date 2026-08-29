@@ -29,6 +29,14 @@ export const env = {
   // (HMAC-SHA256, ver portalAuth.ts) — identidad separada de Supabase
   // Auth. Generar con: openssl rand -base64 32.
   PORTAL_TOKEN_SECRET: requerido("PORTAL_TOKEN_SECRET"),
+  // Panel de Super-Admin — identidad de plataforma, separada de todo lo
+  // demás (ver backend/src/superadmin/). SUPERADMIN_TOKEN_SECRET firma
+  // los tokens de sesión (HMAC-SHA256); SUPERADMIN_ENCRYPTION_KEY cifra
+  // el secreto TOTP en reposo (AES-256-GCM, ver crypto.ts) — deliberadamente
+  // distinta de INTEGRACIONES_ENCRYPTION_KEY para que una fuga no
+  // comprometa ambas cosas. Generar cada una con: openssl rand -base64 32.
+  SUPERADMIN_TOKEN_SECRET: requerido("SUPERADMIN_TOKEN_SECRET"),
+  SUPERADMIN_ENCRYPTION_KEY: requerido("SUPERADMIN_ENCRYPTION_KEY"),
   // Opcionales: sin esto, el envío de la encuesta de satisfacción se
   // omite silenciosamente (no bloquea el resto del backend).
   RESEND_API_KEY: process.env.RESEND_API_KEY ?? null,

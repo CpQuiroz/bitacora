@@ -39,6 +39,7 @@ import { notificacionesFeedRouter } from "./routes/notificacionesFeed";
 import { unidadesMedidaRouter } from "./routes/unidadesMedida";
 import { notificacionesClienteRouter } from "./routes/notificacionesCliente";
 import { portalRouter } from "./routes/portal";
+import { superadminRouter } from "./superadmin/routes";
 import { tiposDocumentoRouter } from "./routes/tiposDocumento";
 import { vehiculosRouter } from "./routes/vehiculos";
 import { documentosRouter } from "./routes/documentos";
@@ -194,6 +195,7 @@ app.use("/api/whatsapp", whatsappRouter);
 // cuenta de Bitácora. Las rutas de datos (/datos/*) están protegidas
 // adentro del propio router con requierePortal (portalAuth.ts).
 app.use("/api/portal", portalRouter);
+app.use("/api/superadmin", superadminRouter);
 
 // Handler de errores global: cualquier excepción sin capturar en una
 // ruta async (vía ah()) termina acá en vez de tumbar el proceso.

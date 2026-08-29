@@ -6,6 +6,7 @@ import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
 import { requiereModulo } from "../permisos";
 import { cifrarJson, descifrarJson } from "../crypto";
+import { env } from "../env";
 
 export const integracionesRouter = Router();
 
@@ -76,7 +77,7 @@ function enmascarar(valor: unknown): string | null {
 // sale de esta función.
 function aRespuestaPublica(proveedor: ProveedorIntegracion, fila: Record<string, unknown> | null) {
   const def = DEFINICIONES[proveedor];
-  const credenciales = descifrarJson(fila?.credenciales as string | undefined);
+  const credenciales = descifrarJson(fila?.credenciales as string | undefined, env.INTEGRACIONES_ENCRYPTION_KEY, "INTEGRACIONES_ENCRYPTION_KEY");
   return {
     proveedor,
     nombre: def.nombre,
@@ -129,7 +130,7 @@ integracionesRouter.patch(
       .maybeSingle();
 
     // Guardar credenciales nuevas exige volver a probar la conexión.
-    const cambios = { credenciales: cifrarJson(credenciales), conectado: false, conectado_en: null, actualizado_en: new Date().toISOString() };
+    const cambios = { credenciales: cifrarJson(credenciales, env.INTEGRACIONES_ENCRYPTION_KEY, "INTEGRACIONES_ENCRYPTION_KEY"), conectado: false, conectado_en: null, actualizado_en: new Date().toISOString() };
 
     const { data, error } = existente
       ? await supabase.from("integraciones").update(cambios).eq("id", existente.id).select().single()
@@ -163,7 +164,7 @@ integracionesRouter.post(
       .eq("proveedor", proveedor)
       .maybeSingle();
 
-    const credenciales = descifrarJson(fila?.credenciales as string | undefined);
+    const credenciales = descifrarJson(fila?.credenciales as string | undefined, env.INTEGRACIONES_ENCRYPTION_KEY, "INTEGRACIONES_ENCRYPTION_KEY");
     if (!fila || Object.keys(credenciales).length === 0) {
       res.status(400).json({ error: "Primero guarda las credenciales" });
       return;

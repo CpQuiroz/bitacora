@@ -157,6 +157,10 @@ const badgeStyles: Record<string, string> = {
   // activo/inactivo (checklists, tipos de OS, etc.)
   activo: "bg-success-soft text-success",
   inactivo: "bg-border text-muted",
+  // estado de empresa (Panel de Super-Admin)
+  activa: "bg-success-soft text-success",
+  suspendida: "bg-warning-soft text-warning",
+  dada_de_baja: "bg-danger-soft text-danger",
   // inventario: estado de stock
   en_stock: "bg-success-soft text-success",
   stock_bajo: "bg-warning-soft text-warning",
@@ -177,7 +181,7 @@ export function Badge({ value }: { value: string }) {
         badgeStyles[value] ?? "bg-brand-soft text-brand"
       }`}
     >
-      {value.replace("_", " ")}
+      {value.replaceAll("_", " ")}
     </span>
   );
 }

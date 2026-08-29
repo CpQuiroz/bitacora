@@ -15,6 +15,7 @@
 export type Rol = "admin" | "supervisor" | "contador" | "colaborador";
 export type Rubro = "transporte" | "servicio_tecnico" | "otro";
 export type Plan = "trial" | "basico" | "pro";
+export type EstadoEmpresa = "activa" | "suspendida" | "dada_de_baja";
 export type EstadoTrabajo = "en_curso" | "completado" | "cancelado";
 export type Prioridad = "alta" | "media" | "baja";
 export type TipoCheckin = "manual" | "ubicacion";
@@ -75,6 +76,34 @@ export type Empresa = {
   prueba_termina_en: string | null;
   inventario_activado: boolean;
   inventario_stock_minimo_default: number;
+  estado: EstadoEmpresa;
+  creado_en: string;
+};
+
+// Identidad de plataforma — completamente separada de Usuario/Rol. Fila
+// completa de la tabla (incluye secretos) — los endpoints de superadmin
+// nunca devuelven password_hash/totp_secreto al frontend, seleccionan
+// explícitamente solo los campos públicos.
+export type SuperAdmin = {
+  id: string;
+  correo: string;
+  password_hash: string;
+  totp_secreto: string;
+  nombre: string;
+  activo: boolean;
+  intentos_fallidos: number;
+  bloqueado_hasta: string | null;
+  ultimo_login_en: string | null;
+  creado_en: string;
+};
+
+export type SuperAdminAuditoria = {
+  id: string;
+  super_admin_id: string;
+  accion: string;
+  empresa_id: string | null;
+  detalle: string | null;
+  ip: string | null;
   creado_en: string;
 };
 
@@ -818,6 +847,8 @@ export type Database = {
       proveedores: Tabla<Proveedor>;
       presupuesto_items: Tabla<PresupuestoItem>;
       tareas: Tabla<Tarea>;
+      super_admins: Tabla<SuperAdmin>;
+      super_admin_auditoria: Tabla<SuperAdminAuditoria>;
     };
     Views: Record<string, never>;
     Functions: {

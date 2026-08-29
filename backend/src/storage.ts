@@ -13,6 +13,7 @@ import {
   S3Client,
   PutObjectCommand,
   GetObjectCommand,
+  ListObjectsV2Command,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { env } from "./env";
@@ -264,4 +265,43 @@ export async function subirFotoGuia(
 
 export function urlFirmadaFotoGuia(key: string, minutosValidez = 15): Promise<string> {
   return urlFirmada(key, minutosValidez, BUCKET_ANEXOS);
+}
+
+// ------------------------------------------------------------
+// Uso de storage por empresa — Panel de Super-Admin. Suma el tamaño de
+// todos los objetos cuyo key empieza con el empresaId, en los 3
+// buckets (sin "/" en el prefix: cubre tanto "${empresaId}/..." como
+// el logo "${empresaId}.ext" — un UUID de 36 caracteres nunca puede
+// ser prefijo de otro UUID, cero riesgo de colisión entre empresas).
+//
+// Límite conocido: las fotos de perfil ("avatars/${usuarioId}.ext" en
+// BUCKET_LOGOS) no llevan prefijo de empresa y quedan fuera de este
+// conteo — volumen marginal comparado con fotos de trabajos/gastos/
+// documentos, así que el número es una aproximación por defecto, no
+// un total exacto.
+const MAX_PAGINAS_LISTADO = 20;
+
+async function sumarTamanioBucket(bucket: string, empresaId: string): Promise<number> {
+  let total = 0;
+  let continuationToken: string | undefined;
+  for (let pagina = 0; pagina < MAX_PAGINAS_LISTADO; pagina++) {
+    const resultado = await client.send(
+      new ListObjectsV2Command({
+        Bucket: bucket,
+        Prefix: empresaId,
+        ContinuationToken: continuationToken,
+      })
+    );
+    for (const objeto of resultado.Contents ?? []) total += objeto.Size ?? 0;
+    if (!resultado.IsTruncated || !resultado.NextContinuationToken) break;
+    continuationToken = resultado.NextContinuationToken;
+  }
+  return total;
+}
+
+export async function medirUsoStorage(empresaId: string): Promise<{ bytesTotal: number; incluyeAvatares: false }> {
+  const tamanos = await Promise.all(
+    [BUCKET, BUCKET_LOGOS, BUCKET_ANEXOS].map((bucket) => sumarTamanioBucket(bucket, empresaId).catch(() => 0))
+  );
+  return { bytesTotal: tamanos.reduce((a, b) => a + b, 0), incluyeAvatares: false };
 }
