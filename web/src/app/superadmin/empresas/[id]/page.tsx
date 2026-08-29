@@ -3,13 +3,17 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import type { EstadoEmpresa, Plan } from "@bitacora/shared";
 import { SuperAdminShell } from "@/components/SuperAdminShell";
-import { Card, ErrorText, PageHeader } from "@/components/ui";
-import { IconChevronLeft } from "@/components/icons";
+import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select } from "@/components/ui";
+import { IconChevronLeft, IconShield } from "@/components/icons";
 import { obtenerTokenSuperAdmin, superadminFetch } from "@/lib/superadminApi";
 
+const ESTADOS: EstadoEmpresa[] = ["activa", "suspendida", "dada_de_baja"];
+const PLANES: Plan[] = ["trial", "basico", "pro"];
+
 type Salud = {
-  empresa: { id: string; nombre: string };
+  empresa: { id: string; nombre: string; estado: EstadoEmpresa; plan: Plan };
   ultima_actividad: string | null;
   usuarios_activos_mes: number;
   os_creadas_mes: number;
@@ -46,26 +50,110 @@ export default function SuperAdminSaludEmpresaPage() {
   const [salud, setSalud] = useState<Salud | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const [planSeleccionado, setPlanSeleccionado] = useState<Plan>("trial");
+  const [guardandoEstado, setGuardandoEstado] = useState(false);
+  const [errorEstado, setErrorEstado] = useState<string | null>(null);
+  const [guardandoPlan, setGuardandoPlan] = useState(false);
+  const [errorPlan, setErrorPlan] = useState<string | null>(null);
+  const [exportando, setExportando] = useState(false);
+  const [errorExportar, setErrorExportar] = useState<string | null>(null);
+  const [confirmacionEliminar, setConfirmacionEliminar] = useState("");
+  const [eliminando, setEliminando] = useState(false);
+  const [errorEliminar, setErrorEliminar] = useState<string | null>(null);
+
+  async function cargar() {
+    const res = await superadminFetch(`/api/superadmin/empresas/${params.id}/salud`);
+    if (!res.ok) {
+      if (res.status === 401) {
+        router.replace("/superadmin/login");
+        return;
+      }
+      const body = await res.json().catch(() => ({}));
+      setError(body.error ?? "No se pudo cargar la salud de la empresa");
+      return;
+    }
+    const datos: Salud = await res.json();
+    setSalud(datos);
+    setPlanSeleccionado(datos.empresa.plan);
+  }
+
   useEffect(() => {
     if (!obtenerTokenSuperAdmin()) {
       router.replace("/superadmin/login");
       return;
     }
-    (async () => {
-      const res = await superadminFetch(`/api/superadmin/empresas/${params.id}/salud`);
-      if (!res.ok) {
-        if (res.status === 401) {
-          router.replace("/superadmin/login");
-          return;
-        }
-        const body = await res.json().catch(() => ({}));
-        setError(body.error ?? "No se pudo cargar la salud de la empresa");
-        return;
-      }
-      setSalud(await res.json());
-    })();
+    cargar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id]);
+
+  async function onCambiarEstado(nuevo: EstadoEmpresa) {
+    if (!confirm(`¿Cambiar el estado a "${nuevo.replaceAll("_", " ")}"?`)) return;
+    setErrorEstado(null);
+    setGuardandoEstado(true);
+    const res = await superadminFetch(`/api/superadmin/empresas/${params.id}/estado`, {
+      method: "PATCH",
+      body: JSON.stringify({ estado: nuevo }),
+    });
+    setGuardandoEstado(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setErrorEstado(body.error ?? "No se pudo cambiar el estado");
+      return;
+    }
+    cargar();
+  }
+
+  async function onGuardarPlan() {
+    setErrorPlan(null);
+    setGuardandoPlan(true);
+    const res = await superadminFetch(`/api/superadmin/empresas/${params.id}/plan`, {
+      method: "PATCH",
+      body: JSON.stringify({ plan: planSeleccionado }),
+    });
+    setGuardandoPlan(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setErrorPlan(body.error ?? "No se pudo cambiar el plan");
+      return;
+    }
+    cargar();
+  }
+
+  async function onExportar() {
+    setErrorExportar(null);
+    setExportando(true);
+    const res = await superadminFetch(`/api/superadmin/empresas/${params.id}/exportar`);
+    setExportando(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setErrorExportar(body.error ?? "No se pudo generar la exportación");
+      return;
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${salud?.empresa.nombre ?? "empresa"}-export-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function onEliminar() {
+    if (!salud || confirmacionEliminar !== salud.empresa.nombre) return;
+    setErrorEliminar(null);
+    setEliminando(true);
+    const res = await superadminFetch(`/api/superadmin/empresas/${params.id}`, {
+      method: "DELETE",
+      body: JSON.stringify({ confirmar: confirmacionEliminar }),
+    });
+    setEliminando(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setErrorEliminar(body.error ?? "No se pudo eliminar la empresa");
+      return;
+    }
+    router.replace("/superadmin");
+  }
 
   return (
     <SuperAdminShell>
@@ -78,7 +166,11 @@ export default function SuperAdminSaludEmpresaPage() {
 
       {salud && (
         <>
-          <PageHeader title={salud.empresa.nombre} subtitle="Salud y uso — sin datos operativos internos" />
+          <PageHeader
+            title={salud.empresa.nombre}
+            subtitle="Salud y uso — sin datos operativos internos"
+            action={<Badge value={salud.empresa.estado} />}
+          />
 
           <div className="my-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Card>
@@ -153,6 +245,98 @@ export default function SuperAdminSaludEmpresaPage() {
               )}
             </Card>
           </div>
+
+          <div className="mt-4 grid gap-4 lg:grid-cols-2">
+            <Card>
+              <h2 className="mb-3 text-sm font-semibold text-foreground">Estado</h2>
+              <p className="mb-3 text-sm text-muted">
+                Estado actual: <Badge value={salud.empresa.estado} />
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {ESTADOS.filter((e) => e !== salud.empresa.estado).map((e) => (
+                  <Button key={e} type="button" variant="outline" disabled={guardandoEstado} onClick={() => onCambiarEstado(e)}>
+                    {e === "activa" ? "Activar" : e === "suspendida" ? "Suspender" : "Dar de baja"}
+                  </Button>
+                ))}
+              </div>
+              {errorEstado && (
+                <div className="mt-3">
+                  <ErrorText>{errorEstado}</ErrorText>
+                </div>
+              )}
+              <p className="mt-3 text-[11px] text-muted">
+                Suspendida o dada de baja bloquea el acceso a la app completa para todos los usuarios de esta empresa de inmediato.
+              </p>
+            </Card>
+
+            <Card>
+              <h2 className="mb-3 text-sm font-semibold text-foreground">Plan</h2>
+              <div className="flex items-end gap-2">
+                <div className="flex-1">
+                  <Label>Plan actual</Label>
+                  <Select value={planSeleccionado} onChange={(e) => setPlanSeleccionado(e.target.value as Plan)}>
+                    {PLANES.map((p) => (
+                      <option key={p} value={p}>
+                        {p}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+                <Button type="button" disabled={guardandoPlan || planSeleccionado === salud.empresa.plan} onClick={onGuardarPlan}>
+                  {guardandoPlan ? "Guardando…" : "Guardar"}
+                </Button>
+              </div>
+              {errorPlan && (
+                <div className="mt-3">
+                  <ErrorText>{errorPlan}</ErrorText>
+                </div>
+              )}
+              <p className="mt-3 text-[11px] text-muted">No hay límites de uso conectados al plan todavía — es solo una etiqueta.</p>
+            </Card>
+          </div>
+
+          <Card className="mt-4">
+            <h2 className="mb-2 text-sm font-semibold text-foreground">Exportar datos</h2>
+            <p className="mb-3 text-sm text-muted">
+              Genera un archivo con todos los datos de esta empresa (para portabilidad si se da de baja). No incluye el contenido de
+              fotos/PDFs, solo las referencias ya guardadas.
+            </p>
+            <Button type="button" variant="outline" disabled={exportando} onClick={onExportar}>
+              {exportando ? "Generando…" : "Exportar datos"}
+            </Button>
+            {errorExportar && (
+              <div className="mt-3">
+                <ErrorText>{errorExportar}</ErrorText>
+              </div>
+            )}
+          </Card>
+
+          <Card className="mt-4 border-danger/40">
+            <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-danger">
+              <IconShield className="h-4 w-4" />
+              Zona de peligro
+            </h2>
+            <p className="mb-4 text-sm text-muted">
+              Eliminar la empresa borra <strong>permanentemente</strong> a {salud.empresa.nombre} — clientes, cotizaciones, órdenes de
+              servicio, cobranzas y todo lo demás. Esta acción no se puede deshacer.
+            </p>
+            <Label>Escribe &ldquo;{salud.empresa.nombre}&rdquo; para confirmar</Label>
+            <Input type="text" value={confirmacionEliminar} onChange={(e) => setConfirmacionEliminar(e.target.value)} className="max-w-sm" />
+            {errorEliminar && (
+              <div className="mt-3">
+                <ErrorText>{errorEliminar}</ErrorText>
+              </div>
+            )}
+            <Button
+              type="button"
+              variant="danger"
+              onClick={onEliminar}
+              disabled={eliminando || confirmacionEliminar !== salud.empresa.nombre}
+              className="mt-4"
+            >
+              {eliminando ? "Eliminando…" : "Eliminar empresa"}
+            </Button>
+          </Card>
         </>
       )}
     </SuperAdminShell>

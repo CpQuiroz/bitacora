@@ -1,12 +1,17 @@
 import { Router } from "express";
+import type { EstadoEmpresa, Plan } from "@bitacora/shared";
 import { supabase } from "../supabase";
 import { env } from "../env";
 import { ah } from "../asyncHandler";
 import { descifrarJson } from "../crypto";
 import { medirUsoStorage } from "../storage";
+import { TABLAS_POR_EMPRESA } from "../tenant";
 import { verificarPassword } from "./passwords";
 import { verificarCodigoTotp } from "./totp";
 import { crearTokenSuperAdmin, requiereSuperAdmin, registrarAuditoria, type RequestConSuperAdmin } from "./auth";
+
+const ESTADOS_EMPRESA: EstadoEmpresa[] = ["activa", "suspendida", "dada_de_baja"];
+const PLANES: Plan[] = ["trial", "basico", "pro"];
 
 export const superadminRouter = Router();
 
@@ -104,7 +109,7 @@ superadminRouter.get(
   requiereSuperAdmin,
   ah<RequestConSuperAdmin>(async (req, res) => {
     const empresaId = req.params.id;
-    const { data: empresa } = await supabase.from("empresas").select("id, nombre").eq("id", empresaId).maybeSingle();
+    const { data: empresa } = await supabase.from("empresas").select("id, nombre, estado, plan").eq("id", empresaId).maybeSingle();
     if (!empresa) {
       res.status(404).json({ error: "Empresa no encontrada" });
       return;
@@ -166,5 +171,156 @@ superadminRouter.get(
       errores_recientes: erroresRecientes ?? [],
       almacenamiento_incluye_avatares: usoStorage.incluyeAvatares,
     });
+  })
+);
+
+superadminRouter.patch(
+  "/empresas/:id/estado",
+  requiereSuperAdmin,
+  ah<RequestConSuperAdmin>(async (req, res) => {
+    const { estado } = req.body ?? {};
+    if (typeof estado !== "string" || !ESTADOS_EMPRESA.includes(estado as EstadoEmpresa)) {
+      res.status(400).json({ error: `estado debe ser uno de: ${ESTADOS_EMPRESA.join(", ")}` });
+      return;
+    }
+
+    const { data: actual } = await supabase.from("empresas").select("nombre, estado").eq("id", req.params.id).maybeSingle();
+    if (!actual) {
+      res.status(404).json({ error: "Empresa no encontrada" });
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("empresas")
+      .update({ estado: estado as EstadoEmpresa })
+      .eq("id", req.params.id)
+      .select("id, estado")
+      .single();
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+
+    await registrarAuditoria(req.superAdminId!, "cambiar_estado_empresa", {
+      empresaId: req.params.id,
+      ip: req.ip ?? null,
+      detalle: `${actual.nombre}: ${actual.estado} → ${estado}`,
+    });
+
+    res.json(data);
+  })
+);
+
+superadminRouter.patch(
+  "/empresas/:id/plan",
+  requiereSuperAdmin,
+  ah<RequestConSuperAdmin>(async (req, res) => {
+    const { plan } = req.body ?? {};
+    if (typeof plan !== "string" || !PLANES.includes(plan as Plan)) {
+      res.status(400).json({ error: `plan debe ser uno de: ${PLANES.join(", ")}` });
+      return;
+    }
+
+    const { data: actual } = await supabase.from("empresas").select("nombre, plan").eq("id", req.params.id).maybeSingle();
+    if (!actual) {
+      res.status(404).json({ error: "Empresa no encontrada" });
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("empresas")
+      .update({ plan: plan as Plan })
+      .eq("id", req.params.id)
+      .select("id, plan")
+      .single();
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+
+    await registrarAuditoria(req.superAdminId!, "cambiar_plan_empresa", {
+      empresaId: req.params.id,
+      ip: req.ip ?? null,
+      detalle: `${actual.nombre}: ${actual.plan} → ${plan}`,
+    });
+
+    res.json(data);
+  })
+);
+
+// No incluye el contenido de los archivos de Storage (fotos/PDFs) —
+// solo las keys ya guardadas en cada fila. Nunca se renderiza en el
+// panel: sale directo como descarga, así el Super-Admin no navega
+// datos operativos ajenos, solo genera el archivo de portabilidad.
+superadminRouter.get(
+  "/empresas/:id/exportar",
+  requiereSuperAdmin,
+  ah<RequestConSuperAdmin>(async (req, res) => {
+    const empresaId = req.params.id;
+    const { data: empresa } = await supabase.from("empresas").select("*").eq("id", empresaId).maybeSingle();
+    if (!empresa) {
+      res.status(404).json({ error: "Empresa no encontrada" });
+      return;
+    }
+
+    const resultados = await Promise.all(
+      TABLAS_POR_EMPRESA.map(async (tabla) => {
+        const { data } = await supabase.from(tabla).select("*").eq("empresa_id", empresaId);
+        return [tabla, data ?? []] as const;
+      })
+    );
+    const datosPorTabla = Object.fromEntries(resultados);
+
+    await registrarAuditoria(req.superAdminId!, "exportar_datos_empresa", {
+      empresaId,
+      ip: req.ip ?? null,
+      detalle: empresa.nombre,
+    });
+
+    const nombreArchivo = `${empresa.nombre.replace(/[^a-zA-Z0-9_-]/g, "_")}-export-${new Date().toISOString().slice(0, 10)}.json`;
+    res.setHeader("Content-Disposition", `attachment; filename="${nombreArchivo}"`);
+    res.json({
+      generado_en: new Date().toISOString(),
+      empresa,
+      nota: "No incluye el contenido de fotos/PDFs de Storage, solo las referencias (keys) ya guardadas en cada fila.",
+      datos: datosPorTabla,
+    });
+  })
+);
+
+// Irreversible a propósito — mismo patrón que la autobaja del propio
+// admin (miEmpresa.ts DELETE /): exige el nombre exacto de la empresa,
+// no un checkbox. El cascade real lo hacen los "on delete cascade" ya
+// definidos en cada una de las 43 tablas de tenant.
+superadminRouter.delete(
+  "/empresas/:id",
+  requiereSuperAdmin,
+  ah<RequestConSuperAdmin>(async (req, res) => {
+    const { confirmar } = req.body ?? {};
+    const { data: empresa } = await supabase.from("empresas").select("nombre").eq("id", req.params.id).maybeSingle();
+    if (!empresa) {
+      res.status(404).json({ error: "Empresa no encontrada" });
+      return;
+    }
+    if (typeof confirmar !== "string" || confirmar !== empresa.nombre) {
+      res.status(400).json({ error: "Escribe el nombre exacto de la empresa para confirmar" });
+      return;
+    }
+
+    // Se loguea el nombre como texto ANTES de borrar — el FK de
+    // super_admin_auditoria.empresa_id es "on delete set null", así que
+    // sin esto el registro sobreviviría sin ninguna referencia legible.
+    await registrarAuditoria(req.superAdminId!, "eliminar_empresa", {
+      empresaId: req.params.id,
+      ip: req.ip ?? null,
+      detalle: empresa.nombre,
+    });
+
+    const { error } = await supabase.from("empresas").delete().eq("id", req.params.id);
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    res.status(204).end();
   })
 );

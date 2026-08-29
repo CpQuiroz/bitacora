@@ -15,7 +15,7 @@ export interface RequestConEmpresa extends RequestConUsuario {
 export const requiereEmpresa = ah<RequestConEmpresa>(async (req, res, next) => {
   const { data: usuario, error } = await supabase
     .from("usuarios")
-    .select("empresa_id, rol, activo")
+    .select("empresa_id, rol, activo, empresa:empresas(estado)")
     .eq("id", req.userId!)
     .maybeSingle();
 
@@ -29,6 +29,15 @@ export const requiereEmpresa = ah<RequestConEmpresa>(async (req, res, next) => {
   }
   if (!usuario.activo) {
     res.status(403).json({ error: "Tu cuenta fue desactivada — contacta a un administrador" });
+    return;
+  }
+  const estadoEmpresa = (usuario as unknown as { empresa: { estado: string } | null }).empresa?.estado;
+  if (estadoEmpresa === "suspendida") {
+    res.status(403).json({ error: "Tu empresa fue suspendida — contacta al soporte" });
+    return;
+  }
+  if (estadoEmpresa === "dada_de_baja") {
+    res.status(403).json({ error: "Esta cuenta fue dada de baja" });
     return;
   }
 
