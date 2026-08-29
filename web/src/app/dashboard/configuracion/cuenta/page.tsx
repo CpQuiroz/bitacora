@@ -1,11 +1,24 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import type { NotificacionPreferencia, TipoNotificacion } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText } from "@/components/ui";
-import { IconUser } from "@/components/icons";
+import { IconBell, IconUser } from "@/components/icons";
 import { useConfiguracion } from "../ConfiguracionContext";
+
+const TIPO_LABEL: Record<TipoNotificacion, string> = {
+  os_asignada: "Nueva orden de servicio asignada a mí",
+  os_completada: "Orden de servicio completada",
+  cobro_por_vencer: "Cobro próximo a vencer",
+  cobro_vencido: "Cobro vencido",
+  ruta_finalizada: "Ruta finalizada",
+  tarea_retrasada: "Tarea retrasada",
+  licencia_por_vencer: "Licencia próxima a vencer",
+  email_fallido: "No se pudo enviar un correo (encuesta, PDF)",
+  cotizacion_aprobada: "Cotización aprobada por el cliente",
+};
 
 const IDIOMAS = [
   { valor: "es", etiqueta: "Español" },
@@ -53,6 +66,25 @@ export default function CuentaPage() {
   const [guardando, setGuardando] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const [preferencias, setPreferencias] = useState<NotificacionPreferencia[] | null>(null);
+  const [guardandoTipo, setGuardandoTipo] = useState<TipoNotificacion | null>(null);
+
+  useEffect(() => {
+    apiFetch("/api/notificaciones-feed/preferencias").then(async (res) => {
+      if (res.ok) setPreferencias(await res.json());
+    });
+  }, []);
+
+  async function onCambiarPreferencia(tipo: TipoNotificacion, appActivado: boolean) {
+    setGuardandoTipo(tipo);
+    setPreferencias((prev) => prev?.map((p) => (p.tipo === tipo ? { ...p, app_activado: appActivado } : p)) ?? prev);
+    await apiFetch(`/api/notificaciones-feed/preferencias/${tipo}`, {
+      method: "PATCH",
+      body: JSON.stringify({ app_activado: appActivado }),
+    });
+    setGuardandoTipo(null);
+  }
 
   const [actualPass, setActualPass] = useState("");
   const [nuevaPass, setNuevaPass] = useState("");
@@ -241,6 +273,34 @@ export default function CuentaPage() {
         <Button type="button" onClick={onGuardarDatos} disabled={guardando} className="mt-4">
           {guardando ? "Guardando…" : "Guardar"}
         </Button>
+      </Card>
+
+      <Card>
+        <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-foreground">
+          <IconBell className="h-4 w-4 text-brand" />
+          Notificaciones
+        </h2>
+        <p className="mb-4 text-xs text-muted">
+          Elige qué alertas quieres recibir dentro de la app. El envío por correo se activará más adelante.
+        </p>
+        {preferencias === null ? (
+          <p className="text-sm text-muted">Cargando…</p>
+        ) : (
+          <div className="flex flex-col divide-y divide-border">
+            {preferencias.map((p) => (
+              <label key={p.tipo} className="flex items-center justify-between gap-4 py-3">
+                <span className="text-sm text-foreground">{TIPO_LABEL[p.tipo]}</span>
+                <input
+                  type="checkbox"
+                  checked={p.app_activado}
+                  disabled={guardandoTipo === p.tipo}
+                  onChange={(e) => onCambiarPreferencia(p.tipo, e.target.checked)}
+                  className="h-4 w-4 accent-brand"
+                />
+              </label>
+            ))}
+          </div>
+        )}
       </Card>
 
       <Card>

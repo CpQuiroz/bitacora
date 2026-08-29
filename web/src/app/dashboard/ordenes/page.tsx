@@ -83,7 +83,7 @@ export default function OrdenesServicioPage() {
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight text-foreground">
           <IconClipboardCheck className="h-6 w-6 text-brand" />
-          Órdenes de Servicio
+          Órdenes de Trabajo/Servicio
         </h1>
         <Link href="/dashboard/ordenes/nueva" className={buttonClass("primary")}>
           <IconPlus className="h-4 w-4" />

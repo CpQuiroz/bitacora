@@ -22,8 +22,22 @@ export const env = {
   STORAGE_SECRET_KEY: requerido("STORAGE_SECRET_KEY"),
   STORAGE_BUCKET: requerido("STORAGE_BUCKET"),
   ANTHROPIC_API_KEY: requerido("ANTHROPIC_API_KEY"),
+  // Llave maestra para cifrar credenciales de Integraciones (AES-256-GCM,
+  // ver crypto.ts). Generar con: openssl rand -base64 32 — nunca commitear.
+  INTEGRACIONES_ENCRYPTION_KEY: requerido("INTEGRACIONES_ENCRYPTION_KEY"),
+  // Llave para firmar los tokens de sesión del Portal de Cliente
+  // (HMAC-SHA256, ver portalAuth.ts) — identidad separada de Supabase
+  // Auth. Generar con: openssl rand -base64 32.
+  PORTAL_TOKEN_SECRET: requerido("PORTAL_TOKEN_SECRET"),
   // Opcionales: sin esto, el envío de la encuesta de satisfacción se
   // omite silenciosamente (no bloquea el resto del backend).
   RESEND_API_KEY: process.env.RESEND_API_KEY ?? null,
   RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL ?? null,
+  // Opcionales: bot de WhatsApp (Cloud API de Meta). Sin esto, el
+  // webhook responde 200 pero no procesa nada — no bloquea el resto
+  // del backend. Ver .env.example para cómo se obtienen.
+  WHATSAPP_ACCESS_TOKEN: process.env.WHATSAPP_ACCESS_TOKEN ?? null,
+  WHATSAPP_PHONE_NUMBER_ID: process.env.WHATSAPP_PHONE_NUMBER_ID ?? null,
+  WHATSAPP_VERIFY_TOKEN: process.env.WHATSAPP_VERIFY_TOKEN ?? null,
+  WHATSAPP_APP_SECRET: process.env.WHATSAPP_APP_SECRET ?? null,
 };

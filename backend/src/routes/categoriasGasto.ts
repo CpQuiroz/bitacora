@@ -3,6 +3,7 @@ import type { CategoriaGasto } from "@bitacora/shared";
 import { supabase } from "../supabase";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
+import { requiereModulo } from "../permisos";
 
 export const categoriasGastoRouter = Router();
 
@@ -43,11 +44,8 @@ categoriasGastoRouter.get(
 
 categoriasGastoRouter.post(
   "/",
+  requiereModulo("configuracion"),
   ah<RequestConEmpresa>(async (req, res) => {
-    if (req.rol !== "admin") {
-      res.status(403).json({ error: "Solo un admin puede crear categorías de gastos" });
-      return;
-    }
     const { nombre, color } = req.body ?? {};
     if (typeof nombre !== "string" || !nombre.trim()) {
       res.status(400).json({ error: "Falta nombre" });
@@ -76,11 +74,8 @@ categoriasGastoRouter.post(
 
 categoriasGastoRouter.patch(
   "/:id",
+  requiereModulo("configuracion"),
   ah<RequestConEmpresa>(async (req, res) => {
-    if (req.rol !== "admin") {
-      res.status(403).json({ error: "Solo un admin puede editar categorías de gastos" });
-      return;
-    }
     const { nombre, color } = req.body ?? {};
     const cambios: Partial<CategoriaGasto> = {};
     if (nombre !== undefined) {
@@ -124,11 +119,8 @@ categoriasGastoRouter.patch(
 
 categoriasGastoRouter.delete(
   "/:id",
+  requiereModulo("configuracion"),
   ah<RequestConEmpresa>(async (req, res) => {
-    if (req.rol !== "admin") {
-      res.status(403).json({ error: "Solo un admin puede eliminar categorías de gastos" });
-      return;
-    }
     const { error, count } = await supabase
       .from("categorias_gasto")
       .delete({ count: "exact" })

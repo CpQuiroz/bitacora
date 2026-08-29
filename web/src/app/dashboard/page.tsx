@@ -60,7 +60,7 @@ const PERIODOS = [
 
 const ACCESOS = [
   { href: "/dashboard/trabajos", label: "Trabajos", icon: IconBriefcase },
-  { href: "/dashboard/ordenes", label: "Órdenes de Servicio", icon: IconClipboardCheck },
+  { href: "/dashboard/ordenes", label: "Órdenes de Trabajo/Servicio", icon: IconClipboardCheck },
   { href: "/dashboard/registros/clientes", label: "Clientes", icon: IconMapPin },
   { href: "/dashboard/rutas", label: "Rutas", icon: IconRoute },
   { href: "/dashboard/financiero/cobros", label: "Cobros", icon: IconReceipt },

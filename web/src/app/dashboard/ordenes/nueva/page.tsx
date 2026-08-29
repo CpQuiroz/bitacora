@@ -74,7 +74,10 @@ export default function NuevaOrdenServicioPage() {
         if (lista.length > 0) setResponsableId(lista[0].id);
       }
       if (resClientes.ok) setClientes(await resClientes.json());
-      if (resTipos.ok) setTiposTrabajo(await resTipos.json());
+      if (resTipos.ok) {
+        const lista: TipoTrabajo[] = await resTipos.json();
+        setTiposTrabajo(lista.filter((t) => t.activo));
+      }
       if (resTiposOs.ok) {
         const lista: TipoOS[] = await resTiposOs.json();
         setTiposOs(lista.filter((t) => t.activo));

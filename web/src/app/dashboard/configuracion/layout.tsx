@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import type { Modulo } from "@bitacora/shared";
+import { puedeVerModulo } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell } from "@/components/DashboardShell";
@@ -20,23 +22,30 @@ import {
   IconUser,
   IconUsers,
   IconWallet,
+  IconWrench,
 } from "@/components/icons";
 import { ConfiguracionContext, type UsuarioConEmpresa } from "./ConfiguracionContext";
 
-const SECCIONES = [
-  { valor: "cuenta", label: "Cuenta", icon: IconUser, soloAdmin: false },
-  { valor: "empresa", label: "Empresa", icon: IconBriefcase, soloAdmin: true },
-  { valor: "equipo", label: "Equipo", icon: IconUsers, soloAdmin: true, href: "/dashboard/equipo" },
-  { valor: "plan", label: "Plan", icon: IconCreditCard, soloAdmin: true },
-  { valor: "plantillas", label: "Plantillas", icon: IconPaperclip, soloAdmin: true },
-  { valor: "checklists", label: "Checklists", icon: IconClipboardCheck, soloAdmin: true },
-  { valor: "tipos-os", label: "Tipos de OS", icon: IconTag, soloAdmin: true },
-  { valor: "integraciones", label: "Integraciones", icon: IconPlug, soloAdmin: true },
-  { valor: "inventario", label: "Inventario", icon: IconBox, soloAdmin: true },
-  { valor: "categorias-gastos", label: "Categorías de Gastos", icon: IconWallet, soloAdmin: true },
-  { valor: "centros-costo", label: "Centros de Costo", icon: IconLayers, soloAdmin: true },
-  { valor: "notificaciones", label: "Notificaciones", icon: IconBell, soloAdmin: true },
-  { valor: "seguridad", label: "Seguridad", icon: IconShield, soloAdmin: false },
+// modulo: null = visible para cualquier rol autenticado (ajustes
+// personales, no de la empresa). El resto usa la misma matriz de
+// permisos de Gestión y Control (packages/shared/src/permisos.ts) — una
+// sola fuente de verdad en vez de un flag soloAdmin repetido acá.
+const SECCIONES: { valor: string; label: string; icon: typeof IconUser; modulo: Modulo | null; href?: string }[] = [
+  { valor: "cuenta", label: "Cuenta", icon: IconUser, modulo: null },
+  { valor: "empresa", label: "Empresa", icon: IconBriefcase, modulo: "configuracion" },
+  { valor: "equipo", label: "Equipo", icon: IconUsers, modulo: "gestion_control", href: "/dashboard/equipo" },
+  { valor: "plan", label: "Plan", icon: IconCreditCard, modulo: "configuracion" },
+  { valor: "plantillas", label: "Plantillas", icon: IconPaperclip, modulo: "configuracion" },
+  { valor: "checklists", label: "Checklists", icon: IconClipboardCheck, modulo: "configuracion" },
+  { valor: "tipos-os", label: "Tipos de OS", icon: IconTag, modulo: "configuracion" },
+  { valor: "tipos-trabajo", label: "Tipos de Trabajo", icon: IconWrench, modulo: "configuracion" },
+  { valor: "integraciones", label: "Integraciones", icon: IconPlug, modulo: "configuracion" },
+  { valor: "inventario", label: "Inventario", icon: IconBox, modulo: "configuracion" },
+  { valor: "categorias-gastos", label: "Categorías de Gastos", icon: IconWallet, modulo: "configuracion" },
+  { valor: "centros-costo", label: "Centros de Costo", icon: IconLayers, modulo: "configuracion" },
+  { valor: "tipos-documento", label: "Tipos de Documento", icon: IconPaperclip, modulo: "flota" },
+  { valor: "notificaciones", label: "Notificaciones", icon: IconBell, modulo: "configuracion" },
+  { valor: "seguridad", label: "Seguridad", icon: IconShield, modulo: null },
 ];
 
 export default function ConfiguracionLayout({ children }: { children: ReactNode }) {
@@ -69,7 +78,7 @@ export default function ConfiguracionLayout({ children }: { children: ReactNode 
 
   if (!usuario) return null;
 
-  const secciones = SECCIONES.filter((s) => !s.soloAdmin || usuario.rol === "admin");
+  const secciones = SECCIONES.filter((s) => s.modulo === null || puedeVerModulo(usuario.rol, s.modulo));
 
   return (
     <DashboardShell

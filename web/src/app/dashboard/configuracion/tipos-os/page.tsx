@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { ChecklistTemplate, TipoOS } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
 import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select } from "@/components/ui";
+import { DataTable } from "@/components/DataTable";
 import { IconPlus, IconTag } from "@/components/icons";
 
 type TipoOsConChecklist = TipoOS & { checklist: { nombre: string } | null };
@@ -32,6 +33,7 @@ export default function TiposOsPage() {
   const [descripcion, setDescripcion] = useState("");
   const [color, setColor] = useState("#4338ca");
   const [checklistId, setChecklistId] = useState("");
+  const [tiempoEstimado, setTiempoEstimado] = useState("");
   const [guardando, setGuardando] = useState(false);
   const [errorForm, setErrorForm] = useState<string | null>(null);
 
@@ -64,6 +66,7 @@ export default function TiposOsPage() {
     setDescripcion("");
     setColor("#4338ca");
     setChecklistId("");
+    setTiempoEstimado("");
     setErrorForm(null);
   }
 
@@ -73,6 +76,7 @@ export default function TiposOsPage() {
     setDescripcion(t.descripcion ?? "");
     setColor(t.color);
     setChecklistId(t.checklist_template_id ?? "");
+    setTiempoEstimado(t.tiempo_estimado_minutos != null ? String(t.tiempo_estimado_minutos) : "");
     setFormAbierto(true);
   }
 
@@ -96,6 +100,7 @@ export default function TiposOsPage() {
       descripcion,
       color,
       checklist_template_id: checklistId || null,
+      tiempo_estimado_minutos: tiempoEstimado.trim() ? Number(tiempoEstimado) : null,
     });
     const res = editandoId
       ? await apiFetch(`/api/tipos-os/${editandoId}`, { method: "PATCH", body })
@@ -179,6 +184,10 @@ export default function TiposOsPage() {
                 ))}
               </Select>
             </div>
+            <div>
+              <Label>Tiempo estimado (minutos)</Label>
+              <Input type="number" min={0} placeholder="60" value={tiempoEstimado} onChange={(e) => setTiempoEstimado(e.target.value)} />
+            </div>
           </div>
           {errorForm && (
             <div className="mt-3">
@@ -205,56 +214,25 @@ export default function TiposOsPage() {
       </div>
 
       {error && <ErrorText>{error}</ErrorText>}
-      {filtrados.length === 0 && tipos !== null && tipos.length > 0 && (
-        <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border py-16 text-center">
-          <IconTag className="h-8 w-8 text-muted" />
-          <p className="text-sm text-muted">No hay tipos que coincidan.</p>
-        </div>
-      )}
-      {filtrados.length > 0 && (
-        <Card className="overflow-x-auto p-0">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-border text-xs text-muted">
-                <th className="px-5 py-3 font-medium"></th>
-                <th className="px-5 py-3 font-medium">Nombre</th>
-                <th className="px-5 py-3 font-medium">Descripción</th>
-                <th className="px-5 py-3 font-medium">Checklist</th>
-                <th className="px-5 py-3 font-medium">Estado</th>
-                <th className="px-5 py-3 font-medium">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtrados.map((t) => (
-                <tr key={t.id} className="border-b border-border last:border-0">
-                  <td className="px-5 py-3">
-                    <span className="inline-block h-3 w-3 rounded-full" style={{ background: t.color }} />
-                  </td>
-                  <td className="px-5 py-3 font-medium text-foreground">{t.nombre}</td>
-                  <td className="px-5 py-3 text-muted">{t.descripcion ?? "—"}</td>
-                  <td className="px-5 py-3 text-muted">{t.checklist?.nombre ?? "—"}</td>
-                  <td className="px-5 py-3">
-                    <Badge value={t.activo ? "activo" : "inactivo"} />
-                  </td>
-                  <td className="px-5 py-3">
-                    <div className="flex flex-wrap gap-3 text-xs font-medium">
-                      <button type="button" onClick={() => abrirEdicion(t)} className="text-brand hover:underline">
-                        Editar
-                      </button>
-                      <button type="button" onClick={() => onAlternarActivo(t)} className="text-muted hover:underline">
-                        {t.activo ? "Desactivar" : "Activar"}
-                      </button>
-                      <button type="button" onClick={() => onEliminar(t.id)} className="text-danger hover:underline">
-                        Eliminar
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
-      )}
+      <DataTable
+        rows={filtrados}
+        rowKey={(t) => t.id}
+        loading={tipos === null && !error}
+        columns={[
+          { header: "", className: "w-8", cell: (t) => <span className="inline-block h-3 w-3 rounded-full" style={{ background: t.color }} /> },
+          { header: "Nombre", cell: (t) => <span className="font-medium text-foreground">{t.nombre}</span> },
+          { header: "Descripción", cell: (t) => <span className="text-muted">{t.descripcion ?? "—"}</span> },
+          { header: "Checklist", cell: (t) => <span className="text-muted">{t.checklist?.nombre ?? "—"}</span> },
+          { header: "Tiempo estimado", cell: (t) => <span className="text-muted">{t.tiempo_estimado_minutos != null ? `${t.tiempo_estimado_minutos} min` : "—"}</span> },
+          { header: "Estado", cell: (t) => <Badge value={t.activo ? "activo" : "inactivo"} /> },
+        ]}
+        actions={[
+          { label: "Editar", onClick: abrirEdicion, variant: "brand" },
+          { label: (t) => (t.activo ? "Desactivar" : "Activar"), onClick: onAlternarActivo, variant: "muted" },
+          { label: "Eliminar", onClick: (t) => onEliminar(t.id), variant: "danger" },
+        ]}
+        emptyState={{ icon: IconTag, message: "No hay tipos que coincidan." }}
+      />
     </div>
   );
 }

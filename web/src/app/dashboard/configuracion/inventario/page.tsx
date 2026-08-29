@@ -1,25 +1,66 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import type { UnidadMedida } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
-import { Button, Card, ErrorText, PageHeader, SuccessText } from "@/components/ui";
-import { IconBox } from "@/components/icons";
+import { Button, Card, ErrorText, Input, Label, PageHeader, SuccessText } from "@/components/ui";
+import { DataTable } from "@/components/DataTable";
+import { IconBox, IconLayers } from "@/components/icons";
 import { useConfiguracion } from "../ConfiguracionContext";
+
+const SUGERIDAS: { nombre: string; abreviatura: string }[] = [
+  { nombre: "Unidad", abreviatura: "un" },
+  { nombre: "Caja", abreviatura: "cj" },
+  { nombre: "Litro", abreviatura: "L" },
+  { nombre: "Metro", abreviatura: "m" },
+  { nombre: "Kilogramo", abreviatura: "kg" },
+  { nombre: "Hora", abreviatura: "hr" },
+  { nombre: "Par", abreviatura: "par" },
+  { nombre: "Rollo", abreviatura: "rollo" },
+];
 
 export default function InventarioPage() {
   const { usuario, recargar } = useConfiguracion();
   const [activado, setActivado] = useState(usuario.empresa.inventario_activado);
+  const [stockMinimoDefault, setStockMinimoDefault] = useState(String(usuario.empresa.inventario_stock_minimo_default));
   const [guardando, setGuardando] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const [unidades, setUnidades] = useState<UnidadMedida[] | null>(null);
+  const [errorUnidades, setErrorUnidades] = useState<string | null>(null);
+  const [nombreUnidad, setNombreUnidad] = useState("");
+  const [abreviaturaUnidad, setAbreviaturaUnidad] = useState("");
+  const [formUnidadAbierto, setFormUnidadAbierto] = useState(false);
+  const [errorFormUnidad, setErrorFormUnidad] = useState<string | null>(null);
+  const [guardandoUnidad, setGuardandoUnidad] = useState(false);
+
+  const cargarUnidades = useCallback(async () => {
+    setErrorUnidades(null);
+    const res = await apiFetch("/api/unidades-medida");
+    if (!res.ok) {
+      setErrorUnidades("No se pudieron cargar las unidades de medida");
+      return;
+    }
+    setUnidades(await res.json());
+  }, []);
+
+  useEffect(() => {
+    cargarUnidades();
+  }, [cargarUnidades]);
+
   async function onGuardar() {
     setError(null);
     setAviso(null);
+    const minimo = Number(stockMinimoDefault);
+    if (!Number.isInteger(minimo) || minimo < 0) {
+      setError("El umbral de stock mínimo debe ser un entero positivo");
+      return;
+    }
     setGuardando(true);
     const res = await apiFetch("/api/empresa", {
       method: "PATCH",
-      body: JSON.stringify({ inventario_activado: activado }),
+      body: JSON.stringify({ inventario_activado: activado, inventario_stock_minimo_default: minimo }),
     });
     setGuardando(false);
     if (!res.ok) {
@@ -29,6 +70,39 @@ export default function InventarioPage() {
     }
     await recargar();
     setAviso("Configuración guardada");
+  }
+
+  async function crearUnidadRapida(s: { nombre: string; abreviatura: string }) {
+    await apiFetch("/api/unidades-medida", { method: "POST", body: JSON.stringify(s) });
+    cargarUnidades();
+  }
+
+  async function onGuardarUnidad() {
+    setErrorFormUnidad(null);
+    if (!nombreUnidad.trim()) {
+      setErrorFormUnidad("Falta el nombre");
+      return;
+    }
+    setGuardandoUnidad(true);
+    const res = await apiFetch("/api/unidades-medida", {
+      method: "POST",
+      body: JSON.stringify({ nombre: nombreUnidad, abreviatura: abreviaturaUnidad }),
+    });
+    setGuardandoUnidad(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setErrorFormUnidad(body.error ?? "No se pudo guardar");
+      return;
+    }
+    setFormUnidadAbierto(false);
+    setNombreUnidad("");
+    setAbreviaturaUnidad("");
+    cargarUnidades();
+  }
+
+  async function onEliminarUnidad(id: string) {
+    const res = await apiFetch(`/api/unidades-medida/${id}`, { method: "DELETE" });
+    if (res.ok) cargarUnidades();
   }
 
   return (
@@ -62,6 +136,15 @@ export default function InventarioPage() {
             />
           </button>
         </div>
+
+        <div className="mt-5 max-w-xs border-t border-border pt-5">
+          <Label>Umbral de stock mínimo por defecto</Label>
+          <Input type="number" min={0} value={stockMinimoDefault} onChange={(e) => setStockMinimoDefault(e.target.value)} />
+          <p className="mt-1.5 text-xs text-muted">
+            Se usa para los productos que no tienen su propio umbral definido — decide cuándo se muestran como &ldquo;stock bajo&rdquo;.
+          </p>
+        </div>
+
         {error && (
           <div className="mt-4">
             <ErrorText>{error}</ErrorText>
@@ -75,6 +158,69 @@ export default function InventarioPage() {
         <Button type="button" onClick={onGuardar} disabled={guardando} className="mt-4">
           {guardando ? "Guardando…" : "Guardar configuración"}
         </Button>
+      </Card>
+
+      <Card>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-sm font-semibold text-foreground">Unidades de medida</h2>
+          <Button type="button" variant="outline" onClick={() => setFormUnidadAbierto((v) => !v)}>
+            {formUnidadAbierto ? "Cancelar" : "Nueva unidad"}
+          </Button>
+        </div>
+
+        {unidades !== null && unidades.length === 0 && !formUnidadAbierto && (
+          <div className="mb-4">
+            <p className="mb-3 text-sm text-muted">Sugeridas — clic para crear:</p>
+            <div className="flex flex-wrap gap-2">
+              {SUGERIDAS.map((s) => (
+                <button
+                  key={s.nombre}
+                  type="button"
+                  onClick={() => crearUnidadRapida(s)}
+                  className="rounded-full border border-border px-3 py-1 text-xs font-medium text-foreground hover:border-brand"
+                >
+                  {s.nombre} ({s.abreviatura})
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {formUnidadAbierto && (
+          <div className="mb-4 rounded-xl border border-border p-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <Label>Nombre</Label>
+                <Input type="text" value={nombreUnidad} onChange={(e) => setNombreUnidad(e.target.value)} />
+              </div>
+              <div>
+                <Label>Abreviatura</Label>
+                <Input type="text" placeholder="kg, L, un…" value={abreviaturaUnidad} onChange={(e) => setAbreviaturaUnidad(e.target.value)} />
+              </div>
+            </div>
+            {errorFormUnidad && (
+              <div className="mt-3">
+                <ErrorText>{errorFormUnidad}</ErrorText>
+              </div>
+            )}
+            <Button type="button" onClick={onGuardarUnidad} disabled={guardandoUnidad} className="mt-4">
+              {guardandoUnidad ? "Guardando…" : "Guardar"}
+            </Button>
+          </div>
+        )}
+
+        <DataTable
+          rows={unidades ?? []}
+          rowKey={(u) => u.id}
+          loading={unidades === null && !errorUnidades}
+          error={errorUnidades}
+          columns={[
+            { header: "Nombre", cell: (u) => <span className="font-medium text-foreground">{u.nombre}</span> },
+            { header: "Abreviatura", cell: (u) => <span className="text-muted">{u.abreviatura ?? "—"}</span> },
+          ]}
+          actions={[{ label: "Eliminar", onClick: (u) => onEliminarUnidad(u.id), variant: "danger" }]}
+          emptyState={{ icon: IconLayers, message: "Todavía no hay unidades — usa las sugeridas de arriba o crea una nueva." }}
+        />
       </Card>
     </div>
   );

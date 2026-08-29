@@ -2,7 +2,7 @@
 
 import { useRef, useState, type CSSProperties, type DragEvent } from "react";
 import type { TipoCuenta } from "@bitacora/shared";
-import { formatearRut, validarRut } from "@bitacora/shared";
+import { comunasDeRegion, formatearRut, REGIONES, validarRut } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
 import { FUENTES, fuenteDe } from "@/lib/fuentes";
 import { Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText } from "@/components/ui";
@@ -17,13 +17,6 @@ const MONEDAS = [
   { valor: "COP", etiqueta: "COP — Peso colombiano" },
   { valor: "MXN", etiqueta: "MXN — Peso mexicano" },
   { valor: "ARS", etiqueta: "ARS — Peso argentino" },
-];
-
-const REGIONES = [
-  "Arica y Parinacota", "Tarapacá", "Antofagasta", "Atacama", "Coquimbo",
-  "Valparaíso", "Metropolitana de Santiago", "Libertador General Bernardo O'Higgins",
-  "Maule", "Ñuble", "Biobío", "La Araucanía", "Los Ríos", "Los Lagos",
-  "Aysén del General Carlos Ibáñez del Campo", "Magallanes y de la Antártica Chilena",
 ];
 
 const BANCOS = [
@@ -61,6 +54,7 @@ export default function EmpresaPage() {
   // --- datos de la empresa ---
   const [nombre, setNombre] = useState(usuario.empresa.nombre);
   const [razonSocial, setRazonSocial] = useState(usuario.empresa.razon_social ?? "");
+  const [giro, setGiro] = useState(usuario.empresa.giro ?? "");
   const [rut, setRut] = useState(usuario.empresa.rut ?? "");
   const [correoEmpresa, setCorreoEmpresa] = useState(usuario.empresa.correo_empresa ?? "");
   const [telefonoEmpresa, setTelefonoEmpresa] = useState(usuario.empresa.telefono_empresa ?? "");
@@ -69,6 +63,14 @@ export default function EmpresaPage() {
   // --- dirección ---
   const [region, setRegion] = useState(usuario.empresa.region ?? "");
   const [comuna, setComuna] = useState(usuario.empresa.comuna ?? "");
+  const comunasDisponibles = comunasDeRegion(region);
+
+  function onCambiarRegion(nuevaRegion: string) {
+    setRegion(nuevaRegion);
+    // Si la comuna actual no pertenece a la nueva región, se limpia —
+    // evita mandar una combinación región/comuna inconsistente.
+    if (!comunasDeRegion(nuevaRegion).includes(comuna)) setComuna("");
+  }
   const [calle, setCalle] = useState(usuario.empresa.direccion_calle ?? "");
   const [numero, setNumero] = useState(usuario.empresa.direccion_numero ?? "");
   const [depto, setDepto] = useState(usuario.empresa.direccion_depto ?? "");
@@ -137,6 +139,7 @@ export default function EmpresaPage() {
       body: JSON.stringify({
         nombre,
         razon_social: razonSocial,
+        giro,
         rut: rut.trim() || null,
         correo_empresa: correoEmpresa,
         telefono_empresa: telefonoEmpresa,
@@ -233,6 +236,10 @@ export default function EmpresaPage() {
             <Input type="text" value={razonSocial} onChange={(e) => setRazonSocial(e.target.value)} />
           </div>
           <div>
+            <Label>Giro</Label>
+            <Input type="text" placeholder="Transporte de carga por carretera" value={giro} onChange={(e) => setGiro(e.target.value)} />
+          </div>
+          <div>
             <Label>RUT</Label>
             <Input
               type="text"
@@ -267,7 +274,7 @@ export default function EmpresaPage() {
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <Label>Región</Label>
-            <Select value={region} onChange={(e) => setRegion(e.target.value)}>
+            <Select value={region} onChange={(e) => onCambiarRegion(e.target.value)}>
               <option value="">Selecciona una región</option>
               {REGIONES.map((r) => (
                 <option key={r} value={r}>
@@ -278,7 +285,14 @@ export default function EmpresaPage() {
           </div>
           <div>
             <Label>Comuna</Label>
-            <Input type="text" value={comuna} onChange={(e) => setComuna(e.target.value)} />
+            <Select value={comuna} onChange={(e) => setComuna(e.target.value)} disabled={!region}>
+              <option value="">{region ? "Selecciona una comuna" : "Elige una región primero"}</option>
+              {comunasDisponibles.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </Select>
           </div>
           <div>
             <Label>Calle</Label>

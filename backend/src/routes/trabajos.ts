@@ -1,12 +1,15 @@
 import { Router } from "express";
 import multer from "multer";
-import type { EstadoOS, EstadoTrabajo, ItemChecklist, OrdenServicio, Prioridad, TipoCheckin, Trabajo } from "@bitacora/shared";
+import type { EstadoOS, EstadoTrabajo, ItemChecklist, OrdenServicio, Prioridad, TipoCheckin, TipoTrabajo, Trabajo } from "@bitacora/shared";
+import { sustituirVariables } from "@bitacora/shared";
 import { supabase } from "../supabase";
 import { subirFirma, subirFoto, urlFirmada } from "../storage";
-import { analizarFoto } from "../claude";
+import { analizarFoto, generarInformeOS } from "../claude";
 import { crearOrdenServicio, obtenerOCrearOrden } from "../ordenes";
 import { enviarEncuestaSatisfaccion, enviarPdfOS } from "../email";
 import { generarPdfOS } from "../generarPdfOS";
+import { notificar, notificarGerencia } from "../notificar";
+import { notificarCliente } from "../notificarCliente";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
 
@@ -91,9 +94,15 @@ trabajosRouter.get(
       .eq("empresa_id", req.empresaId!)
       .order("fecha", { ascending: false });
 
-    // La app móvil pide solo "mis trabajos" (los asignados al usuario logueado).
-    if (req.query.propio === "true") {
+    // Un colaborador SIEMPRE ve solo lo suyo — regla del servidor, no una
+    // opción que decida el cliente. Cualquier otro rol puede además pedir
+    // "propio=true" (lo usa la app móvil) o filtrar por otro responsable.
+    if (req.rol === "colaborador") {
       query = query.eq("responsable_id", req.userId!);
+    } else if (req.query.propio === "true") {
+      query = query.eq("responsable_id", req.userId!);
+    } else if (typeof req.query.responsable_id === "string" && req.query.responsable_id) {
+      query = query.eq("responsable_id", req.query.responsable_id);
     }
 
     const { data, error } = await query;
@@ -108,10 +117,13 @@ trabajosRouter.get(
 trabajosRouter.get(
   "/:id",
   ah<RequestConEmpresa>(async (req, res) => {
-    const { data, error } = await supabase
+    let query = supabase
       .from("trabajos")
       .select("*, tipo_trabajo:tipos_trabajo(*)")
-      .eq("empresa_id", req.empresaId!)
+      .eq("empresa_id", req.empresaId!);
+    // No revela que el trabajo existe si no es del colaborador — 404, no 403.
+    if (req.rol === "colaborador") query = query.eq("responsable_id", req.userId!);
+    const { data, error } = await query
       .eq("id", req.params.id)
       .maybeSingle();
 
@@ -382,6 +394,14 @@ trabajosRouter.post(
       );
     }
 
+    if (data.responsable_id && data.responsable_id !== req.userId) {
+      await notificar(req.empresaId!, data.responsable_id, "os_asignada", {
+        cuerpo: `${data.cliente} — ${data.fecha}`,
+        entidadTipo: "trabajo",
+        entidadId: data.id,
+      });
+    }
+
     res.status(201).json({ ...data, folio: orden.folio });
   })
 );
@@ -434,6 +454,31 @@ trabajosRouter.post(
       return;
     }
 
+    // Check-in es el único evento real de "el colaborador arrancó la
+    // tarea" que existe hoy — se usa como disparador de "técnico en
+    // camino" (no bloquea la respuesta si el envío falla).
+    if (item === "Check-in") {
+      void (async () => {
+        const { data: tarea } = await supabase
+          .from("trabajos")
+          .select("cliente, cliente_id, responsable:usuarios(nombre)")
+          .eq("id", req.params.id)
+          .single();
+        const clienteId = tarea?.cliente_id;
+        if (!clienteId) return;
+        const { data: cliente } = await supabase.from("clientes").select("correo").eq("id", clienteId).maybeSingle();
+        if (!cliente?.correo) return;
+        const { data: empresa } = await supabase.from("empresas").select("nombre").eq("id", req.empresaId!).single();
+        const tecnicoNombre = (tarea as unknown as { responsable: { nombre: string } | null })?.responsable?.nombre ?? "Nuestro equipo";
+        await notificarCliente(req.empresaId!, "tecnico_en_camino", cliente.correo, {
+          clienteId,
+          entidadTipo: "trabajo",
+          entidadId: req.params.id,
+          variables: { cliente: tarea?.cliente ?? "", tecnico: tecnicoNombre, empresa: empresa?.nombre ?? "" },
+        });
+      })();
+    }
+
     // Al cerrar con check-out, si la tarea tiene email de encuesta y
     // todavía no se le mandó, dispara el correo de satisfacción. No
     // bloquea la respuesta si Resend no está configurado o falla.
@@ -451,7 +496,17 @@ trabajosRouter.post(
               .update({ encuesta_enviada_en: new Date().toISOString() })
               .eq("id", req.params.id)
           )
-          .catch((err) => console.error("Error mandando encuesta de satisfacción:", err));
+          .catch((err) => {
+            console.error("Error mandando encuesta de satisfacción:", err);
+            // Sin esto el fallo solo queda en el log del servidor —
+            // nadie del equipo se entera. Avisa a admin/supervisor
+            // dentro de la app, con link directo a esta OS.
+            notificarGerencia(req.empresaId!, "email_fallido", {
+              cuerpo: `No se pudo enviar la encuesta de satisfacción a ${tarea.encuesta_email} (${tarea.cliente}).`,
+              entidadTipo: "trabajo",
+              entidadId: req.params.id,
+            });
+          });
       }
     }
 
@@ -662,7 +717,54 @@ trabajosRouter.post(
       res.status(500).json({ error: error.message });
       return;
     }
-    await supabase.from("trabajos").update({ estado: "completado" }).eq("id", req.params.id);
+    const { data: trabajoActualizado } = await supabase
+      .from("trabajos")
+      .update({ estado: "completado" })
+      .eq("id", req.params.id)
+      .select("cliente, cliente_id, ruta_id")
+      .single();
+
+    await notificarGerencia(req.empresaId!, "os_completada", {
+      cuerpo: trabajoActualizado?.cliente ?? undefined,
+      entidadTipo: "trabajo",
+      entidadId: req.params.id,
+    });
+
+    // OS completada Y firmada (esto es "/finalizar", el cierre real —
+    // "/firma" solo guarda la firma) — se le manda el PDF al cliente
+    // si tiene correo. No bloquea la respuesta si el envío falla.
+    if (trabajoActualizado?.cliente_id) {
+      void (async () => {
+        const { data: cliente } = await supabase.from("clientes").select("correo").eq("id", trabajoActualizado.cliente_id!).maybeSingle();
+        if (!cliente?.correo) return;
+        const datosPdf = await armarDatosPdf(req.empresaId!, req.params.id);
+        if (!datosPdf) return;
+        const pdf = await generarPdfOS(datosPdf);
+        await notificarCliente(req.empresaId!, "os_completada", cliente.correo, {
+          clienteId: trabajoActualizado.cliente_id!,
+          entidadTipo: "trabajo",
+          entidadId: req.params.id,
+          variables: { cliente: datosPdf.clienteNombre, empresa: datosPdf.empresaNombre, tecnico: datosPdf.colaboradorNombre },
+          adjunto: { filename: `${datosPdf.folioTexto}.pdf`, buffer: pdf },
+        });
+      })();
+    }
+
+    // Si esta OS era la última tarea pendiente de su ruta, la ruta
+    // quedó efectivamente ejecutada — se avisa aparte de "OS completada".
+    if (trabajoActualizado?.ruta_id) {
+      const { data: pendientes } = await supabase
+        .from("trabajos")
+        .select("id")
+        .eq("ruta_id", trabajoActualizado.ruta_id)
+        .eq("estado", "en_curso");
+      if (!pendientes || pendientes.length === 0) {
+        await notificarGerencia(req.empresaId!, "ruta_finalizada", {
+          entidadTipo: "ruta",
+          entidadId: trabajoActualizado.ruta_id,
+        });
+      }
+    }
 
     res.json(data);
   })
@@ -670,7 +772,7 @@ trabajosRouter.post(
 
 // Junta todo lo necesario para el PDF de una OS — lo usan tanto la
 // descarga directa como el envío por correo.
-async function armarDatosPdf(empresaId: string, trabajoId: string) {
+export async function armarDatosPdf(empresaId: string, trabajoId: string) {
   const { data: trabajo } = await supabase
     .from("trabajos")
     .select("*, responsable:usuarios(nombre)")
@@ -688,6 +790,13 @@ async function armarDatosPdf(empresaId: string, trabajoId: string) {
     .eq("id", empresaId)
     .single();
 
+  const { data: plantilla } = await supabase
+    .from("plantillas_documento")
+    .select("texto_encabezado, texto_pie, color_primario")
+    .eq("empresa_id", empresaId)
+    .eq("tipo", "orden_servicio")
+    .maybeSingle();
+
   const { data: items } = await supabase
     .from("os_items")
     .select("*")
@@ -704,18 +813,34 @@ async function armarDatosPdf(empresaId: string, trabajoId: string) {
   const fotoUrls = await Promise.all((fotos ?? []).map((f) => urlFirmada(f.foto_url, 15)));
   const firmaUrl = orden.firma_url ? await urlFirmada(orden.firma_url, 15) : null;
 
+  const colaboradorNombre = (trabajo as unknown as { responsable: { nombre: string } | null }).responsable?.nombre ?? "—";
+  const montoTotal = (items ?? []).reduce((acc, it) => acc + it.cantidad * it.precio_unitario, 0);
+  const variables = {
+    cliente: trabajo.cliente,
+    fecha: trabajo.fecha,
+    tecnico: colaboradorNombre,
+    monto: `$${Math.round(montoTotal).toLocaleString("es-CL")}`,
+    folio: String(orden.folio ?? ""),
+    direccion: trabajo.ubicacion ?? "",
+    empresa: empresa?.nombre ?? "",
+  };
+
   return {
     empresaNombre: empresa?.nombre ?? "",
     empresaLogoUrl: empresa?.logo_url ?? null,
-    colorPrimario: empresa?.color_primario ?? null,
+    colorPrimario: plantilla?.color_primario ?? empresa?.color_primario ?? null,
+    textoEncabezado: plantilla?.texto_encabezado ? sustituirVariables(plantilla.texto_encabezado, variables) : null,
+    textoPie: plantilla?.texto_pie ? sustituirVariables(plantilla.texto_pie, variables) : null,
+    clienteId: trabajo.cliente_id,
     folio: orden.folio,
     fecha: trabajo.fecha,
     horaProgramada: trabajo.hora_programada,
     clienteNombre: trabajo.cliente,
     direccion: trabajo.ubicacion,
-    colaboradorNombre: (trabajo as unknown as { responsable: { nombre: string } | null }).responsable?.nombre ?? "—",
+    colaboradorNombre,
     descripcion: trabajo.descripcion,
     observacionesCierre: orden.observaciones_cierre,
+    informeIA: orden.informe_ia,
     items: (items ?? []).map((it) => ({
       descripcion: it.descripcion,
       cantidad: it.cantidad,
@@ -760,5 +885,83 @@ trabajosRouter.post(
     const pdf = await generarPdfOS(datos);
     await enviarPdfOS(destinatario.trim(), datos.empresaNombre, datos.folio ?? 0, pdf);
     res.json({ ok: true });
+  })
+);
+
+// Informe técnico de esta OS puntual (distinto del "Informe IA" de
+// negocio): redacta a partir de los campos personalizados del tipo de
+// trabajo (ej. pH/cloro/turbidez para mantención de agua), el
+// checklist, las observaciones del técnico y el análisis de las fotos.
+trabajosRouter.post(
+  "/:id/informe-ia",
+  ah<RequestConEmpresa>(async (req, res) => {
+    const { data: trabajo } = await supabase
+      .from("trabajos")
+      .select("*, tipo_trabajo:tipos_trabajo(*)")
+      .eq("empresa_id", req.empresaId!)
+      .eq("id", req.params.id)
+      .maybeSingle();
+    if (!trabajo) {
+      res.status(404).json({ error: "Trabajo no encontrado" });
+      return;
+    }
+
+    const orden = await ordenDeTrabajo(req.empresaId!, req.params.id);
+    if (!orden) {
+      res.status(400).json({ error: "Este trabajo todavía no tiene una orden de servicio" });
+      return;
+    }
+
+    const { data: fotos } = await supabase
+      .from("analisis_fotos")
+      .select("resumen, alerta, detalle_alerta")
+      .eq("orden_servicio_id", orden.id);
+
+    const tipoTrabajo = (trabajo as unknown as { tipo_trabajo: TipoTrabajo | null }).tipo_trabajo;
+    const datosGuardados = (trabajo.datos ?? {}) as Record<string, unknown>;
+    const datosPersonalizados = (tipoTrabajo?.campos ?? [])
+      .map((c) => `${c.etiqueta}: ${datosGuardados[c.clave] ?? "sin dato"}`)
+      .join("\n");
+
+    const checklistTexto = ((orden.checklist ?? []) as ItemChecklist[])
+      .map((i) => `- [${i.hecho ? "x" : " "}] ${i.item}`)
+      .join("\n");
+
+    const fotosTexto = (fotos ?? [])
+      .map((f, i) => `Foto ${i + 1}: ${f.resumen}${f.alerta ? ` — ALERTA: ${f.detalle_alerta}` : ""}`)
+      .join("\n");
+
+    if (!datosPersonalizados && !checklistTexto && !orden.observaciones_cierre && !fotosTexto) {
+      res.status(400).json({
+        error: "No hay datos suficientes para generar un informe (faltan datos medidos, checklist, observaciones o fotos)",
+      });
+      return;
+    }
+
+    let contexto = `Tipo de servicio: ${tipoTrabajo?.nombre ?? trabajo.descripcion ?? "Servicio en terreno"}\n`;
+    contexto += `Cliente: ${trabajo.cliente}\nFecha: ${trabajo.fecha}\n\n`;
+    if (datosPersonalizados) contexto += `Datos medidos por el técnico:\n${datosPersonalizados}\n\n`;
+    if (checklistTexto) contexto += `Checklist realizado:\n${checklistTexto}\n\n`;
+    if (orden.observaciones_cierre) contexto += `Observaciones del técnico:\n${orden.observaciones_cierre}\n\n`;
+    if (fotosTexto) contexto += `Fotos tomadas en terreno:\n${fotosTexto}\n\n`;
+
+    const informe = await generarInformeOS(contexto);
+    if (!informe) {
+      res.status(502).json({ error: "No se pudo generar el informe con IA, intenta de nuevo" });
+      return;
+    }
+
+    const { data: actualizado, error } = await supabase
+      .from("ordenes_servicio")
+      .update({ informe_ia: informe })
+      .eq("empresa_id", req.empresaId!)
+      .eq("id", orden.id)
+      .select()
+      .single();
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    res.json(actualizado);
   })
 );

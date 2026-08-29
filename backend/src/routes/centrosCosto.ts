@@ -2,6 +2,7 @@ import { Router } from "express";
 import { supabase } from "../supabase";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
+import { requiereModulo } from "../permisos";
 
 export const centrosCostoRouter = Router();
 
@@ -29,11 +30,8 @@ centrosCostoRouter.get(
 
 centrosCostoRouter.post(
   "/",
+  requiereModulo("configuracion"),
   ah<RequestConEmpresa>(async (req, res) => {
-    if (req.rol !== "admin") {
-      res.status(403).json({ error: "Solo un admin puede crear centros de costo" });
-      return;
-    }
     const { nombre, categoria_gasto_ids } = req.body ?? {};
     if (typeof nombre !== "string" || !nombre.trim()) {
       res.status(400).json({ error: "Falta nombre" });
@@ -57,11 +55,8 @@ centrosCostoRouter.post(
 
 centrosCostoRouter.delete(
   "/:id",
+  requiereModulo("configuracion"),
   ah<RequestConEmpresa>(async (req, res) => {
-    if (req.rol !== "admin") {
-      res.status(403).json({ error: "Solo un admin puede eliminar centros de costo" });
-      return;
-    }
     const { error, count } = await supabase
       .from("centros_costo")
       .delete({ count: "exact" })

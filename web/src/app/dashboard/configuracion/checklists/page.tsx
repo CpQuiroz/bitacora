@@ -1,15 +1,20 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { ChecklistTemplate, SeccionChecklist } from "@bitacora/shared";
+import type { ChecklistTemplate, ItemChecklistPregunta, SeccionChecklist } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
-import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Textarea } from "@/components/ui";
+import { Badge, Button, Card, ErrorText, Input, Label, PageHeader } from "@/components/ui";
+import { DataTable } from "@/components/DataTable";
 import { IconClipboardCheck, IconPlus } from "@/components/icons";
 
 type Editor = { id: string | null; nombre: string; descripcion: string; secciones: SeccionChecklist[] };
 
+function nuevaPregunta(): ItemChecklistPregunta {
+  return { texto: "", obligatorio: true };
+}
+
 function nuevoEditor(): Editor {
-  return { id: null, nombre: "", descripcion: "", secciones: [{ nombre: "Sección 1", preguntas: [""] }] };
+  return { id: null, nombre: "", descripcion: "", secciones: [{ nombre: "Sección 1", preguntas: [nuevaPregunta()] }] };
 }
 
 function aEditor(t: ChecklistTemplate): Editor {
@@ -17,7 +22,7 @@ function aEditor(t: ChecklistTemplate): Editor {
     id: t.id,
     nombre: t.nombre,
     descripcion: t.descripcion ?? "",
-    secciones: t.secciones.length > 0 ? t.secciones : [{ nombre: "Sección 1", preguntas: [""] }],
+    secciones: t.secciones.length > 0 ? t.secciones : [{ nombre: "Sección 1", preguntas: [nuevaPregunta()] }],
   };
 }
 
@@ -78,16 +83,16 @@ export default function ChecklistsPage() {
     });
   }
   function agregarSeccion() {
-    setEditor((prev) => (prev ? { ...prev, secciones: [...prev.secciones, { nombre: `Sección ${prev.secciones.length + 1}`, preguntas: [""] }] } : prev));
+    setEditor((prev) => (prev ? { ...prev, secciones: [...prev.secciones, { nombre: `Sección ${prev.secciones.length + 1}`, preguntas: [nuevaPregunta()] }] } : prev));
   }
   function quitarSeccion(i: number) {
     setEditor((prev) => (prev ? { ...prev, secciones: prev.secciones.filter((_, idx) => idx !== i) } : prev));
   }
-  function actualizarPregunta(si: number, pi: number, texto: string) {
+  function actualizarPregunta(si: number, pi: number, cambios: Partial<ItemChecklistPregunta>) {
     setEditor((prev) => {
       if (!prev) return prev;
       const secciones = prev.secciones.map((s, idx) =>
-        idx === si ? { ...s, preguntas: s.preguntas.map((p, pidx) => (pidx === pi ? texto : p)) } : s
+        idx === si ? { ...s, preguntas: s.preguntas.map((p, pidx) => (pidx === pi ? { ...p, ...cambios } : p)) } : s
       );
       return { ...prev, secciones };
     });
@@ -95,7 +100,7 @@ export default function ChecklistsPage() {
   function agregarPregunta(si: number) {
     setEditor((prev) => {
       if (!prev) return prev;
-      const secciones = prev.secciones.map((s, idx) => (idx === si ? { ...s, preguntas: [...s.preguntas, ""] } : s));
+      const secciones = prev.secciones.map((s, idx) => (idx === si ? { ...s, preguntas: [...s.preguntas, nuevaPregunta()] } : s));
       return { ...prev, secciones };
     });
   }
@@ -115,7 +120,10 @@ export default function ChecklistsPage() {
       return;
     }
     const seccionesLimpias = editor.secciones
-      .map((s) => ({ nombre: s.nombre.trim() || "Sección", preguntas: s.preguntas.map((p) => p.trim()).filter(Boolean) }))
+      .map((s) => ({
+        nombre: s.nombre.trim() || "Sección",
+        preguntas: s.preguntas.map((p) => ({ texto: p.texto.trim(), obligatorio: p.obligatorio })).filter((p) => p.texto),
+      }))
       .filter((s) => s.preguntas.length > 0);
 
     setGuardando(true);
@@ -171,7 +179,21 @@ export default function ChecklistsPage() {
             <div className="flex flex-col gap-2">
               {s.preguntas.map((p, pi) => (
                 <div key={pi} className="flex items-center gap-2">
-                  <Input type="text" placeholder="Pregunta" value={p} onChange={(e) => actualizarPregunta(si, pi, e.target.value)} />
+                  <Input
+                    type="text"
+                    placeholder="Pregunta"
+                    value={p.texto}
+                    onChange={(e) => actualizarPregunta(si, pi, { texto: e.target.value })}
+                  />
+                  <label className="flex shrink-0 items-center gap-1.5 text-xs text-muted">
+                    <input
+                      type="checkbox"
+                      checked={p.obligatorio}
+                      onChange={(e) => actualizarPregunta(si, pi, { obligatorio: e.target.checked })}
+                      className="accent-brand"
+                    />
+                    Obligatorio
+                  </label>
                   <button type="button" onClick={() => quitarPregunta(si, pi)} className="shrink-0 text-xs font-medium text-danger hover:underline">
                     Quitar
                   </button>
@@ -228,64 +250,33 @@ export default function ChecklistsPage() {
       </div>
 
       {error && <ErrorText>{error}</ErrorText>}
-      {templates === null && !error && <p className="text-sm text-muted">Cargando…</p>}
-      {filtrados.length === 0 && templates !== null && (
-        <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border py-16 text-center">
-          <IconClipboardCheck className="h-8 w-8 text-muted" />
-          <p className="text-sm text-muted">No hay checklists que coincidan.</p>
-        </div>
-      )}
-      {filtrados.length > 0 && (
-        <Card className="overflow-x-auto p-0">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-border text-xs text-muted">
-                <th className="px-5 py-3 font-medium">Nombre</th>
-                <th className="px-5 py-3 font-medium">Secciones</th>
-                <th className="px-5 py-3 font-medium">Preguntas</th>
-                <th className="px-5 py-3 font-medium">Versión</th>
-                <th className="px-5 py-3 font-medium">Estado</th>
-                <th className="px-5 py-3 font-medium">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtrados.map((t) => {
-                const totalPreguntas = t.secciones.reduce((acc, s) => acc + s.preguntas.length, 0);
-                return (
-                  <tr key={t.id} className="border-b border-border last:border-0">
-                    <td className="px-5 py-3">
-                      <p className="font-medium text-foreground">{t.nombre}</p>
-                      {t.descripcion && <p className="text-xs text-muted">{t.descripcion}</p>}
-                    </td>
-                    <td className="px-5 py-3">{t.secciones.length}</td>
-                    <td className="px-5 py-3">{totalPreguntas}</td>
-                    <td className="px-5 py-3">v{t.version}</td>
-                    <td className="px-5 py-3">
-                      <Badge value={t.activo ? "activo" : "inactivo"} />
-                    </td>
-                    <td className="px-5 py-3">
-                      <div className="flex flex-wrap gap-3 text-xs font-medium">
-                        <button type="button" onClick={() => setEditor(aEditor(t))} className="text-brand hover:underline">
-                          Ver/Editar
-                        </button>
-                        <button type="button" onClick={() => onDuplicar(t.id)} className="text-brand hover:underline">
-                          Duplicar
-                        </button>
-                        <button type="button" onClick={() => onAlternarActivo(t)} className="text-muted hover:underline">
-                          {t.activo ? "Desactivar" : "Activar"}
-                        </button>
-                        <button type="button" onClick={() => onEliminar(t.id)} className="text-danger hover:underline">
-                          Eliminar
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </Card>
-      )}
+      <DataTable
+        rows={filtrados}
+        rowKey={(t) => t.id}
+        loading={templates === null && !error}
+        columns={[
+          {
+            header: "Nombre",
+            cell: (t) => (
+              <>
+                <p className="font-medium text-foreground">{t.nombre}</p>
+                {t.descripcion && <p className="text-xs text-muted">{t.descripcion}</p>}
+              </>
+            ),
+          },
+          { header: "Secciones", cell: (t) => t.secciones.length },
+          { header: "Preguntas", cell: (t) => t.secciones.reduce((acc, s) => acc + s.preguntas.length, 0) },
+          { header: "Versión", cell: (t) => `v${t.version}` },
+          { header: "Estado", cell: (t) => <Badge value={t.activo ? "activo" : "inactivo"} /> },
+        ]}
+        actions={[
+          { label: "Ver/Editar", onClick: (t) => setEditor(aEditor(t)), variant: "brand" },
+          { label: "Duplicar", onClick: (t) => onDuplicar(t.id), variant: "brand" },
+          { label: (t) => (t.activo ? "Desactivar" : "Activar"), onClick: onAlternarActivo, variant: "muted" },
+          { label: "Eliminar", onClick: (t) => onEliminar(t.id), variant: "danger" },
+        ]}
+        emptyState={{ icon: IconClipboardCheck, message: "No hay checklists que coincidan." }}
+      />
     </div>
   );
 }

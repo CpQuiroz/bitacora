@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import type { CatalogoItem, TipoCatalogoItem } from "@bitacora/shared";
+import type { CatalogoItem, TipoCatalogoItem, UnidadMedida } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
@@ -30,6 +30,7 @@ export default function CatalogoPage() {
   const router = useRouter();
   const [usuario, setUsuario] = useState<UsuarioShell | null>(null);
   const [items, setItems] = useState<ItemConKit[] | null>(null);
+  const [unidades, setUnidades] = useState<UnidadMedida[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("todos");
   const [busqueda, setBusqueda] = useState("");
@@ -53,7 +54,12 @@ export default function CatalogoPage() {
       router.replace("/login");
       return;
     }
-    const [resMe, resItems] = await Promise.all([apiFetch("/api/me"), apiFetch("/api/catalogo")]);
+    const [resMe, resItems, resUnidades] = await Promise.all([
+      apiFetch("/api/me"),
+      apiFetch("/api/catalogo"),
+      apiFetch("/api/unidades-medida"),
+    ]);
+    if (resUnidades.ok) setUnidades((await resUnidades.json()).filter((u: UnidadMedida) => u.activo));
     if (resMe.ok) {
       const { usuario: u } = await resMe.json();
       if (u)
@@ -216,7 +222,18 @@ export default function CatalogoPage() {
               </div>
               <div>
                 <Label>Unidad</Label>
-                <Input type="text" placeholder="unidad, hora, m2…" value={unidad} onChange={(e) => setUnidad(e.target.value)} />
+                {unidades.length > 0 ? (
+                  <Select value={unidad} onChange={(e) => setUnidad(e.target.value)}>
+                    {!unidades.some((u) => u.nombre === unidad) && <option value={unidad}>{unidad}</option>}
+                    {unidades.map((u) => (
+                      <option key={u.id} value={u.nombre}>
+                        {u.abreviatura ? `${u.nombre} (${u.abreviatura})` : u.nombre}
+                      </option>
+                    ))}
+                  </Select>
+                ) : (
+                  <Input type="text" placeholder="unidad, hora, m2…" value={unidad} onChange={(e) => setUnidad(e.target.value)} />
+                )}
               </div>
               <div>
                 <Label>Precio base (CLP)</Label>

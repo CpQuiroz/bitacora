@@ -12,9 +12,11 @@ import { IconBox } from "@/components/icons";
 type UsuarioConEmpresa = Usuario & { empresa: Empresa };
 type MovimientoConNombre = InventarioMovimiento & { item_nombre: string | null };
 
-function estadoStock(item: CatalogoItem): "en_stock" | "stock_bajo" | "sin_stock" {
+// stock_minimo puede venir null (el ítem no definió el suyo) — en ese
+// caso se usa el umbral por defecto de la empresa (Configuración > Inventario).
+function estadoStock(item: CatalogoItem, minimoDefault: number): "en_stock" | "stock_bajo" | "sin_stock" {
   const actual = item.stock_actual ?? 0;
-  const minimo = item.stock_minimo ?? 0;
+  const minimo = item.stock_minimo ?? minimoDefault;
   if (actual <= 0) return "sin_stock";
   if (actual <= minimo) return "stock_bajo";
   return "en_stock";
@@ -186,9 +188,11 @@ export default function InventarioRegistroPage() {
                         <td className="px-5 py-3 text-foreground">
                           {p.stock_actual ?? 0} {p.unidad}
                         </td>
-                        <td className="px-5 py-3 text-muted">{p.stock_minimo ?? 0}</td>
+                        <td className="px-5 py-3 text-muted">
+                          {p.stock_minimo ?? `${usuario?.empresa.inventario_stock_minimo_default ?? 0} (por defecto)`}
+                        </td>
                         <td className="px-5 py-3">
-                          <Badge value={estadoStock(p)} />
+                          <Badge value={estadoStock(p, usuario?.empresa.inventario_stock_minimo_default ?? 0)} />
                         </td>
                         <td className="px-5 py-3">
                           <Button type="button" variant="outline" onClick={() => (ajustandoId === p.id ? setAjustandoId(null) : abrirAjuste(p.id))}>

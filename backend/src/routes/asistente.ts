@@ -24,6 +24,11 @@ de responder — nunca inventes números. Si la pregunta menciona un período re
 mes", "la semana pasada", "este año"), calcula tú las fechas desde/hasta a partir de hoy. Si \
 no hay datos suficientes en el período, dilo directamente en vez de inventar.
 
+Si preguntan por UN cliente puntual (quién es, sus datos de contacto, cuál fue el último \
+agregado, buscar por nombre) usa la herramienta "buscar_clientes" — "datos_negocio" solo \
+tiene cifras agregadas, nunca registros individuales, así que para ese tipo de pregunta \
+"datos_negocio" no te va a servir.
+
 Si la pregunta no requiere datos (saludo, duda sobre cómo usar la app, consejo general de \
 negocio), responde directo sin usar la herramienta. Sé conciso — respuestas cortas, en texto \
 plano puro, como en un chat real: SIN markdown de ningún tipo (nada de **negrita**, #, \
@@ -56,13 +61,46 @@ const HERRAMIENTAS: Anthropic.Tool[] = [
       required: ["seccion", "desde", "hasta"],
     },
   },
+  {
+    name: "buscar_clientes",
+    description:
+      "Busca clientes puntuales por nombre, o lista los más recientes si no se da texto de búsqueda — devuelve registros individuales (nombre, contacto, dirección), no cifras agregadas. Úsala para preguntas sobre UN cliente en particular, no para rankings ni totales.",
+    input_schema: {
+      type: "object",
+      properties: {
+        busqueda: { type: "string", description: "Texto para buscar por nombre (opcional, coincidencia parcial) — si se omite, devuelve los más recientes" },
+        limite: { type: "number", description: "Cuántos resultados devolver (por defecto 5, máximo 20)" },
+      },
+    },
+  },
 ];
+
+async function buscarClientes(input: Record<string, unknown>, empresaId: string): Promise<Record<string, unknown>> {
+  const busqueda = typeof input.busqueda === "string" ? input.busqueda.trim() : "";
+  const limite = Math.min(typeof input.limite === "number" && input.limite > 0 ? input.limite : 5, 20);
+
+  let query = supabase
+    .from("clientes")
+    .select("nombre, telefono, correo, direccion, comuna, activo, creado_en")
+    .eq("empresa_id", empresaId)
+    .limit(limite);
+
+  query = busqueda ? query.ilike("nombre", `%${busqueda}%`).order("nombre") : query.order("creado_en", { ascending: false });
+
+  const { data, error } = await query;
+  if (error) return { error: error.message };
+  if (!data || data.length === 0) {
+    return { mensaje: busqueda ? `No encontré ningún cliente que coincida con "${busqueda}".` : "Todavía no hay clientes registrados." };
+  }
+  return { clientes: data };
+}
 
 async function ejecutarHerramienta(
   nombre: string,
   input: Record<string, unknown>,
   empresaId: string
 ): Promise<Record<string, unknown>> {
+  if (nombre === "buscar_clientes") return buscarClientes(input, empresaId);
   if (nombre !== "datos_negocio") return { error: `Herramienta desconocida: ${nombre}` };
 
   const seccion = input.seccion;

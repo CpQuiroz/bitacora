@@ -1,10 +1,28 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { PlantillaDocumento, PosicionLogo, TipoPlantilla } from "@bitacora/shared";
+import type { PlantillaDocumento, PosicionLogo, TipoPlantilla, VariablePlantilla } from "@bitacora/shared";
+import { VARIABLES_COBRANZA, VARIABLES_COTIZACION, VARIABLES_OS, sustituirVariables } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
 import { Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText, Textarea } from "@/components/ui";
 import { useConfiguracion } from "../ConfiguracionContext";
+
+const VARIABLES_POR_TIPO: Record<TipoPlantilla, VariablePlantilla[]> = {
+  cotizacion: VARIABLES_COTIZACION,
+  orden_servicio: VARIABLES_OS,
+  cobranza: VARIABLES_COBRANZA,
+  terminos_aceptacion: [],
+};
+
+const DATOS_EJEMPLO: Record<string, string> = {
+  cliente: "Juan Pérez",
+  fecha: "24-08-2026",
+  tecnico: "Pedro Soto",
+  monto: "$45.000",
+  folio: "0087",
+  direccion: "Av. Providencia 1234, Providencia",
+  empresa: "Tu empresa",
+};
 
 const TABS: { valor: TipoPlantilla; etiqueta: string }[] = [
   { valor: "cotizacion", etiqueta: "Cotización" },
@@ -25,6 +43,25 @@ const TITULO_DOC: Record<TipoPlantilla, string> = {
   cobranza: "Cobranza N° 0034",
   terminos_aceptacion: "Términos de Aceptación",
 };
+
+function ChipsVariables({ variables, onInsertar }: { variables: VariablePlantilla[]; onInsertar: (clave: string) => void }) {
+  if (variables.length === 0) return null;
+  return (
+    <div className="mt-1.5 flex flex-wrap gap-1.5">
+      {variables.map((v) => (
+        <button
+          key={v.clave}
+          type="button"
+          title={v.etiqueta}
+          onClick={() => onInsertar(v.clave)}
+          className="rounded-full border border-border px-2 py-0.5 font-mono text-[11px] text-muted hover:border-brand hover:text-brand"
+        >
+          {`{${v.clave}}`}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 export default function PlantillasPage() {
   const { usuario } = useConfiguracion();
@@ -119,6 +156,7 @@ export default function PlantillasPage() {
   }
 
   const justify = posicionLogo === "izquierda" ? "justify-start" : posicionLogo === "derecha" ? "justify-end" : "justify-center";
+  const variablesTab = VARIABLES_POR_TIPO[tab];
 
   return (
     <div className="flex flex-col gap-6">
@@ -201,18 +239,22 @@ export default function PlantillasPage() {
                   <div>
                     <Label>Texto de encabezado</Label>
                     <Input type="text" value={textoEncabezado} onChange={(e) => setTextoEncabezado(e.target.value)} />
+                    <ChipsVariables variables={variablesTab} onInsertar={(c) => setTextoEncabezado((v) => `${v}{${c}}`)} />
                   </div>
                   <div>
                     <Label>Texto de pie de página</Label>
                     <Input type="text" value={textoPie} onChange={(e) => setTextoPie(e.target.value)} />
+                    <ChipsVariables variables={variablesTab} onInsertar={(c) => setTextoPie((v) => `${v}{${c}}`)} />
                   </div>
                   <div>
                     <Label>Mensaje predeterminado</Label>
                     <Textarea rows={3} value={mensajePredeterminado} onChange={(e) => setMensajePredeterminado(e.target.value)} />
+                    <ChipsVariables variables={variablesTab} onInsertar={(c) => setMensajePredeterminado((v) => `${v}{${c}}`)} />
                   </div>
                   <div>
                     <Label>Términos y condiciones</Label>
                     <Textarea rows={4} value={terminosCondiciones} onChange={(e) => setTerminosCondiciones(e.target.value)} />
+                    <ChipsVariables variables={variablesTab} onInsertar={(c) => setTerminosCondiciones((v) => `${v}{${c}}`)} />
                   </div>
                   <label className="flex items-center gap-2 text-sm text-foreground">
                     <input type="checkbox" checked={mostrarFirma} onChange={(e) => setMostrarFirma(e.target.checked)} className="accent-brand" />
@@ -252,7 +294,7 @@ export default function PlantillasPage() {
                 <h3 className="mt-0.5 text-lg font-bold" style={{ color: colorPrimario }}>
                   {TITULO_DOC[tab]}
                 </h3>
-                {textoEncabezado && <p className="mt-1 text-xs text-gray-500">{textoEncabezado}</p>}
+                {textoEncabezado && <p className="mt-1 text-xs text-gray-500">{sustituirVariables(textoEncabezado, DATOS_EJEMPLO)}</p>}
 
                 {tab !== "terminos_aceptacion" && (
                   <div className="mt-4 overflow-hidden rounded-lg border" style={{ borderColor: "#e6e6ee" }}>
@@ -267,9 +309,11 @@ export default function PlantillasPage() {
                   </div>
                 )}
 
-                {mensajePredeterminado && <p className="mt-4 text-xs text-gray-600">{mensajePredeterminado}</p>}
+                {mensajePredeterminado && <p className="mt-4 text-xs text-gray-600">{sustituirVariables(mensajePredeterminado, DATOS_EJEMPLO)}</p>}
                 {terminosCondiciones && (
-                  <div className="mt-4 rounded-lg bg-gray-50 p-2.5 text-[10px] leading-relaxed text-gray-500">{terminosCondiciones}</div>
+                  <div className="mt-4 rounded-lg bg-gray-50 p-2.5 text-[10px] leading-relaxed text-gray-500">
+                    {sustituirVariables(terminosCondiciones, DATOS_EJEMPLO)}
+                  </div>
                 )}
 
                 {mostrarFirma && (
@@ -279,7 +323,7 @@ export default function PlantillasPage() {
                     Firma
                   </div>
                 )}
-                {textoPie && <p className="mt-4 text-center text-[10px] text-gray-400">{textoPie}</p>}
+                {textoPie && <p className="mt-4 text-center text-[10px] text-gray-400">{sustituirVariables(textoPie, DATOS_EJEMPLO)}</p>}
               </div>
               <p className="mt-2 text-xs text-muted">Así se ve con los cambios sin guardar todavía.</p>
             </div>

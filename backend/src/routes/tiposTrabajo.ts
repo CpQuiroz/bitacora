@@ -1,8 +1,9 @@
 import { Router } from "express";
-import type { CampoTipoTrabajo } from "@bitacora/shared";
+import type { CampoTipoTrabajo, TipoTrabajo } from "@bitacora/shared";
 import { supabase } from "../supabase";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
+import { requiereModulo } from "../permisos";
 
 export const tiposTrabajoRouter = Router();
 
@@ -39,9 +40,11 @@ tiposTrabajoRouter.get(
 );
 
 // Cada empresa define sus propios tipos de trabajo y qué campos
-// muestra el formulario en la app móvil para cada uno.
+// muestra el formulario (dinámico) en la app móvil y en el detalle
+// de la OS para cada uno.
 tiposTrabajoRouter.post(
   "/",
+  requiereModulo("configuracion"),
   ah<RequestConEmpresa>(async (req, res) => {
     const { nombre, campos } = req.body ?? {};
 
@@ -67,5 +70,81 @@ tiposTrabajoRouter.post(
       return;
     }
     res.status(201).json(data);
+  })
+);
+
+tiposTrabajoRouter.patch(
+  "/:id",
+  requiereModulo("configuracion"),
+  ah<RequestConEmpresa>(async (req, res) => {
+    const { nombre, campos, activo } = req.body ?? {};
+    const cambios: Partial<TipoTrabajo> = {};
+
+    if (nombre !== undefined) {
+      if (typeof nombre !== "string" || !nombre.trim()) {
+        res.status(400).json({ error: "Falta nombre" });
+        return;
+      }
+      cambios.nombre = nombre.trim();
+    }
+    if (campos !== undefined) {
+      if (!Array.isArray(campos) || !campos.every(campoValido)) {
+        res.status(400).json({
+          error: "campos debe ser un arreglo de {clave, etiqueta, tipo: texto|numero|fecha|booleano}",
+        });
+        return;
+      }
+      cambios.campos = campos;
+    }
+    if (activo !== undefined) cambios.activo = Boolean(activo);
+    if (Object.keys(cambios).length === 0) {
+      res.status(400).json({ error: "Nada que actualizar" });
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("tipos_trabajo")
+      .update(cambios)
+      .eq("empresa_id", req.empresaId!)
+      .eq("id", req.params.id)
+      .select()
+      .maybeSingle();
+
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    if (!data) {
+      res.status(404).json({ error: "Tipo de trabajo no encontrado" });
+      return;
+    }
+    res.json(data);
+  })
+);
+
+tiposTrabajoRouter.delete(
+  "/:id",
+  requiereModulo("configuracion"),
+  ah<RequestConEmpresa>(async (req, res) => {
+    const { error, count } = await supabase
+      .from("tipos_trabajo")
+      .delete({ count: "exact" })
+      .eq("empresa_id", req.empresaId!)
+      .eq("id", req.params.id);
+
+    if (error) {
+      // Restricción de llave foránea: hay trabajos que usan este tipo.
+      if (error.code === "23503") {
+        res.status(400).json({ error: "Este tipo de trabajo está en uso — desactívalo en vez de eliminarlo" });
+        return;
+      }
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    if (!count) {
+      res.status(404).json({ error: "Tipo de trabajo no encontrado" });
+      return;
+    }
+    res.status(204).end();
   })
 );

@@ -116,8 +116,9 @@ const badgeStyles: Record<string, string> = {
   vencida: "bg-danger-soft text-danger",
   // usuarios
   admin: "bg-brand-soft text-brand",
+  supervisor: "bg-border text-foreground",
   contador: "bg-warning-soft text-warning",
-  chofer: "bg-success-soft text-success",
+  colaborador: "bg-success-soft text-success",
   // prioridad de tareas
   alta: "bg-danger-soft text-danger",
   media: "bg-warning-soft text-warning",
@@ -130,12 +131,18 @@ const badgeStyles: Record<string, string> = {
   // gastos
   pagado: "bg-success-soft text-success",
   vencido: "bg-danger-soft text-danger",
+  // documentos (flota)
+  vigente: "bg-success-soft text-success",
+  por_vencer: "bg-warning-soft text-warning",
   // cotizaciones (presupuestos)
   borrador: "bg-border text-muted",
   enviado: "bg-brand-soft text-brand",
   aprobado: "bg-success-soft text-success",
   rechazado: "bg-danger-soft text-danger",
   expirado: "bg-warning-soft text-warning",
+  // viajes
+  confirmado: "bg-success-soft text-success",
+  facturado: "bg-brand-soft text-brand",
   // agenda (estado derivado, no es una columna propia)
   agendado: "bg-brand-soft text-brand",
   en_progreso: "bg-warning-soft text-warning",
@@ -150,6 +157,9 @@ const badgeStyles: Record<string, string> = {
   entrada: "bg-success-soft text-success",
   salida: "bg-danger-soft text-danger",
   ajuste: "bg-warning-soft text-warning",
+  // notificaciones al cliente: éxito/fallo de un envío
+  exito: "bg-success-soft text-success",
+  fallido: "bg-danger-soft text-danger",
 };
 
 export function Badge({ value }: { value: string }) {
@@ -183,5 +193,19 @@ export function PageHeader({
       </div>
       {action}
     </div>
+  );
+}
+
+// Estado mostrado cuando el backend responde 403 — por ejemplo alguien
+// entra a una URL directamente a una sección que su rol no puede ver.
+// Un solo componente reutilizable en vez de una pantalla en blanco por página.
+export function SinAutorizacion({ mensaje }: { mensaje?: string }) {
+  return (
+    <Card className="mx-auto max-w-md text-center">
+      <h2 className="text-lg font-semibold text-foreground">Sin autorización</h2>
+      <p className="mt-2 text-sm text-muted">
+        {mensaje ?? "No tienes permiso para acceder a esta sección. Si crees que es un error, contacta a un administrador."}
+      </p>
+    </Card>
   );
 }

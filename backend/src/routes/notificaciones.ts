@@ -3,10 +3,11 @@ import type { NotificacionesConfig, TipoMensajePersonalizado } from "@bitacora/s
 import { supabase } from "../supabase";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
+import { requiereModulo } from "../permisos";
 
 export const notificacionesRouter = Router();
 
-const TIPOS_MENSAJE: TipoMensajePersonalizado[] = ["cotizacion", "orden_servicio", "cobranza"];
+const TIPOS_MENSAJE: TipoMensajePersonalizado[] = ["cotizacion", "orden_servicio", "cobranza", "tecnico_en_camino"];
 
 function tipoValido(tipo: string): tipo is TipoMensajePersonalizado {
   return (TIPOS_MENSAJE as string[]).includes(tipo);
@@ -46,13 +47,10 @@ notificacionesRouter.get(
 
 notificacionesRouter.patch(
   "/",
+  requiereModulo("configuracion"),
   ah<RequestConEmpresa>(async (req, res) => {
-    if (req.rol !== "admin") {
-      res.status(403).json({ error: "Solo un admin puede cambiar las notificaciones" });
-      return;
-    }
     const actual = await obtenerOCrearConfig(req.empresaId!);
-    const campos: (keyof NotificacionesConfig)[] = [
+    const camposBooleanos: (keyof NotificacionesConfig)[] = [
       "correo_activado",
       "cotizacion_creada",
       "cotizacion_aprobada",
@@ -61,10 +59,22 @@ notificacionesRouter.patch(
       "os_completada",
       "cobranza_recibida",
       "cobranza_atrasada",
+      "cotizacion_enviada",
+      "cotizacion_por_vencer",
+      "tecnico_en_camino",
+      "cobro_pendiente",
     ];
     const cambios: Partial<NotificacionesConfig> = { actualizado_en: new Date().toISOString() };
-    for (const campo of campos) {
+    for (const campo of camposBooleanos) {
       if (req.body?.[campo] !== undefined) (cambios as Record<string, unknown>)[campo] = Boolean(req.body[campo]);
+    }
+    if (req.body?.dias_aviso_vencimiento !== undefined) {
+      const dias = Number(req.body.dias_aviso_vencimiento);
+      if (!Number.isInteger(dias) || dias < 0) {
+        res.status(400).json({ error: "dias_aviso_vencimiento debe ser un entero positivo" });
+        return;
+      }
+      cambios.dias_aviso_vencimiento = dias;
     }
 
     const { data, error } = await supabase
@@ -84,11 +94,8 @@ notificacionesRouter.patch(
 
 notificacionesRouter.patch(
   "/mensajes/:tipo",
+  requiereModulo("configuracion"),
   ah<RequestConEmpresa>(async (req, res) => {
-    if (req.rol !== "admin") {
-      res.status(403).json({ error: "Solo un admin puede cambiar los mensajes" });
-      return;
-    }
     if (!tipoValido(req.params.tipo)) {
       res.status(400).json({ error: `tipo debe ser uno de: ${TIPOS_MENSAJE.join(", ")}` });
       return;

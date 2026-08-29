@@ -1,3 +1,6 @@
 export * from "./types";
 export * from "./supabase";
 export * from "./rut";
+export * from "./permisos";
+export * from "./regionesComunas";
+export * from "./plantillas";

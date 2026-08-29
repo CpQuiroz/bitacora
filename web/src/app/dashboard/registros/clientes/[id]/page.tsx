@@ -4,12 +4,14 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import type { Cliente, Factura, Presupuesto, Trabajo, OrdenServicio } from "@bitacora/shared";
+import { formatearRut, validarRut } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, SuccessText } from "@/components/ui";
-import { IconChevronLeft, IconMapPin } from "@/components/icons";
+import { Badge, Button, buttonClass, Card, ErrorText, Input, Label, PageHeader, SuccessText } from "@/components/ui";
+import { IconChat, IconChevronLeft, IconMapPin } from "@/components/icons";
+import { linkWhatsapp } from "@/lib/whatsapp";
 
 type TrabajoConOrden = Trabajo & { orden: Pick<OrdenServicio, "folio" | "estado_os"> | null };
 type ClienteDetalle = Cliente & { trabajos: TrabajoConOrden[]; presupuestos: Presupuesto[]; facturas: Factura[] };
@@ -23,6 +25,7 @@ export default function ClienteDetallePage() {
 
   const [editando, setEditando] = useState(false);
   const [nombre, setNombre] = useState("");
+  const [rut, setRut] = useState("");
   const [telefono, setTelefono] = useState("");
   const [correo, setCorreo] = useState("");
   const [direccion, setDireccion] = useState("");
@@ -60,6 +63,7 @@ export default function ClienteDetallePage() {
     const c: ClienteDetalle = await resCliente.json();
     setCliente(c);
     setNombre(c.nombre);
+    setRut(c.rut ?? "");
     setTelefono(c.telefono ?? "");
     setCorreo(c.correo ?? "");
     setDireccion(c.direccion);
@@ -73,10 +77,14 @@ export default function ClienteDetallePage() {
   async function onGuardar() {
     setErrorForm(null);
     setAviso(null);
+    if (rut.trim() && !validarRut(rut)) {
+      setErrorForm("El RUT no es válido (revisa el dígito verificador)");
+      return;
+    }
     setGuardando(true);
     const res = await apiFetch(`/api/clientes/${params.id}`, {
       method: "PATCH",
-      body: JSON.stringify({ nombre, telefono, correo, direccion, comuna }),
+      body: JSON.stringify({ nombre, rut: rut.trim() || null, telefono, correo, direccion, comuna }),
     });
     setGuardando(false);
     if (!res.ok) {
@@ -114,6 +122,17 @@ export default function ClienteDetallePage() {
             action={
               <div className="flex items-center gap-2">
                 <Badge value={cliente.activo ? "activo" : "inactivo"} />
+                {cliente.telefono && (
+                  <a
+                    href={linkWhatsapp(cliente.telefono)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={buttonClass("outline")}
+                  >
+                    <IconChat className="h-4 w-4" />
+                    WhatsApp
+                  </a>
+                )}
                 <Button type="button" variant="outline" onClick={onAlternarActivo}>
                   {cliente.activo ? "Desactivar" : "Activar"}
                 </Button>
@@ -133,8 +152,18 @@ export default function ClienteDetallePage() {
                   <Input type="text" value={nombre} onChange={(e) => setNombre(e.target.value)} />
                 </div>
                 <div>
-                  <Label>Teléfono</Label>
-                  <Input type="text" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
+                  <Label>RUT (habilita el login al Portal de Cliente)</Label>
+                  <Input
+                    type="text"
+                    placeholder="12.345.678-9"
+                    value={rut}
+                    onChange={(e) => setRut(e.target.value)}
+                    onBlur={() => rut.trim() && validarRut(rut) && setRut(formatearRut(rut))}
+                  />
+                </div>
+                <div>
+                  <Label>Teléfono (para WhatsApp, puedes escribirlo con +56 9…)</Label>
+                  <Input type="text" placeholder="+56 9 1234 5678" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
                 </div>
                 <div>
                   <Label>Correo</Label>
@@ -169,8 +198,25 @@ export default function ClienteDetallePage() {
             <h2 className="mb-4 text-sm font-semibold text-foreground">Contacto</h2>
             <div className="grid gap-4 text-sm sm:grid-cols-3">
               <div>
+                <p className="text-xs text-muted">RUT</p>
+                <p className="text-foreground">{cliente.rut ?? "—"}</p>
+              </div>
+              <div>
                 <p className="text-xs text-muted">Teléfono</p>
-                <p className="text-foreground">{cliente.telefono ?? "—"}</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-foreground">{cliente.telefono ?? "—"}</p>
+                  {cliente.telefono && (
+                    <a
+                      href={linkWhatsapp(cliente.telefono)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="Contactar por WhatsApp"
+                      className="text-muted hover:text-brand"
+                    >
+                      <IconChat className="h-4 w-4" />
+                    </a>
+                  )}
+                </div>
               </div>
               <div>
                 <p className="text-xs text-muted">Correo</p>

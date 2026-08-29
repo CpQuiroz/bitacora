@@ -1,11 +1,12 @@
 import { Router } from "express";
 import multer from "multer";
 import type { Empresa, TipoCuenta } from "@bitacora/shared";
-import { formatearRut, validarRut } from "@bitacora/shared";
+import { comunasDeRegion, formatearRut, REGIONES, validarRut } from "@bitacora/shared";
 import { supabase } from "../supabase";
 import { subirLogo } from "../storage";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
+import { requiereModulo } from "../permisos";
 
 export const miEmpresaRouter = Router();
 
@@ -13,12 +14,6 @@ const MONEDAS = ["CLP", "USD", "EUR", "PEN", "COP", "MXN", "ARS"];
 // Debe reflejar exactamente los "valor" de web/src/lib/fuentes.ts.
 const FUENTES = ["sistema", "inter", "roboto", "poppins", "montserrat", "nunito", "work-sans", "lato", "source-sans-3"];
 const TIPOS_CUENTA: TipoCuenta[] = ["corriente", "vista", "ahorro"];
-const REGIONES = [
-  "Arica y Parinacota", "Tarapacá", "Antofagasta", "Atacama", "Coquimbo",
-  "Valparaíso", "Metropolitana de Santiago", "Libertador General Bernardo O'Higgins",
-  "Maule", "Ñuble", "Biobío", "La Araucanía", "Los Ríos", "Los Lagos",
-  "Aysén del General Carlos Ibáñez del Campo", "Magallanes y de la Antártica Chilena",
-];
 
 // Brillo percibido (fórmula YIQ) para decidir si el texto sobre el
 // color de marca debe ser blanco o casi negro — evita que un admin
@@ -47,11 +42,8 @@ const upload = multer({
 miEmpresaRouter.post(
   "/logo",
   upload.single("logo"),
+  requiereModulo("configuracion"),
   ah<RequestConEmpresa>(async (req, res) => {
-    if (req.rol !== "admin") {
-      res.status(403).json({ error: "Solo un admin puede cambiar el logo" });
-      return;
-    }
     if (!req.file) {
       res.status(400).json({ error: "Falta el archivo (campo 'logo')" });
       return;
@@ -76,11 +68,8 @@ miEmpresaRouter.post(
 
 miEmpresaRouter.patch(
   "/",
+  requiereModulo("configuracion"),
   ah<RequestConEmpresa>(async (req, res) => {
-    if (req.rol !== "admin") {
-      res.status(403).json({ error: "Solo un admin puede cambiar estos datos" });
-      return;
-    }
     const {
       nombre,
       color_primario,
@@ -88,6 +77,7 @@ miEmpresaRouter.patch(
       moneda,
       fuente,
       razon_social,
+      giro,
       rut,
       correo_empresa,
       telefono_empresa,
@@ -103,6 +93,7 @@ miEmpresaRouter.patch(
       pago_numero_cuenta,
       pago_titular,
       inventario_activado,
+      inventario_stock_minimo_default,
     } = req.body ?? {};
     const cambios: Partial<Empresa> = {};
 
@@ -114,6 +105,7 @@ miEmpresaRouter.patch(
       cambios.nombre = nombre.trim();
     }
     if (razon_social !== undefined) cambios.razon_social = razon_social?.trim() || null;
+    if (giro !== undefined) cambios.giro = giro?.trim() || null;
     if (rut !== undefined) {
       if (rut !== null && rut !== "") {
         if (!validarRut(rut)) {
@@ -141,7 +133,19 @@ miEmpresaRouter.patch(
       }
       cambios.region = region || null;
     }
-    if (comuna !== undefined) cambios.comuna = comuna?.trim() || null;
+    if (comuna !== undefined && comuna) {
+      // La comuna se valida contra la región de este mismo request si
+      // viene incluida, o si no contra la región ya guardada.
+      const regionEfectiva =
+        region !== undefined ? region : (await supabase.from("empresas").select("region").eq("id", req.empresaId!).single()).data?.region;
+      if (!comunasDeRegion(regionEfectiva).includes(comuna)) {
+        res.status(400).json({ error: "comuna inválida para la región seleccionada" });
+        return;
+      }
+      cambios.comuna = comuna;
+    } else if (comuna !== undefined) {
+      cambios.comuna = null;
+    }
     if (direccion_calle !== undefined) cambios.direccion_calle = direccion_calle?.trim() || null;
     if (direccion_numero !== undefined) cambios.direccion_numero = direccion_numero?.trim() || null;
     if (direccion_depto !== undefined) cambios.direccion_depto = direccion_depto?.trim() || null;
@@ -157,6 +161,13 @@ miEmpresaRouter.patch(
     if (pago_numero_cuenta !== undefined) cambios.pago_numero_cuenta = pago_numero_cuenta?.trim() || null;
     if (pago_titular !== undefined) cambios.pago_titular = pago_titular?.trim() || null;
     if (inventario_activado !== undefined) cambios.inventario_activado = Boolean(inventario_activado);
+    if (inventario_stock_minimo_default !== undefined) {
+      if (!Number.isInteger(inventario_stock_minimo_default) || inventario_stock_minimo_default < 0) {
+        res.status(400).json({ error: "inventario_stock_minimo_default debe ser un entero positivo" });
+        return;
+      }
+      cambios.inventario_stock_minimo_default = inventario_stock_minimo_default;
+    }
 
     if (color_primario !== undefined) {
       if (color_primario !== null && !/^#[0-9a-fA-F]{6}$/.test(color_primario)) {
@@ -214,11 +225,8 @@ miEmpresaRouter.patch(
 // un checkbox — la misma confirmación se revalida acá, no solo en la UI.
 miEmpresaRouter.delete(
   "/",
+  requiereModulo("configuracion"),
   ah<RequestConEmpresa>(async (req, res) => {
-    if (req.rol !== "admin") {
-      res.status(403).json({ error: "Solo un admin puede eliminar la cuenta" });
-      return;
-    }
     const { confirmar } = req.body ?? {};
     const { data: empresa } = await supabase.from("empresas").select("nombre").eq("id", req.empresaId!).single();
     if (typeof confirmar !== "string" || confirmar !== empresa?.nombre) {

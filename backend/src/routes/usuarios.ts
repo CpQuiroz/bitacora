@@ -6,10 +6,11 @@ import { subirFotoPerfil } from "../storage";
 import { env } from "../env";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
+import { requiereModulo } from "../permisos";
 
 export const usuariosRouter = Router();
 
-const ROLES: Rol[] = ["admin", "contador", "chofer"];
+const ROLES: Rol[] = ["admin", "supervisor", "contador", "colaborador"];
 // Sin lista curada — un huso IANA cualquiera sirve, se valida solo el formato.
 const HUSO_REGEX = /^[A-Za-z]+(?:[/_][A-Za-z_]+)+$|^GMT[+-]\d{1,2}$/;
 
@@ -47,11 +48,8 @@ usuariosRouter.get(
 // el correo con el link para que la persona defina su contraseña.
 usuariosRouter.post(
   "/invitar",
+  requiereModulo("gestion_control"),
   ah<RequestConEmpresa>(async (req, res) => {
-    if (req.rol !== "admin") {
-      res.status(403).json({ error: "Solo un admin puede invitar usuarios" });
-      return;
-    }
 
     const { email, nombre, rol } = req.body ?? {};
     if (typeof email !== "string" || !email.includes("@")) {
@@ -96,6 +94,160 @@ usuariosRouter.post(
     }
 
     res.status(201).json(usuario);
+  })
+);
+
+// Gestión y Control: cambiar el rol o activar/desactivar a un miembro
+// del equipo. Cada campo que cambia deja una fila en auditoria_usuarios
+// con quién lo hizo y el valor anterior/nuevo.
+usuariosRouter.patch(
+  "/:id",
+  requiereModulo("gestion_control"),
+  ah<RequestConEmpresa>(async (req, res) => {
+    if (req.params.id === req.userId) {
+      res.status(400).json({ error: "No puedes cambiar tu propio rol o estado" });
+      return;
+    }
+
+    const { rol, activo, fecha_vencimiento_licencia } = req.body ?? {};
+    const { data: actual, error: errorActual } = await supabase
+      .from("usuarios")
+      .select("*")
+      .eq("empresa_id", req.empresaId!)
+      .eq("id", req.params.id)
+      .maybeSingle();
+    if (errorActual) {
+      res.status(500).json({ error: errorActual.message });
+      return;
+    }
+    if (!actual) {
+      res.status(404).json({ error: "Usuario no encontrado" });
+      return;
+    }
+
+    const cambios: Partial<Usuario> = {};
+    const cambiosAuditoria: { campo: "rol" | "activo"; anterior: string | null; nuevo: string | null }[] = [];
+
+    if (rol !== undefined) {
+      if (!ROLES.includes(rol)) {
+        res.status(400).json({ error: `rol debe ser uno de: ${ROLES.join(", ")}` });
+        return;
+      }
+      if (rol !== actual.rol) {
+        cambios.rol = rol;
+        cambiosAuditoria.push({ campo: "rol", anterior: actual.rol, nuevo: rol });
+      }
+    }
+    if (activo !== undefined) {
+      const activoBool = Boolean(activo);
+      if (activoBool !== actual.activo) {
+        cambios.activo = activoBool;
+        cambiosAuditoria.push({ campo: "activo", anterior: String(actual.activo), nuevo: String(activoBool) });
+      }
+    }
+    if (fecha_vencimiento_licencia !== undefined) {
+      cambios.fecha_vencimiento_licencia = fecha_vencimiento_licencia || null;
+    }
+
+    if (Object.keys(cambios).length === 0) {
+      res.status(400).json({ error: "Nada que actualizar" });
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("usuarios")
+      .update(cambios)
+      .eq("empresa_id", req.empresaId!)
+      .eq("id", req.params.id)
+      .select()
+      .single();
+
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+
+    if (cambiosAuditoria.length > 0) {
+      await supabase.from("auditoria_usuarios").insert(
+        cambiosAuditoria.map((c) => ({
+          empresa_id: req.empresaId!,
+          usuario_afectado_id: req.params.id,
+          realizado_por_id: req.userId!,
+          campo: c.campo,
+          valor_anterior: c.anterior,
+          valor_nuevo: c.nuevo,
+        }))
+      );
+    }
+
+    res.json(data);
+  })
+);
+
+// Zona/área de cobertura — dato operativo de Flota, no de Gestión y
+// Control (rol/activo), por eso vive en su propio endpoint gateado por
+// "flota" — Supervisor administra Flota pero no tiene gestion_control.
+usuariosRouter.patch(
+  "/:id/zona",
+  requiereModulo("flota"),
+  ah<RequestConEmpresa>(async (req, res) => {
+    const { zona } = req.body ?? {};
+    const { data, error } = await supabase
+      .from("usuarios")
+      .update({ zona: zona?.trim() || null })
+      .eq("empresa_id", req.empresaId!)
+      .eq("id", req.params.id)
+      .select()
+      .maybeSingle();
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    if (!data) {
+      res.status(404).json({ error: "Usuario no encontrado" });
+      return;
+    }
+    res.json(data);
+  })
+);
+
+// Historial de cambios de rol/estado — Gestión y Control.
+usuariosRouter.get(
+  "/auditoria",
+  requiereModulo("gestion_control"),
+  ah<RequestConEmpresa>(async (req, res) => {
+    const { data, error } = await supabase
+      .from("auditoria_usuarios")
+      .select("*, usuario_afectado:usuarios!auditoria_usuarios_usuario_afectado_id_fkey(nombre), realizado_por:usuarios!auditoria_usuarios_realizado_por_id_fkey(nombre)")
+      .eq("empresa_id", req.empresaId!)
+      .order("creado_en", { ascending: false })
+      .limit(100);
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    res.json(data);
+  })
+);
+
+// Vehículo actualmente asignado al usuario logueado — self-service, sin
+// el módulo "flota" (un colaborador no puede listar TODOS los
+// vehículos, pero sí necesita ver el suyo).
+usuariosRouter.get(
+  "/me/vehiculo",
+  ah<RequestConEmpresa>(async (req, res) => {
+    const hoy = new Date().toISOString().slice(0, 10);
+    const { data } = await supabase
+      .from("vehiculo_asignaciones")
+      .select("vehiculo:vehiculos(*)")
+      .eq("empresa_id", req.empresaId!)
+      .eq("colaborador_id", req.userId!)
+      .lte("desde", hoy)
+      .or(`hasta.is.null,hasta.gte.${hoy}`)
+      .order("desde", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    res.json((data as unknown as { vehiculo: unknown } | null)?.vehiculo ?? null);
   })
 );
 
@@ -151,6 +303,24 @@ usuariosRouter.patch(
       .select()
       .single();
 
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    res.json(data);
+  })
+);
+
+// Historial de accesos propio — Seguridad. Cada quien ve solo el suyo.
+usuariosRouter.get(
+  "/me/accesos",
+  ah<RequestConEmpresa>(async (req, res) => {
+    const { data, error } = await supabase
+      .from("accesos_usuario")
+      .select("*")
+      .eq("usuario_id", req.userId!)
+      .order("creado_en", { ascending: false })
+      .limit(20);
     if (error) {
       res.status(500).json({ error: error.message });
       return;

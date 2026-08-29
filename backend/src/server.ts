@@ -32,13 +32,35 @@ import { catalogoRouter } from "./routes/catalogo";
 import { inventarioRouter } from "./routes/inventario";
 import { proveedoresRouter } from "./routes/proveedores";
 import { asistenteRouter } from "./routes/asistente";
+import { viajesRouter } from "./routes/viajes";
+import { whatsappRouter } from "./routes/whatsapp";
+import { notificacionesFeedRouter } from "./routes/notificacionesFeed";
+import { unidadesMedidaRouter } from "./routes/unidadesMedida";
+import { notificacionesClienteRouter } from "./routes/notificacionesCliente";
+import { portalRouter } from "./routes/portal";
+import { tiposDocumentoRouter } from "./routes/tiposDocumento";
+import { vehiculosRouter } from "./routes/vehiculos";
+import { documentosRouter } from "./routes/documentos";
+import { requiereModulo } from "./permisos";
 import { ah } from "./asyncHandler";
 
 const RUBROS: Rubro[] = ["transporte", "servicio_tecnico", "otro"];
 
 const app = express();
+// Para que req.ip sea la IP real del cliente (historial de accesos en
+// Seguridad) cuando el backend corre detrás de un proxy/load balancer.
+app.set("trust proxy", true);
 app.use(cors());
-app.use(express.json());
+// El verify callback guarda el body crudo en req.rawBody — lo necesita
+// el webhook de WhatsApp para validar la firma HMAC de Meta (hay que
+// firmar/verificar contra los bytes exactos, no el JSON re-serializado).
+app.use(
+  express.json({
+    verify: (req, _res, buf) => {
+      (req as express.Request & { rawBody?: Buffer }).rawBody = buf;
+    },
+  })
+);
 
 app.get("/health", (_req, res) => {
   res.json({ ok: true });
@@ -129,8 +151,8 @@ app.post("/api/registro-empresa", requiereAuth, ah<RequestConUsuario>(async (req
 }));
 
 app.use("/api/trabajos", requiereAuth, requiereEmpresa, trabajosRouter);
-app.use("/api/cobros", requiereAuth, requiereEmpresa, cobrosRouter);
-app.use("/api/informe", requiereAuth, requiereEmpresa, informeRouter);
+app.use("/api/cobros", requiereAuth, requiereEmpresa, requiereModulo("financiero"), cobrosRouter);
+app.use("/api/informe", requiereAuth, requiereEmpresa, requiereModulo("informe_ia"), informeRouter);
 app.use("/api/tipos-trabajo", requiereAuth, requiereEmpresa, tiposTrabajoRouter);
 app.use("/api/usuarios", requiereAuth, requiereEmpresa, usuariosRouter);
 app.use("/api/clientes", requiereAuth, requiereEmpresa, clientesRouter);
@@ -139,9 +161,9 @@ app.use("/api/empresa", requiereAuth, requiereEmpresa, miEmpresaRouter);
 app.use("/api/rutas-planificadas", requiereAuth, requiereEmpresa, rutasPlanificadasRouter);
 app.use("/api/ordenes-servicio", requiereAuth, requiereEmpresa, ordenesServicioRouter);
 app.use("/api/dashboard", requiereAuth, requiereEmpresa, dashboardRouter);
-app.use("/api/informes", requiereAuth, requiereEmpresa, informesRouter);
-app.use("/api/gastos", requiereAuth, requiereEmpresa, gastosRouter);
-app.use("/api/cotizaciones", requiereAuth, requiereEmpresa, cotizacionesRouter);
+app.use("/api/informes", requiereAuth, requiereEmpresa, requiereModulo("informes"), informesRouter);
+app.use("/api/gastos", requiereAuth, requiereEmpresa, requiereModulo("financiero"), gastosRouter);
+app.use("/api/cotizaciones", requiereAuth, requiereEmpresa, requiereModulo("financiero"), cotizacionesRouter);
 app.use("/api/plantillas", requiereAuth, requiereEmpresa, plantillasRouter);
 app.use("/api/checklists", requiereAuth, requiereEmpresa, checklistsRouter);
 app.use("/api/tipos-os", requiereAuth, requiereEmpresa, tiposOsRouter);
@@ -152,10 +174,24 @@ app.use("/api/notificaciones", requiereAuth, requiereEmpresa, notificacionesRout
 app.use("/api/equipos", requiereAuth, requiereEmpresa, equiposRouter);
 app.use("/api/catalogo", requiereAuth, requiereEmpresa, catalogoRouter);
 app.use("/api/inventario", requiereAuth, requiereEmpresa, inventarioRouter);
+app.use("/api/unidades-medida", requiereAuth, requiereEmpresa, unidadesMedidaRouter);
 app.use("/api/proveedores", requiereAuth, requiereEmpresa, proveedoresRouter);
-app.use("/api/asistente", requiereAuth, requiereEmpresa, asistenteRouter);
+app.use("/api/asistente", requiereAuth, requiereEmpresa, requiereModulo("asistente"), asistenteRouter);
+app.use("/api/notificaciones-feed", requiereAuth, requiereEmpresa, notificacionesFeedRouter);
+app.use("/api/notificaciones-cliente", requiereAuth, requiereEmpresa, notificacionesClienteRouter);
+app.use("/api/viajes", requiereAuth, requiereEmpresa, requiereModulo("viajes"), viajesRouter);
+app.use("/api/tipos-documento", requiereAuth, requiereEmpresa, tiposDocumentoRouter);
+app.use("/api/vehiculos", requiereAuth, requiereEmpresa, requiereModulo("flota"), vehiculosRouter);
+app.use("/api/documentos", requiereAuth, requiereEmpresa, documentosRouter);
 // Sin auth a propósito — la abre un cliente anónimo desde el correo.
 app.use("/api/encuesta", encuestaPublicaRouter);
+// Sin auth a propósito — lo llama Meta directamente; se autentica con
+// la firma HMAC del webhook (ver whatsapp.ts), no con un usuario.
+app.use("/api/whatsapp", whatsappRouter);
+// Sin requiereAuth/requiereEmpresa a propósito — identidad externa sin
+// cuenta de Bitácora. Las rutas de datos (/datos/*) están protegidas
+// adentro del propio router con requierePortal (portalAuth.ts).
+app.use("/api/portal", portalRouter);
 
 // Handler de errores global: cualquier excepción sin capturar en una
 // ruta async (vía ah()) termina acá en vez de tumbar el proceso.

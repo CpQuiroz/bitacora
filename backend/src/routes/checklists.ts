@@ -3,6 +3,7 @@ import type { ChecklistTemplate, SeccionChecklist } from "@bitacora/shared";
 import { supabase } from "../supabase";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
+import { requiereModulo } from "../permisos";
 
 export const checklistsRouter = Router();
 
@@ -14,7 +15,9 @@ function seccionesValidas(secciones: unknown): secciones is SeccionChecklist[] {
     return (
       typeof seccion.nombre === "string" &&
       Array.isArray(seccion.preguntas) &&
-      seccion.preguntas.every((p) => typeof p === "string")
+      seccion.preguntas.every(
+        (p) => typeof p === "object" && p !== null && typeof (p as Record<string, unknown>).texto === "string" && typeof (p as Record<string, unknown>).obligatorio === "boolean"
+      )
     );
   });
 }
@@ -60,11 +63,8 @@ checklistsRouter.get(
 
 checklistsRouter.post(
   "/",
+  requiereModulo("configuracion"),
   ah<RequestConEmpresa>(async (req, res) => {
-    if (req.rol !== "admin") {
-      res.status(403).json({ error: "Solo un admin puede crear checklists" });
-      return;
-    }
     const { nombre, descripcion, secciones } = req.body ?? {};
     if (typeof nombre !== "string" || !nombre.trim()) {
       res.status(400).json({ error: "Falta nombre" });
@@ -97,11 +97,8 @@ checklistsRouter.post(
 
 checklistsRouter.patch(
   "/:id",
+  requiereModulo("configuracion"),
   ah<RequestConEmpresa>(async (req, res) => {
-    if (req.rol !== "admin") {
-      res.status(403).json({ error: "Solo un admin puede editar checklists" });
-      return;
-    }
     const { nombre, descripcion, secciones, activo } = req.body ?? {};
 
     const { data: actual } = await supabase
@@ -160,11 +157,8 @@ checklistsRouter.patch(
 
 checklistsRouter.post(
   "/:id/duplicar",
+  requiereModulo("configuracion"),
   ah<RequestConEmpresa>(async (req, res) => {
-    if (req.rol !== "admin") {
-      res.status(403).json({ error: "Solo un admin puede duplicar checklists" });
-      return;
-    }
     const { data: original, error: errorOriginal } = await supabase
       .from("checklist_templates")
       .select("*")
@@ -202,11 +196,8 @@ checklistsRouter.post(
 
 checklistsRouter.delete(
   "/:id",
+  requiereModulo("configuracion"),
   ah<RequestConEmpresa>(async (req, res) => {
-    if (req.rol !== "admin") {
-      res.status(403).json({ error: "Solo un admin puede eliminar checklists" });
-      return;
-    }
     const { error, count } = await supabase
       .from("checklist_templates")
       .delete({ count: "exact" })

@@ -101,7 +101,9 @@ catalogoRouter.post(
         unidad: unidad?.trim() || "unidad",
         precio_base: precio,
         stock_actual: tipo === "producto" ? 0 : null,
-        stock_minimo: tipo === "producto" ? 0 : null,
+        // null = "sin definir", distinto de "definido en 0" — cae al
+        // umbral por defecto de la empresa (Configuración > Inventario).
+        stock_minimo: null,
       })
       .select()
       .single();

@@ -4,6 +4,8 @@ import type { CategoriaIntegracion, ProveedorIntegracion } from "@bitacora/share
 import { supabase } from "../supabase";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
+import { requiereModulo } from "../permisos";
+import { cifrarJson, descifrarJson } from "../crypto";
 
 export const integracionesRouter = Router();
 
@@ -68,10 +70,13 @@ function enmascarar(valor: unknown): string | null {
 }
 
 // Nunca se devuelve "credenciales" tal cual al frontend — solo un
-// preview enmascarado del campo principal (últimos 4 caracteres).
+// preview enmascarado del campo principal (últimos 4 caracteres). En la
+// base viaja cifrado (crypto.ts); acá es el único lugar donde se
+// descifra, y solo para calcular el preview — el valor completo nunca
+// sale de esta función.
 function aRespuestaPublica(proveedor: ProveedorIntegracion, fila: Record<string, unknown> | null) {
   const def = DEFINICIONES[proveedor];
-  const credenciales = (fila?.credenciales as Record<string, unknown>) ?? {};
+  const credenciales = descifrarJson(fila?.credenciales as string | undefined);
   return {
     proveedor,
     nombre: def.nombre,
@@ -99,11 +104,8 @@ integracionesRouter.get(
 
 integracionesRouter.patch(
   "/:proveedor",
+  requiereModulo("configuracion"),
   ah<RequestConEmpresa>(async (req, res) => {
-    if (req.rol !== "admin") {
-      res.status(403).json({ error: "Solo un admin puede configurar integraciones" });
-      return;
-    }
     if (!proveedorValido(req.params.proveedor)) {
       res.status(400).json({ error: `proveedor debe ser uno de: ${PROVEEDORES.join(", ")}` });
       return;
@@ -127,7 +129,7 @@ integracionesRouter.patch(
       .maybeSingle();
 
     // Guardar credenciales nuevas exige volver a probar la conexión.
-    const cambios = { credenciales, conectado: false, conectado_en: null, actualizado_en: new Date().toISOString() };
+    const cambios = { credenciales: cifrarJson(credenciales), conectado: false, conectado_en: null, actualizado_en: new Date().toISOString() };
 
     const { data, error } = existente
       ? await supabase.from("integraciones").update(cambios).eq("id", existente.id).select().single()
@@ -147,11 +149,8 @@ integracionesRouter.patch(
 
 integracionesRouter.post(
   "/:proveedor/probar",
+  requiereModulo("configuracion"),
   ah<RequestConEmpresa>(async (req, res) => {
-    if (req.rol !== "admin") {
-      res.status(403).json({ error: "Solo un admin puede probar integraciones" });
-      return;
-    }
     if (!proveedorValido(req.params.proveedor)) {
       res.status(400).json({ error: `proveedor debe ser uno de: ${PROVEEDORES.join(", ")}` });
       return;
@@ -164,7 +163,8 @@ integracionesRouter.post(
       .eq("proveedor", proveedor)
       .maybeSingle();
 
-    if (!fila || Object.keys(fila.credenciales ?? {}).length === 0) {
+    const credenciales = descifrarJson(fila?.credenciales as string | undefined);
+    if (!fila || Object.keys(credenciales).length === 0) {
       res.status(400).json({ error: "Primero guarda las credenciales" });
       return;
     }
@@ -174,7 +174,7 @@ integracionesRouter.post(
 
     if (proveedor === "anthropic") {
       try {
-        const cliente = new Anthropic({ apiKey: fila.credenciales.api_key as string });
+        const cliente = new Anthropic({ apiKey: credenciales.api_key as string });
         await cliente.models.list({ limit: 1 });
         mensaje = "Conexión verificada con la API de Anthropic.";
       } catch (err) {
@@ -200,18 +200,15 @@ integracionesRouter.post(
 
 integracionesRouter.delete(
   "/:proveedor",
+  requiereModulo("configuracion"),
   ah<RequestConEmpresa>(async (req, res) => {
-    if (req.rol !== "admin") {
-      res.status(403).json({ error: "Solo un admin puede desconectar integraciones" });
-      return;
-    }
     if (!proveedorValido(req.params.proveedor)) {
       res.status(400).json({ error: `proveedor debe ser uno de: ${PROVEEDORES.join(", ")}` });
       return;
     }
     await supabase
       .from("integraciones")
-      .update({ credenciales: {}, conectado: false, conectado_en: null })
+      .update({ credenciales: "{}", conectado: false, conectado_en: null })
       .eq("empresa_id", req.empresaId!)
       .eq("proveedor", req.params.proveedor);
     res.json(aRespuestaPublica(req.params.proveedor, null));

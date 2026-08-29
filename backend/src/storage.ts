@@ -206,3 +206,62 @@ export async function subirComprobante(
 export function urlFirmadaComprobante(key: string, minutosValidez = 15): Promise<string> {
   return urlFirmada(key, minutosValidez, BUCKET_ANEXOS);
 }
+
+// ------------------------------------------------------------
+// Documento de un colaborador o vehículo (licencia, revisión técnica,
+// seguro, etc. — imagen o PDF). Mismo bucket privado, mismo patrón que
+// subirComprobante — un solo lugar para ambas entidades.
+// ------------------------------------------------------------
+export async function subirDocumento(
+  empresaId: string,
+  entidadTipo: "colaborador" | "vehiculo",
+  entidadId: string,
+  nombreOriginal: string,
+  archivo: Buffer | Uint8Array,
+  contentType: string
+): Promise<string> {
+  const nombreSeguro = nombreOriginal.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const key = `${empresaId}/documentos/${entidadTipo}/${entidadId}/${Date.now()}-${nombreSeguro}`;
+
+  await client.send(
+    new PutObjectCommand({
+      Bucket: BUCKET_ANEXOS,
+      Key: key,
+      Body: archivo,
+      ContentType: contentType,
+    })
+  );
+
+  return key; // se guarda en documentos.archivo_key
+}
+
+export function urlFirmadaDocumento(key: string, minutosValidez = 15): Promise<string> {
+  return urlFirmada(key, minutosValidez, BUCKET_ANEXOS);
+}
+
+// ------------------------------------------------------------
+// Foto de la guía de despacho enviada por el chofer vía WhatsApp
+// (módulo Viajes). Mismo bucket privado que anexos/comprobantes.
+// ------------------------------------------------------------
+export async function subirFotoGuia(
+  empresaId: string,
+  archivo: Buffer | Uint8Array,
+  contentType: string
+): Promise<string> {
+  const key = `${empresaId}/viajes/${Date.now()}.jpg`;
+
+  await client.send(
+    new PutObjectCommand({
+      Bucket: BUCKET_ANEXOS,
+      Key: key,
+      Body: archivo,
+      ContentType: contentType,
+    })
+  );
+
+  return key; // se guarda en viajes.foto_guia_url
+}
+
+export function urlFirmadaFotoGuia(key: string, minutosValidez = 15): Promise<string> {
+  return urlFirmada(key, minutosValidez, BUCKET_ANEXOS);
+}

@@ -1,17 +1,20 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f7f7fb;
+  /* Paleta "Terreno" — azul marino + acento ámbar, en vez del indigo
+     genérico por defecto. Solo color: tipografía y forma de los
+     componentes (radios, sombras) se dejaron igual a propósito. */
+  --background: #eef1f4;
   --surface: #ffffff;
   --foreground: #16161f;
-  --muted: #6b6b7b;
-  --border: #e6e6ee;
+  --muted: #5b6572;
+  --border: #d8dee5;
 
-  --brand: #4338ca;
+  --brand: #1e4e8c;
   --brand-foreground: #ffffff;
-  --brand-soft: #eef0fd;
+  --brand-soft: #e8eef7;
 
-  --accent: #0d9488;
+  --accent: #c07a1f;
 
   --success: #15803d;
   --success-soft: #ecfdf3;
@@ -46,17 +49,17 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0b0b12;
-    --surface: #14141e;
+    --background: #0a0f16;
+    --surface: #121822;
     --foreground: #f1f1f6;
-    --muted: #94949f;
-    --border: #24242f;
+    --muted: #8b96a3;
+    --border: #232c38;
 
-    --brand: #818cf8;
-    --brand-foreground: #0b0b12;
-    --brand-soft: #1d1d3a;
+    --brand: #5b9bdb;
+    --brand-foreground: #0a0f16;
+    --brand-soft: #16283d;
 
-    --accent: #2dd4bf;
+    --accent: #e2a35a;
 
     --success: #4ade80;
     --success-soft: #10281a;

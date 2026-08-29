@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
+import { SelectCrear } from "@/components/SelectCrear";
 import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText } from "@/components/ui";
 import { IconPaperclip, IconPlus, IconWallet } from "@/components/icons";
 
@@ -216,36 +217,39 @@ export default function GastosPage() {
               </div>
               <div>
                 <Label>Categoría</Label>
-                <Select required value={categoriaGastoId} onChange={(e) => setCategoriaGastoId(e.target.value)}>
-                  <option value="">Selecciona una categoría…</option>
-                  {categorias.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.nombre}
-                    </option>
-                  ))}
-                </Select>
+                <SelectCrear
+                  value={categoriaGastoId}
+                  onChange={setCategoriaGastoId}
+                  opciones={categorias}
+                  endpoint="/api/categorias-gasto"
+                  placeholder="Selecciona una categoría…"
+                  etiquetaCrear="+ Nueva categoría…"
+                  onCreado={(nueva) => setCategorias((prev) => [...prev, nueva])}
+                />
               </div>
               <div>
                 <Label>Centro de costo (opcional)</Label>
-                <Select value={centroCostoId} onChange={(e) => setCentroCostoId(e.target.value)}>
-                  <option value="">Sin centro de costo</option>
-                  {centrosCosto.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.nombre}
-                    </option>
-                  ))}
-                </Select>
+                <SelectCrear
+                  value={centroCostoId}
+                  onChange={setCentroCostoId}
+                  opciones={centrosCosto}
+                  endpoint="/api/centros-costo"
+                  placeholder="Sin centro de costo"
+                  etiquetaCrear="+ Nuevo centro de costo…"
+                  onCreado={(nuevo) => setCentrosCosto((prev) => [...prev, nuevo])}
+                />
               </div>
               <div>
                 <Label>Proveedor (opcional)</Label>
-                <Select value={proveedorId} onChange={(e) => setProveedorId(e.target.value)}>
-                  <option value="">Sin proveedor</option>
-                  {proveedores.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.nombre}
-                    </option>
-                  ))}
-                </Select>
+                <SelectCrear
+                  value={proveedorId}
+                  onChange={setProveedorId}
+                  opciones={proveedores}
+                  endpoint="/api/proveedores"
+                  placeholder="Sin proveedor"
+                  etiquetaCrear="+ Nuevo proveedor…"
+                  onCreado={(nuevo) => setProveedores((prev) => [...prev, nuevo])}
+                />
               </div>
               <div>
                 <Label>Orden de Servicio (opcional)</Label>

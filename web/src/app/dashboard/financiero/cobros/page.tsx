@@ -218,7 +218,7 @@ export default function CobrosPage() {
               onClick={() => setModo("trabajos")}
               className={`px-4 py-2 text-sm font-medium transition-colors ${modo === "trabajos" ? "border-b-2 border-brand text-brand" : "text-muted"}`}
             >
-              Desde Órdenes de Servicio
+              Desde Órdenes de Trabajo/Servicio
             </button>
           </div>
 
@@ -277,7 +277,7 @@ export default function CobrosPage() {
                   <Input type="number" min="1" value={diasPlazo} onChange={(e) => setDiasPlazo(e.target.value)} />
                 </div>
                 <div>
-                  <Label>Órdenes de Servicio a incluir</Label>
+                  <Label>Órdenes de Trabajo/Servicio a incluir</Label>
                   {trabajos.length === 0 && <p className="text-sm text-muted">No hay trabajos todavía.</p>}
                   <div className="flex max-h-48 flex-col gap-1 overflow-y-auto rounded-lg border border-border p-2">
                     {trabajos.map((t) => (

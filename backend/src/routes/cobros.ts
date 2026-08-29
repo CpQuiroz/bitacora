@@ -1,6 +1,7 @@
 import { Router } from "express";
-import type { EstadoFactura, Factura, MedioPago } from "@bitacora/shared";
+import type { EstadoFactura, Factura, MedioPago, TipoNotificacionCliente } from "@bitacora/shared";
 import { supabase } from "../supabase";
+import { notificarCliente } from "../notificarCliente";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
 
@@ -10,9 +11,58 @@ const ESTADOS: EstadoFactura[] = ["pendiente", "pagada", "vencida"];
 const MEDIOS: MedioPago[] = ["webpay", "flow", "mercadopago", "transferencia", "efectivo", "otro"];
 const PROVEEDORES_PASARELA: MedioPago[] = ["webpay", "flow", "mercadopago"];
 
+// Sin cron: se revisa cada vez que admin/supervisor abre el listado.
+// "vencido" se decide por fecha, no por el campo estado (que solo se
+// mueve a mano) — mismo criterio que ya usa notificacionesFeed.ts para
+// el aviso interno de cobros.
+async function revisarCobrosCliente(empresaId: string) {
+  const hoy = new Date().toISOString().slice(0, 10);
+  const { data: facturas } = await supabase
+    .from("facturas")
+    .select("id, monto, fecha_vencimiento, cliente_id, cliente_info:clientes(nombre, correo)")
+    .eq("empresa_id", empresaId)
+    .eq("estado", "pendiente");
+
+  const { data: empresa } = await supabase.from("empresas").select("nombre").eq("id", empresaId).single();
+
+  for (const f of facturas ?? []) {
+    const clienteInfo = (f as unknown as { cliente_info: { nombre: string; correo: string | null } | null }).cliente_info;
+    if (!clienteInfo?.correo || !f.cliente_id) continue;
+
+    const tipo: TipoNotificacionCliente = f.fecha_vencimiento < hoy ? "cobro_vencido" : "cobro_pendiente";
+
+    const { data: yaEnviado } = await supabase
+      .from("notificaciones_cliente_log")
+      .select("id")
+      .eq("empresa_id", empresaId)
+      .eq("tipo", tipo)
+      .eq("entidad_id", f.id)
+      .eq("exito", true)
+      .limit(1)
+      .maybeSingle();
+    if (yaEnviado) continue;
+
+    await notificarCliente(empresaId, tipo, clienteInfo.correo, {
+      clienteId: f.cliente_id,
+      entidadTipo: "factura",
+      entidadId: f.id,
+      variables: {
+        cliente: clienteInfo.nombre,
+        fecha: f.fecha_vencimiento,
+        monto: `$${Math.round(f.monto).toLocaleString("es-CL")}`,
+        empresa: empresa?.nombre ?? "",
+      },
+    });
+  }
+}
+
 cobrosRouter.get(
   "/",
   ah<RequestConEmpresa>(async (req, res) => {
+    if (req.rol === "admin" || req.rol === "supervisor") {
+      revisarCobrosCliente(req.empresaId!).catch((err) => console.error("Error revisando cobros para notificar al cliente:", err));
+    }
+
     const { data, error } = await supabase
       .from("facturas")
       .select("*, cliente_info:clientes(id, nombre)")

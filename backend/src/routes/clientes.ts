@@ -1,5 +1,6 @@
 import { Router } from "express";
 import type { Cliente } from "@bitacora/shared";
+import { formatearRut, validarRut } from "@bitacora/shared";
 import { supabase } from "../supabase";
 import { geocodificarDireccion } from "../geocodificar";
 import type { RequestConEmpresa } from "../empresa";
@@ -119,7 +120,7 @@ clientesRouter.get(
 clientesRouter.post(
   "/",
   ah<RequestConEmpresa>(async (req, res) => {
-    const { nombre, direccion, comuna, telefono, correo, notas } = req.body ?? {};
+    const { nombre, rut, direccion, comuna, telefono, correo, notas } = req.body ?? {};
 
     if (typeof nombre !== "string" || !nombre.trim()) {
       res.status(400).json({ error: "Falta nombre" });
@@ -127,6 +128,10 @@ clientesRouter.post(
     }
     if (typeof direccion !== "string" || !direccion.trim()) {
       res.status(400).json({ error: "Falta dirección" });
+      return;
+    }
+    if (rut && !validarRut(rut)) {
+      res.status(400).json({ error: "RUT inválido (verifica el dígito verificador)" });
       return;
     }
 
@@ -137,6 +142,7 @@ clientesRouter.post(
       .insert({
         empresa_id: req.empresaId!,
         nombre: nombre.trim(),
+        rut: rut ? formatearRut(rut) : null,
         direccion: direccion.trim(),
         comuna: comuna?.trim() || null,
         lat: coords?.lat ?? null,
@@ -159,7 +165,7 @@ clientesRouter.post(
 clientesRouter.patch(
   "/:id",
   ah<RequestConEmpresa>(async (req, res) => {
-    const { nombre, direccion, comuna, telefono, correo, notas, activo } = req.body ?? {};
+    const { nombre, rut, direccion, comuna, telefono, correo, notas, activo } = req.body ?? {};
     const cambios: Partial<Cliente> = {};
     let reGeocodificar = false;
 
@@ -169,6 +175,13 @@ clientesRouter.patch(
         return;
       }
       cambios.nombre = nombre.trim();
+    }
+    if (rut !== undefined) {
+      if (rut && !validarRut(rut)) {
+        res.status(400).json({ error: "RUT inválido (verifica el dígito verificador)" });
+        return;
+      }
+      cambios.rut = rut ? formatearRut(rut) : null;
     }
     if (direccion !== undefined) {
       if (typeof direccion !== "string" || !direccion.trim()) {

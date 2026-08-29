@@ -12,6 +12,15 @@ export async function abrirPdfOS(trabajoId: string): Promise<boolean> {
   return true;
 }
 
+export async function abrirPdfCotizacion(cotizacionId: string): Promise<boolean> {
+  const res = await apiFetch(`/api/cotizaciones/${cotizacionId}/pdf`);
+  if (!res.ok) return false;
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  window.open(url, "_blank");
+  return true;
+}
+
 export async function abrirPdfInforme(informeId: string): Promise<boolean> {
   const res = await apiFetch(`/api/informe/historial/${informeId}/pdf`);
   if (!res.ok) return false;

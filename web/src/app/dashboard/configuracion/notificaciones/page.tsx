@@ -1,45 +1,61 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { MensajePersonalizado, NotificacionesConfig, TipoMensajePersonalizado } from "@bitacora/shared";
+import type { MensajePersonalizado, NotificacionClienteLog, NotificacionesConfig, TipoMensajePersonalizado } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
-import { Button, Card, ErrorText, Input, Label, PageHeader, SuccessText, Textarea } from "@/components/ui";
+import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, SuccessText, Textarea } from "@/components/ui";
+import { DataTable } from "@/components/DataTable";
 import { IconChat, IconClock, IconMail } from "@/components/icons";
 
-type Tab = "correo" | "whatsapp" | "recordatorios";
+type Tab = "correo" | "whatsapp" | "recordatorios" | "historial";
 
+// Estos son los switches que de verdad disparan un correo al CLIENTE
+// (a diferencia de cotizacion_creada/aprobada/rechazada y
+// cobranza_recibida, que hoy son solo config sin ningún envío real
+// detrás — quedan igual, no se tocan en este cambio).
 const TOGGLES: { grupo: string; items: { campo: keyof NotificacionesConfig; etiqueta: string }[] }[] = [
   {
     grupo: "Cotizaciones",
     items: [
       { campo: "cotizacion_creada", etiqueta: "Nueva cotización creada" },
+      { campo: "cotizacion_enviada", etiqueta: "Cotización enviada (con PDF)" },
       { campo: "cotizacion_aprobada", etiqueta: "Aprobada por el cliente" },
       { campo: "cotizacion_rechazada", etiqueta: "Rechazada por el cliente" },
     ],
   },
   {
-    grupo: "Órdenes de Servicio",
+    grupo: "Órdenes de Trabajo/Servicio",
     items: [
       { campo: "os_creada", etiqueta: "Nueva OS creada" },
-      { campo: "os_completada", etiqueta: "OS completada" },
+      { campo: "tecnico_en_camino", etiqueta: "Técnico en camino (al hacer Check-in)" },
+      { campo: "os_completada", etiqueta: "OS completada y firmada (con PDF)" },
     ],
   },
   {
     grupo: "Cobranzas",
     items: [
       { campo: "cobranza_recibida", etiqueta: "Pago recibido" },
-      { campo: "cobranza_atrasada", etiqueta: "Pago atrasado" },
+      { campo: "cobro_pendiente", etiqueta: "Cobro pendiente (antes de vencer)" },
+      { campo: "cobranza_atrasada", etiqueta: "Cobro vencido" },
     ],
   },
 ];
 
-const TIPOS_MENSAJE: { valor: TipoMensajePersonalizado; etiqueta: string }[] = [
-  { valor: "cotizacion", etiqueta: "Cotizaciones" },
-  { valor: "orden_servicio", etiqueta: "Órdenes de Servicio" },
-  { valor: "cobranza", etiqueta: "Cobranzas" },
+const TIPOS_MENSAJE: { valor: TipoMensajePersonalizado; etiqueta: string; variables: string }[] = [
+  { valor: "cotizacion", etiqueta: "Cotizaciones", variables: "{cliente}, {fecha}, {monto}, {empresa}" },
+  { valor: "orden_servicio", etiqueta: "Órdenes de Trabajo/Servicio", variables: "{cliente}, {empresa}, {tecnico}" },
+  { valor: "tecnico_en_camino", etiqueta: "Técnico en camino", variables: "{cliente}, {tecnico}, {empresa}" },
+  { valor: "cobranza", etiqueta: "Cobranzas", variables: "{cliente}, {fecha}, {monto}, {empresa}" },
 ];
 
-const VARIABLES = ["{nombre_cliente}", "{valor}", "{numero_cotizacion}"];
+const ETIQUETA_TIPO_LOG: Record<string, string> = {
+  cotizacion_enviada: "Cotización enviada",
+  cotizacion_por_vencer: "Cotización por vencer",
+  tecnico_en_camino: "Técnico en camino",
+  os_completada: "OS completada",
+  cobro_pendiente: "Cobro pendiente",
+  cobro_vencido: "Cobro vencido",
+};
 
 type Mensajes = Record<TipoMensajePersonalizado, MensajePersonalizado | null>;
 
@@ -52,6 +68,10 @@ export default function NotificacionesPage() {
   const [guardando, setGuardando] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
   const [whatsappConectado, setWhatsappConectado] = useState(false);
+
+  const [historial, setHistorial] = useState<NotificacionClienteLog[] | null>(null);
+  const [errorHistorial, setErrorHistorial] = useState<string | null>(null);
+  const [reenviandoId, setReenviandoId] = useState<string | null>(null);
 
   const cargar = useCallback(async () => {
     setError(null);
@@ -69,9 +89,30 @@ export default function NotificacionesPage() {
     }
   }, []);
 
+  const cargarHistorial = useCallback(async () => {
+    setErrorHistorial(null);
+    const res = await apiFetch("/api/notificaciones-cliente");
+    if (!res.ok) {
+      setErrorHistorial("No se pudo cargar el historial de envíos");
+      return;
+    }
+    setHistorial(await res.json());
+  }, []);
+
   useEffect(() => {
     cargar();
   }, [cargar]);
+
+  useEffect(() => {
+    if (tab === "historial" && historial === null) cargarHistorial();
+  }, [tab, historial, cargarHistorial]);
+
+  async function onReenviar(id: string) {
+    setReenviandoId(id);
+    const res = await apiFetch(`/api/notificaciones-cliente/${id}/reenviar`, { method: "POST" });
+    setReenviandoId(null);
+    if (res.ok) cargarHistorial();
+  }
 
   function actualizarToggle(campo: keyof NotificacionesConfig, valor: boolean) {
     setConfig((prev) => (prev ? { ...prev, [campo]: valor } : prev));
@@ -87,11 +128,16 @@ export default function NotificacionesPage() {
       body: JSON.stringify({
         correo_activado: config.correo_activado,
         cotizacion_creada: config.cotizacion_creada,
+        cotizacion_enviada: config.cotizacion_enviada,
         cotizacion_aprobada: config.cotizacion_aprobada,
         cotizacion_rechazada: config.cotizacion_rechazada,
+        cotizacion_por_vencer: config.cotizacion_por_vencer,
+        dias_aviso_vencimiento: config.dias_aviso_vencimiento,
         os_creada: config.os_creada,
+        tecnico_en_camino: config.tecnico_en_camino,
         os_completada: config.os_completada,
         cobranza_recibida: config.cobranza_recibida,
+        cobro_pendiente: config.cobro_pendiente,
         cobranza_atrasada: config.cobranza_atrasada,
       }),
     });
@@ -131,6 +177,7 @@ export default function NotificacionesPage() {
             { valor: "correo", etiqueta: "Correo", icon: IconMail },
             { valor: "whatsapp", etiqueta: "WhatsApp", icon: IconChat },
             { valor: "recordatorios", etiqueta: "Recordatorios", icon: IconClock },
+            { valor: "historial", etiqueta: "Historial de envíos", icon: IconClock },
           ] as const
         ).map((t) => (
           <button
@@ -220,14 +267,73 @@ export default function NotificacionesPage() {
 
       {tab === "recordatorios" && (
         <Card>
-          <p className="text-sm text-muted">Próximamente: recordatorios automáticos antes de una OS agendada o un pago por vencer.</p>
+          <p className="mb-4 text-sm text-muted">
+            &ldquo;Cotización por vencer&rdquo; y &ldquo;Cobro pendiente/vencido&rdquo; se activan o desactivan en la
+            pestaña Correo — acá solo se ajusta cuántos días antes avisar de una cotización por vencer.
+          </p>
+          <div className="max-w-xs">
+            <Label>Días de aviso antes del vencimiento</Label>
+            <Input
+              type="number"
+              min={0}
+              value={config.dias_aviso_vencimiento}
+              onChange={(e) => setConfig((prev) => (prev ? { ...prev, dias_aviso_vencimiento: Number(e.target.value) } : prev))}
+            />
+          </div>
+          {error && (
+            <div className="mt-4">
+              <ErrorText>{error}</ErrorText>
+            </div>
+          )}
+          {aviso && (
+            <div className="mt-4">
+              <SuccessText>{aviso}</SuccessText>
+            </div>
+          )}
+          <Button type="button" onClick={onGuardarPreferencias} disabled={guardando} className="mt-4">
+            {guardando ? "Guardando…" : "Guardar"}
+          </Button>
+        </Card>
+      )}
+
+      {tab === "historial" && (
+        <Card className="p-0">
+          <div className="p-6 pb-0">
+            <p className="text-sm text-muted">
+              Cada intento de correo automático al cliente queda registrado acá — si algo falló, puedes reenviarlo.
+            </p>
+          </div>
+          <div className="p-6">
+            {errorHistorial && <ErrorText>{errorHistorial}</ErrorText>}
+            <DataTable
+              rows={historial ?? []}
+              rowKey={(h) => h.id}
+              loading={historial === null && !errorHistorial}
+              columns={[
+                { header: "Evento", cell: (h) => ETIQUETA_TIPO_LOG[h.tipo] ?? h.tipo },
+                { header: "Destinatario", cell: (h) => <span className="text-muted">{h.destinatario}</span> },
+                { header: "Fecha", cell: (h) => <span className="text-muted">{new Date(h.creado_en).toLocaleString("es-CL")}</span> },
+                { header: "Estado", cell: (h) => <Badge value={h.exito ? "exito" : "fallido"} /> },
+              ]}
+              actions={[
+                {
+                  label: (h) => (reenviandoId === h.id ? "Reenviando…" : "Reenviar"),
+                  onClick: (h) => onReenviar(h.id),
+                  variant: "brand",
+                  hidden: (h) => h.exito,
+                },
+              ]}
+              emptyState={{ icon: IconMail, message: "Todavía no se ha enviado ninguna notificación al cliente." }}
+            />
+          </div>
         </Card>
       )}
 
       <Card>
         <h2 className="mb-1 text-sm font-semibold text-foreground">Mensajes personalizados</h2>
         <p className="mb-4 text-xs text-muted">
-          Variables disponibles: {VARIABLES.join(", ")} — el cuerpo del correo es texto simple, sin editor enriquecido.
+          Si dejas asunto/cuerpo vacíos, se usa un mensaje por defecto. El cuerpo del correo es texto simple, sin editor
+          enriquecido.
         </p>
         <div className="flex flex-col divide-y divide-border">
           {TIPOS_MENSAJE.map((t) => (
@@ -235,6 +341,7 @@ export default function NotificacionesPage() {
               key={t.valor}
               tipo={t.valor}
               etiqueta={t.etiqueta}
+              variables={t.variables}
               abierto={acordeonAbierto === t.valor}
               onToggle={() => setAcordeonAbierto((prev) => (prev === t.valor ? null : t.valor))}
               mensaje={mensajes[t.valor]}
@@ -249,6 +356,7 @@ export default function NotificacionesPage() {
 
 function AcordeonMensaje({
   etiqueta,
+  variables,
   abierto,
   onToggle,
   mensaje,
@@ -256,6 +364,7 @@ function AcordeonMensaje({
 }: {
   tipo: TipoMensajePersonalizado;
   etiqueta: string;
+  variables: string;
   abierto: boolean;
   onToggle: () => void;
   mensaje: MensajePersonalizado | null;
@@ -291,6 +400,7 @@ function AcordeonMensaje({
           <div>
             <Label>Cuerpo del correo</Label>
             <Textarea rows={4} value={cuerpo} onChange={(e) => setCuerpo(e.target.value)} />
+            <p className="mt-1.5 font-mono text-[11px] text-muted">Variables disponibles: {variables}</p>
           </div>
           <Button type="button" onClick={guardar} disabled={guardando} className="self-start">
             {guardando ? "Guardando…" : "Guardar mensaje"}

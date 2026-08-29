@@ -38,6 +38,9 @@ export default function DetalleOrdenServicioPage() {
   const [avisoEnvio, setAvisoEnvio] = useState<string | null>(null);
   const [errorEnvio, setErrorEnvio] = useState<string | null>(null);
 
+  const [generandoInforme, setGenerandoInforme] = useState(false);
+  const [errorInforme, setErrorInforme] = useState<string | null>(null);
+
   const cargar = useCallback(async () => {
     const { data } = await supabase.auth.getSession();
     if (!data.session) {
@@ -70,6 +73,19 @@ export default function DetalleOrdenServicioPage() {
     if (!ok) setError("No se pudo generar el PDF");
   }
 
+  async function onGenerarInforme() {
+    setErrorInforme(null);
+    setGenerandoInforme(true);
+    const res = await apiFetch(`/api/trabajos/${params.id}/informe-ia`, { method: "POST" });
+    setGenerandoInforme(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setErrorInforme(body.error ?? "No se pudo generar el informe");
+      return;
+    }
+    await cargar();
+  }
+
   async function onEnviarEmail(e: FormEvent) {
     e.preventDefault();
     setAvisoEnvio(null);
@@ -96,7 +112,7 @@ export default function DetalleOrdenServicioPage() {
     <DashboardShell usuario={usuario}>
       <Link href="/dashboard/ordenes" className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-brand hover:underline">
         <IconChevronLeft className="h-4 w-4" />
-        Órdenes de Servicio
+        Órdenes de Trabajo/Servicio
       </Link>
 
       {error && !detalle && <ErrorText>{error}</ErrorText>}
@@ -129,6 +145,12 @@ export default function DetalleOrdenServicioPage() {
                   <p className="text-foreground">{detalle.descripcion}</p>
                 </div>
               )}
+              {detalle.tipo_trabajo && (
+                <div>
+                  <p className="text-xs text-muted">Tipo de servicio</p>
+                  <p className="font-medium text-foreground">{detalle.tipo_trabajo.nombre}</p>
+                </div>
+              )}
               {detalle.orden?.observaciones_cierre && (
                 <div className="sm:col-span-2">
                   <p className="text-xs text-muted">Observaciones de cierre</p>
@@ -136,6 +158,22 @@ export default function DetalleOrdenServicioPage() {
                 </div>
               )}
             </div>
+
+            {detalle.tipo_trabajo && detalle.tipo_trabajo.campos.length > 0 && (
+              <div className="mt-5 border-t border-border pt-5">
+                <p className="mb-3 text-xs font-medium text-muted">Datos medidos — {detalle.tipo_trabajo.nombre}</p>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {detalle.tipo_trabajo.campos.map((c) => (
+                    <div key={c.clave} className="rounded-lg border border-border p-3">
+                      <p className="text-xs text-muted">{c.etiqueta}</p>
+                      <p className="mt-1 text-sm font-semibold text-foreground">
+                        {String((detalle.datos as Record<string, unknown>)?.[c.clave] ?? "—")}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </Card>
 
           {detalle.items.length > 0 && (
@@ -188,6 +226,30 @@ export default function DetalleOrdenServicioPage() {
                   </div>
                 ))}
               </div>
+            </Card>
+          )}
+
+          {detalle.orden && (
+            <Card className="my-6">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+                <h2 className="text-sm font-semibold text-foreground">Informe técnico con IA</h2>
+                <Button type="button" variant="outline" onClick={onGenerarInforme} disabled={generandoInforme}>
+                  {generandoInforme ? "Generando…" : detalle.orden.informe_ia ? "Regenerar" : "Generar informe"}
+                </Button>
+              </div>
+              {errorInforme && <ErrorText>{errorInforme}</ErrorText>}
+              {detalle.orden.informe_ia ? (
+                <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-foreground">
+                  {detalle.orden.informe_ia}
+                </pre>
+              ) : (
+                !errorInforme && (
+                  <p className="text-sm text-muted">
+                    Redacta un informe técnico a partir de los datos medidos, el checklist, las observaciones y las
+                    fotos de esta OS.
+                  </p>
+                )
+              )}
             </Card>
           )}
 

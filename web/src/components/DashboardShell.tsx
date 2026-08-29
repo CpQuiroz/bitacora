@@ -3,8 +3,11 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import type { Modulo, Rol } from "@bitacora/shared";
+import { puedeVerModulo } from "@bitacora/shared";
 import { AsistenteChat } from "./AsistenteChat";
 import { Logo } from "./Logo";
+import { NotificacionesBell } from "./NotificacionesBell";
 import { supabase } from "@/lib/supabase";
 import { asegurarFuenteCargada, fuenteDe } from "@/lib/fuentes";
 import {
@@ -18,22 +21,30 @@ import {
   IconLogOut,
   IconMapPin,
   IconMenu,
+  IconPaperclip,
   IconSettings,
+  IconShield,
   IconSparkle,
+  IconTruck,
+  IconUsers,
   IconWallet,
 } from "./icons";
 
 type NavLeaf = { href: string; label: string };
 type NavItem =
-  | { href: string; label: string; icon: typeof IconHome; children?: undefined }
-  | { label: string; icon: typeof IconHome; children: NavLeaf[]; href?: undefined };
+  | { href: string; label: string; icon: typeof IconHome; modulo: Modulo | null; children?: undefined }
+  | { label: string; icon: typeof IconHome; children: NavLeaf[]; modulo: Modulo | null; href?: undefined };
 
+// modulo: null = siempre visible (la página misma decide qué mostrarle a
+// cada rol, ej. Dashboard). Todo lo demás se filtra con puedeVerModulo.
 const NAV: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", icon: IconHome },
-  { href: "/dashboard/agenda", label: "Agenda", icon: IconCalendar },
+  { href: "/dashboard", label: "Dashboard", icon: IconHome, modulo: null },
+  { href: "/dashboard/mis-documentos", label: "Mis Documentos", icon: IconPaperclip, modulo: null },
+  { href: "/dashboard/agenda", label: "Agenda", icon: IconCalendar, modulo: "agenda" },
   {
-    label: "Órdenes de Servicio",
+    label: "Órdenes de Trabajo/Servicio",
     icon: IconClipboardCheck,
+    modulo: "ordenes_servicio",
     children: [
       { href: "/dashboard/ordenes", label: "Todas las OS" },
       { href: "/dashboard/ordenes/nueva", label: "Nueva OS" },
@@ -41,9 +52,11 @@ const NAV: NavItem[] = [
       { href: "/dashboard/rutas", label: "Rutas" },
     ],
   },
+  { href: "/dashboard/viajes", label: "Viajes", icon: IconTruck, modulo: "viajes" },
   {
     label: "Registros",
     icon: IconMapPin,
+    modulo: "registros",
     children: [
       { href: "/dashboard/registros/clientes", label: "Clientes" },
       { href: "/dashboard/registros/equipos", label: "Equipos" },
@@ -55,19 +68,31 @@ const NAV: NavItem[] = [
   {
     label: "Financiero",
     icon: IconWallet,
+    modulo: "financiero",
     children: [
       { href: "/dashboard/financiero/cotizaciones", label: "Cotizaciones" },
       { href: "/dashboard/gastos", label: "Gastos" },
       { href: "/dashboard/financiero/cobros", label: "Cobros" },
     ],
   },
-  { href: "/dashboard/informes", label: "Informes", icon: IconSparkle },
-  { href: "/dashboard/informe", label: "Informe IA", icon: IconChat },
+  {
+    label: "Flota",
+    icon: IconUsers,
+    modulo: "flota",
+    children: [
+      { href: "/dashboard/flota/colaboradores", label: "Colaboradores" },
+      { href: "/dashboard/flota/vehiculos", label: "Vehículos" },
+      { href: "/dashboard/flota/documentos-por-vencer", label: "Documentos por vencer" },
+    ],
+  },
+  { href: "/dashboard/informes", label: "Informes", icon: IconSparkle, modulo: "informes" },
+  { href: "/dashboard/informe", label: "Informe IA", icon: IconChat, modulo: "informe_ia" },
+  { href: "/dashboard/equipo", label: "Gestión y Control", icon: IconShield, modulo: "gestion_control" },
 ];
 
 export type UsuarioShell = {
   nombre: string;
-  rol: string;
+  rol: Rol;
   empresaNombre: string;
   empresaLogoUrl: string | null;
   colorPrimario?: string | null;
@@ -164,10 +189,12 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
     router.push("/login");
   }
 
+  const navVisible = NAV.filter((item) => item.modulo === null || puedeVerModulo(usuario.rol, item.modulo));
+
   function renderNav(compacto: boolean) {
     return (
       <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-2 py-3">
-        {NAV.map((item) => {
+        {navVisible.map((item) => {
           if (item.children) {
             const activo = item.children.some((c) => pathname.startsWith(c.href));
             const abierto = !compacto && (gruposAbiertos.has(item.label) || activo);
@@ -310,7 +337,11 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
             <IconMenu className="h-5 w-5" />
           </button>
 
-          <div className="relative ml-auto" ref={dropdownRef}>
+          <div className="ml-auto">
+            <NotificacionesBell />
+          </div>
+
+          <div className="relative" ref={dropdownRef}>
             <button
               type="button"
               onClick={() => setDropdownAbierto((v) => !v)}
@@ -376,7 +407,7 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
         </main>
       </div>
 
-      <AsistenteChat />
+      {puedeVerModulo(usuario.rol, "asistente") && <AsistenteChat />}
     </div>
   );
 }

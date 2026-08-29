@@ -3,11 +3,13 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import type { Cliente } from "@bitacora/shared";
+import { formatearRut, validarRut } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, SuccessText } from "@/components/ui";
-import { IconMapPin, IconPlus } from "@/components/icons";
+import { IconChat, IconMapPin, IconPlus } from "@/components/icons";
+import { linkWhatsapp } from "@/lib/whatsapp";
 
 type ClienteConDatos = Cliente & { cantidad_os: number; cantidad_cotizaciones: number; ultima_actividad: string | null };
 
@@ -26,6 +28,7 @@ export default function ClientesPage() {
   const [aviso, setAviso] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [nombre, setNombre] = useState("");
+  const [rut, setRut] = useState("");
   const [direccion, setDireccion] = useState("");
   const [comuna, setComuna] = useState("");
   const [telefono, setTelefono] = useState("");
@@ -69,10 +72,14 @@ export default function ClientesPage() {
     e.preventDefault();
     setFormError(null);
     setAviso(null);
+    if (rut.trim() && !validarRut(rut)) {
+      setFormError("El RUT no es válido (revisa el dígito verificador)");
+      return;
+    }
     setGuardando(true);
     const res = await apiFetch("/api/clientes", {
       method: "POST",
-      body: JSON.stringify({ nombre, direccion, comuna, telefono, correo }),
+      body: JSON.stringify({ nombre, rut: rut.trim() || null, direccion, comuna, telefono, correo }),
     });
     setGuardando(false);
     if (!res.ok) {
@@ -87,6 +94,7 @@ export default function ClientesPage() {
         : "Cliente creado, pero no encontramos esa dirección en el mapa — revisa que esté bien escrita."
     );
     setNombre("");
+    setRut("");
     setDireccion("");
     setComuna("");
     setTelefono("");
@@ -151,8 +159,18 @@ export default function ClientesPage() {
                 <Input type="text" required value={nombre} onChange={(e) => setNombre(e.target.value)} />
               </div>
               <div>
-                <Label>Teléfono</Label>
-                <Input type="text" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
+                <Label>RUT (opcional — habilita el login al Portal de Cliente)</Label>
+                <Input
+                  type="text"
+                  placeholder="12.345.678-9"
+                  value={rut}
+                  onChange={(e) => setRut(e.target.value)}
+                  onBlur={() => rut.trim() && validarRut(rut) && setRut(formatearRut(rut))}
+                />
+              </div>
+              <div>
+                <Label>Teléfono (para WhatsApp, puedes escribirlo con +56 9…)</Label>
+                <Input type="text" placeholder="+56 9 1234 5678" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
               </div>
               <div>
                 <Label>Correo</Label>
@@ -245,6 +263,7 @@ export default function ClientesPage() {
                 <th className="px-5 py-3 font-medium">OS</th>
                 <th className="px-5 py-3 font-medium">Última actividad</th>
                 <th className="px-5 py-3 font-medium">Estado</th>
+                <th className="px-5 py-3 font-medium"></th>
               </tr>
             </thead>
             <tbody>
@@ -264,6 +283,20 @@ export default function ClientesPage() {
                   <td className="px-5 py-3 text-muted">{c.ultima_actividad ?? "—"}</td>
                   <td className="px-5 py-3">
                     <Badge value={c.activo ? "activo" : "inactivo"} />
+                  </td>
+                  <td className="px-5 py-3">
+                    {c.telefono && (
+                      <a
+                        href={linkWhatsapp(c.telefono)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        title="Contactar por WhatsApp"
+                        className="inline-flex items-center justify-center rounded-full border border-border p-2 text-muted hover:border-brand hover:text-brand"
+                      >
+                        <IconChat className="h-4 w-4" />
+                      </a>
+                    )}
                   </td>
                 </tr>
               ))}

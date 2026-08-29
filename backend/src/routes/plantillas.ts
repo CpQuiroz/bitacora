@@ -3,6 +3,7 @@ import type { PlantillaDocumento, PosicionLogo, TipoPlantilla } from "@bitacora/
 import { supabase } from "../supabase";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
+import { requiereModulo } from "../permisos";
 
 export const plantillasRouter = Router();
 
@@ -58,11 +59,8 @@ plantillasRouter.get(
 
 plantillasRouter.patch(
   "/:tipo",
+  requiereModulo("configuracion"),
   ah<RequestConEmpresa>(async (req, res) => {
-    if (req.rol !== "admin") {
-      res.status(403).json({ error: "Solo un admin puede editar plantillas" });
-      return;
-    }
     if (!tipoValido(req.params.tipo)) {
       res.status(400).json({ error: `tipo debe ser uno de: ${TIPOS.join(", ")}` });
       return;
@@ -129,11 +127,8 @@ plantillasRouter.patch(
 // lectura la vuelve a crear con los valores por defecto de la tabla.
 plantillasRouter.post(
   "/:tipo/restaurar",
+  requiereModulo("configuracion"),
   ah<RequestConEmpresa>(async (req, res) => {
-    if (req.rol !== "admin") {
-      res.status(403).json({ error: "Solo un admin puede editar plantillas" });
-      return;
-    }
     if (!tipoValido(req.params.tipo)) {
       res.status(400).json({ error: `tipo debe ser uno de: ${TIPOS.join(", ")}` });
       return;

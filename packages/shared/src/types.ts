@@ -1,7 +1,9 @@
 // ============================================================
 // Tipos compartidos — reflejan el esquema de Supabase después de
 // aplicar, en orden, supabase/migrations/01..05 (ver ese folder).
-// La tabla "trabajos" reemplaza a "viajes" (ver 04_generalizacion.sql).
+// La tabla "trabajos" generalizó la "viajes" original (04_generalizacion.sql).
+// "viajes" volvió en 25_viajes.sql, con otro propósito: guías de
+// despacho del rubro transporte, separado de "trabajos"/OS genérico.
 //
 // Nota: los "Row" son `type`, no `interface`, a propósito — el
 // cliente tipado de supabase-js exige que cada Row/Insert/Update
@@ -10,7 +12,7 @@
 // (mismo patrón que usa `supabase gen types typescript`).
 // ============================================================
 
-export type Rol = "admin" | "contador" | "chofer";
+export type Rol = "admin" | "supervisor" | "contador" | "colaborador";
 export type Rubro = "transporte" | "servicio_tecnico" | "otro";
 export type Plan = "trial" | "basico" | "pro";
 export type EstadoTrabajo = "en_curso" | "completado" | "cancelado";
@@ -39,7 +41,7 @@ export type TipoPlantilla = "cotizacion" | "orden_servicio" | "cobranza" | "term
 export type PosicionLogo = "izquierda" | "centro" | "derecha";
 export type ProveedorIntegracion = "webpay" | "flow" | "mercadopago" | "whatsapp" | "anthropic" | "google_document_ai";
 export type CategoriaIntegracion = "pagos" | "comunicacion" | "ia";
-export type TipoMensajePersonalizado = "cotizacion" | "orden_servicio" | "cobranza";
+export type TipoMensajePersonalizado = "cotizacion" | "orden_servicio" | "cobranza" | "tecnico_en_camino";
 
 export type Empresa = {
   id: string;
@@ -55,6 +57,7 @@ export type Empresa = {
   fuente: string | null;
   moneda: string;
   razon_social: string | null;
+  giro: string | null;
   rut: string | null;
   correo_empresa: string | null;
   telefono_empresa: string | null;
@@ -71,6 +74,7 @@ export type Empresa = {
   pago_titular: string | null;
   prueba_termina_en: string | null;
   inventario_activado: boolean;
+  inventario_stock_minimo_default: number;
   creado_en: string;
 };
 
@@ -84,7 +88,127 @@ export type Usuario = {
   pais: string;
   huso_horario: string;
   foto_url: string | null;
+  activo: boolean;
+  fecha_vencimiento_licencia: string | null;
+  mfa_activado: boolean;
+  zona: string | null;
   creado_en: string;
+};
+
+export type AplicaDocumento = "colaborador" | "vehiculo" | "ambos";
+
+export type TipoDocumento = {
+  id: string;
+  empresa_id: string;
+  nombre: string;
+  aplica_a: AplicaDocumento;
+  activo: boolean;
+  creado_en: string;
+};
+
+export type EntidadDocumento = "colaborador" | "vehiculo";
+export type EstadoDocumento = "vigente" | "por_vencer" | "vencido";
+
+export type Documento = {
+  id: string;
+  empresa_id: string;
+  entidad_tipo: EntidadDocumento;
+  entidad_id: string;
+  tipo_documento_id: string;
+  numero: string | null;
+  fecha_emision: string | null;
+  fecha_vencimiento: string | null;
+  archivo_key: string | null;
+  creado_en: string;
+  actualizado_en: string;
+};
+
+export type Vehiculo = {
+  id: string;
+  empresa_id: string;
+  patente: string;
+  marca: string | null;
+  modelo: string | null;
+  anio: number | null;
+  tipo: string | null;
+  capacidad_carga: string | null;
+  activo: boolean;
+  creado_en: string;
+};
+
+export type VehiculoAsignacion = {
+  id: string;
+  empresa_id: string;
+  vehiculo_id: string;
+  colaborador_id: string;
+  desde: string;
+  hasta: string | null;
+  creado_en: string;
+};
+
+// Sin fecha_vencimiento no hay nada que alertar — "vigente" por defecto
+// (documentos como una foto de patente no siempre vencen).
+export function estadoDocumento(fechaVencimiento: string | null): EstadoDocumento | null {
+  if (!fechaVencimiento) return null;
+  const hoy = new Date().toISOString().slice(0, 10);
+  const enTreintaDias = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  if (fechaVencimiento < hoy) return "vencido";
+  if (fechaVencimiento <= enTreintaDias) return "por_vencer";
+  return "vigente";
+}
+
+export type AccesoUsuario = {
+  id: string;
+  usuario_id: string;
+  empresa_id: string;
+  ip: string | null;
+  user_agent: string | null;
+  creado_en: string;
+};
+
+export type AuditoriaUsuario = {
+  id: string;
+  empresa_id: string;
+  usuario_afectado_id: string;
+  realizado_por_id: string | null;
+  campo: "rol" | "activo";
+  valor_anterior: string | null;
+  valor_nuevo: string | null;
+  creado_en: string;
+};
+
+export type TipoNotificacion =
+  | "os_asignada"
+  | "os_completada"
+  | "cobro_por_vencer"
+  | "cobro_vencido"
+  | "ruta_finalizada"
+  | "tarea_retrasada"
+  | "licencia_por_vencer"
+  | "email_fallido"
+  | "cotizacion_aprobada";
+
+export type EntidadNotificacion = "trabajo" | "factura" | "ruta" | "usuario" | "cotizacion";
+
+export type Notificacion = {
+  id: string;
+  empresa_id: string;
+  usuario_id: string;
+  tipo: TipoNotificacion;
+  titulo: string;
+  cuerpo: string | null;
+  entidad_tipo: EntidadNotificacion | null;
+  entidad_id: string | null;
+  leido: boolean;
+  creado_en: string;
+};
+
+export type NotificacionPreferencia = {
+  id: string;
+  usuario_id: string;
+  tipo: TipoNotificacion;
+  app_activado: boolean;
+  email_activado: boolean;
 };
 
 export type CampoTipoTrabajo = {
@@ -98,6 +222,7 @@ export type TipoTrabajo = {
   empresa_id: string;
   nombre: string;
   campos: CampoTipoTrabajo[];
+  activo: boolean;
   creado_en: string;
 };
 
@@ -163,6 +288,7 @@ export type Cliente = {
   id: string;
   empresa_id: string;
   nombre: string;
+  rut: string | null;
   direccion: string;
   comuna: string | null;
   lat: number | null;
@@ -171,6 +297,28 @@ export type Cliente = {
   correo: string | null;
   notas: string | null;
   activo: boolean;
+  creado_en: string;
+};
+
+export type EntidadPortal = "trabajo" | "cotizacion" | "factura";
+
+export type PortalAcceso = {
+  id: string;
+  empresa_id: string;
+  cliente_id: string;
+  entidad_tipo: EntidadPortal | null;
+  entidad_id: string | null;
+  expira_en: string;
+  creado_en: string;
+};
+
+export type PortalCodigo = {
+  id: string;
+  empresa_id: string;
+  cliente_id: string;
+  codigo_hash: string;
+  expira_en: string;
+  usado_en: string | null;
   creado_en: string;
 };
 
@@ -190,6 +338,7 @@ export type Factura = {
   link_pago: string | null;
   estado: EstadoFactura;
   trabajo_ids: string[] | null;
+  viaje_ids: string[] | null;
   creado_en: string;
 };
 
@@ -211,6 +360,7 @@ export type OrdenServicio = {
   firmante_nombre: string | null;
   firmante_documento: string | null;
   observaciones_cierre: string | null;
+  informe_ia: string | null;
   finalizada_en: string | null;
   creado_en: string;
 };
@@ -384,6 +534,42 @@ export type InformePersonalizado = {
   actualizado_en: string;
 };
 
+export type EstadoViaje = "borrador" | "confirmado" | "facturado";
+export type OrigenCapturaViaje = "manual" | "whatsapp";
+
+export type Viaje = {
+  id: string;
+  empresa_id: string;
+  fecha: string;
+  numero_guia: string;
+  cliente: string;
+  cliente_id: string | null;
+  chofer_id: string | null;
+  vehiculo_id: string | null;
+  origen: string;
+  destino: string;
+  km_inicial: number | null;
+  km_final: number | null;
+  subtotal: number;
+  aplica_iva: boolean;
+  iva: number;
+  total: number;
+  estado: EstadoViaje;
+  origen_captura: OrigenCapturaViaje;
+  factura_id: string | null;
+  foto_guia_url: string | null;
+  comentarios: string | null;
+  creado_en: string;
+};
+
+// Ledger de idempotencia del webhook de WhatsApp — nunca se expone
+// por API, solo lo usa el backend para no duplicar un viaje si Meta
+// reintenta la entrega del mismo mensaje.
+export type MensajeWhatsappProcesado = {
+  id: string;
+  procesado_en: string;
+};
+
 export type RolMensajeAsistente = "user" | "assistant";
 
 export type MensajeAsistente = {
@@ -411,9 +597,14 @@ export type PlantillaDocumento = {
   actualizado_en: string;
 };
 
+export type ItemChecklistPregunta = {
+  texto: string;
+  obligatorio: boolean;
+};
+
 export type SeccionChecklist = {
   nombre: string;
-  preguntas: string[];
+  preguntas: ItemChecklistPregunta[];
 };
 
 export type ChecklistTemplate = {
@@ -435,18 +626,30 @@ export type TipoOS = {
   descripcion: string | null;
   color: string;
   checklist_template_id: string | null;
+  tiempo_estimado_minutos: number | null;
+  activo: boolean;
+  creado_en: string;
+};
+
+export type UnidadMedida = {
+  id: string;
+  empresa_id: string;
+  nombre: string;
+  abreviatura: string | null;
   activo: boolean;
   creado_en: string;
 };
 
 // credenciales nunca viaja al frontend con valores reales — el
 // backend siempre devuelve un objeto vacío/enmascarado en su lugar.
+// En la base es un blob cifrado (AES-256-GCM, ver backend/src/crypto.ts),
+// no JSON legible — de ahí que sea string y no Record<string, unknown>.
 export type Integracion = {
   id: string;
   empresa_id: string;
   proveedor: ProveedorIntegracion;
   categoria: CategoriaIntegracion;
-  credenciales: Record<string, unknown>;
+  credenciales: string;
   conectado: boolean;
   conectado_en: string | null;
   actualizado_en: string;
@@ -479,7 +682,36 @@ export type NotificacionesConfig = {
   os_completada: boolean;
   cobranza_recibida: boolean;
   cobranza_atrasada: boolean;
+  cotizacion_enviada: boolean;
+  cotizacion_por_vencer: boolean;
+  dias_aviso_vencimiento: number;
+  tecnico_en_camino: boolean;
+  cobro_pendiente: boolean;
   actualizado_en: string;
+};
+
+// Los 6 eventos que efectivamente le mandan un correo al CLIENTE
+// (distinto de TipoNotificacion, que es el feed interno del equipo).
+export type TipoNotificacionCliente =
+  | "cotizacion_enviada"
+  | "cotizacion_por_vencer"
+  | "tecnico_en_camino"
+  | "os_completada"
+  | "cobro_pendiente"
+  | "cobro_vencido";
+
+export type EntidadNotificacionCliente = "cotizacion" | "trabajo" | "factura";
+
+export type NotificacionClienteLog = {
+  id: string;
+  empresa_id: string;
+  tipo: TipoNotificacionCliente;
+  destinatario: string;
+  entidad_tipo: EntidadNotificacionCliente;
+  entidad_id: string;
+  exito: boolean;
+  error: string | null;
+  creado_en: string;
 };
 
 export type MensajePersonalizado = {
@@ -543,6 +775,20 @@ export type Database = {
       mensajes_personalizados: Tabla<MensajePersonalizado>;
       informes_personalizados: Tabla<InformePersonalizado>;
       asistente_mensajes: Tabla<MensajeAsistente>;
+      viajes: Tabla<Viaje>;
+      whatsapp_mensajes_procesados: Tabla<MensajeWhatsappProcesado>;
+      auditoria_usuarios: Tabla<AuditoriaUsuario>;
+      accesos_usuario: Tabla<AccesoUsuario>;
+      unidades_medida: Tabla<UnidadMedida>;
+      notificaciones_cliente_log: Tabla<NotificacionClienteLog>;
+      portal_accesos: Tabla<PortalAcceso>;
+      portal_codigos: Tabla<PortalCodigo>;
+      tipos_documento: Tabla<TipoDocumento>;
+      documentos: Tabla<Documento>;
+      vehiculos: Tabla<Vehiculo>;
+      vehiculo_asignaciones: Tabla<VehiculoAsignacion>;
+      notificaciones: Tabla<Notificacion>;
+      notificaciones_preferencias: Tabla<NotificacionPreferencia>;
       equipos: Tabla<Equipo>;
       catalogo_items: Tabla<CatalogoItem>;
       catalogo_kit_items: Tabla<CatalogoKitItem>;

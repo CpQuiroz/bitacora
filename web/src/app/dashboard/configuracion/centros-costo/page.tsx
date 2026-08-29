@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { CategoriaGasto } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
 import { Button, Card, ErrorText, Input, Label, PageHeader } from "@/components/ui";
+import { DataTable } from "@/components/DataTable";
 import { IconLayers, IconPlus } from "@/components/icons";
 
 type CentroConCategorias = { id: string; nombre: string; categoria_gasto_ids: string[]; categorias: string[]; creado_en: string };
@@ -142,30 +143,16 @@ export default function CentrosCostoPage() {
         </Card>
       )}
       {centros && centros.length > 0 && (
-        <Card className="overflow-x-auto p-0">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-border text-xs text-muted">
-                <th className="px-5 py-3 font-medium">Nombre</th>
-                <th className="px-5 py-3 font-medium">Categorías</th>
-                <th className="px-5 py-3 font-medium"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {centros.map((c) => (
-                <tr key={c.id} className="border-b border-border last:border-0">
-                  <td className="px-5 py-3 font-medium text-foreground">{c.nombre}</td>
-                  <td className="px-5 py-3 text-muted">{c.categorias.length > 0 ? c.categorias.join(", ") : "—"}</td>
-                  <td className="px-5 py-3">
-                    <button type="button" onClick={() => onEliminar(c.id)} className="text-xs font-medium text-danger hover:underline">
-                      Eliminar
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
+        <DataTable
+          rows={centros}
+          rowKey={(c) => c.id}
+          columns={[
+            { header: "Nombre", cell: (c) => <span className="font-medium text-foreground">{c.nombre}</span> },
+            { header: "Categorías", cell: (c) => <span className="text-muted">{c.categorias.length > 0 ? c.categorias.join(", ") : "—"}</span> },
+          ]}
+          actions={[{ label: "Eliminar", onClick: (c) => onEliminar(c.id), variant: "danger" }]}
+          emptyState={{ icon: IconLayers, message: "Ningún centro de costo registrado." }}
+        />
       )}
     </div>
   );

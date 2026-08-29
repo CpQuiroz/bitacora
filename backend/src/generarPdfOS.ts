@@ -17,6 +17,8 @@ export type DatosOSPdf = {
   empresaNombre: string;
   empresaLogoUrl: string | null;
   colorPrimario: string | null;
+  textoEncabezado: string | null;
+  textoPie: string | null;
   folio: number | null;
   fecha: string;
   horaProgramada: string | null;
@@ -25,6 +27,7 @@ export type DatosOSPdf = {
   colaboradorNombre: string;
   descripcion: string | null;
   observacionesCierre: string | null;
+  informeIA: string | null;
   items: ItemOSPdf[];
   fotoUrls: string[];
   firmaUrl: string | null;
@@ -81,6 +84,12 @@ export async function generarPdfOS(datos: DatosOSPdf): Promise<Buffer> {
   doc.strokeColor("#000000").lineWidth(1);
   doc.y = 120;
 
+  if (datos.textoEncabezado) {
+    doc.font("Helvetica").fontSize(9).fillColor("#555555").text(datos.textoEncabezado, { width: 495 });
+    doc.fillColor("#000000");
+    doc.moveDown(0.8);
+  }
+
   // --- Datos de la OS ---
   doc.fontSize(10).font("Helvetica");
   const filaDatos = (etiqueta: string, valor: string) => {
@@ -101,6 +110,13 @@ export async function generarPdfOS(datos: DatosOSPdf): Promise<Buffer> {
   if (datos.observacionesCierre) {
     doc.font("Helvetica-Bold").text("Observaciones de cierre:");
     doc.font("Helvetica").text(datos.observacionesCierre, { width: 495 });
+    doc.moveDown(1);
+  }
+  if (datos.informeIA) {
+    doc.font("Helvetica-Bold").fontSize(11).fillColor(colorMarca).text("Informe técnico");
+    doc.fillColor("#000000").fontSize(10).font("Helvetica");
+    doc.moveDown(0.2);
+    doc.text(datos.informeIA, { width: 495 });
     doc.moveDown(1);
   }
 
@@ -173,6 +189,12 @@ export async function generarPdfOS(datos: DatosOSPdf): Promise<Buffer> {
   doc.font("Helvetica").fontSize(9);
   if (datos.firmanteNombre) doc.text(`Nombre: ${datos.firmanteNombre}`);
   if (datos.firmanteDocumento) doc.text(`RUT/Documento: ${datos.firmanteDocumento}`);
+
+  if (datos.textoPie) {
+    doc.moveDown(1.5);
+    doc.font("Helvetica").fontSize(8).fillColor("#555555").text(datos.textoPie, { width: 495 });
+    doc.fillColor("#000000");
+  }
 
   doc.end();
   return listo;

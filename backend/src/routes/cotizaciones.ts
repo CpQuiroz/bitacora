@@ -1,7 +1,11 @@
 import { Router } from "express";
 import type { EstadoPresupuesto, Presupuesto } from "@bitacora/shared";
+import { sustituirVariables } from "@bitacora/shared";
 import { supabase } from "../supabase";
 import { crearOrdenServicio } from "../ordenes";
+import { generarPdfCotizacion } from "../generarPdfCotizacion";
+import { enviarCotizacionPdf } from "../email";
+import { notificarCliente } from "../notificarCliente";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
 
@@ -48,9 +52,63 @@ async function guardarItems(empresaId: string, presupuestoId: string, items: Ite
   );
 }
 
+// Sin cron en este proyecto: cada vez que admin/supervisor abre el
+// listado, se revisa rápido si alguna cotización enviada está por
+// vencer y todavía no se le avisó al cliente — dedupe contra los
+// envíos ya exitosos en notificaciones_cliente_log.
+async function revisarCotizacionesPorVencer(empresaId: string) {
+  const { data: config } = await supabase.from("notificaciones_config").select("dias_aviso_vencimiento").eq("empresa_id", empresaId).maybeSingle();
+  const dias = config?.dias_aviso_vencimiento ?? 3;
+
+  const hoy = new Date().toISOString().slice(0, 10);
+  const limite = new Date(Date.now() + dias * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+  const { data: porVencer } = await supabase
+    .from("presupuestos")
+    .select("id, numero, monto, fecha_vencimiento, cliente_id, cliente_info:clientes(nombre, correo)")
+    .eq("empresa_id", empresaId)
+    .eq("estado", "enviado")
+    .gte("fecha_vencimiento", hoy)
+    .lte("fecha_vencimiento", limite);
+
+  const { data: empresa } = await supabase.from("empresas").select("nombre").eq("id", empresaId).single();
+
+  for (const c of porVencer ?? []) {
+    const clienteInfo = (c as unknown as { cliente_info: { nombre: string; correo: string | null } | null }).cliente_info;
+    if (!clienteInfo?.correo || !c.cliente_id) continue;
+
+    const { data: yaEnviado } = await supabase
+      .from("notificaciones_cliente_log")
+      .select("id")
+      .eq("empresa_id", empresaId)
+      .eq("tipo", "cotizacion_por_vencer")
+      .eq("entidad_id", c.id)
+      .eq("exito", true)
+      .limit(1)
+      .maybeSingle();
+    if (yaEnviado) continue;
+
+    await notificarCliente(empresaId, "cotizacion_por_vencer", clienteInfo.correo, {
+      clienteId: c.cliente_id,
+      entidadTipo: "cotizacion",
+      entidadId: c.id,
+      variables: {
+        cliente: clienteInfo.nombre,
+        fecha: c.fecha_vencimiento ?? "",
+        monto: `$${Math.round(c.monto).toLocaleString("es-CL")}`,
+        empresa: empresa?.nombre ?? "",
+      },
+    });
+  }
+}
+
 cotizacionesRouter.get(
   "/",
   ah<RequestConEmpresa>(async (req, res) => {
+    if (req.rol === "admin" || req.rol === "supervisor") {
+      revisarCotizacionesPorVencer(req.empresaId!).catch((err) => console.error("Error revisando cotizaciones por vencer:", err));
+    }
+
     const { data, error } = await supabase
       .from("presupuestos")
       .select("*, cliente_info:clientes(nombre)")
@@ -210,6 +268,30 @@ cotizacionesRouter.patch(
     }
 
     if (items) await guardarItems(req.empresaId!, data.id, items);
+
+    // Al marcar la cotización como "enviada", si el cliente tiene
+    // correo, se le manda con el PDF adjunto — no bloquea la
+    // respuesta si el envío falla (notificarCliente nunca lanza).
+    if (cambios.estado === "enviado") {
+      void (async () => {
+        const datosPdf = await armarDatosPdfCotizacion(req.empresaId!, data.id);
+        if (!datosPdf?.clienteCorreo || !datosPdf.clienteId) return;
+        const pdf = await generarPdfCotizacion(datosPdf);
+        await notificarCliente(req.empresaId!, "cotizacion_enviada", datosPdf.clienteCorreo, {
+          clienteId: datosPdf.clienteId,
+          entidadTipo: "cotizacion",
+          entidadId: data.id,
+          variables: {
+            cliente: datosPdf.clienteNombre,
+            fecha: datosPdf.fecha,
+            monto: `$${Math.round(datosPdf.total).toLocaleString("es-CL")}`,
+            empresa: datosPdf.empresaNombre,
+          },
+          adjunto: { filename: `${datosPdf.numeroTexto}.pdf`, buffer: pdf },
+        });
+      })();
+    }
+
     res.json(data);
   })
 );
@@ -295,5 +377,108 @@ cotizacionesRouter.post(
       .eq("id", req.params.id);
 
     res.status(201).json({ trabajo_id: trabajo.id, folio: orden.folio });
+  })
+);
+
+// Junta todo lo necesario para el PDF de una cotización — mismo patrón
+// que armarDatosPdf() en trabajos.ts. Lo usan tanto la descarga directa
+// como el envío por correo.
+export async function armarDatosPdfCotizacion(empresaId: string, cotizacionId: string) {
+  const { data: cotizacion } = await supabase
+    .from("presupuestos")
+    .select("*, cliente_info:clientes(nombre, correo, direccion)")
+    .eq("empresa_id", empresaId)
+    .eq("id", cotizacionId)
+    .maybeSingle();
+  if (!cotizacion) return null;
+
+  const { data: empresa } = await supabase
+    .from("empresas")
+    .select("nombre, logo_url, color_primario")
+    .eq("id", empresaId)
+    .single();
+
+  const { data: plantilla } = await supabase
+    .from("plantillas_documento")
+    .select("texto_encabezado, texto_pie, color_primario")
+    .eq("empresa_id", empresaId)
+    .eq("tipo", "cotizacion")
+    .maybeSingle();
+
+  const { data: items } = await supabase
+    .from("presupuesto_items")
+    .select("*")
+    .eq("empresa_id", empresaId)
+    .eq("presupuesto_id", cotizacionId)
+    .order("creado_en");
+
+  const clienteInfo = (cotizacion as unknown as { cliente_info: { nombre: string; correo: string | null; direccion: string | null } | null }).cliente_info;
+  const clienteNombre = clienteInfo?.nombre ?? "Cliente";
+
+  const variables = {
+    cliente: clienteNombre,
+    fecha: cotizacion.fecha,
+    monto: `$${Math.round(cotizacion.monto).toLocaleString("es-CL")}`,
+    empresa: empresa?.nombre ?? "",
+  };
+
+  return {
+    empresaNombre: empresa?.nombre ?? "",
+    empresaLogoUrl: empresa?.logo_url ?? null,
+    colorPrimario: plantilla?.color_primario ?? empresa?.color_primario ?? null,
+    textoEncabezado: plantilla?.texto_encabezado ? sustituirVariables(plantilla.texto_encabezado, variables) : null,
+    textoPie: plantilla?.texto_pie ? sustituirVariables(plantilla.texto_pie, variables) : null,
+    clienteId: cotizacion.cliente_id,
+    numero: cotizacion.numero,
+    fecha: cotizacion.fecha,
+    fechaVencimiento: cotizacion.fecha_vencimiento,
+    clienteNombre,
+    clienteDireccion: clienteInfo?.direccion ?? null,
+    clienteCorreo: clienteInfo?.correo ?? null,
+    descripcion: cotizacion.descripcion,
+    items: (items ?? []).map((it) => ({
+      descripcion: it.descripcion,
+      cantidad: it.cantidad,
+      precio_unitario: it.precio_unitario,
+    })),
+    subtotal: cotizacion.subtotal ?? 0,
+    iva: cotizacion.iva ?? 0,
+    total: cotizacion.monto,
+    estado: cotizacion.estado,
+    numeroTexto: `Cotizacion-${cotizacion.numero ?? cotizacionId.slice(0, 8)}`,
+  };
+}
+
+cotizacionesRouter.get(
+  "/:id/pdf",
+  ah<RequestConEmpresa>(async (req, res) => {
+    const datos = await armarDatosPdfCotizacion(req.empresaId!, req.params.id);
+    if (!datos) {
+      res.status(404).json({ error: "Cotización no encontrada" });
+      return;
+    }
+    const pdf = await generarPdfCotizacion(datos);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename="${datos.numeroTexto}.pdf"`);
+    res.send(pdf);
+  })
+);
+
+cotizacionesRouter.post(
+  "/:id/pdf/enviar",
+  ah<RequestConEmpresa>(async (req, res) => {
+    const datos = await armarDatosPdfCotizacion(req.empresaId!, req.params.id);
+    if (!datos) {
+      res.status(404).json({ error: "Cotización no encontrada" });
+      return;
+    }
+    const destinatario = typeof req.body?.destinatario === "string" && req.body.destinatario.trim() ? req.body.destinatario.trim() : datos.clienteCorreo;
+    if (!destinatario) {
+      res.status(400).json({ error: "El cliente no tiene correo registrado — indica un destinatario" });
+      return;
+    }
+    const pdf = await generarPdfCotizacion(datos);
+    await enviarCotizacionPdf(destinatario, datos.empresaNombre, datos.numero ?? 0, pdf);
+    res.json({ ok: true });
   })
 );

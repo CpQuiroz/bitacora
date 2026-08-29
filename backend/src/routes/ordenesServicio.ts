@@ -29,7 +29,11 @@ ordenesServicioRouter.get(
       .eq("empresa_id", req.empresaId!)
       .order("fecha", { ascending: false });
 
-    if (typeof responsable_id === "string" && responsable_id) {
+    // Un colaborador SIEMPRE ve solo lo suyo — regla del servidor, ignora
+    // cualquier responsable_id que mande el cliente.
+    if (req.rol === "colaborador") {
+      query = query.eq("responsable_id", req.userId!);
+    } else if (typeof responsable_id === "string" && responsable_id) {
       query = query.eq("responsable_id", responsable_id);
     }
     if (typeof cliente_id === "string" && cliente_id) {
@@ -67,12 +71,13 @@ ordenesServicioRouter.get(
 ordenesServicioRouter.get(
   "/:trabajoId",
   ah<RequestConEmpresa>(async (req, res) => {
-    const { data: trabajo, error } = await supabase
+    let queryTrabajo = supabase
       .from("trabajos")
       .select("*, cliente_info:clientes(*), responsable:usuarios(nombre), tipo_trabajo:tipos_trabajo(*)")
       .eq("empresa_id", req.empresaId!)
-      .eq("id", req.params.trabajoId)
-      .maybeSingle();
+      .eq("id", req.params.trabajoId);
+    if (req.rol === "colaborador") queryTrabajo = queryTrabajo.eq("responsable_id", req.userId!);
+    const { data: trabajo, error } = await queryTrabajo.maybeSingle();
 
     if (error) {
       res.status(500).json({ error: error.message });

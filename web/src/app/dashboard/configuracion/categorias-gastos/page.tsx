@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { CategoriaGasto } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
 import { Button, Card, ErrorText, Input, Label, PageHeader } from "@/components/ui";
+import { DataTable } from "@/components/DataTable";
 import { IconPlus, IconWallet } from "@/components/icons";
 
 type CategoriaConCantidad = CategoriaGasto & { cantidad_gastos: number };
@@ -158,48 +159,21 @@ export default function CategoriasGastosPage() {
       )}
 
       {error && <ErrorText>{error}</ErrorText>}
-      {categorias && categorias.length > 0 && (
-        <Card className="overflow-x-auto p-0">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-border text-xs text-muted">
-                <th className="px-5 py-3 font-medium"></th>
-                <th className="px-5 py-3 font-medium">Nombre</th>
-                <th className="px-5 py-3 font-medium">Gastos asociados</th>
-                <th className="px-5 py-3 font-medium">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {categorias.map((c) => (
-                <tr key={c.id} className="border-b border-border last:border-0">
-                  <td className="px-5 py-3">
-                    <span className="inline-block h-3 w-3 rounded-full" style={{ background: c.color }} />
-                  </td>
-                  <td className="px-5 py-3 font-medium text-foreground">{c.nombre}</td>
-                  <td className="px-5 py-3 text-muted">{c.cantidad_gastos}</td>
-                  <td className="px-5 py-3">
-                    <div className="flex gap-3 text-xs font-medium">
-                      <button type="button" onClick={() => abrirEdicion(c)} className="text-brand hover:underline">
-                        Editar
-                      </button>
-                      <button type="button" onClick={() => onEliminar(c.id)} className="text-danger hover:underline">
-                        Eliminar
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
-      )}
-      {categorias === null && !error && <p className="text-sm text-muted">Cargando…</p>}
-      {categorias && categorias.length === 0 && (
-        <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border py-16 text-center">
-          <IconWallet className="h-8 w-8 text-muted" />
-          <p className="text-sm text-muted">Todavía no hay categorías propias — usa las sugeridas de arriba o crea una nueva.</p>
-        </div>
-      )}
+      <DataTable
+        rows={categorias ?? []}
+        rowKey={(c) => c.id}
+        loading={categorias === null && !error}
+        columns={[
+          { header: "", className: "w-8", cell: (c) => <span className="inline-block h-3 w-3 rounded-full" style={{ background: c.color }} /> },
+          { header: "Nombre", cell: (c) => <span className="font-medium text-foreground">{c.nombre}</span> },
+          { header: "Gastos asociados", cell: (c) => <span className="text-muted">{c.cantidad_gastos}</span> },
+        ]}
+        actions={[
+          { label: "Editar", onClick: abrirEdicion, variant: "brand" },
+          { label: "Eliminar", onClick: (c) => onEliminar(c.id), variant: "danger" },
+        ]}
+        emptyState={{ icon: IconWallet, message: "Todavía no hay categorías propias — usa las sugeridas de arriba o crea una nueva." }}
+      />
     </div>
   );
 }

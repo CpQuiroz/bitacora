@@ -3,6 +3,7 @@ import type { TipoOS } from "@bitacora/shared";
 import { supabase } from "../supabase";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
+import { requiereModulo } from "../permisos";
 
 export const tiposOsRouter = Router();
 
@@ -35,12 +36,9 @@ tiposOsRouter.get(
 
 tiposOsRouter.post(
   "/",
+  requiereModulo("configuracion"),
   ah<RequestConEmpresa>(async (req, res) => {
-    if (req.rol !== "admin") {
-      res.status(403).json({ error: "Solo un admin puede crear tipos de OS" });
-      return;
-    }
-    const { nombre, descripcion, color, checklist_template_id } = req.body ?? {};
+    const { nombre, descripcion, color, checklist_template_id, tiempo_estimado_minutos } = req.body ?? {};
     if (typeof nombre !== "string" || !nombre.trim()) {
       res.status(400).json({ error: "Falta nombre" });
       return;
@@ -53,6 +51,10 @@ tiposOsRouter.post(
       res.status(400).json({ error: "checklist_template_id inválido" });
       return;
     }
+    if (tiempo_estimado_minutos !== undefined && tiempo_estimado_minutos !== null && (!Number.isInteger(tiempo_estimado_minutos) || tiempo_estimado_minutos < 0)) {
+      res.status(400).json({ error: "tiempo_estimado_minutos debe ser un entero positivo" });
+      return;
+    }
 
     const { data, error } = await supabase
       .from("tipos_os")
@@ -62,6 +64,7 @@ tiposOsRouter.post(
         descripcion: descripcion?.trim() || null,
         color: color || "#4338ca",
         checklist_template_id: checklist_template_id || null,
+        tiempo_estimado_minutos: tiempo_estimado_minutos ?? null,
       })
       .select("*, checklist:checklist_templates(nombre)")
       .single();
@@ -76,12 +79,9 @@ tiposOsRouter.post(
 
 tiposOsRouter.patch(
   "/:id",
+  requiereModulo("configuracion"),
   ah<RequestConEmpresa>(async (req, res) => {
-    if (req.rol !== "admin") {
-      res.status(403).json({ error: "Solo un admin puede editar tipos de OS" });
-      return;
-    }
-    const { nombre, descripcion, color, checklist_template_id, activo } = req.body ?? {};
+    const { nombre, descripcion, color, checklist_template_id, activo, tiempo_estimado_minutos } = req.body ?? {};
     const cambios: Partial<TipoOS> = {};
 
     if (nombre !== undefined) {
@@ -107,6 +107,13 @@ tiposOsRouter.patch(
       cambios.checklist_template_id = checklist_template_id || null;
     }
     if (activo !== undefined) cambios.activo = Boolean(activo);
+    if (tiempo_estimado_minutos !== undefined) {
+      if (tiempo_estimado_minutos !== null && (!Number.isInteger(tiempo_estimado_minutos) || tiempo_estimado_minutos < 0)) {
+        res.status(400).json({ error: "tiempo_estimado_minutos debe ser un entero positivo" });
+        return;
+      }
+      cambios.tiempo_estimado_minutos = tiempo_estimado_minutos;
+    }
     if (Object.keys(cambios).length === 0) {
       res.status(400).json({ error: "Nada que actualizar" });
       return;
@@ -134,11 +141,8 @@ tiposOsRouter.patch(
 
 tiposOsRouter.delete(
   "/:id",
+  requiereModulo("configuracion"),
   ah<RequestConEmpresa>(async (req, res) => {
-    if (req.rol !== "admin") {
-      res.status(403).json({ error: "Solo un admin puede eliminar tipos de OS" });
-      return;
-    }
     const { error, count } = await supabase
       .from("tipos_os")
       .delete({ count: "exact" })
