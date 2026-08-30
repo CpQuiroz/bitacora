@@ -18,6 +18,7 @@ import { puedeVerModulo } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
+import { Modal } from "@/components/Modal";
 import { Badge, Button, Card, ErrorText, Input, Label, Select, Textarea, buttonClass } from "@/components/ui";
 import { IconCalendar, IconChevronLeft, IconChevronRight, IconClipboardCheck, IconPlus, IconWrench } from "@/components/icons";
 
@@ -462,10 +463,8 @@ export default function AgendaPage() {
         </div>
       </div>
 
-      {formTareaAbierto && (
-        <Card className="mb-6">
-          <h2 className="mb-4 text-sm font-semibold text-foreground">{tareaEditandoId ? "Editar tarea" : "Nueva tarea"}</h2>
-          <form onSubmit={onGuardarTarea} className="flex flex-col gap-4">
+      <Modal open={formTareaAbierto} onClose={() => setFormTareaAbierto(false)} title={tareaEditandoId ? "Editar tarea" : "Nueva tarea"} wide>
+        <form onSubmit={onGuardarTarea} className="flex flex-col gap-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
                 <Label>Título</Label>
@@ -603,9 +602,8 @@ export default function AgendaPage() {
                 </Button>
               )}
             </div>
-          </form>
-        </Card>
-      )}
+        </form>
+      </Modal>
 
       <Card className="mb-6">
         <div className="mb-4 flex flex-wrap items-center gap-2">

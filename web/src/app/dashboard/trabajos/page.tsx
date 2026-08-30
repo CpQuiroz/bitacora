@@ -6,6 +6,7 @@ import type { Cliente, EstadoTrabajo, Trabajo, Usuario } from "@bitacora/shared"
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
+import { Modal } from "@/components/Modal";
 import {
   Badge,
   Button,
@@ -30,6 +31,7 @@ export default function TrabajosPage() {
   const [error, setError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
+  const [formAbierto, setFormAbierto] = useState(false);
 
   const [clienteId, setClienteId] = useState(SIN_CLIENTE_GUARDADO);
   const [cliente, setCliente] = useState("");
@@ -112,6 +114,7 @@ export default function TrabajosPage() {
     setUbicacion("");
     setCodigo("");
     setEstado("completado");
+    setFormAbierto(false);
     cargar();
   }
 
@@ -119,13 +122,18 @@ export default function TrabajosPage() {
 
   return (
     <DashboardShell usuario={usuario}>
-      <PageHeader title="Trabajos" subtitle="Registra y revisa los trabajos en terreno" />
+      <PageHeader
+        title="Trabajos"
+        subtitle="Registra y revisa los trabajos en terreno"
+        action={
+          <Button type="button" onClick={() => setFormAbierto(true)}>
+            <IconPlus className="h-4 w-4" />
+            Nuevo trabajo
+          </Button>
+        }
+      />
 
-      <Card className="my-6">
-        <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-foreground">
-          <IconPlus className="h-4 w-4 text-brand" />
-          Nuevo trabajo
-        </h2>
+      <Modal open={formAbierto} onClose={() => setFormAbierto(false)} title="Nuevo trabajo" wide>
         <form onSubmit={onSubmit} className="flex flex-col gap-4">
           <div className="grid gap-4 sm:grid-cols-2">
             {clientesGuardados.length > 0 && (
@@ -190,46 +198,48 @@ export default function TrabajosPage() {
             {guardando ? "Guardando…" : "Agregar trabajo"}
           </Button>
         </form>
-      </Card>
+      </Modal>
 
-      {error && <ErrorText>{error}</ErrorText>}
-      {trabajos === null && !error && <p className="text-sm text-muted">Cargando…</p>}
-      {trabajos?.length === 0 && (
-        <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border py-16 text-center">
-          <IconBriefcase className="h-8 w-8 text-muted" />
-          <p className="text-sm text-muted">Todavía no hay trabajos.</p>
-        </div>
-      )}
-      {trabajos && trabajos.length > 0 && (
-        <Card className="overflow-x-auto p-0">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-border text-xs text-muted">
-                <th className="px-5 py-3 font-medium">Fecha</th>
-                <th className="px-5 py-3 font-medium">Cliente</th>
-                <th className="px-5 py-3 font-medium">Monto</th>
-                <th className="px-5 py-3 font-medium">Estado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {trabajos.map((t) => (
-                <tr
-                  key={t.id}
-                  onClick={() => router.push(`/dashboard/trabajos/${t.id}`)}
-                  className="cursor-pointer border-b border-border last:border-0 hover:bg-brand-soft/40"
-                >
-                  <td className="px-5 py-3">{t.fecha}</td>
-                  <td className="px-5 py-3 font-medium text-foreground">{t.cliente}</td>
-                  <td className="px-5 py-3">${t.monto.toLocaleString("es-CL")}</td>
-                  <td className="px-5 py-3">
-                    <Badge value={t.estado} />
-                  </td>
+      <div className="mt-6">
+        {error && <ErrorText>{error}</ErrorText>}
+        {trabajos === null && !error && <p className="text-sm text-muted">Cargando…</p>}
+        {trabajos?.length === 0 && (
+          <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border py-16 text-center">
+            <IconBriefcase className="h-8 w-8 text-muted" />
+            <p className="text-sm text-muted">Todavía no hay trabajos.</p>
+          </div>
+        )}
+        {trabajos && trabajos.length > 0 && (
+          <Card className="overflow-x-auto p-0">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-border text-xs text-muted">
+                  <th className="px-5 py-3 font-medium">Fecha</th>
+                  <th className="px-5 py-3 font-medium">Cliente</th>
+                  <th className="px-5 py-3 font-medium">Monto</th>
+                  <th className="px-5 py-3 font-medium">Estado</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
-      )}
+              </thead>
+              <tbody>
+                {trabajos.map((t) => (
+                  <tr
+                    key={t.id}
+                    onClick={() => router.push(`/dashboard/trabajos/${t.id}`)}
+                    className="cursor-pointer border-b border-border last:border-0 hover:bg-brand-soft/40"
+                  >
+                    <td className="px-5 py-3">{t.fecha}</td>
+                    <td className="px-5 py-3 font-medium text-foreground">{t.cliente}</td>
+                    <td className="px-5 py-3">${t.monto.toLocaleString("es-CL")}</td>
+                    <td className="px-5 py-3">
+                      <Badge value={t.estado} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Card>
+        )}
+      </div>
     </DashboardShell>
   );
 }
