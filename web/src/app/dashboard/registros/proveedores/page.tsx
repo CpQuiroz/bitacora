@@ -6,7 +6,8 @@ import type { CategoriaGasto, Proveedor } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText } from "@/components/ui";
+import { SelectCrear } from "@/components/SelectCrear";
+import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, SuccessText } from "@/components/ui";
 import { IconPlus, IconTruck } from "@/components/icons";
 
 type ProveedorConCategoria = Proveedor & { categoria: Pick<CategoriaGasto, "id" | "nombre" | "color"> | null };
@@ -82,12 +83,21 @@ export default function ProveedoresPage() {
     setFormAbierto(true);
   }
 
+  // El campo se guarda como texto completo ("+56 9XXXXXXXX") para que
+  // linkWhatsapp() y cualquier otro lector lo sigan tratando como
+  // texto libre — acá solo se extraen los 8 dígitos locales para
+  // precargar el input cuando el número ya tiene el formato esperado.
+  function soloDigitosLocales(telefonoGuardado: string | null): string {
+    if (!telefonoGuardado) return "";
+    return telefonoGuardado.replace(/\D/g, "").replace(/^569/, "").slice(0, 8);
+  }
+
   function abrirEdicion(p: ProveedorConCategoria) {
     setEditandoId(p.id);
     setNombre(p.nombre);
     setRazonSocial(p.razon_social ?? "");
     setRut(p.rut ?? "");
-    setTelefono(p.telefono ?? "");
+    setTelefono(soloDigitosLocales(p.telefono));
     setCorreo(p.correo ?? "");
     setCategoriaGastoId(p.categoria_gasto_id ?? "");
     setFormError(null);
@@ -108,7 +118,7 @@ export default function ProveedoresPage() {
       nombre,
       razon_social: razonSocial,
       rut,
-      telefono,
+      telefono: telefono ? `+56 9${telefono}` : "",
       correo,
       categoria_gasto_id: categoriaGastoId || null,
     });
@@ -171,18 +181,29 @@ export default function ProveedoresPage() {
               </div>
               <div>
                 <Label>Categoría de gasto</Label>
-                <Select value={categoriaGastoId} onChange={(e) => setCategoriaGastoId(e.target.value)}>
-                  <option value="">Sin categoría</option>
-                  {categorias.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.nombre}
-                    </option>
-                  ))}
-                </Select>
+                <SelectCrear
+                  value={categoriaGastoId}
+                  onChange={setCategoriaGastoId}
+                  opciones={categorias}
+                  endpoint="/api/categorias-gasto"
+                  placeholder="Sin categoría"
+                  etiquetaCrear="+ Nueva categoría…"
+                  onCreado={(nueva) => setCategorias((prev) => [...prev, nueva])}
+                />
               </div>
               <div>
                 <Label>Teléfono</Label>
-                <Input type="text" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
+                <div className="flex items-center gap-2">
+                  <span className="shrink-0 rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-muted">+56 9</span>
+                  <Input
+                    type="tel"
+                    inputMode="numeric"
+                    placeholder="1234 5678"
+                    maxLength={8}
+                    value={telefono}
+                    onChange={(e) => setTelefono(e.target.value.replace(/\D/g, "").slice(0, 8))}
+                  />
+                </div>
               </div>
               <div>
                 <Label>Correo</Label>
