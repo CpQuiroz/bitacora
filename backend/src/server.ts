@@ -65,7 +65,14 @@ app.use(helmet());
 // Para que req.ip sea la IP real del cliente (historial de accesos en
 // Seguridad) cuando el backend corre detrás de un proxy/load balancer.
 app.set("trust proxy", true);
-app.use(cors());
+// Sin ALLOWED_ORIGINS configurada (dev local), solo se permite el dev
+// server de Next.js — nunca "*". En producción, ALLOWED_ORIGINS debe
+// listar los dominios reales separados por coma.
+const origenesPermitidos = (env.ALLOWED_ORIGINS ?? "http://localhost:3000")
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
+app.use(cors({ origin: origenesPermitidos }));
 // El verify callback guarda el body crudo en req.rawBody — lo necesita
 // el webhook de WhatsApp para validar la firma HMAC de Meta (hay que
 // firmar/verificar contra los bytes exactos, no el JSON re-serializado).

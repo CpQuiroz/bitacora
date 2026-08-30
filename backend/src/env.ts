@@ -13,6 +13,10 @@ export const env = {
   // A dónde redirige el link del correo de invitación (Settings → Auth →
   // URL Configuration → Redirect URLs debe incluir esta URL en Supabase).
   WEB_URL: process.env.WEB_URL ?? "http://localhost:3000",
+  // Orígenes permitidos por CORS, separados por coma (ej.
+  // "https://app.bitacora.cl,https://portal.bitacora.cl"). Sin esta
+  // variable, solo se permite el dev server local — ver server.ts.
+  ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS ?? null,
   SUPABASE_URL: requerido("SUPABASE_URL"),
   // Service role key: solo en backend, nunca en web/mobile — bypassa RLS.
   SUPABASE_SERVICE_ROLE_KEY: requerido("SUPABASE_SERVICE_ROLE_KEY"),
