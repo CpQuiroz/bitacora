@@ -229,7 +229,9 @@ export default function DashboardPage() {
 
           <div className="my-6 grid gap-6 lg:grid-cols-[1fr_20rem]">
             <Card>
-              <h2 className="mb-4 text-sm font-semibold text-foreground">Ingresos por período (últimos 12 meses)</h2>
+              <h2 className="mb-4 text-sm font-semibold text-foreground">
+                Ingresos por período (últimos {datos.ingresos_por_mes.length} meses)
+              </h2>
               <GraficoIngresos datos={datos.ingresos_por_mes} moneda={moneda} />
             </Card>
 

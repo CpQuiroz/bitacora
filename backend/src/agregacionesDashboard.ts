@@ -150,11 +150,36 @@ export async function estadoOT(empresaId: string, desde: string, hasta: string) 
   return Array.from(conteo.entries()).map(([estado, cantidad]) => ({ estado, cantidad }));
 }
 
-// Últimos 12 meses (fijo, independiente del selector de período del
-// dashboard) — es lo único que tiene sentido para una evolución mensual.
+// Rango dinámico (independiente del selector de período del
+// dashboard): arranca en el primer mes con datos reales, con un
+// mínimo de 3 meses aunque una empresa nueva todavía no tenga nada —
+// antes siempre mostraba 12 meses fijos, casi todos en cero para
+// cuentas recién creadas.
+const MESES_MINIMO = 3;
+const MESES_MAXIMO = 12;
+
 export async function ingresosPorMes(empresaId: string) {
   const hoy = new Date();
-  const desde = new Date(hoy.getFullYear(), hoy.getMonth() - 11, 1).toISOString().slice(0, 10);
+
+  const { data: primeraFactura } = await supabase
+    .from("facturas")
+    .select("fecha_emision")
+    .eq("empresa_id", empresaId)
+    .order("fecha_emision", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  const inicioMinimo = new Date(hoy.getFullYear(), hoy.getMonth() - (MESES_MINIMO - 1), 1);
+  const inicioMaximo = new Date(hoy.getFullYear(), hoy.getMonth() - (MESES_MAXIMO - 1), 1);
+  const primerMesConDatos = primeraFactura
+    ? new Date(`${String(primeraFactura.fecha_emision).slice(0, 7)}-01T00:00:00`)
+    : inicioMinimo;
+  // Nunca antes del primer mes con datos, nunca más nuevo que el
+  // mínimo de 3 meses, nunca más viejo que el máximo de 12.
+  const inicio = new Date(Math.min(Math.max(primerMesConDatos.getTime(), inicioMaximo.getTime()), inicioMinimo.getTime()));
+
+  const cantidadMeses = (hoy.getFullYear() - inicio.getFullYear()) * 12 + (hoy.getMonth() - inicio.getMonth()) + 1;
+  const desde = inicio.toISOString().slice(0, 10);
 
   const { data } = await supabase
     .from("facturas")
@@ -163,7 +188,7 @@ export async function ingresosPorMes(empresaId: string) {
     .gte("fecha_emision", desde);
 
   const meses: { mes: string; recibido: number; pendiente: number; vencido: number }[] = [];
-  for (let i = 11; i >= 0; i--) {
+  for (let i = cantidadMeses - 1; i >= 0; i--) {
     const d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
     meses.push({ mes: d.toISOString().slice(0, 7), recibido: 0, pendiente: 0, vencido: 0 });
   }
