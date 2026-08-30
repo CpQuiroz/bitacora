@@ -39,6 +39,7 @@ const ARCHIVOS_EXCLUIDOS: Record<string, string> = {
   "portal.ts": "Portal de Cliente — se acota por el token/código propio, no por req.empresaId",
   "whatsapp.ts": "webhook entrante del bot — se acota resolviendo el chofer por teléfono, no por req.empresaId",
   "reservaPublica.ts": "reserva online pública, sin cuenta de Bitácora — se acota por :empresaId del path (validado vía empresaHabilitada), no por req.empresaId",
+  "flowWebhook.ts": "webhook de Flow (suscripción B2B) — se acota resolviendo la empresa por flow_customer_id (nunca se confía en el body del POST), no por req.empresaId",
 };
 
 const VENTANA = 25; // líneas hacia adelante y atrás a inspeccionar

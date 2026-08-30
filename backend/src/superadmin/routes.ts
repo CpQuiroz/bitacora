@@ -376,3 +376,56 @@ superadminRouter.patch(
     res.json({ modulo, activado });
   })
 );
+
+// Suscripción B2B (cobro recurrente a esta empresa) — solo lectura +
+// extender el trial acá; cambiar el estado de facturación en sí lo hace
+// exclusivamente el webhook de Flow (backend/src/routes/flowWebhook.ts),
+// nunca a mano, para que el estado real de Flow y el de Bitácora no se
+// desincronicen.
+superadminRouter.get(
+  "/empresas/:id/suscripcion",
+  requiereSuperAdmin,
+  ah<RequestConSuperAdmin>(async (req, res) => {
+    const { data: empresa } = await supabase.from("empresas").select("id, prueba_termina_en").eq("id", req.params.id).maybeSingle();
+    if (!empresa) {
+      res.status(404).json({ error: "Empresa no encontrada" });
+      return;
+    }
+    const { data: suscripcion } = await supabase.from("suscripciones").select("*").eq("empresa_id", req.params.id).maybeSingle();
+    const { data: cobros } = await supabase
+      .from("suscripcion_cobros")
+      .select("*")
+      .eq("empresa_id", req.params.id)
+      .order("creado_en", { ascending: false })
+      .limit(24);
+    res.json({ prueba_termina_en: empresa.prueba_termina_en, suscripcion: suscripcion ?? null, cobros: cobros ?? [] });
+  })
+);
+
+superadminRouter.patch(
+  "/empresas/:id/prueba",
+  requiereSuperAdmin,
+  ah<RequestConSuperAdmin>(async (req, res) => {
+    const { prueba_termina_en } = req.body ?? {};
+    if (typeof prueba_termina_en !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(prueba_termina_en)) {
+      res.status(400).json({ error: "prueba_termina_en debe ser una fecha YYYY-MM-DD" });
+      return;
+    }
+    const { data: empresa } = await supabase.from("empresas").select("nombre, prueba_termina_en").eq("id", req.params.id).maybeSingle();
+    if (!empresa) {
+      res.status(404).json({ error: "Empresa no encontrada" });
+      return;
+    }
+    const { error } = await supabase.from("empresas").update({ prueba_termina_en }).eq("id", req.params.id);
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    await registrarAuditoria(req.superAdminId!, "extender_prueba_empresa", {
+      empresaId: req.params.id,
+      ip: req.ip ?? null,
+      detalle: `${empresa.nombre}: ${empresa.prueba_termina_en ?? "—"} → ${prueba_termina_en}`,
+    });
+    res.json({ prueba_termina_en });
+  })
+);

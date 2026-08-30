@@ -48,4 +48,18 @@ export const env = {
   WHATSAPP_PHONE_NUMBER_ID: process.env.WHATSAPP_PHONE_NUMBER_ID ?? null,
   WHATSAPP_VERIFY_TOKEN: process.env.WHATSAPP_VERIFY_TOKEN ?? null,
   WHATSAPP_APP_SECRET: process.env.WHATSAPP_APP_SECRET ?? null,
+  // Opcionales: suscripción B2B (cobro recurrente a empresas clientes,
+  // ver flow.ts). Sin esto, las rutas de suscripción devuelven error pero
+  // no bloquean el resto del backend. sandbox.flow.cl → Mis Datos →
+  // Integraciones mientras se prueba; producción es un apiKey/secretKey
+  // distinto, nunca el mismo par que sandbox.
+  FLOW_API_KEY: process.env.FLOW_API_KEY ?? null,
+  FLOW_SECRET_KEY: process.env.FLOW_SECRET_KEY ?? null,
+  // https://www.flow.cl/api vs https://sandbox.flow.cl/api — separado
+  // para poder pasar a producción cambiando una sola variable.
+  FLOW_API_URL: process.env.FLOW_API_URL ?? "https://sandbox.flow.cl/api",
+  // El Plan mensual se crea una sola vez desde el panel web de Flow
+  // (Planes de Suscripción — no existe API para esto, ver flow.ts) y su
+  // id se pega acá.
+  FLOW_PLAN_ID: process.env.FLOW_PLAN_ID ?? null,
 };
