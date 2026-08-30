@@ -49,6 +49,8 @@ import { superadminRouter } from "./superadmin/routes";
 import { tiposDocumentoRouter } from "./routes/tiposDocumento";
 import { vehiculosRouter } from "./routes/vehiculos";
 import { documentosRouter } from "./routes/documentos";
+import { mfaRouter } from "./routes/mfa";
+import { authLoginRouter } from "./routes/authLogin";
 import { modulosDeshabilitadosDeEmpresa, requiereModulo } from "./permisos";
 import { ah } from "./asyncHandler";
 
@@ -164,6 +166,8 @@ app.use("/api/cobros", requiereAuth, requiereEmpresa, requiereModulo("financiero
 app.use("/api/informe", requiereAuth, requiereEmpresa, requiereModulo("informe_ia"), informeRouter);
 app.use("/api/tipos-trabajo", requiereAuth, requiereEmpresa, tiposTrabajoRouter);
 app.use("/api/usuarios", requiereAuth, requiereEmpresa, usuariosRouter);
+app.use("/api/usuarios/me/mfa", requiereAuth, requiereEmpresa, mfaRouter);
+app.use("/api/auth", authLoginRouter);
 app.use("/api/clientes", requiereAuth, requiereEmpresa, clientesRouter);
 app.use("/api/rutas", requiereAuth, requiereEmpresa, rutasRouter);
 app.use("/api/empresa", requiereAuth, requiereEmpresa, miEmpresaRouter);

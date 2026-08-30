@@ -14,7 +14,7 @@ import { supabase } from "../src/supabase";
 import { env } from "../src/env";
 import { cifrarJson } from "../src/crypto";
 import { hashPassword } from "../src/superadmin/passwords";
-import { generarSecretoTotp, otpauthUri } from "../src/superadmin/totp";
+import { generarSecretoTotp, otpauthUri } from "../src/totp";
 
 // Enmascara lo que se tipea con "*" — readline no lo hace por
 // default. Usa el truco estándar de la comunidad Node (interceptar
@@ -72,7 +72,7 @@ async function main() {
   console.log("\nSuper-admin creado:", data.id);
   console.log("\nCarga esto en tu app de autenticación (Google Authenticator, Authy, 1Password...):");
   console.log("  Key manual:", secretoTotp);
-  console.log("  URI completa:", otpauthUri(secretoTotp, correo));
+  console.log("  URI completa:", otpauthUri(secretoTotp, correo, "Bitácora Super-Admin"));
   console.log("\nEsta key no se puede volver a mostrar — si la pierdes, hay que generar una nueva (correr este script de nuevo genera un super-admin distinto; para resetear el TOTP de este mismo, se actualiza directo en la base).");
 }
 

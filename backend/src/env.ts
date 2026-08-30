@@ -37,6 +37,12 @@ export const env = {
   // comprometa ambas cosas. Generar cada una con: openssl rand -base64 32.
   SUPERADMIN_TOKEN_SECRET: requerido("SUPERADMIN_TOKEN_SECRET"),
   SUPERADMIN_ENCRYPTION_KEY: requerido("SUPERADMIN_ENCRYPTION_KEY"),
+  // Autenticación de dos factores de usuarios normales (ver
+  // routes/mfa.ts y routes/authLogin.ts) — cifra el secreto TOTP y los
+  // tokens de sesión en tránsito durante el login en dos pasos.
+  // Deliberadamente distinta de las otras *_ENCRYPTION_KEY. Generar
+  // con: openssl rand -base64 32.
+  USUARIOS_MFA_ENCRYPTION_KEY: requerido("USUARIOS_MFA_ENCRYPTION_KEY"),
   // Opcionales: sin esto, el envío de la encuesta de satisfacción se
   // omite silenciosamente (no bloquea el resto del backend).
   RESEND_API_KEY: process.env.RESEND_API_KEY ?? null,

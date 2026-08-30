@@ -10,7 +10,7 @@ import { TABLAS_POR_EMPRESA } from "../tenant";
 import { cambiarPlanEmpresa } from "../planes";
 import { enviarInvitacion } from "../email";
 import { verificarPassword } from "./passwords";
-import { verificarCodigoTotp } from "./totp";
+import { verificarCodigoTotp } from "../totp";
 import { crearTokenSuperAdmin, requiereSuperAdmin, registrarAuditoria, type RequestConSuperAdmin } from "./auth";
 
 const ESTADOS_EMPRESA: EstadoEmpresa[] = ["activa", "suspendida", "dada_de_baja"];

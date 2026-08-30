@@ -93,6 +93,20 @@ export async function enviarInvitacion(destinatario: string, empresaNombre: stri
   );
 }
 
+// Código de verificación de 2FA por correo (activación o login) — 6
+// dígitos, vigente 10 minutos (ver mfa_codigo_pendiente).
+export async function enviarCodigoVerificacion(destinatario: string, codigo: string): Promise<void> {
+  const html = `
+    <div style="font-family:sans-serif;max-width:480px;margin:0 auto;">
+      <h2>Tu código de verificación</h2>
+      <p style="font-size:32px;font-weight:700;letter-spacing:4px;">${codigo}</p>
+      <p>Vence en 10 minutos. Si no fuiste tú, ignora este correo.</p>
+    </div>
+  `;
+
+  await enviarConReintento({ from: env.RESEND_FROM_EMAIL, to: destinatario, subject: `Tu código de verificación: ${codigo}`, html }, "el código de verificación");
+}
+
 // Envía el PDF de una orden de servicio ya finalizada como adjunto.
 export async function enviarPdfOS(destinatario: string, empresaNombre: string, folio: number, pdfBuffer: Buffer): Promise<void> {
   await enviarConReintento(

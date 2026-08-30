@@ -26,9 +26,117 @@ function detectarSO(userAgent: string): string {
   return "SO desconocido";
 }
 
+type EstadoMfa = { activado: boolean; metodo: "totp" | "email" | null };
+
 export default function SeguridadPage() {
   const { usuario } = useConfiguracion();
   const router = useRouter();
+
+  const mfaObligatoria = usuario.rol === "admin" || usuario.rol === "supervisor";
+  const [mfa, setMfa] = useState<EstadoMfa | null>(null);
+  const [modoActivacion, setModoActivacion] = useState<"totp" | "email" | null>(null);
+  const [secretoTotp, setSecretoTotp] = useState<{ secreto: string; otpauthUri: string } | null>(null);
+  const [copiadoSecreto, setCopiadoSecreto] = useState(false);
+  const [codigoActivar, setCodigoActivar] = useState("");
+  const [codigoEmailEnviado, setCodigoEmailEnviado] = useState(false);
+  const [cargandoMfa, setCargandoMfa] = useState(false);
+  const [errorMfa, setErrorMfa] = useState<string | null>(null);
+  const [avisoMfa, setAvisoMfa] = useState<string | null>(null);
+  const [desactivando, setDesactivando] = useState(false);
+
+  useEffect(() => {
+    apiFetch("/api/usuarios/me/mfa").then(async (res) => {
+      if (res.ok) setMfa(await res.json());
+    });
+  }, []);
+
+  function cerrarActivacion() {
+    setModoActivacion(null);
+    setSecretoTotp(null);
+    setCodigoActivar("");
+    setCodigoEmailEnviado(false);
+    setErrorMfa(null);
+    setAvisoMfa(null);
+  }
+
+  async function abrirActivacionTotp() {
+    setErrorMfa(null);
+    setModoActivacion("totp");
+    setCargandoMfa(true);
+    const res = await apiFetch("/api/usuarios/me/mfa/totp/iniciar", { method: "POST" });
+    setCargandoMfa(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setErrorMfa(body.error ?? "No se pudo generar el código");
+      return;
+    }
+    setSecretoTotp(await res.json());
+  }
+
+  function copiarSecreto() {
+    if (!secretoTotp) return;
+    navigator.clipboard.writeText(secretoTotp.secreto).then(() => {
+      setCopiadoSecreto(true);
+      setTimeout(() => setCopiadoSecreto(false), 2000);
+    });
+  }
+
+  async function confirmarTotp() {
+    setErrorMfa(null);
+    setCargandoMfa(true);
+    const res = await apiFetch("/api/usuarios/me/mfa/totp/confirmar", {
+      method: "POST",
+      body: JSON.stringify({ codigo: codigoActivar }),
+    });
+    setCargandoMfa(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setErrorMfa(body.error ?? "Código incorrecto");
+      return;
+    }
+    setMfa({ activado: true, metodo: "totp" });
+    cerrarActivacion();
+  }
+
+  async function abrirActivacionEmail() {
+    setErrorMfa(null);
+    setModoActivacion("email");
+    setCargandoMfa(true);
+    const res = await apiFetch("/api/usuarios/me/mfa/email/iniciar", { method: "POST" });
+    setCargandoMfa(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setErrorMfa(body.error ?? "No se pudo enviar el código");
+      return;
+    }
+    setCodigoEmailEnviado(true);
+    setAvisoMfa("Te enviamos un código a tu correo.");
+  }
+
+  async function confirmarEmail() {
+    setErrorMfa(null);
+    setCargandoMfa(true);
+    const res = await apiFetch("/api/usuarios/me/mfa/email/confirmar", {
+      method: "POST",
+      body: JSON.stringify({ codigo: codigoActivar }),
+    });
+    setCargandoMfa(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setErrorMfa(body.error ?? "Código incorrecto");
+      return;
+    }
+    setMfa({ activado: true, metodo: "email" });
+    cerrarActivacion();
+  }
+
+  async function onDesactivarMfa() {
+    if (!confirm("¿Desactivar la verificación en dos pasos?")) return;
+    setDesactivando(true);
+    const res = await apiFetch("/api/usuarios/me/mfa/desactivar", { method: "POST" });
+    setDesactivando(false);
+    if (res.ok) setMfa({ activado: false, metodo: null });
+  }
 
   const [sesion, setSesion] = useState<{ navegador: string; so: string; actualizado: string | null } | null>(null);
 
@@ -166,20 +274,113 @@ export default function SeguridadPage() {
       </Card>
 
       <Card>
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-sm font-semibold text-foreground">Autenticación de dos factores</h2>
-            <p className="mt-1 text-xs text-muted">Próximamente — un paso extra de verificación al iniciar sesión.</p>
+        <h2 className="text-sm font-semibold text-foreground">Autenticación de dos factores</h2>
+        <p className="mt-1 mb-4 text-xs text-muted">
+          Un paso extra al iniciar sesión — con una app de autenticación (Google Authenticator, Authy...) o con un
+          código que te mandamos por correo.
+        </p>
+
+        {mfaObligatoria && !mfa?.activado && (
+          <p className="mb-4 rounded-lg bg-warning-soft px-3 py-2 text-xs text-warning">
+            Tu rol requiere tenerla activa — mientras no la actives, el resto de la app queda bloqueado salvo esta
+            página.
+          </p>
+        )}
+
+        {mfa === null ? (
+          <p className="text-sm text-muted">Cargando…</p>
+        ) : mfa.activado ? (
+          <div className="flex items-center justify-between rounded-lg border border-border p-3 text-sm">
+            <div>
+              <p className="font-medium text-foreground">Activa — {mfa.metodo === "totp" ? "app de autenticación" : "código por correo"}</p>
+            </div>
+            <Button type="button" variant="outline" onClick={onDesactivarMfa} disabled={desactivando}>
+              {desactivando ? "Desactivando…" : "Desactivar"}
+            </Button>
           </div>
-          <span
-            role="switch"
-            aria-checked={false}
-            aria-disabled="true"
-            className="relative h-6 w-11 shrink-0 cursor-not-allowed rounded-full bg-border opacity-60"
-          >
-            <span className="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow" />
-          </span>
-        </div>
+        ) : modoActivacion === null ? (
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="outline" onClick={abrirActivacionTotp}>
+              Con app de autenticación
+            </Button>
+            <Button type="button" variant="outline" onClick={abrirActivacionEmail}>
+              Con código por correo
+            </Button>
+          </div>
+        ) : modoActivacion === "totp" ? (
+          <div className="flex flex-col gap-3">
+            {secretoTotp ? (
+              <>
+                <p className="text-sm text-muted">
+                  Escanea o abre este link con tu app de autenticación, o ingresa el código manualmente:
+                </p>
+                <a href={secretoTotp.otpauthUri} className="break-all text-sm font-medium text-brand hover:underline">
+                  {secretoTotp.otpauthUri}
+                </a>
+                <div className="flex items-center gap-2">
+                  <code className="rounded-lg border border-border bg-surface px-3 py-2 text-sm font-mono tracking-widest text-foreground">
+                    {secretoTotp.secreto}
+                  </code>
+                  <Button type="button" variant="ghost" onClick={copiarSecreto}>
+                    {copiadoSecreto ? "Copiado" : "Copiar"}
+                  </Button>
+                </div>
+                <Label>Código de la app</Label>
+                <Input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  value={codigoActivar}
+                  onChange={(e) => setCodigoActivar(e.target.value.replace(/\D/g, ""))}
+                  className="max-w-[10rem]"
+                />
+              </>
+            ) : (
+              <p className="text-sm text-muted">Generando…</p>
+            )}
+            {errorMfa && <ErrorText>{errorMfa}</ErrorText>}
+            <div className="flex gap-2">
+              <Button type="button" onClick={confirmarTotp} disabled={cargandoMfa || codigoActivar.length !== 6}>
+                {cargandoMfa ? "Confirmando…" : "Confirmar y activar"}
+              </Button>
+              <Button type="button" variant="ghost" onClick={cerrarActivacion}>
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {avisoMfa && <SuccessText>{avisoMfa}</SuccessText>}
+            {codigoEmailEnviado && (
+              <>
+                <Label>Código que te llegó por correo</Label>
+                <Input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  value={codigoActivar}
+                  onChange={(e) => setCodigoActivar(e.target.value.replace(/\D/g, ""))}
+                  className="max-w-[10rem]"
+                />
+              </>
+            )}
+            {errorMfa && <ErrorText>{errorMfa}</ErrorText>}
+            <div className="flex gap-2">
+              {codigoEmailEnviado ? (
+                <Button type="button" onClick={confirmarEmail} disabled={cargandoMfa || codigoActivar.length !== 6}>
+                  {cargandoMfa ? "Confirmando…" : "Confirmar y activar"}
+                </Button>
+              ) : (
+                <Button type="button" disabled className="opacity-60">
+                  Enviando…
+                </Button>
+              )}
+              <Button type="button" variant="ghost" onClick={cerrarActivacion}>
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        )}
       </Card>
 
       {usuario.rol === "admin" && (

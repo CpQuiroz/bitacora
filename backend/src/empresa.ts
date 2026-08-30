@@ -15,7 +15,7 @@ export interface RequestConEmpresa extends RequestConUsuario {
 export const requiereEmpresa = ah<RequestConEmpresa>(async (req, res, next) => {
   const { data: usuario, error } = await supabase
     .from("usuarios")
-    .select("empresa_id, rol, activo, empresa:empresas(estado)")
+    .select("empresa_id, rol, activo, mfa_activado, empresa:empresas(estado)")
     .eq("id", req.userId!)
     .maybeSingle();
 
@@ -38,6 +38,20 @@ export const requiereEmpresa = ah<RequestConEmpresa>(async (req, res, next) => {
   }
   if (estadoEmpresa === "dada_de_baja") {
     res.status(403).json({ error: "Esta cuenta fue dada de baja" });
+    return;
+  }
+
+  // admin/supervisor están obligados a tener 2FA activo (ver mfa.ts) —
+  // se les deja pasar la contraseña (no hace falta pedirla de nuevo) y
+  // entrar a su propio perfil/2FA para poder configurarlo, pero
+  // cualquier otra ruta queda bloqueada hasta que lo activen.
+  const rolExigeMfa = usuario.rol === "admin" || usuario.rol === "supervisor";
+  const rutaExceptuada = req.originalUrl.startsWith("/api/usuarios/me");
+  if (rolExigeMfa && !usuario.mfa_activado && !rutaExceptuada) {
+    res.status(403).json({
+      error: "Tu rol requiere activar la verificación en dos pasos antes de continuar — actívala en Configuración > Seguridad.",
+      code: "MFA_REQUERIDA",
+    });
     return;
   }
 

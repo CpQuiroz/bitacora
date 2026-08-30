@@ -179,6 +179,22 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
     asegurarFuenteCargada(usuario.fuente);
   }, [usuario.fuente]);
 
+  // admin/supervisor están obligados a tener 2FA activo (backend lo
+  // exige en requiereEmpresa) — mismo criterio que modulosDeshabilitados
+  // arriba: fetch propio acá, para no propagar el dato por props a las
+  // ~30 páginas que construyen UsuarioShell. Si todavía no lo activó,
+  // lo manda directo a Configuración > Seguridad a configurarlo.
+  useEffect(() => {
+    if (usuario.rol !== "admin" && usuario.rol !== "supervisor") return;
+    if (pathname === "/dashboard/configuracion/seguridad") return;
+    (async () => {
+      const res = await apiFetch("/api/usuarios/me/mfa");
+      if (!res.ok) return;
+      const { activado } = await res.json();
+      if (!activado) router.replace("/dashboard/configuracion/seguridad");
+    })();
+  }, [usuario.rol, pathname, router]);
+
   useEffect(() => {
     setGruposAbiertos((prev) => {
       const next = new Set(prev);

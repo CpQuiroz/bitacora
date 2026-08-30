@@ -146,7 +146,41 @@ export type Usuario = {
   activo: boolean;
   fecha_vencimiento_licencia: string | null;
   mfa_activado: boolean;
+  mfa_metodo: "totp" | "email" | null;
   zona: string | null;
+  creado_en: string;
+};
+
+// Secreto TOTP cifrado de 2FA de usuario — tabla aparte de "usuarios"
+// a propósito, nunca la tocan los select("*") que sí llegan al
+// frontend (ej. GET /api/usuarios).
+export type MfaTotpSecreto = {
+  usuario_id: string;
+  secreto_cifrado: string;
+  creado_en: string;
+};
+
+// Código de 6 dígitos vigente de 2FA por correo — se reutiliza tanto
+// al activar el método (enrollment) como en el challenge de login.
+export type MfaCodigoPendiente = {
+  usuario_id: string;
+  codigo_hash: string;
+  intentos: number;
+  expira_en: string;
+  creado_en: string;
+};
+
+// Ticket de login pendiente de segundo factor — guarda la sesión de
+// Supabase ya válida (contraseña correcta) cifrada, hasta confirmar
+// el código.
+export type Login2faPendiente = {
+  id: string;
+  usuario_id: string;
+  metodo: "totp" | "email";
+  intentos: number;
+  access_token_cifrado: string;
+  refresh_token_cifrado: string;
+  expira_en: string;
   creado_en: string;
 };
 
@@ -985,6 +1019,9 @@ export type Database = {
       suscripciones: Tabla<Suscripcion>;
       suscripcion_cobros: Tabla<SuscripcionCobro>;
       empresa_plan_historial: Tabla<EmpresaPlanHistorial>;
+      mfa_totp_secretos: Tabla<MfaTotpSecreto>;
+      mfa_codigo_pendiente: Tabla<MfaCodigoPendiente>;
+      login_2fa_pendiente: Tabla<Login2faPendiente>;
     };
     Views: Record<string, never>;
     Functions: {

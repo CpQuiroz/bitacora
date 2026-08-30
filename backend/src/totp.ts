@@ -2,7 +2,9 @@
 // TOTP (RFC 6238, sobre HOTP de RFC 4226) implementado a mano con
 // crypto nativo de Node — sin dependencia externa (mismo criterio que
 // portalAuth.ts). Compatible con Google Authenticator, Authy, 1Password
-// y cualquier app que siga el estándar.
+// y cualquier app que siga el estándar. Compartido entre el Panel de
+// Super-Admin y el 2FA de usuarios normales — la única diferencia
+// entre ambos es la etiqueta que se muestra en la app autenticadora.
 // ============================================================
 import crypto from "node:crypto";
 
@@ -44,8 +46,8 @@ export function generarSecretoTotp(): string {
   return base32Encode(crypto.randomBytes(20));
 }
 
-export function otpauthUri(secretoBase32: string, correo: string): string {
-  return `otpauth://totp/Bitacora%20Super-Admin:${encodeURIComponent(correo)}?secret=${secretoBase32}&issuer=Bitacora&algorithm=SHA1&digits=${DIGITOS}&period=${PASO_SEGUNDOS}`;
+export function otpauthUri(secretoBase32: string, correo: string, etiqueta: string): string {
+  return `otpauth://totp/${encodeURIComponent(etiqueta)}:${encodeURIComponent(correo)}?secret=${secretoBase32}&issuer=${encodeURIComponent(etiqueta)}&algorithm=SHA1&digits=${DIGITOS}&period=${PASO_SEGUNDOS}`;
 }
 
 function codigoParaContador(secretoBase32: string, contador: number): string {
