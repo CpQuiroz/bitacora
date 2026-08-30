@@ -1,0 +1,19 @@
+stateDiagram-v2
+    [*] --> Borrador
+
+    Borrador --> Enviada: se envía al colaborador
+    Borrador --> Cancelada: se cancela
+
+    Enviada --> Firmada: cliente firma conformidad
+    Enviada --> Cancelada: se cancela
+
+    Firmada --> [*]
+    Cancelada --> [*]
+
+    %% Estado actual del sistema (hoy):
+    %% - No editable en NINGÚN estado (hallazgo del informe UX)
+    %%
+    %% Propuesta recomendada:
+    %% - Editable libremente en Borrador y Enviada
+    %% - En Firmada: solo campos no contractuales (notas internas)
+    %% - Ítems, montos y descripción quedan bloqueados post-firma

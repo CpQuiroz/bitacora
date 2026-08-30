@@ -1,0 +1,16 @@
+stateDiagram-v2
+    [*] --> Borrador
+
+    Borrador --> Enviada: se envía al cliente
+
+    Enviada --> Aprobada: cliente aprueba
+    Enviada --> Rechazada: cliente rechaza
+
+    Aprobada --> ConvertidaEnOS: "Convertir a OS"
+
+    Rechazada --> [*]
+    ConvertidaEnOS --> [*]
+
+    %% Nota (hallazgo del informe UX):
+    %% Al convertir en OS, hoy no se muestra el folio de la OS
+    %% resultante en la tarjeta de la cotización — solo un link genérico.

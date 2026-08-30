@@ -1,0 +1,74 @@
+erDiagram
+    EMPRESAS {
+        uuid id
+        string color_primario
+        string logo_url
+        string moneda
+    }
+    USUARIOS {
+        uuid id
+        uuid empresa_id
+        string rol
+    }
+    ORDENES_SERVICIO {
+        uuid id
+        uuid empresa_id
+        uuid trabajo_id
+        string estado
+    }
+    FACTURAS {
+        uuid id
+        uuid empresa_id
+        uuid[] viaje_ids
+        uuid[] trabajo_ids
+    }
+
+    EMPRESAS ||--o{ USUARIOS : tiene
+    EMPRESAS ||--o{ CLIENTES : tiene
+    CLIENTES ||--o{ EQUIPOS : posee
+
+    EMPRESAS ||--o{ TRABAJOS : tiene
+    TIPOS_TRABAJO ||--o{ TRABAJOS : clasifica
+    TIPOS_OS ||--o{ TRABAJOS : clasifica
+    USUARIOS ||--o{ TRABAJOS : responsable
+    RUTAS_PLANIFICADAS ||--o{ TRABAJOS : agrupa
+    CLIENTES ||--o{ TRABAJOS : solicita
+
+    TRABAJOS ||--o| ORDENES_SERVICIO : genera
+    ORDENES_SERVICIO ||--o{ OS_ITEMS : contiene
+    ORDENES_SERVICIO ||--o{ ANALISIS_FOTOS : incluye
+    CHECKLIST_TEMPLATES ||--o{ ORDENES_SERVICIO : usa
+
+    CLIENTES ||--o{ VIAJES : solicita
+    USUARIOS ||--o{ VIAJES : chofer
+    VIAJES }o--o{ FACTURAS : "agrupa_en (viaje_ids)"
+    TRABAJOS }o--o{ FACTURAS : "agrupa_en (trabajo_ids)"
+
+    CATALOGO_ITEMS ||--o{ CATALOGO_KIT_ITEMS : "incluye (self-ref kit)"
+    CATALOGO_ITEMS ||--o{ INVENTARIO : trackea
+    INVENTARIO ||--o{ INVENTARIO_MOVIMIENTOS : registra
+
+    CLIENTES ||--o{ PRESUPUESTOS : recibe
+    PRESUPUESTOS ||--o{ PRESUPUESTO_ITEMS : contiene
+    PRESUPUESTOS ||--o| TRABAJOS : convierte_en
+
+    CLIENTES ||--o{ FACTURAS : recibe
+
+    CATEGORIAS_GASTO ||--o{ GASTOS : clasifica
+    CENTROS_COSTO ||--o{ GASTOS : asigna
+    PROVEEDORES ||--o{ GASTOS : provee
+    EMPRESAS ||--o{ GASTOS_FIJOS : tiene
+
+    USUARIOS ||--o{ RUTAS_PLANIFICADAS : responsable
+
+    EMPRESAS ||--o{ INFORMES_GENERADOS : tiene
+    INFORMES_PERSONALIZADOS ||--o{ INFORMES_GENERADOS : basa
+    USUARIOS ||--o{ ASISTENTE_MENSAJES : envia
+
+    EMPRESAS ||--o{ INTEGRACIONES : configura
+    EMPRESAS ||--o{ NOTIFICACIONES_CONFIG : define
+    EMPRESAS ||--o{ MENSAJES_PERSONALIZADOS : define
+    EMPRESAS ||--o{ PLANTILLAS_DOCUMENTO : define
+
+    %% whatsapp_mensajes_procesados es un ledger de idempotencia
+    %% sin empresa_id, no tiene relaciones FK con el resto del modelo

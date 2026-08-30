@@ -1,0 +1,18 @@
+stateDiagram-v2
+    [*] --> Pendiente
+
+    Pendiente --> Pagada: pago recibido / marcado manualmente
+    Pendiente --> Vencida: pasa la fecha de vencimiento
+
+    Vencida --> Pagada: pago recibido (tardío)
+
+    Pagada --> [*]
+
+    %% Nota:
+    %% - Hoy el "medio de pago" (Transferencia, etc.) es un campo
+    %%   informativo — no hay integración real con pasarelas.
+    %% - Los "Generar con Webpay/Flow/Mercado Pago" en el listado de
+    %%   Cobros son simulados (linkSimulado), no cambian el estado real.
+    %% - Un Cobro puede agrupar varias OS o Viajes (facturas.viaje_ids /
+    %%   trabajo_ids) — ver hallazgo de informe UX sobre agrupar OS por
+    %%   período.

@@ -1,0 +1,35 @@
+flowchart TB
+    Admin["Admin / Usuario empresa"]
+    Tecnico["Técnico / Chofer"]
+
+    subgraph Bitacora["Bitácora — Monorepo (npm workspaces)"]
+        Web["Web<br/>Next.js 16 / React 19 / TS<br/>Panel de administración"]
+        Backend["Backend API<br/>Express + TS (tsx en dev)<br/>REST, PDF, IA, WhatsApp"]
+        Mobile["App móvil<br/>Expo / React Native<br/>4 pantallas: Login, Trabajos,<br/>Detalle, Ruta"]
+        Shared["packages/shared<br/>Tipos TS, cliente Supabase,<br/>validación RUT"]
+    end
+
+    DB[("PostgreSQL<br/>33 tablas, RLS por empresa_id")]
+    Auth["Supabase Auth<br/>JWT"]
+    Storage["Storage S3-compatible<br/>Fotos, firmas, comprobantes"]
+    Anthropic["Anthropic Claude API"]
+    WhatsAppAPI["WhatsApp Cloud API"]
+    ResendAPI["Resend"]
+
+    Admin --> Web
+    Tecnico --> Mobile
+
+    Web -.->|usa tipos| Shared
+    Backend -.->|usa tipos| Shared
+    Mobile -.->|usa tipos| Shared
+
+    Web -->|REST / fetch, api.ts| Backend
+    Mobile -->|REST / fetch| Backend
+
+    Backend -->|supabase-js / PostgREST| DB
+    Web -->|login| Auth
+    Backend -->|valida token: getUser| Auth
+    Backend -->|sube/lee archivos| Storage
+    Backend -->|genera informes, chat IA| Anthropic
+    Backend -.->|webhook, inactivo| WhatsAppAPI
+    Backend -.->|envío correos, opcional| ResendAPI

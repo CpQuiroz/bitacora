@@ -1,0 +1,24 @@
+flowchart TB
+    subgraph Actores["Actores"]
+        Admin["Admin / Usuario empresa"]
+        Tecnico["Técnico / Chofer"]
+        ClienteFinal["Cliente final"]
+    end
+
+    Bitacora(("Bitácora"))
+
+    Supabase["Supabase<br/>DB Postgres + Auth + Storage"]
+    Anthropic["Anthropic Claude API<br/>claude-sonnet-5"]
+    WhatsApp["WhatsApp Cloud API - Meta<br/>(código listo, no activo)"]
+    Resend["Resend<br/>(opcional)"]
+    Pasarelas["Webpay / Flow / Mercado Pago<br/>(simuladas)"]
+
+    Admin -->|Usa vía panel web| Bitacora
+    Tecnico -->|Usa vía app móvil| Bitacora
+    ClienteFinal -->|Responde encuesta post-servicio| Bitacora
+
+    Bitacora --> Supabase
+    Bitacora --> Anthropic
+    Bitacora -.->|webhook inactivo| WhatsApp
+    Bitacora -.->|opcional, falla en silencio| Resend
+    Bitacora -.->|sin integración real| Pasarelas
