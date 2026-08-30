@@ -78,6 +78,10 @@ export async function crearClienteFlow(email: string, nombre: string, externalId
   return data;
 }
 
+export async function consultarCliente(customerId: string): Promise<{ creditCardType?: string; last4CardDigits?: string; registerDate?: string | null }> {
+  return llamarFlow("GET", "customer/get", { customerId });
+}
+
 // Devuelve la URL de Flow donde el usuario ingresa su tarjeta (nunca pasa
 // por nuestro backend) + un token para luego consultar el resultado.
 export async function linkRegistroTarjeta(customerId: string, urlRetorno: string): Promise<{ url: string; token: string }> {

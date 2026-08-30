@@ -10,7 +10,7 @@ import { env } from "../env";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
 import { requiereRol } from "../permisos";
-import { crearClienteFlow, linkRegistroTarjeta, consultarRegistroTarjeta, suscribirAPlan, cancelarSuscripcionFlow } from "../flow";
+import { crearClienteFlow, linkRegistroTarjeta, consultarRegistroTarjeta, consultarCliente, suscribirAPlan, cancelarSuscripcionFlow } from "../flow";
 
 export const suscripcionRouter = Router();
 
@@ -22,10 +22,41 @@ async function obtenerOCrearSuscripcion(empresaId: string) {
   return creada;
 }
 
+// Flow, al volver de registrar la tarjeta, NO agrega ?token= a nuestro
+// url_return (confirmado contra el sandbox real — /tarjeta/confirmar de
+// abajo asumía que sí, y en la práctica nunca se llama). Por eso acá,
+// cada vez que se consulta la suscripción, si hay un customer sin tarjeta
+// todavía registrada, preguntamos directo a Flow (customer/get) — mismo
+// patrón de "lazy check en una ruta frecuente" que revisarCotizacionesPorVencer.
+async function revisarRegistroTarjetaPendiente(suscripcion: Suscripcion) {
+  if (!suscripcion.flow_customer_id || suscripcion.tarjeta_ultimos4) return suscripcion;
+  try {
+    const cliente = await consultarCliente(suscripcion.flow_customer_id);
+    if (!cliente.last4CardDigits) return suscripcion;
+
+    const cambios: Partial<Suscripcion> = {
+      tarjeta_ultimos4: cliente.last4CardDigits,
+      tarjeta_marca: cliente.creditCardType ?? null,
+      actualizado_en: new Date().toISOString(),
+    };
+    if (!suscripcion.flow_subscription_id && env.FLOW_PLAN_ID) {
+      const suscripcionFlow = await suscribirAPlan(suscripcion.flow_customer_id, env.FLOW_PLAN_ID);
+      cambios.flow_subscription_id = suscripcionFlow.subscriptionId;
+      cambios.estado = "trial";
+    }
+    const { data } = await supabase.from("suscripciones").update(cambios).eq("empresa_id", suscripcion.empresa_id).select().single();
+    return data ?? suscripcion;
+  } catch (err) {
+    console.error("Error revisando registro de tarjeta pendiente en Flow:", err);
+    return suscripcion;
+  }
+}
+
 suscripcionRouter.get(
   "/",
   ah<RequestConEmpresa>(async (req, res) => {
-    const suscripcion = await obtenerOCrearSuscripcion(req.empresaId!);
+    let suscripcion = await obtenerOCrearSuscripcion(req.empresaId!);
+    suscripcion = await revisarRegistroTarjetaPendiente(suscripcion);
     const { data: cobros } = await supabase
       .from("suscripcion_cobros")
       .select("*")
