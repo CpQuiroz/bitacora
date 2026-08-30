@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import type { CatalogoItem, Cliente, EstadoPresupuesto, Presupuesto, PresupuestoItem } from "@bitacora/shared";
+import type { Cliente, EstadoPresupuesto, Presupuesto, PresupuestoItem } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
@@ -11,10 +11,11 @@ import { abrirPdfCotizacion } from "@/lib/descargarPdf";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText } from "@/components/ui";
 import { IconChevronLeft, IconMail, IconPlus } from "@/components/icons";
+import { CatalogoSelectorModal, type ItemSeleccionadoCatalogo } from "@/components/CatalogoSelectorModal";
 
 type ClienteInfo = Pick<Cliente, "id" | "nombre" | "correo" | "telefono" | "direccion">;
 type CotizacionDetalle = Presupuesto & { cliente_info: ClienteInfo | null; items: PresupuestoItem[] };
-type Linea = { catalogo_item_id: string; descripcion: string; cantidad: string; precio_unitario: string };
+type Linea = { catalogo_item_id: string | null; descripcion: string; cantidad: string; precio_unitario: string };
 
 const ESTADOS: EstadoPresupuesto[] = ["borrador", "enviado", "aprobado", "rechazado"];
 const IVA_TASA = 0.19;
@@ -37,13 +38,13 @@ export default function CotizacionDetallePage() {
   const [avisoEnvio, setAvisoEnvio] = useState<string | null>(null);
   const [errorEnvio, setErrorEnvio] = useState<string | null>(null);
 
-  const [catalogo, setCatalogo] = useState<CatalogoItem[]>([]);
   const [editando, setEditando] = useState(false);
   const [descEdit, setDescEdit] = useState("");
   const [fechaVencEdit, setFechaVencEdit] = useState("");
   const [lineasEdit, setLineasEdit] = useState<Linea[]>([]);
   const [guardandoEdit, setGuardandoEdit] = useState(false);
   const [errorEdit, setErrorEdit] = useState<string | null>(null);
+  const [selectorAbiertoEdit, setSelectorAbiertoEdit] = useState(false);
 
   const cargar = useCallback(async () => {
     const { data } = await supabase.auth.getSession();
@@ -51,15 +52,7 @@ export default function CotizacionDetallePage() {
       router.replace("/login");
       return;
     }
-    const [resMe, resCotizacion, resCatalogo] = await Promise.all([
-      apiFetch("/api/me"),
-      apiFetch(`/api/cotizaciones/${params.id}`),
-      apiFetch("/api/catalogo"),
-    ]);
-    if (resCatalogo.ok) {
-      const items: CatalogoItem[] = await resCatalogo.json();
-      setCatalogo(items.filter((i) => i.activo));
-    }
+    const [resMe, resCotizacion] = await Promise.all([apiFetch("/api/me"), apiFetch(`/api/cotizaciones/${params.id}`)]);
     if (resMe.ok) {
       const { usuario: u } = await resMe.json();
       if (u)
@@ -103,37 +96,30 @@ export default function CotizacionDetallePage() {
     setLineasEdit(
       cotizacion.items.length > 0
         ? cotizacion.items.map((it) => ({
-            catalogo_item_id: it.catalogo_item_id ?? "",
+            catalogo_item_id: it.catalogo_item_id ?? null,
             descripcion: it.descripcion,
             cantidad: String(it.cantidad),
             precio_unitario: String(it.precio_unitario),
           }))
-        : [{ catalogo_item_id: "", descripcion: "", cantidad: "1", precio_unitario: "0" }]
+        : [{ catalogo_item_id: null, descripcion: "", cantidad: "1", precio_unitario: "0" }]
     );
     setErrorEdit(null);
     setEditando(true);
   }
 
-  function agregarLineaEdit() {
-    setLineasEdit((v) => [...v, { catalogo_item_id: "", descripcion: "", cantidad: "1", precio_unitario: "0" }]);
-  }
   function quitarLineaEdit(idx: number) {
     setLineasEdit((v) => v.filter((_, i) => i !== idx));
   }
-  function elegirItemEdit(idx: number, catalogoItemId: string) {
-    const item = catalogo.find((i) => i.id === catalogoItemId);
-    setLineasEdit((v) =>
-      v.map((l, i) =>
-        i === idx
-          ? {
-              ...l,
-              catalogo_item_id: catalogoItemId,
-              descripcion: item?.nombre ?? l.descripcion,
-              precio_unitario: item ? String(item.precio_base) : l.precio_unitario,
-            }
-          : l
-      )
-    );
+  function onAgregarDesdeSelectorEdit(item: ItemSeleccionadoCatalogo) {
+    setLineasEdit((v) => [
+      ...v,
+      {
+        catalogo_item_id: item.catalogo_item_id,
+        descripcion: item.descripcion,
+        cantidad: String(item.cantidad),
+        precio_unitario: String(item.precio_unitario),
+      },
+    ]);
   }
   function cambiarLineaEdit(idx: number, cambios: Partial<Linea>) {
     setLineasEdit((v) => v.map((l, i) => (i === idx ? { ...l, ...cambios } : l)));
@@ -159,7 +145,7 @@ export default function CotizacionDetallePage() {
         descripcion: descEdit,
         fecha_vencimiento: fechaVencEdit || null,
         items: lineasValidas.map((l) => ({
-          catalogo_item_id: l.catalogo_item_id || null,
+          catalogo_item_id: l.catalogo_item_id,
           descripcion: l.descripcion,
           cantidad: Number(l.cantidad),
           precio_unitario: Number(l.precio_unitario),
@@ -271,18 +257,7 @@ export default function CotizacionDetallePage() {
 
               <div className="mt-5 flex flex-col gap-3">
                 {lineasEdit.map((l, idx) => (
-                  <div key={idx} className="grid items-end gap-3 sm:grid-cols-[2fr_1fr_1fr_1fr_auto]">
-                    <div>
-                      {idx === 0 && <Label>Ítem del catálogo</Label>}
-                      <Select value={l.catalogo_item_id} onChange={(e) => elegirItemEdit(idx, e.target.value)}>
-                        <option value="">Descripción manual…</option>
-                        {catalogo.map((i) => (
-                          <option key={i.id} value={i.id}>
-                            {i.nombre} — {formatMoneda(i.precio_base, usuario.moneda)}
-                          </option>
-                        ))}
-                      </Select>
-                    </div>
+                  <div key={idx} className="grid items-end gap-3 sm:grid-cols-[2fr_1fr_1fr_auto]">
                     <div>
                       {idx === 0 && <Label>Descripción</Label>}
                       <Input type="text" required value={l.descripcion} onChange={(e) => cambiarLineaEdit(idx, { descripcion: e.target.value })} />
@@ -301,10 +276,17 @@ export default function CotizacionDetallePage() {
                   </div>
                 ))}
               </div>
-              <Button type="button" variant="outline" onClick={agregarLineaEdit} className="mt-4">
+              <Button type="button" variant="outline" onClick={() => setSelectorAbiertoEdit(true)} className="mt-4">
                 <IconPlus className="h-4 w-4" />
                 Agregar ítem
               </Button>
+
+              <CatalogoSelectorModal
+                open={selectorAbiertoEdit}
+                onClose={() => setSelectorAbiertoEdit(false)}
+                onAgregar={onAgregarDesdeSelectorEdit}
+                moneda={usuario.moneda ?? "CLP"}
+              />
 
               <div className="mt-6 flex flex-col items-end gap-1 border-t border-border pt-4 text-sm">
                 <div className="flex w-56 justify-between">

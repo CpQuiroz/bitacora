@@ -2,15 +2,16 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import type { CatalogoItem, Cliente } from "@bitacora/shared";
+import type { Cliente } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Button, Card, ErrorText, Input, Label, PageHeader, Select } from "@/components/ui";
 import { IconChevronLeft, IconPlus } from "@/components/icons";
+import { CatalogoSelectorModal, type ItemSeleccionadoCatalogo } from "@/components/CatalogoSelectorModal";
 
-type Linea = { catalogo_item_id: string; descripcion: string; cantidad: string; precio_unitario: string };
+type Linea = { catalogo_item_id: string | null; descripcion: string; cantidad: string; precio_unitario: string };
 
 const IVA_TASA = 0.19;
 
@@ -18,7 +19,6 @@ export default function NuevaCotizacionPage() {
   const router = useRouter();
   const [usuario, setUsuario] = useState<UsuarioShell | null>(null);
   const [clientes, setClientes] = useState<Cliente[]>([]);
-  const [catalogo, setCatalogo] = useState<CatalogoItem[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
 
@@ -26,6 +26,7 @@ export default function NuevaCotizacionPage() {
   const [descripcion, setDescripcion] = useState("");
   const [fechaVencimiento, setFechaVencimiento] = useState("");
   const [lineas, setLineas] = useState<Linea[]>([]);
+  const [selectorAbierto, setSelectorAbierto] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -34,11 +35,7 @@ export default function NuevaCotizacionPage() {
         router.replace("/login");
         return;
       }
-      const [resMe, resClientes, resCatalogo] = await Promise.all([
-        apiFetch("/api/me"),
-        apiFetch("/api/clientes"),
-        apiFetch("/api/catalogo"),
-      ]);
+      const [resMe, resClientes] = await Promise.all([apiFetch("/api/me"), apiFetch("/api/clientes")]);
       if (resMe.ok) {
         const { usuario: u } = await resMe.json();
         if (u)
@@ -55,34 +52,23 @@ export default function NuevaCotizacionPage() {
           });
       }
       if (resClientes.ok) setClientes(await resClientes.json());
-      if (resCatalogo.ok) {
-        const items: CatalogoItem[] = await resCatalogo.json();
-        setCatalogo(items.filter((i) => i.activo));
-      }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function agregarLinea() {
-    setLineas((v) => [...v, { catalogo_item_id: "", descripcion: "", cantidad: "1", precio_unitario: "0" }]);
-  }
   function quitarLinea(idx: number) {
     setLineas((v) => v.filter((_, i) => i !== idx));
   }
-  function elegirItem(idx: number, catalogoItemId: string) {
-    const item = catalogo.find((i) => i.id === catalogoItemId);
-    setLineas((v) =>
-      v.map((l, i) =>
-        i === idx
-          ? {
-              ...l,
-              catalogo_item_id: catalogoItemId,
-              descripcion: item?.nombre ?? l.descripcion,
-              precio_unitario: item ? String(item.precio_base) : l.precio_unitario,
-            }
-          : l
-      )
-    );
+  function onAgregarDesdeSelector(item: ItemSeleccionadoCatalogo) {
+    setLineas((v) => [
+      ...v,
+      {
+        catalogo_item_id: item.catalogo_item_id,
+        descripcion: item.descripcion,
+        cantidad: String(item.cantidad),
+        precio_unitario: String(item.precio_unitario),
+      },
+    ]);
   }
   function cambiarLinea(idx: number, cambios: Partial<Linea>) {
     setLineas((v) => v.map((l, i) => (i === idx ? { ...l, ...cambios } : l)));
@@ -113,7 +99,7 @@ export default function NuevaCotizacionPage() {
         descripcion,
         fecha_vencimiento: fechaVencimiento || null,
         items: lineas.map((l) => ({
-          catalogo_item_id: l.catalogo_item_id || null,
+          catalogo_item_id: l.catalogo_item_id,
           descripcion: l.descripcion,
           cantidad: Number(l.cantidad),
           precio_unitario: Number(l.precio_unitario),
@@ -174,26 +160,11 @@ export default function NuevaCotizacionPage() {
             <h2 className="text-sm font-semibold text-foreground">Ítems</h2>
           </div>
 
-          {catalogo.length === 0 && (
-            <p className="mb-4 text-sm text-muted">
-              No tienes ítems activos en el Catálogo todavía — puedes describir el ítem manualmente igual.
-            </p>
-          )}
+          {lineas.length === 0 && <p className="mb-4 text-sm text-muted">Todavía no agregas ítems.</p>}
 
           <div className="flex flex-col gap-3">
             {lineas.map((l, idx) => (
-              <div key={idx} className="grid items-end gap-3 sm:grid-cols-[2fr_1fr_1fr_1fr_auto]">
-                <div>
-                  <Label>Ítem del catálogo</Label>
-                  <Select value={l.catalogo_item_id} onChange={(e) => elegirItem(idx, e.target.value)}>
-                    <option value="">Descripción manual…</option>
-                    {catalogo.map((i) => (
-                      <option key={i.id} value={i.id}>
-                        {i.nombre} — {formatMoneda(i.precio_base, usuario.moneda)}
-                      </option>
-                    ))}
-                  </Select>
-                </div>
+              <div key={idx} className="grid items-end gap-3 sm:grid-cols-[2fr_1fr_1fr_auto]">
                 <div>
                   <Label>Descripción</Label>
                   <Input type="text" required value={l.descripcion} onChange={(e) => cambiarLinea(idx, { descripcion: e.target.value })} />
@@ -213,10 +184,17 @@ export default function NuevaCotizacionPage() {
             ))}
           </div>
 
-          <Button type="button" variant="outline" onClick={agregarLinea} className="mt-4">
+          <Button type="button" variant="outline" onClick={() => setSelectorAbierto(true)} className="mt-4">
             <IconPlus className="h-4 w-4" />
             Agregar ítem
           </Button>
+
+          <CatalogoSelectorModal
+            open={selectorAbierto}
+            onClose={() => setSelectorAbierto(false)}
+            onAgregar={onAgregarDesdeSelector}
+            moneda={usuario.moneda ?? "CLP"}
+          />
 
           <div className="mt-6 flex flex-col items-end gap-1 border-t border-border pt-4 text-sm">
             <div className="flex w-56 justify-between">
