@@ -155,6 +155,8 @@ trabajosRouter.patch(
       encuesta_email,
       items,
       notas_internas,
+      fecha,
+      hora_programada,
     } = req.body ?? {};
     const cambios: Partial<Trabajo> = {};
 
@@ -228,6 +230,23 @@ trabajosRouter.patch(
     }
     if (encuesta_email !== undefined) cambios.encuesta_email = encuesta_email?.trim() || null;
     if (notas_internas !== undefined) cambios.notas_internas = notas_internas?.trim() || null;
+    // Fecha/hora son de agendamiento, no contractuales — se pueden
+    // reprogramar aunque la OS ya tenga firma (no cambian lo acordado
+    // con el cliente, solo cuándo se hace).
+    if (fecha !== undefined) {
+      if (typeof fecha !== "string" || !fecha) {
+        res.status(400).json({ error: "fecha inválida" });
+        return;
+      }
+      cambios.fecha = fecha;
+    }
+    if (hora_programada !== undefined) {
+      if (hora_programada !== null && hora_programada !== "" && !/^([01]\d|2[0-3]):[0-5]\d$/.test(hora_programada)) {
+        res.status(400).json({ error: "hora_programada inválida (usa HH:MM)" });
+        return;
+      }
+      cambios.hora_programada = hora_programada || null;
+    }
 
     // Ítems/monto son contractuales — se reemplazan enteros si vienen
     // ítems nuevos (mismo formato que POST /), y el monto se recalcula

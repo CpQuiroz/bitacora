@@ -48,6 +48,8 @@ export default function DetalleOrdenServicioPage() {
   const [descEdit, setDescEdit] = useState("");
   const [itemsEdit, setItemsEdit] = useState<ItemOS[]>([]);
   const [notasEdit, setNotasEdit] = useState("");
+  const [fechaEdit, setFechaEdit] = useState("");
+  const [horaEdit, setHoraEdit] = useState("");
   const [selectorAbierto, setSelectorAbierto] = useState(false);
   const [guardandoEdit, setGuardandoEdit] = useState(false);
   const [errorEdit, setErrorEdit] = useState<string | null>(null);
@@ -131,6 +133,8 @@ export default function DetalleOrdenServicioPage() {
       }))
     );
     setNotasEdit(detalle.notas_internas ?? "");
+    setFechaEdit(detalle.fecha);
+    setHoraEdit(detalle.hora_programada ?? "");
     setErrorEdit(null);
     setEditando(true);
   }
@@ -156,7 +160,11 @@ export default function DetalleOrdenServicioPage() {
   async function onGuardarEdicion() {
     setErrorEdit(null);
     setGuardandoEdit(true);
-    const body: Record<string, unknown> = { notas_internas: notasEdit.trim() || null };
+    const body: Record<string, unknown> = {
+      notas_internas: notasEdit.trim() || null,
+      fecha: fechaEdit,
+      hora_programada: horaEdit || null,
+    };
     if (!tieneFirma) {
       body.descripcion = descEdit.trim() || null;
       body.items = JSON.stringify(
@@ -219,6 +227,17 @@ export default function DetalleOrdenServicioPage() {
                   internas siguen editables.
                 </p>
               )}
+
+              <div className="mb-5 grid gap-4 sm:grid-cols-2">
+                <div>
+                  <Label>Fecha</Label>
+                  <Input type="date" required value={fechaEdit} onChange={(e) => setFechaEdit(e.target.value)} />
+                </div>
+                <div>
+                  <Label>Hora (opcional)</Label>
+                  <Input type="time" value={horaEdit} onChange={(e) => setHoraEdit(e.target.value)} />
+                </div>
+              </div>
 
               <div className="mb-5">
                 <Label>Descripción</Label>
