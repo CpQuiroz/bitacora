@@ -1,14 +1,15 @@
 "use client";
 
-import { GastosAgrupadosView } from "../GastosAgrupadosView";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
-export default function InformeGastosCentroCostoPage() {
-  return (
-    <GastosAgrupadosView
-      endpoint="gastos-centro-costo"
-      nombreDimension="Centro de Costo"
-      nombreDimensionPlural="Centros de Costo"
-      archivoCsv="informe-gastos-por-centro-costo"
-    />
-  );
+// Pestaña vieja "Gastos por Centro de Costo", unificada en
+// /informes/gastos — se mantiene esta ruta solo para no romper enlaces
+// guardados.
+export default function RedirectGastosCentroCosto() {
+  const router = useRouter();
+  useEffect(() => {
+    router.replace("/dashboard/informes/gastos?agrupacion=centro_costo");
+  }, [router]);
+  return null;
 }

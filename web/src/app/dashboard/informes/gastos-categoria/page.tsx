@@ -1,14 +1,14 @@
 "use client";
 
-import { GastosAgrupadosView } from "../GastosAgrupadosView";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
-export default function InformeGastosCategoriaPage() {
-  return (
-    <GastosAgrupadosView
-      endpoint="gastos-categoria"
-      nombreDimension="Categoría"
-      nombreDimensionPlural="Categorías"
-      archivoCsv="informe-gastos-por-categoria"
-    />
-  );
+// Pestaña vieja "Gastos por Categoría", unificada en /informes/gastos —
+// se mantiene esta ruta solo para no romper enlaces guardados.
+export default function RedirectGastosCategoria() {
+  const router = useRouter();
+  useEffect(() => {
+    router.replace("/dashboard/informes/gastos?agrupacion=categoria");
+  }, [router]);
+  return null;
 }

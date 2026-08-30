@@ -8,16 +8,7 @@ import { apiFetch } from "@/lib/api";
 import { DashboardShell } from "@/components/DashboardShell";
 import { Button, Input, PageHeader } from "@/components/ui";
 import { PERIODOS, resolverPeriodo, type PeriodoValor } from "@/lib/periodo";
-import {
-  IconChartBar,
-  IconClipboardCheck,
-  IconLayers,
-  IconMapPin,
-  IconTag,
-  IconUsers,
-  IconWallet,
-  IconWrench,
-} from "@/components/icons";
+import { IconChartBar, IconClipboardCheck, IconReceipt, IconTag, IconUsers, IconWallet, IconWrench } from "@/components/icons";
 import { InformesContext, type UsuarioConEmpresa } from "./InformesContext";
 
 const TABS = [
@@ -27,9 +18,7 @@ const TABS = [
   { valor: "operaciones", label: "Operaciones", icon: IconClipboardCheck },
   { valor: "servicios", label: "Servicios", icon: IconWrench },
   { valor: "clientes", label: "Clientes", icon: IconUsers },
-  { valor: "gastos-os", label: "Gastos en OS", icon: IconWrench },
-  { valor: "gastos-categoria", label: "Gastos por Categoría", icon: IconLayers },
-  { valor: "gastos-centro-costo", label: "Gastos por Centro de Costo", icon: IconMapPin },
+  { valor: "gastos", label: "Gastos", icon: IconReceipt },
 ];
 
 export default function InformesLayout({ children }: { children: ReactNode }) {

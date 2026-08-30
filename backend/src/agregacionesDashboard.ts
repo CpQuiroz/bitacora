@@ -615,93 +615,75 @@ export async function clientesPorComuna(empresaId: string) {
     .sort((a, b) => b.valor - a.valor);
 }
 
-type TrabajoClienteEmbed = { cliente: string } | { cliente: string }[] | null;
-function normalizarTrabajoCliente(t: TrabajoClienteEmbed): { cliente: string } | null {
-  return (Array.isArray(t) ? t[0] : t) ?? null;
-}
-
-// Pestaña Gastos en OS de Informes — solo gastos con trabajo_id (ver
-// Financiero → Gastos, campo "Orden de Servicio (opcional)").
-export async function gastosEnOS(empresaId: string, desde: string, hasta: string) {
-  const { data } = await supabase
-    .from("gastos")
-    .select("monto, estado, fecha, categoria, trabajo:trabajos(cliente)")
-    .eq("empresa_id", empresaId)
-    .not("trabajo_id", "is", null)
-    .gte("fecha", desde)
-    .lte("fecha", hasta);
-
-  type Fila = { monto: number; estado: string; fecha: string; categoria: string; trabajo: TrabajoClienteEmbed };
-  const g = (data ?? []) as unknown as Fila[];
-
-  const pagados = g.filter((x) => x.estado === "pagado");
-  const pendientes = g.filter((x) => x.estado === "pendiente");
-  const total = sum(g);
-
-  const porMes = new Map<string, number>();
-  for (const row of g) porMes.set(row.fecha.slice(0, 7), (porMes.get(row.fecha.slice(0, 7)) ?? 0) + Number(row.monto ?? 0));
-  const evolucionMensual = Array.from(porMes.entries())
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([mes, monto]) => ({ mes, monto }));
-
-  const porCategoria = new Map<string, number>();
-  for (const row of g) porCategoria.set(row.categoria, (porCategoria.get(row.categoria) ?? 0) + Number(row.monto ?? 0));
-
-  const porCliente = new Map<string, number>();
-  for (const row of g) {
-    const trabajo = normalizarTrabajoCliente(row.trabajo);
-    if (!trabajo) continue;
-    porCliente.set(trabajo.cliente, (porCliente.get(trabajo.cliente) ?? 0) + Number(row.monto ?? 0));
-  }
-
-  return {
-    kpis: {
-      total_gastos: total,
-      gastos_pagados: sum(pagados),
-      gastos_pendientes: sum(pendientes),
-      promedio_por_gasto: g.length > 0 ? total / g.length : 0,
-    },
-    cantidades: { total: g.length, pagados: pagados.length, pendientes: pendientes.length },
-    evolucion_mensual: evolucionMensual,
-    distribucion_categoria: Array.from(porCategoria.entries()).map(([estado, cantidad]) => ({ estado, cantidad })),
-    clientes_con_mas_gastos: Array.from(porCliente.entries())
-      .map(([cliente, monto]) => ({ cliente, monto }))
-      .sort((a, b) => b.monto - a.monto)
-      .slice(0, 10),
-  };
-}
-
-// Pestañas Gastos por Categoría / Gastos por Centro de Costo de
-// Informes — misma forma, agrupando por una u otra dimensión (todos
-// los gastos del período, no solo los vinculados a una OS).
-export async function gastosAgrupados(empresaId: string, desde: string, hasta: string, dimension: "categoria" | "centro_costo") {
-  const columnas = dimension === "categoria" ? "monto, categoria, fecha" : "monto, centro_costo_id, fecha, centro_costo:centros_costo(nombre)";
-  const { data } = await supabase
-    .from("gastos")
-    .select(columnas)
-    .eq("empresa_id", empresaId)
-    .gte("fecha", desde)
-    .lte("fecha", hasta);
-
-  type FilaCategoria = { monto: number; categoria: string; fecha: string };
-  type FilaCentro = { monto: number; centro_costo_id: string | null; fecha: string; centro_costo: { nombre: string } | { nombre: string }[] | null };
-
+// Pestaña única "Gastos" de Informes — misma forma para las 3
+// dimensiones, agrupando por una u otra. "categoria"/"centro_costo"
+// consideran todos los gastos del período; "os" mantiene el filtro que
+// ya tenía la vieja pestaña "Gastos en OS" (solo gastos vinculados a
+// una orden de servicio) — es una decisión de producto confirmada, no
+// un descuido: no se generaliza a "Sin OS" para no cambiar los números
+// que ya veía el usuario en esa dimensión.
+export async function gastosAgrupados(empresaId: string, desde: string, hasta: string, dimension: "categoria" | "centro_costo" | "os") {
   const porGrupo = new Map<string, number>();
   const porMes = new Map<string, number>();
   let cantidadConGrupo = 0;
 
   if (dimension === "categoria") {
-    for (const row of (data ?? []) as unknown as FilaCategoria[]) {
+    type Fila = { monto: number; categoria: string; fecha: string };
+    const { data } = await supabase
+      .from("gastos")
+      .select("monto, categoria, fecha")
+      .eq("empresa_id", empresaId)
+      .gte("fecha", desde)
+      .lte("fecha", hasta);
+    for (const row of (data ?? []) as unknown as Fila[]) {
       porGrupo.set(row.categoria, (porGrupo.get(row.categoria) ?? 0) + Number(row.monto ?? 0));
       porMes.set(row.fecha.slice(0, 7), (porMes.get(row.fecha.slice(0, 7)) ?? 0) + Number(row.monto ?? 0));
       cantidadConGrupo += 1;
     }
-  } else {
-    for (const row of (data ?? []) as unknown as FilaCentro[]) {
+  } else if (dimension === "centro_costo") {
+    type Fila = { monto: number; centro_costo_id: string | null; fecha: string; centro_costo: { nombre: string } | { nombre: string }[] | null };
+    const { data } = await supabase
+      .from("gastos")
+      .select("monto, centro_costo_id, fecha, centro_costo:centros_costo(nombre)")
+      .eq("empresa_id", empresaId)
+      .gte("fecha", desde)
+      .lte("fecha", hasta);
+    for (const row of (data ?? []) as unknown as Fila[]) {
       if (!row.centro_costo_id) continue;
       const centro = Array.isArray(row.centro_costo) ? row.centro_costo[0] : row.centro_costo;
       const nombre = centro?.nombre ?? "—";
       porGrupo.set(nombre, (porGrupo.get(nombre) ?? 0) + Number(row.monto ?? 0));
+      porMes.set(row.fecha.slice(0, 7), (porMes.get(row.fecha.slice(0, 7)) ?? 0) + Number(row.monto ?? 0));
+      cantidadConGrupo += 1;
+    }
+  } else {
+    type Fila = { monto: number; fecha: string; trabajo_id: string | null };
+    const { data } = await supabase
+      .from("gastos")
+      .select("monto, fecha, trabajo_id")
+      .eq("empresa_id", empresaId)
+      .not("trabajo_id", "is", null)
+      .gte("fecha", desde)
+      .lte("fecha", hasta);
+    const filas = (data ?? []) as unknown as Fila[];
+
+    const trabajoIds = [...new Set(filas.map((f) => f.trabajo_id).filter((id): id is string => id != null))];
+    const etiquetaPorTrabajo = new Map<string, string>();
+    if (trabajoIds.length > 0) {
+      const [{ data: trabajos }, { data: ordenes }] = await Promise.all([
+        supabase.from("trabajos").select("id, cliente").in("id", trabajoIds),
+        supabase.from("ordenes_servicio").select("trabajo_id, folio").in("trabajo_id", trabajoIds),
+      ]);
+      const folioPorTrabajo = new Map((ordenes ?? []).map((o) => [o.trabajo_id as string, o.folio as number | null]));
+      for (const t of trabajos ?? []) {
+        const folio = folioPorTrabajo.get(t.id);
+        etiquetaPorTrabajo.set(t.id, folio != null ? `OS N° ${folio} — ${t.cliente}` : t.cliente);
+      }
+    }
+
+    for (const row of filas) {
+      const etiqueta = etiquetaPorTrabajo.get(row.trabajo_id!) ?? "—";
+      porGrupo.set(etiqueta, (porGrupo.get(etiqueta) ?? 0) + Number(row.monto ?? 0));
       porMes.set(row.fecha.slice(0, 7), (porMes.get(row.fecha.slice(0, 7)) ?? 0) + Number(row.monto ?? 0));
       cantidadConGrupo += 1;
     }

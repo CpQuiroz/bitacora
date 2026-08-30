@@ -6,7 +6,6 @@ import {
   distribucionClientes,
   estadoPresupuestos,
   gastosAgrupados,
-  gastosEnOS,
   ingresosPorMes,
   ingresosVsGastos,
   kpis,
@@ -164,29 +163,19 @@ informesRouter.get(
   })
 );
 
+const DIMENSIONES_GASTOS = ["categoria", "centro_costo", "os"] as const;
+type DimensionGastos = (typeof DIMENSIONES_GASTOS)[number];
+
 informesRouter.get(
-  "/gastos-os",
+  "/gastos",
   ah<RequestConEmpresa>(async (req, res) => {
     const { desde, hasta } = periodoDesdeQuery(req);
-    const resultado = await gastosEnOS(req.empresaId!, desde, hasta);
-    res.json({ periodo: { desde, hasta }, ...resultado });
+    const agrupacionQuery = typeof req.query.agrupacion === "string" ? req.query.agrupacion : "";
+    const dimension: DimensionGastos = (DIMENSIONES_GASTOS as readonly string[]).includes(agrupacionQuery)
+      ? (agrupacionQuery as DimensionGastos)
+      : "categoria";
+    const resultado = await gastosAgrupados(req.empresaId!, desde, hasta, dimension);
+    res.json({ periodo: { desde, hasta }, agrupacion: dimension, ...resultado });
   })
 );
 
-informesRouter.get(
-  "/gastos-categoria",
-  ah<RequestConEmpresa>(async (req, res) => {
-    const { desde, hasta } = periodoDesdeQuery(req);
-    const resultado = await gastosAgrupados(req.empresaId!, desde, hasta, "categoria");
-    res.json({ periodo: { desde, hasta }, ...resultado });
-  })
-);
-
-informesRouter.get(
-  "/gastos-centro-costo",
-  ah<RequestConEmpresa>(async (req, res) => {
-    const { desde, hasta } = periodoDesdeQuery(req);
-    const resultado = await gastosAgrupados(req.empresaId!, desde, hasta, "centro_costo");
-    res.json({ periodo: { desde, hasta }, ...resultado });
-  })
-);
