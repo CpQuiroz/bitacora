@@ -361,6 +361,7 @@ cotizacionesRouter.post(
         items.map((it) => ({
           empresa_id: req.empresaId!,
           trabajo_id: trabajo.id,
+          catalogo_item_id: it.catalogo_item_id,
           descripcion: it.descripcion,
           cantidad: it.cantidad,
           precio_unitario: it.precio_unitario,

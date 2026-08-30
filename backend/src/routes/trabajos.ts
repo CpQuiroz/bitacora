@@ -333,12 +333,13 @@ trabajosRouter.post(
         return;
       }
     }
-    let itemsParseados: { descripcion: string; cantidad: number; precio_unitario: number }[] = [];
+    let itemsParseados: { catalogo_item_id: string | null; descripcion: string; cantidad: number; precio_unitario: number }[] = [];
     if (typeof items === "string" && items.trim()) {
       try {
         const parsed = JSON.parse(items);
         if (!Array.isArray(parsed)) throw new Error();
         itemsParseados = parsed.map((it) => ({
+          catalogo_item_id: it.catalogo_item_id || null,
           descripcion: String(it.descripcion ?? "").trim(),
           cantidad: Number(it.cantidad ?? 1),
           precio_unitario: Number(it.precio_unitario ?? 0),
@@ -387,6 +388,7 @@ trabajosRouter.post(
         itemsParseados.map((it) => ({
           empresa_id: req.empresaId!,
           trabajo_id: data.id,
+          catalogo_item_id: it.catalogo_item_id,
           descripcion: it.descripcion,
           cantidad: it.cantidad,
           precio_unitario: it.precio_unitario,

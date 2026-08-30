@@ -19,11 +19,12 @@ import {
 } from "@/components/ui";
 import { IconClipboardCheck, IconPlus } from "@/components/icons";
 import { MapaRutas, type Parada } from "@/components/MapaRutas";
+import { CatalogoSelectorModal, type ItemSeleccionadoCatalogo } from "@/components/CatalogoSelectorModal";
 
-type ItemOS = { descripcion: string; cantidad: string; precio_unitario: string };
+type ItemOS = { catalogo_item_id: string | null; descripcion: string; cantidad: string; precio_unitario: string };
+const ITEM_VACIO: ItemOS = { catalogo_item_id: null, descripcion: "", cantidad: "1", precio_unitario: "0" };
 
 const PRIORIDADES: Prioridad[] = ["alta", "media", "baja"];
-const ITEM_VACIO: ItemOS = { descripcion: "", cantidad: "1", precio_unitario: "0" };
 
 export default function NuevaOrdenServicioPage() {
   const router = useRouter();
@@ -45,6 +46,7 @@ export default function NuevaOrdenServicioPage() {
   const [horaProgramada, setHoraProgramada] = useState("");
   const [prioridad, setPrioridad] = useState<Prioridad>("media");
   const [items, setItems] = useState<ItemOS[]>([{ ...ITEM_VACIO }]);
+  const [selectorAbierto, setSelectorAbierto] = useState(false);
 
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -104,11 +106,19 @@ export default function NuevaOrdenServicioPage() {
   function actualizarItem(i: number, campo: keyof ItemOS, valor: string) {
     setItems((prev) => prev.map((it, idx) => (idx === i ? { ...it, [campo]: valor } : it)));
   }
-  function agregarItem() {
-    setItems((prev) => [...prev, { ...ITEM_VACIO }]);
-  }
   function quitarItem(i: number) {
     setItems((prev) => prev.filter((_, idx) => idx !== i));
+  }
+  function onAgregarDesdeSelector(item: ItemSeleccionadoCatalogo) {
+    setItems((prev) => [
+      ...prev,
+      {
+        catalogo_item_id: item.catalogo_item_id,
+        descripcion: item.descripcion,
+        cantidad: String(item.cantidad),
+        precio_unitario: String(item.precio_unitario),
+      },
+    ]);
   }
 
   const clienteSeleccionado = clientes.find((c) => c.id === clienteId);
@@ -153,6 +163,7 @@ export default function NuevaOrdenServicioPage() {
         estado: "en_curso",
         items: itemsValidos.length > 0 ? JSON.stringify(
           itemsValidos.map((it) => ({
+            catalogo_item_id: it.catalogo_item_id,
             descripcion: it.descripcion.trim(),
             cantidad: Number(it.cantidad || 0),
             precio_unitario: Number(it.precio_unitario || 0),
@@ -340,7 +351,7 @@ export default function NuevaOrdenServicioPage() {
           <Card>
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-sm font-semibold text-foreground">Ítems / materiales</h2>
-              <Button type="button" variant="outline" onClick={agregarItem}>
+              <Button type="button" variant="outline" onClick={() => setSelectorAbierto(true)}>
                 <IconPlus className="h-4 w-4" />
                 Agregar ítem
               </Button>
@@ -392,6 +403,13 @@ export default function NuevaOrdenServicioPage() {
               Total: ${totalItems.toLocaleString("es-CL")}
             </p>
           </Card>
+
+          <CatalogoSelectorModal
+            open={selectorAbierto}
+            onClose={() => setSelectorAbierto(false)}
+            onAgregar={onAgregarDesdeSelector}
+            moneda={usuario.moneda ?? "CLP"}
+          />
 
           {error && <ErrorText>{error}</ErrorText>}
           <Button type="submit" disabled={guardando} className="self-start">
