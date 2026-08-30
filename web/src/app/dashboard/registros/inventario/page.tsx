@@ -5,28 +5,13 @@ import { useRouter } from "next/navigation";
 import type { CatalogoItem, Empresa, InventarioMovimiento, TipoMovimientoInventario, Usuario } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
+import { estadoStock } from "@/lib/estadoStock";
 import { DashboardShell } from "@/components/DashboardShell";
 import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText, buttonClass } from "@/components/ui";
 import { IconBox } from "@/components/icons";
 
 type UsuarioConEmpresa = Usuario & { empresa: Empresa };
 type MovimientoConNombre = InventarioMovimiento & { item_nombre: string | null };
-
-// stock_minimo puede venir null (el ítem no definió el suyo) — en ese
-// caso se usa el umbral por defecto de la empresa (Configuración > Inventario).
-function estadoStock(item: CatalogoItem, minimoDefault: number): "en_stock" | "stock_bajo" | "sin_stock" {
-  const actual = item.stock_actual ?? 0;
-  const minimo = item.stock_minimo ?? minimoDefault;
-  if (actual <= 0) return "sin_stock";
-  if (actual <= minimo) return "stock_bajo";
-  return "en_stock";
-}
-
-const ETIQUETA_ESTADO: Record<string, string> = {
-  en_stock: "En stock",
-  stock_bajo: "Stock bajo",
-  sin_stock: "Sin stock",
-};
 
 export default function InventarioRegistroPage() {
   const router = useRouter();
@@ -212,9 +197,9 @@ export default function InventarioRegistroPage() {
                                   <option value="ajuste">Ajuste (fija el stock)</option>
                                 </Select>
                               </div>
-                              <div>
+                              <div className="w-32">
                                 <Label>Cantidad</Label>
-                                <Input type="number" min="0.01" step="0.01" required value={cantidad} onChange={(e) => setCantidad(e.target.value)} className="w-32" />
+                                <Input type="number" min="0.01" step="0.01" required value={cantidad} onChange={(e) => setCantidad(e.target.value)} />
                               </div>
                               <div className="flex-1 min-w-[200px]">
                                 <Label>Motivo (opcional)</Label>

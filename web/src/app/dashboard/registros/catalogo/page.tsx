@@ -6,6 +6,7 @@ import type { CatalogoItem, TipoCatalogoItem, UnidadMedida } from "@bitacora/sha
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
+import { estadoStock } from "@/lib/estadoStock";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText } from "@/components/ui";
 import { IconLayers, IconPlus } from "@/components/icons";
@@ -33,7 +34,9 @@ export default function CatalogoPage() {
   const [unidades, setUnidades] = useState<UnidadMedida[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("todos");
+  const [categoriaFiltro, setCategoriaFiltro] = useState<string | null>(null);
   const [busqueda, setBusqueda] = useState("");
+  const [stockMinimoDefault, setStockMinimoDefault] = useState(5);
 
   const [formAbierto, setFormAbierto] = useState(false);
   const [editandoId, setEditandoId] = useState<string | null>(null);
@@ -74,6 +77,7 @@ export default function CatalogoPage() {
           fuente: u.empresa?.fuente ?? null,
           moneda: u.empresa?.moneda ?? "CLP",
         });
+      if (u?.empresa?.inventario_stock_minimo_default != null) setStockMinimoDefault(u.empresa.inventario_stock_minimo_default);
     }
     if (!resItems.ok) {
       setError("No se pudo cargar el catálogo");
@@ -167,8 +171,12 @@ export default function CatalogoPage() {
     kit: lista.filter((i) => i.tipo === "kit").length,
   };
 
+  // Categorías reales configuradas, nunca hardcodeadas.
+  const categorias = [...new Set(lista.map((i) => i.categoria).filter((c): c is string => Boolean(c)))].sort();
+
   const filtrados = lista.filter((i) => {
     if (tab !== "todos" && i.tipo !== tab) return false;
+    if (categoriaFiltro && i.categoria !== categoriaFiltro) return false;
     const q = busqueda.trim().toLowerCase();
     if (q && !i.nombre.toLowerCase().includes(q) && !(i.sku ?? "").toLowerCase().includes(q) && !(i.categoria ?? "").toLowerCase().includes(q)) {
       return false;
@@ -313,6 +321,31 @@ export default function CatalogoPage() {
             </button>
           ))}
         </div>
+        {categorias.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setCategoriaFiltro(null)}
+              className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                categoriaFiltro === null ? "border-transparent bg-brand-soft text-brand" : "border-border text-muted hover:bg-brand-soft"
+              }`}
+            >
+              Todas las categorías
+            </button>
+            {categorias.map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => setCategoriaFiltro(categoriaFiltro === c ? null : c)}
+                className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                  categoriaFiltro === c ? "border-transparent bg-brand-soft text-brand" : "border-border text-muted hover:bg-brand-soft"
+                }`}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {error && <ErrorText>{error}</ErrorText>}
@@ -352,6 +385,7 @@ export default function CatalogoPage() {
                 <th className="px-5 py-3 font-medium">Categoría</th>
                 <th className="px-5 py-3 font-medium">Unidad</th>
                 <th className="px-5 py-3 font-medium">Precio Base</th>
+                <th className="px-5 py-3 font-medium">Stock</th>
                 <th className="px-5 py-3 font-medium">Estado</th>
                 <th className="px-5 py-3 font-medium">Acciones</th>
               </tr>
@@ -374,6 +408,16 @@ export default function CatalogoPage() {
                   <td className="px-5 py-3 text-muted">{i.categoria || "—"}</td>
                   <td className="px-5 py-3 text-muted">{i.unidad}</td>
                   <td className="px-5 py-3 text-foreground">{formatMoneda(i.precio_base, usuario.moneda)}</td>
+                  <td className="px-5 py-3">
+                    {i.tipo === "producto" && i.stock_actual != null ? (
+                      <span className="flex items-center gap-1.5">
+                        <Badge value={estadoStock(i, stockMinimoDefault)} />
+                        <span className="text-xs text-muted">{i.stock_actual}</span>
+                      </span>
+                    ) : (
+                      <span className="text-muted">—</span>
+                    )}
+                  </td>
                   <td className="px-5 py-3">
                     <Badge value={i.activo ? "activo" : "inactivo"} />
                   </td>

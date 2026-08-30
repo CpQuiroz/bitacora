@@ -346,3 +346,11 @@ export function IconShield(props: SVGProps<SVGSVGElement>) {
     </Icon>
   );
 }
+
+export function IconX(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M6 6l12 12M18 6L6 18" />
+    </Icon>
+  );
+}

@@ -521,6 +521,7 @@ export type OsItem = {
   id: string;
   empresa_id: string;
   trabajo_id: string;
+  catalogo_item_id: string | null;
   descripcion: string;
   cantidad: number;
   precio_unitario: number;
