@@ -383,6 +383,39 @@ export type AgendaProHorario = {
   hora_fin: string;
 };
 
+// Suscripción y cobro automático a empresas clientes (B2B, vía Flow).
+// Estado de facturación, separado de EstadoEmpresa (que sigue siendo el
+// gate de acceso general) — ver backend/src/flow.ts para la tabla completa
+// de qué dispara cada transición.
+export type EstadoSuscripcion = "trial" | "activa" | "pago_pendiente" | "suspendida_por_pago" | "cancelada";
+
+export type Suscripcion = {
+  empresa_id: string;
+  estado: EstadoSuscripcion;
+  flow_customer_id: string | null;
+  flow_subscription_id: string | null;
+  tarjeta_ultimos4: string | null;
+  tarjeta_marca: string | null;
+  proxima_fecha_cobro: string | null;
+  cancelada_en: string | null;
+  trial_aviso_enviado: boolean;
+  creado_en: string;
+  actualizado_en: string;
+};
+
+export type EstadoCobroSuscripcion = "exitoso" | "fallido" | "pendiente";
+
+export type SuscripcionCobro = {
+  id: string;
+  empresa_id: string;
+  flow_payment_id: string | null;
+  monto: number;
+  estado: EstadoCobroSuscripcion;
+  intento_numero: number;
+  error: string | null;
+  creado_en: string;
+};
+
 export type RutaPlanificada = {
   id: string;
   empresa_id: string;
@@ -929,6 +962,8 @@ export type Database = {
       paquetes_sesiones: Tabla<PaqueteSesiones>;
       agenda_pro_config: Tabla<AgendaProConfig>;
       agenda_pro_horarios: Tabla<AgendaProHorario>;
+      suscripciones: Tabla<Suscripcion>;
+      suscripcion_cobros: Tabla<SuscripcionCobro>;
     };
     Views: Record<string, never>;
     Functions: {

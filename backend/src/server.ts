@@ -120,7 +120,7 @@ app.post("/api/registro-empresa", requiereAuth, ah<RequestConUsuario>(async (req
   }
 
   const pruebaTerminaEn = new Date();
-  pruebaTerminaEn.setDate(pruebaTerminaEn.getDate() + 14);
+  pruebaTerminaEn.setDate(pruebaTerminaEn.getDate() + 21);
 
   const { data: empresa, error: errorEmpresa } = await supabase
     .from("empresas")
