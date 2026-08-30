@@ -354,3 +354,12 @@ export function IconX(props: SVGProps<SVGSVGElement>) {
     </Icon>
   );
 }
+
+export function IconMessageShare(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M4 5h13a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H10l-5 4v-4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z" />
+      <path d="M8 9.5h9M8 12.5h6" />
+    </Icon>
+  );
+}

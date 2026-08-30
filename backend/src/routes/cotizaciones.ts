@@ -5,7 +5,7 @@ import { supabase } from "../supabase";
 import { crearOrdenServicio } from "../ordenes";
 import { generarPdfCotizacion } from "../generarPdfCotizacion";
 import { enviarCotizacionPdf } from "../email";
-import { subirPdfCotizacion, descargarPdfCotizacion } from "../storage";
+import { subirPdfCotizacion, descargarPdfCotizacion, urlFirmadaPdfCotizacion } from "../storage";
 import { notificarCliente } from "../notificarCliente";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
@@ -507,6 +507,35 @@ cotizacionesRouter.get(
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `inline; filename="${datos.numeroTexto}.pdf"`);
     res.send(pdf);
+  })
+);
+
+// URL firmada temporal del PDF, para compartir fuera de la app (ej. link de
+// WhatsApp) — a diferencia de /:id/pdf, que exige el header Authorization,
+// esta URL es de por sí accesible por cualquiera que la tenga durante su
+// validez. 7 días: el máximo que permite una URL firmada de S3, pensado
+// para que el destinatario pueda abrirla días después de recibirla.
+cotizacionesRouter.get(
+  "/:id/pdf/compartir",
+  ah<RequestConEmpresa>(async (req, res) => {
+    const datos = await armarDatosPdfCotizacion(req.empresaId!, req.params.id);
+    if (!datos) {
+      res.status(404).json({ error: "Cotización no encontrada" });
+      return;
+    }
+    await obtenerPdfCotizacion(req.empresaId!, req.params.id, datos);
+    const { data: cotizacion } = await supabase
+      .from("presupuestos")
+      .select("pdf_url")
+      .eq("empresa_id", req.empresaId!)
+      .eq("id", req.params.id)
+      .maybeSingle();
+    if (!cotizacion?.pdf_url) {
+      res.status(500).json({ error: "No se pudo generar el PDF para compartir" });
+      return;
+    }
+    const url = await urlFirmadaPdfCotizacion(cotizacion.pdf_url, 60 * 24 * 7);
+    res.json({ url });
   })
 );
 

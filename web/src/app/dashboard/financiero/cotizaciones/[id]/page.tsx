@@ -7,10 +7,10 @@ import type { Cliente, EstadoPresupuesto, Presupuesto, PresupuestoItem } from "@
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
-import { abrirPdfCotizacion } from "@/lib/descargarPdf";
+import { abrirPdfCotizacion, urlCompartirPdfCotizacion } from "@/lib/descargarPdf";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText } from "@/components/ui";
-import { IconChevronLeft, IconMail, IconPlus } from "@/components/icons";
+import { IconChevronLeft, IconMail, IconMessageShare, IconPlus } from "@/components/icons";
 import { CatalogoSelectorModal, type ItemSeleccionadoCatalogo } from "@/components/CatalogoSelectorModal";
 
 type ClienteInfo = Pick<Cliente, "id" | "nombre" | "correo" | "telefono" | "direccion">;
@@ -33,6 +33,8 @@ export default function CotizacionDetallePage() {
   const [folioGenerado, setFolioGenerado] = useState<number | null>(null);
 
   const [descargando, setDescargando] = useState(false);
+  const [compartiendo, setCompartiendo] = useState(false);
+  const [errorCompartir, setErrorCompartir] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [avisoEnvio, setAvisoEnvio] = useState<string | null>(null);
@@ -167,6 +169,22 @@ export default function CotizacionDetallePage() {
     setDescargando(true);
     await abrirPdfCotizacion(params.id);
     setDescargando(false);
+  }
+
+  async function onCompartirWhatsapp() {
+    if (!cotizacion) return;
+    setErrorCompartir(null);
+    setCompartiendo(true);
+    const url = await urlCompartirPdfCotizacion(params.id);
+    setCompartiendo(false);
+    if (!url) {
+      setErrorCompartir("No se pudo generar el link para compartir");
+      return;
+    }
+    const numeroTexto = cotizacion.numero != null ? `N° ${String(cotizacion.numero).padStart(4, "0")} ` : "";
+    const saludo = cotizacion.cliente_info?.nombre ? `Hola ${cotizacion.cliente_info.nombre}, te` : "Te";
+    const mensaje = `${saludo} comparto la cotización ${numeroTexto}de ${usuario?.empresaNombre ?? ""} por ${formatMoneda(cotizacion.monto, usuario?.moneda)}: ${url}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(mensaje)}`, "_blank");
   }
 
   async function onEnviarEmail(e: FormEvent) {
@@ -378,9 +396,15 @@ export default function CotizacionDetallePage() {
               <Card>
                 <h2 className="mb-4 text-sm font-semibold text-foreground">PDF de la cotización</h2>
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                  <Button type="button" onClick={onDescargarPdf} disabled={descargando}>
-                    {descargando ? "Generando…" : "Descargar PDF"}
-                  </Button>
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" onClick={onDescargarPdf} disabled={descargando}>
+                      {descargando ? "Generando…" : "Descargar PDF"}
+                    </Button>
+                    <Button type="button" variant="outline" onClick={onCompartirWhatsapp} disabled={compartiendo}>
+                      <IconMessageShare className="h-4 w-4" />
+                      {compartiendo ? "Generando link…" : "Compartir por WhatsApp"}
+                    </Button>
+                  </div>
                   <form onSubmit={onEnviarEmail} className="flex w-full max-w-sm items-end gap-2">
                     <div className="flex-1">
                       <Label className="flex items-center gap-1">
@@ -406,6 +430,11 @@ export default function CotizacionDetallePage() {
                 {errorEnvio && (
                   <div className="mt-3">
                     <ErrorText>{errorEnvio}</ErrorText>
+                  </div>
+                )}
+                {errorCompartir && (
+                  <div className="mt-3">
+                    <ErrorText>{errorCompartir}</ErrorText>
                   </div>
                 )}
               </Card>
