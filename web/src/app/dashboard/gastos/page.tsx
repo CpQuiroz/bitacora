@@ -39,6 +39,7 @@ export default function GastosPage() {
   const [filtroCategoria, setFiltroCategoria] = useState("todos");
 
   const [formAbierto, setFormAbierto] = useState(false);
+  const [editandoId, setEditandoId] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
@@ -98,6 +99,7 @@ export default function GastosPage() {
   }, []);
 
   function abrirNuevo() {
+    setEditandoId(null);
     setDescripcion("");
     setMonto("");
     setCategoriaGastoId("");
@@ -109,6 +111,26 @@ export default function GastosPage() {
     setComprobante(null);
     setFormError(null);
     setFormAbierto(true);
+  }
+
+  function abrirEdicion(g: GastoConDatos) {
+    setFormAbierto(false);
+    setEditandoId(g.id);
+    setDescripcion(g.descripcion ?? "");
+    setMonto(String(g.monto));
+    setCategoriaGastoId(g.categoria_gasto_id ?? "");
+    setCentroCostoId(g.centro_costo_id ?? "");
+    setProveedorId(g.proveedor_id ?? "");
+    setTrabajoId(g.trabajo_id ?? "");
+    setFecha(g.fecha);
+    setEstado(g.estado);
+    setComprobante(null);
+    setFormError(null);
+  }
+
+  function cerrarFormulario() {
+    setFormAbierto(false);
+    setEditandoId(null);
   }
 
   async function onSubmit(e: FormEvent) {
@@ -131,15 +153,18 @@ export default function GastosPage() {
     if (trabajoId) body.set("trabajo_id", trabajoId);
     if (comprobante) body.set("comprobante", comprobante);
 
-    const res = await apiFetch("/api/gastos", { method: "POST", body });
+    const res = editandoId
+      ? await apiFetch(`/api/gastos/${editandoId}`, { method: "PATCH", body })
+      : await apiFetch("/api/gastos", { method: "POST", body });
     setGuardando(false);
     if (!res.ok) {
       const respBody = await res.json().catch(() => ({}));
-      setFormError(respBody.error ?? "No se pudo crear el gasto");
+      setFormError(respBody.error ?? (editandoId ? "No se pudo guardar el gasto" : "No se pudo crear el gasto"));
       return;
     }
-    setAviso("Gasto creado.");
+    setAviso(editandoId ? "Gasto actualizado." : "Gasto creado.");
     setFormAbierto(false);
+    setEditandoId(null);
     cargar();
   }
 
@@ -177,7 +202,7 @@ export default function GastosPage() {
     <DashboardShell usuario={usuario}>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <PageHeader title="Gastos" subtitle="Gestiona tus cuentas por pagar" />
-        <Button type="button" onClick={() => (formAbierto ? setFormAbierto(false) : abrirNuevo())}>
+        <Button type="button" onClick={() => (formAbierto || editandoId ? cerrarFormulario() : abrirNuevo())}>
           <IconPlus className="h-4 w-4" />
           Nuevo Gasto
         </Button>
@@ -202,9 +227,9 @@ export default function GastosPage() {
         </Card>
       </div>
 
-      {formAbierto && (
+      {(formAbierto || editandoId) && (
         <Card className="mb-6">
-          <h2 className="mb-4 text-sm font-semibold text-foreground">Nuevo gasto</h2>
+          <h2 className="mb-4 text-sm font-semibold text-foreground">{editandoId ? "Editar gasto" : "Nuevo gasto"}</h2>
           <form onSubmit={onSubmit} className="flex flex-col gap-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
@@ -286,9 +311,9 @@ export default function GastosPage() {
             {formError && <ErrorText>{formError}</ErrorText>}
             <div className="flex gap-2">
               <Button type="submit" disabled={guardando} className="self-start">
-                {guardando ? "Guardando…" : "Agregar gasto"}
+                {guardando ? "Guardando…" : editandoId ? "Guardar cambios" : "Agregar gasto"}
               </Button>
-              <Button type="button" variant="ghost" onClick={() => setFormAbierto(false)}>
+              <Button type="button" variant="ghost" onClick={cerrarFormulario}>
                 Cancelar
               </Button>
             </div>
@@ -379,10 +404,20 @@ export default function GastosPage() {
                   <td className="px-5 py-3 text-muted">{g.proveedor_info?.nombre ?? "—"}</td>
                   <td className="px-5 py-3">{formatMoneda(g.monto, usuario.moneda)}</td>
                   <td className="px-5 py-3">
-                    <Badge value={estadoMostrado(g)} />
+                    <div className="flex items-center gap-1.5">
+                      <Badge value={estadoMostrado(g)} />
+                      {g.editado_en && (
+                        <span className="text-[11px] text-muted" title={`Editado el ${new Date(g.editado_en).toLocaleString("es-CL")} después de estar pagado`}>
+                          (editado)
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-3">
+                      <button type="button" onClick={() => abrirEdicion(g)} className="text-xs font-medium text-brand hover:underline">
+                        Editar
+                      </button>
                       {g.estado === "pendiente" && (
                         <button type="button" onClick={() => marcarPagado(g.id)} className="text-xs font-medium text-brand hover:underline">
                           Marcar pagado

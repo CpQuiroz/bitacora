@@ -581,6 +581,8 @@ export type Gasto = {
   fecha: string;
   estado: EstadoGasto;
   fecha_pago: string | null;
+  editado_por: string | null;
+  editado_en: string | null;
   creado_en: string;
 };
 

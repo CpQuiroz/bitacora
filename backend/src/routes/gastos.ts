@@ -149,9 +149,30 @@ gastosRouter.patch(
   "/:id",
   upload.single("comprobante"),
   ah<RequestConEmpresa>(async (req, res) => {
-    const { estado, fecha_pago, categoria_gasto_id, centro_costo_id, proveedor_id, trabajo_id, descripcion } = req.body ?? {};
+    const { estado, fecha_pago, categoria_gasto_id, centro_costo_id, proveedor_id, trabajo_id, descripcion, monto, fecha } = req.body ?? {};
     const cambios: Partial<Gasto> = {};
 
+    const { data: gastoActual } = await supabase.from("gastos").select("estado").eq("empresa_id", req.empresaId!).eq("id", req.params.id).maybeSingle();
+    if (!gastoActual) {
+      res.status(404).json({ error: "Gasto no encontrado" });
+      return;
+    }
+
+    if (monto !== undefined) {
+      const montoNum = Number(monto);
+      if (Number.isNaN(montoNum) || montoNum < 0) {
+        res.status(400).json({ error: "monto inválido" });
+        return;
+      }
+      cambios.monto = montoNum;
+    }
+    if (fecha !== undefined) {
+      if (typeof fecha !== "string" || !fecha) {
+        res.status(400).json({ error: "fecha inválida" });
+        return;
+      }
+      cambios.fecha = fecha;
+    }
     if (estado !== undefined) {
       if (!ESTADOS.includes(estado)) {
         res.status(400).json({ error: `estado debe ser uno de: ${ESTADOS.join(", ")}` });
@@ -201,6 +222,14 @@ gastosRouter.patch(
     if (Object.keys(cambios).length === 0) {
       res.status(400).json({ error: "Nada que actualizar" });
       return;
+    }
+
+    // Registro simple de auditoría: solo si el gasto YA estaba pagado
+    // antes de este cambio (no hay ninguna restricción que impida
+    // editarlo, pero conviene dejar trazado quién tocó algo ya pagado).
+    if (gastoActual.estado === "pagado") {
+      cambios.editado_por = req.userId!;
+      cambios.editado_en = new Date().toISOString();
     }
 
     const { data, error } = await supabase
