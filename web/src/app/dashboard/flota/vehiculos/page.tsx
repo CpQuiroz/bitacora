@@ -13,6 +13,14 @@ import { IconPlus, IconTruck } from "@/components/icons";
 
 type VehiculoConAsignacion = Vehiculo & { asignacion_vigente: { colaborador_id: string; colaborador_nombre: string } | null };
 
+// TODO: decisión pendiente — este módulo (Flota > Vehículos, activos
+// propios de la empresa asignados a colaboradores) se solapa
+// conceptualmente con Registros > Equipos (activos del CLIENTE
+// instalados en su sitio, ver web/src/app/dashboard/registros/equipos/page.tsx).
+// Ambos son "activos con marca/modelo/mantención" pero con dueño y
+// ciclo de vida distintos — evaluar si conviene unificar el modelo de
+// datos o si la distinción de dueño amerita mantenerlos separados.
+
 export default function VehiculosPage() {
   const router = useRouter();
   const [usuario, setUsuario] = useState<UsuarioShell | null>(null);

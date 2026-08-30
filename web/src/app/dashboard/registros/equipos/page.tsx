@@ -12,6 +12,14 @@ import { IconPlus, IconWrench } from "@/components/icons";
 type EquipoConCliente = Equipo & { cliente: Pick<Cliente, "id" | "nombre"> | null };
 type Filtro = "todos" | "activos" | "inactivos";
 
+// TODO: decisión pendiente — este módulo (activos del CLIENTE
+// instalados en su sitio) se solapa conceptualmente con Flota >
+// Vehículos (activos propios de la empresa asignados a colaboradores,
+// ver web/src/app/dashboard/flota/vehiculos/page.tsx). Ambos son
+// "activos con marca/modelo/mantención" pero con dueño y ciclo de
+// vida distintos — evaluar si conviene unificar el modelo de datos o
+// si la distinción de dueño amerita mantenerlos separados.
+
 export default function EquiposPage() {
   const router = useRouter();
   const [usuario, setUsuario] = useState<UsuarioShell | null>(null);
