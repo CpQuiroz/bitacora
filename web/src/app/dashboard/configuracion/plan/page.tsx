@@ -290,7 +290,10 @@ export default function PlanPage() {
 
           <div className="rounded-xl border border-brand/40 bg-brand-soft p-4">
             <p className="text-sm font-semibold text-brand">Pro</p>
-            <p className="mt-2 text-2xl font-bold text-foreground">Además de Básico:</p>
+            <p className="mt-2 text-2xl font-bold text-foreground">
+              {clp(90000)} <span className="text-sm font-normal text-muted">/ mes</span>
+            </p>
+            <p className="mt-2 text-sm font-medium text-foreground">Además de Básico:</p>
             <ul className="mt-4 flex flex-col gap-2 text-sm text-foreground">
               {(info?.modulosExtraPro ?? []).map((m) => (
                 <li key={m} className="flex items-start gap-2">
