@@ -17,7 +17,6 @@ import {
   IconChat,
   IconChevronRight,
   IconClipboardCheck,
-  IconCreditCard,
   IconHelp,
   IconHome,
   IconLogOut,
@@ -454,22 +453,6 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
                   className="block px-4 py-2 text-sm text-foreground hover:bg-brand-soft hover:text-brand"
                 >
                   Perfil
-                </Link>
-                <Link
-                  href="/dashboard/plan"
-                  onClick={() => setDropdownAbierto(false)}
-                  className="flex items-center gap-2 px-4 py-2 text-sm text-foreground hover:bg-brand-soft hover:text-brand"
-                >
-                  <IconCreditCard className="h-4 w-4" />
-                  Plan
-                </Link>
-                <Link
-                  href="/dashboard/configuracion/cuenta"
-                  onClick={() => setDropdownAbierto(false)}
-                  className="flex items-center gap-2 px-4 py-2 text-sm text-foreground hover:bg-brand-soft hover:text-brand"
-                >
-                  <IconSettings className="h-4 w-4" />
-                  Configuración
                 </Link>
                 <Link
                   href="/dashboard/ayuda"
