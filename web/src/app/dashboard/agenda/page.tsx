@@ -124,7 +124,7 @@ export default function AgendaPage() {
   const router = useRouter();
   const [usuario, setUsuario] = useState<UsuarioShell | null>(null);
   const [modulosDeshabilitados, setModulosDeshabilitados] = useState<Modulo[]>([]);
-  const [vista, setVista] = useState<"mes" | "dia">("mes");
+  const [vista, setVista] = useState<"mes" | "semana" | "dia">("mes");
   const [fechaActual, setFechaActual] = useState(() => new Date());
   const [ordenes, setOrdenes] = useState<OrdenListado[] | null>(null);
   const [tareas, setTareas] = useState<TareaListado[] | null>(null);
@@ -158,9 +158,21 @@ export default function AgendaPage() {
 
   const cargar = useCallback(async () => {
     setError(null);
-    const primerDia = new Date(fechaActual.getFullYear(), fechaActual.getMonth(), 1);
-    const ultimoDia = new Date(fechaActual.getFullYear(), fechaActual.getMonth() + 1, 0);
-    const params = new URLSearchParams({ desde: fmtLocal(primerDia), hasta: fmtLocal(ultimoDia) });
+    let desde: Date;
+    let hasta: Date;
+    if (vista === "mes") {
+      desde = new Date(fechaActual.getFullYear(), fechaActual.getMonth(), 1);
+      hasta = new Date(fechaActual.getFullYear(), fechaActual.getMonth() + 1, 0);
+    } else if (vista === "semana") {
+      desde = new Date(fechaActual);
+      desde.setDate(desde.getDate() - desde.getDay());
+      hasta = new Date(desde);
+      hasta.setDate(hasta.getDate() + 6);
+    } else {
+      desde = fechaActual;
+      hasta = fechaActual;
+    }
+    const params = new URLSearchParams({ desde: fmtLocal(desde), hasta: fmtLocal(hasta) });
     const [resOrdenes, resTareas] = await Promise.all([
       apiFetch(`/api/ordenes-servicio?${params.toString()}`),
       apiFetch(`/api/tareas?${params.toString()}`),
@@ -171,7 +183,7 @@ export default function AgendaPage() {
     }
     setOrdenes(await resOrdenes.json());
     if (resTareas.ok) setTareas(await resTareas.json());
-  }, [fechaActual]);
+  }, [fechaActual, vista]);
 
   useEffect(() => {
     (async () => {
@@ -237,6 +249,14 @@ export default function AgendaPage() {
 
   function irMes(delta: number) {
     setFechaActual((prev) => new Date(prev.getFullYear(), prev.getMonth() + delta, 1));
+    setDiaSeleccionado(null);
+  }
+  function irSemana(delta: number) {
+    setFechaActual((prev) => {
+      const next = new Date(prev);
+      next.setDate(next.getDate() + delta * 7);
+      return next;
+    });
     setDiaSeleccionado(null);
   }
   function irDia(delta: number) {
@@ -419,6 +439,19 @@ export default function AgendaPage() {
   const tituloMes = `${NOMBRES_MES[fechaActual.getMonth()]} ${fechaActual.getFullYear()}`;
   const tituloDia = `${fechaActual.getDate()} de ${NOMBRES_MES[fechaActual.getMonth()]}, ${fechaActual.getFullYear()}`;
 
+  const inicioSemana = new Date(fechaActual);
+  inicioSemana.setDate(inicioSemana.getDate() - inicioSemana.getDay());
+  const diasSemana = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(inicioSemana);
+    d.setDate(d.getDate() + i);
+    return d;
+  });
+  const finSemana = diasSemana[6];
+  const tituloSemana =
+    inicioSemana.getMonth() === finSemana.getMonth()
+      ? `${inicioSemana.getDate()} – ${finSemana.getDate()} de ${NOMBRES_MES[inicioSemana.getMonth()]}, ${inicioSemana.getFullYear()}`
+      : `${inicioSemana.getDate()} de ${NOMBRES_MES[inicioSemana.getMonth()]} – ${finSemana.getDate()} de ${NOMBRES_MES[finSemana.getMonth()]}, ${finSemana.getFullYear()}`;
+
   const eventosDiaSeleccionado = diaSeleccionado ? eventosPorDia.get(diaSeleccionado) ?? [] : [];
   const eventosDelDiaVista = vista === "dia" ? eventosPorDia.get(fmtLocal(fechaActual)) ?? [] : [];
 
@@ -439,6 +472,15 @@ export default function AgendaPage() {
               }`}
             >
               Mes
+            </button>
+            <button
+              type="button"
+              onClick={() => setVista("semana")}
+              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                vista === "semana" ? "bg-brand-soft text-brand" : "text-muted"
+              }`}
+            >
+              Semana
             </button>
             <button
               type="button"
@@ -629,15 +671,17 @@ export default function AgendaPage() {
         <div className="flex items-center justify-between">
           <button
             type="button"
-            onClick={() => (vista === "mes" ? irMes(-1) : irDia(-1))}
+            onClick={() => (vista === "mes" ? irMes(-1) : vista === "semana" ? irSemana(-1) : irDia(-1))}
             className="rounded-lg p-2 text-muted transition-colors hover:bg-brand-soft hover:text-brand"
           >
             <IconChevronLeft className="h-4 w-4" />
           </button>
-          <h2 className="text-sm font-semibold capitalize text-foreground">{vista === "mes" ? tituloMes : tituloDia}</h2>
+          <h2 className="text-sm font-semibold capitalize text-foreground">
+            {vista === "mes" ? tituloMes : vista === "semana" ? tituloSemana : tituloDia}
+          </h2>
           <button
             type="button"
-            onClick={() => (vista === "mes" ? irMes(1) : irDia(1))}
+            onClick={() => (vista === "mes" ? irMes(1) : vista === "semana" ? irSemana(1) : irDia(1))}
             className="rounded-lg p-2 text-muted transition-colors hover:bg-brand-soft hover:text-brand"
           >
             <IconChevronRight className="h-4 w-4" />
@@ -759,6 +803,57 @@ export default function AgendaPage() {
             )}
           </Card>
         </div>
+      ) : vista === "semana" ? (
+        <Card className="overflow-hidden p-0">
+          <div className="grid grid-cols-1 divide-y divide-border sm:grid-cols-7 sm:divide-x sm:divide-y-0">
+            {diasSemana.map((dia) => {
+              const clave = fmtLocal(dia);
+              const esHoy = clave === hoy;
+              const eventosDia = eventosPorDia.get(clave) ?? [];
+              return (
+                <div key={clave} className="flex flex-col">
+                  <div className={`flex items-center justify-center gap-2 border-b border-border px-3 py-2 text-xs font-medium sm:flex-col sm:gap-1 ${esHoy ? "text-brand" : "text-muted"}`}>
+                    <span className="capitalize">{NOMBRES_DIA_CORTOS[dia.getDay()]}</span>
+                    <span
+                      className={`flex h-6 w-6 items-center justify-center rounded-full text-sm ${
+                        esHoy ? "bg-brand text-brand-foreground" : "text-foreground"
+                      }`}
+                    >
+                      {dia.getDate()}
+                    </span>
+                  </div>
+                  <div className="flex min-h-[4rem] flex-1 flex-col gap-1.5 p-2">
+                    {eventosDia.length === 0 ? (
+                      <p className="py-1 text-center text-xs text-muted sm:hidden">Sin eventos</p>
+                    ) : (
+                      eventosDia.map((e) => {
+                        const est = ESTADOS_AGENDA.find((x) => x.valor === e.estadoAgenda)!;
+                        return (
+                          <button
+                            key={`${e.tipo}-${e.id}`}
+                            type="button"
+                            onClick={() => abrirEvento(e)}
+                            className={`flex w-full flex-col items-start gap-0.5 overflow-hidden rounded-lg px-2 py-1.5 text-left text-xs transition-opacity hover:opacity-80 ${est.clase}`}
+                          >
+                            <span className="flex items-center gap-1 font-medium">
+                              {e.tipo === "tarea" ? (
+                                <IconClipboardCheck className="h-3 w-3 shrink-0" />
+                              ) : (
+                                <IconWrench className="h-3 w-3 shrink-0" />
+                              )}
+                              {e.hora ?? "Sin hora"}
+                            </span>
+                            <span className="w-full truncate">{e.titulo}</span>
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
       ) : (
         <Card>
           {eventosDelDiaVista.length === 0 ? (
