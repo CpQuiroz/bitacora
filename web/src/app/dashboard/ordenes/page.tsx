@@ -8,8 +8,10 @@ import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { abrirPdfOS } from "@/lib/descargarPdf";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Badge, Card, ErrorText, Label, Select, buttonClass } from "@/components/ui";
-import { IconClipboardCheck, IconPlus } from "@/components/icons";
+import { Badge, Button, Card, ErrorText, Input, Label, Select, SuccessText, buttonClass } from "@/components/ui";
+import { IconClipboardCheck, IconPlus, IconReceipt } from "@/components/icons";
+import { Modal } from "@/components/Modal";
+import { formatMoneda } from "@/lib/formatMoneda";
 
 type OrdenListado = Trabajo & {
   cliente_info: { nombre: string } | null;
@@ -32,6 +34,14 @@ export default function OrdenesServicioPage() {
   const [clienteId, setClienteId] = useState("");
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
+
+  const [seleccionados, setSeleccionados] = useState<Set<string>>(new Set());
+  const [modalCobroAbierto, setModalCobroAbierto] = useState(false);
+  const [semanaCobro, setSemanaCobro] = useState("");
+  const [diasPlazoCobro, setDiasPlazoCobro] = useState("30");
+  const [guardandoCobro, setGuardandoCobro] = useState(false);
+  const [errorCobro, setErrorCobro] = useState<string | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
 
   const cargarOrdenes = useCallback(async () => {
     setError(null);
@@ -75,6 +85,59 @@ export default function OrdenesServicioPage() {
   useEffect(() => {
     cargarOrdenes();
   }, [cargarOrdenes]);
+
+  function toggleSeleccion(id: string) {
+    setSeleccionados((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSeleccionTodos() {
+    if (!ordenes) return;
+    setSeleccionados((prev) => (prev.size === ordenes.length ? new Set() : new Set(ordenes.map((o) => o.id))));
+  }
+
+  const ordenesSeleccionadas = (ordenes ?? []).filter((o) => seleccionados.has(o.id));
+  const nombresClientesSeleccion = new Set(ordenesSeleccionadas.map((o) => o.cliente_info?.nombre ?? o.cliente));
+  const montoTotalSeleccion = ordenesSeleccionadas.reduce((acc, o) => acc + o.monto, 0);
+
+  function abrirModalCobro() {
+    setSemanaCobro("");
+    setDiasPlazoCobro("30");
+    setErrorCobro(null);
+    setModalCobroAbierto(true);
+  }
+
+  async function generarCobro() {
+    if (nombresClientesSeleccion.size !== 1) {
+      setErrorCobro("Las OS seleccionadas deben ser todas del mismo cliente.");
+      return;
+    }
+    setErrorCobro(null);
+    setGuardandoCobro(true);
+    const res = await apiFetch("/api/cobros/desde-trabajos", {
+      method: "POST",
+      body: JSON.stringify({
+        cliente: [...nombresClientesSeleccion][0],
+        semana: semanaCobro,
+        dias_plazo: Number(diasPlazoCobro || 30),
+        trabajo_ids: [...seleccionados],
+      }),
+    });
+    setGuardandoCobro(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setErrorCobro(body.error ?? "No se pudo generar el cobro");
+      return;
+    }
+    setModalCobroAbierto(false);
+    setSeleccionados(new Set());
+    setAviso("Cobro generado a partir de las OS seleccionadas.");
+    cargarOrdenes();
+  }
 
   if (!usuario) return null;
 
@@ -147,6 +210,29 @@ export default function OrdenesServicioPage() {
         </div>
       </Card>
 
+      {aviso && (
+        <div className="mb-4">
+          <SuccessText>{aviso}</SuccessText>
+        </div>
+      )}
+
+      {seleccionados.size > 0 && (
+        <Card className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-foreground">
+            {seleccionados.size} OS seleccionada{seleccionados.size === 1 ? "" : "s"} — {formatMoneda(montoTotalSeleccion, usuario.moneda)}
+          </p>
+          <div className="flex gap-2">
+            <Button type="button" variant="ghost" onClick={() => setSeleccionados(new Set())}>
+              Limpiar selección
+            </Button>
+            <Button type="button" onClick={abrirModalCobro}>
+              <IconReceipt className="h-4 w-4" />
+              Generar Cobro
+            </Button>
+          </div>
+        </Card>
+      )}
+
       {error && <ErrorText>{error}</ErrorText>}
       {ordenes === null && !error && <p className="text-sm text-muted">Cargando…</p>}
       {ordenes?.length === 0 && (
@@ -160,6 +246,15 @@ export default function OrdenesServicioPage() {
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-border text-xs text-muted">
+                <th className="px-5 py-3 font-medium">
+                  <input
+                    type="checkbox"
+                    checked={seleccionados.size > 0 && seleccionados.size === ordenes.length}
+                    onChange={toggleSeleccionTodos}
+                    className="accent-brand"
+                    aria-label="Seleccionar todas"
+                  />
+                </th>
                 <th className="px-5 py-3 font-medium">Folio</th>
                 <th className="px-5 py-3 font-medium">Cliente</th>
                 <th className="px-5 py-3 font-medium">Colaborador</th>
@@ -175,6 +270,15 @@ export default function OrdenesServicioPage() {
                   onClick={() => router.push(`/dashboard/ordenes/${o.id}`)}
                   className="cursor-pointer border-b border-border last:border-0 hover:bg-brand-soft/40"
                 >
+                  <td className="px-5 py-3" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={seleccionados.has(o.id)}
+                      onChange={() => toggleSeleccion(o.id)}
+                      className="accent-brand"
+                      aria-label={`Seleccionar OS de ${o.cliente_info?.nombre ?? o.cliente}`}
+                    />
+                  </td>
                   <td className="px-5 py-3 font-medium text-foreground">
                     {o.orden?.folio != null ? `N° ${o.orden.folio}` : "—"}
                   </td>
@@ -209,6 +313,37 @@ export default function OrdenesServicioPage() {
           </table>
         </Card>
       )}
+
+      <Modal open={modalCobroAbierto} onClose={() => setModalCobroAbierto(false)} title="Generar Cobro">
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-muted">
+            Se agruparán {seleccionados.size} OS de <strong className="text-foreground">{[...nombresClientesSeleccion].join(", ")}</strong> por un
+            total de {formatMoneda(montoTotalSeleccion, usuario.moneda)}.
+          </p>
+          {nombresClientesSeleccion.size > 1 && (
+            <ErrorText>Las OS seleccionadas deben ser todas del mismo cliente — ajusta la selección.</ErrorText>
+          )}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <Label>Semana (opcional)</Label>
+              <Input type="text" placeholder="ej: S33" value={semanaCobro} onChange={(e) => setSemanaCobro(e.target.value)} />
+            </div>
+            <div>
+              <Label>Plazo de pago (días)</Label>
+              <Input type="number" min="1" value={diasPlazoCobro} onChange={(e) => setDiasPlazoCobro(e.target.value)} />
+            </div>
+          </div>
+          {errorCobro && <ErrorText>{errorCobro}</ErrorText>}
+          <div className="flex gap-2">
+            <Button type="button" onClick={generarCobro} disabled={guardandoCobro || nombresClientesSeleccion.size !== 1}>
+              {guardandoCobro ? "Generando…" : "Generar Cobro"}
+            </Button>
+            <Button type="button" variant="ghost" onClick={() => setModalCobroAbierto(false)}>
+              Cancelar
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </DashboardShell>
   );
 }
