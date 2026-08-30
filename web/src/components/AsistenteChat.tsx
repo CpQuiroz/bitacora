@@ -3,14 +3,23 @@
 import { useEffect, useRef, useState } from "react";
 import type { MensajeAsistente } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
-import { IconArrowRight, IconChat } from "./icons";
+import { IconArrowRight, IconChat, IconPanelRight, IconX } from "./icons";
 
 function idTemporal() {
   return `tmp-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
+type ModoAsistente = "burbuja" | "panel";
+const CLAVE_MODO = "bitacora:asistente-modo";
+// Mismo corte que usa el sidebar del dashboard para su versión móvil
+// (ver DashboardShell, clases sm:hidden) — en mobile el modo panel no
+// tiene sentido, así que se ignora la preferencia guardada.
+const MEDIA_QUERY_MOBILE = "(max-width: 639px)";
+
 export function AsistenteChat() {
   const [abierto, setAbierto] = useState(false);
+  const [modo, setModo] = useState<ModoAsistente>("burbuja");
+  const [esMobile, setEsMobile] = useState(false);
   const [cargado, setCargado] = useState(false);
   const [mensajes, setMensajes] = useState<MensajeAsistente[]>([]);
   const [texto, setTexto] = useState("");
@@ -22,6 +31,28 @@ export function AsistenteChat() {
   useEffect(() => {
     if (listaRef.current) listaRef.current.scrollTop = listaRef.current.scrollHeight;
   }, [mensajes, enviando]);
+
+  useEffect(() => {
+    const guardado = window.localStorage.getItem(CLAVE_MODO);
+    if (guardado === "panel") setModo("panel");
+  }, []);
+
+  useEffect(() => {
+    const mq = window.matchMedia(MEDIA_QUERY_MOBILE);
+    setEsMobile(mq.matches);
+    const onChange = (e: MediaQueryListEvent) => setEsMobile(e.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  function alternarModo() {
+    const nuevo: ModoAsistente = modo === "burbuja" ? "panel" : "burbuja";
+    setModo(nuevo);
+    window.localStorage.setItem(CLAVE_MODO, nuevo);
+  }
+
+  // En mobile siempre burbuja/modal, sin importar lo guardado.
+  const modoEfectivo: ModoAsistente = esMobile ? "burbuja" : modo;
 
   async function abrir() {
     setAbierto(true);
@@ -90,8 +121,16 @@ export function AsistenteChat() {
     );
   }
 
+  const esPanel = modoEfectivo === "panel";
+
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex h-[32rem] w-[23rem] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl print:hidden">
+    <div
+      className={
+        esPanel
+          ? "fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col overflow-hidden border-l border-border bg-surface shadow-2xl print:hidden"
+          : "fixed bottom-6 right-6 z-50 flex h-[32rem] w-[23rem] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl print:hidden"
+      }
+    >
       <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
         <div className="flex items-center gap-2">
           <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-soft text-brand">
@@ -100,6 +139,17 @@ export function AsistenteChat() {
           <span className="text-sm font-semibold text-foreground">Asistente</span>
         </div>
         <div className="flex items-center gap-1">
+          {!esMobile && (
+            <button
+              type="button"
+              onClick={alternarModo}
+              aria-label={esPanel ? "Cambiar a modo burbuja" : "Cambiar a modo panel"}
+              title={esPanel ? "Modo burbuja" : "Modo panel"}
+              className="rounded-md p-1.5 text-muted hover:bg-brand-soft hover:text-brand"
+            >
+              <IconPanelRight className="h-4 w-4" />
+            </button>
+          )}
           <button
             type="button"
             onClick={limpiar}
@@ -111,9 +161,9 @@ export function AsistenteChat() {
             type="button"
             onClick={() => setAbierto(false)}
             aria-label="Cerrar asistente"
-            className="rounded-md px-2 py-1 text-sm text-muted hover:bg-brand-soft hover:text-brand"
+            className="rounded-md p-1.5 text-muted hover:bg-brand-soft hover:text-brand"
           >
-            ×
+            <IconX className="h-4 w-4" />
           </button>
         </div>
       </div>

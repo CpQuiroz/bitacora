@@ -363,3 +363,12 @@ export function IconMessageShare(props: SVGProps<SVGSVGElement>) {
     </Icon>
   );
 }
+
+export function IconPanelRight(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <rect x="3.5" y="4.5" width="17" height="15" rx="2" />
+      <path d="M15 4.5v15" />
+    </Icon>
+  );
+}
