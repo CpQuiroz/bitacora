@@ -48,7 +48,18 @@ export default function IntegracionesPage() {
 
   const cargar = useCallback(async () => {
     const res = await apiFetch("/api/integraciones");
-    if (res.ok) setIntegraciones(await res.json());
+    if (res.ok) {
+      const todas: IntegracionPublica[] = await res.json();
+      // "Anthropic Claude API" no se oculta acá porque esté rota — el
+      // backend ya la usa globalmente vía ANTHROPIC_API_KEY (.env), no
+      // por-empresa como el resto de esta pantalla. Mostrarla decía
+      // "No conectado" de forma confusa aunque la IA funcione en toda
+      // la app. Se saca del listado (no se borra del backend/DEFINICIONES
+      // en integraciones.ts) hasta que decidamos si esta pantalla pasa a
+      // reflejar también integraciones globales o si esta se documenta
+      // en otro lado.
+      setIntegraciones(todas.filter((i) => i.proveedor !== "anthropic"));
+    }
   }, []);
 
   useEffect(() => {
