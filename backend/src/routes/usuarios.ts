@@ -9,6 +9,7 @@ import { ah } from "../asyncHandler";
 import { requiereModulo } from "../permisos";
 import { vehiculoAsignadoAColaborador } from "./vehiculos";
 import { enviarInvitacion } from "../email";
+import { limitarInvitacion } from "../rateLimiters";
 
 export const usuariosRouter = Router();
 
@@ -46,10 +47,12 @@ usuariosRouter.get(
 );
 
 // Invita a un nuevo miembro del equipo (chofer, técnico, contador...)
-// por correo. Solo el admin de la empresa puede invitar. Supabase manda
-// el correo con el link para que la persona defina su contraseña.
+// por correo. Solo el admin de la empresa puede invitar — el correo
+// con el link para definir la contraseña se manda vía Resend (ver
+// enviarInvitacion en email.ts).
 usuariosRouter.post(
   "/invitar",
+  limitarInvitacion,
   requiereModulo("gestion_control"),
   ah<RequestConEmpresa>(async (req, res) => {
 

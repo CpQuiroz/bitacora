@@ -52,6 +52,7 @@ import { vehiculosRouter } from "./routes/vehiculos";
 import { documentosRouter } from "./routes/documentos";
 import { mfaRouter } from "./routes/mfa";
 import { authLoginRouter } from "./routes/authLogin";
+import { limitarLogin, limitarEncuestaPublica } from "./rateLimiters";
 import { modulosDeshabilitadosDeEmpresa, requiereModulo } from "./permisos";
 import { ah } from "./asyncHandler";
 
@@ -179,7 +180,7 @@ app.use("/api/informe", requiereAuth, requiereEmpresa, requiereModulo("informe_i
 app.use("/api/tipos-trabajo", requiereAuth, requiereEmpresa, tiposTrabajoRouter);
 app.use("/api/usuarios", requiereAuth, requiereEmpresa, usuariosRouter);
 app.use("/api/usuarios/me/mfa", requiereAuth, requiereEmpresa, mfaRouter);
-app.use("/api/auth", authLoginRouter);
+app.use("/api/auth", limitarLogin, authLoginRouter);
 app.use("/api/clientes", requiereAuth, requiereEmpresa, clientesRouter);
 app.use("/api/rutas", requiereAuth, requiereEmpresa, rutasRouter);
 app.use("/api/empresa", requiereAuth, requiereEmpresa, miEmpresaRouter);
@@ -214,7 +215,7 @@ app.use("/api/tipos-documento", requiereAuth, requiereEmpresa, tiposDocumentoRou
 app.use("/api/vehiculos", requiereAuth, requiereEmpresa, requiereModulo("flota"), vehiculosRouter);
 app.use("/api/documentos", requiereAuth, requiereEmpresa, documentosRouter);
 // Sin auth a propósito — la abre un cliente anónimo desde el correo.
-app.use("/api/encuesta", encuestaPublicaRouter);
+app.use("/api/encuesta", limitarEncuestaPublica, encuestaPublicaRouter);
 app.use("/api/reserva-publica", reservaPublicaRouter);
 app.use("/api/flow-webhook", flowWebhookRouter);
 // Sin auth a propósito — lo llama Meta directamente; se autentica con
