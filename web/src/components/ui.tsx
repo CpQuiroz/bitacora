@@ -178,6 +178,11 @@ const badgeStyles: Record<string, string> = {
   // notificaciones al cliente: canal de envío
   correo: "bg-brand-soft text-brand",
   whatsapp: "bg-success-soft text-success",
+  // suscripción B2B (Flow) — estado de facturación
+  trial: "bg-brand-soft text-brand",
+  pago_pendiente: "bg-warning-soft text-warning",
+  suspendida_por_pago: "bg-danger-soft text-danger",
+  exitoso: "bg-success-soft text-success",
 };
 
 export function Badge({ value }: { value: string }) {

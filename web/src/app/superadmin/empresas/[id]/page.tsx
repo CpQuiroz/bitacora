@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import type { EstadoEmpresa, Plan } from "@bitacora/shared";
+import type { EstadoEmpresa, Plan, Suscripcion, SuscripcionCobro } from "@bitacora/shared";
 import { SuperAdminShell } from "@/components/SuperAdminShell";
 import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select } from "@/components/ui";
 import { IconChevronLeft, IconShield } from "@/components/icons";
@@ -43,6 +43,14 @@ type Salud = {
   errores_recientes: { ruta: string; mensaje: string; creado_en: string }[];
 };
 
+const ETIQUETA_ESTADO_SUSCRIPCION: Record<string, string> = {
+  trial: "En prueba",
+  activa: "Activa",
+  pago_pendiente: "Pago pendiente",
+  suspendida_por_pago: "Suspendida por falta de pago",
+  cancelada: "Cancelada",
+};
+
 const ETIQUETA_FEATURE: Record<string, string> = {
   analisis_foto: "Análisis de fotos",
   informe_os: "Informe de OS",
@@ -79,6 +87,12 @@ export default function SuperAdminSaludEmpresaPage() {
   const [modulos, setModulos] = useState<{ modulo: string; activado: boolean }[] | null>(null);
   const [guardandoModulo, setGuardandoModulo] = useState<string | null>(null);
   const [errorModulos, setErrorModulos] = useState<string | null>(null);
+  const [suscripcion, setSuscripcion] = useState<{ prueba_termina_en: string | null; suscripcion: Suscripcion | null; cobros: SuscripcionCobro[] } | null>(
+    null
+  );
+  const [nuevaFechaPrueba, setNuevaFechaPrueba] = useState("");
+  const [guardandoPrueba, setGuardandoPrueba] = useState(false);
+  const [errorPrueba, setErrorPrueba] = useState<string | null>(null);
 
   async function cargar() {
     const res = await superadminFetch(`/api/superadmin/empresas/${params.id}/salud`);
@@ -101,6 +115,15 @@ export default function SuperAdminSaludEmpresaPage() {
     if (res.ok) setModulos(await res.json());
   }
 
+  async function cargarSuscripcion() {
+    const res = await superadminFetch(`/api/superadmin/empresas/${params.id}/suscripcion`);
+    if (res.ok) {
+      const datos = await res.json();
+      setSuscripcion(datos);
+      setNuevaFechaPrueba(datos.prueba_termina_en ?? "");
+    }
+  }
+
   useEffect(() => {
     if (!obtenerTokenSuperAdmin()) {
       router.replace("/superadmin/login");
@@ -108,8 +131,25 @@ export default function SuperAdminSaludEmpresaPage() {
     }
     cargar();
     cargarModulos();
+    cargarSuscripcion();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id]);
+
+  async function onExtenderPrueba() {
+    setErrorPrueba(null);
+    setGuardandoPrueba(true);
+    const res = await superadminFetch(`/api/superadmin/empresas/${params.id}/prueba`, {
+      method: "PATCH",
+      body: JSON.stringify({ prueba_termina_en: nuevaFechaPrueba }),
+    });
+    setGuardandoPrueba(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setErrorPrueba(body.error ?? "No se pudo extender la prueba");
+      return;
+    }
+    cargarSuscripcion();
+  }
 
   async function onTogglearModulo(modulo: string, activado: boolean) {
     setErrorModulos(null);
@@ -335,6 +375,89 @@ export default function SuperAdminSaludEmpresaPage() {
               <p className="mt-3 text-[11px] text-muted">No hay límites de uso conectados al plan todavía — es solo una etiqueta.</p>
             </Card>
           </div>
+
+          <Card className="mt-4">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-foreground">Suscripción</h2>
+              {suscripcion?.suscripcion && <Badge value={suscripcion.suscripcion.estado} />}
+            </div>
+            {!suscripcion ? (
+              <p className="text-sm text-muted">Cargando…</p>
+            ) : !suscripcion.suscripcion ? (
+              <p className="text-sm text-muted">Esta empresa todavía no tiene una suscripción registrada.</p>
+            ) : (
+              <div className="flex flex-col gap-3">
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div>
+                    <p className="text-xs text-muted">Estado</p>
+                    <p className="text-sm font-medium text-foreground">{ETIQUETA_ESTADO_SUSCRIPCION[suscripcion.suscripcion.estado]}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted">Tarjeta</p>
+                    <p className="text-sm font-medium text-foreground">
+                      {suscripcion.suscripcion.tarjeta_ultimos4
+                        ? `${suscripcion.suscripcion.tarjeta_marca ?? "Tarjeta"} •••• ${suscripcion.suscripcion.tarjeta_ultimos4}`
+                        : "Sin registrar"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted">Próximo cobro</p>
+                    <p className="text-sm font-medium text-foreground">
+                      {suscripcion.suscripcion.proxima_fecha_cobro
+                        ? new Date(`${suscripcion.suscripcion.proxima_fecha_cobro}T00:00:00`).toLocaleDateString("es-CL")
+                        : "—"}
+                    </p>
+                  </div>
+                </div>
+
+                {suscripcion.cobros.length > 0 && (
+                  <div className="overflow-x-auto border-t border-border pt-3">
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className="text-muted">
+                          <th className="py-1.5 pr-4 font-medium">Fecha</th>
+                          <th className="py-1.5 pr-4 font-medium">Monto</th>
+                          <th className="py-1.5 pr-4 font-medium">Intento</th>
+                          <th className="py-1.5 font-medium">Estado</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {suscripcion.cobros.map((c) => (
+                          <tr key={c.id} className="border-t border-border">
+                            <td className="py-1.5 pr-4 text-muted">{new Date(c.creado_en).toLocaleString("es-CL")}</td>
+                            <td className="py-1.5 pr-4 text-foreground">${Math.round(c.monto).toLocaleString("es-CL")}</td>
+                            <td className="py-1.5 pr-4 text-muted">{c.intento_numero}</td>
+                            <td className="py-1.5">
+                              <Badge value={c.estado} />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                <div className="border-t border-border pt-3">
+                  <Label>Extender período de prueba (cortesía comercial)</Label>
+                  <div className="flex items-end gap-2">
+                    <Input type="date" value={nuevaFechaPrueba} onChange={(e) => setNuevaFechaPrueba(e.target.value)} className="max-w-xs" />
+                    <Button type="button" variant="outline" disabled={guardandoPrueba || !nuevaFechaPrueba} onClick={onExtenderPrueba}>
+                      {guardandoPrueba ? "Guardando…" : "Guardar"}
+                    </Button>
+                  </div>
+                  {errorPrueba && (
+                    <div className="mt-2">
+                      <ErrorText>{errorPrueba}</ErrorText>
+                    </div>
+                  )}
+                  <p className="mt-2 text-[11px] text-muted">
+                    El estado de facturación en sí (activa/suspendida por pago/cancelada) lo actualiza automáticamente el webhook de
+                    Flow — acá solo se puede extender la fecha de fin de prueba.
+                  </p>
+                </div>
+              </div>
+            )}
+          </Card>
 
           <Card className="mt-4">
             <h2 className="mb-2 text-sm font-semibold text-foreground">Módulos contratados</h2>

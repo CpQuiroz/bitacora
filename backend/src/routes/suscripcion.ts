@@ -47,24 +47,29 @@ suscripcionRouter.post(
     const { data: empresa } = await supabase.from("empresas").select("nombre").eq("id", req.empresaId!).single();
 
     let customerId = suscripcion.flow_customer_id as string | null;
-    if (!customerId) {
-      const { data: authUser } = await supabase.auth.admin.getUserById(req.userId!);
-      const correo = authUser?.user?.email;
-      if (!correo) {
-        res.status(400).json({ error: "No pudimos determinar tu correo de acceso" });
-        return;
+    try {
+      if (!customerId) {
+        const { data: authUser } = await supabase.auth.admin.getUserById(req.userId!);
+        const correo = authUser?.user?.email;
+        if (!correo) {
+          res.status(400).json({ error: "No pudimos determinar tu correo de acceso" });
+          return;
+        }
+        const cliente = await crearClienteFlow(correo, empresa?.nombre ?? "Empresa", req.empresaId!);
+        customerId = cliente.customerId;
+        await supabase.from("suscripciones").update({ flow_customer_id: customerId }).eq("empresa_id", req.empresaId!);
       }
-      const cliente = await crearClienteFlow(correo, empresa?.nombre ?? "Empresa", req.empresaId!);
-      customerId = cliente.customerId;
-      await supabase.from("suscripciones").update({ flow_customer_id: customerId }).eq("empresa_id", req.empresaId!);
-    }
 
-    // Flow/Transbank agregan ?token=... al volver — la página del
-    // dashboard lo detecta y llama a POST /tarjeta/confirmar (autenticado
-    // normal, no hace falta pasar nada por la URL más que el token).
-    const urlRetorno = `${env.WEB_URL}/dashboard/configuracion/plan`;
-    const registro = await linkRegistroTarjeta(customerId, urlRetorno);
-    res.json({ url: registro.url + (registro.url.includes("?") ? "&" : "?") + `token=${registro.token}` });
+      // Flow/Transbank agregan ?token=... al volver — la página del
+      // dashboard lo detecta y llama a POST /tarjeta/confirmar (autenticado
+      // normal, no hace falta pasar nada por la URL más que el token).
+      const urlRetorno = `${env.WEB_URL}/dashboard/configuracion/plan`;
+      const registro = await linkRegistroTarjeta(customerId, urlRetorno);
+      res.json({ url: registro.url + (registro.url.includes("?") ? "&" : "?") + `token=${registro.token}` });
+    } catch (err) {
+      console.error("Error iniciando registro de tarjeta en Flow:", err);
+      res.status(502).json({ error: "No pudimos conectar con la pasarela de pago — intenta de nuevo en un momento" });
+    }
   })
 );
 
@@ -143,7 +148,13 @@ suscripcionRouter.post(
       res.status(400).json({ error: "No tienes una suscripción activa para cancelar" });
       return;
     }
-    await cancelarSuscripcionFlow(suscripcion.flow_subscription_id);
+    try {
+      await cancelarSuscripcionFlow(suscripcion.flow_subscription_id);
+    } catch (err) {
+      console.error("Error cancelando suscripción en Flow:", err);
+      res.status(502).json({ error: "No pudimos conectar con la pasarela de pago — intenta de nuevo en un momento" });
+      return;
+    }
     const { data, error } = await supabase
       .from("suscripciones")
       .update({ estado: "cancelada", cancelada_en: new Date().toISOString() })
