@@ -8,8 +8,14 @@ import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { estadoStock } from "@/lib/estadoStock";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
+import { SelectCrear } from "@/components/SelectCrear";
 import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText } from "@/components/ui";
-import { IconLayers, IconPlus } from "@/components/icons";
+import { IconHelp, IconLayers, IconPlus } from "@/components/icons";
+
+// Categorías sugeridas cuando el catálogo todavía no tiene ninguna
+// propia — una vez que existan categorías reales usadas, esas se
+// muestran primero (ver "categorias" más abajo).
+const CATEGORIAS_SUGERIDAS = ["Repuestos", "Insumos", "Herramientas", "Materiales", "Mano de obra"];
 
 type ItemConKit = CatalogoItem & { items?: { item_id: string; cantidad: number; nombre: string }[] };
 type Tab = "todos" | "producto" | "servicio" | "kit";
@@ -99,7 +105,7 @@ export default function CatalogoPage() {
     setNombre("");
     setSku("");
     setCategoria("");
-    setUnidad("unidad");
+    setUnidad("");
     setPrecioBase("");
     setKitItems([]);
     setFormError(null);
@@ -173,6 +179,10 @@ export default function CatalogoPage() {
 
   // Categorías reales configuradas, nunca hardcodeadas.
   const categorias = [...new Set(lista.map((i) => i.categoria).filter((c): c is string => Boolean(c)))].sort();
+  // Chips de sugerencia en el formulario: las categorías ya usadas por
+  // esta empresa si existen, o una lista genérica por defecto la
+  // primera vez que se usa el catálogo (todavía vacío).
+  const chipsCategoria = categorias.length > 0 ? categorias : CATEGORIAS_SUGERIDAS;
 
   const filtrados = lista.filter((i) => {
     if (tab !== "todos" && i.tipo !== tab) return false;
@@ -221,27 +231,46 @@ export default function CatalogoPage() {
                 <Input type="text" required value={nombre} onChange={(e) => setNombre(e.target.value)} />
               </div>
               <div>
-                <Label>SKU</Label>
+                <Label className="flex items-center gap-1.5">
+                  SKU
+                  <span title="Código interno para identificar y buscar este ítem rápido — no tiene que ser el mismo del proveedor, es solo tuyo.">
+                    <IconHelp className="h-3.5 w-3.5 text-muted" />
+                  </span>
+                </Label>
                 <Input type="text" value={sku} onChange={(e) => setSku(e.target.value)} />
               </div>
               <div>
                 <Label>Categoría</Label>
                 <Input type="text" value={categoria} onChange={(e) => setCategoria(e.target.value)} />
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {chipsCategoria.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setCategoria(c)}
+                      className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-colors ${
+                        categoria === c ? "border-transparent bg-brand-soft text-brand" : "border-border text-muted hover:bg-brand-soft"
+                      }`}
+                    >
+                      {c}
+                    </button>
+                  ))}
+                </div>
               </div>
               <div>
                 <Label>Unidad</Label>
-                {unidades.length > 0 ? (
-                  <Select value={unidad} onChange={(e) => setUnidad(e.target.value)}>
-                    {!unidades.some((u) => u.nombre === unidad) && <option value={unidad}>{unidad}</option>}
-                    {unidades.map((u) => (
-                      <option key={u.id} value={u.nombre}>
-                        {u.abreviatura ? `${u.nombre} (${u.abreviatura})` : u.nombre}
-                      </option>
-                    ))}
-                  </Select>
-                ) : (
-                  <Input type="text" placeholder="unidad, hora, m2…" value={unidad} onChange={(e) => setUnidad(e.target.value)} />
-                )}
+                <SelectCrear
+                  value={unidades.find((u) => u.nombre === unidad)?.id ?? ""}
+                  onChange={(id) => setUnidad(unidades.find((u) => u.id === id)?.nombre ?? unidad)}
+                  opciones={unidades}
+                  endpoint="/api/unidades-medida"
+                  placeholder={unidad ? unidad : "Selecciona una unidad…"}
+                  etiquetaCrear="+ Nueva unidad…"
+                  onCreado={(nueva) => {
+                    setUnidades((prev) => [...prev, nueva]);
+                    setUnidad(nueva.nombre);
+                  }}
+                />
               </div>
               <div>
                 <Label>Precio base (CLP)</Label>
