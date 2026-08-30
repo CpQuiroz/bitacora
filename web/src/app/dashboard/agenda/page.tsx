@@ -19,7 +19,7 @@ import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Badge, Button, Card, ErrorText, Input, Label, Select, Textarea, buttonClass } from "@/components/ui";
-import { IconCalendar, IconChevronLeft, IconChevronRight, IconClipboardCheck, IconPlus } from "@/components/icons";
+import { IconCalendar, IconChevronLeft, IconChevronRight, IconClipboardCheck, IconPlus, IconWrench } from "@/components/icons";
 
 type OrdenListado = Trabajo & {
   cliente_info: { nombre: string } | null;
@@ -694,7 +694,11 @@ export default function AgendaPage() {
                             key={`${e.tipo}-${e.id}`}
                             className={`flex items-center gap-1 truncate rounded px-1.5 py-0.5 text-[11px] font-medium ${est.clase}`}
                           >
-                            {e.tipo === "tarea" && <IconClipboardCheck className="h-3 w-3 shrink-0" />}
+                            {e.tipo === "tarea" ? (
+                              <IconClipboardCheck className="h-3 w-3 shrink-0" />
+                            ) : (
+                              <IconWrench className="h-3 w-3 shrink-0" />
+                            )}
                             <span className="truncate">
                               {e.hora ? `${e.hora} ` : ""}
                               {e.titulo}
@@ -735,7 +739,11 @@ export default function AgendaPage() {
                       >
                         <div className="min-w-0">
                           <p className="flex items-center gap-1.5 truncate text-sm font-medium text-foreground">
-                            {e.tipo === "tarea" && <IconClipboardCheck className="h-3.5 w-3.5 shrink-0 text-muted" />}
+                            {e.tipo === "tarea" ? (
+                              <IconClipboardCheck className="h-3.5 w-3.5 shrink-0 text-muted" />
+                            ) : (
+                              <IconWrench className="h-3.5 w-3.5 shrink-0 text-muted" />
+                            )}
                             {e.titulo}
                           </p>
                           <p className="text-xs text-muted">
@@ -771,7 +779,11 @@ export default function AgendaPage() {
                 >
                   <div className="min-w-0">
                     <p className="flex items-center gap-1.5 truncate font-medium text-foreground">
-                      {e.tipo === "tarea" && <IconClipboardCheck className="h-3.5 w-3.5 shrink-0 text-muted" />}
+                      {e.tipo === "tarea" ? (
+                              <IconClipboardCheck className="h-3.5 w-3.5 shrink-0 text-muted" />
+                            ) : (
+                              <IconWrench className="h-3.5 w-3.5 shrink-0 text-muted" />
+                            )}
                       {e.titulo}
                     </p>
                     <p className="text-xs text-muted">
