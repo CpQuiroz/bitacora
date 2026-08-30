@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { UnidadMedida } from "@bitacora/shared";
+import type { CatalogoItem, UnidadMedida } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
 import { Button, Card, ErrorText, Input, Label, PageHeader, SuccessText } from "@/components/ui";
 import { DataTable } from "@/components/DataTable";
@@ -27,6 +27,8 @@ export default function InventarioPage() {
   const [aviso, setAviso] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const [hayProductos, setHayProductos] = useState<boolean | null>(null);
+
   const [unidades, setUnidades] = useState<UnidadMedida[] | null>(null);
   const [errorUnidades, setErrorUnidades] = useState<string | null>(null);
   const [nombreUnidad, setNombreUnidad] = useState("");
@@ -47,6 +49,10 @@ export default function InventarioPage() {
 
   useEffect(() => {
     cargarUnidades();
+    apiFetch("/api/catalogo?tipo=producto")
+      .then((res) => (res.ok ? (res.json() as Promise<CatalogoItem[]>) : []))
+      .then((items) => setHayProductos(items.length > 0))
+      .catch(() => setHayProductos(true)); // si falla la carga, no bloquear el toggle sin necesidad
   }, [cargarUnidades]);
 
   async function onGuardar() {
@@ -108,6 +114,10 @@ export default function InventarioPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title="Inventario" subtitle="Control de stock de productos" />
+      <p className="-mt-2 max-w-2xl text-sm text-muted">
+        Estas reglas (umbral de stock, unidades de medida) solo aplican a los ítems tipo <strong className="text-foreground">Producto</strong>{" "}
+        que crees en Catálogo — no afectan a los ítems tipo Servicio ni Kit.
+      </p>
       <Card>
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-3">
@@ -120,14 +130,22 @@ export default function InventarioPage() {
                 Al activarlo, el sistema empieza a rastrear el saldo de tus productos — cada venta o uso descuenta stock,
                 y puedes ver cuándo un producto está por agotarse.
               </p>
+              {hayProductos === false && !activado && (
+                <p className="mt-1.5 max-w-md text-xs text-muted">
+                  Todavía no tienes productos en Catálogo — crea al menos uno antes de activar el control de inventario.
+                </p>
+              )}
             </div>
           </div>
           <button
             type="button"
             role="switch"
             aria-checked={activado}
+            disabled={hayProductos === false && !activado}
             onClick={() => setActivado((v) => !v)}
-            className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${activado ? "bg-brand" : "bg-border"}`}
+            className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${activado ? "bg-brand" : "bg-border"} ${
+              hayProductos === false && !activado ? "cursor-not-allowed opacity-50" : ""
+            }`}
           >
             <span
               className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
