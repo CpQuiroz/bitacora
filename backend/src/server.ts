@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
 import type { Rubro } from "@bitacora/shared";
 import { env } from "./env";
 import { supabase } from "./supabase";
@@ -57,6 +58,10 @@ import { ah } from "./asyncHandler";
 const RUBROS: Rubro[] = ["transporte", "servicio_tecnico", "otro"];
 
 const app = express();
+// Cabeceras de seguridad estándar (X-Content-Type-Options,
+// X-Frame-Options, etc.) — lo más temprano posible, antes de
+// cualquier ruta. Ver checklist de seguridad pre-lanzamiento.
+app.use(helmet());
 // Para que req.ip sea la IP real del cliente (historial de accesos en
 // Seguridad) cuando el backend corre detrás de un proxy/load balancer.
 app.set("trust proxy", true);
