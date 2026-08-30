@@ -72,7 +72,20 @@ usuariosRouter.post(
     );
 
     if (errorInvitar || !invitado.user) {
-      res.status(400).json({ error: errorInvitar?.message ?? "No se pudo invitar al usuario" });
+      console.error("Error invitando usuario:", errorInvitar);
+      // "Error sending invite email" (u otros mensajes relacionados al
+      // envío) viene del servicio de correo del propio proyecto de
+      // Supabase Auth — no depende de RESEND_API_KEY, que solo se usa en
+      // email.ts para correos que sí pasan por nuestro backend (encuesta
+      // post-servicio, notificaciones al cliente). No hay una variable
+      // de entorno nuestra que indique si ese correo está configurado.
+      const mensajeOriginal = errorInvitar?.message ?? "";
+      const fueErrorDeEnvio = /sending invite email|error sending/i.test(mensajeOriginal);
+      res.status(fueErrorDeEnvio ? 502 : 400).json({
+        error: fueErrorDeEnvio
+          ? "No pudimos enviar el correo de invitación. Puede ser un problema temporal del servicio de correo — intenta de nuevo en unos minutos o contacta a soporte."
+          : "No se pudo invitar al usuario. Verifica que el correo sea válido e intenta de nuevo.",
+      });
       return;
     }
 
