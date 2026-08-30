@@ -52,7 +52,11 @@ tiposTrabajoRouter.post(
       res.status(400).json({ error: "Falta nombre" });
       return;
     }
-    if (!Array.isArray(campos) || !campos.every(campoValido)) {
+    // campos es opcional al crear — un tipo de trabajo sin campos
+    // dinámicos es válido (así lo permite el propio default de la
+    // columna); si viene, igual se valida su forma.
+    const camposFinal = campos === undefined ? [] : campos;
+    if (!Array.isArray(camposFinal) || !camposFinal.every(campoValido)) {
       res.status(400).json({
         error: "campos debe ser un arreglo de {clave, etiqueta, tipo: texto|numero|fecha|booleano}",
       });
@@ -61,7 +65,7 @@ tiposTrabajoRouter.post(
 
     const { data, error } = await supabase
       .from("tipos_trabajo")
-      .insert({ empresa_id: req.empresaId!, nombre: nombre.trim(), campos })
+      .insert({ empresa_id: req.empresaId!, nombre: nombre.trim(), campos: camposFinal })
       .select()
       .single();
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import type { Cliente, Prioridad, TipoOS, TipoTrabajo, Usuario } from "@bitacora/shared";
+import type { Cliente, Prioridad, Rol, TipoOS, TipoTrabajo, Usuario } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
@@ -20,11 +20,18 @@ import {
 import { IconClipboardCheck, IconPlus } from "@/components/icons";
 import { MapaRutas, type Parada } from "@/components/MapaRutas";
 import { CatalogoSelectorModal, type ItemSeleccionadoCatalogo } from "@/components/CatalogoSelectorModal";
+import { SelectCrear } from "@/components/SelectCrear";
 
 type ItemOS = { catalogo_item_id: string | null; descripcion: string; cantidad: string; precio_unitario: string };
 const ITEM_VACIO: ItemOS = { catalogo_item_id: null, descripcion: "", cantidad: "1", precio_unitario: "0" };
 
 const PRIORIDADES: Prioridad[] = ["alta", "media", "baja"];
+const ROLES: { value: Rol; label: string }[] = [
+  { value: "colaborador", label: "Colaborador / técnico" },
+  { value: "supervisor", label: "Supervisor" },
+  { value: "contador", label: "Contador" },
+  { value: "admin", label: "Admin" },
+];
 
 export default function NuevaOrdenServicioPage() {
   const router = useRouter();
@@ -39,6 +46,12 @@ export default function NuevaOrdenServicioPage() {
   const [nuevoClienteNombre, setNuevoClienteNombre] = useState("");
   const [nuevoClienteDireccion, setNuevoClienteDireccion] = useState("");
   const [responsableId, setResponsableId] = useState("");
+  const [nuevoColabModo, setNuevoColabModo] = useState(false);
+  const [nuevoColabNombre, setNuevoColabNombre] = useState("");
+  const [nuevoColabCorreo, setNuevoColabCorreo] = useState("");
+  const [nuevoColabRol, setNuevoColabRol] = useState<Rol>("colaborador");
+  const [invitandoColab, setInvitandoColab] = useState(false);
+  const [errorColab, setErrorColab] = useState<string | null>(null);
   const [tipoTrabajoId, setTipoTrabajoId] = useState("");
   const [tipoOsId, setTipoOsId] = useState("");
   const [descripcion, setDescripcion] = useState("");
@@ -101,6 +114,32 @@ export default function NuevaOrdenServicioPage() {
     setNuevoClienteModo(false);
     setNuevoClienteNombre("");
     setNuevoClienteDireccion("");
+  }
+
+  async function onInvitarColaborador() {
+    if (!nuevoColabNombre.trim() || !nuevoColabCorreo.trim()) {
+      setErrorColab("Falta nombre o correo");
+      return;
+    }
+    setErrorColab(null);
+    setInvitandoColab(true);
+    const res = await apiFetch("/api/usuarios/invitar", {
+      method: "POST",
+      body: JSON.stringify({ email: nuevoColabCorreo.trim(), nombre: nuevoColabNombre.trim(), rol: nuevoColabRol }),
+    });
+    setInvitandoColab(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setErrorColab(body.error ?? "No se pudo invitar al colaborador");
+      return;
+    }
+    const nuevo: Usuario = await res.json();
+    setEquipo((prev) => [...prev, nuevo]);
+    setResponsableId(nuevo.id);
+    setNuevoColabModo(false);
+    setNuevoColabNombre("");
+    setNuevoColabCorreo("");
+    setNuevoColabRol("colaborador");
   }
 
   function actualizarItem(i: number, campo: keyof ItemOS, valor: string) {
@@ -281,35 +320,88 @@ export default function NuevaOrdenServicioPage() {
               </div>
               <div>
                 <Label>Colaborador</Label>
-                <Select value={responsableId} onChange={(e) => setResponsableId(e.target.value)} required>
-                  {equipo.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.nombre}
-                    </option>
-                  ))}
-                </Select>
+                {!nuevoColabModo ? (
+                  <Select
+                    value={responsableId}
+                    onChange={(e) => {
+                      if (e.target.value === "__crear__") {
+                        setNuevoColabModo(true);
+                        return;
+                      }
+                      setResponsableId(e.target.value);
+                    }}
+                    required
+                  >
+                    {equipo.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.nombre}
+                      </option>
+                    ))}
+                    <option value="__crear__">+ Invitar colaborador nuevo</option>
+                  </Select>
+                ) : (
+                  <div className="flex flex-col gap-2 rounded-lg border border-border p-3">
+                    <Input
+                      type="text"
+                      placeholder="Nombre"
+                      value={nuevoColabNombre}
+                      onChange={(e) => setNuevoColabNombre(e.target.value)}
+                    />
+                    <Input
+                      type="email"
+                      placeholder="correo@empresa.cl"
+                      value={nuevoColabCorreo}
+                      onChange={(e) => setNuevoColabCorreo(e.target.value)}
+                    />
+                    <Select value={nuevoColabRol} onChange={(e) => setNuevoColabRol(e.target.value as Rol)}>
+                      {ROLES.map((r) => (
+                        <option key={r.value} value={r.value}>
+                          {r.label}
+                        </option>
+                      ))}
+                    </Select>
+                    {errorColab && <ErrorText>{errorColab}</ErrorText>}
+                    <div className="flex gap-2">
+                      <Button type="button" onClick={onInvitarColaborador} disabled={invitandoColab}>
+                        {invitandoColab ? "Invitando…" : "Invitar"}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          setNuevoColabModo(false);
+                          setErrorColab(null);
+                        }}
+                      >
+                        Cancelar
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
               <div>
                 <Label>Tipo de servicio</Label>
-                <Select value={tipoTrabajoId} onChange={(e) => setTipoTrabajoId(e.target.value)}>
-                  <option value="">Sin tipo específico</option>
-                  {tiposTrabajo.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.nombre}
-                    </option>
-                  ))}
-                </Select>
+                <SelectCrear<TipoTrabajo>
+                  value={tipoTrabajoId}
+                  onChange={setTipoTrabajoId}
+                  opciones={tiposTrabajo}
+                  endpoint="/api/tipos-trabajo"
+                  placeholder="Sin tipo específico"
+                  etiquetaCrear="+ Crear tipo de servicio nuevo"
+                  onCreado={(nuevo) => setTiposTrabajo((prev) => [...prev, nuevo])}
+                />
               </div>
               <div>
                 <Label>Tipo de OS (opcional)</Label>
-                <Select value={tipoOsId} onChange={(e) => setTipoOsId(e.target.value)}>
-                  <option value="">Sin clasificar</option>
-                  {tiposOs.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.nombre}
-                    </option>
-                  ))}
-                </Select>
+                <SelectCrear<TipoOS>
+                  value={tipoOsId}
+                  onChange={setTipoOsId}
+                  opciones={tiposOs}
+                  endpoint="/api/tipos-os"
+                  placeholder="Sin clasificar"
+                  etiquetaCrear="+ Crear tipo de OS nuevo"
+                  onCreado={(nuevo) => setTiposOs((prev) => [...prev, nuevo])}
+                />
               </div>
             </div>
 
