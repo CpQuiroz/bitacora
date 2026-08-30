@@ -8,6 +8,7 @@ import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
 import { requiereModulo } from "../permisos";
 import { vehiculoAsignadoAColaborador } from "./vehiculos";
+import { enviarInvitacion } from "../email";
 
 export const usuariosRouter = Router();
 
@@ -66,25 +67,33 @@ usuariosRouter.post(
       return;
     }
 
-    const { data: invitado, error: errorInvitar } = await supabase.auth.admin.inviteUserByEmail(
+    // generateLink crea el usuario y devuelve el link de invitación sin
+    // intentar mandar nada — el envío en sí va por nuestro Resend (ver
+    // enviarInvitacion), no por el servicio de correo integrado de
+    // Supabase Auth (inviteUserByEmail), que tiene un límite de envíos
+    // pensado solo para desarrollo y no es apto para producción.
+    const { data: generado, error: errorGenerar } = await supabase.auth.admin.generateLink({
+      type: "invite",
       email,
-      { redirectTo: `${env.WEB_URL}/invitacion` }
-    );
+      options: { redirectTo: `${env.WEB_URL}/invitacion` },
+    });
+    if (errorGenerar || !generado.user) {
+      console.error("Error generando link de invitación:", errorGenerar);
+      res.status(400).json({ error: "No se pudo invitar al usuario. Verifica que el correo sea válido e intenta de nuevo." });
+      return;
+    }
 
-    if (errorInvitar || !invitado.user) {
-      console.error("Error invitando usuario:", errorInvitar);
-      // "Error sending invite email" (u otros mensajes relacionados al
-      // envío) viene del servicio de correo del propio proyecto de
-      // Supabase Auth — no depende de RESEND_API_KEY, que solo se usa en
-      // email.ts para correos que sí pasan por nuestro backend (encuesta
-      // post-servicio, notificaciones al cliente). No hay una variable
-      // de entorno nuestra que indique si ese correo está configurado.
-      const mensajeOriginal = errorInvitar?.message ?? "";
-      const fueErrorDeEnvio = /sending invite email|error sending/i.test(mensajeOriginal);
-      res.status(fueErrorDeEnvio ? 502 : 400).json({
-        error: fueErrorDeEnvio
-          ? "No pudimos enviar el correo de invitación. Puede ser un problema temporal del servicio de correo — intenta de nuevo en unos minutos o contacta a soporte."
-          : "No se pudo invitar al usuario. Verifica que el correo sea válido e intenta de nuevo.",
+    const { data: empresaFila } = await supabase.from("empresas").select("nombre").eq("id", req.empresaId!).maybeSingle();
+    try {
+      await enviarInvitacion(email, empresaFila?.nombre ?? "Bitácora", nombre.trim(), generado.properties.action_link);
+    } catch (err) {
+      await supabase.auth.admin.deleteUser(generado.user.id);
+      const mensaje = err instanceof Error ? err.message : String(err);
+      console.error("Error enviando invitación:", mensaje);
+      res.status(mensaje.includes("no está configurado") ? 500 : 502).json({
+        error: mensaje.includes("no está configurado")
+          ? "El envío de correos no está configurado en este ambiente."
+          : "No pudimos enviar la invitación. Puede ser un problema temporal del servicio de correo — intenta de nuevo en unos minutos o contacta a soporte.",
       });
       return;
     }
@@ -92,7 +101,7 @@ usuariosRouter.post(
     const { data: usuario, error: errorUsuario } = await supabase
       .from("usuarios")
       .insert({
-        id: invitado.user.id,
+        id: generado.user.id,
         empresa_id: req.empresaId!,
         nombre: nombre.trim(),
         rol,
@@ -102,7 +111,7 @@ usuariosRouter.post(
 
     if (errorUsuario) {
       // limpiar el auth user huérfano si falla la vinculación a la empresa
-      await supabase.auth.admin.deleteUser(invitado.user.id);
+      await supabase.auth.admin.deleteUser(generado.user.id);
       res.status(500).json({ error: errorUsuario.message });
       return;
     }

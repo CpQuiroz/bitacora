@@ -8,6 +8,7 @@ import { descifrarJson } from "../crypto";
 import { medirUsoStorage } from "../storage";
 import { TABLAS_POR_EMPRESA } from "../tenant";
 import { cambiarPlanEmpresa } from "../planes";
+import { enviarInvitacion } from "../email";
 import { verificarPassword } from "./passwords";
 import { verificarCodigoTotp } from "./totp";
 import { crearTokenSuperAdmin, requiereSuperAdmin, registrarAuditoria, type RequestConSuperAdmin } from "./auth";
@@ -163,30 +164,44 @@ superadminRouter.post(
       return;
     }
 
-    const { data: invitado, error: errorInvitar } = await supabase.auth.admin.inviteUserByEmail(admin_correo, {
-      redirectTo: `${env.WEB_URL}/invitacion`,
+    // generateLink crea el usuario y devuelve el link sin intentar mandar
+    // nada — el envío va por nuestro Resend (enviarInvitacion), no por el
+    // servicio de correo integrado de Supabase Auth (inviteUserByEmail),
+    // que tiene un límite de envíos pensado solo para desarrollo.
+    const { data: generado, error: errorGenerar } = await supabase.auth.admin.generateLink({
+      type: "invite",
+      email: admin_correo,
+      options: { redirectTo: `${env.WEB_URL}/invitacion` },
     });
-    if (errorInvitar || !invitado.user) {
+    if (errorGenerar || !generado.user) {
       await supabase.from("empresas").delete().eq("id", empresa.id);
-      console.error("Error invitando admin inicial:", errorInvitar);
-      // Mismo criterio que POST /api/usuarios/invitar — distingue una
-      // falla del servicio de correo de un correo simplemente inválido.
-      const fueErrorDeEnvio = /sending invite email|error sending/i.test(errorInvitar?.message ?? "");
-      res.status(fueErrorDeEnvio ? 502 : 400).json({
-        error: fueErrorDeEnvio
-          ? "No pudimos enviar el correo de invitación al administrador. Puede ser un problema temporal del servicio de correo — intenta de nuevo en unos minutos."
-          : "No se pudo invitar al administrador. Verifica que el correo sea válido e intenta de nuevo.",
+      console.error("Error generando link de invitación:", errorGenerar);
+      res.status(400).json({ error: "No se pudo invitar al administrador. Verifica que el correo sea válido e intenta de nuevo." });
+      return;
+    }
+
+    try {
+      await enviarInvitacion(admin_correo, empresa.nombre, admin_nombre.trim(), generado.properties.action_link);
+    } catch (err) {
+      await supabase.auth.admin.deleteUser(generado.user.id);
+      await supabase.from("empresas").delete().eq("id", empresa.id);
+      const mensaje = err instanceof Error ? err.message : String(err);
+      console.error("Error enviando invitación:", mensaje);
+      res.status(mensaje.includes("no está configurado") ? 500 : 502).json({
+        error: mensaje.includes("no está configurado")
+          ? "El envío de correos no está configurado en este ambiente."
+          : "No pudimos enviar el correo de invitación al administrador. Puede ser un problema temporal del servicio de correo — intenta de nuevo en unos minutos.",
       });
       return;
     }
 
     const { data: usuario, error: errorUsuario } = await supabase
       .from("usuarios")
-      .insert({ id: invitado.user.id, empresa_id: empresa.id, nombre: admin_nombre.trim(), rol: "admin" })
+      .insert({ id: generado.user.id, empresa_id: empresa.id, nombre: admin_nombre.trim(), rol: "admin" })
       .select()
       .single();
     if (errorUsuario) {
-      await supabase.auth.admin.deleteUser(invitado.user.id);
+      await supabase.auth.admin.deleteUser(generado.user.id);
       await supabase.from("empresas").delete().eq("id", empresa.id);
       res.status(500).json({ error: errorUsuario.message });
       return;

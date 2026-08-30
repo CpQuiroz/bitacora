@@ -69,6 +69,30 @@ export async function enviarEncuestaSatisfaccion(destinatario: string, trabajoId
   );
 }
 
+// Invitación a un usuario nuevo (colaborador, o admin inicial de una
+// empresa creada desde Super-Admin). Se manda con nuestro propio Resend
+// en vez del servicio de correo integrado de Supabase Auth
+// (inviteUserByEmail) — ese servicio tiene un límite muy bajo de envíos
+// pensado solo para desarrollo ("Error sending invite email" apenas se
+// supera), no apto para producción. El link se genera aparte con
+// supabase.auth.admin.generateLink({ type: "invite" }), que crea el
+// usuario y devuelve el link sin intentar mandar nada — acá solo se
+// arma y envía el correo.
+export async function enviarInvitacion(destinatario: string, empresaNombre: string, nombreInvitado: string, actionLink: string): Promise<void> {
+  const html = `
+    <div style="font-family:sans-serif;max-width:480px;margin:0 auto;">
+      <h2>Te invitaron a ${empresaNombre} en Bitácora</h2>
+      <p>Hola ${nombreInvitado}, ya te agregaron al equipo de ${empresaNombre}. Activa tu cuenta para empezar:</p>
+      <p><a href="${actionLink}" style="display:inline-block;margin-top:8px;padding:10px 20px;background:#4338ca;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;">Activar mi cuenta</a></p>
+    </div>
+  `;
+
+  await enviarConReintento(
+    { from: env.RESEND_FROM_EMAIL, to: destinatario, subject: `Te invitaron a ${empresaNombre} en Bitácora`, html },
+    "la invitación"
+  );
+}
+
 // Envía el PDF de una orden de servicio ya finalizada como adjunto.
 export async function enviarPdfOS(destinatario: string, empresaNombre: string, folio: number, pdfBuffer: Buffer): Promise<void> {
   await enviarConReintento(
