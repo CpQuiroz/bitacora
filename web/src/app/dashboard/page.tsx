@@ -8,11 +8,12 @@ import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell } from "@/components/DashboardShell";
-import { Button, Card, ErrorText, Select } from "@/components/ui";
+import { Button, buttonClass, Card, ErrorText, Select } from "@/components/ui";
 import {
   IconBriefcase,
   IconClipboardCheck,
   IconMapPin,
+  IconPlus,
   IconReceipt,
   IconRoute,
   IconSparkle,
@@ -163,6 +164,16 @@ export default function DashboardPage() {
           <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground">
             Hola, {usuario.nombre.split(" ")[0]}
           </h1>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Link href="/dashboard/ordenes/nueva" className={buttonClass("primary")}>
+              <IconPlus className="h-4 w-4" />
+              Nueva OS
+            </Link>
+            <Link href="/dashboard/financiero/cotizaciones/nueva" className={buttonClass("outline")}>
+              <IconPlus className="h-4 w-4" />
+              Nueva Cotización
+            </Link>
+          </div>
         </div>
         <div className="flex flex-wrap items-end gap-2">
           <Select value={periodo} onChange={(e) => setPeriodo(e.target.value)} className="w-44">
