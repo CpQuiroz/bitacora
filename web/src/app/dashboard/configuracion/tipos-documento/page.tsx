@@ -99,8 +99,9 @@ export default function TiposDocumentoPage() {
                 key={s.nombre}
                 type="button"
                 onClick={() => crearRapido(s)}
-                className="rounded-full border border-border px-3 py-1 text-xs font-medium text-foreground hover:border-brand"
+                className="flex items-center gap-1 rounded-full border border-border px-3 py-1 text-xs font-medium text-foreground hover:border-brand"
               >
+                <IconPlus className="h-3 w-3" />
                 {s.nombre}
               </button>
             ))}
