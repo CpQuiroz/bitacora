@@ -14,7 +14,7 @@ import { IconChevronLeft, IconMail, IconPlus } from "@/components/icons";
 import { CatalogoSelectorModal, type ItemSeleccionadoCatalogo } from "@/components/CatalogoSelectorModal";
 
 type ClienteInfo = Pick<Cliente, "id" | "nombre" | "correo" | "telefono" | "direccion">;
-type CotizacionDetalle = Presupuesto & { cliente_info: ClienteInfo | null; items: PresupuestoItem[] };
+type CotizacionDetalle = Presupuesto & { cliente_info: ClienteInfo | null; items: PresupuestoItem[]; os_folio: number | null };
 type Linea = { catalogo_item_id: string | null; descripcion: string; cantidad: string; precio_unitario: string };
 
 const ESTADOS: EstadoPresupuesto[] = ["borrador", "enviado", "aprobado", "rechazado"];
@@ -449,7 +449,11 @@ export default function CotizacionDetallePage() {
             <h2 className="mb-3 text-sm font-semibold text-foreground">Orden de Servicio</h2>
             {cotizacion.trabajo_id ? (
               <div className="flex flex-col gap-2">
-                <SuccessText>{folioGenerado != null ? `Convertida en OS N° ${folioGenerado}.` : "Esta cotización ya fue convertida en una OS."}</SuccessText>
+                <SuccessText>
+                  {folioGenerado != null || cotizacion.os_folio != null
+                    ? `Convertida en OS N° ${folioGenerado ?? cotizacion.os_folio}.`
+                    : "Esta cotización ya fue convertida en una OS."}
+                </SuccessText>
                 <Link href={`/dashboard/ordenes/${cotizacion.trabajo_id}`} className="text-sm font-medium text-brand hover:underline">
                   Ver orden de servicio →
                 </Link>

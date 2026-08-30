@@ -149,7 +149,21 @@ cotizacionesRouter.get(
       .eq("presupuesto_id", req.params.id)
       .order("creado_en");
 
-    res.json({ ...cotizacion, items: items ?? [] });
+    // Folio real de la OS ya generada — antes solo se sabía justo al
+    // convertir (estado en memoria del frontend), así que al volver a
+    // entrar más tarde solo se veía "ya fue convertida", sin el N°.
+    let osFolio: number | null = null;
+    if (cotizacion.trabajo_id) {
+      const { data: orden } = await supabase
+        .from("ordenes_servicio")
+        .select("folio")
+        .eq("empresa_id", req.empresaId!)
+        .eq("trabajo_id", cotizacion.trabajo_id)
+        .maybeSingle();
+      osFolio = orden?.folio ?? null;
+    }
+
+    res.json({ ...cotizacion, items: items ?? [], os_folio: osFolio });
   })
 );
 
