@@ -94,6 +94,12 @@ export default function VisionGeneralPage() {
 
   const { kpis, resumen_gastos, ingresos_vs_gastos, ingresos_por_mes } = datos;
 
+  // TODO: decisión pendiente — estas KPIs (Ingreso Total, Cotizaciones,
+  // OS Completadas, Clientes Activos) y el gráfico "Ingresos vs Gastos"
+  // duplican casi exactamente lo que ya muestra el Dashboard
+  // (web/src/app/dashboard/page.tsx). Evaluar si el Dashboard pasa a
+  // ser más accionable (accesos rápidos + alertas) y esta pantalla se
+  // queda con el análisis profundo, sin repetir las mismas métricas.
   return (
     <div className="flex flex-col gap-6">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">

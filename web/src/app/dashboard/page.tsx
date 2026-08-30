@@ -215,6 +215,13 @@ export default function DashboardPage() {
 
       {datos && (
         <>
+          {/* TODO: decisión pendiente — estos KPIs y el gráfico de
+              ingresos duplican casi exactamente lo que ya muestra
+              Informes → Visión General (web/src/app/dashboard/informes/
+              vision-general/page.tsx). Evaluar si este Dashboard pasa a
+              ser más accionable (accesos rápidos + alertas) y Visión
+              General se queda con el análisis profundo, sin repetir
+              las mismas métricas en los dos lugares. */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <KpiCard etiqueta="Ingresos totales" valor={money(datos.kpis.ingresos_totales)} />
             <KpiCard
