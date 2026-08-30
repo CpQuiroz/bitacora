@@ -7,6 +7,7 @@ import { ah } from "../asyncHandler";
 import { descifrarJson } from "../crypto";
 import { medirUsoStorage } from "../storage";
 import { TABLAS_POR_EMPRESA } from "../tenant";
+import { cambiarPlanEmpresa } from "../planes";
 import { verificarPassword } from "./passwords";
 import { verificarCodigoTotp } from "./totp";
 import { crearTokenSuperAdmin, requiereSuperAdmin, registrarAuditoria, type RequestConSuperAdmin } from "./auth";
@@ -228,16 +229,10 @@ superadminRouter.patch(
       return;
     }
 
-    const { data, error } = await supabase
-      .from("empresas")
-      .update({ plan: plan as Plan })
-      .eq("id", req.params.id)
-      .select("id, plan")
-      .single();
-    if (error) {
-      res.status(500).json({ error: error.message });
-      return;
-    }
+    // Misma función que usa la autogestión de la empresa (Configuración >
+    // Plan) — sincroniza empresa_modulos y queda en empresa_plan_historial,
+    // para que ningún camino pueda desincronizarse del otro.
+    await cambiarPlanEmpresa(req.params.id, plan as Plan, { tipo: "super_admin", superAdminId: req.superAdminId! });
 
     await registrarAuditoria(req.superAdminId!, "cambiar_plan_empresa", {
       empresaId: req.params.id,
@@ -245,7 +240,7 @@ superadminRouter.patch(
       detalle: `${actual.nombre}: ${actual.plan} → ${plan}`,
     });
 
-    res.json(data);
+    res.json({ id: req.params.id, plan });
   })
 );
 

@@ -61,5 +61,6 @@ export const env = {
   // El Plan mensual se crea una sola vez desde el panel web de Flow
   // (Planes de Suscripción — no existe API para esto, ver flow.ts) y su
   // id se pega acá.
-  FLOW_PLAN_ID: process.env.FLOW_PLAN_ID ?? null,
+  FLOW_PLAN_ID_BASICO: process.env.FLOW_PLAN_ID_BASICO ?? null,
+  FLOW_PLAN_ID_PRO: process.env.FLOW_PLAN_ID_PRO ?? null,
 };

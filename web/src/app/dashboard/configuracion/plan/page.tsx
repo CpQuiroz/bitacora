@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import type { Suscripcion, SuscripcionCobro } from "@bitacora/shared";
+import type { EmpresaPlanHistorial, Plan, Suscripcion, SuscripcionCobro } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
 import { Badge, Button, Card, ErrorText, PageHeader, SuccessText } from "@/components/ui";
 import { IconCheck, IconCreditCard } from "@/components/icons";
+import { ETIQUETA_MODULO } from "@/lib/etiquetasModulo";
 import { useConfiguracion } from "../ConfiguracionContext";
 
 const FEATURES = [
@@ -21,7 +22,6 @@ const FEATURES = [
   "Soporte prioritario",
 ];
 
-const PRECIO_MENSUAL = 29990;
 const clp = (n: number) => `$${n.toLocaleString("es-CL")}`;
 
 const ETIQUETA_ESTADO: Record<string, string> = {
@@ -32,12 +32,22 @@ const ETIQUETA_ESTADO: Record<string, string> = {
   cancelada: "Cancelada",
 };
 
+const ETIQUETA_PLAN: Record<Plan, string> = { trial: "Trial", basico: "Básico", pro: "Pro" };
+
 function diasRestantes(fechaTermino: string | null): number | null {
   if (!fechaTermino) return null;
   const hoy = new Date();
   const termino = new Date(`${fechaTermino}T00:00:00`);
   return Math.ceil((termino.getTime() - new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate()).getTime()) / 86_400_000);
 }
+
+type InfoPlan = {
+  planActual: Plan;
+  proDisponible: boolean;
+  modulosBasico: string[];
+  modulosExtraPro: string[];
+  historial: EmpresaPlanHistorial[];
+};
 
 export default function PlanPage() {
   const { usuario } = useConfiguracion();
@@ -47,12 +57,16 @@ export default function PlanPage() {
 
   const [suscripcion, setSuscripcion] = useState<Suscripcion | null>(null);
   const [cobros, setCobros] = useState<SuscripcionCobro[]>([]);
+  const [info, setInfo] = useState<InfoPlan | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
   const [cargandoTarjeta, setCargandoTarjeta] = useState(false);
   const [confirmandoRetorno, setConfirmandoRetorno] = useState(false);
   const [confirmandoCancelar, setConfirmandoCancelar] = useState(false);
   const [cancelando, setCancelando] = useState(false);
+  const [cambiandoPlan, setCambiandoPlan] = useState<Plan | null>(null);
+  const [confirmandoBajarPlan, setConfirmandoBajarPlan] = useState(false);
+  const [errorPlan, setErrorPlan] = useState<string | null>(null);
 
   const cargar = useCallback(async () => {
     setError(null);
@@ -66,9 +80,15 @@ export default function PlanPage() {
     setCobros(body.cobros ?? []);
   }, []);
 
+  const cargarPlan = useCallback(async () => {
+    const res = await apiFetch("/api/plan");
+    if (res.ok) setInfo(await res.json());
+  }, []);
+
   useEffect(() => {
     cargar();
-  }, [cargar]);
+    cargarPlan();
+  }, [cargar, cargarPlan]);
 
   // Flow/Transbank vuelven acá con ?token=... tras registrar la tarjeta.
   useEffect(() => {
@@ -81,6 +101,7 @@ export default function PlanPage() {
       if (res.ok) {
         setAviso("Tu tarjeta quedó registrada.");
         cargar();
+        cargarPlan();
       } else {
         const body = await res.json().catch(() => ({}));
         setError(body.error ?? "No se pudo confirmar el registro de tu tarjeta");
@@ -102,6 +123,40 @@ export default function PlanPage() {
     }
     const body = await res.json();
     window.location.href = body.url;
+  }
+
+  async function onCambiarPlan(plan: Plan) {
+    if (plan === "basico" && info?.planActual === "pro" && !confirmandoBajarPlan) {
+      setConfirmandoBajarPlan(true);
+      return;
+    }
+    setErrorPlan(null);
+    setCambiandoPlan(plan);
+    const res = await apiFetch("/api/plan/cambiar", { method: "POST", body: JSON.stringify({ plan }) });
+    if (!res.ok) {
+      setCambiandoPlan(null);
+      const body = await res.json().catch(() => ({}));
+      setErrorPlan(body.error ?? "No se pudo cambiar de plan");
+      return;
+    }
+    const body = await res.json();
+    if (body.requiereTarjeta) {
+      const resTarjeta = await apiFetch("/api/suscripcion/tarjeta", { method: "POST", body: JSON.stringify({ plan }) });
+      setCambiandoPlan(null);
+      if (!resTarjeta.ok) {
+        const errBody = await resTarjeta.json().catch(() => ({}));
+        setErrorPlan(errBody.error ?? "No se pudo iniciar el registro de tu tarjeta");
+        return;
+      }
+      const { url } = await resTarjeta.json();
+      window.location.href = url;
+      return;
+    }
+    setCambiandoPlan(null);
+    setConfirmandoBajarPlan(false);
+    setAviso(`Tu plan quedó en ${ETIQUETA_PLAN[plan]}.`);
+    cargar();
+    cargarPlan();
   }
 
   async function onCancelar() {
@@ -141,7 +196,7 @@ export default function PlanPage() {
           <p className="mt-1 text-sm text-muted">
             {tieneTarjeta
               ? "Ya registraste tu tarjeta — el primer cobro se hará automáticamente al terminar la prueba."
-              : "Agrega tu tarjeta para que la suscripción siga activa sin interrupciones al terminar la prueba."}
+              : "Elige un plan abajo para que la suscripción siga activa sin interrupciones al terminar la prueba."}
           </p>
         </Card>
       )}
@@ -189,6 +244,94 @@ export default function PlanPage() {
       )}
 
       <Card>
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h2 className="text-sm font-semibold text-foreground">Tu plan</h2>
+            <p className="mt-1 text-sm text-muted">
+              Plan actual: <span className="font-medium text-foreground">{info ? ETIQUETA_PLAN[info.planActual] : "—"}</span>
+            </p>
+          </div>
+        </div>
+
+        {errorPlan && (
+          <div className="mb-4">
+            <ErrorText>{errorPlan}</ErrorText>
+          </div>
+        )}
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="rounded-xl border border-border p-4">
+            <p className="text-sm font-semibold text-foreground">Básico</p>
+            <p className="mt-2 text-2xl font-bold text-foreground">
+              {clp(50000)} <span className="text-sm font-normal text-muted">/ mes</span>
+            </p>
+            <ul className="mt-4 flex flex-col gap-2 text-sm text-foreground">
+              {(info?.modulosBasico ?? []).map((m) => (
+                <li key={m} className="flex items-start gap-2">
+                  <IconCheck className="mt-0.5 h-4 w-4 shrink-0 text-success" />
+                  {ETIQUETA_MODULO[m] ?? m}
+                </li>
+              ))}
+            </ul>
+            {info?.planActual === "basico" ? (
+              <p className="mt-4 text-xs font-medium text-muted">Tu plan actual</p>
+            ) : (
+              <Button
+                type="button"
+                variant={info?.planActual === "pro" ? "outline" : "primary"}
+                className="mt-4 w-full"
+                disabled={cambiandoPlan !== null}
+                onClick={() => onCambiarPlan("basico")}
+              >
+                {cambiandoPlan === "basico" ? "Cambiando…" : "Cambiar a Básico"}
+              </Button>
+            )}
+          </div>
+
+          <div className="rounded-xl border border-brand/40 bg-brand-soft p-4">
+            <p className="text-sm font-semibold text-brand">Pro</p>
+            <p className="mt-2 text-2xl font-bold text-foreground">Además de Básico:</p>
+            <ul className="mt-4 flex flex-col gap-2 text-sm text-foreground">
+              {(info?.modulosExtraPro ?? []).map((m) => (
+                <li key={m} className="flex items-start gap-2">
+                  <IconCheck className="mt-0.5 h-4 w-4 shrink-0 text-success" />
+                  {ETIQUETA_MODULO[m] ?? m}
+                </li>
+              ))}
+            </ul>
+            {info?.planActual === "pro" ? (
+              <p className="mt-4 text-xs font-medium text-muted">Tu plan actual</p>
+            ) : !info?.proDisponible ? (
+              <p className="mt-4 text-xs text-muted">Pro estará disponible pronto — contáctanos si te interesa.</p>
+            ) : (
+              <Button type="button" className="mt-4 w-full" disabled={cambiandoPlan !== null} onClick={() => onCambiarPlan("pro")}>
+                {cambiandoPlan === "pro" ? "Cambiando…" : "Cambiar a Pro"}
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {confirmandoBajarPlan && (
+          <div className="mt-4 rounded-xl border border-danger/40 bg-danger-soft p-4">
+            <p className="text-sm font-semibold text-danger">Vas a perder acceso a:</p>
+            <ul className="mt-2 flex flex-col gap-1 text-sm text-foreground">
+              {(info?.modulosExtraPro ?? []).map((m) => (
+                <li key={m}>• {ETIQUETA_MODULO[m] ?? m}</li>
+              ))}
+            </ul>
+            <div className="mt-3 flex gap-2">
+              <Button type="button" variant="danger" disabled={cambiandoPlan !== null} onClick={() => onCambiarPlan("basico")}>
+                {cambiandoPlan === "basico" ? "Cambiando…" : "Sí, bajar a Básico"}
+              </Button>
+              <Button type="button" variant="ghost" onClick={() => setConfirmandoBajarPlan(false)}>
+                Volver
+              </Button>
+            </div>
+          </div>
+        )}
+      </Card>
+
+      <Card>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-sm font-semibold text-foreground">Método de pago</h2>
@@ -201,9 +344,11 @@ export default function PlanPage() {
               <p className="mt-1 text-sm text-muted">Todavía no registraste una tarjeta.</p>
             )}
           </div>
-          <Button type="button" variant="outline" onClick={onAgregarTarjeta} disabled={cargandoTarjeta}>
-            {cargandoTarjeta ? "Redirigiendo…" : tieneTarjeta ? "Actualizar tarjeta" : "Agregar tarjeta"}
-          </Button>
+          {tieneTarjeta && (
+            <Button type="button" variant="outline" onClick={onAgregarTarjeta} disabled={cargandoTarjeta}>
+              {cargandoTarjeta ? "Redirigiendo…" : "Actualizar tarjeta"}
+            </Button>
+          )}
         </div>
         <p className="mt-3 text-xs text-muted">
           Vas a ser redirigido a Flow para ingresar tu tarjeta — nunca pasa por nuestros servidores.
@@ -214,11 +359,7 @@ export default function PlanPage() {
       {aviso && <SuccessText>{aviso}</SuccessText>}
 
       <Card>
-        <p className="text-sm font-semibold text-foreground">Mensual</p>
-        <p className="mt-2 text-3xl font-bold text-foreground">
-          {clp(PRECIO_MENSUAL)} <span className="text-sm font-normal text-muted">/ mes</span>
-        </p>
-        <p className="mt-1 text-xs text-muted">Facturado cada mes — 21 días de prueba gratis para cuentas nuevas.</p>
+        <p className="text-sm font-semibold text-foreground">Qué incluye Bitácora</p>
         <ul className="mt-5 grid gap-2.5 sm:grid-cols-2">
           {FEATURES.map((f) => (
             <li key={f} className="flex items-center gap-2 text-sm text-foreground">
@@ -228,6 +369,33 @@ export default function PlanPage() {
           ))}
         </ul>
       </Card>
+
+      {info && info.historial.length > 0 && (
+        <Card className="overflow-x-auto p-0">
+          <h2 className="p-6 pb-3 text-sm font-semibold text-foreground">Historial de cambios de plan</h2>
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-border text-xs text-muted">
+                <th className="px-5 py-3 font-medium">Fecha</th>
+                <th className="px-5 py-3 font-medium">Cambio</th>
+                <th className="px-5 py-3 font-medium">Quién</th>
+              </tr>
+            </thead>
+            <tbody>
+              {info.historial.map((h) => (
+                <tr key={h.id} className="border-b border-border last:border-0">
+                  <td className="px-5 py-3 text-muted">{new Date(h.creado_en).toLocaleString("es-CL")}</td>
+                  <td className="px-5 py-3 text-foreground">
+                    {ETIQUETA_PLAN[h.plan_anterior]} → {ETIQUETA_PLAN[h.plan_nuevo]}
+                    {!h.cobro_conectado && <span className="ml-2 text-xs text-warning">(sin cobro conectado)</span>}
+                  </td>
+                  <td className="px-5 py-3 text-muted">{h.origen === "super_admin" ? "Super-Admin" : "Tu empresa"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Card>
+      )}
 
       {cobros.length > 0 && (
         <Card className="overflow-x-auto p-0">

@@ -8,25 +8,10 @@ import { SuperAdminShell } from "@/components/SuperAdminShell";
 import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select } from "@/components/ui";
 import { IconChevronLeft, IconShield } from "@/components/icons";
 import { obtenerTokenSuperAdmin, superadminFetch } from "@/lib/superadminApi";
+import { ETIQUETA_MODULO } from "@/lib/etiquetasModulo";
 
 const ESTADOS: EstadoEmpresa[] = ["activa", "suspendida", "dada_de_baja"];
 const PLANES: Plan[] = ["trial", "basico", "pro"];
-
-const ETIQUETA_MODULO: Record<string, string> = {
-  agenda: "Agenda",
-  ordenes_servicio: "Órdenes de servicio",
-  viajes: "Viajes",
-  registros: "Registros",
-  rutas: "Rutas",
-  financiero: "Financiero",
-  informes: "Informes",
-  informe_ia: "Informe con IA",
-  asistente: "Asistente",
-  configuracion: "Configuración",
-  gestion_control: "Gestión y control",
-  flota: "Flota",
-  agenda_pro: "Agenda Pro (paquetes de sesiones y confirmación por el cliente)",
-};
 
 type Salud = {
   empresa: { id: string; nombre: string; estado: EstadoEmpresa; plan: Plan };
@@ -372,7 +357,10 @@ export default function SuperAdminSaludEmpresaPage() {
                   <ErrorText>{errorPlan}</ErrorText>
                 </div>
               )}
-              <p className="mt-3 text-[11px] text-muted">No hay límites de uso conectados al plan todavía — es solo una etiqueta.</p>
+              <p className="mt-3 text-[11px] text-muted">
+                Cambiar el plan acá activa/desactiva automáticamente los módulos opt-in de Pro (mismo camino que usa la empresa
+                al autogestionarse desde Configuración &gt; Plan) y queda en el historial visible para la empresa.
+              </p>
             </Card>
           </div>
 

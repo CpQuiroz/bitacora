@@ -102,7 +102,7 @@ export async function consultarRegistroTarjeta(token: string): Promise<{ status:
 // API — confirmado contra el sandbox: plan/create, plan/get y plan/list no
 // existen (dan "No services available", el mismo error que una ruta
 // inventada). Se crea UNA VEZ desde el panel web de Flow (Planes de
-// Suscripción) y su id se guarda en FLOW_PLAN_ID — acá solo se referencia.
+// Suscripción) y su id se guarda en FLOW_PLAN_ID_BASICO/FLOW_PLAN_ID_PRO — acá solo se referencia.
 export async function suscribirAPlan(customerId: string, planId: string): Promise<{ subscriptionId: string }> {
   return llamarFlow("POST", "subscription/create", { customerId, planId });
 }

@@ -399,6 +399,7 @@ export type Suscripcion = {
   proxima_fecha_cobro: string | null;
   cancelada_en: string | null;
   trial_aviso_enviado: boolean;
+  plan_pendiente: "basico" | "pro" | null;
   creado_en: string;
   actualizado_en: string;
 };
@@ -413,6 +414,20 @@ export type SuscripcionCobro = {
   estado: EstadoCobroSuscripcion;
   intento_numero: number;
   error: string | null;
+  creado_en: string;
+};
+
+export type OrigenCambioPlan = "empresa" | "super_admin";
+
+export type EmpresaPlanHistorial = {
+  id: string;
+  empresa_id: string;
+  plan_anterior: Plan;
+  plan_nuevo: Plan;
+  origen: OrigenCambioPlan;
+  usuario_id: string | null;
+  super_admin_id: string | null;
+  cobro_conectado: boolean;
   creado_en: string;
 };
 
@@ -965,6 +980,7 @@ export type Database = {
       agenda_pro_horarios: Tabla<AgendaProHorario>;
       suscripciones: Tabla<Suscripcion>;
       suscripcion_cobros: Tabla<SuscripcionCobro>;
+      empresa_plan_historial: Tabla<EmpresaPlanHistorial>;
     };
     Views: Record<string, never>;
     Functions: {
