@@ -599,6 +599,7 @@ export type Presupuesto = {
   subtotal: number | null;
   iva: number | null;
   fecha_vencimiento: string | null;
+  pdf_url: string | null;
   creado_en: string;
 };
 

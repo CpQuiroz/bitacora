@@ -209,6 +209,36 @@ export function urlFirmadaComprobante(key: string, minutosValidez = 15): Promise
 }
 
 // ------------------------------------------------------------
+// PDF de una cotización, cacheado — se genera una sola vez (al primer
+// pedido de descarga o al enviarla por correo) y se sirve desde acá en
+// los siguientes pedidos, en vez de regenerarlo con pdfkit cada clic.
+// Se invalida (vuelve a null en presupuestos.pdf_url) cuando la
+// cotización se edita — ver PATCH /:id en cotizaciones.ts.
+// ------------------------------------------------------------
+export async function subirPdfCotizacion(empresaId: string, cotizacionId: string, pdf: Buffer): Promise<string> {
+  const key = `${empresaId}/cotizaciones/${cotizacionId}/${Date.now()}.pdf`;
+  await client.send(
+    new PutObjectCommand({
+      Bucket: BUCKET_ANEXOS,
+      Key: key,
+      Body: pdf,
+      ContentType: "application/pdf",
+    })
+  );
+  return key; // se guarda en presupuestos.pdf_url
+}
+
+export function urlFirmadaPdfCotizacion(key: string, minutosValidez = 15): Promise<string> {
+  return urlFirmada(key, minutosValidez, BUCKET_ANEXOS);
+}
+
+export async function descargarPdfCotizacion(key: string): Promise<Buffer> {
+  const respuesta = await client.send(new GetObjectCommand({ Bucket: BUCKET_ANEXOS, Key: key }));
+  const bytes = await respuesta.Body!.transformToByteArray();
+  return Buffer.from(bytes);
+}
+
+// ------------------------------------------------------------
 // Documento de un colaborador o vehículo (licencia, revisión técnica,
 // seguro, etc. — imagen o PDF). Mismo bucket privado, mismo patrón que
 // subirComprobante — un solo lugar para ambas entidades.

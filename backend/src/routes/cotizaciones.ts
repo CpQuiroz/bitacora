@@ -5,6 +5,7 @@ import { supabase } from "../supabase";
 import { crearOrdenServicio } from "../ordenes";
 import { generarPdfCotizacion } from "../generarPdfCotizacion";
 import { enviarCotizacionPdf } from "../email";
+import { subirPdfCotizacion, descargarPdfCotizacion } from "../storage";
 import { notificarCliente } from "../notificarCliente";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
@@ -259,6 +260,12 @@ cotizacionesRouter.patch(
       cambios.monto = total;
     }
 
+    // Invalida el PDF cacheado si cambió algo que se ve en el
+    // documento — no por solo cambiar el estado administrativo.
+    if (descripcion !== undefined || fecha_vencimiento !== undefined || itemsRaw !== undefined) {
+      cambios.pdf_url = null;
+    }
+
     if (Object.keys(cambios).length === 0) {
       res.status(400).json({ error: "Nada que actualizar" });
       return;
@@ -290,7 +297,7 @@ cotizacionesRouter.patch(
       void (async () => {
         const datosPdf = await armarDatosPdfCotizacion(req.empresaId!, data.id);
         if (!datosPdf?.clienteCorreo || !datosPdf.clienteId) return;
-        const pdf = await generarPdfCotizacion(datosPdf);
+        const pdf = await obtenerPdfCotizacion(req.empresaId!, data.id, datosPdf);
         await notificarCliente(req.empresaId!, "cotizacion_enviada", datosPdf.clienteCorreo, {
           clienteId: datosPdf.clienteId,
           entidadTipo: "cotizacion",
@@ -464,6 +471,30 @@ export async function armarDatosPdfCotizacion(empresaId: string, cotizacionId: s
   };
 }
 
+// El PDF se genera una sola vez y se sirve desde storage en los
+// pedidos siguientes (pdf_url en presupuestos) — se invalida (vuelve a
+// null) en el PATCH de abajo cuando la cotización cambia. Si el objeto
+// cacheado no se puede leer (ej. se borró a mano en el bucket), se
+// regenera igual en vez de fallar.
+async function obtenerPdfCotizacion(
+  empresaId: string,
+  cotizacionId: string,
+  datos: NonNullable<Awaited<ReturnType<typeof armarDatosPdfCotizacion>>>
+): Promise<Buffer> {
+  const { data: cotizacion } = await supabase.from("presupuestos").select("pdf_url").eq("empresa_id", empresaId).eq("id", cotizacionId).maybeSingle();
+  if (cotizacion?.pdf_url) {
+    try {
+      return await descargarPdfCotizacion(cotizacion.pdf_url);
+    } catch (err) {
+      console.error("No se pudo leer el PDF cacheado de la cotización, se regenera:", err);
+    }
+  }
+  const pdf = await generarPdfCotizacion(datos);
+  const key = await subirPdfCotizacion(empresaId, cotizacionId, pdf);
+  await supabase.from("presupuestos").update({ pdf_url: key }).eq("empresa_id", empresaId).eq("id", cotizacionId);
+  return pdf;
+}
+
 cotizacionesRouter.get(
   "/:id/pdf",
   ah<RequestConEmpresa>(async (req, res) => {
@@ -472,7 +503,7 @@ cotizacionesRouter.get(
       res.status(404).json({ error: "Cotización no encontrada" });
       return;
     }
-    const pdf = await generarPdfCotizacion(datos);
+    const pdf = await obtenerPdfCotizacion(req.empresaId!, req.params.id, datos);
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `inline; filename="${datos.numeroTexto}.pdf"`);
     res.send(pdf);
@@ -492,7 +523,7 @@ cotizacionesRouter.post(
       res.status(400).json({ error: "El cliente no tiene correo registrado — indica un destinatario" });
       return;
     }
-    const pdf = await generarPdfCotizacion(datos);
+    const pdf = await obtenerPdfCotizacion(req.empresaId!, req.params.id, datos);
     await enviarCotizacionPdf(destinatario, datos.empresaNombre, datos.numero ?? 0, pdf);
     res.json({ ok: true });
   })
