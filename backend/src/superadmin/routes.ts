@@ -1,6 +1,6 @@
 import { Router } from "express";
-import type { EstadoEmpresa, Modulo, Plan } from "@bitacora/shared";
-import { MODULOS, moduloActivadoPorDefecto } from "@bitacora/shared";
+import type { EstadoEmpresa, Modulo, Plan, Rubro } from "@bitacora/shared";
+import { MODULOS, moduloActivadoPorDefecto, formatearRut, validarRut } from "@bitacora/shared";
 import { supabase } from "../supabase";
 import { env } from "../env";
 import { ah } from "../asyncHandler";
@@ -14,6 +14,7 @@ import { crearTokenSuperAdmin, requiereSuperAdmin, registrarAuditoria, type Requ
 
 const ESTADOS_EMPRESA: EstadoEmpresa[] = ["activa", "suspendida", "dada_de_baja"];
 const PLANES: Plan[] = ["trial", "basico", "pro"];
+const RUBROS: Rubro[] = ["transporte", "servicio_tecnico", "otro"];
 
 export const superadminRouter = Router();
 
@@ -106,12 +107,165 @@ superadminRouter.get(
   })
 );
 
+// Crea una empresa cliente nueva desde el panel — para onboarding
+// manual (ej. un cliente que no pasa por el registro self-service).
+// Invita al admin inicial por correo (mismo mecanismo que invitar
+// colaboradores) y lo deja vinculado a la empresa recién creada.
+superadminRouter.post(
+  "/empresas",
+  requiereSuperAdmin,
+  ah<RequestConSuperAdmin>(async (req, res) => {
+    const { nombre, rubro, rut, giro, telefono_empresa, direccion_calle, admin_nombre, admin_correo } = req.body ?? {};
+
+    if (typeof nombre !== "string" || !nombre.trim()) {
+      res.status(400).json({ error: "Falta el nombre de la empresa" });
+      return;
+    }
+    if (typeof rubro !== "string" || !RUBROS.includes(rubro as Rubro)) {
+      res.status(400).json({ error: `rubro debe ser uno de: ${RUBROS.join(", ")}` });
+      return;
+    }
+    if (typeof admin_nombre !== "string" || !admin_nombre.trim()) {
+      res.status(400).json({ error: "Falta el nombre del administrador inicial" });
+      return;
+    }
+    if (typeof admin_correo !== "string" || !admin_correo.includes("@")) {
+      res.status(400).json({ error: "Correo del administrador inicial inválido" });
+      return;
+    }
+    let rutFormateado: string | null = null;
+    if (rut !== undefined && rut !== null && rut !== "") {
+      if (typeof rut !== "string" || !validarRut(rut)) {
+        res.status(400).json({ error: "RUT inválido (verifica el dígito verificador)" });
+        return;
+      }
+      rutFormateado = formatearRut(rut);
+    }
+
+    const pruebaTerminaEn = new Date();
+    pruebaTerminaEn.setDate(pruebaTerminaEn.getDate() + 21);
+
+    const { data: empresa, error: errorEmpresa } = await supabase
+      .from("empresas")
+      .insert({
+        nombre: nombre.trim(),
+        rubro: rubro as Rubro,
+        rut: rutFormateado,
+        giro: giro?.trim() || null,
+        telefono_empresa: telefono_empresa?.trim() || null,
+        direccion_calle: direccion_calle?.trim() || null,
+        prueba_termina_en: pruebaTerminaEn.toISOString().slice(0, 10),
+      })
+      .select()
+      .single();
+    if (errorEmpresa) {
+      res.status(500).json({ error: errorEmpresa.message });
+      return;
+    }
+
+    const { data: invitado, error: errorInvitar } = await supabase.auth.admin.inviteUserByEmail(admin_correo, {
+      redirectTo: `${env.WEB_URL}/invitacion`,
+    });
+    if (errorInvitar || !invitado.user) {
+      await supabase.from("empresas").delete().eq("id", empresa.id);
+      console.error("Error invitando admin inicial:", errorInvitar);
+      // Mismo criterio que POST /api/usuarios/invitar — distingue una
+      // falla del servicio de correo de un correo simplemente inválido.
+      const fueErrorDeEnvio = /sending invite email|error sending/i.test(errorInvitar?.message ?? "");
+      res.status(fueErrorDeEnvio ? 502 : 400).json({
+        error: fueErrorDeEnvio
+          ? "No pudimos enviar el correo de invitación al administrador. Puede ser un problema temporal del servicio de correo — intenta de nuevo en unos minutos."
+          : "No se pudo invitar al administrador. Verifica que el correo sea válido e intenta de nuevo.",
+      });
+      return;
+    }
+
+    const { data: usuario, error: errorUsuario } = await supabase
+      .from("usuarios")
+      .insert({ id: invitado.user.id, empresa_id: empresa.id, nombre: admin_nombre.trim(), rol: "admin" })
+      .select()
+      .single();
+    if (errorUsuario) {
+      await supabase.auth.admin.deleteUser(invitado.user.id);
+      await supabase.from("empresas").delete().eq("id", empresa.id);
+      res.status(500).json({ error: errorUsuario.message });
+      return;
+    }
+
+    await registrarAuditoria(req.superAdminId!, "crear_empresa", {
+      empresaId: empresa.id,
+      ip: req.ip ?? null,
+      detalle: `${empresa.nombre} (admin: ${admin_correo})`,
+    });
+
+    res.status(201).json({ empresa, usuario });
+  })
+);
+
+// Edita los datos de identidad de una empresa — separado de
+// estado/plan/módulos porque estos últimos son decisiones operativas
+// del Super-Admin, mientras que nombre/RUT son datos que hoy solo la
+// propia empresa puede corregir desde Configuración > Empresa; esto le
+// da al Super-Admin una vía para arreglar un typo o un RUT mal
+// ingresado sin depender del cliente.
+superadminRouter.patch(
+  "/empresas/:id",
+  requiereSuperAdmin,
+  ah<RequestConSuperAdmin>(async (req, res) => {
+    const { nombre, rut } = req.body ?? {};
+    const cambios: { nombre?: string; rut?: string | null } = {};
+
+    if (nombre !== undefined) {
+      if (typeof nombre !== "string" || !nombre.trim()) {
+        res.status(400).json({ error: "Falta el nombre de la empresa" });
+        return;
+      }
+      cambios.nombre = nombre.trim();
+    }
+    if (rut !== undefined) {
+      if (rut === null || rut === "") {
+        cambios.rut = null;
+      } else {
+        if (typeof rut !== "string" || !validarRut(rut)) {
+          res.status(400).json({ error: "RUT inválido (verifica el dígito verificador)" });
+          return;
+        }
+        cambios.rut = formatearRut(rut);
+      }
+    }
+    if (Object.keys(cambios).length === 0) {
+      res.status(400).json({ error: "Nada que actualizar" });
+      return;
+    }
+
+    const { data: actual } = await supabase.from("empresas").select("nombre, rut").eq("id", req.params.id).maybeSingle();
+    if (!actual) {
+      res.status(404).json({ error: "Empresa no encontrada" });
+      return;
+    }
+
+    const { data, error } = await supabase.from("empresas").update(cambios).eq("id", req.params.id).select("id, nombre, rut").single();
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+
+    await registrarAuditoria(req.superAdminId!, "editar_empresa", {
+      empresaId: req.params.id,
+      ip: req.ip ?? null,
+      detalle: `${actual.nombre} → nombre: ${data.nombre}, rut: ${data.rut ?? "—"}`,
+    });
+
+    res.json(data);
+  })
+);
+
 superadminRouter.get(
   "/empresas/:id/salud",
   requiereSuperAdmin,
   ah<RequestConSuperAdmin>(async (req, res) => {
     const empresaId = req.params.id;
-    const { data: empresa } = await supabase.from("empresas").select("id, nombre, estado, plan").eq("id", empresaId).maybeSingle();
+    const { data: empresa } = await supabase.from("empresas").select("id, nombre, estado, plan, rut").eq("id", empresaId).maybeSingle();
     if (!empresa) {
       res.status(404).json({ error: "Empresa no encontrada" });
       return;

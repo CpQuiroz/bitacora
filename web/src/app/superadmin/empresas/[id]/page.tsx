@@ -14,7 +14,7 @@ const ESTADOS: EstadoEmpresa[] = ["activa", "suspendida", "dada_de_baja"];
 const PLANES: Plan[] = ["trial", "basico", "pro"];
 
 type Salud = {
-  empresa: { id: string; nombre: string; estado: EstadoEmpresa; plan: Plan };
+  empresa: { id: string; nombre: string; estado: EstadoEmpresa; plan: Plan; rut: string | null };
   ultima_actividad: string | null;
   usuarios_activos_mes: number;
   os_creadas_mes: number;
@@ -59,6 +59,12 @@ export default function SuperAdminSaludEmpresaPage() {
   const [salud, setSalud] = useState<Salud | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const [editandoIdentidad, setEditandoIdentidad] = useState(false);
+  const [nombreEdit, setNombreEdit] = useState("");
+  const [rutEdit, setRutEdit] = useState("");
+  const [guardandoIdentidad, setGuardandoIdentidad] = useState(false);
+  const [errorIdentidad, setErrorIdentidad] = useState<string | null>(null);
+
   const [planSeleccionado, setPlanSeleccionado] = useState<Plan>("trial");
   const [guardandoEstado, setGuardandoEstado] = useState(false);
   const [errorEstado, setErrorEstado] = useState<string | null>(null);
@@ -93,6 +99,8 @@ export default function SuperAdminSaludEmpresaPage() {
     const datos: Salud = await res.json();
     setSalud(datos);
     setPlanSeleccionado(datos.empresa.plan);
+    setNombreEdit(datos.empresa.nombre);
+    setRutEdit(datos.empresa.rut ?? "");
   }
 
   async function cargarModulos() {
@@ -150,6 +158,23 @@ export default function SuperAdminSaludEmpresaPage() {
       return;
     }
     cargarModulos();
+  }
+
+  async function onGuardarIdentidad() {
+    setErrorIdentidad(null);
+    setGuardandoIdentidad(true);
+    const res = await superadminFetch(`/api/superadmin/empresas/${params.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ nombre: nombreEdit, rut: rutEdit.trim() || null }),
+    });
+    setGuardandoIdentidad(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setErrorIdentidad(body.error ?? "No se pudo guardar");
+      return;
+    }
+    setEditandoIdentidad(false);
+    cargar();
   }
 
   async function onCambiarEstado(nuevo: EstadoEmpresa) {
@@ -235,8 +260,46 @@ export default function SuperAdminSaludEmpresaPage() {
           <PageHeader
             title={salud.empresa.nombre}
             subtitle="Salud y uso — sin datos operativos internos"
-            action={<Badge value={salud.empresa.estado} />}
+            action={
+              <div className="flex items-center gap-2">
+                <Badge value={salud.empresa.estado} />
+                {!editandoIdentidad && (
+                  <Button type="button" variant="outline" onClick={() => setEditandoIdentidad(true)}>
+                    Editar nombre/RUT
+                  </Button>
+                )}
+              </div>
+            }
           />
+
+          {editandoIdentidad && (
+            <Card className="my-6 border-brand/40">
+              <h2 className="mb-3 text-sm font-semibold text-foreground">Editar nombre y RUT</h2>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <Label>Nombre de la empresa</Label>
+                  <Input type="text" value={nombreEdit} onChange={(e) => setNombreEdit(e.target.value)} />
+                </div>
+                <div>
+                  <Label>RUT</Label>
+                  <Input type="text" placeholder="76.123.456-7" value={rutEdit} onChange={(e) => setRutEdit(e.target.value)} />
+                </div>
+              </div>
+              {errorIdentidad && (
+                <div className="mt-3">
+                  <ErrorText>{errorIdentidad}</ErrorText>
+                </div>
+              )}
+              <div className="mt-4 flex gap-2">
+                <Button type="button" disabled={guardandoIdentidad || !nombreEdit.trim()} onClick={onGuardarIdentidad}>
+                  {guardandoIdentidad ? "Guardando…" : "Guardar"}
+                </Button>
+                <Button type="button" variant="ghost" onClick={() => setEditandoIdentidad(false)}>
+                  Cancelar
+                </Button>
+              </div>
+            </Card>
+          )}
 
           <div className="my-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Card>
