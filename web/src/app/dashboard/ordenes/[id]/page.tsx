@@ -8,8 +8,11 @@ import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { abrirPdfOS } from "@/lib/descargarPdf";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, SuccessText } from "@/components/ui";
-import { IconCamera, IconChevronLeft, IconClipboardCheck, IconMail } from "@/components/icons";
+import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, SuccessText, Textarea } from "@/components/ui";
+import { IconCamera, IconChevronLeft, IconClipboardCheck, IconMail, IconPlus } from "@/components/icons";
+import { CatalogoSelectorModal, type ItemSeleccionadoCatalogo } from "@/components/CatalogoSelectorModal";
+
+type ItemOS = { catalogo_item_id: string | null; descripcion: string; cantidad: string; precio_unitario: string };
 
 type OrdenConFirma = OrdenServicio & { firma_url_firmada: string | null };
 type AnalisisFotoConUrl = AnalisisFoto & { url: string };
@@ -40,6 +43,14 @@ export default function DetalleOrdenServicioPage() {
 
   const [generandoInforme, setGenerandoInforme] = useState(false);
   const [errorInforme, setErrorInforme] = useState<string | null>(null);
+
+  const [editando, setEditando] = useState(false);
+  const [descEdit, setDescEdit] = useState("");
+  const [itemsEdit, setItemsEdit] = useState<ItemOS[]>([]);
+  const [notasEdit, setNotasEdit] = useState("");
+  const [selectorAbierto, setSelectorAbierto] = useState(false);
+  const [guardandoEdit, setGuardandoEdit] = useState(false);
+  const [errorEdit, setErrorEdit] = useState<string | null>(null);
 
   const cargar = useCallback(async () => {
     const { data } = await supabase.auth.getSession();
@@ -106,6 +117,70 @@ export default function DetalleOrdenServicioPage() {
     setEmail("");
   }
 
+  const tieneFirma = Boolean(detalle?.orden?.firma_url_firmada);
+
+  function abrirEdicion() {
+    if (!detalle) return;
+    setDescEdit(detalle.descripcion ?? "");
+    setItemsEdit(
+      detalle.items.map((it) => ({
+        catalogo_item_id: it.catalogo_item_id,
+        descripcion: it.descripcion,
+        cantidad: String(it.cantidad),
+        precio_unitario: String(it.precio_unitario),
+      }))
+    );
+    setNotasEdit(detalle.notas_internas ?? "");
+    setErrorEdit(null);
+    setEditando(true);
+  }
+
+  function quitarItemEdit(i: number) {
+    setItemsEdit((prev) => prev.filter((_, idx) => idx !== i));
+  }
+  function actualizarItemEdit(i: number, campo: keyof ItemOS, valor: string) {
+    setItemsEdit((prev) => prev.map((it, idx) => (idx === i ? { ...it, [campo]: valor } : it)));
+  }
+  function onAgregarDesdeSelectorEdit(item: ItemSeleccionadoCatalogo) {
+    setItemsEdit((prev) => [
+      ...prev,
+      {
+        catalogo_item_id: item.catalogo_item_id,
+        descripcion: item.descripcion,
+        cantidad: String(item.cantidad),
+        precio_unitario: String(item.precio_unitario),
+      },
+    ]);
+  }
+
+  async function onGuardarEdicion() {
+    setErrorEdit(null);
+    setGuardandoEdit(true);
+    const body: Record<string, unknown> = { notas_internas: notasEdit.trim() || null };
+    if (!tieneFirma) {
+      body.descripcion = descEdit.trim() || null;
+      body.items = JSON.stringify(
+        itemsEdit
+          .filter((it) => it.descripcion.trim())
+          .map((it) => ({
+            catalogo_item_id: it.catalogo_item_id,
+            descripcion: it.descripcion.trim(),
+            cantidad: Number(it.cantidad || 0),
+            precio_unitario: Number(it.precio_unitario || 0),
+          }))
+      );
+    }
+    const res = await apiFetch(`/api/trabajos/${params.id}`, { method: "PATCH", body: JSON.stringify(body) });
+    setGuardandoEdit(false);
+    if (!res.ok) {
+      const errBody = await res.json().catch(() => ({}));
+      setErrorEdit(errBody.error ?? "No se pudo guardar la orden de servicio");
+      return;
+    }
+    setEditando(false);
+    await cargar();
+  }
+
   if (!usuario) return null;
 
   return (
@@ -122,8 +197,113 @@ export default function DetalleOrdenServicioPage() {
           <PageHeader
             title={detalle.orden?.folio != null ? `OS N° ${detalle.orden.folio}` : "Orden de servicio"}
             subtitle={`${detalle.cliente_info?.nombre ?? detalle.cliente} · ${detalle.fecha}${detalle.hora_programada ? ` ${detalle.hora_programada}` : ""}`}
-            action={<Badge value={detalle.orden?.estado_os ?? "pendiente"} />}
+            action={
+              <div className="flex items-center gap-2">
+                <Badge value={detalle.orden?.estado_os ?? "pendiente"} />
+                {!editando && (
+                  <Button type="button" variant="outline" onClick={abrirEdicion}>
+                    Editar
+                  </Button>
+                )}
+              </div>
+            }
           />
+
+          {editando && (
+            <Card className="my-6 border-brand/40">
+              <h2 className="mb-4 text-sm font-semibold text-foreground">Editar orden de servicio</h2>
+
+              {tieneFirma && (
+                <p className="mb-4 rounded-lg bg-warning-soft px-3 py-2 text-xs text-warning">
+                  Esta OS ya tiene firma de conformidad — los ítems y la descripción quedaron bloqueados. Solo las notas
+                  internas siguen editables.
+                </p>
+              )}
+
+              <div className="mb-5">
+                <Label>Descripción</Label>
+                <Textarea
+                  rows={2}
+                  value={descEdit}
+                  onChange={(e) => setDescEdit(e.target.value)}
+                  disabled={tieneFirma}
+                />
+              </div>
+
+              <div className="mb-5">
+                <div className="mb-3 flex items-center justify-between">
+                  <Label>Ítems / materiales</Label>
+                  {!tieneFirma && (
+                    <Button type="button" variant="outline" onClick={() => setSelectorAbierto(true)}>
+                      <IconPlus className="h-4 w-4" />
+                      Agregar ítem
+                    </Button>
+                  )}
+                </div>
+                <div className="flex flex-col gap-2">
+                  {itemsEdit.map((it, i) => (
+                    <div key={i} className="grid grid-cols-[1fr_5rem_7rem_auto] items-end gap-2">
+                      <Input
+                        type="text"
+                        placeholder="Descripción"
+                        value={it.descripcion}
+                        disabled={tieneFirma}
+                        onChange={(e) => actualizarItemEdit(i, "descripcion", e.target.value)}
+                      />
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={it.cantidad}
+                        disabled={tieneFirma}
+                        onChange={(e) => actualizarItemEdit(i, "cantidad", e.target.value)}
+                      />
+                      <Input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={it.precio_unitario}
+                        disabled={tieneFirma}
+                        onChange={(e) => actualizarItemEdit(i, "precio_unitario", e.target.value)}
+                      />
+                      {!tieneFirma && (
+                        <Button type="button" variant="ghost" onClick={() => quitarItemEdit(i)}>
+                          Quitar
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                  {itemsEdit.length === 0 && <p className="text-sm text-muted">Sin ítems.</p>}
+                </div>
+              </div>
+
+              <div className="mb-5">
+                <Label>Notas internas (no se muestran al cliente)</Label>
+                <Textarea rows={3} value={notasEdit} onChange={(e) => setNotasEdit(e.target.value)} />
+              </div>
+
+              {errorEdit && (
+                <div className="mb-4">
+                  <ErrorText>{errorEdit}</ErrorText>
+                </div>
+              )}
+              <div className="flex gap-2">
+                <Button type="button" onClick={onGuardarEdicion} disabled={guardandoEdit}>
+                  {guardandoEdit ? "Guardando…" : "Guardar cambios"}
+                </Button>
+                <Button type="button" variant="ghost" onClick={() => setEditando(false)}>
+                  Cancelar
+                </Button>
+              </div>
+
+              <CatalogoSelectorModal
+                open={selectorAbierto}
+                onClose={() => setSelectorAbierto(false)}
+                onAgregar={onAgregarDesdeSelectorEdit}
+                moneda={usuario.moneda ?? "CLP"}
+              />
+            </Card>
+          )}
 
           <Card className="my-6">
             <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-foreground">
@@ -155,6 +335,12 @@ export default function DetalleOrdenServicioPage() {
                 <div className="sm:col-span-2">
                   <p className="text-xs text-muted">Observaciones de cierre</p>
                   <p className="text-foreground">{detalle.orden.observaciones_cierre}</p>
+                </div>
+              )}
+              {detalle.notas_internas && (
+                <div className="sm:col-span-2">
+                  <p className="text-xs text-muted">Notas internas (no visibles para el cliente)</p>
+                  <p className="text-foreground">{detalle.notas_internas}</p>
                 </div>
               )}
             </div>

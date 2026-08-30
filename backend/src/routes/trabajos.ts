@@ -153,6 +153,8 @@ trabajosRouter.patch(
       duracion_estimada_min,
       tipo_checkin,
       encuesta_email,
+      items,
+      notas_internas,
     } = req.body ?? {};
     const cambios: Partial<Trabajo> = {};
 
@@ -225,13 +227,50 @@ trabajosRouter.patch(
       cambios.tipo_checkin = tipo_checkin;
     }
     if (encuesta_email !== undefined) cambios.encuesta_email = encuesta_email?.trim() || null;
+    if (notas_internas !== undefined) cambios.notas_internas = notas_internas?.trim() || null;
+
+    // Ítems/monto son contractuales — se reemplazan enteros si vienen
+    // ítems nuevos (mismo formato que POST /), y el monto se recalcula
+    // solo a partir de esos ítems (nunca se acepta un monto suelto acá,
+    // para que no puedan desincronizarse).
+    let itemsParseados: ItemOsParseado[] | null | undefined;
+    const tocaItems = items !== undefined;
+    if (tocaItems) {
+      itemsParseados = parsearItemsOS(items);
+      if (itemsParseados === null) {
+        res.status(400).json({ error: "items inválido" });
+        return;
+      }
+      cambios.monto = itemsParseados.reduce((acc, it) => acc + it.cantidad * it.precio_unitario, 0);
+    }
+
     if (Object.keys(cambios).length === 0) {
       res.status(400).json({ error: "Nada que actualizar" });
       return;
     }
-    if (await trabajoBloqueado(req.empresaId!, req.params.id)) {
-      res.status(403).json({ error: "La orden de servicio ya fue finalizada y no se puede editar" });
+
+    // Campos contractuales: se bloquean apenas hay firma de conformidad
+    // (no hace falta esperar a que la OS quede "finalizada" — ver la
+    // nota de arriba, firma y finalización son pasos distintos). Todo lo
+    // demás, incluidas notas_internas, sigue editable con firma.
+    const CAMPOS_CONTRACTUALES = new Set<keyof Trabajo>(["descripcion", "monto"]);
+    const tocaContractual = tocaItems || Object.keys(cambios).some((c) => CAMPOS_CONTRACTUALES.has(c as keyof Trabajo));
+
+    const orden = await ordenDeTrabajo(req.empresaId!, req.params.id);
+    if (orden?.firma_url && tocaContractual) {
+      res.status(403).json({
+        error: "Esta orden de servicio ya tiene firma de conformidad — no se pueden editar ítems, monto ni descripción. Las notas internas siguen editables.",
+      });
       return;
+    }
+    // Finalizada (siempre implica firma) bloquea todo excepto notas
+    // internas — antes bloqueaba la ruta entera sin excepción.
+    if (orden?.finalizada_en) {
+      const soloNotas = Object.keys(cambios).every((c) => c === "notas_internas") && !tocaItems;
+      if (!soloNotas) {
+        res.status(403).json({ error: "La orden de servicio ya fue finalizada — solo las notas internas siguen editables." });
+        return;
+      }
     }
 
     const { data, error } = await supabase
@@ -250,6 +289,23 @@ trabajosRouter.patch(
       res.status(404).json({ error: "Trabajo no encontrado" });
       return;
     }
+
+    if (tocaItems) {
+      await supabase.from("os_items").delete().eq("empresa_id", req.empresaId!).eq("trabajo_id", req.params.id);
+      if (itemsParseados!.length > 0) {
+        await supabase.from("os_items").insert(
+          itemsParseados!.map((it) => ({
+            empresa_id: req.empresaId!,
+            trabajo_id: req.params.id,
+            catalogo_item_id: it.catalogo_item_id,
+            descripcion: it.descripcion,
+            cantidad: it.cantidad,
+            precio_unitario: it.precio_unitario,
+          }))
+        );
+      }
+    }
+
     res.json(data);
   })
 );
@@ -278,6 +334,30 @@ trabajosRouter.delete(
     res.status(204).end();
   })
 );
+
+type ItemOsParseado = { catalogo_item_id: string | null; descripcion: string; cantidad: number; precio_unitario: number };
+
+// Reutilizado por POST / (crear OS) y PATCH /:id (editar ítems antes de
+// la firma) — misma validación en los dos lugares, un solo formato.
+function parsearItemsOS(items: unknown): ItemOsParseado[] | null {
+  if (typeof items !== "string" || !items.trim()) return [];
+  try {
+    const parsed = JSON.parse(items);
+    if (!Array.isArray(parsed)) return null;
+    const itemsParseados: ItemOsParseado[] = parsed.map((it) => ({
+      catalogo_item_id: it.catalogo_item_id || null,
+      descripcion: String(it.descripcion ?? "").trim(),
+      cantidad: Number(it.cantidad ?? 1),
+      precio_unitario: Number(it.precio_unitario ?? 0),
+    }));
+    if (itemsParseados.some((it) => !it.descripcion || Number.isNaN(it.cantidad) || Number.isNaN(it.precio_unitario))) {
+      return null;
+    }
+    return itemsParseados;
+  } catch {
+    return null;
+  }
+}
 
 trabajosRouter.post(
   "/",
@@ -333,24 +413,10 @@ trabajosRouter.post(
         return;
       }
     }
-    let itemsParseados: { catalogo_item_id: string | null; descripcion: string; cantidad: number; precio_unitario: number }[] = [];
-    if (typeof items === "string" && items.trim()) {
-      try {
-        const parsed = JSON.parse(items);
-        if (!Array.isArray(parsed)) throw new Error();
-        itemsParseados = parsed.map((it) => ({
-          catalogo_item_id: it.catalogo_item_id || null,
-          descripcion: String(it.descripcion ?? "").trim(),
-          cantidad: Number(it.cantidad ?? 1),
-          precio_unitario: Number(it.precio_unitario ?? 0),
-        }));
-        if (itemsParseados.some((it) => !it.descripcion || Number.isNaN(it.cantidad) || Number.isNaN(it.precio_unitario))) {
-          throw new Error();
-        }
-      } catch {
-        res.status(400).json({ error: "items inválido" });
-        return;
-      }
+    const itemsParseados = parsearItemsOS(items);
+    if (itemsParseados === null) {
+      res.status(400).json({ error: "items inválido" });
+      return;
     }
     const estadoFinal: EstadoTrabajo = ESTADOS.includes(estado) ? estado : "completado";
     const prioridadFinal: Prioridad = PRIORIDADES.includes(prioridad) ? prioridad : "media";

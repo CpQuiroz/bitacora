@@ -320,6 +320,7 @@ export type Trabajo = {
   calificacion_satisfaccion: number | null;
   encuesta_respondida_en: string | null;
   hora_programada: string | null;
+  notas_internas: string | null;
   creado_en: string;
 };
 
