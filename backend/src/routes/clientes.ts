@@ -123,7 +123,7 @@ clientesRouter.get(
 clientesRouter.post(
   "/",
   ah<RequestConEmpresa>(async (req, res) => {
-    const { nombre, rut, direccion, comuna, telefono, correo, notas } = req.body ?? {};
+    const { nombre, rut, direccion, comuna, telefono, correo, notas, fecha_nacimiento } = req.body ?? {};
 
     if (typeof nombre !== "string" || !nombre.trim()) {
       res.status(400).json({ error: "Falta nombre" });
@@ -153,6 +153,7 @@ clientesRouter.post(
         telefono: telefono?.trim() || null,
         correo: correo?.trim() || null,
         notas: notas?.trim() || null,
+        fecha_nacimiento: fecha_nacimiento || null,
       })
       .select()
       .single();
@@ -168,7 +169,7 @@ clientesRouter.post(
 clientesRouter.patch(
   "/:id",
   ah<RequestConEmpresa>(async (req, res) => {
-    const { nombre, rut, direccion, comuna, telefono, correo, notas, activo } = req.body ?? {};
+    const { nombre, rut, direccion, comuna, telefono, correo, notas, activo, fecha_nacimiento } = req.body ?? {};
     const cambios: Partial<Cliente> = {};
     let reGeocodificar = false;
 
@@ -199,6 +200,7 @@ clientesRouter.patch(
     if (correo !== undefined) cambios.correo = correo?.trim() || null;
     if (notas !== undefined) cambios.notas = notas?.trim() || null;
     if (activo !== undefined) cambios.activo = Boolean(activo);
+    if (fecha_nacimiento !== undefined) cambios.fecha_nacimiento = fecha_nacimiento || null;
 
     if (reGeocodificar) {
       const coords = await geocodificarDireccion(cambios.direccion!);

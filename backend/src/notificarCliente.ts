@@ -32,6 +32,7 @@ const ASUNTOS_DEFAULT: Record<TipoNotificacionCliente, string> = {
   cobro_pendiente: "Tienes un cobro pendiente",
   cobro_vencido: "Tienes un cobro vencido",
   cita_agendada: "Tu cita con {empresa}",
+  cliente_cumpleanos: "¡Feliz cumpleaños de parte de {empresa}!",
 };
 
 const CUERPOS_DEFAULT: Record<TipoNotificacionCliente, string> = {
@@ -43,6 +44,7 @@ const CUERPOS_DEFAULT: Record<TipoNotificacionCliente, string> = {
   cobro_vencido: "<p>Hola {cliente}, tu cobro de {monto} venció el {fecha}. Contáctanos para regularizarlo.</p>",
   cita_agendada:
     "<p>Hola {cliente}, tienes una cita agendada con {empresa} el {fecha}{hora}. Confírmala o cancélala desde tu portal.</p>",
+  cliente_cumpleanos: "<p>¡Feliz cumpleaños, {cliente}! Todo el equipo de {empresa} te desea un gran día.{descuento}</p>",
 };
 
 // Mismo contenido que CUERPOS_DEFAULT pero en texto plano (sin HTML) —
@@ -55,6 +57,7 @@ const WHATSAPP_DEFAULT: Record<TipoNotificacionCliente, string> = {
   cobro_pendiente: "Hola {cliente}, tienes un cobro pendiente de {monto} con vencimiento el {fecha}.",
   cobro_vencido: "Hola {cliente}, tu cobro de {monto} venció el {fecha}. Contáctanos para regularizarlo.",
   cita_agendada: "Hola {cliente}, tienes una cita agendada con {empresa} el {fecha}{hora}. Confírmala o cancélala desde tu portal.",
+  cliente_cumpleanos: "¡Feliz cumpleaños, {cliente}! Todo el equipo de {empresa} te desea un gran día.{descuento}",
 };
 
 // Algunos eventos comparten el mismo "tipo" de mensaje personalizado
@@ -67,6 +70,7 @@ const TIPO_MENSAJE: Record<TipoNotificacionCliente, TipoMensajePersonalizado> = 
   cobro_pendiente: "cobranza",
   cobro_vencido: "cobranza",
   cita_agendada: "cita_agendada",
+  cliente_cumpleanos: "cumpleanos",
 };
 
 // "¿Este TIPO de evento está prendido?" — independiente del canal (el
@@ -91,6 +95,8 @@ function tipoActivado(config: NotificacionesConfig | null, tipo: TipoNotificacio
       return config.cobranza_atrasada;
     case "cita_agendada":
       return config.cita_agendada;
+    case "cliente_cumpleanos":
+      return config.cliente_cumpleanos;
   }
 }
 

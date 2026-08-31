@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { MensajePersonalizado, NotificacionClienteLog, NotificacionesConfig, TipoMensajePersonalizado } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
-import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, SuccessText, Textarea } from "@/components/ui";
+import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText, Textarea } from "@/components/ui";
 import { DataTable } from "@/components/DataTable";
 import { IconChat, IconClock, IconMail } from "@/components/icons";
 
@@ -43,6 +43,10 @@ const TOGGLES: { grupo: string; items: { campo: keyof NotificacionesConfig; etiq
     grupo: "Agenda Pro",
     items: [{ campo: "cita_agendada", etiqueta: "Nueva cita agendada (con link para confirmar o cancelar)" }],
   },
+  {
+    grupo: "Clientes",
+    items: [{ campo: "cliente_cumpleanos", etiqueta: "Cumpleaños del cliente (correo automático el día)" }],
+  },
 ];
 
 const TIPOS_MENSAJE: { valor: TipoMensajePersonalizado; etiqueta: string; variables: string }[] = [
@@ -51,6 +55,11 @@ const TIPOS_MENSAJE: { valor: TipoMensajePersonalizado; etiqueta: string; variab
   { valor: "tecnico_en_camino", etiqueta: "Técnico en camino", variables: "{cliente}, {tecnico}, {empresa}" },
   { valor: "cobranza", etiqueta: "Cobranzas", variables: "{cliente}, {fecha}, {monto}, {empresa}" },
   { valor: "cita_agendada", etiqueta: "Agenda Pro", variables: "{cliente}, {fecha}, {hora}, {empresa}" },
+  {
+    valor: "cumpleanos",
+    etiqueta: "Cumpleaños de cliente",
+    variables: "{cliente}, {empresa}, {descuento} (frase completa si hay % configurado, vacío si no)",
+  },
 ];
 
 const ETIQUETA_TIPO_LOG: Record<string, string> = {
@@ -61,6 +70,7 @@ const ETIQUETA_TIPO_LOG: Record<string, string> = {
   cobro_pendiente: "Cobro pendiente",
   cobro_vencido: "Cobro vencido",
   cita_agendada: "Cita agendada",
+  cliente_cumpleanos: "Cumpleaños de cliente",
 };
 
 type Mensajes = Record<TipoMensajePersonalizado, MensajePersonalizado | null>;
@@ -151,6 +161,8 @@ export default function NotificacionesPage() {
         cobro_pendiente: config.cobro_pendiente,
         cobranza_atrasada: config.cobranza_atrasada,
         cita_agendada: config.cita_agendada,
+        cliente_cumpleanos: config.cliente_cumpleanos,
+        cliente_cumpleanos_descuento_pct: config.cliente_cumpleanos_descuento_pct,
       }),
     });
     setGuardando(false);
@@ -241,6 +253,28 @@ export default function NotificacionesPage() {
                     </label>
                   ))}
                 </div>
+                {grupo.grupo === "Clientes" && config.cliente_cumpleanos && (
+                  <div className="mt-3 max-w-xs">
+                    <Label>Descuento a mencionar en el correo (opcional)</Label>
+                    <Select
+                      value={config.cliente_cumpleanos_descuento_pct ?? ""}
+                      onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                        setConfig((prev) =>
+                          prev ? { ...prev, cliente_cumpleanos_descuento_pct: e.target.value ? Number(e.target.value) : null } : prev
+                        )
+                      }
+                    >
+                      <option value="">Sin descuento</option>
+                      <option value="10">10%</option>
+                      <option value="15">15%</option>
+                      <option value="20">20%</option>
+                    </Select>
+                    <p className="mt-1.5 text-xs text-muted">
+                      Solo informativo — se menciona en el texto del correo, nunca se calcula ni se aplica nada en la app. La
+                      empresa lo honra a mano cuando el cliente vuelve.
+                    </p>
+                  </div>
+                )}
               </div>
             ))}
           </div>

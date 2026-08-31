@@ -55,6 +55,7 @@ import { mfaRouter } from "./routes/mfa";
 import { authLoginRouter } from "./routes/authLogin";
 import { limitarLogin, limitarEncuestaPublica } from "./rateLimiters";
 import { modulosDeshabilitadosDeEmpresa, requiereModulo } from "./permisos";
+import { revisarCumpleanosClientes } from "./cumpleanosClientes";
 import { ah } from "./asyncHandler";
 
 const RUBROS: Rubro[] = ["transporte", "servicio_tecnico", "otro"];
@@ -105,6 +106,11 @@ app.get("/api/me", requiereAuth, ah<RequestConUsuario>(async (req, res) => {
     return;
   }
   const modulosDeshabilitados = usuario ? await modulosDeshabilitadosDeEmpresa(usuario.empresa_id) : [];
+  // Sin cron en este proyecto — /api/me es el endpoint más universal
+  // (cualquier navegación del dashboard lo llama), así que es donde
+  // más chances hay de que el chequeo corra el día justo. No bloquea
+  // la respuesta.
+  if (usuario) revisarCumpleanosClientes(usuario.empresa_id).catch((err) => console.error("Error revisando cumpleaños de clientes:", err));
   res.json({ usuario, modulos_deshabilitados: modulosDeshabilitados });
 }));
 

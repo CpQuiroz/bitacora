@@ -33,6 +33,7 @@ export default function ClientesPage() {
   const [comuna, setComuna] = useState("");
   const [telefono, setTelefono] = useState("");
   const [correo, setCorreo] = useState("");
+  const [fechaNacimiento, setFechaNacimiento] = useState("");
 
   async function cargar() {
     const { data } = await supabase.auth.getSession();
@@ -79,7 +80,7 @@ export default function ClientesPage() {
     setGuardando(true);
     const res = await apiFetch("/api/clientes", {
       method: "POST",
-      body: JSON.stringify({ nombre, rut: rut.trim() || null, direccion, comuna, telefono, correo }),
+      body: JSON.stringify({ nombre, rut: rut.trim() || null, direccion, comuna, telefono, correo, fecha_nacimiento: fechaNacimiento || null }),
     });
     setGuardando(false);
     if (!res.ok) {
@@ -99,6 +100,7 @@ export default function ClientesPage() {
     setComuna("");
     setTelefono("");
     setCorreo("");
+    setFechaNacimiento("");
     setFormAbierto(false);
     cargar();
   }
@@ -189,6 +191,10 @@ export default function ClientesPage() {
               <div>
                 <Label>Comuna</Label>
                 <Input type="text" value={comuna} onChange={(e) => setComuna(e.target.value)} />
+              </div>
+              <div>
+                <Label>Fecha de cumpleaños (opcional)</Label>
+                <Input type="date" value={fechaNacimiento} onChange={(e) => setFechaNacimiento(e.target.value)} />
               </div>
             </div>
             {formError && <ErrorText>{formError}</ErrorText>}

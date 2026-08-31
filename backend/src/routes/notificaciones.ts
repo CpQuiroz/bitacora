@@ -7,7 +7,7 @@ import { requiereModulo } from "../permisos";
 
 export const notificacionesRouter = Router();
 
-const TIPOS_MENSAJE: TipoMensajePersonalizado[] = ["cotizacion", "orden_servicio", "cobranza", "tecnico_en_camino", "cita_agendada"];
+const TIPOS_MENSAJE: TipoMensajePersonalizado[] = ["cotizacion", "orden_servicio", "cobranza", "tecnico_en_camino", "cita_agendada", "cumpleanos"];
 
 function tipoValido(tipo: string): tipo is TipoMensajePersonalizado {
   return (TIPOS_MENSAJE as string[]).includes(tipo);
@@ -64,6 +64,7 @@ notificacionesRouter.patch(
       "tecnico_en_camino",
       "cobro_pendiente",
       "cita_agendada",
+      "cliente_cumpleanos",
       "whatsapp_activado",
     ];
     const cambios: Partial<NotificacionesConfig> = { actualizado_en: new Date().toISOString() };
@@ -77,6 +78,14 @@ notificacionesRouter.patch(
         return;
       }
       cambios.dias_aviso_vencimiento = dias;
+    }
+    if (req.body?.cliente_cumpleanos_descuento_pct !== undefined) {
+      const pct = req.body.cliente_cumpleanos_descuento_pct;
+      if (pct !== null && ![10, 15, 20].includes(pct)) {
+        res.status(400).json({ error: "cliente_cumpleanos_descuento_pct debe ser 10, 15, 20 o null" });
+        return;
+      }
+      cambios.cliente_cumpleanos_descuento_pct = pct;
     }
 
     // tenant-ok: obtenerOCrearConfig() arriba ya scopeó por empresa_id.

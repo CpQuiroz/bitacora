@@ -54,6 +54,7 @@ export default function ClienteDetallePage() {
   const [correo, setCorreo] = useState("");
   const [direccion, setDireccion] = useState("");
   const [comuna, setComuna] = useState("");
+  const [fechaNacimiento, setFechaNacimiento] = useState("");
   const [guardando, setGuardando] = useState(false);
   const [errorForm, setErrorForm] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
@@ -92,6 +93,7 @@ export default function ClienteDetallePage() {
     setCorreo(c.correo ?? "");
     setDireccion(c.direccion);
     setComuna(c.comuna ?? "");
+    setFechaNacimiento(c.fecha_nacimiento ?? "");
   }, [params.id, router]);
 
   useEffect(() => {
@@ -108,7 +110,7 @@ export default function ClienteDetallePage() {
     setGuardando(true);
     const res = await apiFetch(`/api/clientes/${params.id}`, {
       method: "PATCH",
-      body: JSON.stringify({ nombre, rut: rut.trim() || null, telefono, correo, direccion, comuna }),
+      body: JSON.stringify({ nombre, rut: rut.trim() || null, telefono, correo, direccion, comuna, fecha_nacimiento: fechaNacimiento || null }),
     });
     setGuardando(false);
     if (!res.ok) {
@@ -251,6 +253,10 @@ export default function ClienteDetallePage() {
                   <Label>Comuna</Label>
                   <Input type="text" value={comuna} onChange={(e) => setComuna(e.target.value)} />
                 </div>
+                <div>
+                  <Label>Fecha de cumpleaños (opcional)</Label>
+                  <Input type="date" value={fechaNacimiento} onChange={(e) => setFechaNacimiento(e.target.value)} />
+                </div>
               </div>
               {errorForm && (
                 <div className="mt-3">
@@ -291,6 +297,14 @@ export default function ClienteDetallePage() {
                     </a>
                   )}
                 </div>
+              </div>
+              <div>
+                <p className="text-xs text-muted">Cumpleaños</p>
+                <p className="text-foreground">
+                  {cliente.fecha_nacimiento
+                    ? new Date(`${cliente.fecha_nacimiento}T00:00:00`).toLocaleDateString("es-CL", { day: "2-digit", month: "long" })
+                    : "—"}
+                </p>
               </div>
               <div>
                 <p className="text-xs text-muted">Correo</p>
