@@ -76,6 +76,11 @@ export type Empresa = {
   prueba_termina_en: string | null;
   inventario_activado: boolean;
   inventario_stock_minimo_default: number;
+  // Bloque B (config. de inventario): antes hardcodeado a "firmada" —
+  // ahora configurable por empresa. Ver backend/src/inventario.ts.
+  inventario_descontar_en_estado: EstadoOS;
+  inventario_permitir_negativo: boolean;
+  inventario_descontar_una_vez: boolean;
   estado: EstadoEmpresa;
   creado_en: string;
 };
@@ -559,6 +564,10 @@ export type Factura = {
   estado: EstadoFactura;
   trabajo_ids: string[] | null;
   viaje_ids: string[] | null;
+  // Bloque J: registro de pago manual (independiente de si hay
+  // pasarela real conectada) — ver "Registrar Pago" en el Panel de Acciones.
+  valor_recibido: number | null;
+  observaciones_pago: string | null;
   creado_en: string;
 };
 
@@ -752,6 +761,10 @@ export type CatalogoKitItem = {
 };
 
 export type TipoMovimientoInventario = "entrada" | "salida" | "ajuste";
+// Bloque B/C: distingue un movimiento manual (Configuración > Inventario)
+// de uno automático (cambio de estado de una OS) — antes solo se
+// diferenciaban por el texto libre de "motivo".
+export type OrigenMovimientoInventario = "manual" | "automatico";
 
 export type InventarioMovimiento = {
   id: string;
@@ -761,7 +774,21 @@ export type InventarioMovimiento = {
   cantidad: number;
   stock_resultante: number;
   motivo: string | null;
+  origen: OrigenMovimientoInventario;
   creado_en: string;
+};
+
+// Bloque E: sugerencias iniciales de categorías/tipos según el rubro
+// de la empresa — mecanismo genérico basado en datos.
+export type TipoSugerenciaRubro = "categoria_gasto" | "categoria_catalogo" | "tipo_os" | "tipo_documento";
+export type SugerenciaRubro = {
+  id: string;
+  rubro: Rubro;
+  tipo_sugerencia: TipoSugerenciaRubro;
+  valor: string;
+  color: string | null;
+  aplica_a: string | null;
+  orden: number;
 };
 
 export type Proveedor = {
@@ -1067,6 +1094,7 @@ export type Database = {
       notificaciones_preferencias: Tabla<NotificacionPreferencia>;
       equipos: Tabla<Equipo>;
       planes_mantencion: Tabla<PlanMantencion>;
+      sugerencias_rubro: Tabla<SugerenciaRubro>;
       catalogo_items: Tabla<CatalogoItem>;
       catalogo_kit_items: Tabla<CatalogoKitItem>;
       catalogo_item_tipos_equipo: Tabla<CatalogoItemTipoEquipo>;
