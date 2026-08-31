@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { Empresa, Usuario } from "@bitacora/shared";
+import type { Empresa, Modulo, Usuario } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
@@ -59,7 +59,10 @@ const PERIODOS = [
   { valor: "personalizado", etiqueta: "Personalizado" },
 ];
 
-const ACCESOS = [
+// modulo opcional: solo lo llevan los accesos a un módulo opt-in
+// (ver empresa_modulos) — el resto siempre está disponible, así que
+// no hace falta filtrarlos.
+const ACCESOS: { href: string; label: string; icon: typeof IconBriefcase; modulo?: Modulo }[] = [
   { href: "/dashboard/trabajos", label: "Trabajos", icon: IconBriefcase },
   { href: "/dashboard/ordenes", label: "Órdenes de Trabajo/Servicio", icon: IconClipboardCheck },
   { href: "/dashboard/registros/clientes", label: "Clientes", icon: IconMapPin },
@@ -67,7 +70,7 @@ const ACCESOS = [
   { href: "/dashboard/financiero/cobros", label: "Cobros", icon: IconReceipt },
   { href: "/dashboard/financiero/cotizaciones", label: "Cotizaciones", icon: IconTag },
   { href: "/dashboard/gastos", label: "Gastos", icon: IconWallet },
-  { href: "/dashboard/informe", label: "Informe con IA", icon: IconSparkle },
+  { href: "/dashboard/informe", label: "Informe con IA", icon: IconSparkle, modulo: "informe_ia" },
 ];
 
 function KpiCard({ etiqueta, valor, sub }: { etiqueta: string; valor: string; sub?: string }) {
@@ -85,6 +88,7 @@ const pct = (n: number) => `${n.toFixed(0)}%`;
 export default function DashboardPage() {
   const router = useRouter();
   const [usuario, setUsuario] = useState<UsuarioConEmpresa | null>(null);
+  const [modulosDeshabilitados, setModulosDeshabilitados] = useState<Modulo[]>([]);
   const [cargando, setCargando] = useState(true);
 
   const [periodo, setPeriodo] = useState("este_mes");
@@ -112,6 +116,7 @@ export default function DashboardPage() {
         return;
       }
       setUsuario(body.usuario);
+      setModulosDeshabilitados(body.modulos_deshabilitados ?? []);
       setCargando(false);
     })();
   }, [router]);
@@ -337,7 +342,7 @@ export default function DashboardPage() {
       )}
 
       <div className="mt-8 flex flex-wrap gap-2">
-        {ACCESOS.map((a) => (
+        {ACCESOS.filter((a) => !a.modulo || !modulosDeshabilitados.includes(a.modulo)).map((a) => (
           <Link
             key={a.href}
             href={a.href}
