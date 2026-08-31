@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import type { Cliente, Prioridad, Rol, TipoOS, TipoTrabajo, Usuario } from "@bitacora/shared";
+import type { Cliente, Prioridad, TipoOS, TipoTrabajo, Usuario } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
@@ -21,17 +21,13 @@ import { IconClipboardCheck, IconPlus } from "@/components/icons";
 import { MapaRutas, type Parada } from "@/components/MapaRutas";
 import { CatalogoSelectorModal, type ItemSeleccionadoCatalogo } from "@/components/CatalogoSelectorModal";
 import { SelectCrear } from "@/components/SelectCrear";
+import { ComboboxCliente } from "@/components/ComboboxCliente";
+import { ComboboxResponsable } from "@/components/ComboboxResponsable";
 
 type ItemOS = { catalogo_item_id: string | null; descripcion: string; cantidad: string; precio_unitario: string };
 const ITEM_VACIO: ItemOS = { catalogo_item_id: null, descripcion: "", cantidad: "1", precio_unitario: "0" };
 
 const PRIORIDADES: Prioridad[] = ["alta", "media", "baja"];
-const ROLES: { value: Rol; label: string }[] = [
-  { value: "colaborador", label: "Colaborador / técnico" },
-  { value: "supervisor", label: "Supervisor" },
-  { value: "contador", label: "Contador" },
-  { value: "admin", label: "Admin" },
-];
 
 export default function NuevaOrdenServicioPage() {
   const router = useRouter();
@@ -42,16 +38,7 @@ export default function NuevaOrdenServicioPage() {
   const [tiposOs, setTiposOs] = useState<TipoOS[]>([]);
 
   const [clienteId, setClienteId] = useState("");
-  const [nuevoClienteModo, setNuevoClienteModo] = useState(false);
-  const [nuevoClienteNombre, setNuevoClienteNombre] = useState("");
-  const [nuevoClienteDireccion, setNuevoClienteDireccion] = useState("");
   const [responsableId, setResponsableId] = useState("");
-  const [nuevoColabModo, setNuevoColabModo] = useState(false);
-  const [nuevoColabNombre, setNuevoColabNombre] = useState("");
-  const [nuevoColabCorreo, setNuevoColabCorreo] = useState("");
-  const [nuevoColabRol, setNuevoColabRol] = useState<Rol>("colaborador");
-  const [invitandoColab, setInvitandoColab] = useState(false);
-  const [errorColab, setErrorColab] = useState<string | null>(null);
   const [tipoTrabajoId, setTipoTrabajoId] = useState("");
   const [tipoOsId, setTipoOsId] = useState("");
   const [descripcion, setDescripcion] = useState("");
@@ -100,47 +87,6 @@ export default function NuevaOrdenServicioPage() {
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  async function onCrearCliente() {
-    if (!nuevoClienteNombre.trim() || !nuevoClienteDireccion.trim()) return;
-    const res = await apiFetch("/api/clientes", {
-      method: "POST",
-      body: JSON.stringify({ nombre: nuevoClienteNombre, direccion: nuevoClienteDireccion }),
-    });
-    if (!res.ok) return;
-    const nuevo = await res.json();
-    setClientes((prev) => [...prev, nuevo]);
-    setClienteId(nuevo.id);
-    setNuevoClienteModo(false);
-    setNuevoClienteNombre("");
-    setNuevoClienteDireccion("");
-  }
-
-  async function onInvitarColaborador() {
-    if (!nuevoColabNombre.trim() || !nuevoColabCorreo.trim()) {
-      setErrorColab("Falta nombre o correo");
-      return;
-    }
-    setErrorColab(null);
-    setInvitandoColab(true);
-    const res = await apiFetch("/api/usuarios/invitar", {
-      method: "POST",
-      body: JSON.stringify({ email: nuevoColabCorreo.trim(), nombre: nuevoColabNombre.trim(), rol: nuevoColabRol }),
-    });
-    setInvitandoColab(false);
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      setErrorColab(body.error ?? "No se pudo invitar al colaborador");
-      return;
-    }
-    const nuevo: Usuario = await res.json();
-    setEquipo((prev) => [...prev, nuevo]);
-    setResponsableId(nuevo.id);
-    setNuevoColabModo(false);
-    setNuevoColabNombre("");
-    setNuevoColabCorreo("");
-    setNuevoColabRol("colaborador");
-  }
 
   function actualizarItem(i: number, campo: keyof ItemOS, valor: string) {
     setItems((prev) => prev.map((it, idx) => (idx === i ? { ...it, [campo]: valor } : it)));
@@ -276,108 +222,25 @@ export default function NuevaOrdenServicioPage() {
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
                 <Label>Cliente</Label>
-                {!nuevoClienteModo ? (
-                  <div className="flex gap-2">
-                    <Select value={clienteId} onChange={(e) => setClienteId(e.target.value)} className="flex-1">
-                      <option value="">Selecciona un cliente</option>
-                      {clientes.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.nombre}
-                        </option>
-                      ))}
-                    </Select>
-                    <Button type="button" variant="outline" onClick={() => setNuevoClienteModo(true)}>
-                      + Nuevo
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-2 rounded-lg border border-border p-3">
-                    <Input
-                      type="text"
-                      placeholder="Nombre del cliente"
-                      value={nuevoClienteNombre}
-                      onChange={(e) => setNuevoClienteNombre(e.target.value)}
-                    />
-                    <Input
-                      type="text"
-                      placeholder="Dirección"
-                      value={nuevoClienteDireccion}
-                      onChange={(e) => setNuevoClienteDireccion(e.target.value)}
-                    />
-                    <div className="flex gap-2">
-                      <Button type="button" onClick={onCrearCliente}>
-                        Guardar cliente
-                      </Button>
-                      <Button type="button" variant="outline" onClick={() => setNuevoClienteModo(false)}>
-                        Cancelar
-                      </Button>
-                    </div>
-                  </div>
-                )}
+                <ComboboxCliente
+                  value={clienteId}
+                  onChange={setClienteId}
+                  clientes={clientes}
+                  onClienteCreado={(c) => setClientes((prev) => [...prev, c])}
+                  placeholder="Selecciona un cliente"
+                />
                 {clienteSeleccionado && (
                   <p className="mt-1.5 text-xs text-muted">{clienteSeleccionado.direccion}</p>
                 )}
               </div>
               <div>
                 <Label>Colaborador</Label>
-                {!nuevoColabModo ? (
-                  <Select
-                    value={responsableId}
-                    onChange={(e) => {
-                      if (e.target.value === "__crear__") {
-                        setNuevoColabModo(true);
-                        return;
-                      }
-                      setResponsableId(e.target.value);
-                    }}
-                    required
-                  >
-                    {equipo.map((u) => (
-                      <option key={u.id} value={u.id}>
-                        {u.nombre}
-                      </option>
-                    ))}
-                    <option value="__crear__">+ Invitar colaborador nuevo</option>
-                  </Select>
-                ) : (
-                  <div className="flex flex-col gap-2 rounded-lg border border-border p-3">
-                    <Input
-                      type="text"
-                      placeholder="Nombre"
-                      value={nuevoColabNombre}
-                      onChange={(e) => setNuevoColabNombre(e.target.value)}
-                    />
-                    <Input
-                      type="email"
-                      placeholder="correo@empresa.cl"
-                      value={nuevoColabCorreo}
-                      onChange={(e) => setNuevoColabCorreo(e.target.value)}
-                    />
-                    <Select value={nuevoColabRol} onChange={(e) => setNuevoColabRol(e.target.value as Rol)}>
-                      {ROLES.map((r) => (
-                        <option key={r.value} value={r.value}>
-                          {r.label}
-                        </option>
-                      ))}
-                    </Select>
-                    {errorColab && <ErrorText>{errorColab}</ErrorText>}
-                    <div className="flex gap-2">
-                      <Button type="button" onClick={onInvitarColaborador} disabled={invitandoColab}>
-                        {invitandoColab ? "Invitando…" : "Invitar"}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => {
-                          setNuevoColabModo(false);
-                          setErrorColab(null);
-                        }}
-                      >
-                        Cancelar
-                      </Button>
-                    </div>
-                  </div>
-                )}
+                <ComboboxResponsable
+                  value={responsableId}
+                  onChange={setResponsableId}
+                  equipo={equipo}
+                  placeholder="Selecciona un colaborador"
+                />
               </div>
               <div>
                 <Label>Tipo de servicio</Label>
