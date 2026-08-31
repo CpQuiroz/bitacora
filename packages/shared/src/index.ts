@@ -4,3 +4,4 @@ export * from "./rut";
 export * from "./permisos";
 export * from "./regionesComunas";
 export * from "./plantillas";
+export * from "./limites";

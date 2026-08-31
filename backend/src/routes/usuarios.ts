@@ -10,6 +10,7 @@ import { requiereModulo } from "../permisos";
 import { equipoAsignadoAColaborador } from "./equipos";
 import { enviarInvitacion } from "../email";
 import { limitarInvitacion } from "../rateLimiters";
+import { verificarLimiteUsuarios } from "../limites";
 
 export const usuariosRouter = Router();
 
@@ -69,6 +70,7 @@ usuariosRouter.post(
       res.status(400).json({ error: `rol debe ser uno de: ${ROLES.join(", ")}` });
       return;
     }
+    await verificarLimiteUsuarios(req.empresaId!);
 
     // generateLink crea el usuario y devuelve el link de invitación sin
     // intentar mandar nada — el envío en sí va por nuestro Resend (ver

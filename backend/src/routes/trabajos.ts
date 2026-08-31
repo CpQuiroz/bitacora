@@ -13,6 +13,7 @@ import { notificarCliente } from "../notificarCliente";
 import { aplicarDescuentoInventarioSiCorresponde, revertirStockPorOS } from "../inventario";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
+import { verificarLimiteOS } from "../limites";
 
 export const trabajosRouter = Router();
 
@@ -447,6 +448,7 @@ trabajosRouter.post(
       res.status(400).json({ error: "tipo_os_id inválido" });
       return;
     }
+    await verificarLimiteOS(req.empresaId!);
     // cliente_id vincula a un cliente con coordenadas — lo usa la
     // planificación de rutas. Es opcional, "cliente" (texto) sigue
     // siendo el nombre a mostrar/facturar.

@@ -234,25 +234,33 @@ app.use("/api/superadmin", superadminRouter);
 // punto por el que pasan TODAS las rutas — se aprovecha para loguear
 // en errores_backend (Panel de Super-Admin), sin tocar cada ruta.
 app.use((err: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  console.error(err);
   const mensaje = err instanceof Error ? err.message : "Error interno";
+  // Errores "esperados" (ej. LimiteAlcanzadoError, ver limites.ts)
+  // traen su propio status 4xx — son un freno del negocio, no un bug,
+  // así que no ensucian errores_backend (Panel de Super-Admin) ni se
+  // loguean como si algo hubiera fallado de verdad.
+  const posibleStatus = err instanceof Error ? (err as unknown as { status?: unknown }).status : undefined;
+  const status = typeof posibleStatus === "number" ? posibleStatus : 500;
 
-  const empresaId = (req as express.Request & { empresaId?: string }).empresaId ?? null;
-  void (async () => {
-    try {
-      const { error } = await supabase.from("errores_backend").insert({
-        empresa_id: empresaId,
-        ruta: req.path,
-        metodo: req.method,
-        mensaje: mensaje.slice(0, 500),
-      });
-      if (error) console.error("Error registrando en errores_backend:", error);
-    } catch (err) {
-      console.error("Error registrando en errores_backend:", err);
-    }
-  })();
+  if (status >= 500) {
+    console.error(err);
+    const empresaId = (req as express.Request & { empresaId?: string }).empresaId ?? null;
+    void (async () => {
+      try {
+        const { error } = await supabase.from("errores_backend").insert({
+          empresa_id: empresaId,
+          ruta: req.path,
+          metodo: req.method,
+          mensaje: mensaje.slice(0, 500),
+        });
+        if (error) console.error("Error registrando en errores_backend:", error);
+      } catch (err) {
+        console.error("Error registrando en errores_backend:", err);
+      }
+    })();
+  }
 
-  res.status(500).json({ error: mensaje });
+  res.status(status).json({ error: mensaje });
 });
 
 app.listen(env.PORT, () => {

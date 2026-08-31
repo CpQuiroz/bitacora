@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { env } from "./env";
 import { supabase } from "./supabase";
+import { verificarLimiteIA } from "./limites";
 
 export const claude = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
 
@@ -39,6 +40,7 @@ export async function crearMensajeIA(
   feature: FeatureIA,
   params: Anthropic.MessageCreateParamsNonStreaming
 ): Promise<Anthropic.Message> {
+  await verificarLimiteIA(empresaId);
   const response = await claude.messages.create(params);
   void registrarUsoIA(empresaId, feature, response.model, response.usage.input_tokens, response.usage.output_tokens);
   return response;

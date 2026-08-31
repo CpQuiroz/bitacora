@@ -17,6 +17,7 @@ import {
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { env } from "./env";
+import { verificarLimiteStorage, incrementarStorageUsado } from "./limites";
 
 const client = new S3Client({
   endpoint: env.STORAGE_ENDPOINT,
@@ -39,6 +40,7 @@ export async function subirFoto(
   archivo: Buffer | Uint8Array,
   contentType: string
 ): Promise<string> {
+  await verificarLimiteStorage(empresaId, archivo.byteLength);
   const key = `${empresaId}/trabajos/${trabajoId}/${Date.now()}.jpg`;
 
   await client.send(
@@ -49,6 +51,7 @@ export async function subirFoto(
       ContentType: contentType,
     })
   );
+  incrementarStorageUsado(empresaId, archivo.byteLength);
 
   return key; // se guarda en analisis_fotos.foto_url
 }
@@ -158,6 +161,7 @@ export async function subirAnexo(
   archivo: Buffer | Uint8Array,
   contentType: string
 ): Promise<string> {
+  await verificarLimiteStorage(empresaId, archivo.byteLength);
   const nombreSeguro = nombreOriginal.replace(/[^a-zA-Z0-9._-]/g, "_");
   const key = `${empresaId}/trabajos/${trabajoId}/${Date.now()}-${nombreSeguro}`;
 
@@ -169,6 +173,7 @@ export async function subirAnexo(
       ContentType: contentType,
     })
   );
+  incrementarStorageUsado(empresaId, archivo.byteLength);
 
   return key; // se guarda en trabajos.anexos[].key
 }
@@ -189,6 +194,7 @@ export async function subirComprobante(
   archivo: Buffer | Uint8Array,
   contentType: string
 ): Promise<string> {
+  await verificarLimiteStorage(empresaId, archivo.byteLength);
   const nombreSeguro = nombreOriginal.replace(/[^a-zA-Z0-9._-]/g, "_");
   const key = `${empresaId}/gastos/${gastoId}/${Date.now()}-${nombreSeguro}`;
 
@@ -200,6 +206,7 @@ export async function subirComprobante(
       ContentType: contentType,
     })
   );
+  incrementarStorageUsado(empresaId, archivo.byteLength);
 
   return key; // se guarda en gastos.comprobante_url
 }
@@ -251,6 +258,7 @@ export async function subirDocumento(
   archivo: Buffer | Uint8Array,
   contentType: string
 ): Promise<string> {
+  await verificarLimiteStorage(empresaId, archivo.byteLength);
   const nombreSeguro = nombreOriginal.replace(/[^a-zA-Z0-9._-]/g, "_");
   const key = `${empresaId}/documentos/${entidadTipo}/${entidadId}/${Date.now()}-${nombreSeguro}`;
 
@@ -262,6 +270,7 @@ export async function subirDocumento(
       ContentType: contentType,
     })
   );
+  incrementarStorageUsado(empresaId, archivo.byteLength);
 
   return key; // se guarda en documentos.archivo_key
 }
@@ -279,6 +288,7 @@ export async function subirFotoGuia(
   archivo: Buffer | Uint8Array,
   contentType: string
 ): Promise<string> {
+  await verificarLimiteStorage(empresaId, archivo.byteLength);
   const key = `${empresaId}/viajes/${Date.now()}.jpg`;
 
   await client.send(
@@ -289,6 +299,7 @@ export async function subirFotoGuia(
       ContentType: contentType,
     })
   );
+  incrementarStorageUsado(empresaId, archivo.byteLength);
 
   return key; // se guarda en viajes.foto_guia_url
 }
