@@ -668,7 +668,19 @@ export default function SuperAdminSaludEmpresaPage() {
                             >
                               {restableciendoId === u.id ? "Restableciendo…" : "Restablecer contraseña"}
                             </Button>
-                            {u.mfa_activado ? (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              disabled={cambiandoMfaId === u.id}
+                              onClick={() => onActivarMfa(u.id, u.nombre)}
+                            >
+                              {cambiandoMfaId === u.id
+                                ? "Generando…"
+                                : u.mfa_activado
+                                  ? "Regenerar código TOTP"
+                                  : "Activar 2FA (TOTP)"}
+                            </Button>
+                            {u.mfa_activado && (
                               <Button
                                 type="button"
                                 variant="outline"
@@ -676,15 +688,6 @@ export default function SuperAdminSaludEmpresaPage() {
                                 onClick={() => onDesactivarMfa(u.id, u.nombre, u.rol)}
                               >
                                 {cambiandoMfaId === u.id ? "Desactivando…" : "Desactivar 2FA"}
-                              </Button>
-                            ) : (
-                              <Button
-                                type="button"
-                                variant="outline"
-                                disabled={cambiandoMfaId === u.id}
-                                onClick={() => onActivarMfa(u.id, u.nombre)}
-                              >
-                                {cambiandoMfaId === u.id ? "Activando…" : "Activar 2FA (TOTP)"}
                               </Button>
                             )}
                           </div>
