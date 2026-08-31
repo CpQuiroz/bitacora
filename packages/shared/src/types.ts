@@ -212,6 +212,10 @@ export type Documento = {
   actualizado_en: string;
 };
 
+// Tabla vehiculos: ya sin uso activo — los vehículos viven en equipos
+// (categoria = "Vehículo") desde la migración 52_fusion_vehiculos_equipos.
+// Se mantiene el tipo porque la tabla física sigue existiendo (por si
+// hace falta rollback), pero nada nuevo debería escribir acá.
 export type Vehiculo = {
   id: string;
   empresa_id: string;
@@ -225,10 +229,13 @@ export type Vehiculo = {
   creado_en: string;
 };
 
+// equipo_id apunta a equipos(id) (categoria = "Vehículo") desde la
+// fusión — el nombre de la tabla se mantuvo (vehiculo_asignaciones) al
+// no ser parte de lo pedido, solo se renombró la columna.
 export type VehiculoAsignacion = {
   id: string;
   empresa_id: string;
-  vehiculo_id: string;
+  equipo_id: string;
   colaborador_id: string;
   desde: string;
   hasta: string | null;
@@ -648,10 +655,15 @@ export type PresupuestoItem = {
   creado_en: string;
 };
 
+// cliente_id null = activo propio de la empresa (ej. flota propia de
+// vehículos); no-null = activo del cliente (comportamiento de
+// siempre). Vehículos ya no es tabla aparte — es categoria = "Vehículo"
+// acá, con sus campos propios (patente, anio, tipo_vehiculo,
+// capacidad_carga) opcionales, solo usados en esa categoría.
 export type Equipo = {
   id: string;
   empresa_id: string;
-  cliente_id: string;
+  cliente_id: string | null;
   nombre: string;
   marca: string | null;
   modelo: string | null;
@@ -660,6 +672,10 @@ export type Equipo = {
   notas: string | null;
   activo: boolean;
   creado_en: string;
+  patente: string | null;
+  anio: number | null;
+  tipo_vehiculo: string | null;
+  capacidad_carga: string | null;
 };
 
 export type TipoCatalogoItem = "producto" | "servicio" | "kit";
@@ -751,7 +767,7 @@ export type Viaje = {
   cliente: string;
   cliente_id: string | null;
   chofer_id: string | null;
-  vehiculo_id: string | null;
+  equipo_id: string | null;
   origen: string;
   destino: string;
   km_inicial: number | null;
