@@ -67,6 +67,11 @@ async function clienteExiste(empresaId: string, clienteId: string) {
   return Boolean(data);
 }
 
+async function equipoExiste(empresaId: string, equipoId: string) {
+  const { data } = await supabase.from("equipos").select("id").eq("empresa_id", empresaId).eq("id", equipoId).maybeSingle();
+  return Boolean(data);
+}
+
 async function ordenDeTrabajo(empresaId: string, trabajoId: string) {
   const { data } = await supabase
     .from("ordenes_servicio")
@@ -158,6 +163,7 @@ trabajosRouter.patch(
       notas_internas,
       fecha,
       hora_programada,
+      equipo_id,
     } = req.body ?? {};
     const cambios: Partial<Trabajo> = {};
 
@@ -247,6 +253,13 @@ trabajosRouter.patch(
         return;
       }
       cambios.hora_programada = hora_programada || null;
+    }
+    if (equipo_id !== undefined) {
+      if (equipo_id !== null && equipo_id !== "" && !(await equipoExiste(req.empresaId!, equipo_id))) {
+        res.status(400).json({ error: "equipo_id inválido" });
+        return;
+      }
+      cambios.equipo_id = equipo_id || null;
     }
 
     // Ítems/monto son contractuales — se reemplazan enteros si vienen
@@ -398,6 +411,7 @@ trabajosRouter.post(
     const {
       cliente,
       cliente_id,
+      equipo_id,
       fecha,
       monto,
       ubicacion,
@@ -440,6 +454,10 @@ trabajosRouter.post(
       res.status(400).json({ error: "cliente_id inválido" });
       return;
     }
+    if (equipo_id && !(await equipoExiste(req.empresaId!, equipo_id))) {
+      res.status(400).json({ error: "equipo_id inválido" });
+      return;
+    }
     if (hora_programada !== undefined && hora_programada !== null && hora_programada !== "") {
       if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(hora_programada)) {
         res.status(400).json({ error: "hora_programada inválida (usa HH:MM)" });
@@ -460,6 +478,7 @@ trabajosRouter.post(
         empresa_id: req.empresaId!,
         cliente: cliente.trim(),
         cliente_id: cliente_id || null,
+        equipo_id: equipo_id || null,
         fecha,
         hora_programada: hora_programada || null,
         monto: montoNum,

@@ -75,6 +75,65 @@ equiposRouter.get(
   })
 );
 
+// Bloque C — Dashboard de Equipos: métricas agregadas. Montada ANTES
+// de "/:id" a propósito (si no, Express intentaría matchear "dashboard"
+// como :id).
+equiposRouter.get(
+  "/dashboard",
+  ah<RequestConEmpresa>(async (req, res) => {
+    const empresaId = req.empresaId!;
+    const hoy = new Date().toISOString().slice(0, 10);
+    const en30dias = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+    const [{ data: equipos }, { data: planes }, { data: planesProximos }, { data: trabajos }] = await Promise.all([
+      supabase.from("equipos").select("id, nombre, categoria, activo, garantia_vencimiento").eq("empresa_id", empresaId),
+      supabase.from("planes_mantencion").select("id").eq("empresa_id", empresaId).eq("activo", true),
+      supabase
+        .from("planes_mantencion")
+        .select("id, proxima_fecha, equipo:equipos(nombre)")
+        .eq("empresa_id", empresaId)
+        .eq("activo", true)
+        .gte("proxima_fecha", hoy)
+        .lte("proxima_fecha", en30dias)
+        .order("proxima_fecha", { ascending: true }),
+      supabase.from("trabajos").select("equipo_id").eq("empresa_id", empresaId).not("equipo_id", "is", null),
+    ]);
+
+    const porCategoria = new Map<string, number>();
+    let garantiasPorVencer = 0;
+    for (const e of equipos ?? []) {
+      const categoria = e.categoria || "Sin categoría";
+      porCategoria.set(categoria, (porCategoria.get(categoria) ?? 0) + 1);
+      if (e.garantia_vencimiento && e.garantia_vencimiento >= hoy && e.garantia_vencimiento <= en30dias) garantiasPorVencer++;
+    }
+
+    const osPorEquipo = new Map<string, number>();
+    for (const t of trabajos ?? []) {
+      if (!t.equipo_id) continue;
+      osPorEquipo.set(t.equipo_id, (osPorEquipo.get(t.equipo_id) ?? 0) + 1);
+    }
+    const nombrePorEquipo = new Map((equipos ?? []).map((e) => [e.id, e.nombre]));
+    const equiposConMasOs = [...osPorEquipo.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([equipoId, cantidad]) => ({ equipo_id: equipoId, nombre: nombrePorEquipo.get(equipoId) ?? "—", cantidad_os: cantidad }));
+
+    res.json({
+      total_equipos: (equipos ?? []).length,
+      equipos_activos: (equipos ?? []).filter((e) => e.activo).length,
+      planes_mantencion_activos: (planes ?? []).length,
+      garantias_por_vencer: garantiasPorVencer,
+      equipos_por_categoria: [...porCategoria.entries()].map(([categoria, cantidad]) => ({ categoria, cantidad })),
+      proximas_mantenciones: (planesProximos ?? []).map((p) => ({
+        id: p.id,
+        proxima_fecha: p.proxima_fecha,
+        equipo_nombre: (p as unknown as { equipo: { nombre: string } | null }).equipo?.nombre ?? "—",
+      })),
+      equipos_con_mas_os: equiposConMasOs,
+    });
+  })
+);
+
 equiposRouter.get(
   "/:id",
   ah<RequestConEmpresa>(async (req, res) => {
@@ -94,14 +153,28 @@ equiposRouter.get(
       return;
     }
     const asignaciones = await asignacionVigentePorEquipo(req.empresaId!, [data.id]);
-    res.json({ ...data, asignacion_vigente: asignaciones.get(data.id) ?? null });
+
+    // Bloque C — Histórico de Mantenciones: OS pasadas de este equipo
+    // específico (trabajos.equipo_id), más recientes primero.
+    const { data: historico } = await supabase
+      .from("trabajos")
+      .select("*, orden:ordenes_servicio(folio, estado_os)")
+      .eq("empresa_id", req.empresaId!)
+      .eq("equipo_id", req.params.id)
+      .order("fecha", { ascending: false });
+    const historicoNormalizado = (historico ?? []).map((t) => ({
+      ...t,
+      orden: Array.isArray(t.orden) ? (t.orden[0] ?? null) : t.orden,
+    }));
+
+    res.json({ ...data, asignacion_vigente: asignaciones.get(data.id) ?? null, historico_mantenciones: historicoNormalizado });
   })
 );
 
 equiposRouter.post(
   "/",
   ah<RequestConEmpresa>(async (req, res) => {
-    const { cliente_id, nombre, marca, modelo, numero_serie, categoria, notas, patente, anio, tipo_vehiculo, capacidad_carga } = req.body ?? {};
+    const { cliente_id, nombre, marca, modelo, numero_serie, categoria, notas, patente, anio, tipo_vehiculo, capacidad_carga, garantia_vencimiento } = req.body ?? {};
 
     // cliente_id ahora es opcional — sin cliente significa "activo
     // propio de la empresa" (ej. un vehículo de la flota propia).
@@ -136,6 +209,7 @@ equiposRouter.post(
         anio: anio ? Number(anio) : null,
         tipo_vehiculo: tipo_vehiculo?.trim() || null,
         capacidad_carga: capacidad_carga?.trim() || null,
+        garantia_vencimiento: garantia_vencimiento || null,
       })
       .select("*, cliente:clientes(id, nombre)")
       .single();
@@ -153,7 +227,7 @@ equiposRouter.post(
 equiposRouter.patch(
   "/:id",
   ah<RequestConEmpresa>(async (req, res) => {
-    const { cliente_id, nombre, marca, modelo, numero_serie, categoria, notas, activo, patente, anio, tipo_vehiculo, capacidad_carga } = req.body ?? {};
+    const { cliente_id, nombre, marca, modelo, numero_serie, categoria, notas, activo, patente, anio, tipo_vehiculo, capacidad_carga, garantia_vencimiento } = req.body ?? {};
     const cambios: Partial<Equipo> = {};
 
     if (cliente_id !== undefined) {
@@ -191,6 +265,7 @@ equiposRouter.patch(
     }
     if (tipo_vehiculo !== undefined) cambios.tipo_vehiculo = tipo_vehiculo?.trim() || null;
     if (capacidad_carga !== undefined) cambios.capacidad_carga = capacidad_carga?.trim() || null;
+    if (garantia_vencimiento !== undefined) cambios.garantia_vencimiento = garantia_vencimiento || null;
 
     if (Object.keys(cambios).length === 0) {
       res.status(400).json({ error: "Nada que actualizar" });
