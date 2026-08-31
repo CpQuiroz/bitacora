@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import type { CatalogoItem, TipoCatalogoItem, UnidadMedida } from "@bitacora/shared";
+import type { CatalogoItem, SugerenciaRubro, TipoCatalogoItem, UnidadMedida } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
@@ -67,6 +67,8 @@ export default function CatalogoPage() {
   const [precioBase, setPrecioBase] = useState("");
   const [kitItems, setKitItems] = useState<{ item_id: string; cantidad: string }[]>([]);
   const [tiposEquipo, setTiposEquipo] = useState<string[]>([]);
+  // Bloque E: sugerencias según el rubro de la empresa.
+  const [sugerenciasRubro, setSugerenciasRubro] = useState<SugerenciaRubro[]>([]);
 
   async function cargar() {
     const { data } = await supabase.auth.getSession();
@@ -74,11 +76,16 @@ export default function CatalogoPage() {
       router.replace("/login");
       return;
     }
-    const [resMe, resItems, resUnidades] = await Promise.all([
+    const [resMe, resItems, resUnidades, resSugerencias] = await Promise.all([
       apiFetch("/api/me"),
       apiFetch("/api/catalogo"),
       apiFetch("/api/unidades-medida"),
+      apiFetch("/api/sugerencias-rubro"),
     ]);
+    if (resSugerencias.ok) {
+      const todas: SugerenciaRubro[] = await resSugerencias.json();
+      setSugerenciasRubro(todas.filter((s) => s.tipo_sugerencia === "categoria_catalogo"));
+    }
     if (resUnidades.ok) setUnidades((await resUnidades.json()).filter((u: UnidadMedida) => u.activo));
     if (resMe.ok) {
       const { usuario: u } = await resMe.json();
@@ -199,7 +206,9 @@ export default function CatalogoPage() {
   // Chips de sugerencia en el formulario: las categorías ya usadas por
   // esta empresa si existen, o una lista genérica por defecto la
   // primera vez que se usa el catálogo (todavía vacío).
-  const chipsCategoria = categorias.length > 0 ? categorias : CATEGORIAS_SUGERIDAS;
+  const sugeridasRubroNombres = sugerenciasRubro.map((s) => s.valor);
+  const chipsCategoria =
+    categorias.length > 0 ? categorias : [...sugeridasRubroNombres, ...CATEGORIAS_SUGERIDAS.filter((c) => !sugeridasRubroNombres.includes(c))];
 
   // Bloque D: tipos de equipo ya usados en algún ítem, además de los
   // sugeridos — así un tipo_equipo escrito a mano en otro ítem sigue

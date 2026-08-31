@@ -37,6 +37,7 @@ import { notificacionesRouter } from "./routes/notificaciones";
 import { encuestaPublicaRouter } from "./routes/encuestaPublica";
 import { equiposRouter } from "./routes/equipos";
 import { planesMantencionRouter } from "./routes/planesMantencion";
+import { sugerenciasRubroRouter } from "./routes/sugerenciasRubro";
 import { catalogoRouter } from "./routes/catalogo";
 import { inventarioRouter } from "./routes/inventario";
 import { proveedoresRouter } from "./routes/proveedores";
@@ -204,6 +205,7 @@ app.use("/api/centros-costo", requiereAuth, requiereEmpresa, centrosCostoRouter)
 app.use("/api/notificaciones", requiereAuth, requiereEmpresa, notificacionesRouter);
 app.use("/api/equipos", requiereAuth, requiereEmpresa, equiposRouter);
 app.use("/api/planes-mantencion", requiereAuth, requiereEmpresa, planesMantencionRouter);
+app.use("/api/sugerencias-rubro", requiereAuth, requiereEmpresa, sugerenciasRubroRouter);
 app.use("/api/catalogo", requiereAuth, requiereEmpresa, catalogoRouter);
 app.use("/api/inventario", requiereAuth, requiereEmpresa, inventarioRouter);
 app.use("/api/unidades-medida", requiereAuth, requiereEmpresa, unidadesMedidaRouter);

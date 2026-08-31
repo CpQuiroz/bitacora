@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { AplicaDocumento, TipoDocumento } from "@bitacora/shared";
+import type { AplicaDocumento, SugerenciaRubro, TipoDocumento } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
 import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select } from "@/components/ui";
 import { DataTable } from "@/components/DataTable";
@@ -24,6 +24,8 @@ const SUGERIDOS: { nombre: string; aplica_a: AplicaDocumento }[] = [
 export default function TiposDocumentoPage() {
   const [tipos, setTipos] = useState<TipoDocumento[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Bloque E: sugerencias según el rubro de la empresa.
+  const [sugerenciasRubro, setSugerenciasRubro] = useState<SugerenciaRubro[]>([]);
 
   const [formAbierto, setFormAbierto] = useState(false);
   const [nombre, setNombre] = useState("");
@@ -33,12 +35,16 @@ export default function TiposDocumentoPage() {
 
   const cargar = useCallback(async () => {
     setError(null);
-    const res = await apiFetch("/api/tipos-documento");
+    const [res, resSugerencias] = await Promise.all([apiFetch("/api/tipos-documento"), apiFetch("/api/sugerencias-rubro")]);
     if (!res.ok) {
       setError("No se pudieron cargar los tipos de documento");
       return;
     }
     setTipos(await res.json());
+    if (resSugerencias.ok) {
+      const todas: SugerenciaRubro[] = await resSugerencias.json();
+      setSugerenciasRubro(todas.filter((s) => s.tipo_sugerencia === "tipo_documento"));
+    }
   }, []);
 
   useEffect(() => {
@@ -80,6 +86,11 @@ export default function TiposDocumentoPage() {
     if (res.ok) cargar();
   }
 
+  const sugeridosFinal = [
+    ...sugerenciasRubro.map((s) => ({ nombre: s.valor, aplica_a: (s.aplica_a as AplicaDocumento) ?? "ambos" })),
+    ...SUGERIDOS.filter((s) => !sugerenciasRubro.some((r) => r.valor === s.nombre)),
+  ];
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -94,7 +105,7 @@ export default function TiposDocumentoPage() {
         <Card>
           <p className="mb-3 text-sm text-muted">Sugeridos — clic para crear:</p>
           <div className="flex flex-wrap gap-2">
-            {SUGERIDOS.map((s) => (
+            {sugeridosFinal.map((s) => (
               <button
                 key={s.nombre}
                 type="button"

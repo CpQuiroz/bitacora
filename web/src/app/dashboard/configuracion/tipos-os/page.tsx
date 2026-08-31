@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { ChecklistTemplate, TipoOS } from "@bitacora/shared";
+import type { ChecklistTemplate, SugerenciaRubro, TipoOS } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
 import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select } from "@/components/ui";
 import { DataTable } from "@/components/DataTable";
@@ -23,6 +23,10 @@ const SUGERIDOS: { nombre: string; color: string }[] = [
 export default function TiposOsPage() {
   const [tipos, setTipos] = useState<TipoOsConChecklist[] | null>(null);
   const [checklists, setChecklists] = useState<ChecklistTemplate[]>([]);
+  // Bloque E: sugerencias según el rubro de la empresa — se anteponen
+  // a las genéricas de siempre, sin ocultarlas (útil mientras la
+  // mayoría de los rubros todavía no tiene contenido propio cargado).
+  const [sugerenciasRubro, setSugerenciasRubro] = useState<SugerenciaRubro[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busqueda, setBusqueda] = useState("");
   const [mostrarInactivos, setMostrarInactivos] = useState(false);
@@ -39,18 +43,31 @@ export default function TiposOsPage() {
 
   const cargar = useCallback(async () => {
     setError(null);
-    const [resTipos, resChecklists] = await Promise.all([apiFetch("/api/tipos-os"), apiFetch("/api/checklists")]);
+    const [resTipos, resChecklists, resSugerencias] = await Promise.all([
+      apiFetch("/api/tipos-os"),
+      apiFetch("/api/checklists"),
+      apiFetch("/api/sugerencias-rubro"),
+    ]);
     if (!resTipos.ok) {
       setError("No se pudieron cargar los tipos de OS");
       return;
     }
     setTipos(await resTipos.json());
     if (resChecklists.ok) setChecklists(await resChecklists.json());
+    if (resSugerencias.ok) {
+      const todas: SugerenciaRubro[] = await resSugerencias.json();
+      setSugerenciasRubro(todas.filter((s) => s.tipo_sugerencia === "tipo_os"));
+    }
   }, []);
 
   useEffect(() => {
     cargar();
   }, [cargar]);
+
+  const sugeridosFinal = [
+    ...sugerenciasRubro.map((s) => ({ nombre: s.valor, color: s.color ?? "#4338ca" })),
+    ...SUGERIDOS.filter((s) => !sugerenciasRubro.some((r) => r.valor === s.nombre)),
+  ];
 
   const filtrados = (tipos ?? []).filter((t) => {
     if (!mostrarInactivos && !t.activo) return false;
@@ -139,7 +156,7 @@ export default function TiposOsPage() {
         <Card>
           <p className="mb-3 text-sm text-muted">Tipos sugeridos — clic para crear con un color predefinido:</p>
           <div className="flex flex-wrap gap-2">
-            {SUGERIDOS.map((s) => (
+            {sugeridosFinal.map((s) => (
               <button
                 key={s.nombre}
                 type="button"
