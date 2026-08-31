@@ -101,3 +101,129 @@ No hice click-through de la UI con Playwright para las pantallas nuevas (Cliente
 - El guard de "OS finalizada bloquea todo" tuvo que ajustarse para permitir cancelar como excepción puntual — si no, la reversión de stock (pedida explícitamente) nunca sería alcanzable.
 - `catalogo_item_tipos_equipo.tipo_equipo` es texto libre (no una tabla maestra de "tipos de equipo") — mismo criterio que `equipos.categoria`, que tampoco la tiene.
 - El Historial del Cliente 360° es un timeline de verdad (ordenado, un solo lugar) en vez de simplemente agregar una pestaña más con las mismas 3 listas separadas de antes — interpretación de "línea de tiempo" tomada literalmente.
+
+---
+---
+
+# Resumen de trabajo — Inventario configurable, sugerencias por rubro, Panel de Acciones, Google Login
+
+Rama: `feat/inventario-config-acciones-google`, creada desde la punta de `feat/cliente-360-inventario-catalogo` (no desde `main`) porque este spec reemplaza y extiende el Bloque B de la sección anterior — así se modifica el código real en vez de duplicarlo. Contiene todos los commits de la sección de arriba más los descritos acá. No mergeada, sin push.
+
+Spec de 10 bloques (A–J). No se replicó texto/marca/diseño de ninguna herramienta externa.
+
+---
+
+## Bloque B — Inventario configurable (reemplaza el diseño hardcodeado anterior)
+
+El Bloque B original (sección de arriba) descontaba siempre al firmar la OS, sin forma de configurarlo. Ahora es configurable por empresa:
+
+- Migración 54: `empresas.inventario_descontar_en_estado` (uno de los 5 `EstadoOS` reales, default `firmada`), `empresas.inventario_permitir_negativo` (default true), `empresas.inventario_descontar_una_vez` (default true, guard anti-duplicado); `inventario_movimientos.origen` (`manual`|`automatico`, antes solo se distinguía por texto libre en `motivo`).
+- `backend/src/inventario.ts` reescrito: `descontarStockPorOS` → `aplicarDescuentoInventarioSiCorresponde(empresaId, ordenId, trabajoId, folio, nuevoEstadoOs)` — corta temprano si el módulo está desactivado o si `nuevoEstadoOs` no es el estado configurado como disparador; si `descontar_una_vez` está activo, respeta `ordenes_servicio.stock_descontado` para no descontar dos veces.
+- `estado_os` solo cambia en 3 lugares del código (`POST /trabajos/:id/checklist` en check-in, en check-out, y `POST /trabajos/:id/finalizar`) — se agregó el llamado a la función nueva en los 3, cada uno pasando el estado real que acaba de setear; la función decide internamente si corresponde según la config de la empresa. Así, sea cual sea el estado elegido como disparador, se dispara sin importar por cuál de los 3 caminos se llegó a él.
+- `web/dashboard/configuracion/inventario`: toggle "Descontar solo una vez por OS", radio de estado disparador (usa los `EstadoOS` reales, "firmada" marcado como recomendado), toggle "Permitir stock negativo" — mismos controles visuales que el toggle de activación que ya existía.
+
+**Verificado en vivo** (empresa de prueba con `descontar_en_estado='en_proceso'`, `permitir_negativo=false`, `descontar_una_vez=true`; stock=2, OS pide 5): el descuento ocurre exactamente una vez, justo en el check-in (no en check-out ni en finalizar); aparece la advertencia de stock negativo solo por `permitir_negativo=false`; el movimiento queda `origen='automatico'`; no se generan movimientos adicionales en los otros dos puntos.
+
+---
+
+## Bloque C/D — Dashboard de inventario y distinción manual/automático
+
+El ajuste manual (acción "Ajustar" con Entrada/Salida/Cantidad/Notas) **ya existía** como fila inline en `registros/inventario` — no se duplicó.
+
+- 4 tarjetas de resumen nuevas: SKUs con stock, Cantidad total, Stock bajo, Sin stock (calculadas del listado de productos ya cargado).
+- Badge "automático" junto a los movimientos con `origen='automatico'`, para distinguirlos de un vistazo de los ajustes manuales.
+- `IconAlertTriangle` nuevo (no existía en el set de íconos propio).
+
+---
+
+## Bloque E — Sugerencias iniciales por rubro (mecanismo genérico, no hardcodeado por pantalla)
+
+**No existía nada** — las 4 pantallas (Tipos de OS, Categorías de gasto, Catálogo, Tipos de documento) tenían cada una su propia lista `SUGERIDOS`/`SUGERIDAS` hardcodeada, sin relación con `empresas.rubro`.
+
+- Migración 54: tabla `sugerencias_rubro` (rubro, tipo_sugerencia, valor, color, aplica_a, orden) — **sin `empresa_id` y sin RLS**, a propósito: es data de referencia global, mismo criterio que otras tablas de referencia del proyecto que solo toca el backend con service role.
+- `backend/src/routes/sugerenciasRubro.ts` (nuevo): `GET /api/sugerencias-rubro` resuelve el rubro de la empresa del token y devuelve las sugerencias de ese rubro (arreglo plano, cada pantalla filtra por su `tipo_sugerencia`).
+- Las 4 pantallas anteponen las sugerencias del rubro a su lista genérica existente **sin ocultarla** — así una empresa sin rubro cargado (o con rubro sin contenido todavía) sigue viendo exactamente lo mismo que antes, cero regresión.
+
+**TODO explícito, tal como pedía el spec** (`backend/src/routes/sugerenciasRubro.ts` y migración 54): solo hay contenido real cargado para `rubro='transporte'` (2–3 sugerencias por tipo, como pedía el ejemplo mínimo del spec). `servicio_tecnico` y `otro` quedan sin sugerencias propias hasta que se defina ese contenido — es una decisión de producto, no técnica.
+
+**Verificado en vivo**: `GET /api/sugerencias-rubro` con empresa `rubro='transporte'` devuelve sugerencias de los 4 tipos esperados.
+
+---
+
+## Bloque F — Plantillas de notificación: indicador "N de M completadas"
+
+La sección "Mensajes personalizados" (`configuracion/notificaciones`) ya agrupaba por categoría (5 categorías: Cotizaciones, Órdenes de Trabajo/Servicio, Técnico en camino, Cobranzas, Agenda Pro) en acordeones — se reusó esa estructura, no se restructuró el modelo de datos.
+
+- **Decisión pragmática** (quedaba como pregunta abierta en la investigación previa): "M" se cuenta como los 3 campos personalizables de cada mensaje (WhatsApp / asunto de correo / cuerpo de correo), no como los 7 `TipoNotificacionCliente` del ejemplo "2 de 7" del spec — hacerlo por esos 7 hubiese requerido restructurar `mensajes_personalizados` (que vive agrupado por `TipoMensajePersonalizado`, un enum de 5, no de 7).
+- Badge "N de 3 completados" por categoría (en vivo mientras se edita, antes de guardar) + contador total "X de 5 completados" en el header de la tarjeta.
+
+---
+
+## Bloque G — Gastos: vínculo a OS, fecha de pago condicional, ficha de detalle
+
+Puntos 12/13 del spec (vínculo a una OS vía `trabajo_id` + selector; creación inline de categoría con "+") **ya existían** — sin cambios.
+
+- Punto 14: campo "Fecha de pago" en el formulario, visible y requerido solo cuando Estado=Pagado (el backend ya aceptaba `fecha_pago` desde antes, no hacía falta tocarlo).
+- Punto 15: nueva ficha `web/dashboard/gastos/[id]` con tarjetas agrupadas (Información del Gasto, Proveedor, Categoría, Información Adicional); nuevo `GET /api/gastos/:id` en el backend (no existía); enlazada desde la descripción de cada fila en el listado.
+
+**Verificado en vivo**: gasto creado con `estado=pagado` + `fecha_pago` explícita persiste esa fecha; `GET /api/gastos/:id` trae `categoria_info` anidada correctamente.
+
+---
+
+## Bloque H — Panel de Acciones reutilizable
+
+**No existía** — Cotización y Cobro tenían cada una sus propios botones sueltos repartidos por la pantalla.
+
+- `web/src/components/PanelAcciones.tsx` (nuevo): drawer lateral genérico con 4 secciones opcionales (`seccionEstado`, `seccionCompartir`, `seccionOtras`, `seccionPeligro`), cada una un `ReactNode` — a propósito no es una API rígida de lista de acciones, porque Cotización tiene infraestructura real de compartir (PDF/WhatsApp/Email) y Cobro no; forzar paridad hubiera significado botones falsos en Cobro que no llaman a nada.
+- `cotizaciones/[id]`: el botón Eliminar suelto del header, el link "Editar" inline y la tarjeta completa de "PDF de la cotización" se reemplazaron por un único botón "Acciones" que abre el panel, con las 4 secciones armadas a partir de los handlers que ya existían (nada de lógica nueva, solo reorganización).
+- `cobros/[id]` (ver Bloque J) usa el mismo componente.
+
+---
+
+## Bloque I — Estado "Expirado" de Cotización
+
+El valor `"expirado"` ya era aceptado por el backend como estado válido, pero **nada lo calculaba ni lo persistía** — el frontend simulaba una "vencida" visual comparando fechas en el cliente, sin tocar la base.
+
+- `backend/src/routes/cotizaciones.ts`: `marcarCotizacionesExpiradas(empresaId)` (nueva) — chequeo perezoso (sin infraestructura de cron en el proyecto, mismo patrón que `generarVencimientosPerezosos`), pero **awaited de forma síncrona** antes de responder (a diferencia del chequeo de notificación de al lado, que es fire-and-forget) para que el estado ya esté actualizado en la misma respuesta. Se llama al principio de `GET /` y `GET /:id`.
+- Frontend (`cotizaciones/page.tsx` y `[id]/page.tsx`): se eliminó el cálculo sintético `estadoMostrado()`/`vencida` — ahora todo usa `cotizacion.estado` real.
+- `docs/5_Estados_Cotizacion.mermaid` actualizado con las transiciones `Borrador/Enviada → Expirada → [*]`.
+
+---
+
+## Bloque J — Cobro: combobox de cliente + Registrar Pago
+
+- El selector de cliente del formulario manual de "Nuevo Cobro" era un `<Select>` simple — se reemplazó por `ComboboxCliente` (el mismo componente de buscar/crear ya usado en OS y Cotizaciones), sin reconstruirlo.
+- Cobro **no tenía ficha de detalle** — se creó `web/dashboard/financiero/cobros/[id]` (nueva), con `PanelAcciones` (sección Estado con el shortcut "Marcar como Pagada", sección Otras = "Registrar Pago", sección Peligro = "Eliminar cobro" bloqueada si ya está pagado).
+- Nuevos endpoints backend: `GET /api/cobros/:id` y `DELETE /api/cobros/:id` (403 si `estado='pagada'`) — no existían.
+- Modal "Registrar Pago": valor original (solo lectura, de referencia), fecha del pago, valor recibido, forma de pago, observaciones → hace `PATCH` con `estado:'pagada'` + los 4 campos nuevos (`facturas.valor_recibido`, `facturas.observaciones_pago`, migración 54). Funciona sin ninguna pasarela de pago real detrás, tal como pedía el spec.
+
+---
+
+## Bloque A — Login con Google
+
+- `web/app/login/page.tsx`: botón "Iniciar sesión con Google" vía `supabase.auth.signInWithOAuth({ provider: 'google' })` — flujo separado del login por contraseña (ese pasa por `POST /api/auth/login` para el gate de 2FA; Google no pasa por ahí, es OAuth directo de Supabase).
+- `web/app/auth/callback/page.tsx` (nuevo): espera la sesión OAuth y sigue el mismo camino que el login por contraseña — `GET /api/me` decide `/dashboard` (usuario ya asociado a una empresa) vs `/onboarding` (cuenta nueva o huérfana). Confirmado por lectura de código que `/api/me` y `/onboarding` son agnósticos a cómo se creó la fila en `auth.users` (password vs OAuth) — no hizo falta ningún cambio de backend para que una cuenta nueva por Google pase por el mismo alta de empresa que una por contraseña.
+- **TODO explícito** (comentario en `auth/callback/page.tsx`): si el correo de Google coincide con una invitación pendiente (tabla `invitaciones`), hoy no se detecta automáticamente — es una limitación preexistente de `/onboarding` para cualquier método de login, no algo nuevo de este bloque.
+- **Pendiente del lado del usuario, no de código**: habilitar el proveedor Google en Supabase Auth (Dashboard → Authentication → Providers, con Client ID/Secret de Google Cloud) — no hay API para hacerlo desde el repo. Sin ese paso manual, el botón queda visible pero el flujo de Google fallará.
+- **No verificado en vivo**: requiere el proveedor habilitado en el dashboard de Supabase (paso manual pendiente arriba) y un flujo real de consentimiento de Google en navegador — fuera del alcance de la verificación automatizada con empresas desechables usada en el resto de los bloques.
+
+---
+
+## Cómo se verificó (bloques A–J)
+
+`npx tsc --noEmit` limpio en `backend` y `web` después de cada bloque commiteado.
+
+Verificación en vivo con datos desechables (empresa/usuario creados y borrados en la misma corrida):
+- **Bloque B**: descuento configurable dispara exactamente una vez, en el estado configurado (no en los otros dos puntos donde cambia `estado_os`), con advertencia de stock negativo y `origen='automatico'` correctos.
+- **Bloque E**: `GET /api/sugerencias-rubro` devuelve las sugerencias de las 4 categorías para una empresa `rubro='transporte'`.
+- **Bloque G**: gasto con `fecha_pago` explícita la persiste; `GET /api/gastos/:id` trae la categoría anidada.
+
+No se hizo click-through de UI con Playwright para las pantallas nuevas/reescritas de esta sección (Panel de Acciones, ficha de Cobro, ficha de Gasto, formulario de inventario configurable, botón de Google) — reusan componentes y patrones ya probados del proyecto (`Modal`, `Card`, `ComboboxCliente`, `SelectCrear`) y el backend que consumen quedó verificado por separado. Bloque A además depende del paso manual pendiente (habilitar el proveedor en Supabase) para poder probarse de punta a punta.
+
+## Decisiones tomadas por mi cuenta (no explícitas en el spec)
+
+- Bloque E: sugerencias del rubro se anteponen a la lista genérica existente en vez de reemplazarla — así ninguna empresa pierde las sugerencias que ya tenía si su rubro no tiene contenido cargado todavía.
+- Bloque F: "M" del indicador de progreso se definió como los 3 campos por mensaje (no los 7 `TipoNotificacionCliente`) para no restructurar el modelo de datos existente — ver detalle en la sección del bloque.
+- Bloque H: `PanelAcciones` con secciones opcionales (`ReactNode`), no una API de lista de acciones — Cotización y Cobro tienen capacidades reales distintas (compartir por PDF/WhatsApp/Email vs. no) y no quería fabricar botones sin funcionalidad real detrás.
+- Bloque I: el chequeo de expiración se dejó `await`-eado de forma síncrona (no fire-and-forget) para que el estado ya esté correcto en la misma respuesta que lo devuelve — a diferencia del patrón fire-and-forget de la notificación de al lado, que no bloquea la respuesta porque no afecta el dato que se está devolviendo.
+- Bloque A: el alta/cambio de proveedor OAuth es 100% responsabilidad del usuario en el dashboard de Supabase — no hay endpoint de administración de proveedores en la API de Supabase que se pueda invocar desde el backend propio.
