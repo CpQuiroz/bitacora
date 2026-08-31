@@ -227,3 +227,73 @@ No se hizo click-through de UI con Playwright para las pantallas nuevas/reescrit
 - Bloque H: `PanelAcciones` con secciones opcionales (`ReactNode`), no una API de lista de acciones — Cotización y Cobro tienen capacidades reales distintas (compartir por PDF/WhatsApp/Email vs. no) y no quería fabricar botones sin funcionalidad real detrás.
 - Bloque I: el chequeo de expiración se dejó `await`-eado de forma síncrona (no fire-and-forget) para que el estado ya esté correcto en la misma respuesta que lo devuelve — a diferencia del patrón fire-and-forget de la notificación de al lado, que no bloquea la respuesta porque no afecta el dato que se está devolviendo.
 - Bloque A: el alta/cambio de proveedor OAuth es 100% responsabilidad del usuario en el dashboard de Supabase — no hay endpoint de administración de proveedores en la API de Supabase que se pueda invocar desde el backend propio.
+
+---
+---
+
+# Resumen de trabajo — Diferenciación de planes, límites de uso, resiliencia
+
+Rama: `feat/planes-limites-y-resiliencia`, desde `main` (con las dos secciones de arriba ya mergeadas). No mergeada, sin push.
+
+Pedido en dos partes: (1) diferenciar de verdad Trial/Básico/Pro, hoy prácticamente idénticos salvo Agenda Pro; (2) dos riesgos de escala detectados en un análisis de costos previo — PDF síncrono/CPU-bound bloqueando el event loop, y ninguna cola/límite para las llamadas a Claude.
+
+Antes de escribir código se hizo un análisis de costos real (pricing en vivo de Claude API y Supabase, no inventado): el costo marginal por cliente (IA + storage) es de centavos de dólar incluso en los topes más generosos — el costo real es el piso fijo compartido de infraestructura (~US$70/mes), no el uso por empresa. Esto definió que los límites de uso son un freno anti-abuso, no un control de costo — se fijaron generosos a propósito.
+
+---
+
+## 1 — Trial vencido: bloqueo total
+
+`empresas.plan` solo sale de `'trial'` al confirmarse una tarjeta (`cambiarPlanEmpresa`, disparado desde `suscripcion.ts`) — así que si una empresa sigue en `'trial'` pasada `prueba_termina_en`, es que nunca eligió un plan pago. Gate agregado en `requiereEmpresa` (`backend/src/empresa.ts`), mismo patrón que `suspendida`/`dada_de_baja` y `MFA_REQUERIDA` ya existentes: 403 con `code: "TRIAL_VENCIDO"` en todo excepto `/api/plan*` y `/api/suscripcion*`, para que la empresa pueda seguir eligiendo un plan y salir del bloqueo.
+
+`GET /api/plan` expone `trialVencido: boolean` (no un 403 propio — esa ruta está exceptuada del gate a propósito) y `DashboardShell.tsx` lo chequea proactivamente al montar (mismo criterio que el chequeo de 2FA que ya existía ahí), redirigiendo a Configuración > Plan, donde se agregó un banner explícito.
+
+## 2 — Informe con IA y Asistente pasan a ser exclusivos de Pro
+
+Se sumaron a `MODULOS_OPCIONALES` (antes solo `agenda_pro`). El gate de backend (`requiereModulo`) y el ocultamiento de sidebar ya eran genéricos vía `empresa_modulos` — no hubo que tocar nada de esa parte. Migración 55 hace el backfill explícito para empresas existentes según su plan actual (sin esto, el nuevo default "opt-in = desactivado" las hubiera dejado sin el módulo de golpe, sin importar si ya lo usaban).
+
+## 3 — Límites de uso por plan (usuarios, OS/mes, storage, IA)
+
+`LIMITES_POR_PLAN` en `packages/shared/src/limites.ts` — único lugar con los números:
+
+| Límite | Trial | Básico | Pro |
+|---|---|---|---|
+| Usuarios | 3 | 5 | 15 |
+| OS/mes | 30 | 100 | ilimitado |
+| Storage | 2 GB | 10 GB | 50 GB |
+| IA (tokens/mes) | 500.000 | 1.500.000 | 5.000.000 |
+
+Enforcement en `backend/src/limites.ts` (`LimiteAlcanzadoError`, status 403), un `verificarLimiteX` por eje:
+- **Usuarios**: cuenta `usuarios` activos antes de invitar.
+- **OS/mes**: cuenta `trabajos` creados este mes antes de crear uno nuevo.
+- **Storage**: contador aproximado (`empresas.storage_bytes_usado`, migración 56, incrementado por la propia app en cada subida vía la función `incrementar_storage_usado`) — **no** se mide escaneando los buckets S3 en cada request (eso ya lo hace `medirUsoStorage` para el Panel de Super-Admin) porque sería demasiado lento en el camino caliente de cada subida. Enganchado en las 5 subidas que de verdad escalan con el uso (`subirFoto`, `subirAnexo`, `subirComprobante`, `subirDocumento`, `subirFotoGuia`) — se dejaron afuera a propósito las subidas "singleton" (firma, logo, foto de perfil, PDF de cotización cacheado), que no crecen sin límite.
+- **IA**: suma mensual de `ia_uso` antes de llamar a Claude, en `crearMensajeIA` (único punto que llama a la API).
+
+El handler de errores global (`server.ts`) ahora respeta un `.status` opcional en cualquier error y solo registra en `errores_backend` los `>= 500` — un límite alcanzado es un freno esperado del negocio, no un bug, y no debía ensuciar esa tabla.
+
+**Verificado en vivo** (empresa desechable): los 4 límites bloquean con el mensaje esperado exactamente al alcanzarse, y no bloquean con uso bajo.
+
+## 4 — PDF: caché para OS + generación en worker_thread
+
+- **Caché de OS** (`ordenes_servicio.pdf_url`, migración 57): mismo patrón que el de cotización (que ya existía), pero solo empieza a cachear una vez que la OS queda **firmada** — antes de eso el contenido todavía puede cambiar (checklist, fotos, firma). Firmada, `ordenes_servicio` ya queda inmutable (guard de "OS finalizada" existente), así que no hace falta invalidación.
+- **worker_thread** (`backend/src/pdfWorkerPool.ts` + `workers/pdfWorker.ts`): los 3 generadores (OS, cotización, informe) ahora corren fuera del proceso principal — `pdfkit` es síncrono/CPU-bound, así que una generación pesada ya no bloquea el event loop que atiende el resto del tráfico mientras se genera. Gotcha real encontrado y resuelto: en dev (`tsx watch`), un `worker_thread` nuevo **no hereda** el loader de TypeScript del proceso principal (`Unknown file extension ".ts"` al primer intento) — hay que pasarle `execArgv: ["--require", "tsx/cjs"]` explícito al crear el Worker; en producción (compilado a `.js` vía `tsc`) no hace falta nada de esto, se resuelve solo por extensión de archivo.
+
+**Verificado en vivo**: PDF de OS sin firmar se genera sin cachear; se cachea recién al firmar; una segunda lectura viene del caché (mismo `pdf_url`, no se regenera). PDF de cotización confirmado que sigue funcionando igual tras pasar por el worker.
+
+## 5 — Límite de concurrencia para Claude + registro de 429
+
+`backend/src/concurrencia.ts`: semáforo simple en memoria (sin dependencia externa tipo `p-limit`) que capa a **8** las llamadas simultáneas a Claude desde `crearMensajeIA` — antes nada evitaba que un pico de empresas a la vez (ej. todas subiendo fotos de una OS al mismo tiempo) disparara todo junto. El SDK ya reintenta solo ante un 429, pero eso no evitaba el pico en sí. Un 429 real ahora se registra explícito en `errores_backend` (visible en el Panel de Super-Admin) — no pasa por el handler global (que ignora los 4xx a propósito), porque sí conviene saber si esto llega a pasar de verdad.
+
+**Verificado**: semáforo bajo carga sintética (20 tareas, cupo 3) nunca excede el máximo y no pierde ninguna tarea.
+
+## Cómo se verificó
+
+`npx tsc --noEmit` limpio en `backend` y `web` después de cada commit. Verificación en vivo con empresas/usuarios desechables (creados y borrados en la misma corrida) para: los 4 límites de uso, el gate de trial vencido (`GET /api/clientes` → 403 `TRIAL_VENCIDO`, `GET /api/plan` → `trialVencido: true`), el caché + worker_thread de PDF de OS, el PDF de cotización tras el cambio, y el semáforo de concurrencia en aislado.
+
+No se probó en vivo: el flujo completo de cambio de plan con Flow real (usa el mismo mecanismo ya probado en sandbox de la sección de Suscripción B2B, sin cambios acá) ni un 429 real de Anthropic (requeriría forzar el rate limit real de la cuenta).
+
+## Decisiones tomadas por mi cuenta (no explícitas en el pedido)
+
+- Los números de `LIMITES_POR_PLAN` son una propuesta inicial basada en el análisis de costos (freno anti-abuso, no de costo) — quedan fáciles de ajustar en un solo lugar si no calzan con la realidad una vez en uso.
+- Storage: contador aproximado incrementado por la app, no un total exacto — decisión de performance (evitar escanear S3 en cada subida), documentada explícita en el código para que no se confunda con el número exacto que sí calcula `medirUsoStorage` para el Super-Admin.
+- Se descartó agregar `p-limit` como dependencia nueva — un semáforo de ~30 líneas cubre el caso sin sumar una dependencia externa, coherente con el criterio ya usado en el resto del proyecto (sin ORM, sin librería de componentes UI) de preferir código propio chico antes que una dependencia para algo simple.
+- El backfill de módulos Pro (migración 55) sincroniza empresas existentes según su plan actual en vez de dejarlas perder el módulo silenciosamente — no hay clientes reales en producción todavía (repo sin deploy activo), pero se hizo igual por prolijidad de los datos de prueba/demo.
