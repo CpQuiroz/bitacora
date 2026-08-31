@@ -19,6 +19,8 @@ import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Modal } from "@/components/Modal";
+import { ComboboxCliente } from "@/components/ComboboxCliente";
+import { ComboboxResponsable } from "@/components/ComboboxResponsable";
 import { Badge, Button, Card, ErrorText, Input, Label, Select, Textarea, buttonClass } from "@/components/ui";
 import { IconCalendar, IconChevronLeft, IconChevronRight, IconClipboardCheck, IconPlus, IconWrench } from "@/components/icons";
 
@@ -522,14 +524,14 @@ export default function AgendaPage() {
               </div>
               <div>
                 <Label>Cliente (opcional)</Label>
-                <Select value={clienteIdTarea} onChange={(e) => onCambiarClienteTarea(e.target.value)}>
-                  <option value="">Sin cliente</option>
-                  {clientesOpciones.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.nombre}
-                    </option>
-                  ))}
-                </Select>
+                <ComboboxCliente
+                  value={clienteIdTarea}
+                  onChange={onCambiarClienteTarea}
+                  clientes={clientesOpciones}
+                  onClienteCreado={(c) => setClientesOpciones((prev) => [...prev, c])}
+                  opcionVacia="Sin cliente"
+                  placeholder="Sin cliente"
+                />
               </div>
               {puedeAgendaPro && clienteIdTarea && (
                 <div className="sm:col-span-2 rounded-lg border border-border p-3">
@@ -595,14 +597,13 @@ export default function AgendaPage() {
               )}
               <div>
                 <Label>Responsable (opcional)</Label>
-                <Select value={responsableIdTarea} onChange={(e) => setResponsableIdTarea(e.target.value)}>
-                  <option value="">Sin asignar</option>
-                  {usuariosOpciones.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.nombre}
-                    </option>
-                  ))}
-                </Select>
+                <ComboboxResponsable
+                  value={responsableIdTarea}
+                  onChange={setResponsableIdTarea}
+                  equipo={usuariosOpciones}
+                  opcionVacia="Sin asignar"
+                  placeholder="Sin asignar"
+                />
               </div>
               <div>
                 <Label>Prioridad</Label>
