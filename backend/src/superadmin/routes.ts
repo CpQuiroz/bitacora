@@ -1,16 +1,17 @@
 import { Router } from "express";
+import crypto from "node:crypto";
 import type { EstadoEmpresa, Modulo, Plan, Rubro } from "@bitacora/shared";
 import { MODULOS, moduloActivadoPorDefecto, formatearRut, validarRut } from "@bitacora/shared";
 import { supabase } from "../supabase";
 import { env } from "../env";
 import { ah } from "../asyncHandler";
-import { descifrarJson } from "../crypto";
+import { cifrarJson, descifrarJson } from "../crypto";
 import { medirUsoStorage } from "../storage";
 import { TABLAS_POR_EMPRESA } from "../tenant";
 import { cambiarPlanEmpresa } from "../planes";
 import { enviarInvitacion } from "../email";
 import { verificarPassword } from "./passwords";
-import { verificarCodigoTotp } from "../totp";
+import { generarSecretoTotp, otpauthUri, verificarCodigoTotp } from "../totp";
 import { crearTokenSuperAdmin, requiereSuperAdmin, registrarAuditoria, type RequestConSuperAdmin } from "./auth";
 
 const ESTADOS_EMPRESA: EstadoEmpresa[] = ["activa", "suspendida", "dada_de_baja"];
@@ -272,6 +273,145 @@ superadminRouter.patch(
     });
 
     res.json(data);
+  })
+);
+
+// Lista los usuarios de una empresa con su correo real (usuarios no
+// tiene columna email — vive en auth.users, se resuelve por id). Para
+// que el Super-Admin pueda ver a quién le está restableciendo la
+// contraseña antes de hacerlo.
+superadminRouter.get(
+  "/empresas/:id/usuarios",
+  requiereSuperAdmin,
+  ah<RequestConSuperAdmin>(async (req, res) => {
+    const { data: usuarios, error } = await supabase
+      .from("usuarios")
+      .select("id, nombre, rol, activo, mfa_activado, mfa_metodo")
+      .eq("empresa_id", req.params.id)
+      .order("nombre");
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    const conCorreo = await Promise.all(
+      (usuarios ?? []).map(async (u) => {
+        const { data: authUser } = await supabase.auth.admin.getUserById(u.id);
+        return { ...u, correo: authUser?.user?.email ?? null };
+      })
+    );
+    res.json(conCorreo);
+  })
+);
+
+// Genera una contraseña temporal y la aplica directo en Supabase Auth
+// — se muestra una sola vez en la respuesta (no se guarda en ningún
+// lado); el Super-Admin se la pasa a la empresa por el canal que use
+// habitualmente para soporte. No hay envío de correo automático acá
+// (mismo motivo que el resto del proyecto: RESEND_API_KEY no siempre
+// está configurado).
+superadminRouter.post(
+  "/empresas/:id/usuarios/:usuarioId/restablecer-password",
+  requiereSuperAdmin,
+  ah<RequestConSuperAdmin>(async (req, res) => {
+    const { data: usuario } = await supabase
+      .from("usuarios")
+      .select("id, nombre, empresa_id")
+      .eq("id", req.params.usuarioId)
+      .eq("empresa_id", req.params.id)
+      .maybeSingle();
+    if (!usuario) {
+      res.status(404).json({ error: "Usuario no encontrado en esta empresa" });
+      return;
+    }
+
+    const passwordTemporal = crypto.randomBytes(9).toString("base64url");
+    const { error } = await supabase.auth.admin.updateUserById(usuario.id, { password: passwordTemporal });
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+
+    await registrarAuditoria(req.superAdminId!, "restablecer_password_usuario", {
+      empresaId: req.params.id,
+      ip: req.ip ?? null,
+      detalle: `Usuario: ${usuario.nombre} (${usuario.id})`,
+    });
+
+    res.json({ password: passwordTemporal });
+  })
+);
+
+// Activa 2FA por TOTP a nombre del usuario — a diferencia del alta
+// normal (mfa.ts, /totp/iniciar + /totp/confirmar), acá no hay forma
+// de que el propio usuario confirme un código en el momento, así que
+// el Super-Admin genera el secreto y lo entrega directo (una sola vez
+// en la respuesta), igual que el reset de contraseña. Pensado para
+// desbloquear una cuenta que quedó sin poder pasar su propio 2FA.
+superadminRouter.post(
+  "/empresas/:id/usuarios/:usuarioId/mfa/activar-totp",
+  requiereSuperAdmin,
+  ah<RequestConSuperAdmin>(async (req, res) => {
+    const { data: usuario } = await supabase
+      .from("usuarios")
+      .select("id, nombre, empresa_id")
+      .eq("id", req.params.usuarioId)
+      .eq("empresa_id", req.params.id)
+      .maybeSingle();
+    if (!usuario) {
+      res.status(404).json({ error: "Usuario no encontrado en esta empresa" });
+      return;
+    }
+    const { data: authUser } = await supabase.auth.admin.getUserById(usuario.id);
+    const correo = authUser?.user?.email;
+    if (!correo) {
+      res.status(400).json({ error: "No pudimos determinar el correo de acceso de este usuario" });
+      return;
+    }
+
+    const secreto = generarSecretoTotp();
+    const secretoCifrado = cifrarJson({ secreto }, env.USUARIOS_MFA_ENCRYPTION_KEY, "USUARIOS_MFA_ENCRYPTION_KEY");
+    const { error: errorSecreto } = await supabase.from("mfa_totp_secretos").upsert({ usuario_id: usuario.id, secreto_cifrado: secretoCifrado });
+    if (errorSecreto) {
+      res.status(500).json({ error: errorSecreto.message });
+      return;
+    }
+    await supabase.from("usuarios").update({ mfa_activado: true, mfa_metodo: "totp" }).eq("id", usuario.id);
+
+    await registrarAuditoria(req.superAdminId!, "activar_2fa_usuario", {
+      empresaId: req.params.id,
+      ip: req.ip ?? null,
+      detalle: `Usuario: ${usuario.nombre} (${usuario.id})`,
+    });
+
+    res.json({ secreto, otpauthUri: otpauthUri(secreto, correo, "Bitácora") });
+  })
+);
+
+superadminRouter.post(
+  "/empresas/:id/usuarios/:usuarioId/mfa/desactivar",
+  requiereSuperAdmin,
+  ah<RequestConSuperAdmin>(async (req, res) => {
+    const { data: usuario } = await supabase
+      .from("usuarios")
+      .select("id, nombre, empresa_id")
+      .eq("id", req.params.usuarioId)
+      .eq("empresa_id", req.params.id)
+      .maybeSingle();
+    if (!usuario) {
+      res.status(404).json({ error: "Usuario no encontrado en esta empresa" });
+      return;
+    }
+
+    await supabase.from("usuarios").update({ mfa_activado: false, mfa_metodo: null }).eq("id", usuario.id);
+    await supabase.from("mfa_totp_secretos").delete().eq("usuario_id", usuario.id);
+
+    await registrarAuditoria(req.superAdminId!, "desactivar_2fa_usuario", {
+      empresaId: req.params.id,
+      ip: req.ip ?? null,
+      detalle: `Usuario: ${usuario.nombre} (${usuario.id})`,
+    });
+
+    res.json({ activado: false });
   })
 );
 
