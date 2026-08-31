@@ -2,8 +2,16 @@ import Anthropic from "@anthropic-ai/sdk";
 import { env } from "./env";
 import { supabase } from "./supabase";
 import { verificarLimiteIA } from "./limites";
+import { crearLimitadorConcurrencia } from "./concurrencia";
 
 export const claude = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
+
+// Nada limitaba antes cuántas llamadas simultáneas salían a Claude —
+// un pico de varias empresas a la vez (ej. todas subiendo fotos de
+// una OS al mismo tiempo) podía chocar con los rate limits propios de
+// la cuenta de Anthropic. El SDK ya reintenta solo ante un 429, pero
+// eso no evita que salgan todas juntas en primer lugar.
+const limitarConcurrenciaIA = crearLimitadorConcurrencia(8);
 
 // Etiquetas de feature para ia_uso — una por cada punto de llamada real
 // a Claude en el backend (ver Panel de Super-Admin, consumo por empresa).
@@ -41,9 +49,32 @@ export async function crearMensajeIA(
   params: Anthropic.MessageCreateParamsNonStreaming
 ): Promise<Anthropic.Message> {
   await verificarLimiteIA(empresaId);
-  const response = await claude.messages.create(params);
+  let response: Anthropic.Message;
+  try {
+    response = await limitarConcurrenciaIA(() => claude.messages.create(params));
+  } catch (err) {
+    if (err instanceof Anthropic.RateLimitError) void registrarRateLimit(empresaId, feature);
+    throw err;
+  }
   void registrarUsoIA(empresaId, feature, response.model, response.usage.input_tokens, response.usage.output_tokens);
   return response;
+}
+
+// Un 429 de Anthropic no es un bug del backend, pero sí algo que
+// conviene ver en el Panel de Super-Admin si llega a pasar de verdad
+// — por eso se loguea acá explícito en vez de depender del handler
+// global de errores (que no registra los 4xx, ver server.ts).
+async function registrarRateLimit(empresaId: string, feature: FeatureIA) {
+  try {
+    await supabase.from("errores_backend").insert({
+      empresa_id: empresaId,
+      ruta: `claude:${feature}`,
+      metodo: "POST",
+      mensaje: "Rate limit (429) de la API de Claude",
+    });
+  } catch (err) {
+    console.error("Error registrando rate limit de Claude:", err);
+  }
 }
 
 export interface AnalisisFotoIA {
