@@ -86,7 +86,7 @@ documentosRouter.get(
     const vehiculoIds = (data ?? []).filter((d) => d.entidad_tipo === "vehiculo").map((d) => d.entidad_id);
     const [{ data: colaboradores }, { data: vehiculos }] = await Promise.all([
       colaboradorIds.length ? supabase.from("usuarios").select("id, nombre").in("id", colaboradorIds) : Promise.resolve({ data: [] as { id: string; nombre: string }[] }),
-      vehiculoIds.length ? supabase.from("vehiculos").select("id, patente").in("id", vehiculoIds) : Promise.resolve({ data: [] as { id: string; patente: string }[] }),
+      vehiculoIds.length ? supabase.from("equipos").select("id, patente").in("id", vehiculoIds) : Promise.resolve({ data: [] as { id: string; patente: string | null }[] }),
     ]);
     const nombreColaborador = new Map((colaboradores ?? []).map((c) => [c.id, c.nombre]));
     const patenteVehiculo = new Map((vehiculos ?? []).map((v) => [v.id, v.patente]));

@@ -7,7 +7,7 @@ import { geocodificarDireccion } from "../geocodificar";
 import { subirAnexo, urlFirmadaAnexo } from "../storage";
 import { asignarHorarios, secuenciarNearestNeighbor } from "../optimizarRuta";
 import { crearOrdenServicio } from "../ordenes";
-import { vehiculoAsignadoAColaborador } from "./vehiculos";
+import { equipoAsignadoAColaborador } from "./equipos";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
 
@@ -17,7 +17,7 @@ export const rutasPlanificadasRouter = Router();
 // responsable — sin vehículo asignado, o con algún documento vencido
 // o por vencer (ventana de 30 días, igual que estadoDocumento()).
 async function advertenciasVehiculo(empresaId: string, responsableId: string) {
-  const vehiculo = await vehiculoAsignadoAColaborador(empresaId, responsableId);
+  const vehiculo = await equipoAsignadoAColaborador(empresaId, responsableId);
   if (!vehiculo) return { vehiculo: null, advertencias: ["El colaborador no tiene un vehículo asignado."] };
 
   const en30dias = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
