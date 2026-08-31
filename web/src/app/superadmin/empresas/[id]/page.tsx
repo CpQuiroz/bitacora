@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import type { EstadoEmpresa, Plan, Suscripcion, SuscripcionCobro } from "@bitacora/shared";
+import type { EstadoEmpresa, Plan, Rol, Suscripcion, SuscripcionCobro } from "@bitacora/shared";
 import { SuperAdminShell } from "@/components/SuperAdminShell";
 import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select } from "@/components/ui";
 import { IconChevronLeft, IconShield } from "@/components/icons";
@@ -12,6 +12,7 @@ import { ETIQUETA_MODULO } from "@/lib/etiquetasModulo";
 
 const ESTADOS: EstadoEmpresa[] = ["activa", "suspendida", "dada_de_baja"];
 const PLANES: Plan[] = ["trial", "basico", "pro"];
+const ROLES: Rol[] = ["admin", "supervisor", "contador", "colaborador"];
 
 type Salud = {
   empresa: { id: string; nombre: string; estado: EstadoEmpresa; plan: Plan; rut: string | null };
@@ -94,6 +95,13 @@ export default function SuperAdminSaludEmpresaPage() {
   const [cambiandoMfaId, setCambiandoMfaId] = useState<string | null>(null);
   const [secretoTotpGenerado, setSecretoTotpGenerado] = useState<{ usuarioId: string; nombre: string; secreto: string } | null>(null);
 
+  const [nuevoNombre, setNuevoNombre] = useState("");
+  const [nuevoCorreo, setNuevoCorreo] = useState("");
+  const [nuevoRol, setNuevoRol] = useState<Rol>("colaborador");
+  const [invitando, setInvitando] = useState(false);
+  const [errorInvitar, setErrorInvitar] = useState<string | null>(null);
+  const [avisoInvitar, setAvisoInvitar] = useState<string | null>(null);
+
   async function cargar() {
     const res = await superadminFetch(`/api/superadmin/empresas/${params.id}/salud`);
     if (!res.ok) {
@@ -142,6 +150,28 @@ export default function SuperAdminSaludEmpresaPage() {
     cargarUsuarios();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id]);
+
+  async function onInvitarUsuario(e: React.FormEvent) {
+    e.preventDefault();
+    setErrorInvitar(null);
+    setAvisoInvitar(null);
+    setInvitando(true);
+    const res = await superadminFetch(`/api/superadmin/empresas/${params.id}/usuarios`, {
+      method: "POST",
+      body: JSON.stringify({ nombre: nuevoNombre.trim(), correo: nuevoCorreo.trim(), rol: nuevoRol }),
+    });
+    setInvitando(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setErrorInvitar(body.error ?? "No se pudo invitar al usuario");
+      return;
+    }
+    setAvisoInvitar(`Invitación enviada a ${nuevoCorreo.trim()}. El usuario define su contraseña desde el enlace del correo.`);
+    setNuevoNombre("");
+    setNuevoCorreo("");
+    setNuevoRol("colaborador");
+    cargarUsuarios();
+  }
 
   async function onRestablecerPassword(usuarioId: string, nombre: string) {
     if (!confirm(`¿Restablecer la contraseña de ${nombre}? La contraseña actual dejará de funcionar de inmediato.`)) return;
@@ -613,6 +643,43 @@ export default function SuperAdminSaludEmpresaPage() {
               Restablece la contraseña de un usuario si quedó bloqueado — se genera una clave temporal que reemplaza la actual de
               inmediato. Se muestra una sola vez acá, no se guarda en ningún lado; pásasela por el canal de soporte que uses.
             </p>
+
+            <form onSubmit={onInvitarUsuario} className="mb-4 rounded-lg border border-border p-3">
+              <h3 className="mb-2 text-sm font-semibold text-foreground">Invitar un usuario a esta empresa</h3>
+              <p className="mb-3 text-[11px] text-muted">
+                Se le manda un correo con el enlace para definir su contraseña. No cuenta contra el límite de usuarios del plan.
+              </p>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div>
+                  <Label>Nombre</Label>
+                  <Input type="text" value={nuevoNombre} onChange={(e) => setNuevoNombre(e.target.value)} />
+                </div>
+                <div>
+                  <Label>Correo</Label>
+                  <Input type="email" value={nuevoCorreo} onChange={(e) => setNuevoCorreo(e.target.value)} />
+                </div>
+                <div>
+                  <Label>Rol</Label>
+                  <Select value={nuevoRol} onChange={(e) => setNuevoRol(e.target.value as Rol)}>
+                    {ROLES.map((r) => (
+                      <option key={r} value={r}>
+                        {r}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+              </div>
+              {errorInvitar && (
+                <div className="mt-3">
+                  <ErrorText>{errorInvitar}</ErrorText>
+                </div>
+              )}
+              {avisoInvitar && <p className="mt-3 text-sm text-brand">{avisoInvitar}</p>}
+              <Button type="submit" disabled={invitando || !nuevoNombre.trim() || !nuevoCorreo.trim()} className="mt-3">
+                {invitando ? "Invitando…" : "Enviar invitación"}
+              </Button>
+            </form>
+
             {passwordGenerada && (
               <div className="mb-3 rounded-lg border border-brand/40 bg-brand-soft p-3 text-sm">
                 <p className="font-medium text-foreground">

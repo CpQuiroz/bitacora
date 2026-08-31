@@ -1,6 +1,6 @@
 import { Router } from "express";
 import crypto from "node:crypto";
-import type { EstadoEmpresa, Modulo, Plan, Rubro } from "@bitacora/shared";
+import type { EstadoEmpresa, Modulo, Plan, Rol, Rubro } from "@bitacora/shared";
 import { MODULOS, moduloActivadoPorDefecto, formatearRut, validarRut } from "@bitacora/shared";
 import { supabase } from "../supabase";
 import { env } from "../env";
@@ -17,6 +17,7 @@ import { crearTokenSuperAdmin, requiereSuperAdmin, registrarAuditoria, type Requ
 const ESTADOS_EMPRESA: EstadoEmpresa[] = ["activa", "suspendida", "dada_de_baja"];
 const PLANES: Plan[] = ["trial", "basico", "pro"];
 const RUBROS: Rubro[] = ["transporte", "servicio_tecnico", "otro"];
+const ROLES: Rol[] = ["admin", "supervisor", "contador", "colaborador"];
 
 export const superadminRouter = Router();
 
@@ -300,6 +301,83 @@ superadminRouter.get(
       })
     );
     res.json(conCorreo);
+  })
+);
+
+// Invita un usuario nuevo a una empresa existente — mismo mecanismo que
+// usa el admin de la empresa (routes/usuarios.ts POST /invitar) y que la
+// creación de empresa acá arriba: generateLink crea el usuario en Auth,
+// el correo con el link para definir contraseña se manda por Resend, y
+// recién si eso funciona se vincula la fila en `usuarios`. No aplica el
+// límite de usuarios por plan a propósito — es una acción deliberada de
+// plataforma, igual que cambiar el plan o los módulos desde este panel.
+superadminRouter.post(
+  "/empresas/:id/usuarios",
+  requiereSuperAdmin,
+  ah<RequestConSuperAdmin>(async (req, res) => {
+    const { nombre, correo, rol } = req.body ?? {};
+    if (typeof nombre !== "string" || !nombre.trim()) {
+      res.status(400).json({ error: "Falta el nombre del usuario" });
+      return;
+    }
+    if (typeof correo !== "string" || !correo.includes("@")) {
+      res.status(400).json({ error: "Correo inválido" });
+      return;
+    }
+    if (typeof rol !== "string" || !ROLES.includes(rol as Rol)) {
+      res.status(400).json({ error: `rol debe ser uno de: ${ROLES.join(", ")}` });
+      return;
+    }
+
+    const { data: empresa } = await supabase.from("empresas").select("id, nombre").eq("id", req.params.id).maybeSingle();
+    if (!empresa) {
+      res.status(404).json({ error: "Empresa no encontrada" });
+      return;
+    }
+
+    const { data: generado, error: errorGenerar } = await supabase.auth.admin.generateLink({
+      type: "invite",
+      email: correo,
+      options: { redirectTo: `${env.WEB_URL}/invitacion` },
+    });
+    if (errorGenerar || !generado.user) {
+      console.error("Error generando link de invitación:", errorGenerar);
+      res.status(400).json({ error: "No se pudo invitar al usuario. Verifica que el correo sea válido y que no tenga ya una cuenta." });
+      return;
+    }
+
+    try {
+      await enviarInvitacion(correo, empresa.nombre, nombre.trim(), generado.properties.action_link);
+    } catch (err) {
+      await supabase.auth.admin.deleteUser(generado.user.id);
+      const mensaje = err instanceof Error ? err.message : String(err);
+      console.error("Error enviando invitación:", mensaje);
+      res.status(mensaje.includes("no está configurado") ? 500 : 502).json({
+        error: mensaje.includes("no está configurado")
+          ? "El envío de correos no está configurado en este ambiente."
+          : "No pudimos enviar el correo de invitación. Puede ser un problema temporal del servicio de correo — intenta de nuevo en unos minutos.",
+      });
+      return;
+    }
+
+    const { data: usuario, error: errorUsuario } = await supabase
+      .from("usuarios")
+      .insert({ id: generado.user.id, empresa_id: empresa.id, nombre: nombre.trim(), rol: rol as Rol })
+      .select("id, nombre, rol, activo, mfa_activado, mfa_metodo")
+      .single();
+    if (errorUsuario) {
+      await supabase.auth.admin.deleteUser(generado.user.id);
+      res.status(500).json({ error: errorUsuario.message });
+      return;
+    }
+
+    await registrarAuditoria(req.superAdminId!, "invitar_usuario_empresa", {
+      empresaId: empresa.id,
+      ip: req.ip ?? null,
+      detalle: `${empresa.nombre}: ${nombre.trim()} <${correo}> (${rol})`,
+    });
+
+    res.status(201).json({ ...usuario, correo });
   })
 );
 
