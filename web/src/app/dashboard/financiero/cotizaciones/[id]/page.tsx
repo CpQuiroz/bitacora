@@ -31,6 +31,8 @@ export default function CotizacionDetallePage() {
   const [convirtiendo, setConvirtiendo] = useState(false);
   const [errorConversion, setErrorConversion] = useState<string | null>(null);
   const [folioGenerado, setFolioGenerado] = useState<number | null>(null);
+  const [eliminando, setEliminando] = useState(false);
+  const [errorEliminar, setErrorEliminar] = useState<string | null>(null);
 
   const [descargando, setDescargando] = useState(false);
   const [compartiendo, setCompartiendo] = useState(false);
@@ -207,6 +209,20 @@ export default function CotizacionDetallePage() {
     setEmail("");
   }
 
+  async function onEliminar() {
+    if (!confirm("¿Eliminar esta cotización? Esta acción no se puede deshacer.")) return;
+    setErrorEliminar(null);
+    setEliminando(true);
+    const res = await apiFetch(`/api/cotizaciones/${params.id}`, { method: "DELETE" });
+    setEliminando(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setErrorEliminar(body.error ?? "No se pudo eliminar la cotización");
+      return;
+    }
+    router.push("/dashboard/financiero/cotizaciones");
+  }
+
   async function convertirAOs() {
     setConvirtiendo(true);
     setErrorConversion(null);
@@ -245,12 +261,26 @@ export default function CotizacionDetallePage() {
       <PageHeader
         title={cotizacion.numero != null ? `Cotización N° ${String(cotizacion.numero).padStart(4, "0")}` : "Cotización"}
         subtitle={cotizacion.cliente_info?.nombre ?? "—"}
-        action={<Badge value={estadoMostrado} />}
+        action={
+          <div className="flex items-center gap-2">
+            <Badge value={estadoMostrado} />
+            {!cotizacion.trabajo_id && (
+              <Button type="button" variant="danger" onClick={onEliminar} disabled={eliminando}>
+                {eliminando ? "Eliminando…" : "Eliminar"}
+              </Button>
+            )}
+          </div>
+        }
       />
 
       {aviso && (
         <div className="my-4">
           <SuccessText>{aviso}</SuccessText>
+        </div>
+      )}
+      {errorEliminar && (
+        <div className="my-4">
+          <ErrorText>{errorEliminar}</ErrorText>
         </div>
       )}
 

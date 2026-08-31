@@ -321,6 +321,38 @@ cotizacionesRouter.patch(
 // real, arrastrando sus ítems como os_items (mismo formato que ya usa
 // el flujo manual de creación de OS) — así el Catálogo termina siendo
 // la fuente real de precios de una OS, sin duplicar esa lógica acá.
+// No se puede eliminar una cotización ya convertida en OS — perdería
+// la trazabilidad del trabajo real que generó (mismo criterio que
+// trabajos.ts bloqueando el delete de una OS finalizada).
+cotizacionesRouter.delete(
+  "/:id",
+  ah<RequestConEmpresa>(async (req, res) => {
+    const { data: cotizacion } = await supabase
+      .from("presupuestos")
+      .select("id, trabajo_id")
+      .eq("empresa_id", req.empresaId!)
+      .eq("id", req.params.id)
+      .maybeSingle();
+    if (!cotizacion) {
+      res.status(404).json({ error: "Cotización no encontrada" });
+      return;
+    }
+    if (cotizacion.trabajo_id) {
+      res.status(403).json({ error: "Esta cotización ya fue convertida en una orden de servicio y no se puede eliminar" });
+      return;
+    }
+
+    // presupuesto_items cae por ON DELETE CASCADE — no hace falta
+    // borrarlos a mano acá.
+    const { error } = await supabase.from("presupuestos").delete().eq("empresa_id", req.empresaId!).eq("id", req.params.id);
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    res.status(204).end();
+  })
+);
+
 cotizacionesRouter.post(
   "/:id/convertir-a-os",
   ah<RequestConEmpresa>(async (req, res) => {
