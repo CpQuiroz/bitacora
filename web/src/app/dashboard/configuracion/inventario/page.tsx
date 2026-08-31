@@ -1,12 +1,23 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { CatalogoItem, UnidadMedida } from "@bitacora/shared";
+import type { CatalogoItem, EstadoOS, UnidadMedida } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
 import { Button, Card, ErrorText, Input, Label, PageHeader, SuccessText } from "@/components/ui";
 import { DataTable } from "@/components/DataTable";
 import { IconBox, IconLayers } from "@/components/icons";
 import { useConfiguracion } from "../ConfiguracionContext";
+
+// Mismos estados reales de EstadoOS (packages/shared/src/types.ts) —
+// no se inventan estados nuevos. "en_proceso" y "firmada" son las dos
+// opciones con sentido práctico para disparar un descuento (las otras
+// 3 quedan igual disponibles, por si a alguien le sirve un flujo
+// distinto).
+const ESTADOS_DISPARADOR: { valor: EstadoOS; etiqueta: string; recomendado?: boolean }[] = [
+  { valor: "en_proceso", etiqueta: "En progreso (el colaborador hizo check-in)" },
+  { valor: "completada", etiqueta: "Completada (el colaborador hizo check-out)" },
+  { valor: "firmada", etiqueta: "Firmada (el cliente firmó la conformidad)", recomendado: true },
+];
 
 const SUGERIDAS: { nombre: string; abreviatura: string }[] = [
   { nombre: "Unidad", abreviatura: "un" },
@@ -23,6 +34,9 @@ export default function InventarioPage() {
   const { usuario, recargar } = useConfiguracion();
   const [activado, setActivado] = useState(usuario.empresa.inventario_activado);
   const [stockMinimoDefault, setStockMinimoDefault] = useState(String(usuario.empresa.inventario_stock_minimo_default));
+  const [descontarEnEstado, setDescontarEnEstado] = useState<EstadoOS>(usuario.empresa.inventario_descontar_en_estado);
+  const [permitirNegativo, setPermitirNegativo] = useState(usuario.empresa.inventario_permitir_negativo);
+  const [descontarUnaVez, setDescontarUnaVez] = useState(usuario.empresa.inventario_descontar_una_vez);
   const [guardando, setGuardando] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -66,7 +80,13 @@ export default function InventarioPage() {
     setGuardando(true);
     const res = await apiFetch("/api/empresa", {
       method: "PATCH",
-      body: JSON.stringify({ inventario_activado: activado, inventario_stock_minimo_default: minimo }),
+      body: JSON.stringify({
+        inventario_activado: activado,
+        inventario_stock_minimo_default: minimo,
+        inventario_descontar_en_estado: descontarEnEstado,
+        inventario_permitir_negativo: permitirNegativo,
+        inventario_descontar_una_vez: descontarUnaVez,
+      }),
     });
     setGuardando(false);
     if (!res.ok) {
@@ -161,6 +181,71 @@ export default function InventarioPage() {
           <p className="mt-1.5 text-xs text-muted">
             Se usa para los productos que no tienen su propio umbral definido — decide cuándo se muestran como &ldquo;stock bajo&rdquo;.
           </p>
+        </div>
+
+        <div className="mt-5 border-t border-border pt-5">
+          <Label>Descontar stock cuando la OS alcance el estado</Label>
+          <div className="mt-2 flex flex-col gap-2">
+            {ESTADOS_DISPARADOR.map((e) => (
+              <label key={e.valor} className="flex cursor-pointer items-center gap-2.5 text-sm text-foreground">
+                <input
+                  type="radio"
+                  name="descontar-en-estado"
+                  checked={descontarEnEstado === e.valor}
+                  onChange={() => setDescontarEnEstado(e.valor)}
+                  className="accent-brand"
+                />
+                {e.etiqueta}
+                {e.recomendado && <span className="text-xs font-medium text-brand">(recomendado)</span>}
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-5 flex items-start justify-between gap-4 border-t border-border pt-5">
+          <div>
+            <p className="text-sm font-medium text-foreground">Permitir stock negativo</p>
+            <p className="mt-1 max-w-md text-xs text-muted">
+              Si lo desactivás, el sistema igual descuenta el stock (no bloquea la OS) pero te avisa cuando no había
+              suficiente.
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={permitirNegativo}
+            onClick={() => setPermitirNegativo((v) => !v)}
+            className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${permitirNegativo ? "bg-brand" : "bg-border"}`}
+          >
+            <span
+              className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                permitirNegativo ? "translate-x-5" : "translate-x-0.5"
+              }`}
+            />
+          </button>
+        </div>
+
+        <div className="mt-5 flex items-start justify-between gap-4 border-t border-border pt-5">
+          <div>
+            <p className="text-sm font-medium text-foreground">Descontar solo una vez por OS</p>
+            <p className="mt-1 max-w-md text-xs text-muted">
+              Evita que una OS descuente stock dos veces si vuelve a pasar por el estado configurado (ej. se edita y se
+              vuelve a guardar). Recomendado dejarlo activado.
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={descontarUnaVez}
+            onClick={() => setDescontarUnaVez((v) => !v)}
+            className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${descontarUnaVez ? "bg-brand" : "bg-border"}`}
+          >
+            <span
+              className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                descontarUnaVez ? "translate-x-5" : "translate-x-0.5"
+              }`}
+            />
+          </button>
         </div>
 
         {error && (

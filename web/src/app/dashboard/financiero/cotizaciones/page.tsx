@@ -11,22 +11,19 @@ import { Badge, Button, Card, ErrorText, Input, PageHeader } from "@/components/
 import { IconPlus, IconReceipt } from "@/components/icons";
 
 type CotizacionConCliente = Presupuesto & { cliente_info: { nombre: string } | null };
-type Chip = "todos" | EstadoPresupuesto | "vencida";
+type Chip = "todos" | EstadoPresupuesto;
 
-const HOY = () => new Date().toISOString().slice(0, 10);
-
-function estadoMostrado(c: Presupuesto): EstadoPresupuesto | "vencida" {
-  if (c.estado === "enviado" && c.fecha_vencimiento && c.fecha_vencimiento < HOY()) return "vencida";
-  return c.estado;
-}
-
+// Bloque I: "expirado" ya es un estado real y persistido (el backend
+// lo marca solo al cargar el listado — ver marcarCotizacionesExpiradas
+// en cotizaciones.ts) — antes esto se calculaba acá en el frontend
+// sin guardar nada, con el nombre "vencida".
 const CHIPS: { valor: Chip; etiqueta: string }[] = [
   { valor: "todos", etiqueta: "Todos" },
   { valor: "borrador", etiqueta: "Borrador" },
   { valor: "enviado", etiqueta: "Enviada" },
   { valor: "aprobado", etiqueta: "Aprobada" },
   { valor: "rechazado", etiqueta: "Rechazada" },
-  { valor: "vencida", etiqueta: "Vencida" },
+  { valor: "expirado", etiqueta: "Expirada" },
 ];
 
 export default function CotizacionesPage() {
@@ -81,7 +78,6 @@ export default function CotizacionesPage() {
     aprobado: lista.filter((c) => c.estado === "aprobado").length,
     rechazado: lista.filter((c) => c.estado === "rechazado").length,
     expirado: lista.filter((c) => c.estado === "expirado").length,
-    vencida: lista.filter((c) => estadoMostrado(c) === "vencida").length,
   };
 
   const filtradas = lista.filter((c) => {
@@ -90,7 +86,6 @@ export default function CotizacionesPage() {
       return false;
     }
     if (filtro === "todos") return true;
-    if (filtro === "vencida") return estadoMostrado(c) === "vencida";
     return c.estado === filtro;
   });
 
@@ -172,7 +167,7 @@ export default function CotizacionesPage() {
                   <td className="px-5 py-3 text-foreground">{c.cliente_info?.nombre ?? "—"}</td>
                   <td className="px-5 py-3">{formatMoneda(c.monto, usuario.moneda)}</td>
                   <td className="px-5 py-3">
-                    <Badge value={estadoMostrado(c)} />
+                    <Badge value={c.estado} />
                   </td>
                   <td className="px-5 py-3 text-muted">{c.fecha}</td>
                   <td className="px-5 py-3 text-muted">{c.fecha_vencimiento ?? "—"}</td>

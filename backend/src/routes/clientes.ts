@@ -66,7 +66,7 @@ clientesRouter.get(
       return;
     }
 
-    const [{ data: trabajos }, { data: presupuestos }, { data: facturas }, { data: facturasPorNombre }] = await Promise.all([
+    const [{ data: trabajos }, { data: presupuestos }, { data: facturas }, { data: facturasPorNombre }, { data: equipos }] = await Promise.all([
       supabase
         .from("trabajos")
         .select("*, orden:ordenes_servicio(folio, estado_os)")
@@ -96,6 +96,8 @@ clientesRouter.get(
         .is("cliente_id", null)
         .eq("cliente", cliente.nombre)
         .order("fecha_emision", { ascending: false }),
+      // Bloque A — Vista 360°: equipos de este cliente.
+      supabase.from("equipos").select("*").eq("empresa_id", req.empresaId!).eq("cliente_id", req.params.id).order("nombre"),
     ]);
 
     const trabajosNormalizados = (trabajos ?? []).map((t) => ({
@@ -108,6 +110,7 @@ clientesRouter.get(
       trabajos: trabajosNormalizados,
       presupuestos: presupuestos ?? [],
       facturas: [...(facturas ?? []), ...(facturasPorNombre ?? [])],
+      equipos: equipos ?? [],
     });
   })
 );

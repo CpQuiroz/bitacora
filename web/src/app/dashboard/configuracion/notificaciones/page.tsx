@@ -65,6 +65,15 @@ const ETIQUETA_TIPO_LOG: Record<string, string> = {
 
 type Mensajes = Record<TipoMensajePersonalizado, MensajePersonalizado | null>;
 
+// Indicador "N de M completados": M = los 3 campos personalizables de
+// cada tipo de mensaje (whatsapp/asunto/cuerpo). No hay restricción de
+// obligatoriedad (dejar vacío usa el default), esto es solo progreso.
+const CAMPOS_POR_MENSAJE = 3;
+function camposCompletados(m: MensajePersonalizado | null): number {
+  if (!m) return 0;
+  return [m.mensaje_whatsapp, m.asunto_correo, m.cuerpo_correo].filter((v) => Boolean(v && v.trim())).length;
+}
+
 export default function NotificacionesPage() {
   const [tab, setTab] = useState<Tab>("correo");
   const [config, setConfig] = useState<NotificacionesConfig | null>(null);
@@ -358,7 +367,12 @@ export default function NotificacionesPage() {
       )}
 
       <Card>
-        <h2 className="mb-1 text-sm font-semibold text-foreground">Mensajes personalizados</h2>
+        <div className="mb-1 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-foreground">Mensajes personalizados</h2>
+          <span className="text-xs font-medium text-muted">
+            {TIPOS_MENSAJE.filter((t) => camposCompletados(mensajes[t.valor]) === CAMPOS_POR_MENSAJE).length} de {TIPOS_MENSAJE.length} completados
+          </span>
+        </div>
         <p className="mb-4 text-xs text-muted">
           Si dejas asunto/cuerpo vacíos, se usa un mensaje por defecto. El cuerpo del correo es texto simple, sin editor
           enriquecido.
@@ -402,6 +416,7 @@ function AcordeonMensaje({
   const [asunto, setAsunto] = useState(mensaje?.asunto_correo ?? "");
   const [cuerpo, setCuerpo] = useState(mensaje?.cuerpo_correo ?? "");
   const [guardando, setGuardando] = useState(false);
+  const completados = [whatsapp, asunto, cuerpo].filter((v) => Boolean(v.trim())).length;
 
   async function guardar() {
     setGuardando(true);
@@ -413,7 +428,12 @@ function AcordeonMensaje({
     <div className="py-3">
       <button type="button" onClick={onToggle} className="flex w-full items-center justify-between text-left text-sm font-medium text-foreground">
         {etiqueta}
-        <span className="text-xs text-muted">{abierto ? "Ocultar" : "Editar"}</span>
+        <span className="flex items-center gap-2 text-xs text-muted">
+          <span className={completados === CAMPOS_POR_MENSAJE ? "font-medium text-success" : ""}>
+            {completados} de {CAMPOS_POR_MENSAJE} completados
+          </span>
+          {abierto ? "Ocultar" : "Editar"}
+        </span>
       </button>
       {abierto && (
         <div className="mt-3 flex flex-col gap-3">

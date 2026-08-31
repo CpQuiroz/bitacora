@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { CategoriaGasto, CentroCosto, EstadoGasto, Gasto, Proveedor, Trabajo } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
@@ -51,6 +52,7 @@ export default function GastosPage() {
   const [trabajoId, setTrabajoId] = useState("");
   const [fecha, setFecha] = useState(() => HOY());
   const [estado, setEstado] = useState<EstadoGasto>("pendiente");
+  const [fechaPago, setFechaPago] = useState(() => HOY());
   const [comprobante, setComprobante] = useState<File | null>(null);
 
   async function cargar() {
@@ -108,6 +110,7 @@ export default function GastosPage() {
     setTrabajoId("");
     setFecha(HOY());
     setEstado("pendiente");
+    setFechaPago(HOY());
     setComprobante(null);
     setFormError(null);
     setFormAbierto(true);
@@ -124,6 +127,7 @@ export default function GastosPage() {
     setTrabajoId(g.trabajo_id ?? "");
     setFecha(g.fecha);
     setEstado(g.estado);
+    setFechaPago(g.fecha_pago ?? HOY());
     setComprobante(null);
     setFormError(null);
   }
@@ -148,6 +152,7 @@ export default function GastosPage() {
     body.set("monto", monto);
     body.set("fecha", fecha);
     body.set("estado", estado);
+    if (estado === "pagado") body.set("fecha_pago", fechaPago);
     if (centroCostoId) body.set("centro_costo_id", centroCostoId);
     if (proveedorId) body.set("proveedor_id", proveedorId);
     if (trabajoId) body.set("trabajo_id", trabajoId);
@@ -298,6 +303,12 @@ export default function GastosPage() {
                   <option value="pagado">Pagado</option>
                 </Select>
               </div>
+              {estado === "pagado" && (
+                <div>
+                  <Label>Fecha de pago</Label>
+                  <Input type="date" required value={fechaPago} onChange={(e) => setFechaPago(e.target.value)} />
+                </div>
+              )}
               <div className="sm:col-span-2">
                 <Label>Comprobante / factura (opcional)</Label>
                 <input
@@ -389,7 +400,11 @@ export default function GastosPage() {
               {filtrados.map((g) => (
                 <tr key={g.id} className="border-b border-border last:border-0 hover:bg-brand-soft/40">
                   <td className="px-5 py-3 text-muted">{g.fecha}</td>
-                  <td className="px-5 py-3 font-medium text-foreground">{g.descripcion || "—"}</td>
+                  <td className="px-5 py-3 font-medium text-foreground">
+                    <Link href={`/dashboard/gastos/${g.id}`} className="hover:text-brand hover:underline">
+                      {g.descripcion || "—"}
+                    </Link>
+                  </td>
                   <td className="px-5 py-3">
                     {g.categoria_info ? (
                       <span className="inline-flex items-center gap-1.5 text-xs font-medium" style={{ color: g.categoria_info.color }}>

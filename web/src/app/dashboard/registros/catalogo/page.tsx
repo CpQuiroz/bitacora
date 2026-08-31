@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import type { CatalogoItem, TipoCatalogoItem, UnidadMedida } from "@bitacora/shared";
+import type { CatalogoItem, SugerenciaRubro, TipoCatalogoItem, UnidadMedida } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
@@ -11,11 +11,21 @@ import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { SelectCrear } from "@/components/SelectCrear";
 import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText } from "@/components/ui";
 import { IconHelp, IconLayers, IconPlus } from "@/components/icons";
+import { ICONO_TIPO } from "@/components/CatalogoSelectorModal";
 
 // Categorías sugeridas cuando el catálogo todavía no tiene ninguna
 // propia — una vez que existan categorías reales usadas, esas se
-// muestran primero (ver "categorias" más abajo).
-const CATEGORIAS_SUGERIDAS = ["Repuestos", "Insumos", "Herramientas", "Materiales", "Mano de obra"];
+// muestran primero (ver "categorias" más abajo). Fusiona la lista que
+// ya existía con la pedida en el hallazgo de UX más reciente (mismo
+// "Mano de obra"/"Mano de Obra" e "Insumos"/"Materiales" ya cubiertos
+// no se duplican; "Repuestos"/"Herramientas" se mantienen porque ya
+// estaban en uso).
+const CATEGORIAS_SUGERIDAS = ["Insumos", "Desplazamiento", "Mano de Obra", "Materiales", "Piezas y Componentes", "Repuestos", "Herramientas"];
+
+// Bloque D — a qué tipo(s) de equipo puede aplicar un ítem (etiquetado
+// m2m, texto libre). Mismas categorías sugeridas que Equipos, más
+// cualquier tipo_equipo custom ya en uso (ver "tiposEquipoDisponibles").
+const TIPOS_EQUIPO_SUGERIDOS = ["Vehículo", "Maquinaria", "Herramienta", "Otro"];
 
 type ItemConKit = CatalogoItem & { items?: { item_id: string; cantidad: number; nombre: string }[] };
 type Tab = "todos" | "producto" | "servicio" | "kit";
@@ -56,6 +66,9 @@ export default function CatalogoPage() {
   const [unidad, setUnidad] = useState("unidad");
   const [precioBase, setPrecioBase] = useState("");
   const [kitItems, setKitItems] = useState<{ item_id: string; cantidad: string }[]>([]);
+  const [tiposEquipo, setTiposEquipo] = useState<string[]>([]);
+  // Bloque E: sugerencias según el rubro de la empresa.
+  const [sugerenciasRubro, setSugerenciasRubro] = useState<SugerenciaRubro[]>([]);
 
   async function cargar() {
     const { data } = await supabase.auth.getSession();
@@ -63,11 +76,16 @@ export default function CatalogoPage() {
       router.replace("/login");
       return;
     }
-    const [resMe, resItems, resUnidades] = await Promise.all([
+    const [resMe, resItems, resUnidades, resSugerencias] = await Promise.all([
       apiFetch("/api/me"),
       apiFetch("/api/catalogo"),
       apiFetch("/api/unidades-medida"),
+      apiFetch("/api/sugerencias-rubro"),
     ]);
+    if (resSugerencias.ok) {
+      const todas: SugerenciaRubro[] = await resSugerencias.json();
+      setSugerenciasRubro(todas.filter((s) => s.tipo_sugerencia === "categoria_catalogo"));
+    }
     if (resUnidades.ok) setUnidades((await resUnidades.json()).filter((u: UnidadMedida) => u.activo));
     if (resMe.ok) {
       const { usuario: u } = await resMe.json();
@@ -108,6 +126,7 @@ export default function CatalogoPage() {
     setUnidad("");
     setPrecioBase("");
     setKitItems([]);
+    setTiposEquipo([]);
     setFormError(null);
     setFormAbierto(true);
   }
@@ -121,8 +140,13 @@ export default function CatalogoPage() {
     setUnidad(i.unidad);
     setPrecioBase(String(i.precio_base));
     setKitItems((i.items ?? []).map((k) => ({ item_id: k.item_id, cantidad: String(k.cantidad) })));
+    setTiposEquipo(i.tipos_equipo ?? []);
     setFormError(null);
     setFormAbierto(true);
+  }
+
+  function alternarTipoEquipo(tipoEquipo: string) {
+    setTiposEquipo((prev) => (prev.includes(tipoEquipo) ? prev.filter((t) => t !== tipoEquipo) : [...prev, tipoEquipo]));
   }
 
   async function onAlternarActivo(i: ItemConKit) {
@@ -145,7 +169,7 @@ export default function CatalogoPage() {
     setFormError(null);
     setAviso(null);
     setGuardando(true);
-    const payload: Record<string, unknown> = { nombre, sku, categoria, unidad, precio_base: Number(precioBase) };
+    const payload: Record<string, unknown> = { nombre, sku, categoria, unidad, precio_base: Number(precioBase), tipos_equipo: tiposEquipo };
     if (!editandoId) payload.tipo = tipo;
     if (tipo === "kit") {
       payload.items = kitItems
@@ -182,7 +206,16 @@ export default function CatalogoPage() {
   // Chips de sugerencia en el formulario: las categorías ya usadas por
   // esta empresa si existen, o una lista genérica por defecto la
   // primera vez que se usa el catálogo (todavía vacío).
-  const chipsCategoria = categorias.length > 0 ? categorias : CATEGORIAS_SUGERIDAS;
+  const sugeridasRubroNombres = sugerenciasRubro.map((s) => s.valor);
+  const chipsCategoria =
+    categorias.length > 0 ? categorias : [...sugeridasRubroNombres, ...CATEGORIAS_SUGERIDAS.filter((c) => !sugeridasRubroNombres.includes(c))];
+
+  // Bloque D: tipos de equipo ya usados en algún ítem, además de los
+  // sugeridos — así un tipo_equipo escrito a mano en otro ítem sigue
+  // apareciendo como opción acá.
+  const tiposEquipoDisponibles = [
+    ...new Set([...TIPOS_EQUIPO_SUGERIDOS, ...lista.flatMap((i) => i.tipos_equipo ?? [])]),
+  ];
 
   const filtrados = lista.filter((i) => {
     if (tab !== "todos" && i.tipo !== tab) return false;
@@ -316,6 +349,29 @@ export default function CatalogoPage() {
               </div>
             )}
 
+            <div>
+              <Label className="flex items-center gap-1.5">
+                Aplica a tipo(s) de equipo (opcional)
+                <span title="Al armar una OS/Cotización con un equipo asociado, estos ítems se destacan primero — no oculta el resto del catálogo.">
+                  <IconHelp className="h-3.5 w-3.5 text-muted" />
+                </span>
+              </Label>
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {tiposEquipoDisponibles.map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => alternarTipoEquipo(t)}
+                    className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-colors ${
+                      tiposEquipo.includes(t) ? "border-transparent bg-brand-soft text-brand" : "border-border text-muted hover:bg-brand-soft"
+                    }`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {formError && <ErrorText>{formError}</ErrorText>}
             <div className="flex gap-2">
               <Button type="submit" disabled={guardando} className="self-start">
@@ -423,7 +479,13 @@ export default function CatalogoPage() {
               {filtrados.map((i) => (
                 <tr key={i.id} className="border-b border-border last:border-0 hover:bg-brand-soft/40">
                   <td className="px-5 py-3">
-                    <Badge value={i.tipo} />
+                    <span className="flex items-center gap-1.5">
+                      {(() => {
+                        const Icono = ICONO_TIPO[i.tipo];
+                        return <Icono className="h-4 w-4 text-muted" />;
+                      })()}
+                      <Badge value={i.tipo} />
+                    </span>
                   </td>
                   <td className="px-5 py-3 font-medium text-foreground">
                     {i.nombre}

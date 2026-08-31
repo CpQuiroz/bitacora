@@ -10,6 +10,32 @@ const TIPOS: TipoCatalogoItem[] = ["producto", "servicio", "kit"];
 
 type ItemKit = { item_id: string; cantidad: number };
 
+// Bloque D — etiquetado de un ítem con los tipos de equipo a los que
+// aplica (ej. "Cambio de aceite" -> Camión, Camioneta). Reemplaza por
+// completo (borra e inserta) — mismo criterio que guardarKitItems.
+async function cargarTiposEquipo(empresaId: string, itemIds: string[]) {
+  if (itemIds.length === 0) return new Map<string, string[]>();
+  const { data } = await supabase
+    .from("catalogo_item_tipos_equipo")
+    .select("catalogo_item_id, tipo_equipo")
+    .eq("empresa_id", empresaId)
+    .in("catalogo_item_id", itemIds);
+  const porItem = new Map<string, string[]>();
+  for (const fila of data ?? []) {
+    const lista = porItem.get(fila.catalogo_item_id) ?? [];
+    lista.push(fila.tipo_equipo);
+    porItem.set(fila.catalogo_item_id, lista);
+  }
+  return porItem;
+}
+
+async function guardarTiposEquipo(empresaId: string, itemId: string, tipos: string[]) {
+  await supabase.from("catalogo_item_tipos_equipo").delete().eq("empresa_id", empresaId).eq("catalogo_item_id", itemId);
+  const limpios = [...new Set(tipos.map((t) => String(t).trim()).filter(Boolean))];
+  if (limpios.length === 0) return;
+  await supabase.from("catalogo_item_tipos_equipo").insert(limpios.map((tipo_equipo) => ({ empresa_id: empresaId, catalogo_item_id: itemId, tipo_equipo })));
+}
+
 async function cargarKitItems(empresaId: string, kitIds: string[]) {
   if (kitIds.length === 0) return new Map<string, (ItemKit & { nombre: string })[]>();
   const { data } = await supabase
@@ -67,14 +93,21 @@ catalogoRouter.get(
 
     const kitIds = (data ?? []).filter((i) => i.tipo === "kit").map((i) => i.id);
     const kitItems = await cargarKitItems(req.empresaId!, kitIds);
-    res.json((data ?? []).map((i) => ({ ...i, items: i.tipo === "kit" ? kitItems.get(i.id) ?? [] : undefined })));
+    const tiposEquipoPorItem = await cargarTiposEquipo(req.empresaId!, (data ?? []).map((i) => i.id));
+    res.json(
+      (data ?? []).map((i) => ({
+        ...i,
+        items: i.tipo === "kit" ? kitItems.get(i.id) ?? [] : undefined,
+        tipos_equipo: tiposEquipoPorItem.get(i.id) ?? [],
+      }))
+    );
   })
 );
 
 catalogoRouter.post(
   "/",
   ah<RequestConEmpresa>(async (req, res) => {
-    const { tipo, nombre, sku, categoria, unidad, precio_base, items } = req.body ?? {};
+    const { tipo, nombre, sku, categoria, unidad, precio_base, items, tipos_equipo } = req.body ?? {};
 
     if (typeof tipo !== "string" || !TIPOS.includes(tipo as TipoCatalogoItem)) {
       res.status(400).json({ error: `tipo debe ser uno de: ${TIPOS.join(", ")}` });
@@ -120,15 +153,18 @@ catalogoRouter.post(
         return;
       }
     }
+    if (Array.isArray(tipos_equipo)) {
+      await guardarTiposEquipo(req.empresaId!, data.id, tipos_equipo);
+    }
 
-    res.status(201).json(data);
+    res.status(201).json({ ...data, tipos_equipo: Array.isArray(tipos_equipo) ? tipos_equipo : [] });
   })
 );
 
 catalogoRouter.patch(
   "/:id",
   ah<RequestConEmpresa>(async (req, res) => {
-    const { nombre, sku, categoria, unidad, precio_base, activo, items } = req.body ?? {};
+    const { nombre, sku, categoria, unidad, precio_base, activo, items, tipos_equipo } = req.body ?? {};
     const cambios: Partial<CatalogoItem> = {};
 
     if (nombre !== undefined) {
@@ -151,7 +187,7 @@ catalogoRouter.patch(
     }
     if (activo !== undefined) cambios.activo = Boolean(activo);
 
-    if (Object.keys(cambios).length === 0 && items === undefined) {
+    if (Object.keys(cambios).length === 0 && items === undefined && tipos_equipo === undefined) {
       res.status(400).json({ error: "Nada que actualizar" });
       return;
     }
@@ -192,7 +228,13 @@ catalogoRouter.patch(
         return;
       }
     }
+    if (Array.isArray(tipos_equipo)) {
+      await guardarTiposEquipo(req.empresaId!, data.id, tipos_equipo);
+    }
 
-    res.json(data);
+    const tiposEquipoActuales = Array.isArray(tipos_equipo)
+      ? tipos_equipo
+      : [...(await cargarTiposEquipo(req.empresaId!, [data.id])).get(data.id) ?? []];
+    res.json({ ...data, tipos_equipo: tiposEquipoActuales });
   })
 );

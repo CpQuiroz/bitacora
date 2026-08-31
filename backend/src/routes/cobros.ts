@@ -77,6 +77,29 @@ cobrosRouter.get(
   })
 );
 
+// Bloque H/J: ficha de detalle de un Cobro (no existía — antes todo
+// era lista + form inline, igual que Equipos/Cobros antes de esas tandas).
+cobrosRouter.get(
+  "/:id",
+  ah<RequestConEmpresa>(async (req, res) => {
+    const { data, error } = await supabase
+      .from("facturas")
+      .select("*, cliente_info:clientes(id, nombre, correo, telefono)")
+      .eq("empresa_id", req.empresaId!)
+      .eq("id", req.params.id)
+      .maybeSingle();
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    if (!data) {
+      res.status(404).json({ error: "Cobro no encontrado" });
+      return;
+    }
+    res.json(data);
+  })
+);
+
 // Cobro manual: cliente + monto directos, sin pasar por trabajos.
 cobrosRouter.post(
   "/",
@@ -195,7 +218,7 @@ cobrosRouter.post(
 cobrosRouter.patch(
   "/:id",
   ah<RequestConEmpresa>(async (req, res) => {
-    const { estado, fecha_pago, medio_pago } = req.body ?? {};
+    const { estado, fecha_pago, medio_pago, valor_recibido, observaciones_pago } = req.body ?? {};
     const cambios: Partial<Factura> = {};
 
     if (estado !== undefined) {
@@ -205,6 +228,13 @@ cobrosRouter.patch(
       }
       cambios.estado = estado;
       cambios.fecha_pago = estado === "pagada" ? fecha_pago || new Date().toISOString().slice(0, 10) : null;
+      // Bloque J: el registro de pago (valor recibido/observaciones)
+      // solo tiene sentido junto con "pagada" — si el estado cambia a
+      // otra cosa, se limpia (mismo criterio que fecha_pago arriba).
+      if (estado !== "pagada") {
+        cambios.valor_recibido = null;
+        cambios.observaciones_pago = null;
+      }
     }
     if (medio_pago !== undefined) {
       if (medio_pago !== null && !MEDIOS.includes(medio_pago)) {
@@ -213,6 +243,15 @@ cobrosRouter.patch(
       }
       cambios.medio_pago = medio_pago;
     }
+    if (valor_recibido !== undefined) {
+      const valor = valor_recibido === null ? null : Number(valor_recibido);
+      if (valor !== null && (!Number.isFinite(valor) || valor < 0)) {
+        res.status(400).json({ error: "valor_recibido inválido" });
+        return;
+      }
+      cambios.valor_recibido = valor;
+    }
+    if (observaciones_pago !== undefined) cambios.observaciones_pago = observaciones_pago?.trim() || null;
 
     if (Object.keys(cambios).length === 0) {
       res.status(400).json({ error: "Nada que actualizar" });
@@ -236,6 +275,29 @@ cobrosRouter.patch(
       return;
     }
     res.json(data);
+  })
+);
+
+// Bloque H: "Zona de peligro" del Panel de Acciones — no se puede
+// eliminar un cobro ya pagado (perdería el registro de un pago real).
+cobrosRouter.delete(
+  "/:id",
+  ah<RequestConEmpresa>(async (req, res) => {
+    const { data: factura } = await supabase.from("facturas").select("id, estado").eq("empresa_id", req.empresaId!).eq("id", req.params.id).maybeSingle();
+    if (!factura) {
+      res.status(404).json({ error: "Cobro no encontrado" });
+      return;
+    }
+    if (factura.estado === "pagada") {
+      res.status(403).json({ error: "Este cobro ya fue pagado y no se puede eliminar" });
+      return;
+    }
+    const { error } = await supabase.from("facturas").delete().eq("empresa_id", req.empresaId!).eq("id", req.params.id);
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    res.status(204).end();
   })
 );
 

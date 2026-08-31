@@ -103,9 +103,28 @@ async function revisarCotizacionesPorVencer(empresaId: string) {
   }
 }
 
+// Bloque I: "expirado" es un estado real y persistido (no solo un
+// cálculo del frontend, como era antes — ver docs/5_Estados_Cotizacion.mermaid).
+// Sin cron en este proyecto: se revisa cada vez que se carga el
+// listado, mismo patrón que revisarCotizacionesPorVencer() de acá
+// abajo — a diferencia de esa, esta SÍ se espera (await) antes de
+// responder, para que el listado que se devuelve ya refleje el estado
+// correcto en vez de quedar un tick atrás.
+async function marcarCotizacionesExpiradas(empresaId: string) {
+  const hoy = new Date().toISOString().slice(0, 10);
+  await supabase
+    .from("presupuestos")
+    .update({ estado: "expirado" })
+    .eq("empresa_id", empresaId)
+    .in("estado", ["borrador", "enviado"])
+    .not("fecha_vencimiento", "is", null)
+    .lt("fecha_vencimiento", hoy);
+}
+
 cotizacionesRouter.get(
   "/",
   ah<RequestConEmpresa>(async (req, res) => {
+    await marcarCotizacionesExpiradas(req.empresaId!);
     if (req.rol === "admin" || req.rol === "supervisor") {
       revisarCotizacionesPorVencer(req.empresaId!).catch((err) => console.error("Error revisando cotizaciones por vencer:", err));
     }
@@ -127,6 +146,7 @@ cotizacionesRouter.get(
 cotizacionesRouter.get(
   "/:id",
   ah<RequestConEmpresa>(async (req, res) => {
+    await marcarCotizacionesExpiradas(req.empresaId!);
     const { data: cotizacion, error } = await supabase
       .from("presupuestos")
       .select("*, cliente_info:clientes(id, nombre, correo, telefono, direccion)")
@@ -321,6 +341,38 @@ cotizacionesRouter.patch(
 // real, arrastrando sus ítems como os_items (mismo formato que ya usa
 // el flujo manual de creación de OS) — así el Catálogo termina siendo
 // la fuente real de precios de una OS, sin duplicar esa lógica acá.
+// No se puede eliminar una cotización ya convertida en OS — perdería
+// la trazabilidad del trabajo real que generó (mismo criterio que
+// trabajos.ts bloqueando el delete de una OS finalizada).
+cotizacionesRouter.delete(
+  "/:id",
+  ah<RequestConEmpresa>(async (req, res) => {
+    const { data: cotizacion } = await supabase
+      .from("presupuestos")
+      .select("id, trabajo_id")
+      .eq("empresa_id", req.empresaId!)
+      .eq("id", req.params.id)
+      .maybeSingle();
+    if (!cotizacion) {
+      res.status(404).json({ error: "Cotización no encontrada" });
+      return;
+    }
+    if (cotizacion.trabajo_id) {
+      res.status(403).json({ error: "Esta cotización ya fue convertida en una orden de servicio y no se puede eliminar" });
+      return;
+    }
+
+    // presupuesto_items cae por ON DELETE CASCADE — no hace falta
+    // borrarlos a mano acá.
+    const { error } = await supabase.from("presupuestos").delete().eq("empresa_id", req.empresaId!).eq("id", req.params.id);
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    res.status(204).end();
+  })
+);
+
 cotizacionesRouter.post(
   "/:id/convertir-a-os",
   ah<RequestConEmpresa>(async (req, res) => {

@@ -145,15 +145,15 @@ export default function DetalleOrdenServicioPage() {
   function actualizarItemEdit(i: number, campo: keyof ItemOS, valor: string) {
     setItemsEdit((prev) => prev.map((it, idx) => (idx === i ? { ...it, [campo]: valor } : it)));
   }
-  function onAgregarDesdeSelectorEdit(item: ItemSeleccionadoCatalogo) {
+  function onAgregarDesdeSelectorEdit(items: ItemSeleccionadoCatalogo[]) {
     setItemsEdit((prev) => [
       ...prev,
-      {
+      ...items.map((item) => ({
         catalogo_item_id: item.catalogo_item_id,
         descripcion: item.descripcion,
         cantidad: String(item.cantidad),
         precio_unitario: String(item.precio_unitario),
-      },
+      })),
     ]);
   }
 

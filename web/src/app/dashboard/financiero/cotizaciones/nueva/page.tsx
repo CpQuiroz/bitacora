@@ -1,15 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { Cliente } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Button, Card, ErrorText, Input, Label, PageHeader, Select } from "@/components/ui";
+import { Button, Card, ErrorText, Input, Label, PageHeader } from "@/components/ui";
 import { IconChevronLeft, IconPlus } from "@/components/icons";
 import { CatalogoSelectorModal, type ItemSeleccionadoCatalogo } from "@/components/CatalogoSelectorModal";
+import { ComboboxCliente } from "@/components/ComboboxCliente";
 
 type Linea = { catalogo_item_id: string | null; descripcion: string; cantidad: string; precio_unitario: string };
 
@@ -17,12 +18,15 @@ const IVA_TASA = 0.19;
 
 export default function NuevaCotizacionPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [usuario, setUsuario] = useState<UsuarioShell | null>(null);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
 
-  const [clienteId, setClienteId] = useState("");
+  // Preselección desde la Vista 360° del Cliente ("+ Nueva Cotización"
+  // en la ficha ya trae el cliente puesto, sin tener que buscarlo de nuevo).
+  const [clienteId, setClienteId] = useState(() => searchParams.get("cliente_id") ?? "");
   const [descripcion, setDescripcion] = useState("");
   const [fechaVencimiento, setFechaVencimiento] = useState("");
   const [lineas, setLineas] = useState<Linea[]>([]);
@@ -59,15 +63,15 @@ export default function NuevaCotizacionPage() {
   function quitarLinea(idx: number) {
     setLineas((v) => v.filter((_, i) => i !== idx));
   }
-  function onAgregarDesdeSelector(item: ItemSeleccionadoCatalogo) {
+  function onAgregarDesdeSelector(items: ItemSeleccionadoCatalogo[]) {
     setLineas((v) => [
       ...v,
-      {
+      ...items.map((item) => ({
         catalogo_item_id: item.catalogo_item_id,
         descripcion: item.descripcion,
         cantidad: String(item.cantidad),
         precio_unitario: String(item.precio_unitario),
-      },
+      })),
     ]);
   }
   function cambiarLinea(idx: number, cambios: Partial<Linea>) {
@@ -135,14 +139,13 @@ export default function NuevaCotizacionPage() {
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <Label>Cliente</Label>
-              <Select required value={clienteId} onChange={(e) => setClienteId(e.target.value)}>
-                <option value="">Selecciona un cliente…</option>
-                {clientes.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nombre}
-                  </option>
-                ))}
-              </Select>
+              <ComboboxCliente
+                value={clienteId}
+                onChange={setClienteId}
+                clientes={clientes}
+                onClienteCreado={(c) => setClientes((prev) => [...prev, c])}
+                placeholder="Selecciona un cliente…"
+              />
             </div>
             <div>
               <Label>Fecha de vencimiento (opcional)</Label>

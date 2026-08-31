@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
-import type { Cliente, Prioridad, TipoOS, TipoTrabajo, Usuario } from "@bitacora/shared";
+import { useRouter, useSearchParams } from "next/navigation";
+import type { Cliente, Equipo, Prioridad, TipoOS, TipoTrabajo, Usuario } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
@@ -31,13 +31,20 @@ const PRIORIDADES: Prioridad[] = ["alta", "media", "baja"];
 
 export default function NuevaOrdenServicioPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [usuario, setUsuario] = useState<UsuarioShell | null>(null);
   const [equipo, setEquipo] = useState<Usuario[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [tiposTrabajo, setTiposTrabajo] = useState<TipoTrabajo[]>([]);
   const [tiposOs, setTiposOs] = useState<TipoOS[]>([]);
+  // Bloque C — activos (maquinaria/vehículos) del cliente, no
+  // confundir con "equipo" de arriba (colaboradores).
+  const [equipos, setEquipos] = useState<Equipo[]>([]);
+  const [equipoIdOS, setEquipoIdOS] = useState("");
 
-  const [clienteId, setClienteId] = useState("");
+  // Preselección desde la Vista 360° del Cliente ("+ Nueva OS" en la
+  // ficha ya trae el cliente puesto).
+  const [clienteId, setClienteId] = useState(() => searchParams.get("cliente_id") ?? "");
   const [responsableId, setResponsableId] = useState("");
   const [tipoTrabajoId, setTipoTrabajoId] = useState("");
   const [tipoOsId, setTipoOsId] = useState("");
@@ -59,12 +66,13 @@ export default function NuevaOrdenServicioPage() {
         router.replace("/login");
         return;
       }
-      const [resMe, resEquipo, resClientes, resTipos, resTiposOs] = await Promise.all([
+      const [resMe, resEquipo, resClientes, resTipos, resTiposOs, resEquipos] = await Promise.all([
         apiFetch("/api/me"),
         apiFetch("/api/usuarios"),
         apiFetch("/api/clientes"),
         apiFetch("/api/tipos-trabajo"),
         apiFetch("/api/tipos-os"),
+        apiFetch("/api/equipos"),
       ]);
       if (resMe.ok) {
         const { usuario: u } = await resMe.json();
@@ -84,6 +92,7 @@ export default function NuevaOrdenServicioPage() {
         const lista: TipoOS[] = await resTiposOs.json();
         setTiposOs(lista.filter((t) => t.activo));
       }
+      if (resEquipos.ok) setEquipos(await resEquipos.json());
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -94,19 +103,21 @@ export default function NuevaOrdenServicioPage() {
   function quitarItem(i: number) {
     setItems((prev) => prev.filter((_, idx) => idx !== i));
   }
-  function onAgregarDesdeSelector(item: ItemSeleccionadoCatalogo) {
+  function onAgregarDesdeSelector(items: ItemSeleccionadoCatalogo[]) {
     setItems((prev) => [
       ...prev,
-      {
+      ...items.map((item) => ({
         catalogo_item_id: item.catalogo_item_id,
         descripcion: item.descripcion,
         cantidad: String(item.cantidad),
         precio_unitario: String(item.precio_unitario),
-      },
+      })),
     ]);
   }
 
   const clienteSeleccionado = clientes.find((c) => c.id === clienteId);
+  const equiposDelCliente = equipos.filter((e) => e.cliente_id === clienteId);
+  const equipoSeleccionadoOS = equipos.find((e) => e.id === equipoIdOS);
   const itemsValidos = items.filter((it) => it.descripcion.trim());
   const totalItems = itemsValidos.reduce(
     (acc, it) => acc + Number(it.cantidad || 0) * Number(it.precio_unitario || 0),
@@ -136,6 +147,7 @@ export default function NuevaOrdenServicioPage() {
       body: JSON.stringify({
         cliente: clienteSeleccionado?.nombre ?? "",
         cliente_id: clienteId,
+        equipo_id: equipoIdOS || undefined,
         responsable_id: responsableId,
         tipo_trabajo_id: tipoTrabajoId || undefined,
         tipo_os_id: tipoOsId || undefined,
@@ -208,6 +220,7 @@ export default function NuevaOrdenServicioPage() {
                   setCreada(null);
                   setDescripcion("");
                   setItems([{ ...ITEM_VACIO }]);
+                  setEquipoIdOS("");
                 }}
               >
                 Crear otra
@@ -224,7 +237,10 @@ export default function NuevaOrdenServicioPage() {
                 <Label>Cliente</Label>
                 <ComboboxCliente
                   value={clienteId}
-                  onChange={setClienteId}
+                  onChange={(id) => {
+                    setClienteId(id);
+                    setEquipoIdOS("");
+                  }}
                   clientes={clientes}
                   onClienteCreado={(c) => setClientes((prev) => [...prev, c])}
                   placeholder="Selecciona un cliente"
@@ -242,6 +258,19 @@ export default function NuevaOrdenServicioPage() {
                   placeholder="Selecciona un colaborador"
                 />
               </div>
+              {equiposDelCliente.length > 0 && (
+                <div>
+                  <Label>Equipo del cliente (opcional)</Label>
+                  <Select value={equipoIdOS} onChange={(e) => setEquipoIdOS(e.target.value)}>
+                    <option value="">Sin equipo específico</option>
+                    {equiposDelCliente.map((e) => (
+                      <option key={e.id} value={e.id}>
+                        {e.nombre}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+              )}
               <div>
                 <Label>Tipo de servicio</Label>
                 <SelectCrear<TipoTrabajo>
@@ -364,6 +393,7 @@ export default function NuevaOrdenServicioPage() {
             onClose={() => setSelectorAbierto(false)}
             onAgregar={onAgregarDesdeSelector}
             moneda={usuario.moneda ?? "CLP"}
+            categoriaEquipoDestacar={equipoSeleccionadoOS?.categoria}
           />
 
           {error && <ErrorText>{error}</ErrorText>}

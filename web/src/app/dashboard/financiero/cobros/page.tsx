@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { Cliente, EstadoFactura, Factura, MedioPago, Trabajo } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
@@ -9,6 +10,7 @@ import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText } from "@/components/ui";
 import { IconPlus, IconReceipt } from "@/components/icons";
+import { ComboboxCliente } from "@/components/ComboboxCliente";
 
 type CobroConCliente = Factura & { cliente_info: { id: string; nombre: string } | null };
 
@@ -25,6 +27,7 @@ const HOY = () => new Date().toISOString().slice(0, 10);
 
 export default function CobrosPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [usuario, setUsuario] = useState<UsuarioShell | null>(null);
   const [cobros, setCobros] = useState<CobroConCliente[] | null>(null);
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -93,6 +96,22 @@ export default function CobrosPage() {
 
   useEffect(() => {
     cargar();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Bloque A — "+ Nuevo Cobro" en la Vista 360° del Cliente manda acá
+  // con ?nuevo=1&cliente_id=X (Cobros no tiene una ruta "nueva" propia,
+  // es un form inline) — abre el formulario ya con el cliente puesto.
+  useEffect(() => {
+    if (searchParams.get("nuevo") !== "1") return;
+    setModo("manual");
+    setClienteId(searchParams.get("cliente_id") ?? "");
+    setMonto("");
+    setFechaEmision(HOY());
+    setFechaVencimiento("");
+    setMedioPago("");
+    setFormError(null);
+    setFormAbierto(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -227,14 +246,13 @@ export default function CobrosPage() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <Label>Cliente</Label>
-                  <Select required value={clienteId} onChange={(e) => setClienteId(e.target.value)}>
-                    <option value="">Selecciona un cliente…</option>
-                    {clientes.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.nombre}
-                      </option>
-                    ))}
-                  </Select>
+                  <ComboboxCliente
+                    value={clienteId}
+                    onChange={setClienteId}
+                    clientes={clientes}
+                    onClienteCreado={(c) => setClientes((prev) => [...prev, c])}
+                    placeholder="Selecciona un cliente…"
+                  />
                 </div>
                 <div>
                   <Label>Monto</Label>
@@ -402,7 +420,11 @@ export default function CobrosPage() {
             <tbody>
               {filtrados.map((c) => (
                 <tr key={c.id} className="border-b border-border last:border-0 hover:bg-brand-soft/40">
-                  <td className="px-5 py-3 font-medium text-foreground">{c.cliente}</td>
+                  <td className="px-5 py-3 font-medium text-foreground">
+                    <Link href={`/dashboard/financiero/cobros/${c.id}`} className="hover:text-brand hover:underline">
+                      {c.cliente}
+                    </Link>
+                  </td>
                   <td className="px-5 py-3">{formatMoneda(c.monto, usuario.moneda)}</td>
                   <td className="px-5 py-3 text-muted">{c.medio_pago ? MEDIOS_ETIQUETA[c.medio_pago] : "—"}</td>
                   <td className="px-5 py-3">

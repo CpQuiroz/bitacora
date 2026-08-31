@@ -76,6 +76,11 @@ export type Empresa = {
   prueba_termina_en: string | null;
   inventario_activado: boolean;
   inventario_stock_minimo_default: number;
+  // Bloque B (config. de inventario): antes hardcodeado a "firmada" —
+  // ahora configurable por empresa. Ver backend/src/inventario.ts.
+  inventario_descontar_en_estado: EstadoOS;
+  inventario_permitir_negativo: boolean;
+  inventario_descontar_una_vez: boolean;
   estado: EstadoEmpresa;
   creado_en: string;
 };
@@ -362,6 +367,9 @@ export type Trabajo = {
   encuesta_respondida_en: string | null;
   hora_programada: string | null;
   notas_internas: string | null;
+  // Equipo específico del cliente al que aplica esta OS (opcional) —
+  // alimenta el histórico de mantenciones de un Equipo.
+  equipo_id: string | null;
   creado_en: string;
 };
 
@@ -556,6 +564,10 @@ export type Factura = {
   estado: EstadoFactura;
   trabajo_ids: string[] | null;
   viaje_ids: string[] | null;
+  // Bloque J: registro de pago manual (independiente de si hay
+  // pasarela real conectada) — ver "Registrar Pago" en el Panel de Acciones.
+  valor_recibido: number | null;
+  observaciones_pago: string | null;
   creado_en: string;
 };
 
@@ -579,6 +591,10 @@ export type OrdenServicio = {
   observaciones_cierre: string | null;
   informe_ia: string | null;
   finalizada_en: string | null;
+  // true una vez que /finalizar (estado_os "firmada") generó los
+  // movimientos de salida de inventario de sus ítems tipo "producto" —
+  // evita descontar dos veces o revertir sin haber descontado antes.
+  stock_descontado: boolean;
   creado_en: string;
 };
 
@@ -684,6 +700,25 @@ export type Equipo = {
   anio: number | null;
   tipo_vehiculo: string | null;
   capacidad_carga: string | null;
+  // Vencimiento de garantía del equipo (cualquier categoría, no solo
+  // Vehículo) — alimenta la métrica "garantías por vencer" del
+  // dashboard de Equipos.
+  garantia_vencimiento: string | null;
+};
+
+// Plan de Mantención Preventiva de un equipo — solo CRUD por ahora.
+// TODO: decisión pendiente — generar automáticamente una OS cuando
+// proxima_fecha se cumple. No implementado, requiere definir con qué
+// datos se arma esa OS (responsable, tipo de servicio, etc.).
+export type PlanMantencion = {
+  id: string;
+  empresa_id: string;
+  equipo_id: string;
+  frecuencia_dias: number;
+  proxima_fecha: string;
+  notas: string | null;
+  activo: boolean;
+  creado_en: string;
 };
 
 export type TipoCatalogoItem = "producto" | "servicio" | "kit";
@@ -701,6 +736,20 @@ export type CatalogoItem = {
   stock_minimo: number | null;
   activo: boolean;
   creado_en: string;
+  // Derivado (join con catalogo_item_tipos_equipo), no una columna
+  // propia — igual que "items" en los kits. Solo viene en GET /api/catalogo.
+  tipos_equipo?: string[];
+};
+
+// Etiquetado muchos-a-muchos: a qué tipo(s) de equipo aplica un ítem
+// de catálogo (ej. "Cambio de aceite" aplica a Camión y Camioneta).
+// tipo_equipo es texto libre, igual criterio que equipos.categoria —
+// no hay una tabla maestra de "tipos de equipo".
+export type CatalogoItemTipoEquipo = {
+  id: string;
+  empresa_id: string;
+  catalogo_item_id: string;
+  tipo_equipo: string;
 };
 
 export type CatalogoKitItem = {
@@ -712,6 +761,10 @@ export type CatalogoKitItem = {
 };
 
 export type TipoMovimientoInventario = "entrada" | "salida" | "ajuste";
+// Bloque B/C: distingue un movimiento manual (Configuración > Inventario)
+// de uno automático (cambio de estado de una OS) — antes solo se
+// diferenciaban por el texto libre de "motivo".
+export type OrigenMovimientoInventario = "manual" | "automatico";
 
 export type InventarioMovimiento = {
   id: string;
@@ -721,7 +774,21 @@ export type InventarioMovimiento = {
   cantidad: number;
   stock_resultante: number;
   motivo: string | null;
+  origen: OrigenMovimientoInventario;
   creado_en: string;
+};
+
+// Bloque E: sugerencias iniciales de categorías/tipos según el rubro
+// de la empresa — mecanismo genérico basado en datos.
+export type TipoSugerenciaRubro = "categoria_gasto" | "categoria_catalogo" | "tipo_os" | "tipo_documento";
+export type SugerenciaRubro = {
+  id: string;
+  rubro: Rubro;
+  tipo_sugerencia: TipoSugerenciaRubro;
+  valor: string;
+  color: string | null;
+  aplica_a: string | null;
+  orden: number;
 };
 
 export type Proveedor = {
@@ -1026,8 +1093,11 @@ export type Database = {
       notificaciones: Tabla<Notificacion>;
       notificaciones_preferencias: Tabla<NotificacionPreferencia>;
       equipos: Tabla<Equipo>;
+      planes_mantencion: Tabla<PlanMantencion>;
+      sugerencias_rubro: Tabla<SugerenciaRubro>;
       catalogo_items: Tabla<CatalogoItem>;
       catalogo_kit_items: Tabla<CatalogoKitItem>;
+      catalogo_item_tipos_equipo: Tabla<CatalogoItemTipoEquipo>;
       inventario_movimientos: Tabla<InventarioMovimiento>;
       proveedores: Tabla<Proveedor>;
       presupuesto_items: Tabla<PresupuestoItem>;

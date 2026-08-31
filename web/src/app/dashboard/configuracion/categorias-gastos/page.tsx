@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { CategoriaGasto } from "@bitacora/shared";
+import type { CategoriaGasto, SugerenciaRubro } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
 import { Button, Card, ErrorText, Input, Label, PageHeader } from "@/components/ui";
 import { DataTable } from "@/components/DataTable";
@@ -29,6 +29,8 @@ const SUGERIDAS: { nombre: string; color: string }[] = [
 export default function CategoriasGastosPage() {
   const [categorias, setCategorias] = useState<CategoriaConCantidad[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Bloque E: sugerencias según el rubro de la empresa.
+  const [sugerenciasRubro, setSugerenciasRubro] = useState<SugerenciaRubro[]>([]);
 
   const [formAbierto, setFormAbierto] = useState(false);
   const [editandoId, setEditandoId] = useState<string | null>(null);
@@ -39,12 +41,16 @@ export default function CategoriasGastosPage() {
 
   const cargar = useCallback(async () => {
     setError(null);
-    const res = await apiFetch("/api/categorias-gasto");
+    const [res, resSugerencias] = await Promise.all([apiFetch("/api/categorias-gasto"), apiFetch("/api/sugerencias-rubro")]);
     if (!res.ok) {
       setError("No se pudieron cargar las categorías");
       return;
     }
     setCategorias(await res.json());
+    if (resSugerencias.ok) {
+      const todas: SugerenciaRubro[] = await resSugerencias.json();
+      setSugerenciasRubro(todas.filter((s) => s.tipo_sugerencia === "categoria_gasto"));
+    }
   }, []);
 
   useEffect(() => {
@@ -97,6 +103,11 @@ export default function CategoriasGastosPage() {
     if (res.ok) cargar();
   }
 
+  const sugeridasFinal = [
+    ...sugerenciasRubro.map((s) => ({ nombre: s.valor, color: s.color ?? "#4338ca" })),
+    ...SUGERIDAS.filter((s) => !sugerenciasRubro.some((r) => r.valor === s.nombre)),
+  ];
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -111,7 +122,7 @@ export default function CategoriasGastosPage() {
         <Card>
           <p className="mb-3 text-sm text-muted">Categorías sugeridas — clic para crear con un color predefinido:</p>
           <div className="flex flex-wrap gap-2">
-            {SUGERIDAS.map((s) => (
+            {sugeridasFinal.map((s) => (
               <button
                 key={s.nombre}
                 type="button"

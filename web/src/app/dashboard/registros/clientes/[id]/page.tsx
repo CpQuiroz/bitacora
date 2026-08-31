@@ -1,20 +1,43 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import type { Cliente, Factura, Presupuesto, Trabajo, OrdenServicio } from "@bitacora/shared";
+import type { Cliente, Equipo, Factura, Presupuesto, Trabajo, OrdenServicio } from "@bitacora/shared";
 import { formatearRut, validarRut } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Badge, Button, buttonClass, Card, ErrorText, Input, Label, PageHeader, SuccessText } from "@/components/ui";
-import { IconChat, IconChevronLeft, IconMapPin } from "@/components/icons";
+import { IconChat, IconChevronLeft, IconMapPin, IconPlus, IconReceipt, IconTag, IconWrench } from "@/components/icons";
 import { linkWhatsapp } from "@/lib/whatsapp";
 
 type TrabajoConOrden = Trabajo & { orden: Pick<OrdenServicio, "folio" | "estado_os"> | null };
-type ClienteDetalle = Cliente & { trabajos: TrabajoConOrden[]; presupuestos: Presupuesto[]; facturas: Factura[] };
+type ClienteDetalle = Cliente & {
+  trabajos: TrabajoConOrden[];
+  presupuestos: Presupuesto[];
+  facturas: Factura[];
+  equipos: Equipo[];
+};
+
+type Tab = "historial" | "equipos" | "financiero";
+const TABS: { valor: Tab; etiqueta: string }[] = [
+  { valor: "historial", etiqueta: "Historial" },
+  { valor: "equipos", etiqueta: "Equipos" },
+  { valor: "financiero", etiqueta: "Financiero" },
+];
+
+// Bloque A — Vista 360°: un solo timeline cronológico combinando OS,
+// cotizaciones y cobros — antes eran 3 cards apiladas sin orden común.
+type EventoHistorial = {
+  id: string;
+  tipo: "os" | "cotizacion" | "cobro";
+  fecha: string;
+  titulo: string;
+  badgeValue: string;
+  onClick: () => void;
+};
 
 export default function ClienteDetallePage() {
   const params = useParams<{ id: string }>();
@@ -22,6 +45,7 @@ export default function ClienteDetallePage() {
   const [usuario, setUsuario] = useState<UsuarioShell | null>(null);
   const [cliente, setCliente] = useState<ClienteDetalle | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [tab, setTab] = useState<Tab>("historial");
 
   const [editando, setEditando] = useState(false);
   const [nombre, setNombre] = useState("");
@@ -103,6 +127,39 @@ export default function ClienteDetallePage() {
     if (res.ok) cargar();
   }
 
+  const eventosHistorial: EventoHistorial[] = useMemo(() => {
+    if (!cliente) return [];
+    const eventos: EventoHistorial[] = [
+      ...cliente.trabajos.map((t) => ({
+        id: `os-${t.id}`,
+        tipo: "os" as const,
+        fecha: t.fecha,
+        titulo: t.orden?.folio != null ? `OS N° ${t.orden.folio}` : t.descripcion || t.codigo || "Orden de servicio",
+        badgeValue: t.orden?.estado_os ?? t.estado,
+        onClick: () => router.push(`/dashboard/ordenes/${t.id}`),
+      })),
+      ...cliente.presupuestos.map((p) => ({
+        id: `cot-${p.id}`,
+        tipo: "cotizacion" as const,
+        fecha: p.fecha,
+        titulo: p.descripcion || "Cotización",
+        badgeValue: p.estado,
+        onClick: () => router.push(`/dashboard/financiero/cotizaciones/${p.id}`),
+      })),
+      ...cliente.facturas.map((f) => ({
+        id: `cobro-${f.id}`,
+        tipo: "cobro" as const,
+        fecha: f.fecha_emision,
+        titulo: `Cobro — ${formatMoneda(f.monto, usuario?.moneda ?? "CLP")}`,
+        badgeValue: f.estado,
+        onClick: () => router.push("/dashboard/financiero/cobros"),
+      })),
+    ];
+    return eventos.sort((a, b) => (a.fecha < b.fecha ? 1 : a.fecha > b.fecha ? -1 : 0));
+  }, [cliente, usuario?.moneda, router]);
+
+  const ICONO_EVENTO = { os: IconWrench, cotizacion: IconTag, cobro: IconReceipt } as const;
+
   if (!usuario) return null;
 
   return (
@@ -142,6 +199,23 @@ export default function ClienteDetallePage() {
               </div>
             }
           />
+
+          {/* Bloque A — accesos directos: cada uno abre el formulario
+              correspondiente con este cliente ya preseleccionado. */}
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Link href={`/dashboard/financiero/cotizaciones/nueva?cliente_id=${cliente.id}`} className={buttonClass("outline")}>
+              <IconPlus className="h-4 w-4" />
+              Nueva Cotización
+            </Link>
+            <Link href={`/dashboard/ordenes/nueva?cliente_id=${cliente.id}`} className={buttonClass("outline")}>
+              <IconPlus className="h-4 w-4" />
+              Nueva OS
+            </Link>
+            <Link href={`/dashboard/financiero/cobros?nuevo=1&cliente_id=${cliente.id}`} className={buttonClass("outline")}>
+              <IconPlus className="h-4 w-4" />
+              Nuevo Cobro
+            </Link>
+          </div>
 
           {editando && (
             <Card className="my-6">
@@ -235,70 +309,110 @@ export default function ClienteDetallePage() {
             </div>
           </Card>
 
-          <Card className="my-6">
-            <h2 className="mb-4 text-sm font-semibold text-foreground">Órdenes de servicio ({cliente.trabajos.length})</h2>
-            {cliente.trabajos.length === 0 ? (
-              <p className="text-sm text-muted">Sin OS todavía.</p>
-            ) : (
-              <div className="flex flex-col divide-y divide-border">
-                {cliente.trabajos.map((t) => (
-                  <div key={t.id} className="flex items-center justify-between py-2.5 text-sm">
-                    <div>
-                      <p className="font-medium text-foreground">
-                        {t.orden?.folio != null ? `OS N° ${t.orden.folio}` : t.descripcion || t.codigo || "Sin folio"}
-                      </p>
-                      <p className="text-xs text-muted">{t.fecha}</p>
-                    </div>
-                    <Badge value={t.orden?.estado_os ?? t.estado} />
-                  </div>
-                ))}
-              </div>
-            )}
-          </Card>
+          <div className="mb-4 flex gap-1 border-b border-border">
+            {TABS.map((t) => (
+              <button
+                key={t.valor}
+                type="button"
+                onClick={() => setTab(t.valor)}
+                className={`px-4 py-2.5 text-sm font-medium transition-colors ${
+                  tab === t.valor ? "border-b-2 border-brand text-brand" : "text-muted hover:text-foreground"
+                }`}
+              >
+                {t.etiqueta}
+              </button>
+            ))}
+          </div>
 
-          <Card className="my-6">
-            <h2 className="mb-4 text-sm font-semibold text-foreground">Cotizaciones ({cliente.presupuestos.length})</h2>
-            {cliente.presupuestos.length === 0 ? (
-              <p className="text-sm text-muted">Sin cotizaciones todavía.</p>
-            ) : (
-              <div className="flex flex-col divide-y divide-border">
-                {cliente.presupuestos.map((p) => (
-                  <div key={p.id} className="flex items-center justify-between py-2.5 text-sm">
-                    <div>
-                      <p className="font-medium text-foreground">{p.descripcion || "Cotización"}</p>
-                      <p className="text-xs text-muted">{p.fecha}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-foreground">{formatMoneda(p.monto, usuario.moneda)}</span>
-                      <Badge value={p.estado} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </Card>
+          {tab === "historial" && (
+            <Card>
+              <h2 className="mb-4 text-sm font-semibold text-foreground">Historial ({eventosHistorial.length})</h2>
+              {eventosHistorial.length === 0 ? (
+                <p className="text-sm text-muted">Sin actividad todavía.</p>
+              ) : (
+                <div className="flex flex-col divide-y divide-border">
+                  {eventosHistorial.map((ev) => {
+                    const Icono = ICONO_EVENTO[ev.tipo];
+                    return (
+                      <button
+                        key={ev.id}
+                        type="button"
+                        onClick={ev.onClick}
+                        className="flex items-center justify-between gap-2 py-2.5 text-left text-sm hover:text-brand"
+                      >
+                        <div className="flex min-w-0 items-center gap-2">
+                          <Icono className="h-3.5 w-3.5 shrink-0 text-muted" />
+                          <div className="min-w-0">
+                            <p className="truncate font-medium text-foreground">{ev.titulo}</p>
+                            <p className="text-xs text-muted">{ev.fecha}</p>
+                          </div>
+                        </div>
+                        <Badge value={ev.badgeValue} />
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </Card>
+          )}
 
-          <Card className="my-6">
-            <h2 className="mb-4 text-sm font-semibold text-foreground">Cobranzas ({cliente.facturas.length})</h2>
-            {cliente.facturas.length === 0 ? (
-              <p className="text-sm text-muted">Sin cobranzas todavía.</p>
-            ) : (
-              <div className="flex flex-col divide-y divide-border">
-                {cliente.facturas.map((f) => (
-                  <div key={f.id} className="flex items-center justify-between py-2.5 text-sm">
-                    <div>
-                      <p className="font-medium text-foreground">Factura</p>
-                      <p className="text-xs text-muted">Vence {f.fecha_vencimiento}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-foreground">{formatMoneda(f.monto, usuario.moneda)}</span>
-                      <Badge value={f.estado} />
-                    </div>
-                  </div>
-                ))}
+          {tab === "equipos" && (
+            <Card>
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-sm font-semibold text-foreground">Equipos ({cliente.equipos.length})</h2>
+                <Link href="/dashboard/registros/equipos" className={buttonClass("outline")}>
+                  <IconPlus className="h-4 w-4" />
+                  Nuevo Equipo
+                </Link>
               </div>
-            )}
-          </Card>
+              {cliente.equipos.length === 0 ? (
+                <p className="text-sm text-muted">Sin equipos registrados para este cliente.</p>
+              ) : (
+                <div className="flex flex-col divide-y divide-border">
+                  {cliente.equipos.map((e) => (
+                    <button
+                      key={e.id}
+                      type="button"
+                      onClick={() => router.push(`/dashboard/registros/equipos/${e.id}`)}
+                      className="flex items-center justify-between py-2.5 text-left text-sm hover:text-brand"
+                    >
+                      <div>
+                        <p className="font-medium text-foreground">{e.nombre}</p>
+                        <p className="text-xs text-muted">{[e.categoria, e.marca, e.modelo].filter(Boolean).join(" · ") || "—"}</p>
+                      </div>
+                      <Badge value={e.activo ? "activo" : "inactivo"} />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </Card>
+          )}
+
+          {tab === "financiero" && (
+            <Card>
+              <h2 className="mb-4 text-sm font-semibold text-foreground">Cobros ({cliente.facturas.length})</h2>
+              {cliente.facturas.length === 0 ? (
+                <p className="text-sm text-muted">Sin cobros todavía.</p>
+              ) : (
+                <div className="flex flex-col divide-y divide-border">
+                  {cliente.facturas.map((f) => (
+                    <div key={f.id} className="flex items-center justify-between py-2.5 text-sm">
+                      <div>
+                        <p className="font-medium text-foreground">Factura</p>
+                        <p className="text-xs text-muted">
+                          Emitida {f.fecha_emision} · Vence {f.fecha_vencimiento}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-foreground">{formatMoneda(f.monto, usuario.moneda)}</span>
+                        <Badge value={f.estado} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+          )}
         </>
       )}
     </DashboardShell>

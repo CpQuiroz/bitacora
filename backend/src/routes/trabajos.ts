@@ -10,6 +10,7 @@ import { enviarEncuestaSatisfaccion, enviarPdfOS } from "../email";
 import { generarPdfOS } from "../generarPdfOS";
 import { notificar, notificarGerencia } from "../notificar";
 import { notificarCliente } from "../notificarCliente";
+import { aplicarDescuentoInventarioSiCorresponde, revertirStockPorOS } from "../inventario";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
 
@@ -63,6 +64,11 @@ async function clienteExiste(empresaId: string, clienteId: string) {
     .eq("empresa_id", empresaId)
     .eq("id", clienteId)
     .maybeSingle();
+  return Boolean(data);
+}
+
+async function equipoExiste(empresaId: string, equipoId: string) {
+  const { data } = await supabase.from("equipos").select("id").eq("empresa_id", empresaId).eq("id", equipoId).maybeSingle();
   return Boolean(data);
 }
 
@@ -157,6 +163,7 @@ trabajosRouter.patch(
       notas_internas,
       fecha,
       hora_programada,
+      equipo_id,
     } = req.body ?? {};
     const cambios: Partial<Trabajo> = {};
 
@@ -247,6 +254,13 @@ trabajosRouter.patch(
       }
       cambios.hora_programada = hora_programada || null;
     }
+    if (equipo_id !== undefined) {
+      if (equipo_id !== null && equipo_id !== "" && !(await equipoExiste(req.empresaId!, equipo_id))) {
+        res.status(400).json({ error: "equipo_id inválido" });
+        return;
+      }
+      cambios.equipo_id = equipo_id || null;
+    }
 
     // Ítems/monto son contractuales — se reemplazan enteros si vienen
     // ítems nuevos (mismo formato que POST /), y el monto se recalcula
@@ -286,7 +300,14 @@ trabajosRouter.patch(
     // internas — antes bloqueaba la ruta entera sin excepción.
     if (orden?.finalizada_en) {
       const soloNotas = Object.keys(cambios).every((c) => c === "notas_internas") && !tocaItems;
-      if (!soloNotas) {
+      // Excepción puntual (Bloque B): cancelar una OS ya finalizada
+      // tiene que seguir siendo posible, aunque el resto quede
+      // bloqueado — es lo que dispara la reversión del stock
+      // descontado al firmar (ver revertirStockPorOS más abajo). Solo
+      // se permite como cambio aislado (nada más en el mismo PATCH),
+      // no colado junto a una edición de ítems/monto/descripción.
+      const soloCancelar = cambios.estado === "cancelado" && Object.keys(cambios).length === 1;
+      if (!soloNotas && !soloCancelar) {
         res.status(403).json({ error: "La orden de servicio ya fue finalizada — solo las notas internas siguen editables." });
         return;
       }
@@ -307,6 +328,12 @@ trabajosRouter.patch(
     if (!data) {
       res.status(404).json({ error: "Trabajo no encontrado" });
       return;
+    }
+
+    // Bloque B: si esta OS ya había descontado stock (se firmó) y ahora
+    // se cancela, revierte el descuento — devuelve el stock.
+    if (cambios.estado === "cancelado" && orden?.stock_descontado) {
+      await revertirStockPorOS(req.empresaId!, orden.id, req.params.id, orden.folio);
     }
 
     if (tocaItems) {
@@ -384,6 +411,7 @@ trabajosRouter.post(
     const {
       cliente,
       cliente_id,
+      equipo_id,
       fecha,
       monto,
       ubicacion,
@@ -426,6 +454,10 @@ trabajosRouter.post(
       res.status(400).json({ error: "cliente_id inválido" });
       return;
     }
+    if (equipo_id && !(await equipoExiste(req.empresaId!, equipo_id))) {
+      res.status(400).json({ error: "equipo_id inválido" });
+      return;
+    }
     if (hora_programada !== undefined && hora_programada !== null && hora_programada !== "") {
       if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(hora_programada)) {
         res.status(400).json({ error: "hora_programada inválida (usa HH:MM)" });
@@ -446,6 +478,7 @@ trabajosRouter.post(
         empresa_id: req.empresaId!,
         cliente: cliente.trim(),
         cliente_id: cliente_id || null,
+        equipo_id: equipo_id || null,
         fecha,
         hora_programada: hora_programada || null,
         monto: montoNum,
@@ -543,6 +576,20 @@ trabajosRouter.post(
       return;
     }
 
+    // Bloque B: si el estado configurado como disparador de descuento
+    // (Configuración > Inventario) es "en_proceso" o "completada", acá
+    // es donde se aplicaría — no solo al finalizar/firmar.
+    let advertenciasStockChecklist: string[] = [];
+    if (cambios.estado_os) {
+      advertenciasStockChecklist = await aplicarDescuentoInventarioSiCorresponde(
+        req.empresaId!,
+        orden.id,
+        req.params.id,
+        data.folio,
+        cambios.estado_os
+      );
+    }
+
     // Check-in es el único evento real de "el colaborador arrancó la
     // tarea" que existe hoy — se usa como disparador de "técnico en
     // camino" (no bloquea la respuesta si el envío falla).
@@ -603,7 +650,7 @@ trabajosRouter.post(
       }
     }
 
-    res.json(data);
+    res.json({ ...data, advertencias_stock: advertenciasStockChecklist });
   })
 );
 
@@ -866,7 +913,12 @@ trabajosRouter.post(
       }
     }
 
-    res.json(data);
+    // Bloque B: el descuento de stock es configurable (Configuración >
+    // Inventario) — esta llamada no hace nada si "firmada" no es el
+    // estado configurado como disparador en esta empresa.
+    const advertenciasStock = await aplicarDescuentoInventarioSiCorresponde(req.empresaId!, orden.id, req.params.id, data.folio, "firmada");
+
+    res.json({ ...data, advertencias_stock: advertenciasStock });
   })
 );
 

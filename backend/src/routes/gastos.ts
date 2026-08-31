@@ -64,6 +64,27 @@ gastosRouter.get(
   })
 );
 
+gastosRouter.get(
+  "/:id",
+  ah<RequestConEmpresa>(async (req, res) => {
+    const { data, error } = await supabase
+      .from("gastos")
+      .select("*, categoria_info:categorias_gasto(id, nombre, color), centro_costo_info:centros_costo(id, nombre), proveedor_info:proveedores(id, nombre, telefono, correo), trabajo_info:trabajos(id, cliente, fecha)")
+      .eq("empresa_id", req.empresaId!)
+      .eq("id", req.params.id)
+      .maybeSingle();
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    if (!data) {
+      res.status(404).json({ error: "Gasto no encontrado" });
+      return;
+    }
+    res.json(data);
+  })
+);
+
 gastosRouter.post(
   "/",
   upload.single("comprobante"),

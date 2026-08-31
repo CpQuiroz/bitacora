@@ -9,7 +9,7 @@ import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Modal } from "@/components/Modal";
 import { DocumentoForm } from "@/components/DocumentoForm";
 import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText } from "@/components/ui";
-import { IconPlus, IconWrench } from "@/components/icons";
+import { IconChartBar, IconPlus, IconWrench } from "@/components/icons";
 
 type EquipoConCliente = Equipo & {
   cliente: Pick<Cliente, "id" | "nombre"> | null;
@@ -51,6 +51,10 @@ export default function EquiposPage() {
   const [tipoVehiculo, setTipoVehiculo] = useState("");
   const [capacidadCarga, setCapacidadCarga] = useState("");
   const [anio, setAnio] = useState("");
+  // Bloque C — no es exclusivo de Vehículo: cualquier equipo puede
+  // tener garantía. Alimenta la métrica "garantías por vencer" del
+  // dashboard de Equipos.
+  const [garantiaVencimiento, setGarantiaVencimiento] = useState("");
 
   // Modal de asignación (solo equipos categoría "Vehículo"): asignar,
   // reasignar, desasignar e historial, todo en un mismo lugar — antes
@@ -76,6 +80,7 @@ export default function EquiposPage() {
     setTipoVehiculo("");
     setCapacidadCarga("");
     setAnio("");
+    setGarantiaVencimiento("");
     setFormError(null);
     setFormAbierto(true);
   }
@@ -92,6 +97,7 @@ export default function EquiposPage() {
     setTipoVehiculo(e.tipo_vehiculo ?? "");
     setCapacidadCarga(e.capacidad_carga ?? "");
     setAnio(e.anio ? String(e.anio) : "");
+    setGarantiaVencimiento(e.garantia_vencimiento ?? "");
     setFormError(null);
     setFormAbierto(true);
   }
@@ -161,6 +167,7 @@ export default function EquiposPage() {
       tipo_vehiculo: categoria === "Vehículo" ? tipoVehiculo : "",
       capacidad_carga: categoria === "Vehículo" ? capacidadCarga : "",
       anio: categoria === "Vehículo" ? anio || null : null,
+      garantia_vencimiento: garantiaVencimiento || null,
     });
     const res = editandoId
       ? await apiFetch(`/api/equipos/${editandoId}`, { method: "PATCH", body })
@@ -248,6 +255,10 @@ export default function EquiposPage() {
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <PageHeader title={`Equipos (${lista.length})`} subtitle="Activos propios de la empresa (ej. vehículos) y de tus clientes" />
         <div className="flex gap-2">
+          <Button type="button" variant="outline" onClick={() => router.push("/dashboard/registros/equipos/dashboard")}>
+            <IconChartBar className="h-4 w-4" />
+            Dashboard
+          </Button>
           <Button type="button" variant="outline" onClick={() => alert("Importar equipos desde CSV — próximamente.")}>
             Importar Equipos
           </Button>
@@ -301,6 +312,10 @@ export default function EquiposPage() {
               <div>
                 <Label>N° de serie</Label>
                 <Input type="text" value={numeroSerie} onChange={(e) => setNumeroSerie(e.target.value)} />
+              </div>
+              <div>
+                <Label>Vencimiento de garantía (opcional)</Label>
+                <Input type="date" value={garantiaVencimiento} onChange={(e) => setGarantiaVencimiento(e.target.value)} />
               </div>
             </div>
 
@@ -433,6 +448,9 @@ export default function EquiposPage() {
                   </td>
                   <td className="px-5 py-3">
                     <div className="flex flex-wrap gap-2">
+                      <Button type="button" variant="outline" onClick={() => router.push(`/dashboard/registros/equipos/${e.id}`)}>
+                        Ver ficha
+                      </Button>
                       <Button type="button" variant="outline" onClick={() => abrirEdicion(e)}>
                         Editar
                       </Button>
