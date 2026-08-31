@@ -25,7 +25,14 @@ erDiagram
 
     EMPRESAS ||--o{ USUARIOS : tiene
     EMPRESAS ||--o{ CLIENTES : tiene
-    CLIENTES ||--o{ EQUIPOS : posee
+    %% Vehículos ya no es tabla aparte — es EQUIPOS con categoria =
+    %% "Vehículo" y cliente_id null (ver migración 52). cliente_id
+    %% pasó a ser opcional: con cliente = activo del cliente (como
+    %% siempre); sin cliente = activo propio de la empresa.
+    CLIENTES ||--o{ EQUIPOS : "posee (opcional)"
+    EMPRESAS ||--o{ EQUIPOS : "posee (propios, ej. vehículos)"
+    USUARIOS ||--o{ EQUIPOS : "asignado (vía vehiculo_asignaciones, solo categoría Vehículo)"
+    EQUIPOS ||--o{ VIAJES : "usa (equipo_id, solo categoría Vehículo)"
 
     EMPRESAS ||--o{ TRABAJOS : tiene
     TIPOS_TRABAJO ||--o{ TRABAJOS : clasifica

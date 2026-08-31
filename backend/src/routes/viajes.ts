@@ -23,7 +23,7 @@ viajesRouter.get(
 
     let query = supabase
       .from("viajes")
-      .select("*, cliente_info:clientes(id, nombre), chofer:usuarios(id, nombre), vehiculo:vehiculos(id, patente, marca, modelo)")
+      .select("*, cliente_info:clientes(id, nombre), chofer:usuarios(id, nombre), equipo:equipos(id, patente, marca, modelo)")
       .eq("empresa_id", req.empresaId!)
       .order("fecha", { ascending: false })
       .order("creado_en", { ascending: false });
@@ -127,7 +127,7 @@ viajesRouter.post(
       numero_guia,
       cliente_id,
       chofer_id,
-      vehiculo_id,
+      equipo_id,
       origen,
       destino,
       km_inicial,
@@ -171,7 +171,7 @@ viajesRouter.post(
         cliente: resultado.cliente.nombre,
         cliente_id: resultado.cliente.id,
         chofer_id: typeof chofer_id === "string" && chofer_id ? chofer_id : null,
-        vehiculo_id: typeof vehiculo_id === "string" && vehiculo_id ? vehiculo_id : null,
+        equipo_id: typeof equipo_id === "string" && equipo_id ? equipo_id : null,
         origen: origen.trim(),
         destino: destino.trim(),
         km_inicial: km_inicial === "" || km_inicial == null ? null : Number(km_inicial),
@@ -184,7 +184,7 @@ viajesRouter.post(
         origen_captura: "manual",
         comentarios: typeof comentarios === "string" && comentarios.trim() ? comentarios.trim() : null,
       })
-      .select("*, cliente_info:clientes(id, nombre), chofer:usuarios(id, nombre), vehiculo:vehiculos(id, patente, marca, modelo)")
+      .select("*, cliente_info:clientes(id, nombre), chofer:usuarios(id, nombre), equipo:equipos(id, patente, marca, modelo)")
       .single();
 
     if (error) {
@@ -222,7 +222,7 @@ viajesRouter.patch(
       numero_guia,
       cliente_id,
       chofer_id,
-      vehiculo_id,
+      equipo_id,
       origen,
       destino,
       km_inicial,
@@ -241,7 +241,7 @@ viajesRouter.patch(
     if (destino !== undefined) cambios.destino = String(destino).trim();
     if (comentarios !== undefined) cambios.comentarios = comentarios?.trim() || null;
     if (chofer_id !== undefined) cambios.chofer_id = chofer_id || null;
-    if (vehiculo_id !== undefined) cambios.vehiculo_id = vehiculo_id || null;
+    if (equipo_id !== undefined) cambios.equipo_id = equipo_id || null;
     if (km_inicial !== undefined) cambios.km_inicial = km_inicial === "" || km_inicial == null ? null : Number(km_inicial);
     if (km_final !== undefined) cambios.km_final = km_final === "" || km_final == null ? null : Number(km_final);
 
@@ -282,7 +282,7 @@ viajesRouter.patch(
       .update(cambios)
       .eq("empresa_id", req.empresaId!)
       .eq("id", req.params.id)
-      .select("*, cliente_info:clientes(id, nombre), chofer:usuarios(id, nombre), vehiculo:vehiculos(id, patente, marca, modelo)")
+      .select("*, cliente_info:clientes(id, nombre), chofer:usuarios(id, nombre), equipo:equipos(id, patente, marca, modelo)")
       .single();
 
     if (error) {

@@ -7,7 +7,7 @@ import { env } from "../env";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
 import { requiereModulo } from "../permisos";
-import { vehiculoAsignadoAColaborador } from "./vehiculos";
+import { equipoAsignadoAColaborador } from "./equipos";
 import { enviarInvitacion } from "../email";
 import { limitarInvitacion } from "../rateLimiters";
 
@@ -262,7 +262,7 @@ usuariosRouter.get(
 usuariosRouter.get(
   "/me/vehiculo",
   ah<RequestConEmpresa>(async (req, res) => {
-    res.json(await vehiculoAsignadoAColaborador(req.empresaId!, req.userId!));
+    res.json(await equipoAsignadoAColaborador(req.empresaId!, req.userId!));
   })
 );
 

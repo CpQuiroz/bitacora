@@ -48,7 +48,6 @@ import { notificacionesClienteRouter } from "./routes/notificacionesCliente";
 import { portalRouter } from "./routes/portal";
 import { superadminRouter } from "./superadmin/routes";
 import { tiposDocumentoRouter } from "./routes/tiposDocumento";
-import { vehiculosRouter } from "./routes/vehiculos";
 import { documentosRouter } from "./routes/documentos";
 import { mfaRouter } from "./routes/mfa";
 import { authLoginRouter } from "./routes/authLogin";
@@ -212,7 +211,6 @@ app.use("/api/notificaciones-feed", requiereAuth, requiereEmpresa, notificacione
 app.use("/api/notificaciones-cliente", requiereAuth, requiereEmpresa, notificacionesClienteRouter);
 app.use("/api/viajes", requiereAuth, requiereEmpresa, requiereModulo("viajes"), viajesRouter);
 app.use("/api/tipos-documento", requiereAuth, requiereEmpresa, tiposDocumentoRouter);
-app.use("/api/vehiculos", requiereAuth, requiereEmpresa, requiereModulo("flota"), vehiculosRouter);
 app.use("/api/documentos", requiereAuth, requiereEmpresa, documentosRouter);
 // Sin auth a propósito — la abre un cliente anónimo desde el correo.
 app.use("/api/encuesta", limitarEncuestaPublica, encuestaPublicaRouter);

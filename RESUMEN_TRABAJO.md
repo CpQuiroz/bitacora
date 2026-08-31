@@ -1,87 +1,140 @@
-# Resumen de trabajo — Combobox de búsqueda + crear (Cliente/Responsable)
+# Resumen de trabajo — Fusión Vehículos → Equipos
 
-Rama: `feat/combobox-buscar-crear` (4 commits, no mergeada a `main`, sin
-push a ningún remoto).
+Rama: `feat/fusion-vehiculos-equipos` (desde `main`), no mergeada, sin
+push a ningún remoto.
 
 ## Qué se hizo
 
-**Componentes nuevos, compartidos** (`web/src/components/`):
+Vehículos dejó de ser tabla/módulo separado. Ahora es una categoría
+(`categoria = "Vehículo"`) dentro de `equipos`, con sus campos propios
+(`patente`, `tipo_vehiculo`, `capacidad_carga`, `anio`) opcionales.
 
-- `Combobox.tsx` — primitivo genérico de búsqueda con teclado (escribir
-  para filtrar, flechas para navegar, Enter para elegir/crear, clic
-  afuera o Escape para cerrar). Sin librería nueva — a mano sobre el
-  design system propio (`ui.tsx`), ya que el proyecto no usa
-  Radix/shadcn.
-- `ComboboxCliente.tsx` — envuelve el primitivo con la lógica de
-  "crear cliente real": `POST /api/clientes` (nombre prellenado con lo
-  buscado, dirección obligatoria, teléfono/correo opcionales) y deja
-  el cliente nuevo seleccionado.
-- `ComboboxResponsable.tsx` — envuelve el primitivo con la lógica de
-  "invitar colaborador": mismo `POST /api/usuarios/invitar` que ya
-  usa Gestión y Control (nombre/correo/rol), reutilizando la misma
-  traducción de errores en español ya corregida en una tanda anterior.
-  A propósito **no** deja al invitado seleccionado — no tiene cuenta
-  activa hasta que acepte — y muestra el aviso pedido ("Invitación
-  enviada a [correo]. Podrás asignarlo como responsable una vez que
-  acepte la invitación.").
-- `web/src/lib/roles.ts` — etiquetas de `Rol` en español,
-  centralizadas (estaban duplicadas en Nueva OS y en Gestión y
-  Control).
+### Modelo de datos (`supabase/migrations/52_fusion_vehiculos_equipos.sql`, ya aplicada)
 
-**Formularios con el patrón ya aplicado:**
+- `equipos.cliente_id` pasó a **opcional**: `null` = activo propio de
+  la empresa (ej. un vehículo de la flota propia); con cliente = activo
+  del cliente, comportamiento de siempre.
+- 4 columnas nuevas en `equipos`: `patente`, `anio`, `tipo_vehiculo`,
+  `capacidad_carga` — todas nullable, solo se usan cuando
+  `categoria = "Vehículo"`.
+- Índice único parcial `(empresa_id, patente) where patente is not null`
+  — mantiene la unicidad de patente sin restringir a los equipos que no
+  son vehículo.
+- Los datos de `vehiculos` se migraron a `equipos` **preservando el
+  mismo `id`**, así todo lo que ya apuntaba a ese id (documentos,
+  asignaciones, viajes) sigue resolviendo sin tener que reescribirlo.
+- `vehiculo_asignaciones.vehiculo_id` y `viajes.vehiculo_id` se
+  renombraron a `equipo_id` y sus FK ahora apuntan a `equipos(id)` (no
+  se renombró la tabla `vehiculo_asignaciones` — no era parte de lo
+  pedido).
+- `documentos.entidad_tipo = 'vehiculo'` **no cambió** — es una
+  etiqueta semántica ("este documento es de un vehículo"), no un
+  nombre de tabla, y sigue siendo correcta.
+- La tabla `vehiculos` **no se borró** — queda existente y sin uso
+  activo, para poder hacer rollback. Se puede eliminar en una
+  migración posterior una vez confirmado que todo funciona.
 
-1. Agenda → "Nueva tarea" (Cliente y Responsable).
-2. Trabajos → "Nuevo trabajo" (selector de "Cliente guardado" que
-   prellena el campo de texto libre + dirección, y Responsable).
-3. Órdenes de Servicio → "Nueva OS" — acá el formulario **ya tenía**
-   su propio flujo de "+ Nuevo cliente" e "invitar colaborador"
-   (construido en una tanda anterior); se reemplazó por los
-   componentes compartidos para no mantener dos implementaciones del
-   mismo patrón. De paso corrigió una inconsistencia real que tenía
-   ese flujo viejo: dejaba al colaborador recién invitado
-   auto-seleccionado como responsable pese a no tener cuenta activa —
-   ahora, como en los otros dos formularios, el campo queda como
-   estaba.
+### Backend
 
-## Verificado en vivo
+- `backend/src/routes/equipos.ts` — absorbió todo lo que antes vivía
+  en `vehiculos.ts` (ahora borrado): CRUD con los campos nuevos,
+  `GET /:id/asignaciones`, `POST /:id/asignar`, `POST /:id/desasignar`,
+  y los helpers `asignacionVigentePorEquipo`/`equipoAsignadoAColaborador`
+  (antes `...PorVehiculo`/`vehiculoAsignadoA...`).
+- **Bug encontrado y corregido** al mover esa lógica: `desasignar()`
+  ponía `hasta = hoy`, pero la consulta de "asignación vigente" usaba
+  `hasta >= hoy`, así que un vehículo desasignado seguía apareciendo
+  como asignado el resto del día — recién se reflejaba al día
+  siguiente. Cambiado a `hasta > hoy`. Preexistía en el `vehiculos.ts`
+  original (no es una regresión de esta fusión), lo encontré
+  verificando el flujo en vivo.
+- `rutasPlanificadas.ts`, `notificacionesFeed.ts`, `usuarios.ts` (
+  `/me/vehiculo`), `documentos.ts` (`/por-vencer`): actualizados para
+  consultar `equipos` en vez de `vehiculos`.
+- `viajes.ts`: `vehiculo_id` → `equipo_id` en request/response
+  (columna y alias del `select`).
+- `server.ts`: ya no monta `/api/vehiculos`.
+- **Nota de alcance no resuelta**: `equiposRouter` no tiene
+  `requiereModulo(...)` propio (a diferencia del `vehiculosRouter`
+  viejo, que exigía el módulo `"flota"`) — esto ya era así en
+  `equipos.ts` antes de esta tarea, no lo introduje yo, pero ahora
+  que absorbe asignación vehículo↔colaborador (antes protegida por
+  `"flota"`) es más relevante. No lo cambié por no ser parte de lo
+  pedido — queda para que lo definan.
 
-Con una empresa/cliente/usuario de prueba desechables (ya borrados):
-búsqueda y filtrado por texto, selección con clic, selección con
-teclado (flecha + Enter), creación de cliente nuevo con
-auto-selección, envío del formulario completo hasta crear la OS. El
-flujo de invitar colaborador se probó hasta el punto de envío — en
-este ambiente de desarrollo `RESEND_API_KEY` no está configurada, así
-que el envío real de la invitación falla, pero con el mensaje correcto
-en español ("El envío de correos no está configurado en este
-ambiente.") en vez de un error crudo — mismo comportamiento ya
-conocido y documentado en tandas anteriores, no es un bug nuevo. El
-formulario de invitación se queda abierto para reintentar en vez de
-perderse, que es el comportamiento esperado ante un error.
+### Frontend
 
-## Encontré más lugares con el mismo problema, no los cubrí
+- `web/src/app/dashboard/registros/equipos/page.tsx` — reescrita:
+  - Cliente ahora opcional, con opción explícita "Sin cliente — activo
+    propio de la empresa".
+  - Selector de categoría (`Vehículo`, `Maquinaria`, `Herramienta`,
+    `Otro` — cualquier valor libre ya guardado se sigue mostrando y no
+    se pierde).
+  - Al elegir "Vehículo" aparecen los campos propios (patente, tipo,
+    capacidad de carga, año).
+  - Filtro por categoría en el listado (además de los chips
+    Todos/Activos/Inactivos ya existentes) y columnas nuevas
+    Patente/Asignado a.
+  - Para equipos categoría Vehículo: botón **Asignación** (modal con
+    asignar/reasignar/desasignar + historial — reemplaza la ficha
+    aparte que tenía Vehículos) y botón **Documentos** (mismo
+    `DocumentoForm` que antes vivía en esa ficha, en un modal).
+- `web/src/app/dashboard/flota/vehiculos/` (lista + ficha por id) —
+  **eliminado**. `web/src/components/DashboardShell.tsx` — sacada la
+  entrada "Vehículos" del sidebar de Flota.
+- `web/src/app/dashboard/flota/colaboradores/page.tsx`,
+  `.../rutas/nueva/page.tsx`, `.../perfil/page.tsx` — pasaron de
+  `/api/vehiculos` + tipo `Vehiculo` a `/api/equipos` + tipo `Equipo`
+  (filtrando `categoria === "Vehículo"` donde corresponde).
+- `web/src/app/dashboard/flota/documentos-por-vencer/page.tsx` — el
+  link de un documento de vehículo ya no apunta a una ficha por id
+  (no existe más); manda a la lista de Equipos.
 
-El encargo pedía específicamente estos 3 formularios. Buscando
-`cliente_id`/`responsable_id` en el resto del dashboard encontré otros
-`<select>` planos con el mismo patrón (buscar/crear) que podrían
-beneficiarse del mismo tratamiento, pero no los toqué por estar fuera
-del alcance pedido:
+### App móvil
 
-- `web/src/app/dashboard/financiero/cotizaciones/nueva/page.tsx` —
-  selector de Cliente (línea ~138), sin búsqueda ni creación inline.
-- `web/src/app/dashboard/viajes/page.tsx` — selector de Cliente en
-  "Nuevo viaje" (línea ~379).
-- `web/src/app/dashboard/agenda/paquetes/page.tsx` — selector de
-  Cliente al crear un paquete de sesiones (línea ~137).
-- `web/src/app/dashboard/rutas/nueva/page.tsx` — selector de
-  Responsable (línea ~342) y de Cliente (línea ~485) al armar una
-  ruta.
+Revisé — **cero referencias** a Vehículos como entidad en `mobile/`.
+No requiere ningún ajuste.
 
-Los componentes ya están listos y son genéricos — aplicarlos a estos
-4 lugares debería ser mecánico (mismo patrón que en Agenda/Trabajos),
-si querés que los cubra en una siguiente tanda.
+### Documentación
 
-## Nada quedó con TODO de decisión pendiente
+`docs/1_ERD_Bitacora.mermaid` actualizado: sin entidad VEHICULOS
+separada (nunca la tuvo, de hecho — el ERD ya solo mostraba EQUIPOS),
+agregadas las relaciones `EMPRESAS→EQUIPOS` (propios), `CLIENTES→EQUIPOS`
+marcada opcional, `USUARIOS→EQUIPOS` (asignación) y `EQUIPOS→VIAJES`.
 
-Todas las decisiones del encargo estaban resueltas en el propio
-documento (qué campos, qué mensaje mostrar, qué no auto-seleccionar) —
-no hubo que dejar ningún `// TODO: decisión pendiente` en esta tanda.
+## Cómo se verificó
+
+`npx tsc --noEmit` limpio en `backend` y `web`. Grep final sin
+referencias colgantes a `/api/vehiculos`, `from("vehiculos")`,
+`vehiculosRouter` ni a las rutas de frontend borradas.
+
+Verificación en vivo contra los servidores corriendo, con datos 100%
+desechables (empresa, cliente, colaborador, creados y borrados en la
+misma corrida): equipo de cliente se crea igual que siempre; equipo
+"Vehículo" propio de la empresa se crea con `cliente_id: null` y sus
+campos propios; `GET /api/equipos` trae `asignacion_vigente`; asignar
+→ se refleja en el detalle y en `/api/usuarios/me/vehiculo` del
+colaborador; historial de asignaciones correcto; desasignar libera
+inmediatamente (el bug de arriba, ya corregido); un documento cargado
+con `entidad_tipo=vehiculo` se resuelve correctamente desde `equipos`
+en `/api/documentos/por-vencer`; un viaje creado con `equipo_id`
+devuelve el equipo esperado en el `select` anidado. Las 12
+verificaciones pasaron. No hice click-through de la UI con Playwright
+(la reescritura de la página de Equipos es code-review-able y reusa
+patrones ya probados del proyecto — Modal, DocumentoForm, chips de
+filtro — pero si querés que la recorra en el navegador antes de
+mergear, avisame).
+
+## Decisiones que tuve que tomar (no estaban explícitas en el prompt)
+
+- `equipos.nombre` es `NOT NULL` y `vehiculos` no tenía un campo
+  "nombre" propio — para los vehículos migrados usé la patente como
+  nombre.
+- La tabla `vehiculo_asignaciones` mantuvo su nombre (solo se renombró
+  su columna `vehiculo_id` → `equipo_id`) — el prompt pedía renombrar
+  la columna, no la tabla.
+- El historial de asignaciones (antes en la ficha separada de un
+  vehículo) se conservó como parte del modal "Asignación" en vez de
+  crear una ficha/ruta por id para Equipos — Equipos nunca tuvo ficha
+  propia (lista + edición inline), así que no agregué una solo para
+  esto.

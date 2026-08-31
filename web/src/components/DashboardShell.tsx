@@ -92,7 +92,6 @@ const NAV_GROUPS: NavGroup[] = [
         modulo: "flota",
         children: [
           { href: "/dashboard/flota/colaboradores", label: "Colaboradores" },
-          { href: "/dashboard/flota/vehiculos", label: "Vehículos" },
           { href: "/dashboard/flota/documentos-por-vencer", label: "Documentos por vencer" },
         ],
       },

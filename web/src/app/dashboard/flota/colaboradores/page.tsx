@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { Usuario, Vehiculo } from "@bitacora/shared";
+import type { Equipo, Usuario } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
@@ -10,7 +10,7 @@ import { ErrorText } from "@/components/ui";
 import { DataTable } from "@/components/DataTable";
 import { IconUsers } from "@/components/icons";
 
-type VehiculoConAsignacion = Vehiculo & { asignacion_vigente: { colaborador_id: string; colaborador_nombre: string } | null };
+type EquipoConAsignacion = Equipo & { asignacion_vigente: { colaborador_id: string; colaborador_nombre: string } | null };
 
 export default function ColaboradoresFlotaPage() {
   const router = useRouter();
@@ -25,7 +25,7 @@ export default function ColaboradoresFlotaPage() {
       router.replace("/login");
       return;
     }
-    const [resMe, resUsuarios, resVehiculos] = await Promise.all([apiFetch("/api/me"), apiFetch("/api/usuarios"), apiFetch("/api/vehiculos")]);
+    const [resMe, resUsuarios, resEquipos] = await Promise.all([apiFetch("/api/me"), apiFetch("/api/usuarios"), apiFetch("/api/equipos")]);
     if (resMe.ok) {
       const { usuario: u } = await resMe.json();
       if (u)
@@ -48,11 +48,11 @@ export default function ColaboradoresFlotaPage() {
     const todos: Usuario[] = await resUsuarios.json();
     setColaboradores(todos.filter((u) => u.rol === "colaborador"));
 
-    if (resVehiculos.ok) {
-      const vehiculos: VehiculoConAsignacion[] = await resVehiculos.json();
+    if (resEquipos.ok) {
+      const equipos: EquipoConAsignacion[] = await resEquipos.json();
       const mapa = new Map<string, string>();
-      for (const v of vehiculos) {
-        if (v.asignacion_vigente) mapa.set(v.asignacion_vigente.colaborador_id, v.patente);
+      for (const e of equipos) {
+        if (e.categoria === "Vehículo" && e.asignacion_vigente && e.patente) mapa.set(e.asignacion_vigente.colaborador_id, e.patente);
       }
       setVehiculoPorColaborador(mapa);
     }

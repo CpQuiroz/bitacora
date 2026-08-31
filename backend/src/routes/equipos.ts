@@ -6,6 +6,57 @@ import { ah } from "../asyncHandler";
 
 export const equiposRouter = Router();
 
+// Equipo (categoría "Vehículo") actualmente asignado a cada uno — se
+// usa acá y también en Ruteo/notificacionesFeed. Migrado desde
+// vehiculos.ts cuando Vehículos se fusionó dentro de Equipos — la
+// tabla de asignaciones se mantuvo (vehiculo_asignaciones), solo su
+// columna vehiculo_id pasó a llamarse equipo_id.
+export async function asignacionVigentePorEquipo(empresaId: string, equipoIds: string[]) {
+  if (equipoIds.length === 0) return new Map<string, { colaborador_id: string; colaborador_nombre: string }>();
+  const hoy = new Date().toISOString().slice(0, 10);
+  const { data } = await supabase
+    .from("vehiculo_asignaciones")
+    .select("equipo_id, colaborador_id, desde, hasta, colaborador:usuarios(nombre)")
+    .eq("empresa_id", empresaId)
+    .in("equipo_id", equipoIds)
+    .lte("desde", hoy)
+    // hasta.gt (no gte): un desasignar() pone hasta = hoy y debe dejar
+    // de contar como vigente ese mismo día, no recién al día siguiente
+    // — bug preexistente en el vehiculos.ts original, encontrado y
+    // corregido acá al mover esta lógica (ver RESUMEN_TRABAJO.md).
+    .or(`hasta.is.null,hasta.gt.${hoy}`)
+    .order("desde", { ascending: false });
+
+  const mapa = new Map<string, { colaborador_id: string; colaborador_nombre: string }>();
+  for (const a of data ?? []) {
+    if (mapa.has(a.equipo_id)) continue; // ya tomamos la más reciente
+    const colaboradorNombre = (a as unknown as { colaborador: { nombre: string } | null }).colaborador?.nombre ?? "—";
+    mapa.set(a.equipo_id, { colaborador_id: a.colaborador_id, colaborador_nombre: colaboradorNombre });
+  }
+  return mapa;
+}
+
+// Sentido inverso — el equipo (si hay alguno) asignado hoy a un
+// colaborador puntual. Usado en Ruteo (Nueva ruta) y en /api/usuarios/me/vehiculo.
+export async function equipoAsignadoAColaborador(empresaId: string, colaboradorId: string): Promise<Equipo | null> {
+  const hoy = new Date().toISOString().slice(0, 10);
+  const { data } = await supabase
+    .from("vehiculo_asignaciones")
+    .select("equipo:equipos(*)")
+    .eq("empresa_id", empresaId)
+    .eq("colaborador_id", colaboradorId)
+    .lte("desde", hoy)
+    // hasta.gt (no gte): un desasignar() pone hasta = hoy y debe dejar
+    // de contar como vigente ese mismo día, no recién al día siguiente
+    // — bug preexistente en el vehiculos.ts original, encontrado y
+    // corregido acá al mover esta lógica (ver RESUMEN_TRABAJO.md).
+    .or(`hasta.is.null,hasta.gt.${hoy}`)
+    .order("desde", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return (data as unknown as { equipo: Equipo } | null)?.equipo ?? null;
+}
+
 equiposRouter.get(
   "/",
   ah<RequestConEmpresa>(async (req, res) => {
@@ -19,7 +70,8 @@ equiposRouter.get(
       res.status(500).json({ error: error.message });
       return;
     }
-    res.json(data ?? []);
+    const asignaciones = await asignacionVigentePorEquipo(req.empresaId!, (data ?? []).map((e) => e.id));
+    res.json((data ?? []).map((e) => ({ ...e, asignacion_vigente: asignaciones.get(e.id) ?? null })));
   })
 );
 
@@ -41,32 +93,31 @@ equiposRouter.get(
       res.status(404).json({ error: "Equipo no encontrado" });
       return;
     }
-    res.json(data);
+    const asignaciones = await asignacionVigentePorEquipo(req.empresaId!, [data.id]);
+    res.json({ ...data, asignacion_vigente: asignaciones.get(data.id) ?? null });
   })
 );
 
 equiposRouter.post(
   "/",
   ah<RequestConEmpresa>(async (req, res) => {
-    const { cliente_id, nombre, marca, modelo, numero_serie, categoria, notas } = req.body ?? {};
+    const { cliente_id, nombre, marca, modelo, numero_serie, categoria, notas, patente, anio, tipo_vehiculo, capacidad_carga } = req.body ?? {};
 
-    if (typeof cliente_id !== "string" || !cliente_id.trim()) {
-      res.status(400).json({ error: "Falta cliente_id" });
-      return;
+    // cliente_id ahora es opcional — sin cliente significa "activo
+    // propio de la empresa" (ej. un vehículo de la flota propia).
+    if (cliente_id) {
+      const { data: cliente } = await supabase.from("clientes").select("id").eq("empresa_id", req.empresaId!).eq("id", cliente_id).maybeSingle();
+      if (!cliente) {
+        res.status(400).json({ error: "El cliente indicado no existe" });
+        return;
+      }
     }
     if (typeof nombre !== "string" || !nombre.trim()) {
       res.status(400).json({ error: "Falta nombre" });
       return;
     }
-
-    const { data: cliente } = await supabase
-      .from("clientes")
-      .select("id")
-      .eq("empresa_id", req.empresaId!)
-      .eq("id", cliente_id)
-      .maybeSingle();
-    if (!cliente) {
-      res.status(400).json({ error: "El cliente indicado no existe" });
+    if (anio !== undefined && anio !== null && anio !== "" && !Number.isInteger(Number(anio))) {
+      res.status(400).json({ error: "anio inválido" });
       return;
     }
 
@@ -74,19 +125,25 @@ equiposRouter.post(
       .from("equipos")
       .insert({
         empresa_id: req.empresaId!,
-        cliente_id,
+        cliente_id: cliente_id || null,
         nombre: nombre.trim(),
         marca: marca?.trim() || null,
         modelo: modelo?.trim() || null,
         numero_serie: numero_serie?.trim() || null,
         categoria: categoria?.trim() || null,
         notas: notas?.trim() || null,
+        patente: patente?.trim() ? patente.trim().toUpperCase() : null,
+        anio: anio ? Number(anio) : null,
+        tipo_vehiculo: tipo_vehiculo?.trim() || null,
+        capacidad_carga: capacidad_carga?.trim() || null,
       })
       .select("*, cliente:clientes(id, nombre)")
       .single();
 
     if (error) {
-      res.status(500).json({ error: error.message });
+      res.status(error.code === "23505" ? 409 : 500).json({
+        error: error.code === "23505" ? "Ya existe un equipo con esa patente" : error.message,
+      });
       return;
     }
     res.status(201).json(data);
@@ -96,25 +153,20 @@ equiposRouter.post(
 equiposRouter.patch(
   "/:id",
   ah<RequestConEmpresa>(async (req, res) => {
-    const { cliente_id, nombre, marca, modelo, numero_serie, categoria, notas, activo } = req.body ?? {};
+    const { cliente_id, nombre, marca, modelo, numero_serie, categoria, notas, activo, patente, anio, tipo_vehiculo, capacidad_carga } = req.body ?? {};
     const cambios: Partial<Equipo> = {};
 
     if (cliente_id !== undefined) {
-      if (typeof cliente_id !== "string" || !cliente_id.trim()) {
-        res.status(400).json({ error: "cliente_id inválido" });
-        return;
+      if (cliente_id) {
+        const { data: cliente } = await supabase.from("clientes").select("id").eq("empresa_id", req.empresaId!).eq("id", cliente_id).maybeSingle();
+        if (!cliente) {
+          res.status(400).json({ error: "El cliente indicado no existe" });
+          return;
+        }
+        cambios.cliente_id = cliente_id;
+      } else {
+        cambios.cliente_id = null;
       }
-      const { data: cliente } = await supabase
-        .from("clientes")
-        .select("id")
-        .eq("empresa_id", req.empresaId!)
-        .eq("id", cliente_id)
-        .maybeSingle();
-      if (!cliente) {
-        res.status(400).json({ error: "El cliente indicado no existe" });
-        return;
-      }
-      cambios.cliente_id = cliente_id;
     }
     if (nombre !== undefined) {
       if (typeof nombre !== "string" || !nombre.trim()) {
@@ -129,6 +181,16 @@ equiposRouter.patch(
     if (categoria !== undefined) cambios.categoria = categoria?.trim() || null;
     if (notas !== undefined) cambios.notas = notas?.trim() || null;
     if (activo !== undefined) cambios.activo = Boolean(activo);
+    if (patente !== undefined) cambios.patente = patente?.trim() ? patente.trim().toUpperCase() : null;
+    if (anio !== undefined) {
+      if (anio !== null && anio !== "" && !Number.isInteger(Number(anio))) {
+        res.status(400).json({ error: "anio inválido" });
+        return;
+      }
+      cambios.anio = anio ? Number(anio) : null;
+    }
+    if (tipo_vehiculo !== undefined) cambios.tipo_vehiculo = tipo_vehiculo?.trim() || null;
+    if (capacidad_carga !== undefined) cambios.capacidad_carga = capacidad_carga?.trim() || null;
 
     if (Object.keys(cambios).length === 0) {
       res.status(400).json({ error: "Nada que actualizar" });
@@ -144,7 +206,9 @@ equiposRouter.patch(
       .maybeSingle();
 
     if (error) {
-      res.status(500).json({ error: error.message });
+      res.status(error.code === "23505" ? 409 : 500).json({
+        error: error.code === "23505" ? "Ya existe un equipo con esa patente" : error.message,
+      });
       return;
     }
     if (!data) {
@@ -152,5 +216,98 @@ equiposRouter.patch(
       return;
     }
     res.json(data);
+  })
+);
+
+// Historial de asignaciones a colaborador de un equipo (más reciente
+// primero) — en la práctica solo se usa para equipos categoría
+// "Vehículo", pero el endpoint no lo exige.
+equiposRouter.get(
+  "/:id/asignaciones",
+  ah<RequestConEmpresa>(async (req, res) => {
+    const { data, error } = await supabase
+      .from("vehiculo_asignaciones")
+      .select("*, colaborador:usuarios(nombre)")
+      .eq("empresa_id", req.empresaId!)
+      .eq("equipo_id", req.params.id)
+      .order("desde", { ascending: false });
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    res.json(data);
+  })
+);
+
+// Asigna el equipo a un colaborador — si había una asignación vigente
+// (sin "hasta"), se cierra automáticamente el día anterior, así el
+// equipo no queda "asignado" a dos personas a la vez.
+equiposRouter.post(
+  "/:id/asignar",
+  ah<RequestConEmpresa>(async (req, res) => {
+    const { colaborador_id, desde } = req.body ?? {};
+    if (typeof colaborador_id !== "string" || !colaborador_id.trim()) {
+      res.status(400).json({ error: "Falta colaborador_id" });
+      return;
+    }
+    const { data: equipo } = await supabase.from("equipos").select("id").eq("empresa_id", req.empresaId!).eq("id", req.params.id).maybeSingle();
+    if (!equipo) {
+      res.status(404).json({ error: "Equipo no encontrado" });
+      return;
+    }
+    const { data: colaborador } = await supabase
+      .from("usuarios")
+      .select("id")
+      .eq("empresa_id", req.empresaId!)
+      .eq("id", colaborador_id)
+      .maybeSingle();
+    if (!colaborador) {
+      res.status(400).json({ error: "El colaborador indicado no existe" });
+      return;
+    }
+
+    const fechaDesde = typeof desde === "string" && desde ? desde : new Date().toISOString().slice(0, 10);
+    const diaAnterior = new Date(new Date(fechaDesde).getTime() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+    await supabase
+      .from("vehiculo_asignaciones")
+      .update({ hasta: diaAnterior })
+      .eq("empresa_id", req.empresaId!)
+      .eq("equipo_id", req.params.id)
+      .is("hasta", null);
+
+    const { data, error } = await supabase
+      .from("vehiculo_asignaciones")
+      .insert({ empresa_id: req.empresaId!, equipo_id: req.params.id, colaborador_id, desde: fechaDesde })
+      .select("*, colaborador:usuarios(nombre)")
+      .single();
+
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    res.status(201).json(data);
+  })
+);
+
+// Termina la asignación vigente de un equipo (sin reemplazarla por otra).
+equiposRouter.post(
+  "/:id/desasignar",
+  ah<RequestConEmpresa>(async (req, res) => {
+    const { error, count } = await supabase
+      .from("vehiculo_asignaciones")
+      .update({ hasta: new Date().toISOString().slice(0, 10) }, { count: "exact" })
+      .eq("empresa_id", req.empresaId!)
+      .eq("equipo_id", req.params.id)
+      .is("hasta", null);
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    if (!count) {
+      res.status(404).json({ error: "Este equipo no tiene una asignación vigente" });
+      return;
+    }
+    res.status(204).end();
   })
 );
