@@ -364,7 +364,12 @@ export type Trabajo = {
 // "confirmada" es propia de Agenda Pro — el cliente confirma la cita
 // desde el Portal antes de que llegue la fecha (ver 5c). Sin Agenda
 // Pro las tareas siguen yendo directo de pendiente a completada.
-export type EstadoTarea = "pendiente" | "confirmada" | "completada" | "cancelada";
+// "no_asistio" y "cancelada_anticipada" solo aplican a citas con
+// paquete_id — separan si la cancelación/inasistencia descuenta la
+// sesión del paquete o no, según la ventana de aviso configurada
+// (ver backend/src/agendaPro.ts). Citas sin paquete siguen usando el
+// "cancelada" genérico.
+export type EstadoTarea = "pendiente" | "confirmada" | "completada" | "cancelada" | "no_asistio" | "cancelada_anticipada";
 
 export type Tarea = {
   id: string;
@@ -407,6 +412,9 @@ export type AgendaProConfig = {
   duracion_slot_min: number;
   anticipacion_min_horas: number;
   dias_max_adelante: number;
+  // Horas de anticipación mínimas para cancelar una cita con paquete
+  // sin que se descuente la sesión — default 24.
+  ventana_cancelacion_horas: number;
   actualizado_en: string;
 };
 
