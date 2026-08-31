@@ -3,6 +3,7 @@ import type { EstadoTarea, Prioridad, Tarea } from "@bitacora/shared";
 import { supabase } from "../supabase";
 import { notificar } from "../notificar";
 import { avisarCitaAgendada } from "../agendaProAvisos";
+import { calcularEstadoCancelacion, obtenerOCrearAgendaProConfig } from "../agendaPro";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
 import { requiereModulo } from "../permisos";
@@ -10,7 +11,7 @@ import { requiereModulo } from "../permisos";
 export const tareasRouter = Router();
 
 const PRIORIDADES: Prioridad[] = ["alta", "media", "baja"];
-const ESTADOS: EstadoTarea[] = ["pendiente", "confirmada", "completada", "cancelada"];
+const ESTADOS: EstadoTarea[] = ["pendiente", "confirmada", "completada", "cancelada", "no_asistio", "cancelada_anticipada"];
 const HORA_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 async function clienteExiste(empresaId: string, clienteId: string) {
@@ -137,6 +138,57 @@ tareasRouter.post(
     }
 
     res.status(201).json(data);
+  })
+);
+
+// Cancelación "automática" de una cita — a diferencia del PATCH
+// genérico (que permite fijar cualquier estado a mano, incluido
+// no_asistio/cancelada_anticipada como corrección manual), este
+// endpoint decide él mismo cuál de los dos aplica cuando la cita tiene
+// paquete_id, comparando la hora programada contra la ventana de
+// aviso configurada (ver agendaPro.ts). Citas sin paquete se cancelan
+// igual que siempre (estado "cancelada", sin cálculo).
+tareasRouter.post(
+  "/:id/cancelar",
+  requiereModulo("agenda"),
+  ah<RequestConEmpresa>(async (req, res) => {
+    const { data: tarea, error: errorBuscar } = await supabase
+      .from("tareas")
+      .select("*")
+      .eq("empresa_id", req.empresaId!)
+      .eq("id", req.params.id)
+      .maybeSingle();
+    if (errorBuscar) {
+      res.status(500).json({ error: errorBuscar.message });
+      return;
+    }
+    if (!tarea) {
+      res.status(404).json({ error: "Tarea no encontrada" });
+      return;
+    }
+    if (tarea.estado !== "pendiente" && tarea.estado !== "confirmada") {
+      res.status(400).json({ error: "Esta cita ya no se puede cancelar" });
+      return;
+    }
+
+    let nuevoEstado: EstadoTarea = "cancelada";
+    if (tarea.paquete_id) {
+      const config = await obtenerOCrearAgendaProConfig(req.empresaId!);
+      nuevoEstado = calcularEstadoCancelacion(tarea, config.ventana_cancelacion_horas);
+    }
+
+    const { data, error } = await supabase
+      .from("tareas")
+      .update({ estado: nuevoEstado, actualizado_en: new Date().toISOString() })
+      .eq("empresa_id", req.empresaId!)
+      .eq("id", req.params.id)
+      .select()
+      .single();
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    res.json({ ...data, descuenta: nuevoEstado === "no_asistio" });
   })
 );
 

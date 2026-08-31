@@ -7,6 +7,7 @@
 import { Router } from "express";
 import type { AgendaProConfig } from "@bitacora/shared";
 import { supabase } from "../supabase";
+import { obtenerOCrearAgendaProConfig } from "../agendaPro";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
 import { requiereModulo, requiereRol } from "../permisos";
@@ -18,24 +19,10 @@ agendaProConfigRouter.use(requiereModulo("agenda_pro"));
 const DIA_REGEX = /^[0-6]$/;
 const HORA_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
 
-async function obtenerOCrearConfig(empresaId: string): Promise<AgendaProConfig> {
-  const { data: existente, error: errorBuscar } = await supabase
-    .from("agenda_pro_config")
-    .select("*")
-    .eq("empresa_id", empresaId)
-    .maybeSingle();
-  if (errorBuscar) throw new Error(errorBuscar.message);
-  if (existente) return existente;
-
-  const { data: creada, error: errorCrear } = await supabase.from("agenda_pro_config").insert({ empresa_id: empresaId }).select().single();
-  if (errorCrear) throw new Error(errorCrear.message);
-  return creada;
-}
-
 agendaProConfigRouter.get(
   "/",
   ah<RequestConEmpresa>(async (req, res) => {
-    const config = await obtenerOCrearConfig(req.empresaId!);
+    const config = await obtenerOCrearAgendaProConfig(req.empresaId!);
     const { data: horarios } = await supabase
       .from("agenda_pro_horarios")
       .select("*")
@@ -49,8 +36,8 @@ agendaProConfigRouter.patch(
   "/",
   requiereRol("admin", "supervisor"),
   ah<RequestConEmpresa>(async (req, res) => {
-    const actual = await obtenerOCrearConfig(req.empresaId!);
-    const { duracion_slot_min, anticipacion_min_horas, dias_max_adelante } = req.body ?? {};
+    const actual = await obtenerOCrearAgendaProConfig(req.empresaId!);
+    const { duracion_slot_min, anticipacion_min_horas, dias_max_adelante, ventana_cancelacion_horas } = req.body ?? {};
     const cambios: Partial<AgendaProConfig> = { actualizado_en: new Date().toISOString() };
 
     if (duracion_slot_min !== undefined) {
@@ -74,8 +61,15 @@ agendaProConfigRouter.patch(
       }
       cambios.dias_max_adelante = dias_max_adelante;
     }
+    if (ventana_cancelacion_horas !== undefined) {
+      if (!Number.isInteger(ventana_cancelacion_horas) || ventana_cancelacion_horas < 0) {
+        res.status(400).json({ error: "ventana_cancelacion_horas debe ser un entero mayor o igual a 0" });
+        return;
+      }
+      cambios.ventana_cancelacion_horas = ventana_cancelacion_horas;
+    }
 
-    // tenant-ok: obtenerOCrearConfig() arriba ya scopeó por empresa_id.
+    // tenant-ok: obtenerOCrearAgendaProConfig() arriba ya scopeó por empresa_id.
     const { data, error } = await supabase.from("agenda_pro_config").update(cambios).eq("empresa_id", actual.empresa_id).select().single();
     if (error) {
       res.status(500).json({ error: error.message });

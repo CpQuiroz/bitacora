@@ -72,6 +72,7 @@ export default function AgendaProConfigPage() {
           duracion_slot_min: config.duracion_slot_min,
           anticipacion_min_horas: config.anticipacion_min_horas,
           dias_max_adelante: config.dias_max_adelante,
+          ventana_cancelacion_horas: config.ventana_cancelacion_horas,
         }),
       }),
       apiFetch("/api/agenda-pro/config/horarios", {
@@ -204,6 +205,25 @@ export default function AgendaProConfigPage() {
               onChange={(e) => setConfig((prev) => (prev ? { ...prev, dias_max_adelante: Number(e.target.value) || 1 } : prev))}
             />
           </div>
+        </div>
+      </Card>
+
+      <Card>
+        <h2 className="mb-1 text-sm font-semibold text-foreground">Cancelación de sesiones de paquetes</h2>
+        <p className="mb-4 text-sm text-muted">Aplica solo a citas asociadas a un paquete de sesiones.</p>
+        <div className="max-w-xs">
+          <Label>Horas de anticipación para cancelar sin costo</Label>
+          <Input
+            type="number"
+            min={0}
+            value={config.ventana_cancelacion_horas}
+            onChange={(e) =>
+              setConfig((prev) => (prev ? { ...prev, ventana_cancelacion_horas: Number(e.target.value) || 0 } : prev))
+            }
+          />
+          <p className="mt-1 text-xs text-muted">
+            Si la clienta cancela con menos anticipación que este valor, la sesión se descuenta igual del paquete.
+          </p>
         </div>
       </Card>
 

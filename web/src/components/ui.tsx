@@ -175,6 +175,9 @@ const badgeStyles: Record<string, string> = {
   // paquetes de sesiones (Agenda Pro): saldo restante
   disponible: "bg-success-soft text-success",
   agotado: "bg-danger-soft text-danger",
+  // paquetes de sesiones (Agenda Pro): asistencia de una cita con paquete
+  no_asistio: "bg-danger-soft text-danger",
+  cancelada_anticipada: "bg-border text-muted",
   // notificaciones al cliente: canal de envío
   correo: "bg-brand-soft text-brand",
   whatsapp: "bg-success-soft text-success",

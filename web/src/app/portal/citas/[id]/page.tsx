@@ -4,11 +4,19 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { PortalShell } from "@/components/PortalShell";
-import { Badge, Button, Card, ErrorText, SuccessText } from "@/components/ui";
+import { Badge, Button, Card, ErrorText, SuccessText, WarningText } from "@/components/ui";
 import { IconChevronLeft } from "@/components/icons";
 import { obtenerTokenPortal, portalFetch } from "@/lib/portalApi";
 
-type CitaDetalle = { id: string; titulo: string; descripcion: string | null; fecha: string; hora: string | null; estado: string };
+type CitaDetalle = {
+  id: string;
+  titulo: string;
+  descripcion: string | null;
+  fecha: string;
+  hora: string | null;
+  estado: string;
+  advertencia_cancelacion: { ventana_horas: number; descuenta_si_cancela_ahora: boolean } | null;
+};
 
 export default function PortalCitaDetallePage() {
   const params = useParams<{ id: string }>();
@@ -41,6 +49,13 @@ export default function PortalCitaDetallePage() {
   }, [params.id]);
 
   async function decidir(accion: "confirmar" | "cancelar") {
+    if (accion === "cancelar" && cita?.advertencia_cancelacion?.descuenta_si_cancela_ahora) {
+      const horas = cita.advertencia_cancelacion.ventana_horas;
+      const confirmado = confirm(
+        `Esta cancelación es con menos de ${horas} horas de anticipación y se descontará del paquete de todas formas. ¿Confirmas?`
+      );
+      if (!confirmado) return;
+    }
     setDecidiendo(true);
     setError(null);
     const res = await portalFetch(`/api/portal/datos/citas/${params.id}/${accion}`, { method: "POST" });
@@ -79,6 +94,13 @@ export default function PortalCitaDetallePage() {
           </Card>
 
           {aviso && <SuccessText>{aviso}</SuccessText>}
+
+          {cita.advertencia_cancelacion?.descuenta_si_cancela_ahora && (
+            <WarningText>
+              Estás a menos de {cita.advertencia_cancelacion.ventana_horas} horas de la cita — si cancelas ahora, la sesión se
+              descontará igual de tu paquete.
+            </WarningText>
+          )}
 
           {cita.estado === "pendiente" && (
             <div className="flex gap-3">

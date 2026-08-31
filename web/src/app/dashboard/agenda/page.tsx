@@ -60,6 +60,8 @@ const ESTADO_TAREA_A_AGENDA: Record<EstadoTarea, EstadoAgenda> = {
   confirmada: "agendado",
   completada: "completado",
   cancelada: "cancelado",
+  no_asistio: "cancelado",
+  cancelada_anticipada: "cancelado",
 };
 
 const PRIORIDADES: Prioridad[] = ["alta", "media", "baja"];
@@ -149,6 +151,7 @@ export default function AgendaPage() {
   const [clientesOpciones, setClientesOpciones] = useState<Cliente[]>([]);
   const [usuariosOpciones, setUsuariosOpciones] = useState<Usuario[]>([]);
 
+  const [ventanaCancelacionHoras, setVentanaCancelacionHoras] = useState(24);
   const [paquetesCliente, setPaquetesCliente] = useState<PaqueteSesionesConSaldo[]>([]);
   const [paqueteIdTarea, setPaqueteIdTarea] = useState("");
   const [sesionesConsumidasTarea, setSesionesConsumidasTarea] = useState(1);
@@ -274,6 +277,13 @@ export default function AgendaPage() {
     const [resClientes, resUsuarios] = await Promise.all([apiFetch("/api/clientes"), apiFetch("/api/usuarios")]);
     if (resClientes.ok) setClientesOpciones(await resClientes.json());
     if (resUsuarios.ok) setUsuariosOpciones(await resUsuarios.json());
+    if (puedeAgendaPro) {
+      const resConfig = await apiFetch("/api/agenda-pro/config");
+      if (resConfig.ok) {
+        const { config } = await resConfig.json();
+        setVentanaCancelacionHoras(config.ventana_cancelacion_horas);
+      }
+    }
   }
 
   async function cargarPaquetesCliente(clienteId: string) {
@@ -407,6 +417,34 @@ export default function AgendaPage() {
     if (!res.ok) {
       const b = await res.json().catch(() => ({}));
       setErrorTarea(b.error ?? "No se pudo guardar la tarea");
+      return;
+    }
+    setFormTareaAbierto(false);
+    cargar();
+  }
+
+  // Cancelación automática de una cita con paquete: si cancelar AHORA
+  // cae dentro de la ventana de aviso configurada, avisa antes de
+  // confirmar (el backend vuelve a calcular con su propio reloj —
+  // esto es solo para mostrar la advertencia antes de que el usuario
+  // confirme, no la decisión final).
+  async function onCancelarTarea() {
+    if (!tareaEditandoId) return;
+    const horaSesion = horaTarea || "23:59";
+    const momentoSesion = new Date(`${fechaTarea}T${horaSesion}:00`);
+    const diffHoras = (momentoSesion.getTime() - Date.now()) / (1000 * 60 * 60);
+    if (diffHoras < ventanaCancelacionHoras) {
+      const confirmado = confirm(
+        `Esta cancelación es con menos de ${ventanaCancelacionHoras} horas de anticipación y se descontará del paquete de todas formas. ¿Confirmas?`
+      );
+      if (!confirmado) return;
+    }
+    setGuardandoTarea(true);
+    const res = await apiFetch(`/api/tareas/${tareaEditandoId}/cancelar`, { method: "POST" });
+    setGuardandoTarea(false);
+    if (!res.ok) {
+      const b = await res.json().catch(() => ({}));
+      setErrorTarea(b.error ?? "No se pudo cancelar la cita");
       return;
     }
     setFormTareaAbierto(false);
@@ -621,9 +659,25 @@ export default function AgendaPage() {
                   <Select value={estadoTarea} onChange={(e) => setEstadoTarea(e.target.value as EstadoTarea)}>
                     <option value="pendiente">Pendiente</option>
                     {puedeAgendaPro && <option value="confirmada">Confirmada por el cliente</option>}
-                    <option value="completada">Completada</option>
-                    <option value="cancelada">Cancelada</option>
+                    {paqueteIdTarea ? (
+                      <>
+                        <option value="completada">Asistió</option>
+                        <option value="no_asistio">No asistió / cancelada tarde</option>
+                        <option value="cancelada_anticipada">Cancelada con anticipación</option>
+                      </>
+                    ) : (
+                      <>
+                        <option value="completada">Completada</option>
+                        <option value="cancelada">Cancelada</option>
+                      </>
+                    )}
                   </Select>
+                  {paqueteIdTarea && (
+                    <p className="mt-1 text-xs text-muted">
+                      Para cancelar esta cita usa el botón &quot;Cancelar cita&quot; — decide automáticamente si corresponde
+                      descontar la sesión según la anticipación.
+                    </p>
+                  )}
                 </div>
               )}
               <div className="sm:col-span-2">
@@ -639,6 +693,11 @@ export default function AgendaPage() {
               <Button type="button" variant="ghost" onClick={() => setFormTareaAbierto(false)}>
                 Cancelar
               </Button>
+              {tareaEditandoId && paqueteIdTarea && (estadoTarea === "pendiente" || estadoTarea === "confirmada") && (
+                <Button type="button" variant="outline" onClick={onCancelarTarea} disabled={guardandoTarea}>
+                  Cancelar cita
+                </Button>
+              )}
               {tareaEditandoId && (
                 <Button type="button" variant="danger" className="ml-auto" onClick={onEliminarTarea}>
                   Eliminar
