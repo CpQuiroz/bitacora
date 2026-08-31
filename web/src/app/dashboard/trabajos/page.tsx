@@ -7,6 +7,8 @@ import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Modal } from "@/components/Modal";
+import { ComboboxCliente } from "@/components/ComboboxCliente";
+import { ComboboxResponsable } from "@/components/ComboboxResponsable";
 import {
   Badge,
   Button,
@@ -136,35 +138,29 @@ export default function TrabajosPage() {
       <Modal open={formAbierto} onClose={() => setFormAbierto(false)} title="Nuevo trabajo" wide>
         <form onSubmit={onSubmit} className="flex flex-col gap-4">
           <div className="grid gap-4 sm:grid-cols-2">
-            {clientesGuardados.length > 0 && (
-              <div className="sm:col-span-2">
-                <Label>Cliente guardado (opcional)</Label>
-                <Select
-                  value={clienteId}
-                  onChange={(e) => onSeleccionarClienteGuardado(e.target.value)}
-                >
-                  <option value={SIN_CLIENTE_GUARDADO}>Sin cliente guardado — solo texto</option>
-                  {clientesGuardados.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.nombre}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-            )}
+            <div className="sm:col-span-2">
+              <Label>Cliente guardado (opcional)</Label>
+              <ComboboxCliente
+                value={clienteId}
+                onChange={onSeleccionarClienteGuardado}
+                clientes={clientesGuardados}
+                onClienteCreado={(c) => {
+                  setClientesGuardados((prev) => [...prev, c]);
+                  setClienteId(c.id);
+                  setCliente(c.nombre);
+                  setUbicacion(c.direccion);
+                }}
+                opcionVacia="Sin cliente guardado — solo texto"
+                placeholder="Sin cliente guardado — solo texto"
+              />
+            </div>
             <div>
               <Label>Cliente</Label>
               <Input type="text" required value={cliente} onChange={(e) => setCliente(e.target.value)} />
             </div>
             <div>
               <Label>Responsable</Label>
-              <Select value={responsableId} onChange={(e) => setResponsableId(e.target.value)}>
-                {equipo.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.nombre}
-                  </option>
-                ))}
-              </Select>
+              <ComboboxResponsable value={responsableId} onChange={setResponsableId} equipo={equipo} placeholder="Selecciona un responsable" />
             </div>
             <div>
               <Label>Fecha</Label>
