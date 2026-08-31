@@ -43,6 +43,10 @@ const TOGGLES: { grupo: string; items: { campo: keyof NotificacionesConfig; etiq
     grupo: "Agenda Pro",
     items: [{ campo: "cita_agendada", etiqueta: "Nueva cita agendada (con link para confirmar o cancelar)" }],
   },
+  {
+    grupo: "Clientes",
+    items: [{ campo: "cliente_cumpleanos", etiqueta: "Cumpleaños del cliente (correo automático el día)" }],
+  },
 ];
 
 const TIPOS_MENSAJE: { valor: TipoMensajePersonalizado; etiqueta: string; variables: string }[] = [
@@ -51,6 +55,7 @@ const TIPOS_MENSAJE: { valor: TipoMensajePersonalizado; etiqueta: string; variab
   { valor: "tecnico_en_camino", etiqueta: "Técnico en camino", variables: "{cliente}, {tecnico}, {empresa}" },
   { valor: "cobranza", etiqueta: "Cobranzas", variables: "{cliente}, {fecha}, {monto}, {empresa}" },
   { valor: "cita_agendada", etiqueta: "Agenda Pro", variables: "{cliente}, {fecha}, {hora}, {empresa}" },
+  { valor: "cumpleanos", etiqueta: "Cumpleaños de cliente", variables: "{cliente}, {empresa}" },
 ];
 
 const ETIQUETA_TIPO_LOG: Record<string, string> = {
@@ -61,6 +66,7 @@ const ETIQUETA_TIPO_LOG: Record<string, string> = {
   cobro_pendiente: "Cobro pendiente",
   cobro_vencido: "Cobro vencido",
   cita_agendada: "Cita agendada",
+  cliente_cumpleanos: "Cumpleaños de cliente",
 };
 
 type Mensajes = Record<TipoMensajePersonalizado, MensajePersonalizado | null>;
@@ -151,6 +157,7 @@ export default function NotificacionesPage() {
         cobro_pendiente: config.cobro_pendiente,
         cobranza_atrasada: config.cobranza_atrasada,
         cita_agendada: config.cita_agendada,
+        cliente_cumpleanos: config.cliente_cumpleanos,
       }),
     });
     setGuardando(false);

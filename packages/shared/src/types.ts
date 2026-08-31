@@ -42,7 +42,7 @@ export type TipoPlantilla = "cotizacion" | "orden_servicio" | "cobranza" | "term
 export type PosicionLogo = "izquierda" | "centro" | "derecha";
 export type ProveedorIntegracion = "webpay" | "flow" | "mercadopago" | "whatsapp" | "anthropic" | "google_document_ai";
 export type CategoriaIntegracion = "pagos" | "comunicacion" | "ia";
-export type TipoMensajePersonalizado = "cotizacion" | "orden_servicio" | "cobranza" | "tecnico_en_camino" | "cita_agendada";
+export type TipoMensajePersonalizado = "cotizacion" | "orden_servicio" | "cobranza" | "tecnico_en_camino" | "cita_agendada" | "cumpleanos";
 
 export type Empresa = {
   id: string;
@@ -522,6 +522,10 @@ export type Cliente = {
   correo: string | null;
   notas: string | null;
   activo: boolean;
+  // Opcional — usado para la felicitación automática de cumpleaños
+  // (ver cumpleanosClientes.ts). Solo se usa mes/día, el año queda
+  // ignorado a propósito.
+  fecha_nacimiento: string | null;
   creado_en: string;
 };
 
@@ -985,6 +989,7 @@ export type NotificacionesConfig = {
   tecnico_en_camino: boolean;
   cobro_pendiente: boolean;
   cita_agendada: boolean;
+  cliente_cumpleanos: boolean;
   whatsapp_activado: boolean;
   actualizado_en: string;
 };
@@ -998,9 +1003,10 @@ export type TipoNotificacionCliente =
   | "os_completada"
   | "cobro_pendiente"
   | "cobro_vencido"
-  | "cita_agendada";
+  | "cita_agendada"
+  | "cliente_cumpleanos";
 
-export type EntidadNotificacionCliente = "cotizacion" | "trabajo" | "factura" | "tarea";
+export type EntidadNotificacionCliente = "cotizacion" | "trabajo" | "factura" | "tarea" | "cliente";
 
 export type CanalNotificacionCliente = "correo" | "whatsapp";
 
