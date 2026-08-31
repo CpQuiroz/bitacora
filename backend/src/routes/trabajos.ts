@@ -3,11 +3,12 @@ import multer from "multer";
 import type { EstadoOS, EstadoTrabajo, ItemChecklist, OrdenServicio, Prioridad, TipoCheckin, TipoTrabajo, Trabajo } from "@bitacora/shared";
 import { sustituirVariables } from "@bitacora/shared";
 import { supabase } from "../supabase";
-import { subirFirma, subirFoto, urlFirmada } from "../storage";
+import { subirFirma, subirFoto, urlFirmada, subirPdfOS, descargarPdfOS } from "../storage";
 import { analizarFoto, generarInformeOS } from "../claude";
 import { crearOrdenServicio, obtenerOCrearOrden } from "../ordenes";
 import { enviarEncuestaSatisfaccion, enviarPdfOS } from "../email";
-import { generarPdfOS } from "../generarPdfOS";
+import { generarPdfEnWorker } from "../pdfWorkerPool";
+import type { DatosOSPdf } from "../generarPdfOS";
 import { notificar, notificarGerencia } from "../notificar";
 import { notificarCliente } from "../notificarCliente";
 import { aplicarDescuentoInventarioSiCorresponde, revertirStockPorOS } from "../inventario";
@@ -888,7 +889,7 @@ trabajosRouter.post(
         if (!cliente?.correo) return;
         const datosPdf = await armarDatosPdf(req.empresaId!, req.params.id);
         if (!datosPdf) return;
-        const pdf = await generarPdfOS(datosPdf);
+        const pdf = await obtenerPdfOS(req.empresaId!, req.params.id, datosPdf);
         await notificarCliente(req.empresaId!, "os_completada", cliente.correo, {
           clienteId: trabajoActualizado.cliente_id!,
           entidadTipo: "trabajo",
@@ -1008,6 +1009,40 @@ export async function armarDatosPdf(empresaId: string, trabajoId: string) {
   };
 }
 
+// Se cachea solo una vez que la OS queda firmada (datos.firmaUrl
+// presente) — antes de eso el contenido todavía puede cambiar, así
+// que se genera en vivo sin guardar nada. Firmada, ordenes_servicio
+// queda inmutable (ver el guard de "OS finalizada" en el PATCH de
+// abajo), no hace falta invalidación.
+async function obtenerPdfOS(
+  empresaId: string,
+  trabajoId: string,
+  datos: NonNullable<Awaited<ReturnType<typeof armarDatosPdf>>>
+): Promise<Buffer> {
+  const finalizado = Boolean(datos.firmaUrl);
+  if (finalizado) {
+    const { data: orden } = await supabase
+      .from("ordenes_servicio")
+      .select("pdf_url")
+      .eq("empresa_id", empresaId)
+      .eq("trabajo_id", trabajoId)
+      .maybeSingle();
+    if (orden?.pdf_url) {
+      try {
+        return await descargarPdfOS(orden.pdf_url);
+      } catch (err) {
+        console.error("No se pudo leer el PDF cacheado de la OS, se regenera:", err);
+      }
+    }
+  }
+  const pdf = await generarPdfEnWorker<DatosOSPdf>("os", datos);
+  if (finalizado) {
+    const key = await subirPdfOS(empresaId, trabajoId, pdf);
+    await supabase.from("ordenes_servicio").update({ pdf_url: key }).eq("empresa_id", empresaId).eq("trabajo_id", trabajoId);
+  }
+  return pdf;
+}
+
 trabajosRouter.get(
   "/:id/pdf",
   ah<RequestConEmpresa>(async (req, res) => {
@@ -1016,7 +1051,7 @@ trabajosRouter.get(
       res.status(404).json({ error: "Trabajo u orden de servicio no encontrada" });
       return;
     }
-    const pdf = await generarPdfOS(datos);
+    const pdf = await obtenerPdfOS(req.empresaId!, req.params.id, datos);
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `inline; filename="${datos.folioTexto}.pdf"`);
     res.send(pdf);
@@ -1036,7 +1071,7 @@ trabajosRouter.post(
       res.status(404).json({ error: "Trabajo u orden de servicio no encontrada" });
       return;
     }
-    const pdf = await generarPdfOS(datos);
+    const pdf = await obtenerPdfOS(req.empresaId!, req.params.id, datos);
     await enviarPdfOS(destinatario.trim(), datos.empresaNombre, datos.folio ?? 0, pdf);
     res.json({ ok: true });
   })

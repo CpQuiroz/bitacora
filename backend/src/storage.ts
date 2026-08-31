@@ -246,6 +246,30 @@ export async function descargarPdfCotizacion(key: string): Promise<Buffer> {
 }
 
 // ------------------------------------------------------------
+// PDF de una OS, cacheado — mismo patrón que subirPdfCotizacion/
+// descargarPdfCotizacion, solo se llama una vez que la OS queda
+// firmada (ver ordenes_servicio.pdf_url y obtenerPdfOS en trabajos.ts).
+// ------------------------------------------------------------
+export async function subirPdfOS(empresaId: string, trabajoId: string, pdf: Buffer): Promise<string> {
+  const key = `${empresaId}/trabajos/${trabajoId}/os-${Date.now()}.pdf`;
+  await client.send(
+    new PutObjectCommand({
+      Bucket: BUCKET_ANEXOS,
+      Key: key,
+      Body: pdf,
+      ContentType: "application/pdf",
+    })
+  );
+  return key; // se guarda en ordenes_servicio.pdf_url
+}
+
+export async function descargarPdfOS(key: string): Promise<Buffer> {
+  const respuesta = await client.send(new GetObjectCommand({ Bucket: BUCKET_ANEXOS, Key: key }));
+  const bytes = await respuesta.Body!.transformToByteArray();
+  return Buffer.from(bytes);
+}
+
+// ------------------------------------------------------------
 // Documento de un colaborador o vehículo (licencia, revisión técnica,
 // seguro, etc. — imagen o PDF). Mismo bucket privado, mismo patrón que
 // subirComprobante — un solo lugar para ambas entidades.

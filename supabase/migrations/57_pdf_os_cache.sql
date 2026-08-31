@@ -1,0 +1,11 @@
+-- El PDF de la OS se genera siempre desde cero hoy (a diferencia del
+-- de cotización, que ya está cacheado) — con pdfkit corriendo
+-- síncrono en el mismo proceso que atiende el resto del tráfico, cada
+-- descarga/reenvío repetido es trabajo de CPU desperdiciado. Se cachea
+-- igual que presupuestos.pdf_url, pero solo a partir de que la OS
+-- queda firmada (estado_os = 'firmada') — antes de eso el contenido
+-- todavía puede cambiar (checklist, fotos, firma), así que no se
+-- guarda cache prematuramente. Una vez firmada, ordenes_servicio ya
+-- queda inmutable salvo cancelación (ver el guard de "OS finalizada"
+-- en PATCH /trabajos/:id), así que no hace falta invalidación.
+alter table ordenes_servicio add column pdf_url text;

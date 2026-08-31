@@ -601,6 +601,9 @@ export type OrdenServicio = {
   // movimientos de salida de inventario de sus ítems tipo "producto" —
   // evita descontar dos veces o revertir sin haber descontado antes.
   stock_descontado: boolean;
+  // Cacheado solo una vez firmada — ver migración 57 y obtenerPdfOS en
+  // backend/src/routes/trabajos.ts.
+  pdf_url: string | null;
   creado_en: string;
 };
 
