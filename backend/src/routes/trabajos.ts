@@ -10,6 +10,7 @@ import { enviarEncuestaSatisfaccion, enviarPdfOS } from "../email";
 import { generarPdfOS } from "../generarPdfOS";
 import { notificar, notificarGerencia } from "../notificar";
 import { notificarCliente } from "../notificarCliente";
+import { descontarStockPorOS, revertirStockPorOS } from "../inventario";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
 
@@ -286,7 +287,14 @@ trabajosRouter.patch(
     // internas — antes bloqueaba la ruta entera sin excepción.
     if (orden?.finalizada_en) {
       const soloNotas = Object.keys(cambios).every((c) => c === "notas_internas") && !tocaItems;
-      if (!soloNotas) {
+      // Excepción puntual (Bloque B): cancelar una OS ya finalizada
+      // tiene que seguir siendo posible, aunque el resto quede
+      // bloqueado — es lo que dispara la reversión del stock
+      // descontado al firmar (ver revertirStockPorOS más abajo). Solo
+      // se permite como cambio aislado (nada más en el mismo PATCH),
+      // no colado junto a una edición de ítems/monto/descripción.
+      const soloCancelar = cambios.estado === "cancelado" && Object.keys(cambios).length === 1;
+      if (!soloNotas && !soloCancelar) {
         res.status(403).json({ error: "La orden de servicio ya fue finalizada — solo las notas internas siguen editables." });
         return;
       }
@@ -307,6 +315,12 @@ trabajosRouter.patch(
     if (!data) {
       res.status(404).json({ error: "Trabajo no encontrado" });
       return;
+    }
+
+    // Bloque B: si esta OS ya había descontado stock (se firmó) y ahora
+    // se cancela, revierte el descuento — devuelve el stock.
+    if (cambios.estado === "cancelado" && orden?.stock_descontado) {
+      await revertirStockPorOS(req.empresaId!, orden.id, req.params.id, orden.folio);
     }
 
     if (tocaItems) {
@@ -866,7 +880,13 @@ trabajosRouter.post(
       }
     }
 
-    res.json(data);
+    // Bloque B: recién ACÁ (OS "firmada" — ver decisión en RESUMEN_TRABAJO.md)
+    // se descuenta stock de los ítems tipo "producto" de la OS, kits
+    // resueltos a sus componentes. No bloquea el cierre de la OS si el
+    // stock queda negativo — solo junta advertencias para mostrar.
+    const advertenciasStock = await descontarStockPorOS(req.empresaId!, orden.id, req.params.id, data.folio);
+
+    res.json({ ...data, advertencias_stock: advertenciasStock });
   })
 );
 
