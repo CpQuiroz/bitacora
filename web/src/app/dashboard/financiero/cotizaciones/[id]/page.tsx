@@ -10,8 +10,9 @@ import { formatMoneda } from "@/lib/formatMoneda";
 import { abrirPdfCotizacion, urlCompartirPdfCotizacion } from "@/lib/descargarPdf";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText } from "@/components/ui";
-import { IconChevronLeft, IconMail, IconMessageShare, IconPlus } from "@/components/icons";
+import { IconChevronLeft, IconMail, IconMessageShare, IconPlus, IconSettings } from "@/components/icons";
 import { CatalogoSelectorModal, type ItemSeleccionadoCatalogo } from "@/components/CatalogoSelectorModal";
+import { PanelAcciones } from "@/components/PanelAcciones";
 
 type ClienteInfo = Pick<Cliente, "id" | "nombre" | "correo" | "telefono" | "direccion">;
 type CotizacionDetalle = Presupuesto & { cliente_info: ClienteInfo | null; items: PresupuestoItem[]; os_folio: number | null };
@@ -32,6 +33,7 @@ export default function CotizacionDetallePage() {
   const [folioGenerado, setFolioGenerado] = useState<number | null>(null);
   const [eliminando, setEliminando] = useState(false);
   const [errorEliminar, setErrorEliminar] = useState<string | null>(null);
+  const [panelAbierto, setPanelAbierto] = useState(false);
 
   const [descargando, setDescargando] = useState(false);
   const [compartiendo, setCompartiendo] = useState(false);
@@ -260,11 +262,10 @@ export default function CotizacionDetallePage() {
         action={
           <div className="flex items-center gap-2">
             <Badge value={cotizacion.estado} />
-            {!cotizacion.trabajo_id && (
-              <Button type="button" variant="danger" onClick={onEliminar} disabled={eliminando}>
-                {eliminando ? "Eliminando…" : "Eliminar"}
-              </Button>
-            )}
+            <Button type="button" variant="outline" onClick={() => setPanelAbierto(true)}>
+              <IconSettings className="h-4 w-4" />
+              Acciones
+            </Button>
           </div>
         }
       />
@@ -272,11 +273,6 @@ export default function CotizacionDetallePage() {
       {aviso && (
         <div className="my-4">
           <SuccessText>{aviso}</SuccessText>
-        </div>
-      )}
-      {errorEliminar && (
-        <div className="my-4">
-          <ErrorText>{errorEliminar}</ErrorText>
         </div>
       )}
 
@@ -366,11 +362,6 @@ export default function CotizacionDetallePage() {
               <Card>
                 <div className="mb-4 flex items-center justify-between">
                   <h2 className="text-sm font-semibold text-foreground">Ítems</h2>
-                  {!cotizacion.trabajo_id && (
-                    <button type="button" onClick={abrirEdicion} className="text-xs font-medium text-brand hover:underline">
-                      Editar
-                    </button>
-                  )}
                 </div>
                 {cotizacion.items.length === 0 ? (
                   <p className="text-sm text-muted">Sin ítems.</p>
@@ -419,51 +410,6 @@ export default function CotizacionDetallePage() {
                 </Card>
               )}
 
-              <Card>
-                <h2 className="mb-4 text-sm font-semibold text-foreground">PDF de la cotización</h2>
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="flex flex-wrap gap-2">
-                    <Button type="button" onClick={onDescargarPdf} disabled={descargando}>
-                      {descargando ? "Generando…" : "Descargar PDF"}
-                    </Button>
-                    <Button type="button" variant="outline" onClick={onCompartirWhatsapp} disabled={compartiendo}>
-                      <IconMessageShare className="h-4 w-4" />
-                      {compartiendo ? "Generando link…" : "Compartir por WhatsApp"}
-                    </Button>
-                  </div>
-                  <form onSubmit={onEnviarEmail} className="flex w-full max-w-sm items-end gap-2">
-                    <div className="flex-1">
-                      <Label className="flex items-center gap-1">
-                        <IconMail className="h-3.5 w-3.5" /> Enviar por email
-                      </Label>
-                      <Input
-                        type="email"
-                        placeholder={cotizacion.cliente_info?.correo || "correo@cliente.cl"}
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                      />
-                    </div>
-                    <Button type="submit" variant="outline" disabled={enviando || !email.trim()}>
-                      {enviando ? "Enviando…" : "Enviar"}
-                    </Button>
-                  </form>
-                </div>
-                {avisoEnvio && (
-                  <div className="mt-3">
-                    <SuccessText>{avisoEnvio}</SuccessText>
-                  </div>
-                )}
-                {errorEnvio && (
-                  <div className="mt-3">
-                    <ErrorText>{errorEnvio}</ErrorText>
-                  </div>
-                )}
-                {errorCompartir && (
-                  <div className="mt-3">
-                    <ErrorText>{errorCompartir}</ErrorText>
-                  </div>
-                )}
-              </Card>
             </>
           )}
         </div>
@@ -481,14 +427,7 @@ export default function CotizacionDetallePage() {
 
           <Card>
             <h2 className="mb-4 text-sm font-semibold text-foreground">Estado</h2>
-            <Select value={cotizacion.estado} onChange={(e) => cambiarEstado(e.target.value as EstadoPresupuesto)}>
-              {ESTADOS.map((e) => (
-                <option key={e} value={e}>
-                  {e}
-                </option>
-              ))}
-            </Select>
-            <div className="mt-4 grid gap-2 text-sm">
+            <div className="grid gap-2 text-sm">
               <div>
                 <Label>Fecha de creación</Label>
                 <p className="text-foreground">{cotizacion.fecha}</p>
@@ -531,6 +470,90 @@ export default function CotizacionDetallePage() {
           </Card>
         </div>
       </div>
+
+      <PanelAcciones
+        open={panelAbierto}
+        onClose={() => setPanelAbierto(false)}
+        titulo={cotizacion.numero != null ? `Cotización N° ${String(cotizacion.numero).padStart(4, "0")}` : "Cotización"}
+        subtitulo={cotizacion.cliente_info?.nombre ?? undefined}
+        seccionEstado={
+          <div className="flex flex-col gap-3">
+            <Select value={cotizacion.estado} onChange={(e) => cambiarEstado(e.target.value as EstadoPresupuesto)}>
+              {ESTADOS.map((e) => (
+                <option key={e} value={e}>
+                  {e}
+                </option>
+              ))}
+            </Select>
+            {cotizacion.estado === "borrador" && (
+              <Button type="button" variant="outline" onClick={() => cambiarEstado("enviado")}>
+                Marcar como Enviado
+              </Button>
+            )}
+          </div>
+        }
+        seccionCompartir={
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" onClick={onDescargarPdf} disabled={descargando}>
+                {descargando ? "Generando…" : "Descargar PDF"}
+              </Button>
+              <Button type="button" variant="outline" onClick={onCompartirWhatsapp} disabled={compartiendo}>
+                <IconMessageShare className="h-4 w-4" />
+                {compartiendo ? "Generando link…" : "WhatsApp"}
+              </Button>
+            </div>
+            <form onSubmit={onEnviarEmail} className="flex flex-col gap-2">
+              <Label className="flex items-center gap-1">
+                <IconMail className="h-3.5 w-3.5" /> Enviar por email
+              </Label>
+              <div className="flex items-end gap-2">
+                <Input
+                  type="email"
+                  placeholder={cotizacion.cliente_info?.correo || "correo@cliente.cl"}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="flex-1"
+                />
+                <Button type="submit" variant="outline" disabled={enviando || !email.trim()}>
+                  {enviando ? "Enviando…" : "Enviar"}
+                </Button>
+              </div>
+            </form>
+            {avisoEnvio && <SuccessText>{avisoEnvio}</SuccessText>}
+            {errorEnvio && <ErrorText>{errorEnvio}</ErrorText>}
+            {errorCompartir && <ErrorText>{errorCompartir}</ErrorText>}
+          </div>
+        }
+        seccionOtras={
+          !cotizacion.trabajo_id ? (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setPanelAbierto(false);
+                abrirEdicion();
+              }}
+            >
+              Editar
+            </Button>
+          ) : (
+            <p className="text-sm text-muted">Ya fue convertida en OS — no se puede editar.</p>
+          )
+        }
+        seccionPeligro={
+          !cotizacion.trabajo_id ? (
+            <div className="flex flex-col gap-2">
+              <Button type="button" variant="danger" onClick={onEliminar} disabled={eliminando}>
+                {eliminando ? "Eliminando…" : "Eliminar cotización"}
+              </Button>
+              {errorEliminar && <ErrorText>{errorEliminar}</ErrorText>}
+            </div>
+          ) : (
+            <p className="text-sm text-muted">Ya fue convertida en OS — no se puede eliminar.</p>
+          )
+        }
+      />
     </DashboardShell>
   );
 }
