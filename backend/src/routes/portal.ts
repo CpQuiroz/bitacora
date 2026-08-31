@@ -13,6 +13,7 @@ import { env } from "../env";
 import { enviarConReintento } from "../email";
 import { notificarGerencia } from "../notificar";
 import { crearTokenPortal, requierePortal, type RequestConPortal } from "../portalAuth";
+import { calcularEstadoCancelacion, obtenerOCrearAgendaProConfig } from "../agendaPro";
 import { armarDatosPdf } from "./trabajos";
 import { generarPdfOS } from "../generarPdfOS";
 import { armarDatosPdfCotizacion } from "./cotizaciones";
@@ -360,7 +361,19 @@ portalRouter.get(
       res.status(404).json({ error: "No encontrada" });
       return;
     }
-    res.json(tarea);
+    // Si la cita tiene paquete y todavía se puede cancelar, le
+    // avisamos al cliente de antemano si cancelar AHORA le
+    // descontaría la sesión igual — así el frontend puede mostrar la
+    // advertencia antes de que confirme, no después.
+    let advertenciaCancelacion: { ventana_horas: number; descuenta_si_cancela_ahora: boolean } | null = null;
+    if (tarea.paquete_id && (tarea.estado === "pendiente" || tarea.estado === "confirmada")) {
+      const config = await obtenerOCrearAgendaProConfig(req.empresaId!);
+      advertenciaCancelacion = {
+        ventana_horas: config.ventana_cancelacion_horas,
+        descuenta_si_cancela_ahora: calcularEstadoCancelacion(tarea, config.ventana_cancelacion_horas) === "no_asistio",
+      };
+    }
+    res.json({ ...tarea, advertencia_cancelacion: advertenciaCancelacion });
   })
 );
 
@@ -400,9 +413,22 @@ portalRouter.post(
       res.status(400).json({ error: "Esta cita ya no se puede cancelar" });
       return;
     }
-    await supabase.from("tareas").update({ estado: "cancelada", actualizado_en: new Date().toISOString() }).eq("id", req.params.id);
+
+    let nuevoEstado: "cancelada" | "no_asistio" | "cancelada_anticipada" = "cancelada";
+    if (tarea.paquete_id) {
+      const config = await obtenerOCrearAgendaProConfig(req.empresaId!);
+      nuevoEstado = calcularEstadoCancelacion(tarea, config.ventana_cancelacion_horas);
+    }
+
+    await supabase.from("tareas").update({ estado: nuevoEstado, actualizado_en: new Date().toISOString() }).eq("id", req.params.id);
+    const notaSaldo =
+      nuevoEstado === "no_asistio"
+        ? " (dentro de la ventana de aviso — se descontó del paquete)"
+        : nuevoEstado === "cancelada_anticipada"
+          ? " (con anticipación — no se descontó del paquete)"
+          : "";
     await notificarGerencia(req.empresaId!, "cita_cancelada", {
-      cuerpo: `${tarea.titulo} — ${tarea.fecha} — cancelada por el cliente.`,
+      cuerpo: `${tarea.titulo} — ${tarea.fecha} — cancelada por el cliente${notaSaldo}.`,
       entidadTipo: "tarea",
       entidadId: req.params.id,
     }).catch(() => {});

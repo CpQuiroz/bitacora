@@ -99,6 +99,7 @@ reservaPublicaRouter.get(
       .select("fecha, hora")
       .eq("empresa_id", empresa.id)
       .neq("estado", "cancelada")
+      .neq("estado", "cancelada_anticipada")
       .not("hora", "is", null)
       .gte("fecha", fmtFecha(desde))
       .lte("fecha", fmtFecha(fechaLimite));
@@ -166,6 +167,7 @@ reservaPublicaRouter.post(
       .eq("fecha", fecha)
       .eq("hora", hora)
       .neq("estado", "cancelada")
+      .neq("estado", "cancelada_anticipada")
       .maybeSingle();
     if (choque) {
       res.status(409).json({ error: "Ese horario ya no está disponible — elige otro" });
