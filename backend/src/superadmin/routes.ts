@@ -1,4 +1,5 @@
 import { Router } from "express";
+import crypto from "node:crypto";
 import type { EstadoEmpresa, Modulo, Plan, Rubro } from "@bitacora/shared";
 import { MODULOS, moduloActivadoPorDefecto, formatearRut, validarRut } from "@bitacora/shared";
 import { supabase } from "../supabase";
@@ -272,6 +273,71 @@ superadminRouter.patch(
     });
 
     res.json(data);
+  })
+);
+
+// Lista los usuarios de una empresa con su correo real (usuarios no
+// tiene columna email — vive en auth.users, se resuelve por id). Para
+// que el Super-Admin pueda ver a quién le está restableciendo la
+// contraseña antes de hacerlo.
+superadminRouter.get(
+  "/empresas/:id/usuarios",
+  requiereSuperAdmin,
+  ah<RequestConSuperAdmin>(async (req, res) => {
+    const { data: usuarios, error } = await supabase
+      .from("usuarios")
+      .select("id, nombre, rol, activo")
+      .eq("empresa_id", req.params.id)
+      .order("nombre");
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    const conCorreo = await Promise.all(
+      (usuarios ?? []).map(async (u) => {
+        const { data: authUser } = await supabase.auth.admin.getUserById(u.id);
+        return { ...u, correo: authUser?.user?.email ?? null };
+      })
+    );
+    res.json(conCorreo);
+  })
+);
+
+// Genera una contraseña temporal y la aplica directo en Supabase Auth
+// — se muestra una sola vez en la respuesta (no se guarda en ningún
+// lado); el Super-Admin se la pasa a la empresa por el canal que use
+// habitualmente para soporte. No hay envío de correo automático acá
+// (mismo motivo que el resto del proyecto: RESEND_API_KEY no siempre
+// está configurado).
+superadminRouter.post(
+  "/empresas/:id/usuarios/:usuarioId/restablecer-password",
+  requiereSuperAdmin,
+  ah<RequestConSuperAdmin>(async (req, res) => {
+    const { data: usuario } = await supabase
+      .from("usuarios")
+      .select("id, nombre, empresa_id")
+      .eq("id", req.params.usuarioId)
+      .eq("empresa_id", req.params.id)
+      .maybeSingle();
+    if (!usuario) {
+      res.status(404).json({ error: "Usuario no encontrado en esta empresa" });
+      return;
+    }
+
+    const passwordTemporal = crypto.randomBytes(9).toString("base64url");
+    const { error } = await supabase.auth.admin.updateUserById(usuario.id, { password: passwordTemporal });
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+
+    await registrarAuditoria(req.superAdminId!, "restablecer_password_usuario", {
+      empresaId: req.params.id,
+      ip: req.ip ?? null,
+      detalle: `Usuario: ${usuario.nombre} (${usuario.id})`,
+    });
+
+    res.json({ password: passwordTemporal });
   })
 );
 

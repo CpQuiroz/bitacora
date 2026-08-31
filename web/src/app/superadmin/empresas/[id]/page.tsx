@@ -85,6 +85,11 @@ export default function SuperAdminSaludEmpresaPage() {
   const [guardandoPrueba, setGuardandoPrueba] = useState(false);
   const [errorPrueba, setErrorPrueba] = useState<string | null>(null);
 
+  const [usuarios, setUsuarios] = useState<{ id: string; nombre: string; rol: string; activo: boolean; correo: string | null }[] | null>(null);
+  const [errorUsuarios, setErrorUsuarios] = useState<string | null>(null);
+  const [restableciendoId, setRestableciendoId] = useState<string | null>(null);
+  const [passwordGenerada, setPasswordGenerada] = useState<{ usuarioId: string; nombre: string; password: string } | null>(null);
+
   async function cargar() {
     const res = await superadminFetch(`/api/superadmin/empresas/${params.id}/salud`);
     if (!res.ok) {
@@ -117,6 +122,11 @@ export default function SuperAdminSaludEmpresaPage() {
     }
   }
 
+  async function cargarUsuarios() {
+    const res = await superadminFetch(`/api/superadmin/empresas/${params.id}/usuarios`);
+    if (res.ok) setUsuarios(await res.json());
+  }
+
   useEffect(() => {
     if (!obtenerTokenSuperAdmin()) {
       router.replace("/superadmin/login");
@@ -125,8 +135,27 @@ export default function SuperAdminSaludEmpresaPage() {
     cargar();
     cargarModulos();
     cargarSuscripcion();
+    cargarUsuarios();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id]);
+
+  async function onRestablecerPassword(usuarioId: string, nombre: string) {
+    if (!confirm(`¿Restablecer la contraseña de ${nombre}? La contraseña actual dejará de funcionar de inmediato.`)) return;
+    setErrorUsuarios(null);
+    setPasswordGenerada(null);
+    setRestableciendoId(usuarioId);
+    const res = await superadminFetch(`/api/superadmin/empresas/${params.id}/usuarios/${usuarioId}/restablecer-password`, {
+      method: "POST",
+    });
+    setRestableciendoId(null);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setErrorUsuarios(body.error ?? "No se pudo restablecer la contraseña");
+      return;
+    }
+    const { password } = await res.json();
+    setPasswordGenerada({ usuarioId, nombre, password });
+  }
 
   async function onExtenderPrueba() {
     setErrorPrueba(null);
@@ -535,6 +564,68 @@ export default function SuperAdminSaludEmpresaPage() {
             {errorModulos && (
               <div className="mt-3">
                 <ErrorText>{errorModulos}</ErrorText>
+              </div>
+            )}
+          </Card>
+
+          <Card className="mt-4">
+            <h2 className="mb-2 text-sm font-semibold text-foreground">Equipo</h2>
+            <p className="mb-3 text-sm text-muted">
+              Restablece la contraseña de un usuario si quedó bloqueado — se genera una clave temporal que reemplaza la actual de
+              inmediato. Se muestra una sola vez acá, no se guarda en ningún lado; pásasela por el canal de soporte que uses.
+            </p>
+            {passwordGenerada && (
+              <div className="mb-3 rounded-lg border border-brand/40 bg-brand-soft p-3 text-sm">
+                <p className="font-medium text-foreground">
+                  Nueva contraseña de {passwordGenerada.nombre}: <span className="font-mono">{passwordGenerada.password}</span>
+                </p>
+                <p className="mt-1 text-xs text-muted">Copiala ahora — no se vuelve a mostrar.</p>
+              </div>
+            )}
+            {!usuarios ? (
+              <p className="text-sm text-muted">Cargando…</p>
+            ) : usuarios.length === 0 ? (
+              <p className="text-sm text-muted">Esta empresa todavía no tiene usuarios.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead>
+                    <tr className="text-xs text-muted">
+                      <th className="py-1.5 pr-4 font-medium">Nombre</th>
+                      <th className="py-1.5 pr-4 font-medium">Correo</th>
+                      <th className="py-1.5 pr-4 font-medium">Rol</th>
+                      <th className="py-1.5 pr-4 font-medium">Estado</th>
+                      <th className="py-1.5 font-medium"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {usuarios.map((u) => (
+                      <tr key={u.id} className="border-t border-border">
+                        <td className="py-2 pr-4 text-foreground">{u.nombre}</td>
+                        <td className="py-2 pr-4 text-muted">{u.correo ?? "—"}</td>
+                        <td className="py-2 pr-4 text-muted">{u.rol}</td>
+                        <td className="py-2 pr-4">
+                          <Badge value={u.activo ? "activo" : "inactivo"} />
+                        </td>
+                        <td className="py-2 text-right">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            disabled={restableciendoId === u.id}
+                            onClick={() => onRestablecerPassword(u.id, u.nombre)}
+                          >
+                            {restableciendoId === u.id ? "Restableciendo…" : "Restablecer contraseña"}
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            {errorUsuarios && (
+              <div className="mt-3">
+                <ErrorText>{errorUsuarios}</ErrorText>
               </div>
             )}
           </Card>
