@@ -10,7 +10,7 @@ import { enviarEncuestaSatisfaccion, enviarPdfOS } from "../email";
 import { generarPdfOS } from "../generarPdfOS";
 import { notificar, notificarGerencia } from "../notificar";
 import { notificarCliente } from "../notificarCliente";
-import { descontarStockPorOS, revertirStockPorOS } from "../inventario";
+import { aplicarDescuentoInventarioSiCorresponde, revertirStockPorOS } from "../inventario";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
 
@@ -576,6 +576,20 @@ trabajosRouter.post(
       return;
     }
 
+    // Bloque B: si el estado configurado como disparador de descuento
+    // (Configuración > Inventario) es "en_proceso" o "completada", acá
+    // es donde se aplicaría — no solo al finalizar/firmar.
+    let advertenciasStockChecklist: string[] = [];
+    if (cambios.estado_os) {
+      advertenciasStockChecklist = await aplicarDescuentoInventarioSiCorresponde(
+        req.empresaId!,
+        orden.id,
+        req.params.id,
+        data.folio,
+        cambios.estado_os
+      );
+    }
+
     // Check-in es el único evento real de "el colaborador arrancó la
     // tarea" que existe hoy — se usa como disparador de "técnico en
     // camino" (no bloquea la respuesta si el envío falla).
@@ -636,7 +650,7 @@ trabajosRouter.post(
       }
     }
 
-    res.json(data);
+    res.json({ ...data, advertencias_stock: advertenciasStockChecklist });
   })
 );
 
@@ -899,11 +913,10 @@ trabajosRouter.post(
       }
     }
 
-    // Bloque B: recién ACÁ (OS "firmada" — ver decisión en RESUMEN_TRABAJO.md)
-    // se descuenta stock de los ítems tipo "producto" de la OS, kits
-    // resueltos a sus componentes. No bloquea el cierre de la OS si el
-    // stock queda negativo — solo junta advertencias para mostrar.
-    const advertenciasStock = await descontarStockPorOS(req.empresaId!, orden.id, req.params.id, data.folio);
+    // Bloque B: el descuento de stock es configurable (Configuración >
+    // Inventario) — esta llamada no hace nada si "firmada" no es el
+    // estado configurado como disparador en esta empresa.
+    const advertenciasStock = await aplicarDescuentoInventarioSiCorresponde(req.empresaId!, orden.id, req.params.id, data.folio, "firmada");
 
     res.json({ ...data, advertencias_stock: advertenciasStock });
   })

@@ -114,6 +114,7 @@ inventarioRouter.post(
         cantidad: cantidadNum,
         stock_resultante: stockResultante,
         motivo: motivo?.trim() || null,
+        origen: "manual",
       })
       .select()
       .single();

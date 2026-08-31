@@ -1,6 +1,6 @@
 import { Router } from "express";
 import multer from "multer";
-import type { Empresa, TipoCuenta } from "@bitacora/shared";
+import type { Empresa, EstadoOS, TipoCuenta } from "@bitacora/shared";
 import { comunasDeRegion, formatearRut, REGIONES, validarRut } from "@bitacora/shared";
 import { supabase } from "../supabase";
 import { subirLogo } from "../storage";
@@ -14,6 +14,7 @@ const MONEDAS = ["CLP", "USD", "EUR", "PEN", "COP", "MXN", "ARS"];
 // Debe reflejar exactamente los "valor" de web/src/lib/fuentes.ts.
 const FUENTES = ["sistema", "inter", "roboto", "poppins", "montserrat", "nunito", "work-sans", "lato", "source-sans-3"];
 const TIPOS_CUENTA: TipoCuenta[] = ["corriente", "vista", "ahorro"];
+const ESTADOS_OS_DISPARADOR: EstadoOS[] = ["pendiente", "enviada", "en_proceso", "completada", "firmada"];
 
 // Brillo percibido (fórmula YIQ) para decidir si el texto sobre el
 // color de marca debe ser blanco o casi negro — evita que un admin
@@ -94,6 +95,9 @@ miEmpresaRouter.patch(
       pago_titular,
       inventario_activado,
       inventario_stock_minimo_default,
+      inventario_descontar_en_estado,
+      inventario_permitir_negativo,
+      inventario_descontar_una_vez,
     } = req.body ?? {};
     const cambios: Partial<Empresa> = {};
 
@@ -168,6 +172,15 @@ miEmpresaRouter.patch(
       }
       cambios.inventario_stock_minimo_default = inventario_stock_minimo_default;
     }
+    if (inventario_descontar_en_estado !== undefined) {
+      if (!ESTADOS_OS_DISPARADOR.includes(inventario_descontar_en_estado)) {
+        res.status(400).json({ error: `inventario_descontar_en_estado debe ser uno de: ${ESTADOS_OS_DISPARADOR.join(", ")}` });
+        return;
+      }
+      cambios.inventario_descontar_en_estado = inventario_descontar_en_estado;
+    }
+    if (inventario_permitir_negativo !== undefined) cambios.inventario_permitir_negativo = Boolean(inventario_permitir_negativo);
+    if (inventario_descontar_una_vez !== undefined) cambios.inventario_descontar_una_vez = Boolean(inventario_descontar_una_vez);
 
     if (color_primario !== undefined) {
       if (color_primario !== null && !/^#[0-9a-fA-F]{6}$/.test(color_primario)) {
