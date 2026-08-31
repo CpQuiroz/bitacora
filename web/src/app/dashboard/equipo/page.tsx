@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import type { AuditoriaUsuario, Rol, Usuario } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
+import { ROLES } from "@/lib/roles";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import {
   Badge,
@@ -20,13 +21,6 @@ import {
   SuccessText,
 } from "@/components/ui";
 import { IconMail, IconUsers } from "@/components/icons";
-
-const ROLES: { value: Rol; label: string }[] = [
-  { value: "colaborador", label: "Colaborador / técnico" },
-  { value: "supervisor", label: "Supervisor" },
-  { value: "contador", label: "Contador" },
-  { value: "admin", label: "Admin" },
-];
 
 type AuditoriaFila = AuditoriaUsuario & {
   usuario_afectado: { nombre: string } | null;
