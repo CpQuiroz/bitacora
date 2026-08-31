@@ -8,7 +8,7 @@ import { apiFetch } from "@/lib/api";
 import { estadoStock } from "@/lib/estadoStock";
 import { DashboardShell } from "@/components/DashboardShell";
 import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText, buttonClass } from "@/components/ui";
-import { IconBox } from "@/components/icons";
+import { IconAlertTriangle, IconBox, IconLayers, IconX } from "@/components/icons";
 
 type UsuarioConEmpresa = Usuario & { empresa: Empresa };
 type MovimientoConNombre = InventarioMovimiento & { item_nombre: string | null };
@@ -150,6 +150,61 @@ export default function InventarioRegistroPage() {
           )}
 
           {productos && productos.length > 0 && (
+            <div className="my-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <Card>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-soft text-brand">
+                    <IconLayers className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-semibold text-foreground">{productos.length}</p>
+                    <p className="text-xs text-muted">SKUs con stock</p>
+                  </div>
+                </div>
+              </Card>
+              <Card>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-soft text-brand">
+                    <IconBox className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-semibold text-foreground">
+                      {productos.reduce((acc, p) => acc + (p.stock_actual ?? 0), 0)}
+                    </p>
+                    <p className="text-xs text-muted">Cantidad total</p>
+                  </div>
+                </div>
+              </Card>
+              <Card>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-warning-soft text-warning">
+                    <IconAlertTriangle className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-semibold text-foreground">
+                      {productos.filter((p) => estadoStock(p, usuario.empresa.inventario_stock_minimo_default) === "stock_bajo").length}
+                    </p>
+                    <p className="text-xs text-muted">Stock bajo</p>
+                  </div>
+                </div>
+              </Card>
+              <Card>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-danger-soft text-danger">
+                    <IconX className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-semibold text-foreground">
+                      {productos.filter((p) => estadoStock(p, usuario.empresa.inventario_stock_minimo_default) === "sin_stock").length}
+                    </p>
+                    <p className="text-xs text-muted">Sin stock</p>
+                  </div>
+                </div>
+              </Card>
+            </div>
+          )}
+
+          {productos && productos.length > 0 && (
             <Card className="my-6 overflow-x-auto p-0">
               <table className="w-full text-left text-sm">
                 <thead>
@@ -234,7 +289,12 @@ export default function InventarioRegistroPage() {
                 {movimientos.map((m) => (
                   <div key={m.id} className="flex items-center justify-between py-2.5 text-sm">
                     <div>
-                      <p className="font-medium text-foreground">{m.item_nombre ?? "Ítem eliminado"}</p>
+                      <p className="flex items-center gap-1.5 font-medium text-foreground">
+                        {m.item_nombre ?? "Ítem eliminado"}
+                        {m.origen === "automatico" && (
+                          <span className="rounded-full bg-brand-soft px-1.5 py-0.5 text-[10px] font-medium text-brand">automático</span>
+                        )}
+                      </p>
                       <p className="text-xs text-muted">
                         {m.motivo || "Sin motivo indicado"} · {new Date(m.creado_en).toLocaleString("es-CL")}
                       </p>
