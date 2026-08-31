@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { Cliente, EstadoFactura, Factura, MedioPago, Trabajo } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
@@ -25,6 +25,7 @@ const HOY = () => new Date().toISOString().slice(0, 10);
 
 export default function CobrosPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [usuario, setUsuario] = useState<UsuarioShell | null>(null);
   const [cobros, setCobros] = useState<CobroConCliente[] | null>(null);
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -93,6 +94,22 @@ export default function CobrosPage() {
 
   useEffect(() => {
     cargar();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Bloque A — "+ Nuevo Cobro" en la Vista 360° del Cliente manda acá
+  // con ?nuevo=1&cliente_id=X (Cobros no tiene una ruta "nueva" propia,
+  // es un form inline) — abre el formulario ya con el cliente puesto.
+  useEffect(() => {
+    if (searchParams.get("nuevo") !== "1") return;
+    setModo("manual");
+    setClienteId(searchParams.get("cliente_id") ?? "");
+    setMonto("");
+    setFechaEmision(HOY());
+    setFechaVencimiento("");
+    setMedioPago("");
+    setFormError(null);
+    setFormAbierto(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
