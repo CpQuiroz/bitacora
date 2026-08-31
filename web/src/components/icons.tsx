@@ -175,6 +175,14 @@ export function IconPlus(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function IconMinus(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M5 12h14" />
+    </Icon>
+  );
+}
+
 export function IconTag(props: SVGProps<SVGSVGElement>) {
   return (
     <Icon {...props}>

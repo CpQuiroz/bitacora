@@ -63,15 +63,15 @@ export default function NuevaCotizacionPage() {
   function quitarLinea(idx: number) {
     setLineas((v) => v.filter((_, i) => i !== idx));
   }
-  function onAgregarDesdeSelector(item: ItemSeleccionadoCatalogo) {
+  function onAgregarDesdeSelector(items: ItemSeleccionadoCatalogo[]) {
     setLineas((v) => [
       ...v,
-      {
+      ...items.map((item) => ({
         catalogo_item_id: item.catalogo_item_id,
         descripcion: item.descripcion,
         cantidad: String(item.cantidad),
         precio_unitario: String(item.precio_unitario),
-      },
+      })),
     ]);
   }
   function cambiarLinea(idx: number, cambios: Partial<Linea>) {

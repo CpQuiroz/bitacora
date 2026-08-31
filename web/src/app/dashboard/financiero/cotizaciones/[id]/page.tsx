@@ -112,15 +112,15 @@ export default function CotizacionDetallePage() {
   function quitarLineaEdit(idx: number) {
     setLineasEdit((v) => v.filter((_, i) => i !== idx));
   }
-  function onAgregarDesdeSelectorEdit(item: ItemSeleccionadoCatalogo) {
+  function onAgregarDesdeSelectorEdit(items: ItemSeleccionadoCatalogo[]) {
     setLineasEdit((v) => [
       ...v,
-      {
+      ...items.map((item) => ({
         catalogo_item_id: item.catalogo_item_id,
         descripcion: item.descripcion,
         cantidad: String(item.cantidad),
         precio_unitario: String(item.precio_unitario),
-      },
+      })),
     ]);
   }
   function cambiarLineaEdit(idx: number, cambios: Partial<Linea>) {

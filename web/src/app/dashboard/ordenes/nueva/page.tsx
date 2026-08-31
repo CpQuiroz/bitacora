@@ -94,15 +94,15 @@ export default function NuevaOrdenServicioPage() {
   function quitarItem(i: number) {
     setItems((prev) => prev.filter((_, idx) => idx !== i));
   }
-  function onAgregarDesdeSelector(item: ItemSeleccionadoCatalogo) {
+  function onAgregarDesdeSelector(items: ItemSeleccionadoCatalogo[]) {
     setItems((prev) => [
       ...prev,
-      {
+      ...items.map((item) => ({
         catalogo_item_id: item.catalogo_item_id,
         descripcion: item.descripcion,
         cantidad: String(item.cantidad),
         precio_unitario: String(item.precio_unitario),
-      },
+      })),
     ]);
   }
 
