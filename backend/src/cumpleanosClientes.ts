@@ -36,6 +36,20 @@ export async function revisarCumpleanosClientes(empresaId: string): Promise<void
   const { data: empresa } = await supabase.from("empresas").select("nombre").eq("id", empresaId).single();
   const desde = new Date(Date.now() - 350 * 24 * 60 * 60 * 1000).toISOString();
 
+  // Solo informativo — nunca se calcula ni se aplica nada en la app,
+  // la empresa lo honra a mano. Sin config o sin porcentaje elegido,
+  // "descuento" queda vacío y el texto default cierra igual de bien
+  // (ver CUERPOS_DEFAULT en notificarCliente.ts).
+  const { data: config } = await supabase
+    .from("notificaciones_config")
+    .select("cliente_cumpleanos_descuento_pct")
+    .eq("empresa_id", empresaId)
+    .maybeSingle();
+  const pct = config?.cliente_cumpleanos_descuento_pct;
+  const descuento = pct
+    ? ` Como regalo, tienes un ${pct}% de descuento en tu próxima visita — coméntanoslo cuando vengas.`
+    : "";
+
   for (const cliente of cumpleanerosHoy) {
     const { data: yaEnviado } = await supabase
       .from("notificaciones_cliente_log")
@@ -53,7 +67,7 @@ export async function revisarCumpleanosClientes(empresaId: string): Promise<void
       clienteId: cliente.id,
       entidadTipo: "cliente",
       entidadId: cliente.id,
-      variables: { cliente: cliente.nombre, empresa: empresa?.nombre ?? "" },
+      variables: { cliente: cliente.nombre, empresa: empresa?.nombre ?? "", descuento },
     });
   }
 }

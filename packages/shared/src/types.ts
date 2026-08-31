@@ -990,6 +990,9 @@ export type NotificacionesConfig = {
   cobro_pendiente: boolean;
   cita_agendada: boolean;
   cliente_cumpleanos: boolean;
+  // Solo informativo — nunca se calcula ni se aplica en la app, la
+  // empresa lo honra a mano. null = no mencionar ningún descuento.
+  cliente_cumpleanos_descuento_pct: number | null;
   whatsapp_activado: boolean;
   actualizado_en: string;
 };

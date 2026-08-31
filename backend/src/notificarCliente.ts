@@ -44,7 +44,7 @@ const CUERPOS_DEFAULT: Record<TipoNotificacionCliente, string> = {
   cobro_vencido: "<p>Hola {cliente}, tu cobro de {monto} venció el {fecha}. Contáctanos para regularizarlo.</p>",
   cita_agendada:
     "<p>Hola {cliente}, tienes una cita agendada con {empresa} el {fecha}{hora}. Confírmala o cancélala desde tu portal.</p>",
-  cliente_cumpleanos: "<p>¡Feliz cumpleaños, {cliente}! Todo el equipo de {empresa} te desea un gran día.</p>",
+  cliente_cumpleanos: "<p>¡Feliz cumpleaños, {cliente}! Todo el equipo de {empresa} te desea un gran día.{descuento}</p>",
 };
 
 // Mismo contenido que CUERPOS_DEFAULT pero en texto plano (sin HTML) —
@@ -57,7 +57,7 @@ const WHATSAPP_DEFAULT: Record<TipoNotificacionCliente, string> = {
   cobro_pendiente: "Hola {cliente}, tienes un cobro pendiente de {monto} con vencimiento el {fecha}.",
   cobro_vencido: "Hola {cliente}, tu cobro de {monto} venció el {fecha}. Contáctanos para regularizarlo.",
   cita_agendada: "Hola {cliente}, tienes una cita agendada con {empresa} el {fecha}{hora}. Confírmala o cancélala desde tu portal.",
-  cliente_cumpleanos: "¡Feliz cumpleaños, {cliente}! Todo el equipo de {empresa} te desea un gran día.",
+  cliente_cumpleanos: "¡Feliz cumpleaños, {cliente}! Todo el equipo de {empresa} te desea un gran día.{descuento}",
 };
 
 // Algunos eventos comparten el mismo "tipo" de mensaje personalizado
