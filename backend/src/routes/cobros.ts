@@ -77,6 +77,29 @@ cobrosRouter.get(
   })
 );
 
+// Bloque H/J: ficha de detalle de un Cobro (no existía — antes todo
+// era lista + form inline, igual que Equipos/Cobros antes de esas tandas).
+cobrosRouter.get(
+  "/:id",
+  ah<RequestConEmpresa>(async (req, res) => {
+    const { data, error } = await supabase
+      .from("facturas")
+      .select("*, cliente_info:clientes(id, nombre, correo, telefono)")
+      .eq("empresa_id", req.empresaId!)
+      .eq("id", req.params.id)
+      .maybeSingle();
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    if (!data) {
+      res.status(404).json({ error: "Cobro no encontrado" });
+      return;
+    }
+    res.json(data);
+  })
+);
+
 // Cobro manual: cliente + monto directos, sin pasar por trabajos.
 cobrosRouter.post(
   "/",
@@ -252,6 +275,29 @@ cobrosRouter.patch(
       return;
     }
     res.json(data);
+  })
+);
+
+// Bloque H: "Zona de peligro" del Panel de Acciones — no se puede
+// eliminar un cobro ya pagado (perdería el registro de un pago real).
+cobrosRouter.delete(
+  "/:id",
+  ah<RequestConEmpresa>(async (req, res) => {
+    const { data: factura } = await supabase.from("facturas").select("id, estado").eq("empresa_id", req.empresaId!).eq("id", req.params.id).maybeSingle();
+    if (!factura) {
+      res.status(404).json({ error: "Cobro no encontrado" });
+      return;
+    }
+    if (factura.estado === "pagada") {
+      res.status(403).json({ error: "Este cobro ya fue pagado y no se puede eliminar" });
+      return;
+    }
+    const { error } = await supabase.from("facturas").delete().eq("empresa_id", req.empresaId!).eq("id", req.params.id);
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    res.status(204).end();
   })
 );
 

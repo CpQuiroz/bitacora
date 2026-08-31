@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { Cliente, EstadoFactura, Factura, MedioPago, Trabajo } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
@@ -419,7 +420,11 @@ export default function CobrosPage() {
             <tbody>
               {filtrados.map((c) => (
                 <tr key={c.id} className="border-b border-border last:border-0 hover:bg-brand-soft/40">
-                  <td className="px-5 py-3 font-medium text-foreground">{c.cliente}</td>
+                  <td className="px-5 py-3 font-medium text-foreground">
+                    <Link href={`/dashboard/financiero/cobros/${c.id}`} className="hover:text-brand hover:underline">
+                      {c.cliente}
+                    </Link>
+                  </td>
                   <td className="px-5 py-3">{formatMoneda(c.monto, usuario.moneda)}</td>
                   <td className="px-5 py-3 text-muted">{c.medio_pago ? MEDIOS_ETIQUETA[c.medio_pago] : "—"}</td>
                   <td className="px-5 py-3">
