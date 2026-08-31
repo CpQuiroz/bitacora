@@ -195,7 +195,7 @@ cobrosRouter.post(
 cobrosRouter.patch(
   "/:id",
   ah<RequestConEmpresa>(async (req, res) => {
-    const { estado, fecha_pago, medio_pago } = req.body ?? {};
+    const { estado, fecha_pago, medio_pago, valor_recibido, observaciones_pago } = req.body ?? {};
     const cambios: Partial<Factura> = {};
 
     if (estado !== undefined) {
@@ -205,6 +205,13 @@ cobrosRouter.patch(
       }
       cambios.estado = estado;
       cambios.fecha_pago = estado === "pagada" ? fecha_pago || new Date().toISOString().slice(0, 10) : null;
+      // Bloque J: el registro de pago (valor recibido/observaciones)
+      // solo tiene sentido junto con "pagada" — si el estado cambia a
+      // otra cosa, se limpia (mismo criterio que fecha_pago arriba).
+      if (estado !== "pagada") {
+        cambios.valor_recibido = null;
+        cambios.observaciones_pago = null;
+      }
     }
     if (medio_pago !== undefined) {
       if (medio_pago !== null && !MEDIOS.includes(medio_pago)) {
@@ -213,6 +220,15 @@ cobrosRouter.patch(
       }
       cambios.medio_pago = medio_pago;
     }
+    if (valor_recibido !== undefined) {
+      const valor = valor_recibido === null ? null : Number(valor_recibido);
+      if (valor !== null && (!Number.isFinite(valor) || valor < 0)) {
+        res.status(400).json({ error: "valor_recibido inválido" });
+        return;
+      }
+      cambios.valor_recibido = valor;
+    }
+    if (observaciones_pago !== undefined) cambios.observaciones_pago = observaciones_pago?.trim() || null;
 
     if (Object.keys(cambios).length === 0) {
       res.status(400).json({ error: "Nada que actualizar" });

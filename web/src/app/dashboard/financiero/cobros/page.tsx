@@ -9,6 +9,7 @@ import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText } from "@/components/ui";
 import { IconPlus, IconReceipt } from "@/components/icons";
+import { ComboboxCliente } from "@/components/ComboboxCliente";
 
 type CobroConCliente = Factura & { cliente_info: { id: string; nombre: string } | null };
 
@@ -244,14 +245,13 @@ export default function CobrosPage() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <Label>Cliente</Label>
-                  <Select required value={clienteId} onChange={(e) => setClienteId(e.target.value)}>
-                    <option value="">Selecciona un cliente…</option>
-                    {clientes.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.nombre}
-                      </option>
-                    ))}
-                  </Select>
+                  <ComboboxCliente
+                    value={clienteId}
+                    onChange={setClienteId}
+                    clientes={clientes}
+                    onClienteCreado={(c) => setClientes((prev) => [...prev, c])}
+                    placeholder="Selecciona un cliente…"
+                  />
                 </div>
                 <div>
                   <Label>Monto</Label>
