@@ -9,7 +9,10 @@
 # build necesita ver packages/shared/ y el package-lock.json de la raíz.
 # ============================================================
 
-FROM node:20-slim AS base
+# Node 22: @supabase/supabase-js v2 (realtime-js) necesita un WebSocket
+# global nativo, que recién existe sin flags desde Node 22. Con node:20
+# el backend crashea al arrancar ("native WebSocket not found").
+FROM node:22-slim AS base
 WORKDIR /app
 
 # --- dependencias ---
@@ -37,7 +40,7 @@ RUN npm run build:shared && npm run build:backend
 RUN npm prune --omit=dev
 
 # --- imagen final, liviana ---
-FROM node:20-slim
+FROM node:22-slim
 WORKDIR /app/backend
 ENV NODE_ENV=production
 
