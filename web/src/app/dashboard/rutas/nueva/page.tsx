@@ -5,13 +5,13 @@ import { useRouter } from "next/navigation";
 import type {
   Cliente,
   DiaSemana,
+  Equipo,
   Prioridad,
   RutaPlanificada,
   TipoCheckin,
   TipoTrabajo,
   Trabajo,
   Usuario,
-  Vehiculo,
 } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
@@ -33,7 +33,7 @@ import { IconClock, IconPaperclip, IconPlus, IconRoute, IconTag } from "@/compon
 import { MapaRutas, type Parada } from "@/components/MapaRutas";
 
 type TareaConCliente = Trabajo & { cliente_info: Cliente | null };
-type VehiculoConAsignacion = Vehiculo & { asignacion_vigente: { colaborador_id: string; colaborador_nombre: string } | null };
+type VehiculoConAsignacion = Equipo & { asignacion_vigente: { colaborador_id: string; colaborador_nombre: string } | null };
 
 const DIAS: { valor: DiaSemana; etiqueta: string }[] = [
   { valor: "lunes", etiqueta: "Lun" },
@@ -114,7 +114,7 @@ export default function NuevaRutaPage() {
         apiFetch("/api/usuarios"),
         apiFetch("/api/clientes"),
         apiFetch("/api/tipos-trabajo"),
-        apiFetch("/api/vehiculos"),
+        apiFetch("/api/equipos"),
       ]);
       if (resMe.ok) {
         const { usuario: u } = await resMe.json();
@@ -129,7 +129,10 @@ export default function NuevaRutaPage() {
       }
       if (resClientes.ok) setClientes(await resClientes.json());
       if (resTipos.ok) setTiposTrabajo(await resTipos.json());
-      if (resVehiculos.ok) setVehiculos(await resVehiculos.json());
+      if (resVehiculos.ok) {
+        const todosEquipos: VehiculoConAsignacion[] = await resVehiculos.json();
+        setVehiculos(todosEquipos.filter((e) => e.categoria === "Vehículo"));
+      }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -348,7 +351,7 @@ export default function NuevaRutaPage() {
                 </Select>
                 <p className="mt-1 text-xs text-muted">
                   {vehiculoDelResponsable
-                    ? `Vehículo asignado: ${vehiculoDelResponsable.patente}`
+                    ? `Vehículo asignado: ${vehiculoDelResponsable.patente ?? vehiculoDelResponsable.nombre}`
                     : "Sin vehículo asignado"}
                 </p>
               </div>

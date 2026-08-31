@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { Empresa, Usuario, Vehiculo } from "@bitacora/shared";
+import type { Empresa, Equipo, Usuario } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell } from "@/components/DashboardShell";
@@ -15,7 +15,7 @@ type UsuarioConEmpresa = Usuario & { empresa: Empresa };
 export default function PerfilPage() {
   const router = useRouter();
   const [usuario, setUsuario] = useState<UsuarioConEmpresa | null>(null);
-  const [vehiculo, setVehiculo] = useState<Vehiculo | null>(null);
+  const [vehiculo, setVehiculo] = useState<Equipo | null>(null);
 
   useEffect(() => {
     (async () => {
