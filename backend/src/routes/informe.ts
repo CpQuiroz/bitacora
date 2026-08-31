@@ -25,7 +25,8 @@ import {
   topClientes,
   topServiciosVendidos,
 } from "../agregacionesDashboard";
-import { generarPdfInforme } from "../generarPdfInforme";
+import type { DatosInformePdf } from "../generarPdfInforme";
+import { generarPdfEnWorker } from "../pdfWorkerPool";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
 
@@ -689,7 +690,7 @@ informeRouter.get(
       .eq("id", req.empresaId!)
       .single();
 
-    const pdf = await generarPdfInforme({
+    const pdf = await generarPdfEnWorker<DatosInformePdf>("informe", {
       empresaNombre: empresa?.nombre ?? "",
       empresaLogoUrl: empresa?.logo_url ?? null,
       colorPrimario: empresa?.color_primario ?? null,

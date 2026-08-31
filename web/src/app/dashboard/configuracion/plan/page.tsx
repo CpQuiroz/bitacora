@@ -43,6 +43,7 @@ function diasRestantes(fechaTermino: string | null): number | null {
 
 type InfoPlan = {
   planActual: Plan;
+  trialVencido: boolean;
   proDisponible: boolean;
   modulosBasico: string[];
   modulosExtraPro: string[];
@@ -180,6 +181,16 @@ export default function PlanPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title="Plan" subtitle="Tu suscripción y método de pago" />
+
+      {info?.trialVencido && (
+        <Card className="border-danger/40 bg-danger-soft">
+          <p className="text-sm font-semibold text-danger">Tu período de prueba terminó</p>
+          <p className="mt-1 text-sm text-foreground">
+            El resto de Bitácora queda bloqueado hasta que elijas un plan — tus datos siguen intactos, solo tienes que
+            elegir Básico o Pro abajo para seguir.
+          </p>
+        </Card>
+      )}
 
       {confirmandoRetorno && (
         <Card className="border-brand/40 bg-brand-soft">

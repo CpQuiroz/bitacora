@@ -40,10 +40,14 @@ export function puedeVerModulo(rol: Rol, modulo: Modulo): boolean {
 }
 
 // Qué módulos quedan activados para una empresa que todavía no tiene
-// fila en empresa_modulos para ese módulo puntual. Los 12 base
-// activados por defecto (no romper a nadie hoy); los opt-in nuevos,
-// desactivados hasta que el Super-Admin los prenda.
-export const MODULOS_OPCIONALES: Modulo[] = ["agenda_pro"];
+// fila en empresa_modulos para ese módulo puntual. Los base activados
+// por defecto; los opt-in, desactivados hasta que el Super-Admin los
+// prenda o la empresa pase a Pro (ver cambiarPlanEmpresa en
+// backend/src/planes.ts). informe_ia y asistente pasaron a ser
+// exclusivos de Pro — antes eran base, empresas ya existentes se
+// migran explícitamente en la migración que agrega esto (no quedan
+// des-sincronizadas silenciosamente).
+export const MODULOS_OPCIONALES: Modulo[] = ["agenda_pro", "informe_ia", "asistente"];
 
 export function moduloActivadoPorDefecto(modulo: Modulo): boolean {
   return !MODULOS_OPCIONALES.includes(modulo);

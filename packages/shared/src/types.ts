@@ -81,6 +81,12 @@ export type Empresa = {
   inventario_descontar_en_estado: EstadoOS;
   inventario_permitir_negativo: boolean;
   inventario_descontar_una_vez: boolean;
+  // Contador aproximado, incrementado por la app en cada subida (ver
+  // migración 56 y backend/src/limites.ts) — no un total exacto
+  // recalculado, para no tener que escanear los buckets S3 en cada
+  // subida de archivo (eso sí lo hace medirUsoStorage, para el Panel
+  // de Super-Admin, con costo de latencia asumido para ese caso).
+  storage_bytes_usado: number;
   estado: EstadoEmpresa;
   creado_en: string;
 };
@@ -595,6 +601,9 @@ export type OrdenServicio = {
   // movimientos de salida de inventario de sus ítems tipo "producto" —
   // evita descontar dos veces o revertir sin haber descontado antes.
   stock_descontado: boolean;
+  // Cacheado solo una vez firmada — ver migración 57 y obtenerPdfOS en
+  // backend/src/routes/trabajos.ts.
+  pdf_url: string | null;
   creado_en: string;
 };
 
@@ -1132,6 +1141,10 @@ export type Database = {
       siguiente_folio_os: {
         Args: { p_empresa_id: string };
         Returns: number;
+      };
+      incrementar_storage_usado: {
+        Args: { p_empresa_id: string; p_bytes: number };
+        Returns: void;
       };
       siguiente_numero_cotizacion: {
         Args: { p_empresa_id: string };

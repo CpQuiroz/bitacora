@@ -24,7 +24,7 @@ function resolverFlowPlanId(plan: "basico" | "pro"): string | null {
 planRouter.get(
   "/",
   ah<RequestConEmpresa>(async (req, res) => {
-    const { data: empresa } = await supabase.from("empresas").select("plan").eq("id", req.empresaId!).maybeSingle();
+    const { data: empresa } = await supabase.from("empresas").select("plan, prueba_termina_en").eq("id", req.empresaId!).maybeSingle();
     const { data: historial } = await supabase
       .from("empresa_plan_historial")
       .select("*")
@@ -32,8 +32,13 @@ planRouter.get(
       .order("creado_en", { ascending: false })
       .limit(20);
 
+    const HOY = new Date().toISOString().slice(0, 10);
+    const trialVencido =
+      empresa?.plan === "trial" && empresa.prueba_termina_en != null && empresa.prueba_termina_en < HOY;
+
     res.json({
       planActual: empresa?.plan ?? "trial",
+      trialVencido,
       proDisponible: Boolean(env.FLOW_PLAN_ID_PRO),
       modulosBasico: MODULOS_BASICO,
       modulosExtraPro: MODULOS_OPCIONALES,

@@ -3,7 +3,8 @@ import type { EstadoPresupuesto, Presupuesto } from "@bitacora/shared";
 import { sustituirVariables } from "@bitacora/shared";
 import { supabase } from "../supabase";
 import { crearOrdenServicio } from "../ordenes";
-import { generarPdfCotizacion } from "../generarPdfCotizacion";
+import type { DatosCotizacionPdf } from "../generarPdfCotizacion";
+import { generarPdfEnWorker } from "../pdfWorkerPool";
 import { enviarCotizacionPdf } from "../email";
 import { subirPdfCotizacion, descargarPdfCotizacion, urlFirmadaPdfCotizacion } from "../storage";
 import { notificarCliente } from "../notificarCliente";
@@ -541,7 +542,7 @@ async function obtenerPdfCotizacion(
       console.error("No se pudo leer el PDF cacheado de la cotización, se regenera:", err);
     }
   }
-  const pdf = await generarPdfCotizacion(datos);
+  const pdf = await generarPdfEnWorker<DatosCotizacionPdf>("cotizacion", datos);
   const key = await subirPdfCotizacion(empresaId, cotizacionId, pdf);
   await supabase.from("presupuestos").update({ pdf_url: key }).eq("empresa_id", empresaId).eq("id", cotizacionId);
   return pdf;

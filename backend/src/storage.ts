@@ -17,6 +17,7 @@ import {
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { env } from "./env";
+import { verificarLimiteStorage, incrementarStorageUsado } from "./limites";
 
 const client = new S3Client({
   endpoint: env.STORAGE_ENDPOINT,
@@ -39,6 +40,7 @@ export async function subirFoto(
   archivo: Buffer | Uint8Array,
   contentType: string
 ): Promise<string> {
+  await verificarLimiteStorage(empresaId, archivo.byteLength);
   const key = `${empresaId}/trabajos/${trabajoId}/${Date.now()}.jpg`;
 
   await client.send(
@@ -49,6 +51,7 @@ export async function subirFoto(
       ContentType: contentType,
     })
   );
+  incrementarStorageUsado(empresaId, archivo.byteLength);
 
   return key; // se guarda en analisis_fotos.foto_url
 }
@@ -158,6 +161,7 @@ export async function subirAnexo(
   archivo: Buffer | Uint8Array,
   contentType: string
 ): Promise<string> {
+  await verificarLimiteStorage(empresaId, archivo.byteLength);
   const nombreSeguro = nombreOriginal.replace(/[^a-zA-Z0-9._-]/g, "_");
   const key = `${empresaId}/trabajos/${trabajoId}/${Date.now()}-${nombreSeguro}`;
 
@@ -169,6 +173,7 @@ export async function subirAnexo(
       ContentType: contentType,
     })
   );
+  incrementarStorageUsado(empresaId, archivo.byteLength);
 
   return key; // se guarda en trabajos.anexos[].key
 }
@@ -189,6 +194,7 @@ export async function subirComprobante(
   archivo: Buffer | Uint8Array,
   contentType: string
 ): Promise<string> {
+  await verificarLimiteStorage(empresaId, archivo.byteLength);
   const nombreSeguro = nombreOriginal.replace(/[^a-zA-Z0-9._-]/g, "_");
   const key = `${empresaId}/gastos/${gastoId}/${Date.now()}-${nombreSeguro}`;
 
@@ -200,6 +206,7 @@ export async function subirComprobante(
       ContentType: contentType,
     })
   );
+  incrementarStorageUsado(empresaId, archivo.byteLength);
 
   return key; // se guarda en gastos.comprobante_url
 }
@@ -239,6 +246,30 @@ export async function descargarPdfCotizacion(key: string): Promise<Buffer> {
 }
 
 // ------------------------------------------------------------
+// PDF de una OS, cacheado — mismo patrón que subirPdfCotizacion/
+// descargarPdfCotizacion, solo se llama una vez que la OS queda
+// firmada (ver ordenes_servicio.pdf_url y obtenerPdfOS en trabajos.ts).
+// ------------------------------------------------------------
+export async function subirPdfOS(empresaId: string, trabajoId: string, pdf: Buffer): Promise<string> {
+  const key = `${empresaId}/trabajos/${trabajoId}/os-${Date.now()}.pdf`;
+  await client.send(
+    new PutObjectCommand({
+      Bucket: BUCKET_ANEXOS,
+      Key: key,
+      Body: pdf,
+      ContentType: "application/pdf",
+    })
+  );
+  return key; // se guarda en ordenes_servicio.pdf_url
+}
+
+export async function descargarPdfOS(key: string): Promise<Buffer> {
+  const respuesta = await client.send(new GetObjectCommand({ Bucket: BUCKET_ANEXOS, Key: key }));
+  const bytes = await respuesta.Body!.transformToByteArray();
+  return Buffer.from(bytes);
+}
+
+// ------------------------------------------------------------
 // Documento de un colaborador o vehículo (licencia, revisión técnica,
 // seguro, etc. — imagen o PDF). Mismo bucket privado, mismo patrón que
 // subirComprobante — un solo lugar para ambas entidades.
@@ -251,6 +282,7 @@ export async function subirDocumento(
   archivo: Buffer | Uint8Array,
   contentType: string
 ): Promise<string> {
+  await verificarLimiteStorage(empresaId, archivo.byteLength);
   const nombreSeguro = nombreOriginal.replace(/[^a-zA-Z0-9._-]/g, "_");
   const key = `${empresaId}/documentos/${entidadTipo}/${entidadId}/${Date.now()}-${nombreSeguro}`;
 
@@ -262,6 +294,7 @@ export async function subirDocumento(
       ContentType: contentType,
     })
   );
+  incrementarStorageUsado(empresaId, archivo.byteLength);
 
   return key; // se guarda en documentos.archivo_key
 }
@@ -279,6 +312,7 @@ export async function subirFotoGuia(
   archivo: Buffer | Uint8Array,
   contentType: string
 ): Promise<string> {
+  await verificarLimiteStorage(empresaId, archivo.byteLength);
   const key = `${empresaId}/viajes/${Date.now()}.jpg`;
 
   await client.send(
@@ -289,6 +323,7 @@ export async function subirFotoGuia(
       ContentType: contentType,
     })
   );
+  incrementarStorageUsado(empresaId, archivo.byteLength);
 
   return key; // se guarda en viajes.foto_guia_url
 }

@@ -193,6 +193,20 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
     })();
   }, [usuario.rol, pathname, router]);
 
+  // Trial vencido sin plan elegido (backend lo exige en requiereEmpresa,
+  // código TRIAL_VENCIDO) — mismo criterio que el gate de 2FA de arriba:
+  // fetch propio acá contra una ruta exceptuada del gate (/api/plan), en
+  // vez de propagar el dato por props. Lo manda a Configuración > Plan.
+  useEffect(() => {
+    if (pathname === "/dashboard/configuracion/plan") return;
+    (async () => {
+      const res = await apiFetch("/api/plan");
+      if (!res.ok) return;
+      const body = await res.json().catch(() => ({}));
+      if (body.trialVencido) router.replace("/dashboard/configuracion/plan");
+    })();
+  }, [pathname, router]);
+
   useEffect(() => {
     setGruposAbiertos((prev) => {
       const next = new Set(prev);

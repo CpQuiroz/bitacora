@@ -15,7 +15,7 @@ export interface RequestConEmpresa extends RequestConUsuario {
 export const requiereEmpresa = ah<RequestConEmpresa>(async (req, res, next) => {
   const { data: usuario, error } = await supabase
     .from("usuarios")
-    .select("empresa_id, rol, activo, mfa_activado, empresa:empresas(estado)")
+    .select("empresa_id, rol, activo, mfa_activado, empresa:empresas(estado, plan, prueba_termina_en)")
     .eq("id", req.userId!)
     .maybeSingle();
 
@@ -31,13 +31,29 @@ export const requiereEmpresa = ah<RequestConEmpresa>(async (req, res, next) => {
     res.status(403).json({ error: "Tu cuenta fue desactivada — contacta a un administrador" });
     return;
   }
-  const estadoEmpresa = (usuario as unknown as { empresa: { estado: string } | null }).empresa?.estado;
-  if (estadoEmpresa === "suspendida") {
+  const empresa = (usuario as unknown as { empresa: { estado: string; plan: string; prueba_termina_en: string | null } | null }).empresa;
+  if (empresa?.estado === "suspendida") {
     res.status(403).json({ error: "Tu empresa fue suspendida — contacta al soporte" });
     return;
   }
-  if (estadoEmpresa === "dada_de_baja") {
+  if (empresa?.estado === "dada_de_baja") {
     res.status(403).json({ error: "Esta cuenta fue dada de baja" });
+    return;
+  }
+
+  // Trial vencido sin haber elegido un plan pago: empresas.plan solo
+  // sale de "trial" al confirmarse una tarjeta (ver cambiarPlanEmpresa
+  // en planes.ts) — así que si sigue en "trial" pasada la fecha, es
+  // que nunca eligió plan. Se deja pasar /api/plan* y /api/suscripcion*
+  // para que pueda elegir uno y salir del bloqueo.
+  const HOY = new Date().toISOString().slice(0, 10);
+  const trialVencido = empresa?.plan === "trial" && empresa.prueba_termina_en != null && empresa.prueba_termina_en < HOY;
+  const rutaDePlan = req.originalUrl.startsWith("/api/plan") || req.originalUrl.startsWith("/api/suscripcion");
+  if (trialVencido && !rutaDePlan) {
+    res.status(403).json({
+      error: "Tu período de prueba terminó — elige un plan para seguir usando Bitácora.",
+      code: "TRIAL_VENCIDO",
+    });
     return;
   }
 
