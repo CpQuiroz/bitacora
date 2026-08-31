@@ -1,0 +1,35 @@
+# El build context es la raíz del monorepo (ver backend/Dockerfile).
+# Todo lo que no haga falta para compilar el backend queda fuera para
+# que el context sea chico y las capas se cacheen bien.
+
+**/node_modules
+**/dist
+**/build
+**/.next
+**/.expo
+**/.expo-shared
+**/*.tsbuildinfo
+
+.git
+.github
+*.log
+.DS_Store
+
+# Secretos — nunca al context
+**/.env
+**/.env.local
+**/.env.*.local
+!**/.env.example
+
+# Front y app móvil: no se compilan en esta imagen, pero npm ci en la
+# raíz necesita sus package.json para resolver el workspace — se
+# excluye todo el resto de esas carpetas.
+web/*
+mobile/*
+!web/package.json
+!mobile/package.json
+
+# Docs y material de trabajo
+Documentacion
+docs
+*.md

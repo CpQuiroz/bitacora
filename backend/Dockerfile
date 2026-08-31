@@ -1,29 +1,56 @@
 # ============================================================
 # BITÁCORA — Dockerfile del backend
-# Corre igual en Cloud Run, AWS Fargate, Azure Container Apps,
-# o un servidor propio — no depende de ningún proveedor
+#
+# IMPORTANTE: el build context es la RAÍZ del monorepo, no backend/.
+#   - Render: Root Directory vacío, Dockerfile Path = backend/Dockerfile
+#   - Local:  docker build -f backend/Dockerfile .
+#
+# El backend depende de @bitacora/shared (workspace de npm), así que el
+# build necesita ver packages/shared/ y el package-lock.json de la raíz.
 # ============================================================
 
 FROM node:20-slim AS base
 WORKDIR /app
 
 # --- dependencias ---
-COPY package*.json ./
-RUN npm ci --omit=dev
+# Solo los manifests primero, para que la capa de npm ci se cachee
+# mientras no cambien. Hacen falta los package.json de TODOS los
+# workspaces que lista la raíz (web, mobile, backend, packages/*) o
+# npm ci se queja de que el lockfile no cuadra.
+COPY package.json package-lock.json ./
+COPY packages/shared/package.json ./packages/shared/
+COPY backend/package.json ./backend/
+COPY web/package.json ./web/
+COPY mobile/package.json ./mobile/
+RUN npm ci
 
-# --- código ---
-COPY . .
-RUN npm run build
+# --- código + build ---
+# Solo lo que el backend necesita compilar: shared primero (genera su
+# dist/), backend después. build:shared / build:backend son scripts de
+# la raíz que hacen `npm run build -w <workspace>`.
+COPY packages/shared ./packages/shared
+COPY backend ./backend
+RUN npm run build:shared && npm run build:backend
+
+# Deja node_modules solo con dependencias de producción (quita
+# typescript, tsx, @types/*, etc.) antes de copiarlo a la imagen final.
+RUN npm prune --omit=dev
 
 # --- imagen final, liviana ---
 FROM node:20-slim
-WORKDIR /app
+WORKDIR /app/backend
 ENV NODE_ENV=production
-COPY --from=base /app/node_modules ./node_modules
-COPY --from=base /app/dist ./dist
-COPY --from=base /app/package.json ./package.json
 
-# El puerto se lee de la variable PORT — así funciona igual
-# en Cloud Run (que la asigna) como en cualquier otro lado
+# node_modules hoisteado de la raíz (incluye el symlink
+# @bitacora/shared -> ../../packages/shared, que Docker preserva).
+COPY --from=base /app/node_modules /app/node_modules
+# El destino del symlink: package.json (main: dist/index.js) + el dist ya compilado.
+COPY --from=base /app/packages/shared/package.json /app/packages/shared/package.json
+COPY --from=base /app/packages/shared/dist /app/packages/shared/dist
+# El backend en sí.
+COPY --from=base /app/backend/package.json ./package.json
+COPY --from=base /app/backend/dist ./dist
+
+# El puerto se lee de la variable PORT (Render la asigna).
 EXPOSE 8080
 CMD ["node", "dist/server.js"]
