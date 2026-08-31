@@ -20,7 +20,29 @@ function linkCalificacion(trabajoId: string, valor: number): string {
 // sin duplicar el reintento/manejo de error acá.
 export async function enviarConReintento(body: Record<string, unknown>, contexto: string): Promise<void> {
   if (!env.RESEND_API_KEY || !env.RESEND_FROM_EMAIL) {
-    throw new Error("El envío de correo no está configurado (RESEND_API_KEY/RESEND_FROM_EMAIL)");
+    // En producción esto es un error real: quien llama hace rollback o
+    // notifica. En desarrollo, para no bloquear pruebas locales sin Resend,
+    // escribimos el correo (destinatario, asunto y cualquier enlace) en la
+    // consola del backend y seguimos como si se hubiera enviado.
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("El envío de correo no está configurado (RESEND_API_KEY/RESEND_FROM_EMAIL)");
+    }
+    const contenido = `${body.html ?? ""} ${body.text ?? ""}`;
+    const enlaces = contenido.match(/https?:\/\/[^\s"'<>]+/g) ?? [];
+    console.warn(
+      [
+        "",
+        "─".repeat(72),
+        `CORREO NO ENVIADO (Resend sin configurar) — modo desarrollo`,
+        `  contexto : ${contexto}`,
+        `  para     : ${String(body.to ?? "")}`,
+        `  asunto   : ${String(body.subject ?? "")}`,
+        ...(enlaces.length ? ["  enlaces  :", ...enlaces.map((u) => `    ${u}`)] : []),
+        "─".repeat(72),
+        "",
+      ].join("\n")
+    );
+    return;
   }
 
   let ultimoError: string = "";
