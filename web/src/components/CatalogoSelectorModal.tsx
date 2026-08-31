@@ -25,7 +25,9 @@ const TABS: { valor: Tab; etiqueta: string }[] = [
   { valor: "kit", etiqueta: "Kits" },
 ];
 
-const ICONO_TIPO: Record<TipoCatalogoItem, typeof IconBox> = {
+// Exportado para reusar el mismo ícono por tipo en el listado de
+// Catálogo (Bloque E) — no duplicar la constante en dos lugares.
+export const ICONO_TIPO: Record<TipoCatalogoItem, typeof IconBox> = {
   producto: IconBox,
   servicio: IconWrench,
   kit: IconLayers,
