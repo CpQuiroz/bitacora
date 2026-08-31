@@ -103,9 +103,28 @@ async function revisarCotizacionesPorVencer(empresaId: string) {
   }
 }
 
+// Bloque I: "expirado" es un estado real y persistido (no solo un
+// cálculo del frontend, como era antes — ver docs/5_Estados_Cotizacion.mermaid).
+// Sin cron en este proyecto: se revisa cada vez que se carga el
+// listado, mismo patrón que revisarCotizacionesPorVencer() de acá
+// abajo — a diferencia de esa, esta SÍ se espera (await) antes de
+// responder, para que el listado que se devuelve ya refleje el estado
+// correcto en vez de quedar un tick atrás.
+async function marcarCotizacionesExpiradas(empresaId: string) {
+  const hoy = new Date().toISOString().slice(0, 10);
+  await supabase
+    .from("presupuestos")
+    .update({ estado: "expirado" })
+    .eq("empresa_id", empresaId)
+    .in("estado", ["borrador", "enviado"])
+    .not("fecha_vencimiento", "is", null)
+    .lt("fecha_vencimiento", hoy);
+}
+
 cotizacionesRouter.get(
   "/",
   ah<RequestConEmpresa>(async (req, res) => {
+    await marcarCotizacionesExpiradas(req.empresaId!);
     if (req.rol === "admin" || req.rol === "supervisor") {
       revisarCotizacionesPorVencer(req.empresaId!).catch((err) => console.error("Error revisando cotizaciones por vencer:", err));
     }
@@ -127,6 +146,7 @@ cotizacionesRouter.get(
 cotizacionesRouter.get(
   "/:id",
   ah<RequestConEmpresa>(async (req, res) => {
+    await marcarCotizacionesExpiradas(req.empresaId!);
     const { data: cotizacion, error } = await supabase
       .from("presupuestos")
       .select("*, cliente_info:clientes(id, nombre, correo, telefono, direccion)")

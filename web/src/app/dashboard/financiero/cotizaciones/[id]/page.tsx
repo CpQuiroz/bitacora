@@ -19,7 +19,6 @@ type Linea = { catalogo_item_id: string | null; descripcion: string; cantidad: s
 
 const ESTADOS: EstadoPresupuesto[] = ["borrador", "enviado", "aprobado", "rechazado"];
 const IVA_TASA = 0.19;
-const HOY = () => new Date().toISOString().slice(0, 10);
 
 export default function CotizacionDetallePage() {
   const params = useParams<{ id: string }>();
@@ -248,9 +247,6 @@ export default function CotizacionDetallePage() {
   }
   if (!cotizacion) return null;
 
-  const vencida = cotizacion.estado === "enviado" && cotizacion.fecha_vencimiento != null && cotizacion.fecha_vencimiento < HOY();
-  const estadoMostrado = vencida ? "vencida" : cotizacion.estado;
-
   return (
     <DashboardShell usuario={usuario}>
       <Link href="/dashboard/financiero/cotizaciones" className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-brand hover:underline">
@@ -263,7 +259,7 @@ export default function CotizacionDetallePage() {
         subtitle={cotizacion.cliente_info?.nombre ?? "—"}
         action={
           <div className="flex items-center gap-2">
-            <Badge value={estadoMostrado} />
+            <Badge value={cotizacion.estado} />
             {!cotizacion.trabajo_id && (
               <Button type="button" variant="danger" onClick={onEliminar} disabled={eliminando}>
                 {eliminando ? "Eliminando…" : "Eliminar"}

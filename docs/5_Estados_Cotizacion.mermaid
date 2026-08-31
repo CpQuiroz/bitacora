@@ -11,6 +11,15 @@ stateDiagram-v2
     Rechazada --> [*]
     ConvertidaEnOS --> [*]
 
+    %% Bloque I: "Expirado" es un estado real, marcado automáticamente
+    %% (sin cron — se revisa al cargar el listado o la ficha, ver
+    %% marcarCotizacionesExpiradas() en cotizaciones.ts) cuando pasa
+    %% fecha_vencimiento sin que haya sido aprobada ni rechazada. Antes
+    %% esto solo se calculaba en el frontend ("vencida"), sin persistir.
+    Borrador --> Expirada: pasó fecha_vencimiento
+    Enviada --> Expirada: pasó fecha_vencimiento
+    Expirada --> [*]
+
     %% Nota (hallazgo del informe UX):
     %% Al convertir en OS, hoy no se muestra el folio de la OS
     %% resultante en la tarjeta de la cotización — solo un link genérico.
