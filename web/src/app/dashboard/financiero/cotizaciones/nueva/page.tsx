@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { Suspense, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { Cliente } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
@@ -16,7 +16,7 @@ type Linea = { catalogo_item_id: string | null; descripcion: string; cantidad: s
 
 const IVA_TASA = 0.19;
 
-export default function NuevaCotizacionPage() {
+function NuevaCotizacionContenido() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [usuario, setUsuario] = useState<UsuarioShell | null>(null);
@@ -226,5 +226,15 @@ export default function NuevaCotizacionPage() {
         </div>
       </form>
     </DashboardShell>
+  );
+}
+
+// useSearchParams() necesita un boundary de Suspense para el build de
+// producción (si no, Next aborta con "missing-suspense-with-csr-bailout").
+export default function NuevaCotizacionPage() {
+  return (
+    <Suspense fallback={null}>
+      <NuevaCotizacionContenido />
+    </Suspense>
   );
 }

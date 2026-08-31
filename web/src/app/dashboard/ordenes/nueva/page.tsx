@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { Suspense, useEffect, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { Cliente, Equipo, Prioridad, TipoOS, TipoTrabajo, Usuario } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
@@ -29,7 +29,7 @@ const ITEM_VACIO: ItemOS = { catalogo_item_id: null, descripcion: "", cantidad: 
 
 const PRIORIDADES: Prioridad[] = ["alta", "media", "baja"];
 
-export default function NuevaOrdenServicioPage() {
+function NuevaOrdenServicioContenido() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [usuario, setUsuario] = useState<UsuarioShell | null>(null);
@@ -403,5 +403,15 @@ export default function NuevaOrdenServicioPage() {
         </form>
       )}
     </DashboardShell>
+  );
+}
+
+// useSearchParams() necesita un boundary de Suspense para el build de
+// producción (si no, Next aborta con "missing-suspense-with-csr-bailout").
+export default function NuevaOrdenServicioPage() {
+  return (
+    <Suspense fallback={null}>
+      <NuevaOrdenServicioContenido />
+    </Suspense>
   );
 }

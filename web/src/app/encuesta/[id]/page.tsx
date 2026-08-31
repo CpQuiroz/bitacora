@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { AuthLayout } from "@/components/AuthLayout";
 import { ErrorText } from "@/components/ui";
@@ -8,7 +8,7 @@ import { IconStar } from "@/components/icons";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
-export default function EncuestaPage() {
+function EncuestaContenido() {
   const params = useParams<{ id: string }>();
   const searchParams = useSearchParams();
 
@@ -72,5 +72,15 @@ export default function EncuestaPage() {
         </div>
       )}
     </AuthLayout>
+  );
+}
+
+// useSearchParams() necesita un boundary de Suspense para el build de
+// producción (si no, Next aborta con "missing-suspense-with-csr-bailout").
+export default function EncuestaPage() {
+  return (
+    <Suspense fallback={null}>
+      <EncuestaContenido />
+    </Suspense>
   );
 }

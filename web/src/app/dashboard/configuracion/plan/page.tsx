@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { EmpresaPlanHistorial, Plan, Suscripcion, SuscripcionCobro } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
@@ -50,7 +50,7 @@ type InfoPlan = {
   historial: EmpresaPlanHistorial[];
 };
 
-export default function PlanPage() {
+function PlanContenido() {
   const { usuario } = useConfiguracion();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -466,5 +466,15 @@ export default function PlanPage() {
         </Card>
       )}
     </div>
+  );
+}
+
+// useSearchParams() necesita un boundary de Suspense para el build de
+// producción (si no, Next aborta con "missing-suspense-with-csr-bailout").
+export default function PlanPage() {
+  return (
+    <Suspense fallback={null}>
+      <PlanContenido />
+    </Suspense>
   );
 }

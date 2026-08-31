@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
@@ -41,7 +41,7 @@ function agrupacionValida(valor: string | null): Agrupacion {
   return AGRUPACIONES.some((a) => a.valor === valor) ? (valor as Agrupacion) : "categoria";
 }
 
-export default function InformeGastosPage() {
+function InformeGastosContenido() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { desde, hasta, refreshKey, usuario, registrarExportCsv } = useInformes();
@@ -151,5 +151,15 @@ export default function InformeGastosPage() {
         </>
       )}
     </div>
+  );
+}
+
+// useSearchParams() necesita un boundary de Suspense para el build de
+// producción (si no, Next aborta con "missing-suspense-with-csr-bailout").
+export default function InformeGastosPage() {
+  return (
+    <Suspense fallback={null}>
+      <InformeGastosContenido />
+    </Suspense>
   );
 }

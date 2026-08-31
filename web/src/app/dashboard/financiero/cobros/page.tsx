@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { Suspense, useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { Cliente, EstadoFactura, Factura, MedioPago, Trabajo } from "@bitacora/shared";
@@ -25,7 +25,7 @@ const MEDIOS_ETIQUETA: Record<MedioPago, string> = {
 
 const HOY = () => new Date().toISOString().slice(0, 10);
 
-export default function CobrosPage() {
+function CobrosContenido() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [usuario, setUsuario] = useState<UsuarioShell | null>(null);
@@ -468,5 +468,15 @@ export default function CobrosPage() {
         </Card>
       )}
     </DashboardShell>
+  );
+}
+
+// useSearchParams() necesita un boundary de Suspense para el build de
+// producción (si no, Next aborta con "missing-suspense-with-csr-bailout").
+export default function CobrosPage() {
+  return (
+    <Suspense fallback={null}>
+      <CobrosContenido />
+    </Suspense>
   );
 }

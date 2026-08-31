@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AuthLayout } from "@/components/AuthLayout";
 import { ErrorText } from "@/components/ui";
@@ -12,7 +12,7 @@ const RUTA_POR_ENTIDAD: Record<string, (id: string) => string> = {
   factura: () => `/portal/cobros`,
 };
 
-export default function AccederPortalPage() {
+function AccederPortalContenido() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
@@ -53,5 +53,16 @@ export default function AccederPortalPage() {
     <AuthLayout title="Entrando…" subtitle="Un momento, estamos verificando tu link.">
       <div />
     </AuthLayout>
+  );
+}
+
+// useSearchParams() obliga a un boundary de Suspense para el build de
+// producción (si no, Next aborta el prerender con "missing-suspense-
+// with-csr-bailout"). El contenido real va adentro.
+export default function AccederPortalPage() {
+  return (
+    <Suspense fallback={null}>
+      <AccederPortalContenido />
+    </Suspense>
   );
 }
