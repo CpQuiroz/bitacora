@@ -16,8 +16,23 @@ type DashboardEquipos = {
   garantias_por_vencer: number;
   equipos_por_categoria: { categoria: string; cantidad: number }[];
   proximas_mantenciones: { id: string; proxima_fecha: string; equipo_nombre: string }[];
+  documentos_por_vencer: {
+    id: string;
+    equipo_nombre: string;
+    tipo_nombre: string;
+    fecha_vencimiento: string;
+    estado: "vigente" | "por_vencer" | "vencido" | null;
+  }[];
   equipos_con_mas_os: { equipo_id: string; nombre: string; cantidad_os: number }[];
 };
+
+// Días entre hoy y la fecha de vencimiento (negativo = ya vencido).
+function diasRestantes(fecha: string): number {
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+  const venc = new Date(fecha + "T00:00:00");
+  return Math.round((venc.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
+}
 
 export default function EquiposDashboardPage() {
   const router = useRouter();
@@ -179,6 +194,37 @@ export default function EquiposDashboardPage() {
                     <span className="text-muted">{p.proxima_fecha}</span>
                   </div>
                 ))}
+              </div>
+            )}
+          </Card>
+
+          <Card>
+            <h2 className="mb-4 text-sm font-semibold text-foreground">Documentos de equipos por vencer</h2>
+            {datos.documentos_por_vencer.length === 0 ? (
+              <div className="flex flex-col items-center gap-2 py-6 text-center">
+                <IconClock className="h-6 w-6 text-muted" />
+                <p className="text-sm text-muted">Nada por vencer en los próximos 30 días.</p>
+              </div>
+            ) : (
+              <div className="flex flex-col divide-y divide-border">
+                {datos.documentos_por_vencer.map((d) => {
+                  const dias = diasRestantes(d.fecha_vencimiento);
+                  const vencido = dias < 0;
+                  return (
+                    <div key={d.id} className="flex items-center justify-between gap-3 py-2 text-sm">
+                      <div className="min-w-0">
+                        <span className="text-foreground">{d.equipo_nombre}</span>
+                        <span className="text-muted"> · {d.tipo_nombre}</span>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-3">
+                        <span className="text-muted">{d.fecha_vencimiento}</span>
+                        <span className={`font-medium ${vencido ? "text-danger" : dias <= 7 ? "text-warning" : "text-muted"}`}>
+                          {vencido ? "Vencido" : dias === 0 ? "Vence hoy" : `${dias} día${dias === 1 ? "" : "s"}`}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </Card>

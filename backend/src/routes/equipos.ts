@@ -1,5 +1,6 @@
 import { Router } from "express";
 import type { Equipo } from "@bitacora/shared";
+import { estadoDocumento } from "@bitacora/shared";
 import { supabase } from "../supabase";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
@@ -85,7 +86,7 @@ equiposRouter.get(
     const hoy = new Date().toISOString().slice(0, 10);
     const en30dias = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
-    const [{ data: equipos }, { data: planes }, { data: planesProximos }, { data: trabajos }] = await Promise.all([
+    const [{ data: equipos }, { data: planes }, { data: planesProximos }, { data: trabajos }, { data: docsPorVencer }] = await Promise.all([
       supabase.from("equipos").select("id, nombre, categoria, activo, garantia_vencimiento").eq("empresa_id", empresaId),
       supabase.from("planes_mantencion").select("id").eq("empresa_id", empresaId).eq("activo", true),
       supabase
@@ -97,6 +98,18 @@ equiposRouter.get(
         .lte("proxima_fecha", en30dias)
         .order("proxima_fecha", { ascending: true }),
       supabase.from("trabajos").select("equipo_id").eq("empresa_id", empresaId).not("equipo_id", "is", null),
+      // Documentos de equipos próximos a vencer — misma ventana que Flota
+      // → "Documentos por vencer" (documentos.ts, GET /por-vencer): sin
+      // piso inferior, así entran también los ya vencidos. Solo
+      // entidad_tipo="vehiculo" (los de colaboradores viven en Flota).
+      supabase
+        .from("documentos")
+        .select("id, entidad_id, fecha_vencimiento, tipo:tipos_documento(nombre)")
+        .eq("empresa_id", empresaId)
+        .eq("entidad_tipo", "vehiculo")
+        .not("fecha_vencimiento", "is", null)
+        .lte("fecha_vencimiento", en30dias)
+        .order("fecha_vencimiento", { ascending: true }),
     ]);
 
     const porCategoria = new Map<string, number>();
@@ -128,6 +141,13 @@ equiposRouter.get(
         id: p.id,
         proxima_fecha: p.proxima_fecha,
         equipo_nombre: (p as unknown as { equipo: { nombre: string } | null }).equipo?.nombre ?? "—",
+      })),
+      documentos_por_vencer: (docsPorVencer ?? []).map((d) => ({
+        id: d.id,
+        equipo_nombre: nombrePorEquipo.get(d.entidad_id) ?? "—",
+        tipo_nombre: (d as unknown as { tipo: { nombre: string } | null }).tipo?.nombre ?? "—",
+        fecha_vencimiento: d.fecha_vencimiento,
+        estado: estadoDocumento(d.fecha_vencimiento),
       })),
       equipos_con_mas_os: equiposConMasOs,
     });
