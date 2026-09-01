@@ -22,7 +22,9 @@ Dev sigue en un Supabase aparte (ref `pruwvpnlvrvgtmpetlsr`) + servidores locale
 
 ### Migraciones — estado en prod
 
-**Última migración aplicada a producción: `61` (verificado 1-sep-2026 con `supabase migration list` + consulta directa a `information_schema`).** Actualizar este número a mano cada vez que se aplique una migración nueva a prod — es la única fuente de verdad rápida hasta que exista el chequeo de CI (ver más abajo).
+**Última migración aplicada a producción: `62` (1-sep-2026, `supabase db push` con el CLI linkeado a prod; CI de migraciones en verde).** Actualizar este número a mano cada vez que se aplique una migración nueva a prod.
+
+> ⚠️ **El tracking de migraciones de DEV (`pruwvpnlvrvgtmpetlsr`) está desincronizado a partir de la 62.** La `62_tareas_trabajo_id.sql` se aplicó a dev corriendo su SQL a mano en el SQL Editor de Supabase (el CLI solo está linkeado a prod y no se tiene el password de la DB de dev). El schema de dev **sí** tiene la columna, pero `supabase_migrations.schema_migrations` en dev **no** tiene la fila de la 62. Consecuencia: si algún día se linkea el CLI a dev y se corre `db push`, va a intentar re-aplicar la 62 y fallar con "column already exists". Fix cuando pase: `supabase migration repair --status applied 62` (con el CLI linkeado a dev) antes del `db push`.
 
 > ⚠️ **Incidente real (1-sep-2026):** un script de verificación corrió sin `DOTENV_CONFIG_PATH`, leyó `backend/.env` (dev) en vez de `.env.produccion.local`, y esa lectura equivocada llevó a marcar las migraciones 54-59 como aplicadas en prod (`migration repair`) sin que su SQL hubiera corrido. Prod quedó con el schema real de 01-53 pero el tracking mintiendo hasta 59, hasta que un error real de la app (`clientes.fecha_nacimiento` no encontrado) lo destapó. Se corrigió con `migration repair --status reverted` + `db push --include-all`. Mitigaciones agregadas:
 > - `backend/src/env.ts` loguea el ref de Supabase al cargar, en cualquier script o al arrancar el server — nunca más se debería adivinar contra qué proyecto se está actuando.
