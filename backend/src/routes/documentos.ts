@@ -59,8 +59,12 @@ documentosRouter.get(
   })
 );
 
-// Vista consolidada — solo admin/supervisor (flota). Vencidos primero,
-// después por días restantes — para no tener que entrar ficha por ficha.
+// Vista consolidada de TODOS los documentos (colaboradores + vehículos) —
+// solo admin/supervisor (flota). Ordenados por fecha de vencimiento
+// ascendente (los que no vencen van al final). El filtro "Por vencer" /
+// "Vencidos" se aplica en el frontend sobre `estado`, que usa la misma
+// ventana de 30 días — ver estadoDocumento() en @bitacora/shared.
+// La ruta mantiene el nombre "/por-vencer" por compatibilidad.
 documentosRouter.get(
   "/por-vencer",
   ah<RequestConEmpresa>(async (req, res) => {
@@ -68,15 +72,12 @@ documentosRouter.get(
       res.status(403).json({ error: "No tienes permiso para acceder a este módulo" });
       return;
     }
-    const en30dias = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
     const { data, error } = await supabase
       .from("documentos")
       .select("*, tipo:tipos_documento(nombre)")
       .eq("empresa_id", req.empresaId!)
-      .not("fecha_vencimiento", "is", null)
-      .lte("fecha_vencimiento", en30dias)
-      .order("fecha_vencimiento", { ascending: true });
+      .order("fecha_vencimiento", { ascending: true, nullsFirst: false });
     if (error) {
       res.status(500).json({ error: error.message });
       return;

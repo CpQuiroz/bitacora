@@ -55,6 +55,23 @@ Sin esos dos secrets el workflow falla al correr (no puede vincularse). Corre en
    correo de admin **que no exista todavía** en `auth.users` (ver §4, issue conocido).
 3. Que llegue el correo de invitación, activar la cuenta del admin, entrar al dashboard.
 
+### Storage — buckets que prod necesita
+
+`backend/src/storage.ts` usa **3 buckets** y hoy prod (`yjbskbskyadxjooxngjv`) solo
+tiene `bitacora_prod`. Crear los otros 2 a mano en Supabase → Storage → New bucket
+(el backend usa la `service_role` key vía el endpoint S3, así que no hace falta tocar
+políticas RLS de storage):
+
+| Bucket | Público | Lo usa | Cómo se define en el código |
+|---|---|---|---|
+| `bitacora_prod` | Privado | fotos de trabajos, firmas | env var `STORAGE_BUCKET` |
+| `anexos` | **Privado** | anexos de tareas, comprobantes de gastos, PDF de cotización/OS, **documentos de colaboradores y vehículos**, foto de guía | hardcodeado (`BUCKET_ANEXOS`) |
+| `logos` | **Público** | logo de empresa, foto de perfil | hardcodeado (`BUCKET_LOGOS`) |
+
+> Síntoma cuando falta uno: error **"Bucket not found"** al subir el archivo
+> correspondiente (ej. "Guardar documento" en la ficha de un colaborador).
+> Dev (`pruwvpnlvrvgtmpetlsr`) ya tiene los 3 — por eso en localhost no se ve.
+
 ---
 
 ## 1. Arquitectura de despliegue
