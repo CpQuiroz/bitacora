@@ -30,7 +30,7 @@ export default function SuperAdminLoginPage() {
     }
     const { token } = await res.json();
     guardarTokenSuperAdmin(token);
-    router.push("/superadmin");
+    router.push("/superadmin/resumen");
   }
 
   return (

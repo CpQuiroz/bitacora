@@ -172,6 +172,50 @@ superadminRouter.post(
   })
 );
 
+// ── Dashboard global ─────────────────────────────────────────────────
+// Vista agregada de todo el negocio (MRR aproximado, churn, uso,
+// outliers de costo). El cálculo real vive en la función SQL
+// superadmin_metricas_calcular() (migración 60). Acá solo se maneja el
+// cache: se devuelve el snapshot guardado si tiene menos de 15 min, si
+// no se recalcula y se re-guarda. Sin cron — el refresco lo dispara
+// quien abra el panel.
+const METRICAS_TTL_MS = 15 * 60 * 1000;
+
+superadminRouter.get(
+  "/metricas",
+  requiereSuperAdmin,
+  ah<RequestConSuperAdmin>(async (req, res) => {
+    await registrarAuditoria(req.superAdminId!, "ver_metricas_globales", { ip: req.ip ?? null });
+
+    const { data: cache } = await supabase
+      .from("superadmin_metricas_cache")
+      .select("datos, generado_en")
+      .eq("id", 1)
+      .maybeSingle();
+
+    if (cache && Date.now() - new Date(cache.generado_en).getTime() < METRICAS_TTL_MS) {
+      res.json({ ...(cache.datos as Record<string, unknown>), generado_en: cache.generado_en, cacheado: true });
+      return;
+    }
+
+    const { data: calculo, error } = await supabase.rpc("superadmin_metricas_calcular");
+    if (error) {
+      // Si falla el recálculo pero hay un snapshot viejo, servirlo igual
+      // (mejor un dato de hace un rato que un 500).
+      if (cache) {
+        res.json({ ...(cache.datos as Record<string, unknown>), generado_en: cache.generado_en, cacheado: true, obsoleto: true });
+        return;
+      }
+      res.status(500).json({ error: error.message });
+      return;
+    }
+
+    const generadoEn = new Date().toISOString();
+    await supabase.from("superadmin_metricas_cache").upsert({ id: 1, datos: calculo, generado_en: generadoEn });
+    res.json({ ...(calculo as Record<string, unknown>), generado_en: generadoEn, cacheado: false });
+  })
+);
+
 superadminRouter.get(
   "/empresas",
   requiereSuperAdmin,

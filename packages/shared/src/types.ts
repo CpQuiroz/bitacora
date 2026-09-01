@@ -128,6 +128,31 @@ export type IaUso = {
   creado_en: string;
 };
 
+// Snapshot cacheado del dashboard global del Super-Admin (una sola fila,
+// id = 1). Ver migración 60 y GET /api/superadmin/metricas.
+export type SuperadminMetricasCache = {
+  id: number;
+  datos: MetricasSuperAdmin;
+  generado_en: string;
+};
+
+// Forma del jsonb que devuelve superadmin_metricas_calcular() + los
+// campos que agrega el endpoint (generado_en, cacheado).
+export type MetricasSuperAdmin = {
+  empresas_por_estado_suscripcion: Record<string, number>;
+  empresas_por_estado_operativo: Record<string, number>;
+  empresas_por_rubro: Record<string, number>;
+  total_empresas: number;
+  mrr: { mes_actual: number; mes_anterior: number; variacion_pct: number | null };
+  churn: { canceladas_30d: number; base: number; tasa_pct: number | null };
+  uso_mes: { os_creadas: number; tokens_ia: number; storage_bytes_total: number };
+  top_ia: { id: string; nombre: string; tokens: number }[];
+  top_storage: { id: string; nombre: string; bytes: number }[];
+  generado_en: string;
+  cacheado: boolean;
+  obsoleto?: boolean;
+};
+
 export type ErrorBackend = {
   id: string;
   empresa_id: string | null;
@@ -1122,6 +1147,7 @@ export type Database = {
       tareas: Tabla<Tarea>;
       super_admins: Tabla<SuperAdmin>;
       super_admin_auditoria: Tabla<SuperAdminAuditoria>;
+      superadmin_metricas_cache: Tabla<SuperadminMetricasCache>;
       ia_uso: Tabla<IaUso>;
       errores_backend: Tabla<ErrorBackend>;
       empresa_modulos: Tabla<EmpresaModulo>;
@@ -1158,6 +1184,10 @@ export type Database = {
       siguiente_numero_cotizacion: {
         Args: { p_empresa_id: string };
         Returns: number;
+      };
+      superadmin_metricas_calcular: {
+        Args: Record<string, never>;
+        Returns: MetricasSuperAdmin;
       };
       trabajos_del_dia: {
         Args: {
