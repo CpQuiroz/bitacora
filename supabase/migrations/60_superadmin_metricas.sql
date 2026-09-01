@@ -19,13 +19,11 @@ create table superadmin_metricas_cache (
 -- el backend "normal" (con empresa_actual()) nunca toca esta tabla.
 
 -- Calcula todas las métricas del dashboard global en una sola pasada.
--- security definer + search_path fijo por consistencia con las demás
--- funciones del proyecto; en la práctica el backend la llama con la
--- service role, que ya ve todas las filas.
+-- security invoker (default): el único que la llama es el backend con la
+-- service role, que ya ve todas las filas — no hace falta definer.
 create or replace function superadmin_metricas_calcular()
 returns jsonb
 language plpgsql
-security definer
 set search_path = public
 as $$
 declare
