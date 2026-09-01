@@ -5,16 +5,11 @@ import { urlFirmadaFotoGuia } from "../storage";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
 import { requiereRol } from "../permisos";
+import { calcularMontos } from "../viajesMontos";
 
 export const viajesRouter = Router();
 
-const IVA_TASA = 0.19;
 const ESTADOS: EstadoViaje[] = ["borrador", "confirmado", "facturado"];
-
-function calcularMontos(subtotalNum: number, aplicaIva: boolean) {
-  const iva = aplicaIva ? Math.round(subtotalNum * IVA_TASA) : 0;
-  return { subtotal: Math.round(subtotalNum), iva, total: Math.round(subtotalNum) + iva };
-}
 
 viajesRouter.get(
   "/",

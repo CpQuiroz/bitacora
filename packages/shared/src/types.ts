@@ -920,6 +920,34 @@ export type MensajeWhatsappProcesado = {
   procesado_en: string;
 };
 
+// Estado de una conversación en curso del bot de WhatsApp (flujo
+// "nuevo viaje" del chofer). Una fila por número de teléfono => cada
+// chofer tiene a lo más una conversación activa. Solo la toca el
+// backend, nunca se expone por API.
+export type PasoConversacionWhatsapp =
+  | "cliente"
+  | "cliente_elegir"
+  | "guia"
+  | "origen"
+  | "destino"
+  | "equipo"
+  | "equipo_elegir"
+  | "km"
+  | "monto"
+  | "iva"
+  | "confirmar";
+
+export type ConversacionWhatsapp = {
+  telefono: string;
+  empresa_id: string;
+  usuario_id: string;
+  flujo: "viaje";
+  paso: PasoConversacionWhatsapp;
+  datos: Record<string, unknown>;
+  creado_en: string;
+  actualizado_en: string;
+};
+
 export type RolMensajeAsistente = "user" | "assistant";
 
 export type MensajeAsistente = {
@@ -1138,6 +1166,7 @@ export type Database = {
       asistente_mensajes: Tabla<MensajeAsistente>;
       viajes: Tabla<Viaje>;
       whatsapp_mensajes_procesados: Tabla<MensajeWhatsappProcesado>;
+      whatsapp_conversaciones: Tabla<ConversacionWhatsapp>;
       auditoria_usuarios: Tabla<AuditoriaUsuario>;
       accesos_usuario: Tabla<AccesoUsuario>;
       unidades_medida: Tabla<UnidadMedida>;

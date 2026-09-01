@@ -12,6 +12,7 @@ import {
   verificarFirmaWebhook,
   type MensajeEntranteWhatsapp,
 } from "../whatsapp";
+import { hayConversacionActiva, manejarConversacionViaje } from "../whatsappFlujoViaje";
 
 export const whatsappRouter = Router();
 
@@ -126,6 +127,17 @@ async function manejarFoto(chofer: { id: string; empresa_id: string }, mensaje: 
 
 async function manejarTexto(chofer: { id: string; empresa_id: string }, mensaje: MensajeEntranteWhatsapp, desde: string) {
   const texto = mensaje.text?.body ?? "";
+  const telefono = normalizarTelefono(desde);
+
+  // Flujo conversacional "nuevo viaje" — tiene prioridad. Devuelve null
+  // si no hay conversación activa y el texto no es un disparador; ahí se
+  // sigue con el manejo legado (foto de guía + km) de abajo.
+  const respuestasFlujo = await manejarConversacionViaje(chofer, telefono, texto);
+  if (respuestasFlujo) {
+    for (const respuesta of respuestasFlujo) await enviarMensajeWhatsapp(desde, respuesta);
+    return;
+  }
+
   const match = texto.match(/(\d{2,7})\D+(\d{2,7})/);
 
   const { data: pendiente } = await supabase
@@ -143,7 +155,7 @@ async function manejarTexto(chofer: { id: string; empresa_id: string }, mensaje:
       desde,
       pendiente
         ? "No entendí los kilómetros — mándalos como dos números, ej: 45230 / 45410"
-        : "Para registrar un viaje, primero mándame una foto de la guía de despacho 📄"
+        : "No te entendí 🤔\n\nPara registrar un viaje paso a paso, escribe *nuevo viaje*.\nO mándame una foto de la guía de despacho 📄 y la leo yo."
     );
     return;
   }
@@ -200,7 +212,17 @@ whatsappRouter.post(
         }
 
         if (mensaje.type === "image") {
-          await manejarFoto(chofer, mensaje, desde);
+          // Si hay un "nuevo viaje" a medio llenar, una foto no debe
+          // disparar el flujo legado de OCR en paralelo — se le pide al
+          // chofer que termine (o cancele) la conversación primero.
+          if (await hayConversacionActiva(normalizarTelefono(desde))) {
+            await enviarMensajeWhatsapp(
+              desde,
+              "Estoy registrando tu viaje paso a paso. Mándame el dato que te pedí, o escribe *cancelar* para descartarlo."
+            );
+          } else {
+            await manejarFoto(chofer, mensaje, desde);
+          }
         } else if (mensaje.type === "text") {
           await manejarTexto(chofer, mensaje, desde);
         }
@@ -210,3 +232,51 @@ whatsappRouter.post(
     }
   })
 );
+
+// ------------------------------------------------------------
+// Simulador — SOLO fuera de producción. Simula un mensaje de texto
+// entrante y devuelve las respuestas que el bot mandaría, sin pasar por
+// Meta ni necesitar credenciales. Para probar el flujo conversacional
+// "nuevo viaje" de punta a punta.
+//
+//   curl -s localhost:8080/api/whatsapp/_simular \
+//     -H 'content-type: application/json' \
+//     -d '{"telefono":"+56 9 1234 5678","texto":"nuevo viaje"}'
+//
+// Mantén el mismo "telefono" entre llamadas para continuar la misma
+// conversación (el estado vive en whatsapp_conversaciones).
+// ------------------------------------------------------------
+if (process.env.NODE_ENV !== "production") {
+  whatsappRouter.post(
+    "/_simular",
+    ah(async (req, res) => {
+      const { telefono, texto } = (req.body ?? {}) as { telefono?: unknown; texto?: unknown };
+      if (typeof telefono !== "string" || typeof texto !== "string") {
+        res.status(400).json({ error: 'Manda { "telefono": "...", "texto": "..." }' });
+        return;
+      }
+      const tel = normalizarTelefono(telefono);
+      const chofer = await buscarChofer(tel);
+      if (!chofer) {
+        res.json({
+          telefono: tel,
+          chofer: null,
+          respuestas: [
+            "(número no vinculado a ningún usuario con rol colaborador — en producción el bot solo lo loguea y no responde)",
+          ],
+        });
+        return;
+      }
+      const respuestas = await manejarConversacionViaje(chofer, tel, texto);
+      res.json({
+        telefono: tel,
+        chofer: { id: chofer.id, empresa_id: chofer.empresa_id },
+        tomado_por_flujo: respuestas !== null,
+        respuestas:
+          respuestas ?? [
+            "(el flujo conversacional no tomó el mensaje — en producción caería al manejo legado de foto de guía + km)",
+          ],
+      });
+    })
+  );
+}
