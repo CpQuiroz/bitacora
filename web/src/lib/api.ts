@@ -1,10 +1,15 @@
 import { supabase } from "./supabase";
+import { obtenerImpersonacion } from "./impersonacion";
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
 export async function apiFetch(path: string, options: RequestInit = {}) {
-  const { data } = await supabase.auth.getSession();
-  const token = data.session?.access_token;
+  // Si hay una sesión de impersonación activa (Super-Admin viendo como
+  // un usuario), TODO el dashboard usa ese token en vez del de Supabase.
+  const imp = obtenerImpersonacion();
+  const token = imp
+    ? imp.token
+    : (await supabase.auth.getSession()).data.session?.access_token;
 
   const headers = new Headers(options.headers);
   // FormData (subida de archivos) necesita que el navegador calcule su

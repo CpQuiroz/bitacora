@@ -5,9 +5,10 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import type { EstadoEmpresa, Plan, Rol, Suscripcion, SuscripcionCobro } from "@bitacora/shared";
 import { SuperAdminShell } from "@/components/SuperAdminShell";
-import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select } from "@/components/ui";
+import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, Textarea } from "@/components/ui";
 import { IconChevronLeft, IconShield } from "@/components/icons";
 import { obtenerTokenSuperAdmin, superadminFetch } from "@/lib/superadminApi";
+import { guardarImpersonacion } from "@/lib/impersonacion";
 import { ETIQUETA_MODULO } from "@/lib/etiquetasModulo";
 
 const ESTADOS: EstadoEmpresa[] = ["activa", "suspendida", "dada_de_baja"];
@@ -102,6 +103,11 @@ export default function SuperAdminSaludEmpresaPage() {
   const [errorInvitar, setErrorInvitar] = useState<string | null>(null);
   const [avisoInvitar, setAvisoInvitar] = useState<string | null>(null);
 
+  const [impersonarUsuario, setImpersonarUsuario] = useState<{ id: string; nombre: string } | null>(null);
+  const [justificacionImp, setJustificacionImp] = useState("");
+  const [iniciandoImp, setIniciandoImp] = useState(false);
+  const [errorImp, setErrorImp] = useState<string | null>(null);
+
   async function cargar() {
     const res = await superadminFetch(`/api/superadmin/empresas/${params.id}/salud`);
     if (!res.ok) {
@@ -171,6 +177,25 @@ export default function SuperAdminSaludEmpresaPage() {
     setNuevoCorreo("");
     setNuevoRol("colaborador");
     cargarUsuarios();
+  }
+
+  async function onIniciarImpersonacion() {
+    if (!impersonarUsuario) return;
+    setErrorImp(null);
+    setIniciandoImp(true);
+    const res = await superadminFetch(`/api/superadmin/empresas/${params.id}/usuarios/${impersonarUsuario.id}/impersonar`, {
+      method: "POST",
+      body: JSON.stringify({ justificacion: justificacionImp }),
+    });
+    setIniciandoImp(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setErrorImp(body.error ?? "No se pudo iniciar la impersonación");
+      return;
+    }
+    const { token, expira_en, usuario_nombre } = await res.json();
+    guardarImpersonacion({ token, expira: Date.parse(expira_en), usuario_nombre });
+    window.location.href = "/dashboard";
   }
 
   async function onRestablecerPassword(usuarioId: string, nombre: string) {
@@ -680,6 +705,44 @@ export default function SuperAdminSaludEmpresaPage() {
               </Button>
             </form>
 
+            {impersonarUsuario && (
+              <div className="mb-4 rounded-lg border border-danger/40 bg-danger-soft p-3">
+                <p className="text-sm font-semibold text-foreground">Impersonar a {impersonarUsuario.nombre}</p>
+                <p className="mt-1 text-xs text-muted">
+                  Vas a entrar a Bitácora viendo lo que ve {impersonarUsuario.nombre}, sin conocer ni cambiar su contraseña. La sesión
+                  dura 30 minutos, las acciones destructivas quedan bloqueadas, y todo (inicio y fin) queda registrado con esta
+                  justificación en la auditoría.
+                </p>
+                <div className="mt-3">
+                  <Label>Justificación (obligatoria, mín. 20 caracteres)</Label>
+                  <Textarea
+                    rows={2}
+                    value={justificacionImp}
+                    onChange={(e) => setJustificacionImp(e.target.value)}
+                    placeholder="Ej: el usuario reporta que no puede firmar la OS #142 desde el celular, replicando para ver el error"
+                  />
+                </div>
+                {errorImp && (
+                  <div className="mt-2">
+                    <ErrorText>{errorImp}</ErrorText>
+                  </div>
+                )}
+                <div className="mt-3 flex gap-2">
+                  <Button
+                    type="button"
+                    variant="danger"
+                    disabled={iniciandoImp || justificacionImp.trim().length < 20}
+                    onClick={onIniciarImpersonacion}
+                  >
+                    {iniciandoImp ? "Entrando…" : `Entrar como ${impersonarUsuario.nombre}`}
+                  </Button>
+                  <Button type="button" variant="ghost" onClick={() => setImpersonarUsuario(null)}>
+                    Cancelar
+                  </Button>
+                </div>
+              </div>
+            )}
+
             {passwordGenerada && (
               <div className="mb-3 rounded-lg border border-brand/40 bg-brand-soft p-3 text-sm">
                 <p className="font-medium text-foreground">
@@ -727,6 +790,18 @@ export default function SuperAdminSaludEmpresaPage() {
                         <td className="py-2 pr-4 text-muted">{u.mfa_activado ? `Activo (${u.mfa_metodo})` : "Inactivo"}</td>
                         <td className="py-2">
                           <div className="flex flex-wrap justify-end gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              disabled={!u.activo}
+                              onClick={() => {
+                                setImpersonarUsuario({ id: u.id, nombre: u.nombre });
+                                setJustificacionImp("");
+                                setErrorImp(null);
+                              }}
+                            >
+                              Impersonar
+                            </Button>
                             <Button
                               type="button"
                               variant="outline"

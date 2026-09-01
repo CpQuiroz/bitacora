@@ -47,6 +47,47 @@ export function verificarTokenSuperAdmin(token: string): { superAdminId: string 
   }
 }
 
+// ── Impersonación ────────────────────────────────────────────────────
+// Token que le permite a un super-admin "entrar como" un usuario de una
+// empresa para debuggear. NO es una sesión de Supabase — es el mismo
+// mecanismo HMAC de arriba, con dos diferencias deliberadas: (1) vida
+// corta (30 min, no las 12h de la sesión de super-admin ni la ~1h de la
+// de un usuario normal); (2) prefijo "imp." para que backend/src/auth.ts
+// lo distinga barato antes de intentar validarlo contra Supabase.
+// backend/src/auth.ts lo verifica y, si es válido, deja req.userId = el
+// usuario impersonado + req.impersonacion = { superAdminId }.
+const DURACION_IMPERSONACION_MS = 30 * 60 * 1000;
+
+type PayloadImpersonacion = { tipo: "impersonacion"; superAdminId: string; usuarioId: string; exp: number };
+
+export function crearTokenImpersonacion(superAdminId: string, usuarioId: string): { token: string; expiraEn: string } {
+  const exp = Date.now() + DURACION_IMPERSONACION_MS;
+  const payload: PayloadImpersonacion = { tipo: "impersonacion", superAdminId, usuarioId, exp };
+  const cuerpo = base64url(JSON.stringify(payload));
+  return { token: `imp.${cuerpo}.${firmar(cuerpo)}`, expiraEn: new Date(exp).toISOString() };
+}
+
+export function verificarTokenImpersonacion(token: string): { superAdminId: string; usuarioId: string } | null {
+  if (!token.startsWith("imp.")) return null;
+  const [, cuerpo, firma] = token.split(".");
+  if (!cuerpo || !firma) return null;
+
+  const firmaEsperada = firmar(cuerpo);
+  const a = Buffer.from(firma);
+  const b = Buffer.from(firmaEsperada);
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
+
+  try {
+    const payload = JSON.parse(Buffer.from(cuerpo, "base64url").toString("utf8")) as PayloadImpersonacion;
+    if (payload.tipo !== "impersonacion") return null;
+    if (typeof payload.exp !== "number" || payload.exp < Date.now()) return null;
+    if (typeof payload.superAdminId !== "string" || typeof payload.usuarioId !== "string") return null;
+    return { superAdminId: payload.superAdminId, usuarioId: payload.usuarioId };
+  } catch {
+    return null;
+  }
+}
+
 export interface RequestConSuperAdmin extends Request {
   superAdminId?: string;
 }

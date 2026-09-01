@@ -9,7 +9,8 @@ import { AsistenteChat } from "./AsistenteChat";
 import { Logo } from "./Logo";
 import { NotificacionesBell } from "./NotificacionesBell";
 import { supabase } from "@/lib/supabase";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, API_URL } from "@/lib/api";
+import { limpiarImpersonacion, obtenerImpersonacion } from "@/lib/impersonacion";
 import { asegurarFuenteCargada, fuenteDe } from "@/lib/fuentes";
 import {
   IconBox,
@@ -153,6 +154,7 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
   const [dropdownAbierto, setDropdownAbierto] = useState(false);
   const [gruposAbiertos, setGruposAbiertos] = useState<Set<string>>(new Set());
   const [modulosDeshabilitados, setModulosDeshabilitados] = useState<Modulo[]>([]);
+  const [impersonando, setImpersonando] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -169,9 +171,40 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
       if (res.ok) {
         const body = await res.json();
         setModulosDeshabilitados(body.modulos_deshabilitados ?? []);
+        // La verdad la tiene el servidor: si NO viene impersonacion pero
+        // hay un token guardado, quedó viejo/vencido — limpiarlo.
+        if (body.impersonacion) setImpersonando(true);
+        else if (obtenerImpersonacion()) limpiarImpersonacion();
       }
     })();
   }, []);
+
+  // Cuando se cumplen los 30 min, salir solo (el backend ya rechaza el
+  // token vencido — esto es para que la UI no se quede colgada).
+  useEffect(() => {
+    if (!impersonando) return;
+    const imp = obtenerImpersonacion();
+    if (!imp) return;
+    const t = setTimeout(() => {
+      limpiarImpersonacion();
+      window.location.href = "/superadmin";
+    }, Math.max(0, imp.expira - Date.now()));
+    return () => clearTimeout(t);
+  }, [impersonando]);
+
+  async function salirImpersonacion() {
+    const imp = obtenerImpersonacion();
+    if (imp) {
+      await fetch(`${API_URL}/api/superadmin/impersonar/finalizar`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${imp.token}` },
+      }).catch(() => {});
+    }
+    limpiarImpersonacion();
+    // Navegación completa: resetea todo el estado del dashboard y vuelve
+    // al panel, que lee su propia sesión de super-admin (sin re-login).
+    window.location.href = "/superadmin";
+  }
 
   useEffect(() => {
     asegurarFuenteCargada(usuario.fuente);
@@ -381,7 +414,23 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
   }
 
   return (
-    <div className="flex min-h-screen bg-background" style={temaStyle}>
+    <>
+      {impersonando && (
+        <div className="fixed inset-x-0 top-0 z-[60] flex flex-wrap items-center justify-center gap-x-3 gap-y-1 bg-danger px-4 py-2 text-center text-xs font-medium text-white print:hidden">
+          <span>
+            Estás viendo Bitácora como <strong>{usuario.nombre}</strong> — sesión de impersonación de Super-Admin (solo debug, acciones
+            destructivas bloqueadas).
+          </span>
+          <button
+            type="button"
+            onClick={salirImpersonacion}
+            className="rounded bg-white/20 px-2 py-0.5 font-semibold hover:bg-white/30"
+          >
+            Salir de impersonación
+          </button>
+        </div>
+      )}
+      <div className={`flex min-h-screen bg-background ${impersonando ? "pt-9" : ""}`} style={temaStyle}>
       {/* Sidebar de escritorio */}
       <aside
         className={`sticky top-0 hidden h-screen shrink-0 flex-col border-r border-border bg-surface transition-[width] duration-150 print:hidden sm:flex ${
@@ -494,6 +543,7 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
       </div>
 
       {puedeVerModulo(usuario.rol, "asistente") && !modulosDeshabilitados.includes("asistente") && <AsistenteChat />}
-    </div>
+      </div>
+    </>
   );
 }

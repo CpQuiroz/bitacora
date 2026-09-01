@@ -111,7 +111,14 @@ app.get("/api/me", requiereAuth, ah<RequestConUsuario>(async (req, res) => {
   // más chances hay de que el chequeo corra el día justo. No bloquea
   // la respuesta.
   if (usuario) revisarCumpleanosClientes(usuario.empresa_id).catch((err) => console.error("Error revisando cumpleaños de clientes:", err));
-  res.json({ usuario, modulos_deshabilitados: modulosDeshabilitados });
+  res.json({
+    usuario,
+    modulos_deshabilitados: modulosDeshabilitados,
+    // Marca (sin datos del super-admin) para que el dashboard muestre el
+    // banner persistente de "estás impersonando". La verdad la tiene el
+    // servidor: el token de este request es de impersonación o no.
+    impersonacion: req.impersonacion ? { activa: true } : null,
+  });
 }));
 
 // Onboarding multi-tenant: crea la empresa y vincula al usuario ya

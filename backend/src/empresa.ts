@@ -8,6 +8,27 @@ export interface RequestConEmpresa extends RequestConUsuario {
   rol?: string;
 }
 
+// Durante una sesión de impersonación de Super-Admin (debug de un
+// problema reportado, ver superadmin/routes.ts) se permite mirar y
+// operar liviano, pero NO tocar nada irreversible o de gobernanza:
+// borrar registros, cancelar/cambiar la suscripción o el plan, editar
+// datos de la empresa (incluye la autobaja), gestionar el equipo/roles,
+// ni las credenciales de integraciones. Regla conservadora a propósito
+// (Ley 21.719) — ajustable si estorba demasiado al debugging real.
+function mutacionBloqueadaEnImpersonacion(req: RequestConUsuario): boolean {
+  if (!req.impersonacion) return false;
+  if (req.method === "GET" || req.method === "HEAD") return false;
+  if (req.method === "DELETE") return true;
+  const url = req.originalUrl;
+  return (
+    url.startsWith("/api/suscripcion") ||
+    url.startsWith("/api/plan") ||
+    url.startsWith("/api/empresa") ||
+    url.startsWith("/api/usuarios") ||
+    url.startsWith("/api/integraciones")
+  );
+}
+
 // Va después de requiereAuth: resuelve la empresa del usuario logueado.
 // 403 si el usuario todavía no completó /api/registro-empresa, o si un
 // admin lo desactivó (Gestión y Control) — un solo punto de chequeo que
@@ -71,10 +92,21 @@ export const requiereEmpresa = ah<RequestConEmpresa>(async (req, res, next) => {
     return;
   }
 
+  if (mutacionBloqueadaEnImpersonacion(req)) {
+    res.status(403).json({
+      error: "Esta acción no está permitida durante una sesión de impersonación de Super-Admin.",
+      code: "IMPERSONACION_SOLO_LECTURA",
+    });
+    return;
+  }
+
   req.empresaId = usuario.empresa_id;
   req.rol = usuario.rol;
-  // No se espera esta escritura — es solo para el historial de accesos
-  // de Seguridad, no debe agregar latencia al request real.
-  void registrarAccesoSiCorresponde(req.userId!, usuario.empresa_id, req.ip ?? null, req.headers["user-agent"] ?? null);
+  // No registrar el acceso como si fuera un login del usuario cuando en
+  // realidad es el Super-Admin impersonando — ensuciaría su historial de
+  // Seguridad. La impersonación queda en super_admin_auditoria.
+  if (!req.impersonacion) {
+    void registrarAccesoSiCorresponde(req.userId!, usuario.empresa_id, req.ip ?? null, req.headers["user-agent"] ?? null);
+  }
   next();
 });

@@ -12,7 +12,14 @@ import { cambiarPlanEmpresa } from "../planes";
 import { enviarInvitacion } from "../email";
 import { hashPassword, verificarPassword } from "./passwords";
 import { generarSecretoTotp, otpauthUri, verificarCodigoTotp } from "../totp";
-import { crearTokenSuperAdmin, requiereSuperAdmin, registrarAuditoria, type RequestConSuperAdmin } from "./auth";
+import {
+  crearTokenSuperAdmin,
+  crearTokenImpersonacion,
+  verificarTokenImpersonacion,
+  requiereSuperAdmin,
+  registrarAuditoria,
+  type RequestConSuperAdmin,
+} from "./auth";
 
 const ESTADOS_EMPRESA: EstadoEmpresa[] = ["activa", "suspendida", "dada_de_baja"];
 const PLANES: Plan[] = ["trial", "basico", "pro"];
@@ -626,6 +633,80 @@ superadminRouter.post(
     });
 
     res.json({ activado: false });
+  })
+);
+
+// ── Impersonar un usuario ────────────────────────────────────────────
+// "Entrar como" un usuario para debuggear un problema reportado, sin
+// conocer ni resetear su contraseña. Sensible (Ley 21.719): exige una
+// justificación de texto de ≥ 20 caracteres reales, genera una sesión
+// corta (30 min, ver crearTokenImpersonacion) y deja tanto el inicio
+// como el fin en super_admin_auditoria con la justificación completa.
+// El backend limita qué se puede hacer impersonando (requiereEmpresa,
+// código IMPERSONACION_SOLO_LECTURA) y el frontend muestra un banner
+// persistente.
+const MIN_JUSTIFICACION = 20;
+
+superadminRouter.post(
+  "/empresas/:id/usuarios/:usuarioId/impersonar",
+  requiereSuperAdmin,
+  ah<RequestConSuperAdmin>(async (req, res) => {
+    const justificacion = typeof req.body?.justificacion === "string" ? req.body.justificacion.trim() : "";
+    if (justificacion.length < MIN_JUSTIFICACION) {
+      res.status(400).json({ error: `La justificación es obligatoria y debe tener al menos ${MIN_JUSTIFICACION} caracteres.` });
+      return;
+    }
+    // Evita "aaaaaaaaaaaaaaaaaaaa" o "                    " como relleno.
+    if (new Set(justificacion.replace(/\s/g, "")).size < 5) {
+      res.status(400).json({ error: "La justificación no parece real — describí el problema que estás debuggeando." });
+      return;
+    }
+
+    const { data: usuario } = await supabase
+      .from("usuarios")
+      .select("id, nombre, rol, activo, empresa_id")
+      .eq("id", req.params.usuarioId)
+      .eq("empresa_id", req.params.id)
+      .maybeSingle();
+    if (!usuario) {
+      res.status(404).json({ error: "Usuario no encontrado en esta empresa" });
+      return;
+    }
+    if (!usuario.activo) {
+      res.status(400).json({ error: "Ese usuario está desactivado — no se puede impersonar." });
+      return;
+    }
+
+    const { token, expiraEn } = crearTokenImpersonacion(req.superAdminId!, usuario.id);
+
+    await registrarAuditoria(req.superAdminId!, "iniciar_impersonacion", {
+      empresaId: req.params.id,
+      ip: req.ip ?? null,
+      detalle: `Usuario: ${usuario.nombre} (${usuario.id}, ${usuario.rol}) — hasta ${expiraEn} — Justificación: ${justificacion}`,
+    });
+
+    res.json({ token, expira_en: expiraEn, usuario_nombre: usuario.nombre });
+  })
+);
+
+// Fin de la impersonación — se autentica con el propio token de
+// impersonación (no con la sesión de super-admin, que el frontend
+// mantiene aparte). Idempotente: si el token ya venció, igual responde
+// ok para que el frontend limpie su estado.
+superadminRouter.post(
+  "/impersonar/finalizar",
+  ah(async (req, res) => {
+    const header = req.headers.authorization;
+    const token = header?.startsWith("Bearer ") ? header.slice(7) : "";
+    const imp = verificarTokenImpersonacion(token);
+    if (imp) {
+      const { data: usuario } = await supabase.from("usuarios").select("nombre").eq("id", imp.usuarioId).maybeSingle();
+      await registrarAuditoria(imp.superAdminId, "finalizar_impersonacion", {
+        ip: req.ip ?? null,
+        detalle: `Usuario: ${usuario?.nombre ?? "?"} (${imp.usuarioId})`,
+      });
+    }
+    res.json({ ok: true });
   })
 );
 
