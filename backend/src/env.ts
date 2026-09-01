@@ -74,3 +74,14 @@ export const env = {
   FLOW_PLAN_ID_BASICO: process.env.FLOW_PLAN_ID_BASICO ?? null,
   FLOW_PLAN_ID_PRO: process.env.FLOW_PLAN_ID_PRO ?? null,
 };
+
+// Log de a qué proyecto Supabase se conecta este proceso — server.ts y
+// TODO script de backend/scripts/ pasan por acá al importar env.ts (o
+// algo que lo importe). Sale una sola vez al cargar el módulo. Existe
+// por un incidente real: un script de verificación corrió sin
+// DOTENV_CONFIG_PATH, cayó en el .env de dev en silencio, y esa lectura
+// equivocada llevó a marcar migraciones como aplicadas en producción
+// cuando no lo estaban. Con esto, el proyecto real queda a la vista
+// siempre, no hay que adivinar contra qué base se está actuando.
+const refSupabase = env.SUPABASE_URL.match(/https:\/\/([a-z0-9]+)\.supabase\.co/)?.[1] ?? env.SUPABASE_URL;
+console.log(`[env] Conectando a Supabase ref: ${refSupabase}`);

@@ -1,0 +1,55 @@
+name: Migraciones vs. producción
+
+# Falla el build si hay migraciones locales (supabase/migrations/) que
+# todavía no están aplicadas en el Supabase de PRODUCCIÓN. Existe por un
+# incidente real (1-sep-2026): el tracking de prod quedó desincronizado
+# de su schema real y nadie lo notó hasta que un usuario pisó un error en
+# la app. Ver docs/PUESTA_EN_PRODUCCION.md, sección "Migraciones".
+#
+# Requiere 2 secrets en este repo (Settings → Secrets and variables →
+# Actions), ver instrucciones en docs/PUESTA_EN_PRODUCCION.md:
+#   SUPABASE_ACCESS_TOKEN     token personal del CLI (supabase.com/dashboard/account/tokens)
+#   SUPABASE_PROD_DB_PASSWORD password de la base de PRODUCCIÓN (Project Settings → Database)
+
+on:
+  pull_request:
+    paths:
+      - "supabase/migrations/**"
+  push:
+    branches: [main]
+    paths:
+      - "supabase/migrations/**"
+  workflow_dispatch: {}
+
+jobs:
+  check-migraciones:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Vincular al proyecto de producción
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          supabase link --project-ref yjbskbskyadxjooxngjv -p "${{ secrets.SUPABASE_PROD_DB_PASSWORD }}"
+
+      - name: Comparar migraciones locales vs. las aplicadas en prod
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          set -euo pipefail
+          SALIDA="$(supabase migration list)"
+          echo "$SALIDA"
+          PENDIENTES="$(echo "$SALIDA" | jq -r '.migrations[] | select(.local != "" and .remote == "") | .local')"
+          if [ -n "$PENDIENTES" ]; then
+            echo "::error::Hay migraciones locales sin aplicar en producción:"
+            echo "$PENDIENTES" | sed 's/^/::error:: - /'
+            echo ""
+            echo "Aplicalas con: supabase db push --include-all (revisá docs/PUESTA_EN_PRODUCCION.md primero)"
+            exit 1
+          fi
+          echo "OK — todas las migraciones locales están aplicadas en producción."

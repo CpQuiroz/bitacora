@@ -20,6 +20,25 @@ desarrollo. Falta terminar de dar de alta la primera empresa cliente.
 
 Dev sigue en un Supabase aparte (ref `pruwvpnlvrvgtmpetlsr`) + servidores locales.
 
+### Migraciones — estado en prod
+
+**Última migración aplicada a producción: `61` (verificado 1-sep-2026 con `supabase migration list` + consulta directa a `information_schema`).** Actualizar este número a mano cada vez que se aplique una migración nueva a prod — es la única fuente de verdad rápida hasta que exista el chequeo de CI (ver más abajo).
+
+> ⚠️ **Incidente real (1-sep-2026):** un script de verificación corrió sin `DOTENV_CONFIG_PATH`, leyó `backend/.env` (dev) en vez de `.env.produccion.local`, y esa lectura equivocada llevó a marcar las migraciones 54-59 como aplicadas en prod (`migration repair`) sin que su SQL hubiera corrido. Prod quedó con el schema real de 01-53 pero el tracking mintiendo hasta 59, hasta que un error real de la app (`clientes.fecha_nacimiento` no encontrado) lo destapó. Se corrigió con `migration repair --status reverted` + `db push --include-all`. Mitigaciones agregadas:
+> - `backend/src/env.ts` loguea el ref de Supabase al cargar, en cualquier script o al arrancar el server — nunca más se debería adivinar contra qué proyecto se está actuando.
+> - `.github/workflows/check-migraciones-prod.yml` (nuevo, ver abajo) falla el CI si hay migraciones locales sin aplicar a prod.
+
+#### CI de migraciones — falta configurar 2 secrets en GitHub
+
+El workflow `.github/workflows/check-migraciones-prod.yml` ya está en el repo pero necesita, en **GitHub → Settings del repo → Secrets and variables → Actions → New repository secret**:
+
+| Secret | De dónde sale |
+|---|---|
+| `SUPABASE_ACCESS_TOKEN` | supabase.com/dashboard/account/tokens → Generate new token |
+| `SUPABASE_PROD_DB_PASSWORD` | Supabase (proyecto `bitacora-prod`) → Project Settings → Database → Database password (el mismo que usaste para `supabase link`) |
+
+Sin esos dos secrets el workflow falla al correr (no puede vincularse). Corre en cada push/PR que toque `supabase/migrations/**`, y también manual (`workflow_dispatch`).
+
 ### Lo que YA funciona en prod (verificado)
 - La web carga, el backend responde (`/health` → 200), CORS habilitado para el dominio.
 - Login normal (`/login`) y login de Super-Admin (`/superadmin/login`) llegan a la DB.
