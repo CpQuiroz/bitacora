@@ -642,6 +642,180 @@ superadminRouter.post(
   })
 );
 
+// ── Desactivar / reactivar / eliminar un usuario ─────────────────────
+//
+// Tres niveles, de menos a más destructivo:
+//  - desactivar: usuarios.activo = false. El login sigue existiendo pero
+//    toda llamada a la API responde 403 (ver empresa.ts). Reversible,
+//    no toca ningún dato histórico. Es lo que se recomienda casi siempre.
+//  - reactivar: lo vuelve a habilitar.
+//  - eliminar: borra la fila de `usuarios` (y el login en Auth, para
+//    liberar el correo). Solo se permite cuando el usuario NO tiene
+//    registros que lo referencien con FK sin ON DELETE (trabajos/OS como
+//    responsable, rutas planificadas, fotos subidas, informes generados)
+//    — si los tiene, se responde 409 con el detalle y hay que usar
+//    "desactivar". Los FK con `on delete set null` (viajes.chofer_id,
+//    tareas.responsable_id, gastos.editado_por, etc.) y `on delete
+//    cascade` (notificaciones, mfa, accesos_usuario…) se limpian solos.
+
+async function esUltimoAdminActivo(empresaId: string, usuarioId: string): Promise<boolean> {
+  const { data } = await supabase
+    .from("usuarios")
+    .select("id")
+    .eq("empresa_id", empresaId)
+    .eq("rol", "admin")
+    .eq("activo", true);
+  const ids = (data ?? []).map((u) => u.id);
+  return ids.length <= 1 && ids.includes(usuarioId);
+}
+
+// Tablas con FK a usuarios(id) SIN on delete (NO ACTION) — un DELETE con
+// filas acá reventaría con violación de FK. Ver la consulta de
+// information_schema en docs si esto cambia con una migración futura.
+const REFERENCIAS_BLOQUEANTES: { tabla: string; columna: string; etiqueta: string }[] = [
+  { tabla: "trabajos", columna: "responsable_id", etiqueta: "trabajos/OS como responsable" },
+  { tabla: "rutas_planificadas", columna: "responsable_id", etiqueta: "rutas planificadas" },
+  { tabla: "analisis_fotos", columna: "subida_por", etiqueta: "fotos subidas" },
+  { tabla: "informes_generados", columna: "usuario_id", etiqueta: "informes generados" },
+];
+
+async function referenciasBloqueantes(usuarioId: string): Promise<{ etiqueta: string; cantidad: number }[]> {
+  const resultado: { etiqueta: string; cantidad: number }[] = [];
+  for (const ref of REFERENCIAS_BLOQUEANTES) {
+    const { count } = await supabase
+      .from(ref.tabla)
+      .select("*", { count: "exact", head: true })
+      .eq(ref.columna, usuarioId);
+    if (count && count > 0) resultado.push({ etiqueta: ref.etiqueta, cantidad: count });
+  }
+  return resultado;
+}
+
+async function buscarUsuarioDeEmpresa(empresaId: string, usuarioId: string) {
+  const { data } = await supabase
+    .from("usuarios")
+    .select("id, nombre, rol, activo, empresa_id")
+    .eq("id", usuarioId)
+    .eq("empresa_id", empresaId)
+    .maybeSingle();
+  return data;
+}
+
+superadminRouter.post(
+  "/empresas/:id/usuarios/:usuarioId/desactivar",
+  requiereSuperAdmin,
+  ah<RequestConSuperAdmin>(async (req, res) => {
+    const usuario = await buscarUsuarioDeEmpresa(req.params.id, req.params.usuarioId);
+    if (!usuario) {
+      res.status(404).json({ error: "Usuario no encontrado en esta empresa" });
+      return;
+    }
+    if (!usuario.activo) {
+      res.json({ activo: false });
+      return;
+    }
+    if (await esUltimoAdminActivo(req.params.id, usuario.id)) {
+      res.status(409).json({ error: "Es el único administrador activo de la empresa. Deja otro admin antes de desactivarlo." });
+      return;
+    }
+
+    const { error } = await supabase.from("usuarios").update({ activo: false }).eq("id", usuario.id).eq("empresa_id", req.params.id);
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    await registrarAuditoria(req.superAdminId!, "desactivar_usuario", {
+      empresaId: req.params.id,
+      ip: req.ip ?? null,
+      detalle: `${usuario.nombre} (${usuario.rol}, ${usuario.id})`,
+    });
+    res.json({ activo: false });
+  })
+);
+
+superadminRouter.post(
+  "/empresas/:id/usuarios/:usuarioId/reactivar",
+  requiereSuperAdmin,
+  ah<RequestConSuperAdmin>(async (req, res) => {
+    const usuario = await buscarUsuarioDeEmpresa(req.params.id, req.params.usuarioId);
+    if (!usuario) {
+      res.status(404).json({ error: "Usuario no encontrado en esta empresa" });
+      return;
+    }
+    if (usuario.activo) {
+      res.json({ activo: true });
+      return;
+    }
+
+    const { error } = await supabase.from("usuarios").update({ activo: true }).eq("id", usuario.id).eq("empresa_id", req.params.id);
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    await registrarAuditoria(req.superAdminId!, "reactivar_usuario", {
+      empresaId: req.params.id,
+      ip: req.ip ?? null,
+      detalle: `${usuario.nombre} (${usuario.rol}, ${usuario.id})`,
+    });
+    res.json({ activo: true });
+  })
+);
+
+superadminRouter.delete(
+  "/empresas/:id/usuarios/:usuarioId",
+  requiereSuperAdmin,
+  ah<RequestConSuperAdmin>(async (req, res) => {
+    const { confirmar } = req.body ?? {};
+    const usuario = await buscarUsuarioDeEmpresa(req.params.id, req.params.usuarioId);
+    if (!usuario) {
+      res.status(404).json({ error: "Usuario no encontrado en esta empresa" });
+      return;
+    }
+    if (typeof confirmar !== "string" || confirmar.trim() !== usuario.nombre) {
+      res.status(400).json({ error: "Escribe el nombre exacto del usuario para confirmar" });
+      return;
+    }
+    if (await esUltimoAdminActivo(req.params.id, usuario.id)) {
+      res.status(409).json({ error: "Es el único administrador activo de la empresa. Deja otro admin antes de eliminarlo." });
+      return;
+    }
+
+    const bloqueos = await referenciasBloqueantes(usuario.id);
+    if (bloqueos.length > 0) {
+      res.status(409).json({
+        error:
+          "No se puede eliminar definitivamente: el usuario tiene " +
+          bloqueos.map((b) => `${b.cantidad} ${b.etiqueta}`).join(", ") +
+          '. Usa "Desactivar" — le impide entrar y deja el historial intacto.',
+        bloqueos,
+      });
+      return;
+    }
+
+    // Correo para dejarlo en la auditoría antes de que desaparezca de Auth.
+    const { data: authUser } = await supabase.auth.admin.getUserById(usuario.id);
+    const correo = authUser?.user?.email ?? "?";
+
+    const { error } = await supabase.from("usuarios").delete().eq("id", usuario.id).eq("empresa_id", req.params.id);
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    // Libera el correo en Supabase Auth — mismo criterio que el rollback
+    // de "invitar". Si falla, el usuario de negocio ya se borró igual.
+    await supabase.auth.admin.deleteUser(usuario.id).catch((err) => {
+      console.error("No se pudo borrar el usuario de Auth tras eliminar la fila de usuarios:", err);
+    });
+
+    await registrarAuditoria(req.superAdminId!, "eliminar_usuario", {
+      empresaId: req.params.id,
+      ip: req.ip ?? null,
+      detalle: `${usuario.nombre} (${usuario.rol}, ${usuario.id}, ${correo})`,
+    });
+    res.status(204).end();
+  })
+);
+
 // ── Impersonar un usuario ────────────────────────────────────────────
 // "Entrar como" un usuario para debuggear un problema reportado, sin
 // conocer ni resetear su contraseña. Sensible (Ley 21.719): exige una

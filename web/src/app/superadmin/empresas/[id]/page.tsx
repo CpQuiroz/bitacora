@@ -95,6 +95,11 @@ export default function SuperAdminSaludEmpresaPage() {
   const [passwordGenerada, setPasswordGenerada] = useState<{ usuarioId: string; nombre: string; password: string } | null>(null);
   const [cambiandoMfaId, setCambiandoMfaId] = useState<string | null>(null);
   const [secretoTotpGenerado, setSecretoTotpGenerado] = useState<{ usuarioId: string; nombre: string; secreto: string } | null>(null);
+  const [cambiandoEstadoId, setCambiandoEstadoId] = useState<string | null>(null);
+  const [eliminarUsuario, setEliminarUsuario] = useState<{ id: string; nombre: string } | null>(null);
+  const [confirmacionEliminarUsuario, setConfirmacionEliminarUsuario] = useState("");
+  const [eliminandoUsuario, setEliminandoUsuario] = useState(false);
+  const [errorEliminarUsuario, setErrorEliminarUsuario] = useState<string | null>(null);
 
   const [nuevoNombre, setNuevoNombre] = useState("");
   const [nuevoCorreo, setNuevoCorreo] = useState("");
@@ -291,6 +296,43 @@ export default function SuperAdminSaludEmpresaPage() {
       setErrorUsuarios(body.error ?? "No se pudo desactivar el 2FA");
       return;
     }
+    cargarUsuarios();
+  }
+
+  async function onCambiarEstadoUsuario(usuarioId: string, nombre: string, activo: boolean) {
+    const accion = activo ? "reactivar" : "desactivar";
+    const aviso = activo
+      ? ""
+      : " No podrá entrar a la app hasta que lo reactives. Su historial queda intacto.";
+    if (!confirm(`¿${activo ? "Reactivar" : "Desactivar"} a ${nombre}?${aviso}`)) return;
+    setErrorUsuarios(null);
+    setCambiandoEstadoId(usuarioId);
+    const res = await superadminFetch(`/api/superadmin/empresas/${params.id}/usuarios/${usuarioId}/${accion}`, { method: "POST" });
+    setCambiandoEstadoId(null);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setErrorUsuarios(body.error ?? `No se pudo ${accion} el usuario`);
+      return;
+    }
+    cargarUsuarios();
+  }
+
+  async function onEliminarUsuario() {
+    if (!eliminarUsuario) return;
+    setErrorEliminarUsuario(null);
+    setEliminandoUsuario(true);
+    const res = await superadminFetch(`/api/superadmin/empresas/${params.id}/usuarios/${eliminarUsuario.id}`, {
+      method: "DELETE",
+      body: JSON.stringify({ confirmar: confirmacionEliminarUsuario }),
+    });
+    setEliminandoUsuario(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setErrorEliminarUsuario(body.error ?? "No se pudo eliminar el usuario");
+      return;
+    }
+    setEliminarUsuario(null);
+    setConfirmacionEliminarUsuario("");
     cargarUsuarios();
   }
 
@@ -923,6 +965,26 @@ export default function SuperAdminSaludEmpresaPage() {
                                 {cambiandoMfaId === u.id ? "Desactivando…" : "Desactivar 2FA"}
                               </Button>
                             )}
+                            <Button
+                              type="button"
+                              variant="outline"
+                              disabled={cambiandoEstadoId === u.id}
+                              onClick={() => onCambiarEstadoUsuario(u.id, u.nombre, !u.activo)}
+                            >
+                              {cambiandoEstadoId === u.id ? "Guardando…" : u.activo ? "Desactivar" : "Reactivar"}
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              className="text-danger"
+                              onClick={() => {
+                                setEliminarUsuario({ id: u.id, nombre: u.nombre });
+                                setConfirmacionEliminarUsuario("");
+                                setErrorEliminarUsuario(null);
+                              }}
+                            >
+                              Eliminar
+                            </Button>
                           </div>
                         </td>
                       </tr>
@@ -934,6 +996,42 @@ export default function SuperAdminSaludEmpresaPage() {
             {errorUsuarios && (
               <div className="mt-3">
                 <ErrorText>{errorUsuarios}</ErrorText>
+              </div>
+            )}
+
+            {eliminarUsuario && (
+              <div className="mt-4 rounded-lg border border-danger/40 bg-danger/5 p-4">
+                <p className="text-sm font-semibold text-foreground">Eliminar definitivamente a {eliminarUsuario.nombre}</p>
+                <p className="mt-1 text-sm text-muted">
+                  Borra la cuenta y libera su correo. Solo funciona si no tiene trabajos/OS, rutas, fotos ni informes
+                  asociados — si los tiene, usa <span className="font-medium">Desactivar</span>. Esto no se puede deshacer.
+                </p>
+                <Label className="mt-3">
+                  Escribe <span className="font-mono text-foreground">{eliminarUsuario.nombre}</span> para confirmar
+                </Label>
+                <Input
+                  value={confirmacionEliminarUsuario}
+                  onChange={(e) => setConfirmacionEliminarUsuario(e.target.value)}
+                  className="mt-1 max-w-sm"
+                />
+                {errorEliminarUsuario && (
+                  <div className="mt-2">
+                    <ErrorText>{errorEliminarUsuario}</ErrorText>
+                  </div>
+                )}
+                <div className="mt-3 flex gap-2">
+                  <Button
+                    type="button"
+                    variant="danger"
+                    disabled={eliminandoUsuario || confirmacionEliminarUsuario.trim() !== eliminarUsuario.nombre}
+                    onClick={onEliminarUsuario}
+                  >
+                    {eliminandoUsuario ? "Eliminando…" : "Eliminar definitivamente"}
+                  </Button>
+                  <Button type="button" variant="ghost" onClick={() => setEliminarUsuario(null)}>
+                    Cancelar
+                  </Button>
+                </div>
               </div>
             )}
           </Card>
