@@ -37,6 +37,18 @@ export async function modulosDeshabilitadosDeEmpresa(empresaId: string): Promise
   return MODULOS.filter((m) => (filas.has(m) ? !filas.get(m) : !moduloActivadoPorDefecto(m)));
 }
 
+// Feature flags en beta activados para esta empresa (ver migración 61 y
+// el Panel de Super-Admin). Consulta chica y con índice — la mayoría de
+// las empresas no tiene ninguna fila; se expone en GET /api/me.
+export async function featureFlagsDeEmpresa(empresaId: string): Promise<string[]> {
+  const { data } = await supabase
+    .from("empresa_feature_flags")
+    .select("flag")
+    .eq("empresa_id", empresaId)
+    .eq("activado", true);
+  return (data ?? []).map((f) => f.flag);
+}
+
 export function requiereModulo(modulo: Modulo) {
   return ah<RequestConEmpresa>(async (req, res, next) => {
     if (!puedeVerModulo((req.rol ?? "colaborador") as Rol, modulo)) {

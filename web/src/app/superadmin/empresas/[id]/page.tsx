@@ -108,6 +108,11 @@ export default function SuperAdminSaludEmpresaPage() {
   const [iniciandoImp, setIniciandoImp] = useState(false);
   const [errorImp, setErrorImp] = useState<string | null>(null);
 
+  const [flags, setFlags] = useState<{ flag: string; activado: boolean; activado_en: string }[] | null>(null);
+  const [nuevoFlag, setNuevoFlag] = useState("");
+  const [guardandoFlag, setGuardandoFlag] = useState(false);
+  const [errorFlag, setErrorFlag] = useState<string | null>(null);
+
   async function cargar() {
     const res = await superadminFetch(`/api/superadmin/empresas/${params.id}/salud`);
     if (!res.ok) {
@@ -145,6 +150,11 @@ export default function SuperAdminSaludEmpresaPage() {
     if (res.ok) setUsuarios(await res.json());
   }
 
+  async function cargarFlags() {
+    const res = await superadminFetch(`/api/superadmin/empresas/${params.id}/feature-flags`);
+    if (res.ok) setFlags(await res.json());
+  }
+
   useEffect(() => {
     if (!obtenerTokenSuperAdmin()) {
       router.replace("/superadmin/login");
@@ -154,6 +164,7 @@ export default function SuperAdminSaludEmpresaPage() {
     cargarModulos();
     cargarSuscripcion();
     cargarUsuarios();
+    cargarFlags();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id]);
 
@@ -177,6 +188,38 @@ export default function SuperAdminSaludEmpresaPage() {
     setNuevoCorreo("");
     setNuevoRol("colaborador");
     cargarUsuarios();
+  }
+
+  async function onActivarFlag(e: React.FormEvent) {
+    e.preventDefault();
+    setErrorFlag(null);
+    setGuardandoFlag(true);
+    const res = await superadminFetch(`/api/superadmin/empresas/${params.id}/feature-flags`, {
+      method: "POST",
+      body: JSON.stringify({ flag: nuevoFlag.trim().toLowerCase() }),
+    });
+    setGuardandoFlag(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setErrorFlag(body.error ?? "No se pudo activar el flag");
+      return;
+    }
+    setNuevoFlag("");
+    cargarFlags();
+  }
+
+  async function onDesactivarFlag(flag: string) {
+    setErrorFlag(null);
+    const res = await superadminFetch(`/api/superadmin/empresas/${params.id}/feature-flags/desactivar`, {
+      method: "POST",
+      body: JSON.stringify({ flag }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setErrorFlag(body.error ?? "No se pudo desactivar el flag");
+      return;
+    }
+    cargarFlags();
   }
 
   async function onIniciarImpersonacion() {
@@ -658,6 +701,54 @@ export default function SuperAdminSaludEmpresaPage() {
             {errorModulos && (
               <div className="mt-3">
                 <ErrorText>{errorModulos}</ErrorText>
+              </div>
+            )}
+          </Card>
+
+          <Card className="mt-4">
+            <h2 className="mb-2 text-sm font-semibold text-foreground">Feature flags (beta)</h2>
+            <p className="mb-3 text-sm text-muted">
+              Prende una funcionalidad en prueba para esta empresa antes de que esté disponible en el plan. Es un eje aparte de los
+              módulos contratados. El nombre es texto libre (minúsculas, números, <code>-</code> y <code>_</code>); el frontend lo
+              consulta desde <code>GET /api/me</code>.
+            </p>
+
+            {flags === null ? (
+              <p className="text-sm text-muted">Cargando…</p>
+            ) : flags.filter((f) => f.activado).length === 0 ? (
+              <p className="text-sm text-muted">Esta empresa no tiene ningún flag activo.</p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {flags
+                  .filter((f) => f.activado)
+                  .map((f) => (
+                    <div key={f.flag} className="flex items-center justify-between rounded-lg border border-border px-3 py-2 text-sm">
+                      <span className="font-mono text-foreground">{f.flag}</span>
+                      <Button type="button" variant="ghost" onClick={() => onDesactivarFlag(f.flag)}>
+                        Quitar
+                      </Button>
+                    </div>
+                  ))}
+              </div>
+            )}
+
+            <form onSubmit={onActivarFlag} className="mt-4 flex items-end gap-2">
+              <div className="flex-1">
+                <Label>Activar un flag nuevo</Label>
+                <Input
+                  type="text"
+                  value={nuevoFlag}
+                  onChange={(e) => setNuevoFlag(e.target.value)}
+                  placeholder="asistente_panel_fijo"
+                />
+              </div>
+              <Button type="submit" disabled={guardandoFlag || nuevoFlag.trim().length < 2}>
+                {guardandoFlag ? "Activando…" : "Activar"}
+              </Button>
+            </form>
+            {errorFlag && (
+              <div className="mt-3">
+                <ErrorText>{errorFlag}</ErrorText>
               </div>
             )}
           </Card>

@@ -54,7 +54,7 @@ import { documentosRouter } from "./routes/documentos";
 import { mfaRouter } from "./routes/mfa";
 import { authLoginRouter } from "./routes/authLogin";
 import { limitarLogin, limitarEncuestaPublica } from "./rateLimiters";
-import { modulosDeshabilitadosDeEmpresa, requiereModulo } from "./permisos";
+import { modulosDeshabilitadosDeEmpresa, featureFlagsDeEmpresa, requiereModulo } from "./permisos";
 import { revisarCumpleanosClientes } from "./cumpleanosClientes";
 import { ah } from "./asyncHandler";
 
@@ -105,7 +105,9 @@ app.get("/api/me", requiereAuth, ah<RequestConUsuario>(async (req, res) => {
     res.status(500).json({ error: error.message });
     return;
   }
-  const modulosDeshabilitados = usuario ? await modulosDeshabilitadosDeEmpresa(usuario.empresa_id) : [];
+  const [modulosDeshabilitados, featureFlags] = usuario
+    ? await Promise.all([modulosDeshabilitadosDeEmpresa(usuario.empresa_id), featureFlagsDeEmpresa(usuario.empresa_id)])
+    : [[], []];
   // Sin cron en este proyecto — /api/me es el endpoint más universal
   // (cualquier navegación del dashboard lo llama), así que es donde
   // más chances hay de que el chequeo corra el día justo. No bloquea
@@ -114,6 +116,9 @@ app.get("/api/me", requiereAuth, ah<RequestConUsuario>(async (req, res) => {
   res.json({
     usuario,
     modulos_deshabilitados: modulosDeshabilitados,
+    // Feature flags en beta activados para esta empresa (Panel de
+    // Super-Admin). Lista de nombres; el frontend hace .includes(...).
+    feature_flags: featureFlags,
     // Marca (sin datos del super-admin) para que el dashboard muestre el
     // banner persistente de "estás impersonando". La verdad la tiene el
     // servidor: el token de este request es de impersonación o no.

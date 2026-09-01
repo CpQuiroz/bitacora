@@ -169,6 +169,18 @@ export type EmpresaModulo = {
   actualizado_en: string;
 };
 
+// Feature flag por empresa — funcionalidad en beta activada para 1-2
+// empresas puntuales antes de ofrecerla a todos. Eje separado de
+// EmpresaModulo (contratado vs. en prueba). Ver migración 61.
+export type EmpresaFeatureFlag = {
+  id: string;
+  empresa_id: string;
+  flag: string;
+  activado: boolean;
+  activado_en: string;
+  activado_por: string | null;
+};
+
 export type Usuario = {
   id: string; // = auth.users.id
   empresa_id: string;
@@ -1148,6 +1160,7 @@ export type Database = {
       super_admins: Tabla<SuperAdmin>;
       super_admin_auditoria: Tabla<SuperAdminAuditoria>;
       superadmin_metricas_cache: Tabla<SuperadminMetricasCache>;
+      empresa_feature_flags: Tabla<EmpresaFeatureFlag>;
       ia_uso: Tabla<IaUso>;
       errores_backend: Tabla<ErrorBackend>;
       empresa_modulos: Tabla<EmpresaModulo>;

@@ -976,6 +976,101 @@ superadminRouter.patch(
   })
 );
 
+// ── Feature flags (beta por empresa) ─────────────────────────────────
+// Eje separado de los módulos contratados: acá se prende una feature en
+// prueba para 1-2 empresas antes de que exista en el plan. El nombre del
+// flag es texto libre (sin catálogo fijo). El backend expone los flags
+// activos de la empresa del usuario logueado en GET /api/me.
+const FLAG_REGEX = /^[a-z0-9][a-z0-9_-]{1,49}$/;
+
+superadminRouter.get(
+  "/empresas/:id/feature-flags",
+  requiereSuperAdmin,
+  ah<RequestConSuperAdmin>(async (req, res) => {
+    const { data, error } = await supabase
+      .from("empresa_feature_flags")
+      .select("flag, activado, activado_en")
+      .eq("empresa_id", req.params.id)
+      .order("activado_en", { ascending: false });
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    res.json(data ?? []);
+  })
+);
+
+superadminRouter.post(
+  "/empresas/:id/feature-flags",
+  requiereSuperAdmin,
+  ah<RequestConSuperAdmin>(async (req, res) => {
+    const flag = typeof req.body?.flag === "string" ? req.body.flag.trim().toLowerCase() : "";
+    if (!FLAG_REGEX.test(flag)) {
+      res.status(400).json({ error: "El nombre del flag debe ser 2–50 caracteres: minúsculas, números, guion y guion bajo." });
+      return;
+    }
+    const { data: empresa } = await supabase.from("empresas").select("nombre").eq("id", req.params.id).maybeSingle();
+    if (!empresa) {
+      res.status(404).json({ error: "Empresa no encontrada" });
+      return;
+    }
+
+    const { error } = await supabase.from("empresa_feature_flags").upsert(
+      { empresa_id: req.params.id, flag, activado: true, activado_en: new Date().toISOString(), activado_por: req.superAdminId! },
+      { onConflict: "empresa_id,flag" }
+    );
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+
+    await registrarAuditoria(req.superAdminId!, "activar_feature_flag", {
+      empresaId: req.params.id,
+      ip: req.ip ?? null,
+      detalle: `${empresa.nombre}: ${flag}`,
+    });
+
+    res.json({ flag, activado: true });
+  })
+);
+
+superadminRouter.post(
+  "/empresas/:id/feature-flags/desactivar",
+  requiereSuperAdmin,
+  ah<RequestConSuperAdmin>(async (req, res) => {
+    const flag = typeof req.body?.flag === "string" ? req.body.flag.trim().toLowerCase() : "";
+    if (!flag) {
+      res.status(400).json({ error: "Falta el flag" });
+      return;
+    }
+    const { data: empresa } = await supabase.from("empresas").select("nombre").eq("id", req.params.id).maybeSingle();
+    if (!empresa) {
+      res.status(404).json({ error: "Empresa no encontrada" });
+      return;
+    }
+
+    // Soft: activado = false, conserva quién/cuándo lo activó. Volver a
+    // prender es el mismo POST de arriba (upsert lo pone en true).
+    const { error } = await supabase
+      .from("empresa_feature_flags")
+      .update({ activado: false })
+      .eq("empresa_id", req.params.id)
+      .eq("flag", flag);
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+
+    await registrarAuditoria(req.superAdminId!, "desactivar_feature_flag", {
+      empresaId: req.params.id,
+      ip: req.ip ?? null,
+      detalle: `${empresa.nombre}: ${flag}`,
+    });
+
+    res.json({ flag, activado: false });
+  })
+);
+
 // Suscripción B2B (cobro recurrente a esta empresa) — solo lectura +
 // extender el trial acá; cambiar el estado de facturación en sí lo hace
 // exclusivamente el webhook de Flow (backend/src/routes/flowWebhook.ts),
