@@ -56,6 +56,7 @@ import { authLoginRouter } from "./routes/authLogin";
 import { limitarLogin, limitarEncuestaPublica } from "./rateLimiters";
 import { modulosDeshabilitadosDeEmpresa, featureFlagsDeEmpresa, requiereModulo } from "./permisos";
 import { revisarCumpleanosClientes } from "./cumpleanosClientes";
+import { sembrarSugerenciasRubro } from "./seedRubro";
 import { ah } from "./asyncHandler";
 
 const RUBROS: Rubro[] = ["transporte", "servicio_tecnico", "otro"];
@@ -189,6 +190,10 @@ app.post("/api/registro-empresa", requiereAuth, ah<RequestConUsuario>(async (req
     res.status(500).json({ error: errorUsuario.message });
     return;
   }
+
+  // Deja la empresa con las sugerencias de su rubro ya cargadas en vez
+  // de arrancar vacía. No bloquea ni falla el alta.
+  await sembrarSugerenciasRubro(empresa.id, empresa.rubro as Rubro);
 
   res.status(201).json({ empresa, usuario });
 }));

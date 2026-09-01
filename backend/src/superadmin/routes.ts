@@ -10,6 +10,7 @@ import { medirUsoStorage } from "../storage";
 import { TABLAS_POR_EMPRESA } from "../tenant";
 import { cambiarPlanEmpresa } from "../planes";
 import { enviarInvitacion } from "../email";
+import { sembrarSugerenciasRubro } from "../seedRubro";
 import { hashPassword, verificarPassword } from "./passwords";
 import { generarSecretoTotp, otpauthUri, verificarCodigoTotp } from "../totp";
 import {
@@ -351,6 +352,11 @@ superadminRouter.post(
       res.status(500).json({ error: errorUsuario.message });
       return;
     }
+
+    // Deja la empresa con las sugerencias de su rubro ya cargadas
+    // (tipos de documento, categorías de gasto, tipos de OS) en vez de
+    // arrancar completamente vacía. No bloquea ni falla la creación.
+    await sembrarSugerenciasRubro(empresa.id, empresa.rubro as Rubro);
 
     await registrarAuditoria(req.superAdminId!, "crear_empresa", {
       empresaId: empresa.id,
