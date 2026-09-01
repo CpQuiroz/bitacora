@@ -148,7 +148,7 @@ export default function EquipoPage() {
   if (sinAcceso) {
     return usuario ? (
       <DashboardShell usuario={usuario}>
-        <SinAutorizacion mensaje="Solo un administrador puede ver Gestión y Control." />
+        <SinAutorizacion mensaje="Solo un administrador puede ver Grupo y usuario." />
       </DashboardShell>
     ) : null;
   }
@@ -157,7 +157,7 @@ export default function EquipoPage() {
 
   return (
     <DashboardShell usuario={usuario}>
-      <PageHeader title="Gestión y Control" subtitle="Invita al equipo, asigna roles y controla el acceso" />
+      <PageHeader title="Grupo y usuario" subtitle="Invita al equipo, asigna roles y controla el acceso" />
 
       <Card className="my-6">
         <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-foreground">

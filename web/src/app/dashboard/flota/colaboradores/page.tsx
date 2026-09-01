@@ -84,7 +84,7 @@ export default function ColaboradoresFlotaPage() {
           { header: "Vehículo asignado", cell: (c) => <span className="text-muted">{vehiculoPorColaborador.get(c.id) ?? "Sin asignar"}</span> },
         ]}
         actions={[{ label: "Ver ficha", onClick: (c) => router.push(`/dashboard/flota/colaboradores/${c.id}`), variant: "brand" }]}
-        emptyState={{ icon: IconUsers, message: "Todavía no hay colaboradores registrados — invítalos desde Gestión y Control." }}
+        emptyState={{ icon: IconUsers, message: "Todavía no hay colaboradores registrados — invítalos desde Grupo y usuario." }}
       />
     </DashboardShell>
   );

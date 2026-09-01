@@ -30,6 +30,7 @@ import {
   IconSparkle,
   IconTag,
   IconTruck,
+  IconUser,
   IconUsers,
   IconWallet,
 } from "./icons";
@@ -116,8 +117,9 @@ const NAV_GROUPS: NavGroup[] = [
   {
     titulo: "Administración",
     items: [
-      { href: "/dashboard/equipo", label: "Gestión y Control", icon: IconShield, modulo: "gestion_control" },
-      { href: "/dashboard/configuracion/cuenta", label: "Configuración", icon: IconSettings, modulo: null },
+      { href: "/dashboard/equipo", label: "Grupo y usuario", icon: IconShield, modulo: "gestion_control" },
+      // "Configuración" vive en el menú del usuario (arriba a la derecha),
+      // no acá.
     ],
   },
 ];
@@ -512,9 +514,18 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
                 <Link
                   href="/dashboard/perfil"
                   onClick={() => setDropdownAbierto(false)}
-                  className="block px-4 py-2 text-sm text-foreground hover:bg-brand-soft hover:text-brand"
+                  className="flex items-center gap-2 px-4 py-2 text-sm text-foreground hover:bg-brand-soft hover:text-brand"
                 >
+                  <IconUser className="h-4 w-4" />
                   Perfil
+                </Link>
+                <Link
+                  href="/dashboard/configuracion/cuenta"
+                  onClick={() => setDropdownAbierto(false)}
+                  className="flex items-center gap-2 px-4 py-2 text-sm text-foreground hover:bg-brand-soft hover:text-brand"
+                >
+                  <IconSettings className="h-4 w-4" />
+                  Configuración
                 </Link>
                 <Link
                   href="/dashboard/ayuda"

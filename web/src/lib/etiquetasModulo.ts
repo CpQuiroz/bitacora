@@ -12,7 +12,7 @@ export const ETIQUETA_MODULO: Record<string, string> = {
   informe_ia: "Informe con IA",
   asistente: "Asistente",
   configuracion: "Configuración",
-  gestion_control: "Gestión y control",
+  gestion_control: "Grupo y usuario",
   flota: "Flota",
   agenda_pro: "Agenda Pro (paquetes de sesiones y confirmación por el cliente)",
 };
