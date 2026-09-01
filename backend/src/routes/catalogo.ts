@@ -107,7 +107,7 @@ catalogoRouter.get(
 catalogoRouter.post(
   "/",
   ah<RequestConEmpresa>(async (req, res) => {
-    const { tipo, nombre, sku, categoria, unidad, precio_base, items, tipos_equipo } = req.body ?? {};
+    const { tipo, nombre, sku, categoria, unidad, precio_base, items, tipos_equipo, stock_inicial } = req.body ?? {};
 
     if (typeof tipo !== "string" || !TIPOS.includes(tipo as TipoCatalogoItem)) {
       res.status(400).json({ error: `tipo debe ser uno de: ${TIPOS.join(", ")}` });
@@ -123,6 +123,14 @@ catalogoRouter.post(
       return;
     }
 
+    // Stock inicial: solo aplica a productos (servicios y kits no tienen
+    // stock propio). Opcional, default 0.
+    const stockInicial = tipo === "producto" ? Number(stock_inicial) || 0 : 0;
+    if (stockInicial < 0) {
+      res.status(400).json({ error: "El stock inicial no puede ser negativo" });
+      return;
+    }
+
     const { data, error } = await supabase
       .from("catalogo_items")
       .insert({
@@ -133,7 +141,7 @@ catalogoRouter.post(
         categoria: categoria?.trim() || null,
         unidad: unidad?.trim() || "unidad",
         precio_base: precio,
-        stock_actual: tipo === "producto" ? 0 : null,
+        stock_actual: tipo === "producto" ? stockInicial : null,
         // null = "sin definir", distinto de "definido en 0" — cae al
         // umbral por defecto de la empresa (Configuración > Inventario).
         stock_minimo: null,
@@ -144,6 +152,23 @@ catalogoRouter.post(
     if (error) {
       res.status(500).json({ error: error.message });
       return;
+    }
+
+    // Deja el movimiento de "entrada" que explica de dónde salió ese
+    // stock — mismo patrón que el ajuste manual (routes/inventario.ts) y
+    // que el descuento automático por OS (inventario.ts): stock_actual +
+    // inventario_movimientos siempre van juntos. No bloquea la respuesta.
+    if (stockInicial > 0) {
+      const { error: errorMov } = await supabase.from("inventario_movimientos").insert({
+        empresa_id: req.empresaId!,
+        catalogo_item_id: data.id,
+        tipo: "entrada",
+        cantidad: stockInicial,
+        stock_resultante: stockInicial,
+        motivo: "Stock inicial",
+        origen: "manual",
+      });
+      if (errorMov) console.error("Error registrando el movimiento de stock inicial:", errorMov);
     }
 
     if (tipo === "kit" && Array.isArray(items) && items.length > 0) {

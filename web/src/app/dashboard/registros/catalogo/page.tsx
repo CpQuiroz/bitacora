@@ -65,6 +65,9 @@ export default function CatalogoPage() {
   const [categoria, setCategoria] = useState("");
   const [unidad, setUnidad] = useState("unidad");
   const [precioBase, setPrecioBase] = useState("");
+  // Solo para "Nuevo ítem" tipo Producto. Editar el stock después va por
+  // el flujo de ajuste de Inventario (para no romper la trazabilidad).
+  const [stockInicial, setStockInicial] = useState("0");
   const [kitItems, setKitItems] = useState<{ item_id: string; cantidad: string }[]>([]);
   const [tiposEquipo, setTiposEquipo] = useState<string[]>([]);
   // Bloque E: sugerencias según el rubro de la empresa.
@@ -125,6 +128,7 @@ export default function CatalogoPage() {
     setCategoria("");
     setUnidad("");
     setPrecioBase("");
+    setStockInicial("0");
     setKitItems([]);
     setTiposEquipo([]);
     setFormError(null);
@@ -170,7 +174,10 @@ export default function CatalogoPage() {
     setAviso(null);
     setGuardando(true);
     const payload: Record<string, unknown> = { nombre, sku, categoria, unidad, precio_base: Number(precioBase), tipos_equipo: tiposEquipo };
-    if (!editandoId) payload.tipo = tipo;
+    if (!editandoId) {
+      payload.tipo = tipo;
+      if (tipo === "producto") payload.stock_inicial = Number(stockInicial) || 0;
+    }
     if (tipo === "kit") {
       payload.items = kitItems
         .filter((k) => k.item_id)
@@ -309,6 +316,17 @@ export default function CatalogoPage() {
                 <Label>Precio base (CLP)</Label>
                 <Input type="number" min="0" step="1" required value={precioBase} onChange={(e) => setPrecioBase(e.target.value)} />
               </div>
+              {tipo === "producto" && !editandoId && (
+                <div>
+                  <Label className="flex items-center gap-1.5">
+                    Stock inicial (opcional)
+                    <span title="Cantidad con la que arranca este producto. Después, ajustá el stock desde Inventario para mantener el historial de movimientos.">
+                      <IconHelp className="h-3.5 w-3.5 text-muted" />
+                    </span>
+                  </Label>
+                  <Input type="number" min="0" step="1" value={stockInicial} onChange={(e) => setStockInicial(e.target.value)} />
+                </div>
+              )}
             </div>
 
             {tipo === "kit" && (
