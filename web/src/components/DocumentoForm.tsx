@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import type { Documento, EntidadDocumento, EstadoDocumento, TipoDocumento } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
 import { Badge, Button, Card, ErrorText, Input, Label, Select } from "@/components/ui";
@@ -14,6 +15,7 @@ type DocumentoConTipo = Documento & { tipo: { nombre: string } | null; estado: E
 // Mis Documentos (self-service, con soloLectura parcial).
 export function DocumentoForm({ entidadTipo, entidadId }: { entidadTipo: EntidadDocumento; entidadId: string }) {
   const [tipos, setTipos] = useState<TipoDocumento[]>([]);
+  const [tiposCargados, setTiposCargados] = useState(false);
   const [documentos, setDocumentos] = useState<DocumentoConTipo[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,6 +37,7 @@ export function DocumentoForm({ entidadTipo, entidadId }: { entidadTipo: Entidad
     if (resTipos.ok) {
       const todos: TipoDocumento[] = await resTipos.json();
       setTipos(todos.filter((t) => t.activo && (t.aplica_a === entidadTipo || t.aplica_a === "ambos")));
+      setTiposCargados(true);
     }
     if (!resDocs.ok) {
       setError("No se pudieron cargar los documentos");
@@ -109,7 +112,22 @@ export function DocumentoForm({ entidadTipo, entidadId }: { entidadTipo: Entidad
         </Button>
       </div>
 
-      {formAbierto && (
+      {formAbierto && tiposCargados && tipos.length === 0 && (
+        <div className="mb-4 rounded-xl border border-border bg-brand-soft p-4 text-sm">
+          <p className="font-medium text-foreground">
+            No hay tipos de documento configurados para {entidadTipo === "vehiculo" ? "vehículos" : "colaboradores"}.
+          </p>
+          <p className="mt-1 text-muted">
+            Creá al menos uno en{" "}
+            <Link href="/dashboard/configuracion/tipos-documento" className="font-medium text-brand hover:underline">
+              Configuración → Tipos de Documento
+            </Link>{" "}
+            y después volvé acá para adjuntarlo.
+          </p>
+        </div>
+      )}
+
+      {formAbierto && tipos.length > 0 && (
         <div className="mb-4 rounded-xl border border-border p-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
