@@ -1,8 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { Suspense, useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import type {
   Cliente,
   EstadoTarea,
@@ -21,7 +20,7 @@ import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Modal } from "@/components/Modal";
 import { ComboboxCliente } from "@/components/ComboboxCliente";
 import { ComboboxResponsable } from "@/components/ComboboxResponsable";
-import { Badge, Button, Card, ErrorText, Input, Label, Select, Textarea, buttonClass } from "@/components/ui";
+import { Badge, Button, Card, ErrorText, Input, Label, Select, Textarea } from "@/components/ui";
 import { IconCalendar, IconChevronLeft, IconChevronRight, IconClipboardCheck, IconPlus, IconWrench } from "@/components/icons";
 
 type OrdenListado = Trabajo & {
@@ -124,8 +123,13 @@ const NOMBRES_MES = [
 ];
 const NOMBRES_DIA_CORTOS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
-export default function AgendaPage() {
+// Borrador de "nueva tarea rápida" que se guarda antes de saltar a crear
+// una OS, para reabrir el formulario con los datos al volver (Parte 2).
+const CLAVE_BORRADOR = "agenda:borrador-tarea";
+
+function AgendaContenido() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [usuario, setUsuario] = useState<UsuarioShell | null>(null);
   const [modulosDeshabilitados, setModulosDeshabilitados] = useState<Modulo[]>([]);
   const [vista, setVista] = useState<"mes" | "semana" | "dia">("mes");
@@ -160,6 +164,13 @@ export default function AgendaPage() {
   const [cantidadPaquete, setCantidadPaquete] = useState(5);
   const [guardandoPaquete, setGuardandoPaquete] = useState(false);
   const [errorPaquete, setErrorPaquete] = useState<string | null>(null);
+
+  // Form rápido de nueva tarea anclado a un día (Parte 1). Reusa el
+  // mismo estado de tarea de arriba; esto solo dice para qué día está
+  // abierto (null = cerrado). trabajoVinculado guarda la OS creada
+  // desde el flujo de Parte 2 para asociarla al guardar.
+  const [tareaRapidaFecha, setTareaRapidaFecha] = useState<string | null>(null);
+  const [trabajoVinculado, setTrabajoVinculado] = useState<{ id: string; folio: number | null } | null>(null);
 
   const cargar = useCallback(async () => {
     setError(null);
@@ -220,6 +231,46 @@ export default function AgendaPage() {
   useEffect(() => {
     cargar();
   }, [cargar]);
+
+  // Parte 2: volvimos de crear una OS (?reabrirTarea=1). Reabre el form
+  // rápido con el borrador guardado + la OS recién creada vinculada, y
+  // limpia sessionStorage + los query params para que un refresh no
+  // reabra nada (D4).
+  useEffect(() => {
+    if (searchParams.get("reabrirTarea") !== "1") return;
+    const trabajoId = searchParams.get("trabajoId");
+    const folioRaw = searchParams.get("folio");
+    let borrador: Record<string, string> | null = null;
+    try {
+      borrador = JSON.parse(window.sessionStorage.getItem(CLAVE_BORRADOR) ?? "null");
+      window.sessionStorage.removeItem(CLAVE_BORRADOR);
+    } catch {
+      borrador = null;
+    }
+    router.replace("/dashboard/agenda");
+    if (!borrador) return;
+
+    const fecha = borrador.fecha || fmtLocal(new Date());
+    setTareaEditandoId(null);
+    setFormTareaAbierto(false);
+    setTituloTarea(borrador.titulo ?? "");
+    setDescripcionTarea(borrador.descripcion ?? "");
+    setFechaTarea(fecha);
+    setHoraTarea(borrador.hora ?? "");
+    setClienteIdTarea(borrador.cliente_id ?? "");
+    setResponsableIdTarea(borrador.responsable_id ?? "");
+    setPrioridadTarea((borrador.prioridad as Prioridad) || "media");
+    setEstadoTarea("pendiente");
+    setPaqueteIdTarea("");
+    setSesionesConsumidasTarea(1);
+    setPaquetesCliente([]);
+    setErrorTarea(null);
+    setTrabajoVinculado(trabajoId ? { id: trabajoId, folio: folioRaw ? Number(folioRaw) : null } : null);
+    setDiaSeleccionado(fecha);
+    setTareaRapidaFecha(fecha);
+    cargarOpcionesFormTarea();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const eventos = useMemo(() => {
     return [...(ordenes ?? []).map(eventoDeOrden), ...(tareas ?? []).map(eventoDeTarea)];
@@ -303,11 +354,15 @@ export default function AgendaPage() {
     else setPaquetesCliente([]);
   }
 
-  function abrirNuevaTarea() {
+  // Deja el estado de tarea en blanco para una creación nueva. `fecha`
+  // es la fecha inicial (día clickeado o hoy). No abre ningún form por
+  // sí solo — quien llama decide si abre el Modal completo o el rápido.
+  function resetearFormTarea(fecha: string) {
     setTareaEditandoId(null);
+    setTrabajoVinculado(null);
     setTituloTarea("");
     setDescripcionTarea("");
-    setFechaTarea(diaSeleccionado ?? fmtLocal(new Date()));
+    setFechaTarea(fecha);
     setHoraTarea("");
     setClienteIdTarea("");
     setResponsableIdTarea("");
@@ -319,11 +374,71 @@ export default function AgendaPage() {
     setPaquetesCliente([]);
     setFormPaqueteAbierto(false);
     setErrorPaquete(null);
+  }
+
+  function abrirNuevaTarea() {
+    setTareaRapidaFecha(null);
+    resetearFormTarea(diaSeleccionado ?? fmtLocal(new Date()));
     setFormTareaAbierto(true);
     cargarOpcionesFormTarea();
   }
 
+  // Form rápido anclado a un día (Parte 1). Toggle: clic en el mismo día
+  // lo cierra. D4: al abrir uno nuevo se descarta cualquier borrador
+  // viejo de sessionStorage — solo se respeta con ?reabrirTarea=1.
+  function abrirTareaRapida(fecha: string) {
+    if (tareaRapidaFecha === fecha) {
+      setTareaRapidaFecha(null);
+      return;
+    }
+    try {
+      window.sessionStorage.removeItem(CLAVE_BORRADOR);
+    } catch {
+      /* noop */
+    }
+    setFormTareaAbierto(false);
+    resetearFormTarea(fecha);
+    setTareaRapidaFecha(fecha);
+    cargarOpcionesFormTarea();
+  }
+
+  function cerrarTareaRapida() {
+    setTareaRapidaFecha(null);
+    setTrabajoVinculado(null);
+    try {
+      window.sessionStorage.removeItem(CLAVE_BORRADOR);
+    } catch {
+      /* noop */
+    }
+  }
+
+  // Parte 2: guarda lo que se lleva escrito en el form rápido y salta a
+  // crear la OS, con ?volverA=agenda para que al guardarla vuelva acá.
+  function onCrearOSDesdeTarea() {
+    try {
+      window.sessionStorage.setItem(
+        CLAVE_BORRADOR,
+        JSON.stringify({
+          titulo: tituloTarea,
+          descripcion: descripcionTarea,
+          fecha: fechaTarea,
+          hora: horaTarea,
+          cliente_id: clienteIdTarea,
+          responsable_id: responsableIdTarea,
+          prioridad: prioridadTarea,
+        })
+      );
+    } catch {
+      /* si no se puede guardar el borrador igual dejamos crear la OS */
+    }
+    const q = new URLSearchParams({ volverA: "agenda" });
+    if (clienteIdTarea) q.set("cliente_id", clienteIdTarea);
+    router.push(`/dashboard/ordenes/nueva?${q.toString()}`);
+  }
+
   function abrirEdicionTarea(t: TareaListado) {
+    setTareaRapidaFecha(null);
+    setTrabajoVinculado(null);
     setTareaEditandoId(t.id);
     setTituloTarea(t.titulo);
     setDescripcionTarea(t.descripcion ?? "");
@@ -409,6 +524,9 @@ export default function AgendaPage() {
       paquete_id: puedeAgendaPro ? paqueteIdTarea || null : null,
       sesiones_consumidas: puedeAgendaPro && paqueteIdTarea ? sesionesConsumidasTarea : 1,
       ...(tareaEditandoId ? { estado: estadoTarea } : {}),
+      // Vínculo con la OS creada desde el flujo "nueva tarea → crear OS"
+      // (Parte 2). Solo se manda si hay una OS vinculada.
+      ...(!tareaEditandoId && trabajoVinculado ? { trabajo_id: trabajoVinculado.id } : {}),
     };
     const res = tareaEditandoId
       ? await apiFetch(`/api/tareas/${tareaEditandoId}`, { method: "PATCH", body: JSON.stringify(body) })
@@ -420,6 +538,7 @@ export default function AgendaPage() {
       return;
     }
     setFormTareaAbierto(false);
+    cerrarTareaRapida();
     cargar();
   }
 
@@ -495,6 +614,89 @@ export default function AgendaPage() {
   const eventosDiaSeleccionado = diaSeleccionado ? eventosPorDia.get(diaSeleccionado) ?? [] : [];
   const eventosDelDiaVista = vista === "dia" ? eventosPorDia.get(fmtLocal(fechaActual)) ?? [] : [];
 
+  // Form rápido de nueva tarea (Parte 1) — se renderiza donde tenga
+  // sentido según la vista. Reusa el mismo estado de tarea + guardado.
+  function renderTareaRapida() {
+    if (!tareaRapidaFecha || !puedeGestionarAgenda) return null;
+    return (
+      <Card className="border-brand/40">
+        <form onSubmit={onGuardarTarea} className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-foreground">
+              Nueva tarea — {fechaDesdeString(tareaRapidaFecha).toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" })}
+            </h3>
+            <button type="button" onClick={cerrarTareaRapida} className="text-xs font-medium text-muted hover:text-foreground">
+              Cerrar
+            </button>
+          </div>
+
+          {trabajoVinculado && (
+            <p className="rounded-lg bg-brand-soft px-3 py-2 text-xs font-medium text-brand">
+              ✓ {trabajoVinculado.folio != null ? `OS N° ${trabajoVinculado.folio}` : "Orden de servicio"} creada — se vincula a esta tarea al guardar.
+            </p>
+          )}
+
+          <div>
+            <Label>Título</Label>
+            <Input type="text" value={tituloTarea} onChange={(e) => setTituloTarea(e.target.value)} placeholder="Ej: Visita técnica, recordatorio…" />
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <Label>Fecha</Label>
+              <Input
+                type="date"
+                value={fechaTarea}
+                onChange={(e) => {
+                  setFechaTarea(e.target.value);
+                  setTareaRapidaFecha(e.target.value || tareaRapidaFecha);
+                }}
+              />
+            </div>
+            <div>
+              <Label>Hora (opcional)</Label>
+              <Input type="time" value={horaTarea} onChange={(e) => setHoraTarea(e.target.value)} />
+            </div>
+          </div>
+          <div>
+            <Label>Cliente (opcional)</Label>
+            <ComboboxCliente
+              value={clienteIdTarea}
+              onChange={onCambiarClienteTarea}
+              clientes={clientesOpciones}
+              onClienteCreado={(c) => setClientesOpciones((prev) => [...prev, c])}
+              opcionVacia="Sin cliente"
+              placeholder="Sin cliente"
+            />
+          </div>
+          <div>
+            <Label>Responsable (opcional)</Label>
+            <ComboboxResponsable
+              value={responsableIdTarea}
+              onChange={setResponsableIdTarea}
+              equipo={usuariosOpciones}
+              opcionVacia="Sin asignar"
+              placeholder="Sin asignar"
+            />
+          </div>
+
+          {errorTarea && <ErrorText>{errorTarea}</ErrorText>}
+
+          <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
+            <Button type="submit" disabled={guardandoTarea}>
+              {guardandoTarea ? "Guardando…" : "Guardar tarea"}
+            </Button>
+            {!trabajoVinculado && (
+              <Button type="button" variant="outline" onClick={onCrearOSDesdeTarea} disabled={guardandoTarea}>
+                <IconWrench className="h-4 w-4" />
+                Crear Orden de Servicio
+              </Button>
+            )}
+          </div>
+        </form>
+      </Card>
+    );
+  }
+
   return (
     <DashboardShell usuario={usuario}>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
@@ -538,10 +740,6 @@ export default function AgendaPage() {
               Nueva Tarea
             </Button>
           )}
-          <Link href="/dashboard/ordenes/nueva" className={buttonClass("primary")}>
-            <IconPlus className="h-4 w-4" />
-            Nueva OS
-          </Link>
         </div>
       </div>
 
@@ -776,7 +974,13 @@ export default function AgendaPage() {
                   <button
                     key={i}
                     type="button"
-                    onClick={() => setDiaSeleccionado(seleccionado ? null : clave)}
+                    onClick={() => {
+                      setDiaSeleccionado(seleccionado ? null : clave);
+                      if (puedeGestionarAgenda) {
+                        if (seleccionado) cerrarTareaRapida();
+                        else abrirTareaRapida(clave);
+                      }
+                    }}
                     className={`flex min-h-[6.5rem] flex-col items-stretch gap-1 border-b border-r border-border p-1.5 text-left transition-colors last:border-r-0 hover:bg-brand-soft/40 ${
                       seleccionado ? "bg-brand-soft/60" : ""
                     }`}
@@ -818,6 +1022,8 @@ export default function AgendaPage() {
             </div>
           </Card>
 
+          <div className="flex flex-col gap-6">
+          {tareaRapidaFecha === diaSeleccionado && renderTareaRapida()}
           <Card>
             {diaSeleccionado ? (
               <>
@@ -859,11 +1065,14 @@ export default function AgendaPage() {
                 )}
               </>
             ) : (
-              <p className="text-sm text-muted">Haz clic en un día para ver el detalle completo.</p>
+              <p className="text-sm text-muted">Haz clic en un día para crear una tarea rápida o ver su detalle.</p>
             )}
           </Card>
+          </div>
         </div>
       ) : vista === "semana" ? (
+        <div className="flex flex-col gap-6">
+        {renderTareaRapida()}
         <Card className="overflow-hidden p-0">
           <div className="grid grid-cols-1 divide-y divide-border sm:grid-cols-7 sm:divide-x sm:divide-y-0">
             {diasSemana.map((dia) => {
@@ -872,7 +1081,15 @@ export default function AgendaPage() {
               const eventosDia = eventosPorDia.get(clave) ?? [];
               return (
                 <div key={clave} className="flex flex-col">
-                  <div className={`flex items-center justify-center gap-2 border-b border-border px-3 py-2 text-xs font-medium sm:flex-col sm:gap-1 ${esHoy ? "text-brand" : "text-muted"}`}>
+                  <button
+                    type="button"
+                    onClick={() => (puedeGestionarAgenda ? abrirTareaRapida(clave) : undefined)}
+                    disabled={!puedeGestionarAgenda}
+                    title={puedeGestionarAgenda ? "Nueva tarea este día" : undefined}
+                    className={`flex items-center justify-center gap-2 border-b px-3 py-2 text-xs font-medium transition-colors sm:flex-col sm:gap-1 ${
+                      tareaRapidaFecha === clave ? "border-brand bg-brand-soft/60" : "border-border"
+                    } ${esHoy ? "text-brand" : "text-muted"} ${puedeGestionarAgenda ? "hover:bg-brand-soft/40" : ""}`}
+                  >
                     <span className="capitalize">{NOMBRES_DIA_CORTOS[dia.getDay()]}</span>
                     <span
                       className={`flex h-6 w-6 items-center justify-center rounded-full text-sm ${
@@ -881,7 +1098,7 @@ export default function AgendaPage() {
                     >
                       {dia.getDate()}
                     </span>
-                  </div>
+                  </button>
                   <div className="flex min-h-[4rem] flex-1 flex-col gap-1.5 p-2">
                     {eventosDia.length === 0 ? (
                       <p className="py-1 text-center text-xs text-muted sm:hidden">Sin eventos</p>
@@ -914,8 +1131,19 @@ export default function AgendaPage() {
             })}
           </div>
         </Card>
+        </div>
       ) : (
+        <div className="flex flex-col gap-6">
+        {renderTareaRapida()}
         <Card>
+          {puedeGestionarAgenda && tareaRapidaFecha !== fmtLocal(fechaActual) && (
+            <div className="mb-4">
+              <Button type="button" variant="outline" onClick={() => abrirTareaRapida(fmtLocal(fechaActual))}>
+                <IconPlus className="h-4 w-4" />
+                Nueva tarea este día
+              </Button>
+            </div>
+          )}
           {eventosDelDiaVista.length === 0 ? (
             <div className="flex flex-col items-center gap-3 py-16 text-center">
               <IconCalendar className="h-8 w-8 text-muted" />
@@ -949,7 +1177,16 @@ export default function AgendaPage() {
             </div>
           )}
         </Card>
+        </div>
       )}
     </DashboardShell>
+  );
+}
+
+export default function AgendaPage() {
+  return (
+    <Suspense fallback={null}>
+      <AgendaContenido />
+    </Suspense>
   );
 }

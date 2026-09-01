@@ -29,6 +29,11 @@ async function paqueteExiste(empresaId: string, paqueteId: string) {
   return Boolean(data);
 }
 
+async function trabajoExiste(empresaId: string, trabajoId: string) {
+  const { data } = await supabase.from("trabajos").select("id").eq("empresa_id", empresaId).eq("id", trabajoId).maybeSingle();
+  return Boolean(data);
+}
+
 tareasRouter.get(
   "/",
   ah<RequestConEmpresa>(async (req, res) => {
@@ -67,7 +72,7 @@ tareasRouter.post(
   "/",
   requiereModulo("agenda"),
   ah<RequestConEmpresa>(async (req, res) => {
-    const { titulo, descripcion, fecha, hora, responsable_id, cliente_id, prioridad, paquete_id, sesiones_consumidas } = req.body ?? {};
+    const { titulo, descripcion, fecha, hora, responsable_id, cliente_id, prioridad, paquete_id, sesiones_consumidas, trabajo_id } = req.body ?? {};
 
     if (typeof titulo !== "string" || !titulo.trim()) {
       res.status(400).json({ error: "Falta título" });
@@ -93,6 +98,10 @@ tareasRouter.post(
       res.status(400).json({ error: "paquete_id inválido" });
       return;
     }
+    if (trabajo_id && !(await trabajoExiste(req.empresaId!, trabajo_id))) {
+      res.status(400).json({ error: "trabajo_id inválido" });
+      return;
+    }
     if (sesiones_consumidas !== undefined && sesiones_consumidas !== null && (!Number.isInteger(sesiones_consumidas) || sesiones_consumidas <= 0)) {
       res.status(400).json({ error: "sesiones_consumidas debe ser un entero mayor a 0" });
       return;
@@ -112,6 +121,9 @@ tareasRouter.post(
         prioridad: prioridadFinal,
         paquete_id: paquete_id || null,
         sesiones_consumidas: paquete_id ? sesiones_consumidas || 1 : 1,
+        // Solo se incluye si viene — así el endpoint sigue funcionando
+        // aunque la migración 62 (columna trabajo_id) todavía no esté.
+        ...(trabajo_id ? { trabajo_id } : {}),
       })
       .select()
       .single();
@@ -196,7 +208,7 @@ tareasRouter.patch(
   "/:id",
   requiereModulo("agenda"),
   ah<RequestConEmpresa>(async (req, res) => {
-    const { titulo, descripcion, fecha, hora, responsable_id, cliente_id, prioridad, estado, paquete_id, sesiones_consumidas } = req.body ?? {};
+    const { titulo, descripcion, fecha, hora, responsable_id, cliente_id, prioridad, estado, paquete_id, sesiones_consumidas, trabajo_id } = req.body ?? {};
     const cambios: Partial<Tarea> = {};
 
     if (titulo !== undefined) {
@@ -248,6 +260,13 @@ tareasRouter.patch(
         return;
       }
       cambios.estado = estado;
+    }
+    if (trabajo_id !== undefined) {
+      if (trabajo_id && !(await trabajoExiste(req.empresaId!, trabajo_id))) {
+        res.status(400).json({ error: "trabajo_id inválido" });
+        return;
+      }
+      cambios.trabajo_id = trabajo_id || null;
     }
     if (paquete_id !== undefined) {
       if (paquete_id && !(await paqueteExiste(req.empresaId!, paquete_id))) {

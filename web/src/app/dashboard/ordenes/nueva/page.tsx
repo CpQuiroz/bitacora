@@ -175,6 +175,17 @@ function NuevaOrdenServicioContenido() {
       return;
     }
     const nueva = await res.json();
+
+    // Vino del flujo "Nueva tarea → Crear OS" en Agenda (Parte 2): en vez
+    // de mostrar la pantalla de éxito, volver a Agenda para reabrir el
+    // borrador de tarea con esta OS ya vinculada.
+    if (searchParams.get("volverA") === "agenda") {
+      const q = new URLSearchParams({ reabrirTarea: "1", trabajoId: nueva.id });
+      if (nueva.folio != null) q.set("folio", String(nueva.folio));
+      router.replace(`/dashboard/agenda?${q.toString()}`);
+      return;
+    }
+
     setCreada({ folio: nueva.folio ?? null });
   }
 
