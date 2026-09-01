@@ -10,7 +10,7 @@ import { medirUsoStorage } from "../storage";
 import { TABLAS_POR_EMPRESA } from "../tenant";
 import { cambiarPlanEmpresa } from "../planes";
 import { enviarInvitacion } from "../email";
-import { verificarPassword } from "./passwords";
+import { hashPassword, verificarPassword } from "./passwords";
 import { generarSecretoTotp, otpauthUri, verificarCodigoTotp } from "../totp";
 import { crearTokenSuperAdmin, requiereSuperAdmin, registrarAuditoria, type RequestConSuperAdmin } from "./auth";
 
@@ -77,6 +77,98 @@ superadminRouter.post(
     await registrarAuditoria(superAdmin.id, "login", { ip: req.ip ?? null });
 
     res.json({ token: crearTokenSuperAdmin(superAdmin.id), nombre: superAdmin.nombre });
+  })
+);
+
+// ── Mi cuenta ────────────────────────────────────────────────────────
+// Autogestión de las credenciales del propio super-admin. Hasta ahora
+// la única vía era el script offline (crear-superadmin.ts) — esto da un
+// camino desde el panel, sin acceso shell al servidor. Toda mutación
+// exige reautenticarse en el momento (contraseña actual + código TOTP),
+// igual que el login, para que un token filtrado no alcance para
+// cambiar la contraseña o el segundo factor.
+
+async function reautenticar(superAdminId: string, password: unknown, codigo: unknown): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
+  if (typeof password !== "string" || typeof codigo !== "string") {
+    return { ok: false, status: 400, error: "Falta la contraseña actual o el código" };
+  }
+  const { data: sa } = await supabase.from("super_admins").select("password_hash, totp_secreto").eq("id", superAdminId).maybeSingle();
+  if (!sa) return { ok: false, status: 401, error: "Sesión inválida — vuelve a entrar" };
+  const totpSecreto = descifrarJson(sa.totp_secreto, env.SUPERADMIN_ENCRYPTION_KEY, "SUPERADMIN_ENCRYPTION_KEY").secreto as string;
+  if (!verificarPassword(password, sa.password_hash) || !verificarCodigoTotp(totpSecreto, codigo)) {
+    return { ok: false, status: 401, error: "Contraseña actual o código incorrecto" };
+  }
+  return { ok: true };
+}
+
+superadminRouter.get(
+  "/me",
+  requiereSuperAdmin,
+  ah<RequestConSuperAdmin>(async (req, res) => {
+    const { data } = await supabase.from("super_admins").select("correo, nombre, ultimo_login_en, creado_en").eq("id", req.superAdminId!).maybeSingle();
+    if (!data) {
+      res.status(404).json({ error: "No encontrado" });
+      return;
+    }
+    res.json(data);
+  })
+);
+
+superadminRouter.post(
+  "/me/cambiar-password",
+  requiereSuperAdmin,
+  ah<RequestConSuperAdmin>(async (req, res) => {
+    const { password_actual, password_nueva, codigo } = req.body ?? {};
+    if (typeof password_nueva !== "string" || password_nueva.length < 12) {
+      res.status(400).json({ error: "La contraseña nueva debe tener al menos 12 caracteres" });
+      return;
+    }
+    const auth = await reautenticar(req.superAdminId!, password_actual, codigo);
+    if (!auth.ok) {
+      res.status(auth.status).json({ error: auth.error });
+      return;
+    }
+    const { error } = await supabase
+      .from("super_admins")
+      .update({ password_hash: hashPassword(password_nueva), intentos_fallidos: 0, bloqueado_hasta: null })
+      .eq("id", req.superAdminId!);
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    await registrarAuditoria(req.superAdminId!, "cambiar_password_propia", { ip: req.ip ?? null });
+    res.json({ ok: true });
+  })
+);
+
+superadminRouter.post(
+  "/me/regenerar-totp",
+  requiereSuperAdmin,
+  ah<RequestConSuperAdmin>(async (req, res) => {
+    const { password_actual, codigo } = req.body ?? {};
+    const auth = await reautenticar(req.superAdminId!, password_actual, codigo);
+    if (!auth.ok) {
+      res.status(auth.status).json({ error: auth.error });
+      return;
+    }
+    const { data: sa } = await supabase.from("super_admins").select("correo").eq("id", req.superAdminId!).maybeSingle();
+    if (!sa) {
+      res.status(404).json({ error: "No encontrado" });
+      return;
+    }
+    const secreto = generarSecretoTotp();
+    const { error } = await supabase
+      .from("super_admins")
+      .update({ totp_secreto: cifrarJson({ secreto }, env.SUPERADMIN_ENCRYPTION_KEY, "SUPERADMIN_ENCRYPTION_KEY") })
+      .eq("id", req.superAdminId!);
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    await registrarAuditoria(req.superAdminId!, "regenerar_totp_propio", { ip: req.ip ?? null });
+    // Se muestra una sola vez — igual que crear-superadmin.ts y que el
+    // reset de 2FA de un usuario de empresa.
+    res.json({ secreto, otpauthUri: otpauthUri(secreto, sa.correo, "Bitácora Super-Admin") });
   })
 );
 

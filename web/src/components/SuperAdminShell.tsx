@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { Logo } from "./Logo";
 import { cerrarSesionSuperAdmin } from "@/lib/superadminApi";
-import { IconLogOut } from "./icons";
+import { IconLogOut, IconUser } from "./icons";
 
 // Panel de Super-Admin: identidad de plataforma, sin nada compartido
 // con DashboardShell ni con PortalShell — layout propio, mínimo.
@@ -24,10 +24,16 @@ export function SuperAdminShell({ children }: { children: ReactNode }) {
           <Logo markClassName="h-7 w-7" />
           <span className="text-sm font-semibold text-foreground">Panel de Super-Admin</span>
         </Link>
-        <button type="button" onClick={salir} className="flex items-center gap-1.5 text-xs font-medium text-muted hover:text-danger">
-          <IconLogOut className="h-4 w-4" />
-          Salir
-        </button>
+        <div className="flex items-center gap-4">
+          <Link href="/superadmin/cuenta" className="flex items-center gap-1.5 text-xs font-medium text-muted hover:text-foreground">
+            <IconUser className="h-4 w-4" />
+            Mi cuenta
+          </Link>
+          <button type="button" onClick={salir} className="flex items-center gap-1.5 text-xs font-medium text-muted hover:text-danger">
+            <IconLogOut className="h-4 w-4" />
+            Salir
+          </button>
+        </div>
       </header>
       <main className="mx-auto max-w-6xl px-6 py-10">{children}</main>
     </div>
