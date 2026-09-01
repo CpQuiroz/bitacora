@@ -61,8 +61,9 @@ const NAV_GROUPS: NavGroup[] = [
         icon: IconClipboardCheck,
         modulo: "ordenes_servicio",
         children: [
+          // "Nueva OS" ya no vive acá — es el botón "+ Nueva OS" del
+          // listado (mismo patrón que Clientes/Equipos/Catálogo).
           { href: "/dashboard/ordenes", label: "Todas las OS" },
-          { href: "/dashboard/ordenes/nueva", label: "Nueva OS" },
           { href: "/dashboard/trabajos", label: "Trabajos" },
         ],
       },
