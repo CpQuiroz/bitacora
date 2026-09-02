@@ -2,7 +2,8 @@ import { Router } from "express";
 import crypto from "node:crypto";
 import type { Accion, EstadoEmpresa, Modulo, Plan, Rol, Rubro } from "@bitacora/shared";
 import { ACCIONES, MODULOS, moduloActivadoPorDefecto, formatearRut, validarRut } from "@bitacora/shared";
-import { invalidarCacheRoles, empresaPuedeUsarRol } from "../roles";
+import { invalidarCacheRoles, empresaPuedeUsarRol, rolesDeEmpresa } from "../roles";
+import { validarValorAcceso } from "../accesosAutorizados";
 import { supabase } from "../supabase";
 import { env } from "../env";
 import { ah } from "../asyncHandler";
@@ -1248,6 +1249,101 @@ superadminRouter.post(
     });
 
     res.json({ flag, activado: false });
+  })
+);
+
+// ── Correos y dominios autorizados por empresa (migración 72) ────────
+// Un correo/dominio de esta lista puede entrar a la empresa aunque no
+// haya sido invitado — el backend le crea la fila en `usuarios` con el
+// rol indicado la primera vez que entra (ver accesosAutorizados.ts).
+superadminRouter.get(
+  "/empresas/:id/accesos",
+  requiereSuperAdmin,
+  ah<RequestConSuperAdmin>(async (req, res) => {
+    const { data: empresa } = await supabase.from("empresas").select("id").eq("id", req.params.id).maybeSingle();
+    if (!empresa) {
+      res.status(404).json({ error: "Empresa no encontrada" });
+      return;
+    }
+    const [{ data: accesos }, roles] = await Promise.all([
+      supabase
+        .from("empresa_accesos_autorizados")
+        .select("id, tipo, valor, rol, creado_en")
+        .eq("empresa_id", req.params.id)
+        .order("creado_en", { ascending: false }),
+      rolesDeEmpresa(req.params.id),
+    ]);
+    res.json({ accesos: accesos ?? [], roles: roles.map((r) => ({ slug: r.slug, nombre: r.nombre })) });
+  })
+);
+
+superadminRouter.post(
+  "/empresas/:id/accesos",
+  requiereSuperAdmin,
+  ah<RequestConSuperAdmin>(async (req, res) => {
+    const { data: empresa } = await supabase.from("empresas").select("nombre").eq("id", req.params.id).maybeSingle();
+    if (!empresa) {
+      res.status(404).json({ error: "Empresa no encontrada" });
+      return;
+    }
+    const v = validarValorAcceso(req.body?.tipo, req.body?.valor);
+    if (!v.ok) {
+      res.status(400).json({ error: v.error });
+      return;
+    }
+    const rol = typeof req.body?.rol === "string" && req.body.rol ? req.body.rol : "colaborador";
+    if (!(await empresaPuedeUsarRol(rol, req.params.id))) {
+      res.status(400).json({ error: "El rol indicado no está disponible para esta empresa" });
+      return;
+    }
+
+    const { error } = await supabase.from("empresa_accesos_autorizados").insert({
+      empresa_id: req.params.id,
+      tipo: v.tipo,
+      valor: v.valor,
+      rol,
+      creado_por: req.superAdminId!,
+    });
+    if (error) {
+      res.status(error.code === "23505" ? 409 : 500).json({
+        error: error.code === "23505" ? "Ese correo o dominio ya está en la lista" : error.message,
+      });
+      return;
+    }
+    await registrarAuditoria(req.superAdminId!, "autorizar_acceso_empresa", {
+      empresaId: req.params.id,
+      ip: req.ip ?? null,
+      detalle: `${empresa.nombre}: ${v.tipo} ${v.valor} (${rol})`,
+    });
+    res.status(201).json({ ok: true });
+  })
+);
+
+superadminRouter.delete(
+  "/empresas/:id/accesos/:accesoId",
+  requiereSuperAdmin,
+  ah<RequestConSuperAdmin>(async (req, res) => {
+    const { data: acceso } = await supabase
+      .from("empresa_accesos_autorizados")
+      .select("id, tipo, valor")
+      .eq("id", req.params.accesoId)
+      .eq("empresa_id", req.params.id)
+      .maybeSingle();
+    if (!acceso) {
+      res.status(404).json({ error: "Autorización no encontrada" });
+      return;
+    }
+    const { error } = await supabase.from("empresa_accesos_autorizados").delete().eq("id", acceso.id);
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    await registrarAuditoria(req.superAdminId!, "revocar_acceso_empresa", {
+      empresaId: req.params.id,
+      ip: req.ip ?? null,
+      detalle: `${acceso.tipo} ${acceso.valor}`,
+    });
+    res.json({ ok: true });
   })
 );
 

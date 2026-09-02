@@ -27,6 +27,25 @@ export function dominioDeCorreo(email: string): string | null {
   return email.slice(at + 1).trim().toLowerCase();
 }
 
+const RE_CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const RE_DOMINIO = /^(?!-)[a-z0-9-]+(\.[a-z0-9-]+)+$/;
+
+// Valida y normaliza un valor de la lista de accesos. Devuelve el valor
+// en minúsculas listo para guardar, o un mensaje de error.
+export function validarValorAcceso(
+  tipo: unknown,
+  valor: unknown
+): { ok: true; tipo: "correo" | "dominio"; valor: string } | { ok: false; error: string } {
+  if (tipo !== "correo" && tipo !== "dominio") return { ok: false, error: "tipo debe ser 'correo' o 'dominio'" };
+  if (typeof valor !== "string" || !valor.trim()) return { ok: false, error: "Falta el valor" };
+  const limpio = valor.trim().toLowerCase();
+  if (tipo === "correo" && !RE_CORREO.test(limpio)) return { ok: false, error: "Correo inválido" };
+  if (tipo === "dominio" && !RE_DOMINIO.test(limpio)) {
+    return { ok: false, error: "Dominio inválido (ej. transportes.cl, sin @ ni http)" };
+  }
+  return { ok: true, tipo, valor: limpio };
+}
+
 export type AccesoAutorizado = { empresaId: string; rol: string; tipo: "correo" | "dominio" };
 
 // Todas las autorizaciones que matchean un correo — por correo exacto o
