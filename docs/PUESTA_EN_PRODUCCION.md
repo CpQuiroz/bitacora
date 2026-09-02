@@ -22,9 +22,9 @@ Dev sigue en un Supabase aparte (ref `pruwvpnlvrvgtmpetlsr`) + servidores locale
 
 ### Migraciones — estado en prod
 
-**Última migración aplicada a producción: `69` (2-sep-2026, `supabase db push` con el CLI linkeado a prod; tracking `remote:69` OK, CI de migraciones en verde).** Actualizar este número a mano cada vez que se aplique una migración nueva a prod.
+**Última migración aplicada a producción: `70` (2-sep-2026, `supabase db push` con el CLI linkeado a prod; tracking `remote:70` OK, CI de migraciones en verde).** Actualizar este número a mano cada vez que se aplique una migración nueva a prod.
 > `64`–`66` — reconstrucción app móvil (Fase 2): check-in/out geo en `ordenes_servicio`, `usuarios.funcion`, `viajes.origen_captura += 'app'`.
-> `67`–`69` — módulo Remuneraciones (opt-in): `parametros_previsionales`/`afp_parametros`/`asignacion_familiar_tramos`, `datos_laborales`, `liquidaciones`.
+> `67`–`70` — módulo Remuneraciones (opt-in): `parametros_previsionales`/`afp_parametros`/`asignacion_familiar_tramos`, `datos_laborales`, `liquidaciones`, y (`70`) `usuarios.rut` + campos Previred en `datos_laborales`.
 
 > ⚠️ **El tracking de migraciones de DEV (`pruwvpnlvrvgtmpetlsr`) está desincronizado.** Varias migraciones se aplicaron a dev por fuera de `db push` (SQL Editor o `supabase db query --linked --project-ref pruwvpnlvrvgtmpetlsr -f ...` vía Management API — no necesita el password de la DB), así que el schema de dev **sí** está al día pero `supabase_migrations.schema_migrations` de dev **no** tiene esas filas. **Además, las migraciones 60 y 61 nunca se habían aplicado a dev** (destapado el 2-sep por el error `Could not find the function public.superadmin_metricas_calcular` en el Panel de Super-Admin de dev) — se aplicaron ese día por Management API + `notify pgrst, 'reload schema'`. Estado real de dev al 2-sep-2026: **schema equivalente a la 69**. Fix si algún día se linkea el CLI a dev: `supabase migration repair --status applied 60 61 62 63 64 65 66 67 68 69` antes del `db push`.
 
