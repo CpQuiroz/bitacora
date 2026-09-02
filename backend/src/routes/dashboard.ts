@@ -10,6 +10,7 @@ import {
 } from "../agregacionesDashboard";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
+import { requiereRol } from "../permisos";
 
 export const dashboardRouter = Router();
 
@@ -61,8 +62,11 @@ export function resolverPeriodo(periodo: string | undefined, desdeQuery: unknown
   }
 }
 
+// KPIs financieros + operativos agregados de toda la empresa — no es
+// para un colaborador (rol sin módulos). admin/supervisor/contador sí.
 dashboardRouter.get(
   "/",
+  requiereRol("admin", "supervisor", "contador"),
   ah<RequestConEmpresa>(async (req, res) => {
     const { desde, hasta } = resolverPeriodo(
       typeof req.query.periodo === "string" ? req.query.periodo : undefined,

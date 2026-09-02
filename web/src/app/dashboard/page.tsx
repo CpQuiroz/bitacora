@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Empresa, Modulo, Usuario } from "@bitacora/shared";
+import { puedeVerModulo } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
@@ -59,17 +60,18 @@ const PERIODOS = [
   { valor: "personalizado", etiqueta: "Personalizado" },
 ];
 
-// modulo opcional: solo lo llevan los accesos a un módulo opt-in
-// (ver empresa_modulos) — el resto siempre está disponible, así que
-// no hace falta filtrarlos.
-const ACCESOS: { href: string; label: string; icon: typeof IconBriefcase; modulo?: Modulo }[] = [
-  { href: "/dashboard/trabajos", label: "Trabajos", icon: IconBriefcase },
-  { href: "/dashboard/ordenes", label: "Órdenes de Trabajo/Servicio", icon: IconClipboardCheck },
-  { href: "/dashboard/registros/clientes", label: "Clientes", icon: IconMapPin },
-  { href: "/dashboard/rutas", label: "Rutas", icon: IconRoute },
-  { href: "/dashboard/financiero/cobros", label: "Cobros", icon: IconReceipt },
-  { href: "/dashboard/financiero/cotizaciones", label: "Cotizaciones", icon: IconTag },
-  { href: "/dashboard/gastos", label: "Gastos", icon: IconWallet },
+// Cada acceso lleva su módulo — se muestra solo si el ROL lo puede ver
+// (puedeVerModulo) y la empresa lo tiene activado. Antes solo se
+// filtraba por módulo opt-in, así que un colaborador (sin módulos) veía
+// atajos a Trabajos, Clientes, Cobros, etc. que no puede abrir.
+const ACCESOS: { href: string; label: string; icon: typeof IconBriefcase; modulo: Modulo }[] = [
+  { href: "/dashboard/trabajos", label: "Trabajos", icon: IconBriefcase, modulo: "ordenes_servicio" },
+  { href: "/dashboard/ordenes", label: "Órdenes de Trabajo/Servicio", icon: IconClipboardCheck, modulo: "ordenes_servicio" },
+  { href: "/dashboard/registros/clientes", label: "Clientes", icon: IconMapPin, modulo: "registros" },
+  { href: "/dashboard/rutas", label: "Rutas", icon: IconRoute, modulo: "rutas" },
+  { href: "/dashboard/financiero/cobros", label: "Cobros", icon: IconReceipt, modulo: "financiero" },
+  { href: "/dashboard/financiero/cotizaciones", label: "Cotizaciones", icon: IconTag, modulo: "financiero" },
+  { href: "/dashboard/gastos", label: "Gastos", icon: IconWallet, modulo: "financiero" },
   { href: "/dashboard/informe", label: "Informe con IA", icon: IconSparkle, modulo: "informe_ia" },
 ];
 
@@ -140,7 +142,10 @@ export default function DashboardPage() {
   }, [periodo]);
 
   useEffect(() => {
-    if (!cargando) cargarDashboard();
+    // El dashboard analítico (KPIs/gráficos financieros y operativos) es
+    // para admin/supervisor/contador — el backend ahora también lo
+    // rechaza para colaborador, así no se dispara un 403.
+    if (!cargando && usuario && usuario.rol !== "colaborador") cargarDashboard();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cargando]);
 
@@ -148,6 +153,9 @@ export default function DashboardPage() {
 
   const moneda = usuario.empresa.moneda ?? "CLP";
   const money = (n: number) => formatMoneda(n, moneda);
+  const puedeVer = (m: Modulo) => puedeVerModulo(usuario.rol, m) && !modulosDeshabilitados.includes(m);
+  const verAnalitico = usuario.rol !== "colaborador";
+  const accesosVisibles = ACCESOS.filter((a) => puedeVer(a.modulo));
 
   return (
     <DashboardShell
@@ -169,56 +177,74 @@ export default function DashboardPage() {
           <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground">
             Hola, {usuario.nombre.split(" ")[0]}
           </h1>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <Link href="/dashboard/ordenes/nueva" className={buttonClass("primary")}>
-              <IconPlus className="h-4 w-4" />
-              Nueva OS
-            </Link>
-            <Link href="/dashboard/financiero/cotizaciones/nueva" className={buttonClass("outline")}>
-              <IconPlus className="h-4 w-4" />
-              Nueva Cotización
-            </Link>
-          </div>
-        </div>
-        <div className="flex flex-wrap items-end gap-2">
-          <Select value={periodo} onChange={(e) => setPeriodo(e.target.value)} className="w-44">
-            {PERIODOS.map((p) => (
-              <option key={p.valor} value={p.valor}>
-                {p.etiqueta}
-              </option>
-            ))}
-          </Select>
-          {periodo === "personalizado" && (
-            <>
-              <input
-                type="date"
-                value={desdeCustom}
-                onChange={(e) => setDesdeCustom(e.target.value)}
-                className="rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-              />
-              <input
-                type="date"
-                value={hastaCustom}
-                onChange={(e) => setHastaCustom(e.target.value)}
-                className="rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-              />
-            </>
+          {(puedeVer("ordenes_servicio") || puedeVer("financiero")) && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {puedeVer("ordenes_servicio") && (
+                <Link href="/dashboard/ordenes/nueva" className={buttonClass("primary")}>
+                  <IconPlus className="h-4 w-4" />
+                  Nueva OS
+                </Link>
+              )}
+              {puedeVer("financiero") && (
+                <Link href="/dashboard/financiero/cotizaciones/nueva" className={buttonClass("outline")}>
+                  <IconPlus className="h-4 w-4" />
+                  Nueva Cotización
+                </Link>
+              )}
+            </div>
           )}
-          <Button type="button" onClick={cargarDashboard} disabled={cargandoDatos}>
-            {cargandoDatos ? "Actualizando…" : "Actualizar"}
-          </Button>
         </div>
+        {verAnalitico && (
+          <div className="flex flex-wrap items-end gap-2">
+            <Select value={periodo} onChange={(e) => setPeriodo(e.target.value)} className="w-44">
+              {PERIODOS.map((p) => (
+                <option key={p.valor} value={p.valor}>
+                  {p.etiqueta}
+                </option>
+              ))}
+            </Select>
+            {periodo === "personalizado" && (
+              <>
+                <input
+                  type="date"
+                  value={desdeCustom}
+                  onChange={(e) => setDesdeCustom(e.target.value)}
+                  className="rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                />
+                <input
+                  type="date"
+                  value={hastaCustom}
+                  onChange={(e) => setHastaCustom(e.target.value)}
+                  className="rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                />
+              </>
+            )}
+            <Button type="button" onClick={cargarDashboard} disabled={cargandoDatos}>
+              {cargandoDatos ? "Actualizando…" : "Actualizar"}
+            </Button>
+          </div>
+        )}
       </div>
 
-      {error && (
+      {!verAnalitico && (
+        <Card className="mb-6">
+          <p className="text-sm text-foreground">Tu perfil no tiene módulos de gestión asignados.</p>
+          <p className="mt-1 text-sm text-muted">
+            El trabajo en terreno (órdenes de servicio, checklists, fotos) se hace desde la app móvil. Si crees que deberías ver más
+            acá, pídele a un administrador de tu empresa que revise tu rol en Grupo y usuario.
+          </p>
+        </Card>
+      )}
+
+      {verAnalitico && error && (
         <div className="mb-6">
           <ErrorText>{error}</ErrorText>
         </div>
       )}
 
-      {!datos && !error && <p className="text-sm text-muted">Cargando indicadores…</p>}
+      {verAnalitico && !datos && !error && <p className="text-sm text-muted">Cargando indicadores…</p>}
 
-      {datos && (
+      {verAnalitico && datos && (
         <>
           {/* TODO: decisión pendiente — estos KPIs y el gráfico de
               ingresos duplican casi exactamente lo que ya muestra
@@ -341,18 +367,20 @@ export default function DashboardPage() {
         </>
       )}
 
-      <div className="mt-8 flex flex-wrap gap-2">
-        {ACCESOS.filter((a) => !a.modulo || !modulosDeshabilitados.includes(a.modulo)).map((a) => (
-          <Link
-            key={a.href}
-            href={a.href}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-medium text-muted transition-colors hover:border-brand hover:text-brand"
-          >
-            <a.icon className="h-4 w-4" />
-            {a.label}
-          </Link>
-        ))}
-      </div>
+      {accesosVisibles.length > 0 && (
+        <div className="mt-8 flex flex-wrap gap-2">
+          {accesosVisibles.map((a) => (
+            <Link
+              key={a.href}
+              href={a.href}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-medium text-muted transition-colors hover:border-brand hover:text-brand"
+            >
+              <a.icon className="h-4 w-4" />
+              {a.label}
+            </Link>
+          ))}
+        </div>
+      )}
     </DashboardShell>
   );
 }
