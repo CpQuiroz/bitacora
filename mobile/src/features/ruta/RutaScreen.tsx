@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
-import { Linking, Platform, ScrollView, View } from "react-native";
-import { AppleMaps, GoogleMaps } from "expo-maps";
+import { Linking, ScrollView, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { useTema } from "../../theme";
 import { EmptyState, ErrorState, LoadingScreen, Screen, Text } from "../../components/ui";
 import { OfflineBanner } from "../../components/OfflineBanner";
 import { obtenerRutaDelDia, type Parada } from "../../services/ruta";
+import { MapaRuta } from "./MapaRuta";
 
 const wazeUrl = (lat: number, lng: number) => `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`;
 
@@ -53,15 +53,7 @@ export function RutaScreen() {
         <Text variante="titulo">Mi ruta de hoy</Text>
       </View>
 
-      {conCoords.length > 0 ? (
-        <View style={{ height: 260, marginHorizontal: t.espacio(5), borderRadius: t.radio.lg, overflow: "hidden" }}>
-          {Platform.OS === "ios" ? (
-            <AppleMaps.View style={{ flex: 1 }} cameraPosition={{ coordinates: centro, zoom: 11 }} markers={markers} />
-          ) : (
-            <GoogleMaps.View style={{ flex: 1 }} cameraPosition={{ coordinates: centro, zoom: 11 }} markers={markers} />
-          )}
-        </View>
-      ) : null}
+      {conCoords.length > 0 ? <MapaRuta centro={centro} markers={markers} /> : null}
 
       <ScrollView contentContainerStyle={{ padding: t.espacio(5), gap: t.espacio(3), flexGrow: 1 }}>
         {paradas.length === 0 ? (
