@@ -43,7 +43,35 @@ async function buscarChofer(telefonoNormalizado: string) {
     .select("id, empresa_id, telefono")
     .eq("rol", "colaborador")
     .not("telefono", "is", null);
-  return (data ?? []).find((u) => normalizarTelefono(u.telefono) === telefonoNormalizado) ?? null;
+  const candidatos = (data ?? []).map((u) => ({ ...u, norm: normalizarTelefono(u.telefono) })).filter((u) => u.norm.length >= 8);
+
+  // Coincidencia exacta primero.
+  const exacto = candidatos.find((u) => u.norm === telefonoNormalizado);
+  if (exacto) return exacto;
+
+  // Tolerante: WhatsApp a veces entrega el wa_id sin el "9" móvil de
+  // Chile, o con distinto prefijo de país. El número de abonado son los
+  // últimos 8 dígitos — si esos coinciden y es único, es la persona.
+  if (telefonoNormalizado.length >= 8) {
+    const sufijo = telefonoNormalizado.slice(-8);
+    const porSufijo = candidatos.filter((u) => u.norm.slice(-8) === sufijo);
+    if (porSufijo.length === 1) return porSufijo[0];
+  }
+  return null;
+}
+
+// Deja rastro en errores_backend de un mensaje de un número que no
+// matcheó ningún chofer — el console.warn no se ve en Render.
+async function registrarChoferNoEncontrado(desde: string) {
+  try {
+    await supabase.from("errores_backend").insert({
+      ruta: "whatsapp:chofer-no-encontrado",
+      metodo: "POST",
+      mensaje: `Mensaje de WhatsApp de ${desde} — ningún usuario con rol colaborador tiene ese teléfono`,
+    });
+  } catch (err) {
+    console.error("No se pudo registrar chofer-no-encontrado:", err);
+  }
 }
 
 async function manejarFoto(chofer: { id: string; empresa_id: string }, mensaje: MensajeEntranteWhatsapp, desde: string) {
@@ -134,7 +162,19 @@ async function manejarTexto(chofer: { id: string; empresa_id: string }, mensaje:
   // sigue con el manejo legado (foto de guía + km) de abajo.
   const respuestasFlujo = await manejarConversacionViaje(chofer, telefono, texto);
   if (respuestasFlujo) {
-    for (const respuesta of respuestasFlujo) await enviarMensajeWhatsapp(desde, respuesta);
+    for (const respuesta of respuestasFlujo) {
+      const envio = await enviarMensajeWhatsapp(desde, respuesta);
+      if (!envio.ok) {
+        // El flujo hizo su trabajo (guardó estado) pero la respuesta no
+        // salió — casi siempre WHATSAPP_ACCESS_TOKEN vencido/ausente.
+        // Se registra para poder verlo sin acceso a los logs de Render.
+        await supabase
+          .from("errores_backend")
+          .insert({ ruta: "whatsapp:envio-respuesta", metodo: "POST", mensaje: envio.error ?? "fallo desconocido al enviar" })
+          .then(({ error }) => error && console.error("No se pudo registrar el fallo de envío:", error));
+        break;
+      }
+    }
     return;
   }
 
@@ -209,6 +249,7 @@ whatsappRouter.post(
         const chofer = await buscarChofer(normalizarTelefono(desde));
         if (!chofer) {
           console.warn("Mensaje de WhatsApp de un número no registrado como chofer:", desde);
+          await registrarChoferNoEncontrado(desde);
           continue;
         }
 
