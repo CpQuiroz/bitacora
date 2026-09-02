@@ -9,7 +9,7 @@ import { Badge, Card, EmptyState, ErrorState, LoadingScreen, Text } from "../../
 import { OfflineBanner } from "../../components/OfflineBanner";
 import { useAuth } from "../auth/AuthContext";
 import { listarTrabajos } from "../../services/trabajos";
-import type { TrabajosStackParamList } from "../../app/navigation/types";
+import type { TrabajosStackParamList } from "../../shell/navigation/types";
 
 export function TrabajosScreen({ navigation }: NativeStackScreenProps<TrabajosStackParamList, "TrabajosLista">) {
   const t = useTema();

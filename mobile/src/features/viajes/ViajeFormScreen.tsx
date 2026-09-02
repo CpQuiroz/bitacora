@@ -7,7 +7,7 @@ import { useTema } from "../../theme";
 import { Button, Card, Input, LoadingScreen, Text } from "../../components/ui";
 import { comprimirImagen } from "../../lib/imagen";
 import { catalogoParaViaje, encolarViaje, type BorradorViaje } from "../../services/viajes";
-import type { ViajesStackParamList } from "../../app/navigation/types";
+import type { ViajesStackParamList } from "../../shell/navigation/types";
 
 const VACIO: BorradorViaje = {
   cliente_id: "",

@@ -20,7 +20,7 @@ import {
 import { CamposDinamicos } from "./components/CamposDinamicos";
 import { FotosSection } from "./components/FotosSection";
 import { CierreFirma } from "./components/CierreFirma";
-import type { TrabajosStackParamList } from "../../app/navigation/types";
+import type { TrabajosStackParamList } from "../../shell/navigation/types";
 
 export function TrabajoDetalleScreen({ route }: NativeStackScreenProps<TrabajosStackParamList, "TrabajoDetalle">) {
   const t = useTema();

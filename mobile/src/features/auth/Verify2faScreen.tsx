@@ -5,7 +5,7 @@ import { supabase } from "../../lib/supabase";
 import { apiJson } from "../../services/api";
 import { useTema } from "../../theme";
 import { Button, Input, Screen, Text } from "../../components/ui";
-import type { RootStackParamList } from "../../app/navigation/types";
+import type { RootStackParamList } from "../../shell/navigation/types";
 
 export function Verify2faScreen({ route, navigation }: NativeStackScreenProps<RootStackParamList, "Verify2fa">) {
   const t = useTema();

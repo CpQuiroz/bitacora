@@ -8,7 +8,7 @@ import { Badge, Button, Card, EmptyState, ErrorState, LoadingScreen, Text } from
 import { OfflineBanner } from "../../components/OfflineBanner";
 import { useRed } from "../../services/sync/NetworkProvider";
 import { listarViajesPropios, type ViajeConDatos } from "../../services/viajes";
-import type { ViajesStackParamList } from "../../app/navigation/types";
+import type { ViajesStackParamList } from "../../shell/navigation/types";
 
 export function ViajesScreen({ navigation }: NativeStackScreenProps<ViajesStackParamList, "ViajesLista">) {
   const t = useTema();
