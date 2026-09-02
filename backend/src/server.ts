@@ -56,7 +56,8 @@ import { documentosRouter } from "./routes/documentos";
 import { mfaRouter } from "./routes/mfa";
 import { authLoginRouter } from "./routes/authLogin";
 import { limitarLogin, limitarEncuestaPublica } from "./rateLimiters";
-import { modulosDeshabilitadosDeEmpresa, featureFlagsDeEmpresa, requiereModulo } from "./permisos";
+import { modulosDeshabilitadosDeEmpresa, featureFlagsDeEmpresa, modulosVisiblesDeUsuario, requiereModulo } from "./permisos";
+import { accionesDeRol } from "./roles";
 import { revisarCumpleanosClientes } from "./cumpleanosClientes";
 import { sembrarSugerenciasRubro } from "./seedRubro";
 import { ah } from "./asyncHandler";
@@ -108,9 +109,14 @@ app.get("/api/me", requiereAuth, ah<RequestConUsuario>(async (req, res) => {
     res.status(500).json({ error: error.message });
     return;
   }
-  const [modulosDeshabilitados, featureFlags] = usuario
-    ? await Promise.all([modulosDeshabilitadosDeEmpresa(usuario.empresa_id), featureFlagsDeEmpresa(usuario.empresa_id)])
-    : [[], []];
+  const [modulosDeshabilitados, featureFlags, modulosVisibles, acciones] = usuario
+    ? await Promise.all([
+        modulosDeshabilitadosDeEmpresa(usuario.empresa_id),
+        featureFlagsDeEmpresa(usuario.empresa_id),
+        modulosVisiblesDeUsuario(usuario.rol, usuario.empresa_id),
+        accionesDeRol(usuario.rol),
+      ])
+    : [[], [], [], []];
   // Sin cron en este proyecto — /api/me es el endpoint más universal
   // (cualquier navegación del dashboard lo llama), así que es donde
   // más chances hay de que el chequeo corra el día justo. No bloquea
@@ -119,6 +125,11 @@ app.get("/api/me", requiereAuth, ah<RequestConUsuario>(async (req, res) => {
   res.json({
     usuario,
     modulos_deshabilitados: modulosDeshabilitados,
+    // Módulos que este usuario realmente ve (rol ∩ contratados) y sus
+    // acciones sensibles delegadas — el frontend filtra la navegación y
+    // los botones con esto, ya no con la matriz hardcodeada.
+    modulos_visibles: modulosVisibles,
+    acciones,
     // Feature flags en beta activados para esta empresa (Panel de
     // Super-Admin). Lista de nombres; el frontend hace .includes(...).
     feature_flags: featureFlags,

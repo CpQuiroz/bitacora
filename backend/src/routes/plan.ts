@@ -9,7 +9,7 @@ import { supabase } from "../supabase";
 import { env } from "../env";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
-import { requiereRol } from "../permisos";
+import { requiereAccion } from "../permisos";
 import { cambiarPlanEmpresa } from "../planes";
 import { suscribirAPlan, cancelarSuscripcionFlow } from "../flow";
 
@@ -49,7 +49,7 @@ planRouter.get(
 
 planRouter.post(
   "/cambiar",
-  requiereRol("admin"),
+  requiereAccion("gestionar_plan"),
   ah<RequestConEmpresa>(async (req, res) => {
     const { plan } = req.body ?? {};
     if (plan !== "basico" && plan !== "pro") {

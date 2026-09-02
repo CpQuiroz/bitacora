@@ -9,7 +9,7 @@ import { supabase } from "../supabase";
 import { env } from "../env";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
-import { requiereRol } from "../permisos";
+import { requiereAccion } from "../permisos";
 import { crearClienteFlow, linkRegistroTarjeta, consultarRegistroTarjeta, consultarCliente, suscribirAPlan, cancelarSuscripcionFlow } from "../flow";
 import { cambiarPlanEmpresa } from "../planes";
 
@@ -93,7 +93,7 @@ suscripcionRouter.get(
 // lo crea primero.
 suscripcionRouter.post(
   "/tarjeta",
-  requiereRol("admin"),
+  requiereAccion("gestionar_plan"),
   ah<RequestConEmpresa>(async (req, res) => {
     const { plan } = req.body ?? {};
     const planPendiente: "basico" | "pro" | null = plan === "basico" || plan === "pro" ? plan : null;
@@ -141,7 +141,7 @@ suscripcionRouter.post(
 // ?token=... en la URL.
 suscripcionRouter.post(
   "/tarjeta/confirmar",
-  requiereRol("admin"),
+  requiereAccion("gestionar_plan"),
   ah<RequestConEmpresa>(async (req, res) => {
     const { token } = req.body ?? {};
     if (typeof token !== "string" || !token) {
@@ -211,7 +211,7 @@ suscripcionRouter.post(
 
 suscripcionRouter.post(
   "/cancelar",
-  requiereRol("admin"),
+  requiereAccion("gestionar_plan"),
   ah<RequestConEmpresa>(async (req, res) => {
     const suscripcion = await obtenerOCrearSuscripcion(req.empresaId!);
     if (!suscripcion.flow_subscription_id) {

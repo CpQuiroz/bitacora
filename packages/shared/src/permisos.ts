@@ -31,6 +31,11 @@ export const MODULOS = [
 
 export type Modulo = (typeof MODULOS)[number];
 
+// ⚠️ SEMILLA — desde la migración 71 los roles son filas editables desde
+// el Panel de Super-Admin (tabla `roles`). Estas constantes solo se usan
+// para sembrar los 4 roles de sistema la primera vez (backend/src/roles.ts).
+// El backend resuelve permisos contra la tabla; el frontend contra
+// `modulos_visibles` / `acciones` que devuelve /api/me.
 export const PERMISOS_POR_ROL: Record<Rol, Modulo[]> = {
   admin: [...MODULOS],
   supervisor: ["agenda", "ordenes_servicio", "viajes", "registros", "rutas", "flota", "agenda_pro"],
@@ -38,6 +43,34 @@ export const PERMISOS_POR_ROL: Record<Rol, Modulo[]> = {
   colaborador: [],
 };
 
+// Capacidades sensibles delegables a un rol (además de sus módulos). El
+// rol `admin` las tiene todas siempre, no hace falta listarlas.
+export const ACCIONES = ["facturar", "gestionar_plan", "config_agenda_pro", "ver_dashboard"] as const;
+export type Accion = (typeof ACCIONES)[number];
+
+export const ACCIONES_POR_ROL: Record<Rol, Accion[]> = {
+  admin: [...ACCIONES],
+  supervisor: ["config_agenda_pro", "ver_dashboard"],
+  contador: ["ver_dashboard"],
+  colaborador: [],
+};
+
+export const ROL_EXIGE_2FA: Record<Rol, boolean> = {
+  admin: true,
+  supervisor: true,
+  contador: false,
+  colaborador: false,
+};
+
+export const ETIQUETA_ROL_SISTEMA: Record<Rol, string> = {
+  admin: "Admin",
+  supervisor: "Supervisor",
+  contador: "Contador",
+  colaborador: "Colaborador / técnico / chofer",
+};
+
+// Fallback sincrónico — solo se usa si por algún motivo no hay tabla de
+// roles cargada. El camino real es asíncrono contra la DB.
 export function puedeVerModulo(rol: Rol, modulo: Modulo): boolean {
   return PERMISOS_POR_ROL[rol]?.includes(modulo) ?? false;
 }

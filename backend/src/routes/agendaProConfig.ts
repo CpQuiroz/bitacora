@@ -10,7 +10,7 @@ import { supabase } from "../supabase";
 import { obtenerOCrearAgendaProConfig } from "../agendaPro";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
-import { requiereModulo, requiereRol } from "../permisos";
+import { requiereModulo, requiereAccion } from "../permisos";
 
 export const agendaProConfigRouter = Router();
 
@@ -34,7 +34,7 @@ agendaProConfigRouter.get(
 
 agendaProConfigRouter.patch(
   "/",
-  requiereRol("admin", "supervisor"),
+  requiereAccion("config_agenda_pro"),
   ah<RequestConEmpresa>(async (req, res) => {
     const actual = await obtenerOCrearAgendaProConfig(req.empresaId!);
     const { duracion_slot_min, anticipacion_min_horas, dias_max_adelante, ventana_cancelacion_horas } = req.body ?? {};
@@ -81,7 +81,7 @@ agendaProConfigRouter.patch(
 
 agendaProConfigRouter.put(
   "/horarios",
-  requiereRol("admin", "supervisor"),
+  requiereAccion("config_agenda_pro"),
   ah<RequestConEmpresa>(async (req, res) => {
     const horarios = req.body?.horarios;
     if (!Array.isArray(horarios)) {

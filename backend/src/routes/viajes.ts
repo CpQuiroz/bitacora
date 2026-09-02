@@ -4,7 +4,7 @@ import { supabase } from "../supabase";
 import { urlFirmadaFotoGuia } from "../storage";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
-import { requiereRol } from "../permisos";
+import { requiereAccion } from "../permisos";
 import { calcularMontos } from "../viajesMontos";
 
 export const viajesRouter = Router();
@@ -318,7 +318,7 @@ viajesRouter.delete(
 // sola factura — reutiliza la tabla "facturas" del módulo Cobros.
 viajesRouter.post(
   "/facturar",
-  requiereRol("admin"),
+  requiereAccion("facturar"),
   ah<RequestConEmpresa>(async (req, res) => {
     const { viaje_ids, fecha_vencimiento } = req.body ?? {};
     if (!Array.isArray(viaje_ids) || viaje_ids.length === 0) {

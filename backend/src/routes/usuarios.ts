@@ -2,6 +2,7 @@ import { Router } from "express";
 import multer from "multer";
 import type { FuncionColaborador, Rol, Usuario } from "@bitacora/shared";
 import { supabase } from "../supabase";
+import { empresaPuedeUsarRol } from "../roles";
 import { subirFotoPerfil } from "../storage";
 import { env } from "../env";
 import type { RequestConEmpresa } from "../empresa";
@@ -14,7 +15,8 @@ import { verificarLimiteUsuarios } from "../limites";
 
 export const usuariosRouter = Router();
 
-const ROLES: Rol[] = ["admin", "supervisor", "contador", "colaborador"];
+// Los roles ya no son fijos (migración 71) — se validan contra los
+// disponibles para la empresa (ver empresaPuedeUsarRol).
 const FUNCIONES: FuncionColaborador[] = ["tecnico", "chofer", "instalador", "administrativo", "otro"];
 // Sin lista curada — un huso IANA cualquiera sirve, se valida solo el formato.
 const HUSO_REGEX = /^[A-Za-z]+(?:[/_][A-Za-z_]+)+$|^GMT[+-]\d{1,2}$/;
@@ -67,8 +69,8 @@ usuariosRouter.post(
       res.status(400).json({ error: "Falta nombre" });
       return;
     }
-    if (!ROLES.includes(rol)) {
-      res.status(400).json({ error: `rol debe ser uno de: ${ROLES.join(", ")}` });
+    if (typeof rol !== "string" || !(await empresaPuedeUsarRol(rol, req.empresaId!))) {
+      res.status(400).json({ error: "El rol indicado no está disponible para tu empresa" });
       return;
     }
     // Teléfono opcional — con código de país (ej. +56 9 ...). El bot de
@@ -115,7 +117,7 @@ usuariosRouter.post(
         id: generado.user.id,
         empresa_id: req.empresaId!,
         nombre: nombre.trim(),
-        rol,
+        rol: rol as Rol,
         telefono: telefonoLimpio,
         funcion: funcionLimpia,
       })
@@ -165,12 +167,12 @@ usuariosRouter.patch(
     const cambiosAuditoria: { campo: "rol" | "activo"; anterior: string | null; nuevo: string | null }[] = [];
 
     if (rol !== undefined) {
-      if (!ROLES.includes(rol)) {
-        res.status(400).json({ error: `rol debe ser uno de: ${ROLES.join(", ")}` });
+      if (typeof rol !== "string" || !(await empresaPuedeUsarRol(rol, req.empresaId!))) {
+        res.status(400).json({ error: "El rol indicado no está disponible para tu empresa" });
         return;
       }
       if (rol !== actual.rol) {
-        cambios.rol = rol;
+        cambios.rol = rol as Rol;
         cambiosAuditoria.push({ campo: "rol", anterior: actual.rol, nuevo: rol });
       }
     }

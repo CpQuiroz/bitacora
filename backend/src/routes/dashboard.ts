@@ -10,7 +10,7 @@ import {
 } from "../agregacionesDashboard";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
-import { requiereRol } from "../permisos";
+import { requiereAccion } from "../permisos";
 
 export const dashboardRouter = Router();
 
@@ -66,7 +66,7 @@ export function resolverPeriodo(periodo: string | undefined, desdeQuery: unknown
 // para un colaborador (rol sin módulos). admin/supervisor/contador sí.
 dashboardRouter.get(
   "/",
-  requiereRol("admin", "supervisor", "contador"),
+  requiereAccion("ver_dashboard"),
   ah<RequestConEmpresa>(async (req, res) => {
     const { desde, hasta } = resolverPeriodo(
       typeof req.query.periodo === "string" ? req.query.periodo : undefined,

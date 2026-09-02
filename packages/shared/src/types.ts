@@ -190,6 +190,12 @@ export type Usuario = {
   id: string; // = auth.users.id
   empresa_id: string;
   nombre: string;
+  // Desde la migración 71 el rol es el `slug` de una fila de `roles`
+  // (editable desde el Panel de Super-Admin). Los 4 de sistema —
+  // admin/supervisor/contador/colaborador — mantienen su semántica.
+  // El tipo se mantiene como `Rol` para no romper el frontend, que
+  // resuelve los permisos vía `/api/me` (`modulos_visibles`). El backend
+  // castea a string donde necesita aceptar slugs custom.
   rol: Rol;
   telefono: string | null;
   idioma: string;
@@ -967,6 +973,24 @@ export type ConversacionWhatsapp = {
   actualizado_en: string;
 };
 
+// ── Roles editables (migración 71) ──────────────────────────────────
+export type RolFila = {
+  slug: string;
+  nombre: string;
+  modulos: string[];
+  acciones: string[];
+  requiere_2fa: boolean;
+  es_sistema: boolean;
+  orden: number;
+  creado_en: string;
+  actualizado_en: string;
+};
+
+export type RolEmpresa = {
+  rol_slug: string;
+  empresa_id: string;
+};
+
 // ── Módulo Remuneraciones (opt-in) — ver liquidacionChile.ts para el
 // cálculo y migraciones 67/68/69 para el esquema. ─────────────────────
 export type ParametroPrevisional = {
@@ -1323,6 +1347,8 @@ export type Database = {
       mfa_totp_secretos: Tabla<MfaTotpSecreto>;
       mfa_codigo_pendiente: Tabla<MfaCodigoPendiente>;
       login_2fa_pendiente: Tabla<Login2faPendiente>;
+      roles: Tabla<RolFila>;
+      rol_empresas: Tabla<RolEmpresa>;
       parametros_previsionales: Tabla<ParametroPrevisional>;
       afp_parametros: Tabla<AfpParametro>;
       asignacion_familiar_tramos: Tabla<AsignacionFamiliarTramo>;

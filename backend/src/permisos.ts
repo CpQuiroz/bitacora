@@ -1,22 +1,25 @@
 // ============================================================
-// BITÁCORA — Guards de permisos reutilizables. Usan la misma matriz
-// centralizada de @bitacora/shared (packages/shared/src/permisos.ts)
-// que también consume el frontend para ocultar navegación — nunca
-// hay que repetir la regla de "quién ve qué" en dos lugares.
+// BITÁCORA — Guards de permisos reutilizables.
 //
-// requiereModulo: para proteger un módulo entero (ej. todo Financiero).
-// requiereRol: para una acción puntual más fina dentro de un módulo
-// que Supervisor sí puede ver pero no ejecutar (ej. "Facturar").
+// Dos ejes:
+//  1. El ROL decide qué VE y qué ACCIONES sensibles puede ejecutar cada
+//     persona. Desde la migración 71 los roles son filas editables
+//     (Panel de Super-Admin) — se resuelven vía backend/src/roles.ts.
+//  2. empresa_modulos: qué está CONTRATADO por esa empresa. requiereModulo
+//     valida los dos.
+//
+// requiereModulo: protege un módulo entero.
+// requiereAccion: protege una acción sensible delegable (facturar,
+//   gestionar_plan, …) — reemplaza a requiereRol, que queda solo para
+//   compatibilidad puntual.
 // ============================================================
-import type { Modulo, Rol } from "@bitacora/shared";
-import { MODULOS, moduloActivadoPorDefecto, puedeVerModulo } from "@bitacora/shared";
+import type { Accion, Modulo, Rol } from "@bitacora/shared";
+import { MODULOS, moduloActivadoPorDefecto } from "@bitacora/shared";
 import { supabase } from "./supabase";
 import type { RequestConEmpresa } from "./empresa";
 import { ah } from "./asyncHandler";
+import { modulosDeRol, rolPuedeVerModulo, rolTieneAccion } from "./roles";
 
-// Eje 1: el rol decide qué VE cada persona dentro de una empresa.
-// Eje 2 (empresa_modulos): qué está CONTRATADO por esa empresa en
-// primer lugar — Etapa 5. Sin fila = el default de moduloActivadoPorDefecto.
 export async function empresaTieneModulo(empresaId: string, modulo: Modulo): Promise<boolean> {
   const { data } = await supabase
     .from("empresa_modulos")
@@ -29,17 +32,22 @@ export async function empresaTieneModulo(empresaId: string, modulo: Modulo): Pro
 }
 
 // Para /api/me — solo las EXCEPCIONES al default (la mayoría de las
-// empresas nunca tocan esto, así que devolver la lista completa cada
-// vez sería ruido).
+// empresas nunca tocan esto).
 export async function modulosDeshabilitadosDeEmpresa(empresaId: string): Promise<Modulo[]> {
   const { data } = await supabase.from("empresa_modulos").select("modulo, activado").eq("empresa_id", empresaId);
   const filas = new Map((data ?? []).map((f) => [f.modulo, f.activado]));
   return MODULOS.filter((m) => (filas.has(m) ? !filas.get(m) : !moduloActivadoPorDefecto(m)));
 }
 
-// Feature flags en beta activados para esta empresa (ver migración 61 y
-// el Panel de Super-Admin). Consulta chica y con índice — la mayoría de
-// las empresas no tiene ninguna fila; se expone en GET /api/me.
+// Módulos que este usuario realmente ve: los de su rol ∩ los contratados
+// (y activos) por su empresa. Lo consume /api/me → el frontend filtra la
+// navegación con esto y ya no depende de la matriz hardcodeada.
+export async function modulosVisiblesDeUsuario(rol: string, empresaId: string): Promise<Modulo[]> {
+  const delRol = new Set(await modulosDeRol(rol));
+  const deshabilitados = new Set(await modulosDeshabilitadosDeEmpresa(empresaId));
+  return MODULOS.filter((m) => delRol.has(m) && !deshabilitados.has(m));
+}
+
 export async function featureFlagsDeEmpresa(empresaId: string): Promise<string[]> {
   const { data } = await supabase
     .from("empresa_feature_flags")
@@ -51,7 +59,7 @@ export async function featureFlagsDeEmpresa(empresaId: string): Promise<string[]
 
 export function requiereModulo(modulo: Modulo) {
   return ah<RequestConEmpresa>(async (req, res, next) => {
-    if (!puedeVerModulo((req.rol ?? "colaborador") as Rol, modulo)) {
+    if (!(await rolPuedeVerModulo(req.rol ?? "colaborador", modulo))) {
       res.status(403).json({ error: "No tienes permiso para acceder a este módulo" });
       return;
     }
@@ -63,6 +71,19 @@ export function requiereModulo(modulo: Modulo) {
   });
 }
 
+export function requiereAccion(accion: Accion) {
+  return ah<RequestConEmpresa>(async (req, res, next) => {
+    if (!(await rolTieneAccion(req.rol ?? "colaborador", accion))) {
+      res.status(403).json({ error: "No tienes permiso para realizar esta acción" });
+      return;
+    }
+    next();
+  });
+}
+
+// Compatibilidad: chequeo literal de slug de rol. Nuevo código usa
+// requiereAccion. Solo queda por si algún endpoint necesita exigir un
+// rol de sistema puntual.
 export function requiereRol(...roles: Rol[]) {
   return ah<RequestConEmpresa>(async (req, res, next) => {
     if (!roles.includes((req.rol ?? "colaborador") as Rol)) {

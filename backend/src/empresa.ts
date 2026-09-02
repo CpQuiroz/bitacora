@@ -2,6 +2,7 @@ import { supabase } from "./supabase";
 import type { RequestConUsuario } from "./auth";
 import { ah } from "./asyncHandler";
 import { registrarAccesoSiCorresponde } from "./accesos";
+import { rolExigeMfa as rolExigeMfaFn } from "./roles";
 
 export interface RequestConEmpresa extends RequestConUsuario {
   empresaId?: string;
@@ -82,9 +83,8 @@ export const requiereEmpresa = ah<RequestConEmpresa>(async (req, res, next) => {
   // se les deja pasar la contraseña (no hace falta pedirla de nuevo) y
   // entrar a su propio perfil/2FA para poder configurarlo, pero
   // cualquier otra ruta queda bloqueada hasta que lo activen.
-  const rolExigeMfa = usuario.rol === "admin" || usuario.rol === "supervisor";
   const rutaExceptuada = req.originalUrl.startsWith("/api/usuarios/me");
-  if (rolExigeMfa && !usuario.mfa_activado && !rutaExceptuada) {
+  if (!usuario.mfa_activado && !rutaExceptuada && (await rolExigeMfaFn(usuario.rol))) {
     res.status(403).json({
       error: "Tu rol requiere activar la verificación en dos pasos antes de continuar — actívala en Configuración > Seguridad.",
       code: "MFA_REQUERIDA",
