@@ -49,6 +49,7 @@ export default function EquipoPage() {
 
   const [email, setEmail] = useState("");
   const [nombre, setNombre] = useState("");
+  const [telefono, setTelefono] = useState("");
   const [rol, setRol] = useState<Rol>("colaborador");
 
   const [editandoId, setEditandoId] = useState<string | null>(null);
@@ -99,7 +100,7 @@ export default function EquipoPage() {
     setInvitando(true);
     const res = await apiFetch("/api/usuarios/invitar", {
       method: "POST",
-      body: JSON.stringify({ email, nombre, rol }),
+      body: JSON.stringify({ email, nombre, rol, telefono: telefono.trim() || undefined }),
     });
     setInvitando(false);
     if (!res.ok) {
@@ -110,6 +111,7 @@ export default function EquipoPage() {
     setExito(`Invitación enviada a ${email}`);
     setEmail("");
     setNombre("");
+    setTelefono("");
     setRol("colaborador");
     cargar();
   }
@@ -183,6 +185,16 @@ export default function EquipoPage() {
                   </option>
                 ))}
               </Select>
+            </div>
+            <div className="sm:col-span-2">
+              <Label>Teléfono (opcional)</Label>
+              <Input
+                type="tel"
+                placeholder="+56 9 1234 5678"
+                value={telefono}
+                onChange={(e) => setTelefono(e.target.value)}
+              />
+              <p className="mt-1 text-xs text-muted">Con código de país. Sirve para que un chofer use el bot de WhatsApp.</p>
             </div>
           </div>
           {formError && <ErrorText>{formError}</ErrorText>}

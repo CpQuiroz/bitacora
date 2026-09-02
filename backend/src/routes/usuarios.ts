@@ -57,7 +57,7 @@ usuariosRouter.post(
   requiereModulo("gestion_control"),
   ah<RequestConEmpresa>(async (req, res) => {
 
-    const { email, nombre, rol } = req.body ?? {};
+    const { email, nombre, rol, telefono } = req.body ?? {};
     if (typeof email !== "string" || !email.includes("@")) {
       res.status(400).json({ error: "Correo inválido" });
       return;
@@ -70,6 +70,10 @@ usuariosRouter.post(
       res.status(400).json({ error: `rol debe ser uno de: ${ROLES.join(", ")}` });
       return;
     }
+    // Teléfono opcional — con código de país (ej. +56 9 ...). El bot de
+    // WhatsApp identifica al chofer comparando este número (sin los
+    // no-dígitos) con el "from" del mensaje entrante.
+    const telefonoLimpio = typeof telefono === "string" && telefono.trim() ? telefono.trim().slice(0, 30) : null;
     await verificarLimiteUsuarios(req.empresaId!);
 
     // generateLink crea el usuario y devuelve el link de invitación sin
@@ -110,6 +114,7 @@ usuariosRouter.post(
         empresa_id: req.empresaId!,
         nombre: nombre.trim(),
         rol,
+        telefono: telefonoLimpio,
       })
       .select()
       .single();
@@ -212,17 +217,38 @@ usuariosRouter.patch(
   })
 );
 
-// Zona/área de cobertura — dato operativo de Flota, no de Gestión y
-// Control (rol/activo), por eso vive en su propio endpoint gateado por
-// "flota" — Supervisor administra Flota pero no tiene gestion_control.
+// Datos operativos de un colaborador desde Flota (nombre, teléfono,
+// zona) — separado de Gestión y Control (rol/activo), por eso va gateado
+// por "flota": Supervisor administra Flota pero no tiene gestion_control.
+// La ruta se sigue llamando "/zona" por compatibilidad.
 usuariosRouter.patch(
   "/:id/zona",
   requiereModulo("flota"),
   ah<RequestConEmpresa>(async (req, res) => {
-    const { zona } = req.body ?? {};
+    const { nombre, telefono, zona } = req.body ?? {};
+    const cambios: Partial<Usuario> = {};
+
+    if (nombre !== undefined) {
+      if (typeof nombre !== "string" || !nombre.trim()) {
+        res.status(400).json({ error: "El nombre no puede quedar vacío" });
+        return;
+      }
+      cambios.nombre = nombre.trim();
+    }
+    if (telefono !== undefined) {
+      cambios.telefono = typeof telefono === "string" && telefono.trim() ? telefono.trim().slice(0, 30) : null;
+    }
+    if (zona !== undefined) {
+      cambios.zona = typeof zona === "string" && zona.trim() ? zona.trim() : null;
+    }
+    if (Object.keys(cambios).length === 0) {
+      res.status(400).json({ error: "Nada que actualizar" });
+      return;
+    }
+
     const { data, error } = await supabase
       .from("usuarios")
-      .update({ zona: zona?.trim() || null })
+      .update(cambios)
       .eq("empresa_id", req.empresaId!)
       .eq("id", req.params.id)
       .select()

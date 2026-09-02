@@ -4,10 +4,11 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import type { RutaPlanificada, Usuario } from "@bitacora/shared";
+import { REGIONES } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, SuccessText } from "@/components/ui";
+import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText } from "@/components/ui";
 import { DocumentoForm } from "@/components/DocumentoForm";
 import { IconCalendar, IconChevronLeft } from "@/components/icons";
 
@@ -19,6 +20,8 @@ export default function ColaboradorFlotaDetallePage() {
   const [rutas, setRutas] = useState<RutaPlanificada[]>([]);
   const [error, setError] = useState<string | null>(null);
 
+  const [nombre, setNombre] = useState("");
+  const [telefono, setTelefono] = useState("");
   const [zona, setZona] = useState("");
   const [guardando, setGuardando] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
@@ -57,6 +60,8 @@ export default function ColaboradorFlotaDetallePage() {
       return;
     }
     setColaborador(c);
+    setNombre(c.nombre ?? "");
+    setTelefono(c.telefono ?? "");
     setZona(c.zona ?? "");
     if (resRutas.ok) {
       const todasRutas: RutaPlanificada[] = await resRutas.json();
@@ -68,18 +73,25 @@ export default function ColaboradorFlotaDetallePage() {
     cargar();
   }, [cargar]);
 
-  async function onGuardarZona() {
+  async function onGuardar() {
     setErrorForm(null);
     setAviso(null);
+    if (!nombre.trim()) {
+      setErrorForm("El nombre no puede quedar vacío");
+      return;
+    }
     setGuardando(true);
-    const res = await apiFetch(`/api/usuarios/${params.id}/zona`, { method: "PATCH", body: JSON.stringify({ zona }) });
+    const res = await apiFetch(`/api/usuarios/${params.id}/zona`, {
+      method: "PATCH",
+      body: JSON.stringify({ nombre: nombre.trim(), telefono: telefono.trim(), zona }),
+    });
     setGuardando(false);
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
       setErrorForm(body.error ?? "No se pudo guardar");
       return;
     }
-    setAviso("Zona actualizada");
+    setAviso("Datos actualizados");
     cargar();
   }
 
@@ -106,8 +118,30 @@ export default function ColaboradorFlotaDetallePage() {
 
       <div className="my-6 grid gap-6 lg:grid-cols-2">
         <Card>
-          <h2 className="mb-4 text-sm font-semibold text-foreground">Zona / área de cobertura</h2>
-          <Input type="text" placeholder="ej. Zona Sur, Rancagua y alrededores" value={zona} onChange={(e) => setZona(e.target.value)} />
+          <h2 className="mb-4 text-sm font-semibold text-foreground">Datos del colaborador</h2>
+          <div className="flex flex-col gap-4">
+            <div>
+              <Label>Nombre</Label>
+              <Input type="text" value={nombre} onChange={(e) => setNombre(e.target.value)} />
+            </div>
+            <div>
+              <Label>Teléfono</Label>
+              <Input type="tel" placeholder="+56 9 1234 5678" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
+              <p className="mt-1 text-xs text-muted">Con código de país. Necesario para que use el bot de WhatsApp.</p>
+            </div>
+            <div>
+              <Label>Zona / área de cobertura</Label>
+              <Select value={zona} onChange={(e) => setZona(e.target.value)}>
+                <option value="">Sin zona</option>
+                {REGIONES.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
+                {zona && !REGIONES.includes(zona) && <option value={zona}>{zona} (actual)</option>}
+              </Select>
+            </div>
+          </div>
           {errorForm && (
             <div className="mt-3">
               <ErrorText>{errorForm}</ErrorText>
@@ -118,7 +152,7 @@ export default function ColaboradorFlotaDetallePage() {
               <SuccessText>{aviso}</SuccessText>
             </div>
           )}
-          <Button type="button" onClick={onGuardarZona} disabled={guardando} className="mt-4">
+          <Button type="button" onClick={onGuardar} disabled={guardando} className="mt-4">
             {guardando ? "Guardando…" : "Guardar"}
           </Button>
         </Card>

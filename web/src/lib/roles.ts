@@ -4,7 +4,7 @@ import type { Rol } from "@bitacora/shared";
 // (invitar/editar miembro), Nueva OS y ComboboxResponsable, para no
 // mantener la misma lista de a copias sueltas.
 export const ROLES: { value: Rol; label: string }[] = [
-  { value: "colaborador", label: "Colaborador / técnico" },
+  { value: "colaborador", label: "Colaborador / técnico / chofer" },
   { value: "supervisor", label: "Supervisor" },
   { value: "contador", label: "Contador" },
   { value: "admin", label: "Admin" },
