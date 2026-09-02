@@ -966,6 +966,101 @@ export type ConversacionWhatsapp = {
   actualizado_en: string;
 };
 
+// ── Módulo Remuneraciones (opt-in) — ver liquidacionChile.ts para el
+// cálculo y migraciones 67/68/69 para el esquema. ─────────────────────
+export type ParametroPrevisional = {
+  periodo: string; // 'YYYY-MM'
+  uf: number;
+  utm: number;
+  ingreso_minimo: number;
+  tope_imponible_uf: number;
+  tope_afc_uf: number;
+  tope_gratificacion_mensual: number;
+  tasa_sis: number;
+  tasa_mutual_base: number;
+  tramos_impuesto: { desde: number; hasta: number | null; factor: number; rebaja: number }[];
+  fuente: "mindicador" | "manual";
+  actualizado_en: string;
+};
+
+export type AfpParametro = {
+  periodo: string;
+  afp: string;
+  nombre: string;
+  codigo_previred: string;
+  tasa_comision: number;
+};
+
+export type AsignacionFamiliarTramo = {
+  periodo: string;
+  tramo: number;
+  renta_desde: number;
+  renta_hasta: number | null;
+  monto_por_carga: number;
+};
+
+export type TipoContratoLaboral = "indefinido" | "plazo_fijo" | "por_obra";
+export type SistemaSaludLaboral = "fonasa" | "isapre";
+
+export type DatosLaborales = {
+  usuario_id: string;
+  empresa_id: string;
+  tipo_contrato: TipoContratoLaboral;
+  fecha_ingreso: string | null;
+  sueldo_base: number;
+  gratificacion_legal: boolean;
+  colacion_mensual: number;
+  movilizacion_mensual: number;
+  afp: string | null;
+  sistema_salud: SistemaSaludLaboral;
+  plan_isapre_uf: number | null;
+  plan_isapre_pesos: number | null;
+  cargas_familiares: number;
+  tasa_mutual_empresa: number | null;
+  activo: boolean;
+  actualizado_en: string;
+};
+
+export type EstadoLiquidacion = "borrador" | "emitida";
+
+export type Liquidacion = {
+  id: string;
+  empresa_id: string;
+  usuario_id: string | null;
+  periodo: string;
+  dias_trabajados: number;
+  sueldo_base: number;
+  gratificacion: number;
+  horas_extra: number;
+  otros_imponibles: number;
+  colacion: number;
+  movilizacion: number;
+  otros_no_imponibles: number;
+  asignacion_familiar: number;
+  total_haberes: number;
+  base_imponible: number;
+  base_tributable: number;
+  cotizacion_afp: number;
+  comision_afp: number;
+  cotizacion_salud: number;
+  salud_adicional: number;
+  cotizacion_afc: number;
+  impuesto_unico: number;
+  otros_descuentos: number;
+  total_descuentos: number;
+  liquido_pagar: number;
+  aporte_afc_empleador: number;
+  aporte_sis: number;
+  aporte_mutual: number;
+  detalle: Record<string, unknown>;
+  pdf_url: string | null;
+  estado: EstadoLiquidacion;
+  creado_por: string | null;
+  emitida_en: string | null;
+  creado_en: string;
+  actualizado_en: string;
+};
+
 export type RolMensajeAsistente = "user" | "assistant";
 
 export type MensajeAsistente = {
@@ -1223,6 +1318,11 @@ export type Database = {
       mfa_totp_secretos: Tabla<MfaTotpSecreto>;
       mfa_codigo_pendiente: Tabla<MfaCodigoPendiente>;
       login_2fa_pendiente: Tabla<Login2faPendiente>;
+      parametros_previsionales: Tabla<ParametroPrevisional>;
+      afp_parametros: Tabla<AfpParametro>;
+      asignacion_familiar_tramos: Tabla<AsignacionFamiliarTramo>;
+      datos_laborales: Tabla<DatosLaborales>;
+      liquidaciones: Tabla<Liquidacion>;
     };
     Views: Record<string, never>;
     Functions: {

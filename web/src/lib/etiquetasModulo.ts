@@ -15,4 +15,5 @@ export const ETIQUETA_MODULO: Record<string, string> = {
   gestion_control: "Grupo y usuario",
   flota: "Flota",
   agenda_pro: "Agenda Pro (paquetes de sesiones y confirmación por el cliente)",
+  remuneraciones: "Remuneraciones (liquidaciones de sueldo — legislación chilena)",
 };

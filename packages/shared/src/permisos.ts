@@ -24,6 +24,9 @@ export const MODULOS = [
   // agenda con paquetes de sesiones y confirmación/cancelación de
   // citas por el cliente. No es parte del "agenda" base.
   "agenda_pro",
+  // Cálculo de liquidaciones de sueldo (legislación chilena) — opt-in,
+  // apagado por defecto, lo enciende el Super-Admin por empresa.
+  "remuneraciones",
 ] as const;
 
 export type Modulo = (typeof MODULOS)[number];
@@ -31,7 +34,7 @@ export type Modulo = (typeof MODULOS)[number];
 export const PERMISOS_POR_ROL: Record<Rol, Modulo[]> = {
   admin: [...MODULOS],
   supervisor: ["agenda", "ordenes_servicio", "viajes", "registros", "rutas", "flota", "agenda_pro"],
-  contador: ["financiero", "informes"],
+  contador: ["financiero", "informes", "remuneraciones"],
   colaborador: [],
 };
 
@@ -47,7 +50,7 @@ export function puedeVerModulo(rol: Rol, modulo: Modulo): boolean {
 // exclusivos de Pro — antes eran base, empresas ya existentes se
 // migran explícitamente en la migración que agrega esto (no quedan
 // des-sincronizadas silenciosamente).
-export const MODULOS_OPCIONALES: Modulo[] = ["agenda_pro", "informe_ia", "asistente"];
+export const MODULOS_OPCIONALES: Modulo[] = ["agenda_pro", "informe_ia", "asistente", "remuneraciones"];
 
 export function moduloActivadoPorDefecto(modulo: Modulo): boolean {
   return !MODULOS_OPCIONALES.includes(modulo);
