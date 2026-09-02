@@ -7,6 +7,9 @@ import { asegurarParametros, obtenerParametros } from "../remuneraciones/paramet
 import { armarLiquidacion, type VariablesMes } from "../remuneraciones/calcular";
 import { generarPdfLiquidacion } from "../generarPdfLiquidacion";
 import { subirPdfLiquidacion, urlFirmadaPdfLiquidacion } from "../storage";
+import { generarArchivoPrevired, type FilaPrevired } from "../remuneraciones/archivoPrevired";
+import { generarResumenPrevisional } from "../remuneraciones/resumenPrevisional";
+import { generarLibroRemuneracionesDT } from "../remuneraciones/libroRemuneracionesDT";
 
 export const remuneracionesRouter = Router();
 
@@ -101,7 +104,7 @@ remuneracionesRouter.get(
   ah<RequestConEmpresa>(async (req, res) => {
     const { data: usuarios } = await supabase
       .from("usuarios")
-      .select("id, nombre, rol, activo")
+      .select("id, nombre, rol, activo, rut")
       .eq("empresa_id", req.empresaId!)
       .neq("rol", "admin") // los admin normalmente no van en nómina; se pueden agregar a mano si hace falta
       .order("nombre");
@@ -139,6 +142,7 @@ remuneracionesRouter.put(
       return;
     }
     const num = (v: unknown, def = 0) => (v === "" || v == null ? def : Number(v));
+    const txt = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
     const fila = {
       usuario_id: req.params.usuarioId,
       empresa_id: req.empresaId!,
@@ -154,6 +158,9 @@ remuneracionesRouter.put(
       plan_isapre_pesos: b.plan_isapre_pesos ? Number(b.plan_isapre_pesos) : null,
       cargas_familiares: Math.max(0, Math.trunc(num(b.cargas_familiares))),
       tasa_mutual_empresa: b.tasa_mutual_empresa ? Number(b.tasa_mutual_empresa) : null,
+      codigo_isapre: txt(b.codigo_isapre),
+      apellido_paterno: txt(b.apellido_paterno),
+      apellido_materno: txt(b.apellido_materno),
       activo: b.activo !== false,
       actualizado_en: new Date().toISOString(),
     };
@@ -161,6 +168,10 @@ remuneracionesRouter.put(
     if (error) {
       res.status(500).json({ error: error.message });
       return;
+    }
+    // El RUT vive en `usuarios` (identidad, no dato del módulo).
+    if (b.rut !== undefined) {
+      await supabase.from("usuarios").update({ rut: txt(b.rut) }).eq("empresa_id", req.empresaId!).eq("id", req.params.usuarioId);
     }
     res.json(data);
   })
@@ -387,5 +398,76 @@ remuneracionesRouter.get(
       return;
     }
     res.json({ url: await urlFirmadaPdfLiquidacion(data.pdf_url) });
+  })
+);
+
+// ── Exportar archivos del período (Previred / DT / resumen) ──────────
+// Solo cuentan las liquidaciones EMITIDAS. Se descarga y se sube a
+// previred.cl / la DT — Bitácora no presenta nada.
+type Formato = "previred" | "lre" | "resumen";
+
+remuneracionesRouter.get(
+  "/exportar/:formato",
+  ah<RequestConEmpresa>(async (req, res) => {
+    const formato = req.params.formato as Formato;
+    const periodo = typeof req.query.periodo === "string" ? req.query.periodo : "";
+    if (!["previred", "lre", "resumen"].includes(formato) || !PERIODO_RE.test(periodo)) {
+      res.status(400).json({ error: "Parámetros inválidos (formato + periodo YYYY-MM)" });
+      return;
+    }
+
+    const { data: liqs } = await supabase
+      .from("liquidaciones")
+      .select("*")
+      .eq("empresa_id", req.empresaId!)
+      .eq("periodo", periodo)
+      .eq("estado", "emitida");
+    if (!liqs || liqs.length === 0) {
+      res.status(400).json({ error: "No hay liquidaciones emitidas en este período. Emitilas primero." });
+      return;
+    }
+
+    const usuarioIds = (liqs as Liquidacion[]).map((l) => l.usuario_id).filter((x): x is string => Boolean(x));
+    const [{ data: datosL }, { data: usuarios }] = await Promise.all([
+      supabase.from("datos_laborales").select("*").eq("empresa_id", req.empresaId!).in("usuario_id", usuarioIds),
+      supabase.from("usuarios").select("id, nombre, rut").eq("empresa_id", req.empresaId!).in("id", usuarioIds),
+    ]);
+    const datosPorUsuario = new Map((datosL ?? []).map((d) => [d.usuario_id, d]));
+    const usuarioPorId = new Map((usuarios ?? []).map((u) => [u.id, u]));
+
+    const filas: FilaPrevired[] = (liqs as Liquidacion[])
+      .filter((l) => l.usuario_id && datosPorUsuario.has(l.usuario_id))
+      .map((l) => ({
+        liquidacion: l,
+        datos: datosPorUsuario.get(l.usuario_id!)!,
+        usuario: {
+          nombre: usuarioPorId.get(l.usuario_id!)?.nombre ?? "",
+          rut: usuarioPorId.get(l.usuario_id!)?.rut ?? null,
+        },
+      }));
+
+    const sinRut = filas.filter((f) => !f.usuario.rut).length;
+
+    let contenido: string;
+    let nombreArchivo: string;
+    let contentType: string;
+    if (formato === "previred") {
+      contenido = generarArchivoPrevired(filas, periodo);
+      nombreArchivo = `previred_${periodo}.txt`;
+      contentType = "text/plain; charset=utf-8";
+    } else if (formato === "lre") {
+      contenido = generarLibroRemuneracionesDT(filas);
+      nombreArchivo = `libro_remuneraciones_${periodo}.csv`;
+      contentType = "text/csv; charset=utf-8";
+    } else {
+      contenido = generarResumenPrevisional(filas);
+      nombreArchivo = `resumen_previsional_${periodo}.csv`;
+      contentType = "text/csv; charset=utf-8";
+    }
+
+    res.setHeader("Content-Type", contentType);
+    res.setHeader("Content-Disposition", `attachment; filename="${nombreArchivo}"`);
+    if (sinRut > 0) res.setHeader("X-Aviso", `${sinRut} colaborador(es) sin RUT — cargalo en Datos del equipo`);
+    res.send(contenido);
   })
 );

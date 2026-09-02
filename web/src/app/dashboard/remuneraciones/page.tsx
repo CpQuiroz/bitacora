@@ -6,7 +6,7 @@ import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell } from "@/components/DashboardShell";
 import { Badge, Button, Card, ErrorText, PageHeader, Select, SuccessText } from "@/components/ui";
 import { useUsuarioShell } from "@/lib/useUsuarioShell";
-import { nombrePeriodo, periodoRelativo, remuneraciones, type LiquidacionConNombre } from "@/lib/remuneracionesApi";
+import { nombrePeriodo, periodoRelativo, remuneraciones, type FormatoExport, type LiquidacionConNombre } from "@/lib/remuneracionesApi";
 
 const PERIODOS = Array.from({ length: 12 }, (_, i) => periodoRelativo(-i));
 
@@ -69,6 +69,15 @@ export default function RemuneracionesPage() {
     }
   }
 
+  async function exportar(formato: FormatoExport) {
+    setError(null);
+    try {
+      await remuneraciones.exportar(formato, periodo);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No se pudo generar el archivo");
+    }
+  }
+
   if (!usuario) return null;
   const moneda = usuario.moneda ?? "CLP";
 
@@ -114,6 +123,28 @@ export default function RemuneracionesPage() {
             </p>
           </Card>
         </div>
+      )}
+
+      {filas && totales.emitidas > 0 && (
+        <Card className="mb-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-sm font-medium text-foreground">Exportar {nombrePeriodo(periodo)}:</span>
+            <Button type="button" variant="outline" onClick={() => exportar("resumen")}>
+              Resumen previsional (CSV)
+            </Button>
+            <Button type="button" variant="outline" onClick={() => exportar("previred")}>
+              Archivo Previred
+            </Button>
+            <Button type="button" variant="outline" onClick={() => exportar("lre")}>
+              Libro de Remuneraciones (DT)
+            </Button>
+          </div>
+          <p className="mt-2 text-xs text-muted">
+            Solo las liquidaciones <strong>emitidas</strong>. Descargá → subí a previred.cl / la DT → revisá el total → pagá ahí. Los
+            archivos Previred y DT son un <strong>borrador</strong>: validalos con tu contador contra el validador oficial antes del primer
+            envío real.
+          </p>
+        </Card>
       )}
 
       {filas === null && !error && <p className="text-sm text-muted">Cargando…</p>}

@@ -7,9 +7,12 @@ import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, Succe
 import { IconChevronLeft } from "@/components/icons";
 import { useUsuarioShell } from "@/lib/useUsuarioShell";
 import { remuneraciones, type FilaDatosLaborales } from "@/lib/remuneracionesApi";
-import { AFP_CHILE } from "@bitacora/shared";
+import { AFP_CHILE, ISAPRES_CHILE } from "@bitacora/shared";
 
 const VACIO = {
+  rut: "",
+  apellido_paterno: "",
+  apellido_materno: "",
   tipo_contrato: "indefinido",
   fecha_ingreso: "",
   sueldo_base: "",
@@ -19,6 +22,7 @@ const VACIO = {
   afp: "",
   sistema_salud: "fonasa",
   plan_isapre_uf: "",
+  codigo_isapre: "",
   cargas_familiares: "",
 };
 
@@ -51,6 +55,9 @@ export default function DatosLaboralesPage() {
     setForm(
       d
         ? {
+            rut: f.usuario.rut ?? "",
+            apellido_paterno: d.apellido_paterno ?? "",
+            apellido_materno: d.apellido_materno ?? "",
             tipo_contrato: d.tipo_contrato,
             fecha_ingreso: d.fecha_ingreso ?? "",
             sueldo_base: String(d.sueldo_base || ""),
@@ -60,9 +67,10 @@ export default function DatosLaboralesPage() {
             afp: d.afp ?? "",
             sistema_salud: d.sistema_salud,
             plan_isapre_uf: d.plan_isapre_uf ? String(d.plan_isapre_uf) : "",
+            codigo_isapre: d.codigo_isapre ?? "",
             cargas_familiares: String(d.cargas_familiares || ""),
           }
-        : { ...VACIO }
+        : { ...VACIO, rut: f.usuario.rut ?? "" }
     );
   }
 
@@ -140,6 +148,18 @@ export default function DatosLaboralesPage() {
                         <td colSpan={5} className="px-5 py-4">
                           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                             <div>
+                              <Label>RUT</Label>
+                              <Input placeholder="12.345.678-9" value={String(form.rut)} onChange={(e) => set("rut", e.target.value)} />
+                            </div>
+                            <div>
+                              <Label>Apellido paterno</Label>
+                              <Input value={String(form.apellido_paterno)} onChange={(e) => set("apellido_paterno", e.target.value)} />
+                            </div>
+                            <div>
+                              <Label>Apellido materno</Label>
+                              <Input value={String(form.apellido_materno)} onChange={(e) => set("apellido_materno", e.target.value)} />
+                            </div>
+                            <div>
                               <Label>Tipo de contrato</Label>
                               <Select value={String(form.tipo_contrato)} onChange={(e) => set("tipo_contrato", e.target.value)}>
                                 <option value="indefinido">Indefinido</option>
@@ -186,15 +206,28 @@ export default function DatosLaboralesPage() {
                               </Select>
                             </div>
                             {form.sistema_salud === "isapre" && (
-                              <div>
-                                <Label>Plan Isapre (UF)</Label>
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  value={String(form.plan_isapre_uf)}
-                                  onChange={(e) => set("plan_isapre_uf", e.target.value)}
-                                />
-                              </div>
+                              <>
+                                <div>
+                                  <Label>Plan Isapre (UF)</Label>
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    value={String(form.plan_isapre_uf)}
+                                    onChange={(e) => set("plan_isapre_uf", e.target.value)}
+                                  />
+                                </div>
+                                <div>
+                                  <Label>Isapre</Label>
+                                  <Select value={String(form.codigo_isapre)} onChange={(e) => set("codigo_isapre", e.target.value)}>
+                                    <option value="">Elegir…</option>
+                                    {ISAPRES_CHILE.map((i) => (
+                                      <option key={i.codigo} value={i.codigo}>
+                                        {i.nombre}
+                                      </option>
+                                    ))}
+                                  </Select>
+                                </div>
+                              </>
                             )}
                             <div>
                               <Label>Cargas familiares</Label>

@@ -202,6 +202,7 @@ export type Usuario = {
   mfa_metodo: "totp" | "email" | null;
   zona: string | null;
   funcion: FuncionColaborador | null;
+  rut: string | null; // migración 70 — para el archivo Previred
   creado_en: string;
 };
 
@@ -1019,6 +1020,10 @@ export type DatosLaborales = {
   tasa_mutual_empresa: number | null;
   activo: boolean;
   actualizado_en: string;
+  // migración 70 — para el archivo Previred / Libro de Remuneraciones DT
+  codigo_isapre: string | null;
+  apellido_paterno: string | null;
+  apellido_materno: string | null;
 };
 
 export type EstadoLiquidacion = "borrador" | "emitida";

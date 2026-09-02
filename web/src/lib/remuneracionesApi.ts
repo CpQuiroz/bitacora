@@ -3,7 +3,12 @@ import { apiFetch } from "./api";
 
 export type LiquidacionConNombre = Liquidacion & { colaborador: { id: string; nombre: string } | null };
 export type AfpParametro = { periodo: string; afp: string; nombre: string; codigo_previred: string; tasa_comision: number };
-export type FilaDatosLaborales = { usuario: Pick<Usuario, "id" | "nombre" | "rol" | "activo">; datos_laborales: DatosLaborales | null };
+export type FilaDatosLaborales = {
+  usuario: Pick<Usuario, "id" | "nombre" | "rol" | "activo" | "rut">;
+  datos_laborales: DatosLaborales | null;
+};
+
+export type FormatoExport = "previred" | "lre" | "resumen";
 
 async function json<T>(res: Response): Promise<T> {
   if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? `Error ${res.status}`);
@@ -51,6 +56,20 @@ export const remuneraciones = {
     const { url } = await res.json();
     if (url) window.open(url, "_blank");
     return Boolean(url);
+  },
+
+  async exportar(formato: FormatoExport, periodo: string): Promise<void> {
+    const res = await apiFetch(`/api/remuneraciones/exportar/${formato}?periodo=${periodo}`);
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? "No se pudo generar el archivo");
+    const blob = await res.blob();
+    const nombre =
+      res.headers.get("Content-Disposition")?.match(/filename="([^"]+)"/)?.[1] ?? `${formato}_${periodo}.txt`;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = nombre;
+    a.click();
+    URL.revokeObjectURL(url);
   },
 };
 

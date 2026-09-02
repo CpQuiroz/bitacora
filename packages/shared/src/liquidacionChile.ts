@@ -229,3 +229,21 @@ export const AFP_CHILE: { afp: string; nombre: string; codigoPrevired: string }[
   { afp: "provida", nombre: "AFP ProVida", codigoPrevired: "08" },
   { afp: "uno", nombre: "AFP Uno", codigoPrevired: "35" },
 ];
+
+// Código de institución de salud para el archivo Previred. FONASA = 07.
+// Los códigos de Isapre — REVISAR contra el listado vigente de Previred
+// antes del primer archivo real (pueden cambiar; el contador confirma).
+export const CODIGO_FONASA = "07";
+export const ISAPRES_CHILE: { codigo: string; nombre: string }[] = [
+  { codigo: "01", nombre: "Cruz Blanca" },
+  { codigo: "02", nombre: "Río Blanco" },
+  { codigo: "03", nombre: "Banmédica" },
+  { codigo: "04", nombre: "Colmena Golden Cross" },
+  { codigo: "05", nombre: "Consalud" },
+  { codigo: "09", nombre: "Vida Tres" },
+  { codigo: "11", nombre: "Chuquicamata (Isapre de Codelco)" },
+  { codigo: "12", nombre: "Nueva Masvida" },
+  { codigo: "25", nombre: "Fundación (Isapre de Codelco)" },
+  { codigo: "28", nombre: "Cruz del Norte" },
+  { codigo: "37", nombre: "Esencial" },
+];
