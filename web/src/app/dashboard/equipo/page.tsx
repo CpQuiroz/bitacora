@@ -62,6 +62,15 @@ export default function EquipoPage() {
   const [editError, setEditError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
 
+  const [accesos, setAccesos] = useState<
+    { id: string; tipo: "correo" | "dominio"; valor: string; rol: string; creado_en: string }[] | null
+  >(null);
+  const [accesoTipo, setAccesoTipo] = useState<"correo" | "dominio">("correo");
+  const [accesoValor, setAccesoValor] = useState("");
+  const [accesoRol, setAccesoRol] = useState("colaborador");
+  const [guardandoAcceso, setGuardandoAcceso] = useState(false);
+  const [errorAcceso, setErrorAcceso] = useState<string | null>(null);
+
   async function cargar() {
     const { data } = await supabase.auth.getSession();
     if (!data.session) {
@@ -90,6 +99,41 @@ export default function EquipoPage() {
     }
     setUsuarios(await resUsuarios.json());
     if (resAuditoria.ok) setAuditoria(await resAuditoria.json());
+    cargarAccesos();
+  }
+
+  async function cargarAccesos() {
+    const res = await apiFetch("/api/accesos");
+    if (res.ok) setAccesos((await res.json()).accesos ?? []);
+  }
+
+  async function onAgregarAcceso(e: FormEvent) {
+    e.preventDefault();
+    setErrorAcceso(null);
+    setGuardandoAcceso(true);
+    const res = await apiFetch("/api/accesos", {
+      method: "POST",
+      body: JSON.stringify({ tipo: accesoTipo, valor: accesoValor.trim(), rol: accesoRol }),
+    });
+    setGuardandoAcceso(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setErrorAcceso(body.error ?? "No se pudo agregar");
+      return;
+    }
+    setAccesoValor("");
+    cargarAccesos();
+  }
+
+  async function onQuitarAcceso(id: string) {
+    setErrorAcceso(null);
+    const res = await apiFetch(`/api/accesos/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setErrorAcceso(body.error ?? "No se pudo quitar");
+      return;
+    }
+    cargarAccesos();
   }
 
   useEffect(() => {
@@ -228,6 +272,73 @@ export default function EquipoPage() {
             {invitando ? "Invitando…" : "Invitar"}
           </Button>
         </form>
+      </Card>
+
+      <Card className="my-6">
+        <h2 className="mb-1 text-sm font-semibold text-foreground">Correos y dominios autorizados</h2>
+        <p className="mb-4 text-sm text-muted">
+          Un correo (<code>persona@tuempresa.cl</code>) o un dominio entero (<code>tuempresa.cl</code>) de esta lista puede entrar
+          a la empresa sin invitación — la primera vez que inicia sesión se le crea el usuario con el rol indicado. Un correo que
+          no está acá ni fue invitado no puede entrar.
+        </p>
+
+        {accesos === null ? (
+          <p className="text-sm text-muted">Cargando…</p>
+        ) : accesos.length === 0 ? (
+          <p className="text-sm text-muted">Sin correos ni dominios autorizados.</p>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {accesos.map((a) => (
+              <div key={a.id} className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2 text-sm">
+                <span className="flex flex-wrap items-center gap-2">
+                  <Badge value={a.tipo} />
+                  <span className="font-mono text-foreground">{a.valor}</span>
+                  <span className="text-muted">→ {etiquetaRol(a.rol)}</span>
+                </span>
+                <Button type="button" variant="ghost" onClick={() => onQuitarAcceso(a.id)}>
+                  Quitar
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <form onSubmit={onAgregarAcceso} className="mt-4 grid gap-2 sm:grid-cols-[auto_1fr_auto_auto] sm:items-end">
+          <div>
+            <Label>Tipo</Label>
+            <Select value={accesoTipo} onChange={(e) => setAccesoTipo(e.target.value as "correo" | "dominio")}>
+              <option value="correo">Correo</option>
+              <option value="dominio">Dominio</option>
+            </Select>
+          </div>
+          <div>
+            <Label>{accesoTipo === "correo" ? "Correo" : "Dominio"}</Label>
+            <Input
+              type="text"
+              value={accesoValor}
+              onChange={(e) => setAccesoValor(e.target.value)}
+              placeholder={accesoTipo === "correo" ? "persona@tuempresa.cl" : "tuempresa.cl"}
+            />
+          </div>
+          <div>
+            <Label>Rol</Label>
+            <Select value={accesoRol} onChange={(e) => setAccesoRol(e.target.value)}>
+              {rolesDisponibles.map((r) => (
+                <option key={r.value} value={r.value}>
+                  {r.label}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <Button type="submit" disabled={guardandoAcceso || accesoValor.trim().length < 3}>
+            {guardandoAcceso ? "Agregando…" : "Agregar"}
+          </Button>
+        </form>
+        {errorAcceso && (
+          <div className="mt-3">
+            <ErrorText>{errorAcceso}</ErrorText>
+          </div>
+        )}
       </Card>
 
       {error && <ErrorText>{error}</ErrorText>}
