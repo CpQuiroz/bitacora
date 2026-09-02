@@ -55,6 +55,7 @@ export default function ConfiguracionLayout({ children }: { children: ReactNode 
   const pathname = usePathname();
   const [usuario, setUsuario] = useState<UsuarioConEmpresa | null>(null);
   const [modulosDeshabilitados, setModulosDeshabilitados] = useState<Modulo[]>([]);
+  const [modulosVisibles, setModulosVisibles] = useState<Modulo[] | null>(null);
 
   const cargar = useCallback(async () => {
     const { data } = await supabase.auth.getSession();
@@ -74,6 +75,7 @@ export default function ConfiguracionLayout({ children }: { children: ReactNode 
     }
     setUsuario(body.usuario);
     setModulosDeshabilitados(body.modulos_deshabilitados ?? []);
+    if (Array.isArray(body.modulos_visibles)) setModulosVisibles(body.modulos_visibles);
   }, [router]);
 
   useEffect(() => {
@@ -82,9 +84,12 @@ export default function ConfiguracionLayout({ children }: { children: ReactNode 
 
   if (!usuario) return null;
 
-  const secciones = SECCIONES.filter(
-    (s) => s.modulo === null || (puedeVerModulo(usuario.rol, s.modulo) && !modulosDeshabilitados.includes(s.modulo))
-  );
+  const moduloVisible = (m: Modulo) =>
+    modulosVisibles !== null
+      ? modulosVisibles.includes(m)
+      : puedeVerModulo(usuario.rol, m) && !modulosDeshabilitados.includes(m);
+
+  const secciones = SECCIONES.filter((s) => s.modulo === null || moduloVisible(s.modulo));
 
   return (
     <DashboardShell

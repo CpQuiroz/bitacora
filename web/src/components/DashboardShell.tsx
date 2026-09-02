@@ -172,6 +172,10 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
   const [dropdownAbierto, setDropdownAbierto] = useState(false);
   const [gruposAbiertos, setGruposAbiertos] = useState<Set<string>>(new Set());
   const [modulosDeshabilitados, setModulosDeshabilitados] = useState<Modulo[]>([]);
+  // Módulos que este usuario realmente ve (rol ∩ contratados − deshabilitados),
+  // resueltos por el backend desde la tabla `roles` (migración 71). null =
+  // todavía no cargó → se usa el fallback sync puedeVerModulo.
+  const [modulosVisibles, setModulosVisibles] = useState<Modulo[] | null>(null);
   const [impersonando, setImpersonando] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -189,6 +193,7 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
       if (res.ok) {
         const body = await res.json();
         setModulosDeshabilitados(body.modulos_deshabilitados ?? []);
+        if (Array.isArray(body.modulos_visibles)) setModulosVisibles(body.modulos_visibles);
         // La verdad la tiene el servidor: si NO viene impersonacion pero
         // hay un token guardado, quedó viejo/vencido — limpiarlo.
         if (body.impersonacion) setImpersonando(true);
@@ -316,16 +321,20 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
     router.push("/login");
   }
 
+  // Fuente de verdad: `modulos_visibles` de /api/me (rol dinámico ∩
+  // contratados). Mientras carga se usa el fallback sync sobre los roles
+  // de sistema para no parpadear una navegación vacía.
+  const moduloVisible = (m: Modulo) =>
+    modulosVisibles !== null
+      ? modulosVisibles.includes(m)
+      : puedeVerModulo(usuario.rol, m) && !modulosDeshabilitados.includes(m);
+
   // Un grupo entero se oculta si, tras filtrar por módulo, no le queda
   // ningún ítem visible (ej. "Datos" para un rol contador) — nunca se
   // muestra un encabezado de sección flotando sin nada debajo.
   const gruposVisibles = NAV_GROUPS.map((g) => ({
     ...g,
-    items: g.items.filter(
-      (item) =>
-        item.modulo === null ||
-        (puedeVerModulo(usuario.rol, item.modulo) && !modulosDeshabilitados.includes(item.modulo))
-    ),
+    items: g.items.filter((item) => item.modulo === null || moduloVisible(item.modulo)),
   })).filter((g) => g.items.length > 0);
 
   function esActivoLeaf(href: string): boolean {
@@ -569,7 +578,7 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
         </main>
       </div>
 
-      {puedeVerModulo(usuario.rol, "asistente") && !modulosDeshabilitados.includes("asistente") && <AsistenteChat />}
+      {moduloVisible("asistente") && <AsistenteChat />}
       </div>
     </>
   );

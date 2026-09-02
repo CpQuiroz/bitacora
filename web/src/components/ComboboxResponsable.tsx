@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import type { Rol, Usuario } from "@bitacora/shared";
+import type { Usuario } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
-import { ROLES } from "@/lib/roles";
+import { useRolesDisponibles } from "@/lib/roles";
 import { Button, ErrorText, Input, Label, Select, SuccessText } from "./ui";
 import { Combobox } from "./Combobox";
 
@@ -27,10 +27,11 @@ export function ComboboxResponsable({
   opcionVacia?: string;
   placeholder?: string;
 }) {
+  const rolesDisponibles = useRolesDisponibles();
   const [invitando, setInvitando] = useState(false);
   const [nombre, setNombre] = useState("");
   const [correo, setCorreo] = useState("");
-  const [rol, setRol] = useState<Rol>("colaborador");
+  const [rol, setRol] = useState("colaborador");
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
@@ -86,8 +87,8 @@ export function ComboboxResponsable({
         </div>
         <div>
           <Label>Rol</Label>
-          <Select value={rol} onChange={(e) => setRol(e.target.value as Rol)}>
-            {ROLES.map((r) => (
+          <Select value={rol} onChange={(e) => setRol(e.target.value)}>
+            {rolesDisponibles.map((r) => (
               <option key={r.value} value={r.value}>
                 {r.label}
               </option>

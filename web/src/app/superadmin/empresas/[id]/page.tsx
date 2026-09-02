@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import type { EstadoEmpresa, Plan, Rol, Suscripcion, SuscripcionCobro } from "@bitacora/shared";
+import type { EstadoEmpresa, Plan, Suscripcion, SuscripcionCobro } from "@bitacora/shared";
 import { SuperAdminShell } from "@/components/SuperAdminShell";
 import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, Textarea } from "@/components/ui";
 import { IconChevronLeft, IconShield } from "@/components/icons";
@@ -13,7 +13,6 @@ import { ETIQUETA_MODULO } from "@/lib/etiquetasModulo";
 
 const ESTADOS: EstadoEmpresa[] = ["activa", "suspendida", "dada_de_baja"];
 const PLANES: Plan[] = ["trial", "basico", "pro"];
-const ROLES: Rol[] = ["admin", "supervisor", "contador", "colaborador"];
 
 type Salud = {
   empresa: { id: string; nombre: string; estado: EstadoEmpresa; plan: Plan; rut: string | null };
@@ -103,7 +102,8 @@ export default function SuperAdminSaludEmpresaPage() {
 
   const [nuevoNombre, setNuevoNombre] = useState("");
   const [nuevoCorreo, setNuevoCorreo] = useState("");
-  const [nuevoRol, setNuevoRol] = useState<Rol>("colaborador");
+  const [nuevoRol, setNuevoRol] = useState("colaborador");
+  const [rolesDisponibles, setRolesDisponibles] = useState<{ slug: string; nombre: string }[]>([]);
   const [invitando, setInvitando] = useState(false);
   const [errorInvitar, setErrorInvitar] = useState<string | null>(null);
   const [avisoInvitar, setAvisoInvitar] = useState<string | null>(null);
@@ -160,6 +160,16 @@ export default function SuperAdminSaludEmpresaPage() {
     if (res.ok) setFlags(await res.json());
   }
 
+  async function cargarRoles() {
+    const res = await superadminFetch(`/api/superadmin/roles`);
+    if (!res.ok) return;
+    const { roles } = (await res.json()) as { roles: { slug: string; nombre: string; empresas: string[] }[] };
+    // Solo los roles globales o los restringidos a esta empresa.
+    setRolesDisponibles(
+      roles.filter((r) => r.empresas.length === 0 || r.empresas.includes(params.id)).map((r) => ({ slug: r.slug, nombre: r.nombre }))
+    );
+  }
+
   useEffect(() => {
     if (!obtenerTokenSuperAdmin()) {
       router.replace("/superadmin/login");
@@ -170,6 +180,7 @@ export default function SuperAdminSaludEmpresaPage() {
     cargarSuscripcion();
     cargarUsuarios();
     cargarFlags();
+    cargarRoles();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id]);
 
@@ -818,10 +829,10 @@ export default function SuperAdminSaludEmpresaPage() {
                 </div>
                 <div>
                   <Label>Rol</Label>
-                  <Select value={nuevoRol} onChange={(e) => setNuevoRol(e.target.value as Rol)}>
-                    {ROLES.map((r) => (
-                      <option key={r} value={r}>
-                        {r}
+                  <Select value={nuevoRol} onChange={(e) => setNuevoRol(e.target.value)}>
+                    {rolesDisponibles.map((r) => (
+                      <option key={r.slug} value={r.slug}>
+                        {r.nombre}
                       </option>
                     ))}
                   </Select>

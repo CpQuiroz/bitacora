@@ -91,6 +91,8 @@ export default function DashboardPage() {
   const router = useRouter();
   const [usuario, setUsuario] = useState<UsuarioConEmpresa | null>(null);
   const [modulosDeshabilitados, setModulosDeshabilitados] = useState<Modulo[]>([]);
+  const [modulosVisibles, setModulosVisibles] = useState<Modulo[] | null>(null);
+  const [acciones, setAcciones] = useState<string[]>([]);
   const [cargando, setCargando] = useState(true);
 
   const [periodo, setPeriodo] = useState("este_mes");
@@ -119,6 +121,8 @@ export default function DashboardPage() {
       }
       setUsuario(body.usuario);
       setModulosDeshabilitados(body.modulos_deshabilitados ?? []);
+      if (Array.isArray(body.modulos_visibles)) setModulosVisibles(body.modulos_visibles);
+      setAcciones(body.acciones ?? []);
       setCargando(false);
     })();
   }, [router]);
@@ -141,20 +145,24 @@ export default function DashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [periodo]);
 
+  const verAnalitico = acciones.includes("ver_dashboard");
+
   useEffect(() => {
-    // El dashboard analítico (KPIs/gráficos financieros y operativos) es
-    // para admin/supervisor/contador — el backend ahora también lo
-    // rechaza para colaborador, así no se dispara un 403.
-    if (!cargando && usuario && usuario.rol !== "colaborador") cargarDashboard();
+    // El dashboard analítico (KPIs/gráficos financieros y operativos) lo
+    // habilita la acción "ver_dashboard" del rol — el backend ahora
+    // también rechaza el endpoint sin ella, así no se dispara un 403.
+    if (!cargando && usuario && verAnalitico) cargarDashboard();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cargando]);
+  }, [cargando, verAnalitico]);
 
   if (cargando || !usuario) return null;
 
   const moneda = usuario.empresa.moneda ?? "CLP";
   const money = (n: number) => formatMoneda(n, moneda);
-  const puedeVer = (m: Modulo) => puedeVerModulo(usuario.rol, m) && !modulosDeshabilitados.includes(m);
-  const verAnalitico = usuario.rol !== "colaborador";
+  const puedeVer = (m: Modulo) =>
+    modulosVisibles !== null
+      ? modulosVisibles.includes(m)
+      : puedeVerModulo(usuario.rol, m) && !modulosDeshabilitados.includes(m);
   const accesosVisibles = ACCESOS.filter((a) => puedeVer(a.modulo));
 
   return (

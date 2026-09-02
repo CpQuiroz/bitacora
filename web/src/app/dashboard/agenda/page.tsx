@@ -132,6 +132,7 @@ function AgendaContenido() {
   const searchParams = useSearchParams();
   const [usuario, setUsuario] = useState<UsuarioShell | null>(null);
   const [modulosDeshabilitados, setModulosDeshabilitados] = useState<Modulo[]>([]);
+  const [modulosVisibles, setModulosVisibles] = useState<Modulo[] | null>(null);
   const [vista, setVista] = useState<"mes" | "semana" | "dia">("mes");
   const [fechaActual, setFechaActual] = useState(() => new Date());
   const [ordenes, setOrdenes] = useState<OrdenListado[] | null>(null);
@@ -210,7 +211,8 @@ function AgendaContenido() {
       }
       const res = await apiFetch("/api/me");
       if (res.ok) {
-        const { usuario: u, modulos_deshabilitados: deshabilitados } = await res.json();
+        const { usuario: u, modulos_deshabilitados: deshabilitados, modulos_visibles: visibles } = await res.json();
+        if (Array.isArray(visibles)) setModulosVisibles(visibles);
         if (u) {
           setUsuario({
             nombre: u.nombre,
@@ -582,8 +584,12 @@ function AgendaContenido() {
 
   if (!usuario) return null;
 
-  const puedeGestionarAgenda = puedeVerModulo(usuario.rol, "agenda");
-  const puedeAgendaPro = puedeVerModulo(usuario.rol, "agenda_pro") && !modulosDeshabilitados.includes("agenda_pro");
+  const moduloVisible = (m: Modulo) =>
+    modulosVisibles !== null
+      ? modulosVisibles.includes(m)
+      : puedeVerModulo(usuario.rol, m) && !modulosDeshabilitados.includes(m);
+  const puedeGestionarAgenda = moduloVisible("agenda");
+  const puedeAgendaPro = moduloVisible("agenda_pro");
   const hoy = fmtLocal(new Date());
 
   const primerDiaMes = new Date(fechaActual.getFullYear(), fechaActual.getMonth(), 1);

@@ -3,10 +3,10 @@
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { AuditoriaUsuario, Rol, Usuario } from "@bitacora/shared";
+import type { AuditoriaUsuario, Usuario } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
-import { ROLES } from "@/lib/roles";
+import { useRolesDisponibles } from "@/lib/roles";
 import { FUNCIONES } from "@/lib/funciones";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import {
@@ -51,11 +51,13 @@ export default function EquipoPage() {
   const [email, setEmail] = useState("");
   const [nombre, setNombre] = useState("");
   const [telefono, setTelefono] = useState("");
-  const [rol, setRol] = useState<Rol>("colaborador");
+  const rolesDisponibles = useRolesDisponibles();
+  const etiquetaRol = (slug: string) => rolesDisponibles.find((r) => r.value === slug)?.label ?? slug;
+  const [rol, setRol] = useState("colaborador");
   const [funcion, setFuncion] = useState<string>("");
 
   const [editandoId, setEditandoId] = useState<string | null>(null);
-  const [editRol, setEditRol] = useState<Rol>("colaborador");
+  const [editRol, setEditRol] = useState<string>("colaborador");
   const [editActivo, setEditActivo] = useState(true);
   const [editError, setEditError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
@@ -187,8 +189,8 @@ export default function EquipoPage() {
             </div>
             <div>
               <Label>Rol</Label>
-              <Select value={rol} onChange={(e) => setRol(e.target.value as Rol)}>
-                {ROLES.map((r) => (
+              <Select value={rol} onChange={(e) => setRol(e.target.value)}>
+                {rolesDisponibles.map((r) => (
                   <option key={r.value} value={r.value}>
                     {r.label}
                   </option>
@@ -254,8 +256,8 @@ export default function EquipoPage() {
                   <tr key={u.id} className="border-b border-border bg-brand-soft/30 last:border-0">
                     <td className="px-5 py-3 font-medium text-foreground">{u.nombre}</td>
                     <td className="px-5 py-3">
-                      <Select value={editRol} onChange={(e) => setEditRol(e.target.value as Rol)} className="min-w-36">
-                        {ROLES.map((r) => (
+                      <Select value={editRol} onChange={(e) => setEditRol(e.target.value)} className="min-w-36">
+                        {rolesDisponibles.map((r) => (
                           <option key={r.value} value={r.value}>
                             {r.label}
                           </option>
@@ -291,7 +293,7 @@ export default function EquipoPage() {
                   <tr key={u.id} className="border-b border-border last:border-0 hover:bg-brand-soft/40">
                     <td className="px-5 py-3 font-medium text-foreground">{u.nombre}</td>
                     <td className="px-5 py-3">
-                      <Badge value={u.rol} />
+                      <Badge value={etiquetaRol(u.rol)} />
                     </td>
                     <td className="px-5 py-3">
                       <Badge value={u.activo ? "activo" : "inactivo"} />

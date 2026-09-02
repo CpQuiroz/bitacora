@@ -2,7 +2,7 @@ import { Router } from "express";
 import multer from "multer";
 import type { FuncionColaborador, Rol, Usuario } from "@bitacora/shared";
 import { supabase } from "../supabase";
-import { empresaPuedeUsarRol } from "../roles";
+import { empresaPuedeUsarRol, rolesDeEmpresa } from "../roles";
 import { subirFotoPerfil } from "../storage";
 import { env } from "../env";
 import type { RequestConEmpresa } from "../empresa";
@@ -47,6 +47,17 @@ usuariosRouter.get(
       return;
     }
     res.json(data);
+  })
+);
+
+// Roles que esta empresa puede asignar a sus usuarios — los globales más
+// los restringidos a ella (ver rol_empresas / migración 71). Lo consumen
+// los selectores de rol del dashboard (invitar / editar miembro / Nueva OS).
+usuariosRouter.get(
+  "/roles",
+  ah<RequestConEmpresa>(async (req, res) => {
+    const roles = await rolesDeEmpresa(req.empresaId!);
+    res.json(roles.map((r) => ({ slug: r.slug, nombre: r.nombre })));
   })
 );
 
