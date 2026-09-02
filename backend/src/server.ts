@@ -44,6 +44,7 @@ import { proveedoresRouter } from "./routes/proveedores";
 import { asistenteRouter } from "./routes/asistente";
 import { viajesRouter } from "./routes/viajes";
 import { misViajesRouter } from "./routes/misViajes";
+import { remuneracionesRouter } from "./routes/remuneraciones";
 import { whatsappRouter } from "./routes/whatsapp";
 import { notificacionesFeedRouter } from "./routes/notificacionesFeed";
 import { unidadesMedidaRouter } from "./routes/unidadesMedida";
@@ -241,6 +242,9 @@ app.use("/api/viajes", requiereAuth, requiereEmpresa, requiereModulo("viajes"), 
 // Viajes propios de un colaborador (app móvil / bot) — sin requiereModulo,
 // scopeado a chofer_id = usuario autenticado. Ver routes/misViajes.ts.
 app.use("/api/mis-viajes", requiereAuth, requiereEmpresa, misViajesRouter);
+// Remuneraciones (liquidaciones de sueldo) — módulo opt-in, apagado por
+// defecto, lo enciende el Super-Admin. Roles admin/contador.
+app.use("/api/remuneraciones", requiereAuth, requiereEmpresa, requiereModulo("remuneraciones"), remuneracionesRouter);
 app.use("/api/tipos-documento", requiereAuth, requiereEmpresa, tiposDocumentoRouter);
 app.use("/api/documentos", requiereAuth, requiereEmpresa, documentosRouter);
 // Sin auth a propósito — la abre un cliente anónimo desde el correo.

@@ -239,6 +239,21 @@ export function urlFirmadaPdfCotizacion(key: string, minutosValidez = 15): Promi
   return urlFirmada(key, minutosValidez, BUCKET_ANEXOS);
 }
 
+// ------------------------------------------------------------
+// PDF de una liquidación de sueldo (módulo Remuneraciones). Bucket
+// privado — dato personal sensible, siempre con URL firmada. Se
+// regenera al emitir/re-emitir.
+// ------------------------------------------------------------
+export async function subirPdfLiquidacion(empresaId: string, liquidacionId: string, pdf: Buffer): Promise<string> {
+  const key = `${empresaId}/liquidaciones/${liquidacionId}/${Date.now()}.pdf`;
+  await client.send(new PutObjectCommand({ Bucket: BUCKET_ANEXOS, Key: key, Body: pdf, ContentType: "application/pdf" }));
+  return key; // se guarda en liquidaciones.pdf_url
+}
+
+export function urlFirmadaPdfLiquidacion(key: string, minutosValidez = 15): Promise<string> {
+  return urlFirmada(key, minutosValidez, BUCKET_ANEXOS);
+}
+
 export async function descargarPdfCotizacion(key: string): Promise<Buffer> {
   const respuesta = await client.send(new GetObjectCommand({ Bucket: BUCKET_ANEXOS, Key: key }));
   const bytes = await respuesta.Body!.transformToByteArray();

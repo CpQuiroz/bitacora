@@ -109,6 +109,21 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    titulo: "Remuneraciones",
+    items: [
+      {
+        label: "Remuneraciones",
+        icon: IconWallet,
+        modulo: "remuneraciones",
+        children: [
+          { href: "/dashboard/remuneraciones", label: "Liquidaciones" },
+          { href: "/dashboard/remuneraciones/datos-laborales", label: "Datos del equipo" },
+          { href: "/dashboard/remuneraciones/parametros", label: "Parámetros" },
+        ],
+      },
+    ],
+  },
+  {
     titulo: "Análisis",
     items: [
       { href: "/dashboard/informes", label: "Informes", icon: IconSparkle, modulo: "informes" },
