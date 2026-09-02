@@ -3,23 +3,16 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { apiFetch } from "@/lib/api";
+import { resolverDestinoPostLogin } from "@/lib/accesoPostLogin";
 import { AuthLayout } from "@/components/AuthLayout";
 import { ErrorText } from "@/components/ui";
 
-// Bloque A: destino de redirectTo del signInWithOAuth de Google
+// Destino de redirectTo del signInWithOAuth de Google
 // (web/src/app/login/page.tsx). supabase-js procesa el código/hash de
-// la URL solo. Una vez que hay sesión, sigue exactamente el mismo
-// camino que el login por contraseña: /api/me decide entre
-// /dashboard (usuario ya asociado a una empresa) u /onboarding (cuenta
-// nueva o huérfana) — cero diferencia de tratamiento entre Google y
-// contraseña a partir de acá.
-//
-// TODO: si el correo de Google coincide con una invitación pendiente
-// (tabla invitaciones), hoy /onboarding no la detecta automáticamente
-// para ningún método de login — es una limitación preexistente, no
-// algo nuevo de Google. Queda pendiente decidir si conviene resolverla
-// acá o en /onboarding en general.
+// la URL solo. Una vez que hay sesión, sigue el mismo camino que el
+// login por contraseña: resolverDestinoPostLogin() consulta /api/me,
+// que aprovisiona al usuario si su correo/dominio está autorizado
+// (migración 72), o niega el acceso si no lo está.
 export default function AuthCallbackPage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -34,14 +27,13 @@ export default function AuthCallbackPage() {
         setError("No se pudo completar el inicio de sesión con Google. Intenta de nuevo.");
         return;
       }
-      const res = await apiFetch("/api/me");
+      const r = await resolverDestinoPostLogin();
       if (cancelado) return;
-      if (!res.ok) {
-        setError("No se pudo verificar la cuenta. Intenta de nuevo.");
+      if ("error" in r) {
+        setError(r.error);
         return;
       }
-      const { usuario } = await res.json();
-      router.replace(usuario ? "/dashboard" : "/onboarding");
+      router.replace(r.destino);
     }
 
     const { data: listener } = supabase.auth.onAuthStateChange((event) => {

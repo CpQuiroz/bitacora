@@ -4,7 +4,8 @@ import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { apiFetch, API_URL } from "@/lib/api";
+import { API_URL } from "@/lib/api";
+import { resolverDestinoPostLogin } from "@/lib/accesoPostLogin";
 import { AuthLayout } from "@/components/AuthLayout";
 import { Button, ErrorText, Input, Label } from "@/components/ui";
 
@@ -22,14 +23,13 @@ export default function LoginPage() {
 
   async function continuarConSesion(accessToken: string, refreshToken: string) {
     await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
-    const res = await apiFetch("/api/me");
+    const r = await resolverDestinoPostLogin();
     setCargando(false);
-    if (!res.ok) {
-      setError("No se pudo verificar la cuenta. Intenta de nuevo.");
+    if ("error" in r) {
+      setError(r.error);
       return;
     }
-    const { usuario } = await res.json();
-    router.push(usuario ? "/dashboard" : "/onboarding");
+    router.push(r.destino);
   }
 
   // Bloque A: login con Google — flujo OAuth de Supabase, separado del

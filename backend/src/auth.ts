@@ -5,6 +5,12 @@ import { verificarTokenImpersonacion } from "./superadmin/auth";
 
 export interface RequestConUsuario extends Request {
   userId?: string;
+  // Correo y metadata del usuario autenticado (de Supabase Auth). Se usa
+  // en /api/me para resolver el acceso de una cuenta que todavía no tiene
+  // fila en `usuarios` (ver backend/src/accesos.ts). Ausentes en el
+  // camino de impersonación (ese usuario siempre tiene fila).
+  userEmail?: string;
+  userMetadata?: Record<string, unknown>;
   // Presente solo cuando el request llega con un token de impersonación
   // de Super-Admin (ver superadmin/auth.ts). req.userId es el usuario
   // impersonado; esto identifica quién lo está impersonando.
@@ -40,5 +46,7 @@ export const requiereAuth = ah<RequestConUsuario>(async (req, res, next) => {
   }
 
   req.userId = data.user.id;
+  req.userEmail = data.user.email ?? undefined;
+  req.userMetadata = (data.user.user_metadata ?? {}) as Record<string, unknown>;
   next();
 });

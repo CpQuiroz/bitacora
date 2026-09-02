@@ -21,7 +21,15 @@ export default function RegistroPage() {
     setError(null);
     setCargando(true);
 
-    const { data, error } = await supabase.auth.signUp({ email, password });
+    // self_signup marca que esta cuenta se creó por autorregistro (trial):
+    // /api/me la deja pasar a /onboarding aunque su correo no esté
+    // autorizado en ninguna empresa (ver migración 72). Los que entran
+    // con Google sin invitación no lo tienen → acceso denegado.
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { self_signup: true } },
+    });
 
     setCargando(false);
     if (error) {

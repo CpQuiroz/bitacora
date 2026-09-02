@@ -58,6 +58,7 @@ import { authLoginRouter } from "./routes/authLogin";
 import { limitarLogin, limitarEncuestaPublica } from "./rateLimiters";
 import { modulosDeshabilitadosDeEmpresa, featureFlagsDeEmpresa, modulosVisiblesDeUsuario, requiereModulo } from "./permisos";
 import { accionesDeRol } from "./roles";
+import { resolverAccesoParaLogin, aprovisionarUsuario } from "./accesosAutorizados";
 import { revisarCumpleanosClientes } from "./cumpleanosClientes";
 import { sembrarSugerenciasRubro } from "./seedRubro";
 import { ah } from "./asyncHandler";
@@ -99,7 +100,7 @@ app.get("/health", (_req, res) => {
 // existe en Supabase Auth pero todavía no completó el onboarding
 // (no tiene fila en "usuarios").
 app.get("/api/me", requiereAuth, ah<RequestConUsuario>(async (req, res) => {
-  const { data: usuario, error } = await supabase
+  const { data: filaUsuario, error } = await supabase
     .from("usuarios")
     .select("*, empresa:empresas(*)")
     .eq("id", req.userId!)
@@ -109,6 +110,33 @@ app.get("/api/me", requiereAuth, ah<RequestConUsuario>(async (req, res) => {
     res.status(500).json({ error: error.message });
     return;
   }
+
+  let usuario = filaUsuario;
+  // Cuenta autenticada sin fila en `usuarios`: resolver el acceso por
+  // correo/dominio autorizado (migración 72). El camino de impersonación
+  // nunca cae acá — ese usuario siempre tiene fila.
+  if (!usuario && !req.impersonacion) {
+    const acceso = await resolverAccesoParaLogin(req.userEmail, req.userMetadata);
+    if (acceso.estado === "entra") {
+      const nombre =
+        (typeof req.userMetadata?.full_name === "string" && req.userMetadata.full_name) ||
+        (typeof req.userMetadata?.name === "string" && req.userMetadata.name) ||
+        (req.userEmail ? req.userEmail.split("@")[0] : "");
+      usuario = await aprovisionarUsuario({
+        userId: req.userId!,
+        empresaId: acceso.empresaId,
+        rol: acceso.rol,
+        nombre,
+      });
+    }
+    if (!usuario) {
+      // "entra" que falló el insert cae acá como denegado — es raro y
+      // preferible a dejar entrar sin fila.
+      res.json({ usuario: null, acceso: acceso.estado === "entra" ? "denegado" : acceso.estado });
+      return;
+    }
+  }
+
   const [modulosDeshabilitados, featureFlags, modulosVisibles, acciones] = usuario
     ? await Promise.all([
         modulosDeshabilitadosDeEmpresa(usuario.empresa_id),

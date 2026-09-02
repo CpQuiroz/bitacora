@@ -991,6 +991,17 @@ export type RolEmpresa = {
   empresa_id: string;
 };
 
+// ── Correos/dominios autorizados por empresa (migración 72) ─────────
+export type EmpresaAccesoAutorizado = {
+  id: string;
+  empresa_id: string;
+  tipo: "correo" | "dominio";
+  valor: string;
+  rol: string;
+  creado_por: string | null;
+  creado_en: string;
+};
+
 // ── Módulo Remuneraciones (opt-in) — ver liquidacionChile.ts para el
 // cálculo y migraciones 67/68/69 para el esquema. ─────────────────────
 export type ParametroPrevisional = {
@@ -1349,6 +1360,7 @@ export type Database = {
       login_2fa_pendiente: Tabla<Login2faPendiente>;
       roles: Tabla<RolFila>;
       rol_empresas: Tabla<RolEmpresa>;
+      empresa_accesos_autorizados: Tabla<EmpresaAccesoAutorizado>;
       parametros_previsionales: Tabla<ParametroPrevisional>;
       afp_parametros: Tabla<AfpParametro>;
       asignacion_familiar_tramos: Tabla<AsignacionFamiliarTramo>;

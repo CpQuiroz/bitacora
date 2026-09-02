@@ -32,9 +32,16 @@ export default function OnboardingPage() {
       }
       const res = await apiFetch("/api/me");
       if (res.ok) {
-        const { usuario } = await res.json();
-        if (usuario) {
+        const body = await res.json();
+        if (body.usuario) {
           router.replace("/dashboard");
+          return;
+        }
+        // Sin fila en `usuarios` y sin autorregistro: no puede crear
+        // empresa acá (ver migración 72). Se lo saca al login.
+        if (body.acceso && body.acceso !== "onboarding") {
+          await supabase.auth.signOut();
+          router.replace("/login");
           return;
         }
       }
