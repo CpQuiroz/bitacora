@@ -58,6 +58,11 @@ export const env = {
   WHATSAPP_PHONE_NUMBER_ID: process.env.WHATSAPP_PHONE_NUMBER_ID ?? null,
   WHATSAPP_VERIFY_TOKEN: process.env.WHATSAPP_VERIFY_TOKEN ?? null,
   WHATSAPP_APP_SECRET: process.env.WHATSAPP_APP_SECRET ?? null,
+  // OCR de guías por FOTO SUELTA (Claude): apagado por defecto. En "true",
+  // una imagen enviada fuera de una conversación se procesa con IA y crea
+  // un viaje borrador solo. El flujo conversacional ("hola" / "nuevo
+  // viaje") guarda la foto SIN OCR igual, independiente de este flag.
+  WHATSAPP_OCR_GUIA_ACTIVO: process.env.WHATSAPP_OCR_GUIA_ACTIVO === "true",
   // Opcionales: suscripción B2B (cobro recurrente a empresas clientes,
   // ver flow.ts). Sin esto, las rutas de suscripción devuelven error pero
   // no bloquean el resto del backend. sandbox.flow.cl → Mis Datos →

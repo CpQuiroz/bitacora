@@ -1,22 +1,30 @@
 // ============================================================
 // BITÁCORA — Flujo conversacional "nuevo viaje" del bot de WhatsApp.
 //
-// State machine simple: el chofer escribe "nuevo viaje" y el bot le va
-// pidiendo un dato por mensaje (cliente → guía → origen → destino →
-// vehículo → km → monto → IVA → confirmación). El progreso vive en la
-// tabla whatsapp_conversaciones, con el teléfono como key (una
-// conversación por chofer, aisladas entre sí).
+// State machine simple: el chofer escribe "hola" (o "nuevo viaje") y el
+// bot le va pidiendo un dato por mensaje (cliente → guía → foto de la
+// guía → origen → destino → vehículo → km → monto → IVA → confirmación).
+// El progreso vive en la tabla whatsapp_conversaciones, con el teléfono
+// como key (una conversación por chofer, aisladas entre sí).
+//
+// La foto de la guía se guarda tal cual (sin OCR) en el bucket privado
+// "anexos", con el nombre de archivo armado a partir del número de guía.
+// El OCR con IA de una foto suelta sigue existiendo pero apagado detrás
+// de env.WHATSAPP_OCR_GUIA_ACTIVO (ver routes/whatsapp.ts).
 //
 // Este módulo NO llama a enviarMensajeWhatsapp: cada handler devuelve
 // los textos a responder (string[]) y el webhook los manda. Así el
 // endpoint /_simular puede probar el flujo completo sin credenciales
-// de Meta.
+// de Meta (la imagen se simula con un buffer de prueba).
 // ============================================================
 import type { PasoConversacionWhatsapp } from "@bitacora/shared";
 import { supabase } from "./supabase";
 import { calcularMontos } from "./viajesMontos";
+import { subirFotoGuiaConNombre } from "./storage";
 
 type Chofer = { id: string; empresa_id: string };
+
+export type ImagenEntrante = { buffer: Buffer; mimeType: string };
 
 type Candidato = { id: string; label: string };
 
@@ -24,6 +32,7 @@ type Datos = {
   cliente_id?: string;
   cliente_nombre?: string;
   numero_guia?: string;
+  foto_key?: string | null;
   origen?: string;
   destino?: string;
   equipo_id?: string | null;
@@ -33,6 +42,8 @@ type Datos = {
   subtotal?: number;
   aplica_iva?: boolean;
   candidatos?: Candidato[];
+  // A qué paso volver después de re-subir la foto (comando "foto").
+  reanudar_en?: PasoConversacionWhatsapp;
 };
 
 const MAX_CANDIDATOS = 8;
@@ -66,6 +77,37 @@ function esTrigger(t: string): boolean {
     n === "registrar viaje" ||
     n === "cargar viaje" ||
     n.startsWith("nuevo viaje")
+  );
+}
+
+// Saludos que arrancan el flujo — SOLO cuando no hay conversación en
+// curso (a mitad de flujo un "hola" se trata como respuesta al paso).
+function esSaludo(t: string): boolean {
+  const n = norm(t);
+  return [
+    "hola",
+    "holaa",
+    "hola bot",
+    "buenas",
+    "buenas!",
+    "buen dia",
+    "buenos dias",
+    "buenas tardes",
+    "buenas noches",
+    "alo",
+    "hey",
+    "que tal",
+    "menu",
+    "empezar",
+    "inicio",
+  ].includes(n);
+}
+
+// Comando para volver a subir la foto de la guía sin perder lo demás.
+function esCambiarFoto(t: string): boolean {
+  const n = norm(t);
+  return ["foto", "cambiar foto", "cambiar la foto", "editar foto", "corregir foto", "otra foto", "subir foto", "subir foto de nuevo", "reemplazar foto"].includes(
+    n
   );
 }
 
@@ -170,15 +212,19 @@ function etiquetaEquipo(e: { nombre: string | null; patente: string | null }): s
 // ------------------------------------------------------------
 // Prompts
 // ------------------------------------------------------------
-const PROMPTS: Record<string, string> = {
+const PROMPTS: Record<PasoConversacionWhatsapp, string> = {
   cliente: "🚚 Nuevo viaje.\n\n¿Para qué cliente es? Escribe el nombre (o parte). Escribe *cancelar* en cualquier momento para salir.",
+  cliente_elegir: "Responde con el número del cliente de la lista.",
   guia: "¿Número de la guía de despacho?",
+  foto: "📷 Ahora mándame la *foto de la guía* (como imagen). Si no la tienes a mano, escribe *-* y seguimos.",
   origen: "¿Desde dónde salió el viaje? (origen)",
   destino: "¿A dónde llegó? (destino)",
   equipo: "¿Qué vehículo usaste? Escribe la patente o el nombre. Si no aplica, escribe *-*.",
+  equipo_elegir: "Responde con el número del vehículo de la lista.",
   km: "¿Kilómetros inicial y final? Ej: *45230 / 45410*. Si no los tienes, escribe *-*.",
   monto: "¿Monto del viaje en pesos? (solo el número, sin IVA)",
   iva: "¿Se aplica IVA (19%)? Responde *SI* o *NO*.",
+  confirmar: "Responde *SI* para guardar el viaje, o *NO* para descartarlo.",
 };
 
 function resumen(d: Datos): string {
@@ -195,6 +241,7 @@ function resumen(d: Datos): string {
     "",
     `👤 Cliente: ${d.cliente_nombre ?? "—"}`,
     `📄 Guía: ${d.numero_guia ?? "—"}`,
+    `📷 Foto de guía: ${d.foto_key ? "adjunta ✅" : "sin foto"}`,
     `📍 Ruta: ${d.origen ?? "—"} → ${d.destino ?? "—"}`,
     `🚛 Vehículo: ${d.equipo_label ?? "sin especificar"}`,
     kmLinea,
@@ -203,7 +250,7 @@ function resumen(d: Datos): string {
     `💰 Monto: $${subtotal.toLocaleString("es-CL")}${aplicaIva ? ` + IVA $${iva.toLocaleString("es-CL")}` : " (sin IVA)"}`,
     `   Total: $${total.toLocaleString("es-CL")}`,
     "",
-    "Responde *SI* para guardar, *NO* para descartar.",
+    "Responde *SI* para guardar, *NO* para descartar. (Para cambiar la imagen, escribe *foto*.)",
   ].join("\n");
 }
 
@@ -232,6 +279,7 @@ async function crearViaje(chofer: Chofer, d: Datos): Promise<string | null> {
     total,
     estado: "borrador",
     origen_captura: "whatsapp",
+    foto_guia_url: d.foto_key ?? null,
   });
   return error ? error.message : null;
 }
@@ -239,16 +287,21 @@ async function crearViaje(chofer: Chofer, d: Datos): Promise<string | null> {
 // ------------------------------------------------------------
 // Entrada principal.
 //
+// `imagen` viene seteada cuando el chofer mandó una foto (el webhook ya
+// la descargó de Meta). En el paso "foto" se guarda; en cualquier otro
+// paso se le explica que ahí no toca una imagen.
+//
 // Devuelve:
 //  - string[]  -> el flujo tomó el mensaje; son las respuestas a enviar.
-//  - null      -> no hay conversación activa y el texto no es un
-//                 disparador; el webhook sigue con su manejo legado
-//                 (foto de guía + km).
+//  - null      -> no hay conversación activa y el mensaje no arranca el
+//                 flujo (ni saludo ni disparador); el webhook sigue con
+//                 su manejo legado.
 // ------------------------------------------------------------
 export async function manejarConversacionViaje(
   chofer: Chofer,
   telefono: string,
-  textoCrudo: string
+  textoCrudo: string,
+  imagen: ImagenEntrante | null = null
 ): Promise<string[] | null> {
   const texto = (textoCrudo ?? "").trim();
   const conv = await cargarConversacion(telefono);
@@ -256,10 +309,21 @@ export async function manejarConversacionViaje(
   if (esCancelar(texto)) {
     if (!conv) return null;
     await borrar(telefono);
-    return ["Listo, cancelé el registro del viaje. Escribe *nuevo viaje* cuando quieras empezar otro."];
+    return ["Listo, cancelé el registro del viaje. Escribe *hola* cuando quieras empezar otro."];
   }
 
-  if (esTrigger(texto)) {
+  // "foto" a mitad de flujo -> vuelve a pedir la imagen sin perder nada.
+  if (conv && esCambiarFoto(texto)) {
+    const datos = (conv.datos ?? {}) as Datos;
+    if (!datos.numero_guia) {
+      return ["Primero dame el número de la guía y después te pido la foto.\n\n" + PROMPTS.guia];
+    }
+    datos.reanudar_en = (conv.paso as PasoConversacionWhatsapp) === "foto" ? datos.reanudar_en ?? "origen" : (conv.paso as PasoConversacionWhatsapp);
+    await guardar(telefono, chofer, "foto", datos);
+    return [PROMPTS.foto];
+  }
+
+  if (esTrigger(texto) || (!conv && esSaludo(texto))) {
     await guardar(telefono, chofer, "cliente", {});
     return [conv ? "Ok, empecemos de nuevo.\n\n" + PROMPTS.cliente : PROMPTS.cliente];
   }
@@ -267,7 +331,7 @@ export async function manejarConversacionViaje(
   if (!conv) return null;
 
   const datos = (conv.datos ?? {}) as Datos;
-  return despachar(chofer, telefono, conv.paso as PasoConversacionWhatsapp, datos, texto);
+  return despachar(chofer, telefono, conv.paso as PasoConversacionWhatsapp, datos, texto, imagen);
 }
 
 async function despachar(
@@ -275,8 +339,17 @@ async function despachar(
   telefono: string,
   paso: PasoConversacionWhatsapp,
   datos: Datos,
-  texto: string
+  texto: string,
+  imagen: ImagenEntrante | null = null
 ): Promise<string[]> {
+  // Una imagen solo se procesa en el paso "foto"; en cualquier otro,
+  // se avisa y se repite lo que se estaba pidiendo.
+  if (imagen && paso !== "foto") {
+    return [
+      `Recibí una imagen, pero ahora te estoy pidiendo otra cosa 🙂\nSi querías cambiar la foto de la guía, escribe *foto*.\n\n${PROMPTS[paso]}`,
+    ];
+  }
+
   switch (paso) {
     // ---- Cliente -------------------------------------------------
     case "cliente": {
@@ -313,12 +386,41 @@ async function despachar(
       return [`Cliente: *${elegido.label}* ✅`, PROMPTS.guia];
     }
 
-    // ---- Guía / Origen / Destino --------------------------------
+    // ---- Guía / Foto / Origen / Destino -------------------------
     case "guia": {
       if (!texto) return ["El número de guía no puede quedar vacío. " + PROMPTS.guia];
       datos.numero_guia = texto.slice(0, 60);
-      await guardar(telefono, chofer, "origen", datos);
-      return [PROMPTS.origen];
+      await guardar(telefono, chofer, "foto", datos);
+      return [PROMPTS.foto];
+    }
+
+    case "foto": {
+      const volverA: PasoConversacionWhatsapp = datos.reanudar_en ?? "origen";
+      const seguir = async (): Promise<string[]> => {
+        delete datos.reanudar_en;
+        await guardar(telefono, chofer, volverA, datos);
+        return volverA === "confirmar" ? [resumen(datos)] : [PROMPTS[volverA]];
+      };
+
+      if (imagen) {
+        try {
+          datos.foto_key = await subirFotoGuiaConNombre(
+            chofer.empresa_id,
+            datos.numero_guia ?? "guia",
+            imagen.buffer,
+            imagen.mimeType
+          );
+        } catch (err) {
+          console.error("Error subiendo la foto de la guía (WhatsApp):", err);
+          return ["No pude guardar la foto 😕 Intenta mandarla de nuevo, o escribe *-* para seguir sin ella."];
+        }
+        return ["Guardé la foto de la guía ✅ (si subiste la equivocada, escribe *foto* para cambiarla).", ...(await seguir())];
+      }
+      if (esOmitir(texto)) {
+        datos.foto_key = datos.foto_key ?? null;
+        return seguir();
+      }
+      return ["Mándame la *foto de la guía* como imagen 📷, o escribe *-* para seguir sin ella."];
     }
 
     case "origen": {
@@ -416,12 +518,12 @@ async function despachar(
           return ["Uf, hubo un problema guardando el viaje 😕 Avísale a la oficina para que lo carguen a mano."];
         }
         return [
-          "✅ Viaje registrado como borrador. La oficina lo revisa y lo confirma.\n\nSi te equivocaste, escribe *nuevo viaje* para cargar otro, o avísale a la oficina para corregir este.",
+          "✅ Viaje registrado como borrador. La oficina lo revisa y lo confirma.\n\nSi te equivocaste, escribe *hola* para cargar otro, o avísale a la oficina para corregir este.",
         ];
       }
       if (esNo(texto)) {
         await borrar(telefono);
-        return ["Ok, descarté el viaje. Escribe *nuevo viaje* para empezar de nuevo."];
+        return ["Ok, descarté el viaje. Escribe *hola* para empezar de nuevo."];
       }
       return ["Responde *SI* para guardar el viaje, o *NO* para descartarlo.\n\n" + resumen(datos)];
     }

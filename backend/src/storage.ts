@@ -332,6 +332,34 @@ export function urlFirmadaFotoGuia(key: string, minutosValidez = 15): Promise<st
   return urlFirmada(key, minutosValidez, BUCKET_ANEXOS);
 }
 
+// Igual que subirFotoGuia, pero el nombre del archivo lleva el número de
+// guía adelante (el flujo conversacional del bot ya lo tiene cuando pide
+// la foto). El timestamp al final evita colisiones si se sube dos veces
+// la foto de la misma guía (ej. el chofer corrige la imagen).
+export async function subirFotoGuiaConNombre(
+  empresaId: string,
+  numeroGuia: string,
+  archivo: Buffer | Uint8Array,
+  contentType: string
+): Promise<string> {
+  await verificarLimiteStorage(empresaId, archivo.byteLength);
+  const extension = contentType === "image/png" ? "png" : contentType === "image/webp" ? "webp" : "jpg";
+  const guiaSegura = (numeroGuia || "guia").replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 40) || "guia";
+  const key = `${empresaId}/viajes/${guiaSegura}-${Date.now()}.${extension}`;
+
+  await client.send(
+    new PutObjectCommand({
+      Bucket: BUCKET_ANEXOS,
+      Key: key,
+      Body: archivo,
+      ContentType: contentType,
+    })
+  );
+  incrementarStorageUsado(empresaId, archivo.byteLength);
+
+  return key; // se guarda en viajes.foto_guia_url
+}
+
 // ------------------------------------------------------------
 // Uso de storage por empresa — Panel de Super-Admin. Suma el tamaño de
 // todos los objetos cuyo key empieza con el empresaId, en los 3

@@ -12,7 +12,7 @@ import {
   verificarFirmaWebhook,
   type MensajeEntranteWhatsapp,
 } from "../whatsapp";
-import { hayConversacionActiva, manejarConversacionViaje } from "../whatsappFlujoViaje";
+import { hayConversacionActiva, manejarConversacionViaje, type ImagenEntrante } from "../whatsappFlujoViaje";
 
 export const whatsappRouter = Router();
 
@@ -151,11 +151,12 @@ async function manejarTexto(chofer: { id: string; empresa_id: string }, mensaje:
     .maybeSingle();
 
   if (!match) {
+    const ayuda = env.WHATSAPP_OCR_GUIA_ACTIVO
+      ? "No te entendí 🤔\n\nPara registrar un viaje, escribe *hola* y te voy pidiendo los datos.\nO mándame una foto de la guía de despacho 📄 y la leo yo."
+      : "No te entendí 🤔\n\nPara registrar un viaje, escribe *hola* y te voy pidiendo los datos, incluida la foto de la guía 📷";
     await enviarMensajeWhatsapp(
       desde,
-      pendiente
-        ? "No entendí los kilómetros — mándalos como dos números, ej: 45230 / 45410"
-        : "No te entendí 🤔\n\nPara registrar un viaje paso a paso, escribe *nuevo viaje*.\nO mándame una foto de la guía de despacho 📄 y la leo yo."
+      pendiente ? "No entendí los kilómetros — mándalos como dos números, ej: 45230 / 45410" : ayuda
     );
     return;
   }
@@ -212,16 +213,27 @@ whatsappRouter.post(
         }
 
         if (mensaje.type === "image") {
-          // Si hay un "nuevo viaje" a medio llenar, una foto no debe
-          // disparar el flujo legado de OCR en paralelo — se le pide al
-          // chofer que termine (o cancele) la conversación primero.
-          if (await hayConversacionActiva(normalizarTelefono(desde))) {
+          const telefono = normalizarTelefono(desde);
+          if (await hayConversacionActiva(telefono)) {
+            // Descarga la imagen y se la pasa al flujo — él decide si es
+            // el paso "foto" (la guarda) o no (avisa que ahí no toca).
+            const media = mensaje.image ? await descargarMediaWhatsapp(mensaje.image.id) : null;
+            if (!media) {
+              await enviarMensajeWhatsapp(desde, "No pude descargar la foto, ¿la puedes mandar de nuevo?");
+            } else {
+              const mimeType = media.mimeType === "image/png" ? "image/png" : media.mimeType === "image/webp" ? "image/webp" : "image/jpeg";
+              const imagen: ImagenEntrante = { buffer: media.buffer, mimeType };
+              const respuestas = await manejarConversacionViaje(chofer, telefono, "", imagen);
+              for (const r of respuestas ?? []) await enviarMensajeWhatsapp(desde, r);
+            }
+          } else if (env.WHATSAPP_OCR_GUIA_ACTIVO) {
+            // OCR de foto suelta — apagado por defecto (ver env.ts).
+            await manejarFoto(chofer, mensaje, desde);
+          } else {
             await enviarMensajeWhatsapp(
               desde,
-              "Estoy registrando tu viaje paso a paso. Mándame el dato que te pedí, o escribe *cancelar* para descartarlo."
+              "Para registrar un viaje escribe *hola* y te voy pidiendo los datos, incluida la foto de la guía 📷"
             );
-          } else {
-            await manejarFoto(chofer, mensaje, desde);
           }
         } else if (mensaje.type === "text") {
           await manejarTexto(chofer, mensaje, desde);
@@ -234,25 +246,35 @@ whatsappRouter.post(
 );
 
 // ------------------------------------------------------------
-// Simulador — SOLO fuera de producción. Simula un mensaje de texto
-// entrante y devuelve las respuestas que el bot mandaría, sin pasar por
-// Meta ni necesitar credenciales. Para probar el flujo conversacional
-// "nuevo viaje" de punta a punta.
+// Simulador — SOLO fuera de producción. Simula un mensaje entrante y
+// devuelve las respuestas que el bot mandaría, sin pasar por Meta ni
+// necesitar credenciales. Para probar el flujo "nuevo viaje" de punta
+// a punta.
 //
 //   curl -s localhost:8080/api/whatsapp/_simular \
 //     -H 'content-type: application/json' \
-//     -d '{"telefono":"+56 9 1234 5678","texto":"nuevo viaje"}'
+//     -d '{"telefono":"+56 9 1234 5678","texto":"hola"}'
+//
+// Para simular que el chofer manda la foto de la guía, pasa
+// "imagen": true (usa un JPEG de prueba de 1x1 y lo sube al bucket
+// "anexos" como lo haría el flujo real).
 //
 // Mantén el mismo "telefono" entre llamadas para continuar la misma
 // conversación (el estado vive en whatsapp_conversaciones).
 // ------------------------------------------------------------
+const JPEG_PRUEBA_1PX = Buffer.from(
+  "/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=",
+  "base64"
+);
+
 if (process.env.NODE_ENV !== "production") {
   whatsappRouter.post(
     "/_simular",
     ah(async (req, res) => {
-      const { telefono, texto } = (req.body ?? {}) as { telefono?: unknown; texto?: unknown };
-      if (typeof telefono !== "string" || typeof texto !== "string") {
-        res.status(400).json({ error: 'Manda { "telefono": "...", "texto": "..." }' });
+      const { telefono, texto, imagen } = (req.body ?? {}) as { telefono?: unknown; texto?: unknown; imagen?: unknown };
+      const conImagen = imagen === true || imagen === "true";
+      if (typeof telefono !== "string" || (typeof texto !== "string" && !conImagen)) {
+        res.status(400).json({ error: 'Manda { "telefono": "...", "texto": "..." } — o "imagen": true para simular la foto de la guía' });
         return;
       }
       const tel = normalizarTelefono(telefono);
@@ -267,7 +289,8 @@ if (process.env.NODE_ENV !== "production") {
         });
         return;
       }
-      const respuestas = await manejarConversacionViaje(chofer, tel, texto);
+      const imagenSim: ImagenEntrante | null = conImagen ? { buffer: JPEG_PRUEBA_1PX, mimeType: "image/jpeg" } : null;
+      const respuestas = await manejarConversacionViaje(chofer, tel, typeof texto === "string" ? texto : "", imagenSim);
       res.json({
         telefono: tel,
         chofer: { id: chofer.id, empresa_id: chofer.empresa_id },

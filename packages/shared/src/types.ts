@@ -928,6 +928,7 @@ export type PasoConversacionWhatsapp =
   | "cliente"
   | "cliente_elegir"
   | "guia"
+  | "foto"
   | "origen"
   | "destino"
   | "equipo"
