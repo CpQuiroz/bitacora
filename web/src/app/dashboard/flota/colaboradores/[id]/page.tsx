@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import type { RutaPlanificada, Usuario } from "@bitacora/shared";
 import { REGIONES } from "@bitacora/shared";
+import { FUNCIONES } from "@/lib/funciones";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
@@ -22,6 +23,7 @@ export default function ColaboradorFlotaDetallePage() {
 
   const [nombre, setNombre] = useState("");
   const [telefono, setTelefono] = useState("");
+  const [funcion, setFuncion] = useState("");
   const [zona, setZona] = useState("");
   const [guardando, setGuardando] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
@@ -62,6 +64,7 @@ export default function ColaboradorFlotaDetallePage() {
     setColaborador(c);
     setNombre(c.nombre ?? "");
     setTelefono(c.telefono ?? "");
+    setFuncion(c.funcion ?? "");
     setZona(c.zona ?? "");
     if (resRutas.ok) {
       const todasRutas: RutaPlanificada[] = await resRutas.json();
@@ -83,7 +86,7 @@ export default function ColaboradorFlotaDetallePage() {
     setGuardando(true);
     const res = await apiFetch(`/api/usuarios/${params.id}/zona`, {
       method: "PATCH",
-      body: JSON.stringify({ nombre: nombre.trim(), telefono: telefono.trim(), zona }),
+      body: JSON.stringify({ nombre: nombre.trim(), telefono: telefono.trim(), funcion, zona }),
     });
     setGuardando(false);
     if (!res.ok) {
@@ -128,6 +131,18 @@ export default function ColaboradorFlotaDetallePage() {
               <Label>Teléfono</Label>
               <Input type="tel" placeholder="+56 9 1234 5678" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
               <p className="mt-1 text-xs text-muted">Con código de país. Necesario para que use el bot de WhatsApp.</p>
+            </div>
+            <div>
+              <Label>Función</Label>
+              <Select value={funcion} onChange={(e) => setFuncion(e.target.value)}>
+                <option value="">Sin definir</option>
+                {FUNCIONES.map((f) => (
+                  <option key={f.value} value={f.value}>
+                    {f.label}
+                  </option>
+                ))}
+              </Select>
+              <p className="mt-1 text-xs text-muted">Define qué pestañas ve en la app móvil.</p>
             </div>
             <div>
               <Label>Zona / área de cobertura</Label>

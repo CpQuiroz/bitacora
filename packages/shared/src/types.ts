@@ -13,6 +13,11 @@
 // ============================================================
 
 export type Rol = "admin" | "supervisor" | "contador" | "colaborador";
+
+// Función / especialidad de un colaborador en terreno — más fina que el
+// rol (ver migración 65). La usa la app móvil para mostrar solo las
+// herramientas que ese colaborador realmente usa. null = sin definir.
+export type FuncionColaborador = "tecnico" | "chofer" | "instalador" | "administrativo" | "otro";
 export type Rubro = "transporte" | "servicio_tecnico" | "otro";
 export type Plan = "trial" | "basico" | "pro";
 export type EstadoEmpresa = "activa" | "suspendida" | "dada_de_baja";
@@ -196,6 +201,7 @@ export type Usuario = {
   mfa_activado: boolean;
   mfa_metodo: "totp" | "email" | null;
   zona: string | null;
+  funcion: FuncionColaborador | null;
   creado_en: string;
 };
 
@@ -641,6 +647,17 @@ export type OrdenServicio = {
   observaciones_cierre: string | null;
   informe_ia: string | null;
   finalizada_en: string | null;
+  // Check-in / check-out geolocalizado desde la app móvil (migración
+  // 64). El item en `checklist` se sigue escribiendo igual; esto es la
+  // copia consultable (coordenadas + exactitud del GPS en metros).
+  check_in_at: string | null;
+  check_in_lat: number | null;
+  check_in_lng: number | null;
+  check_in_precision: number | null;
+  check_out_at: string | null;
+  check_out_lat: number | null;
+  check_out_lng: number | null;
+  check_out_precision: number | null;
   // true una vez que /finalizar (estado_os "firmada") generó los
   // movimientos de salida de inventario de sus ítems tipo "producto" —
   // evita descontar dos veces o revertir sin haber descontado antes.
@@ -885,7 +902,7 @@ export type InformePersonalizado = {
 };
 
 export type EstadoViaje = "borrador" | "confirmado" | "facturado";
-export type OrigenCapturaViaje = "manual" | "whatsapp";
+export type OrigenCapturaViaje = "manual" | "whatsapp" | "app";
 
 export type Viaje = {
   id: string;

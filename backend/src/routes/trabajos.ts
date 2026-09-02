@@ -534,11 +534,16 @@ trabajosRouter.post(
 trabajosRouter.post(
   "/:id/checklist",
   ah<RequestConEmpresa>(async (req, res) => {
-    const { item } = req.body ?? {};
+    const { item, lat, lng, precision_m } = req.body ?? {};
     if (item !== "Check-in" && item !== "Check-out") {
       res.status(400).json({ error: 'item debe ser "Check-in" o "Check-out"' });
       return;
     }
+    // Coordenadas opcionales — la app móvil las manda si el chofer dio
+    // permiso de ubicación; si no, el check-in igual se registra.
+    const latNum = typeof lat === "number" && Number.isFinite(lat) ? lat : null;
+    const lngNum = typeof lng === "number" && Number.isFinite(lng) ? lng : null;
+    const precNum = typeof precision_m === "number" && Number.isFinite(precision_m) ? precision_m : null;
     if (!(await trabajoExiste(req.empresaId!, req.params.id))) {
       res.status(404).json({ error: "Trabajo no encontrado" });
       return;
@@ -563,6 +568,19 @@ trabajosRouter.post(
       cambios.estado_os = "en_proceso";
     } else if (item === "Check-out" && orden.estado_os === "en_proceso") {
       cambios.estado_os = "completada";
+    }
+    // Copia geolocalizada consultable (migración 64) — además del item
+    // en el jsonb `checklist`.
+    if (item === "Check-in") {
+      cambios.check_in_at = ahora;
+      cambios.check_in_lat = latNum;
+      cambios.check_in_lng = lngNum;
+      cambios.check_in_precision = precNum;
+    } else {
+      cambios.check_out_at = ahora;
+      cambios.check_out_lat = latNum;
+      cambios.check_out_lng = lngNum;
+      cambios.check_out_precision = precNum;
     }
 
     // tenant-ok: trabajoExiste() más arriba ya validó empresa_id; orden

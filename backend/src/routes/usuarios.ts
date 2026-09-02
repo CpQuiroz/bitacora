@@ -1,6 +1,6 @@
 import { Router } from "express";
 import multer from "multer";
-import type { Rol, Usuario } from "@bitacora/shared";
+import type { FuncionColaborador, Rol, Usuario } from "@bitacora/shared";
 import { supabase } from "../supabase";
 import { subirFotoPerfil } from "../storage";
 import { env } from "../env";
@@ -15,6 +15,7 @@ import { verificarLimiteUsuarios } from "../limites";
 export const usuariosRouter = Router();
 
 const ROLES: Rol[] = ["admin", "supervisor", "contador", "colaborador"];
+const FUNCIONES: FuncionColaborador[] = ["tecnico", "chofer", "instalador", "administrativo", "otro"];
 // Sin lista curada — un huso IANA cualquiera sirve, se valida solo el formato.
 const HUSO_REGEX = /^[A-Za-z]+(?:[/_][A-Za-z_]+)+$|^GMT[+-]\d{1,2}$/;
 
@@ -57,7 +58,7 @@ usuariosRouter.post(
   requiereModulo("gestion_control"),
   ah<RequestConEmpresa>(async (req, res) => {
 
-    const { email, nombre, rol, telefono } = req.body ?? {};
+    const { email, nombre, rol, telefono, funcion } = req.body ?? {};
     if (typeof email !== "string" || !email.includes("@")) {
       res.status(400).json({ error: "Correo inválido" });
       return;
@@ -74,6 +75,7 @@ usuariosRouter.post(
     // WhatsApp identifica al chofer comparando este número (sin los
     // no-dígitos) con el "from" del mensaje entrante.
     const telefonoLimpio = typeof telefono === "string" && telefono.trim() ? telefono.trim().slice(0, 30) : null;
+    const funcionLimpia = FUNCIONES.includes(funcion) ? (funcion as FuncionColaborador) : null;
     await verificarLimiteUsuarios(req.empresaId!);
 
     // generateLink crea el usuario y devuelve el link de invitación sin
@@ -115,6 +117,7 @@ usuariosRouter.post(
         nombre: nombre.trim(),
         rol,
         telefono: telefonoLimpio,
+        funcion: funcionLimpia,
       })
       .select()
       .single();
@@ -225,7 +228,7 @@ usuariosRouter.patch(
   "/:id/zona",
   requiereModulo("flota"),
   ah<RequestConEmpresa>(async (req, res) => {
-    const { nombre, telefono, zona } = req.body ?? {};
+    const { nombre, telefono, zona, funcion } = req.body ?? {};
     const cambios: Partial<Usuario> = {};
 
     if (nombre !== undefined) {
@@ -240,6 +243,9 @@ usuariosRouter.patch(
     }
     if (zona !== undefined) {
       cambios.zona = typeof zona === "string" && zona.trim() ? zona.trim() : null;
+    }
+    if (funcion !== undefined) {
+      cambios.funcion = FUNCIONES.includes(funcion) ? (funcion as FuncionColaborador) : null;
     }
     if (Object.keys(cambios).length === 0) {
       res.status(400).json({ error: "Nada que actualizar" });

@@ -7,6 +7,7 @@ import type { AuditoriaUsuario, Rol, Usuario } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { ROLES } from "@/lib/roles";
+import { FUNCIONES } from "@/lib/funciones";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import {
   Badge,
@@ -51,6 +52,7 @@ export default function EquipoPage() {
   const [nombre, setNombre] = useState("");
   const [telefono, setTelefono] = useState("");
   const [rol, setRol] = useState<Rol>("colaborador");
+  const [funcion, setFuncion] = useState<string>("");
 
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [editRol, setEditRol] = useState<Rol>("colaborador");
@@ -100,7 +102,13 @@ export default function EquipoPage() {
     setInvitando(true);
     const res = await apiFetch("/api/usuarios/invitar", {
       method: "POST",
-      body: JSON.stringify({ email, nombre, rol, telefono: telefono.trim() || undefined }),
+      body: JSON.stringify({
+        email,
+        nombre,
+        rol,
+        telefono: telefono.trim() || undefined,
+        funcion: rol === "colaborador" && funcion ? funcion : undefined,
+      }),
     });
     setInvitando(false);
     if (!res.ok) {
@@ -113,6 +121,7 @@ export default function EquipoPage() {
     setNombre("");
     setTelefono("");
     setRol("colaborador");
+    setFuncion("");
     cargar();
   }
 
@@ -186,6 +195,20 @@ export default function EquipoPage() {
                 ))}
               </Select>
             </div>
+            {rol === "colaborador" && (
+              <div>
+                <Label>Función (opcional)</Label>
+                <Select value={funcion} onChange={(e) => setFuncion(e.target.value)}>
+                  <option value="">Sin definir</option>
+                  {FUNCIONES.map((f) => (
+                    <option key={f.value} value={f.value}>
+                      {f.label}
+                    </option>
+                  ))}
+                </Select>
+                <p className="mt-1 text-xs text-muted">Define qué ve en la app móvil (un chofer no ve Órdenes de servicio).</p>
+              </div>
+            )}
             <div className="sm:col-span-2">
               <Label>Teléfono (opcional)</Label>
               <Input

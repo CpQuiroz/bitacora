@@ -9,11 +9,12 @@ const workspaceRoot = path.resolve(projectRoot, "..");
 
 const config = getDefaultConfig(projectRoot);
 
+// Metro observa también la raíz del workspace (para packages/shared).
 config.watchFolders = [workspaceRoot];
+// Resuelve módulos primero desde mobile/, luego desde la raíz (hoisting).
 config.resolver.nodeModulesPaths = [
   path.resolve(projectRoot, "node_modules"),
   path.resolve(workspaceRoot, "node_modules"),
 ];
-config.resolver.disableHierarchicalLookup = true;
 
 module.exports = config;

@@ -43,6 +43,7 @@ import { inventarioRouter } from "./routes/inventario";
 import { proveedoresRouter } from "./routes/proveedores";
 import { asistenteRouter } from "./routes/asistente";
 import { viajesRouter } from "./routes/viajes";
+import { misViajesRouter } from "./routes/misViajes";
 import { whatsappRouter } from "./routes/whatsapp";
 import { notificacionesFeedRouter } from "./routes/notificacionesFeed";
 import { unidadesMedidaRouter } from "./routes/unidadesMedida";
@@ -237,6 +238,9 @@ app.use("/api/asistente", requiereAuth, requiereEmpresa, requiereModulo("asisten
 app.use("/api/notificaciones-feed", requiereAuth, requiereEmpresa, notificacionesFeedRouter);
 app.use("/api/notificaciones-cliente", requiereAuth, requiereEmpresa, notificacionesClienteRouter);
 app.use("/api/viajes", requiereAuth, requiereEmpresa, requiereModulo("viajes"), viajesRouter);
+// Viajes propios de un colaborador (app móvil / bot) — sin requiereModulo,
+// scopeado a chofer_id = usuario autenticado. Ver routes/misViajes.ts.
+app.use("/api/mis-viajes", requiereAuth, requiereEmpresa, misViajesRouter);
 app.use("/api/tipos-documento", requiereAuth, requiereEmpresa, tiposDocumentoRouter);
 app.use("/api/documentos", requiereAuth, requiereEmpresa, documentosRouter);
 // Sin auth a propósito — la abre un cliente anónimo desde el correo.
