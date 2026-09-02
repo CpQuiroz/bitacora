@@ -1,7 +1,8 @@
 import { Router } from "express";
 import crypto from "node:crypto";
-import type { EstadoEmpresa, Modulo, Plan, Rol, Rubro } from "@bitacora/shared";
-import { MODULOS, moduloActivadoPorDefecto, formatearRut, validarRut } from "@bitacora/shared";
+import type { Accion, EstadoEmpresa, Modulo, Plan, Rol, Rubro } from "@bitacora/shared";
+import { ACCIONES, MODULOS, moduloActivadoPorDefecto, formatearRut, validarRut } from "@bitacora/shared";
+import { invalidarCacheRoles, empresaPuedeUsarRol } from "../roles";
 import { supabase } from "../supabase";
 import { env } from "../env";
 import { ah } from "../asyncHandler";
@@ -25,7 +26,6 @@ import {
 const ESTADOS_EMPRESA: EstadoEmpresa[] = ["activa", "suspendida", "dada_de_baja"];
 const PLANES: Plan[] = ["trial", "basico", "pro"];
 const RUBROS: Rubro[] = ["transporte", "servicio_tecnico", "otro"];
-const ROLES: Rol[] = ["admin", "supervisor", "contador", "colaborador"];
 
 export const superadminRouter = Router();
 
@@ -473,8 +473,8 @@ superadminRouter.post(
       res.status(400).json({ error: "Correo inválido" });
       return;
     }
-    if (typeof rol !== "string" || !ROLES.includes(rol as Rol)) {
-      res.status(400).json({ error: `rol debe ser uno de: ${ROLES.join(", ")}` });
+    if (typeof rol !== "string" || !(await empresaPuedeUsarRol(rol, req.params.id))) {
+      res.status(400).json({ error: "El rol indicado no está disponible para esta empresa" });
       return;
     }
 
@@ -1301,5 +1301,242 @@ superadminRouter.patch(
       detalle: `${empresa.nombre}: ${empresa.prueba_termina_en ?? "—"} → ${prueba_termina_en}`,
     });
     res.json({ prueba_termina_en });
+  })
+);
+
+// ── Roles editables (tabla `roles`, migración 71) ────────────────────
+// El Super-Admin edita qué módulos y qué acciones sensibles tiene cada
+// rol, crea roles nuevos, y puede restringir un rol a empresas puntuales
+// (rol_empresas). Los 4 roles de sistema no se borran ni se renombra su
+// slug; `admin` además no se edita (acceso total siempre).
+const SLUG_ROL_REGEX = /^[a-z][a-z0-9_]{1,30}$/;
+const ROLES_SISTEMA_SLUGS = ["admin", "supervisor", "contador", "colaborador"];
+
+function sanearListaModulos(valor: unknown): Modulo[] | null {
+  if (!Array.isArray(valor)) return null;
+  const set = new Set<string>();
+  for (const v of valor) {
+    if (typeof v !== "string" || !MODULOS.includes(v as Modulo)) return null;
+    set.add(v);
+  }
+  return [...set] as Modulo[];
+}
+
+function sanearListaAcciones(valor: unknown): Accion[] | null {
+  if (!Array.isArray(valor)) return null;
+  const set = new Set<string>();
+  for (const v of valor) {
+    if (typeof v !== "string" || !ACCIONES.includes(v as Accion)) return null;
+    set.add(v);
+  }
+  return [...set] as Accion[];
+}
+
+superadminRouter.get(
+  "/roles",
+  requiereSuperAdmin,
+  ah<RequestConSuperAdmin>(async (_req, res) => {
+    const [{ data: roles }, { data: restr }, { data: empresas }, { data: usuarios }] = await Promise.all([
+      supabase.from("roles").select("*").order("orden"),
+      supabase.from("rol_empresas").select("rol_slug, empresa_id"),
+      supabase.from("empresas").select("id, nombre").order("nombre"),
+      supabase.from("usuarios").select("rol"),
+    ]);
+
+    const porRol = new Map<string, string[]>();
+    for (const f of restr ?? []) {
+      if (!porRol.has(f.rol_slug)) porRol.set(f.rol_slug, []);
+      porRol.get(f.rol_slug)!.push(f.empresa_id);
+    }
+    const conteo = new Map<string, number>();
+    for (const u of usuarios ?? []) conteo.set(u.rol, (conteo.get(u.rol) ?? 0) + 1);
+
+    res.json({
+      roles: (roles ?? []).map((r) => ({
+        ...r,
+        empresas: porRol.get(r.slug) ?? [],
+        usuarios: conteo.get(r.slug) ?? 0,
+      })),
+      empresas: empresas ?? [],
+      catalogo: { modulos: [...MODULOS], acciones: [...ACCIONES] },
+    });
+  })
+);
+
+superadminRouter.post(
+  "/roles",
+  requiereSuperAdmin,
+  ah<RequestConSuperAdmin>(async (req, res) => {
+    const { slug, nombre } = req.body ?? {};
+    const slugLimpio = typeof slug === "string" ? slug.trim().toLowerCase() : "";
+    if (!SLUG_ROL_REGEX.test(slugLimpio)) {
+      res.status(400).json({ error: "El identificador debe ser 2–31 caracteres: minúsculas, números y guion bajo, empezando por letra." });
+      return;
+    }
+    if (ROLES_SISTEMA_SLUGS.includes(slugLimpio)) {
+      res.status(400).json({ error: "Ese identificador está reservado para un rol de sistema." });
+      return;
+    }
+    if (typeof nombre !== "string" || !nombre.trim()) {
+      res.status(400).json({ error: "Falta el nombre del rol" });
+      return;
+    }
+    const modulos = sanearListaModulos(req.body?.modulos ?? []);
+    const acciones = sanearListaAcciones(req.body?.acciones ?? []);
+    if (!modulos || !acciones) {
+      res.status(400).json({ error: "Lista de módulos o acciones inválida" });
+      return;
+    }
+
+    const { data: existe } = await supabase.from("roles").select("slug").eq("slug", slugLimpio).maybeSingle();
+    if (existe) {
+      res.status(409).json({ error: "Ya existe un rol con ese identificador" });
+      return;
+    }
+
+    const { error } = await supabase.from("roles").insert({
+      slug: slugLimpio,
+      nombre: nombre.trim(),
+      modulos,
+      acciones,
+      requiere_2fa: Boolean(req.body?.requiere_2fa),
+      es_sistema: false,
+      orden: 100,
+    });
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    invalidarCacheRoles();
+    await registrarAuditoria(req.superAdminId!, "crear_rol", { ip: req.ip ?? null, detalle: `${slugLimpio} (${nombre.trim()})` });
+    res.status(201).json({ slug: slugLimpio });
+  })
+);
+
+superadminRouter.patch(
+  "/roles/:slug",
+  requiereSuperAdmin,
+  ah<RequestConSuperAdmin>(async (req, res) => {
+    const { data: rol } = await supabase.from("roles").select("*").eq("slug", req.params.slug).maybeSingle();
+    if (!rol) {
+      res.status(404).json({ error: "Rol no encontrado" });
+      return;
+    }
+    if (rol.slug === "admin") {
+      res.status(400).json({ error: "El rol Admin tiene acceso total y no es editable." });
+      return;
+    }
+
+    const cambios: Record<string, unknown> = { actualizado_en: new Date().toISOString() };
+    if (req.body?.nombre !== undefined) {
+      if (typeof req.body.nombre !== "string" || !req.body.nombre.trim()) {
+        res.status(400).json({ error: "Nombre inválido" });
+        return;
+      }
+      cambios.nombre = req.body.nombre.trim();
+    }
+    if (req.body?.modulos !== undefined) {
+      const modulos = sanearListaModulos(req.body.modulos);
+      if (!modulos) {
+        res.status(400).json({ error: "Lista de módulos inválida" });
+        return;
+      }
+      cambios.modulos = modulos;
+    }
+    if (req.body?.acciones !== undefined) {
+      const acciones = sanearListaAcciones(req.body.acciones);
+      if (!acciones) {
+        res.status(400).json({ error: "Lista de acciones inválida" });
+        return;
+      }
+      cambios.acciones = acciones;
+    }
+    if (req.body?.requiere_2fa !== undefined) cambios.requiere_2fa = Boolean(req.body.requiere_2fa);
+
+    const { error } = await supabase.from("roles").update(cambios as never).eq("slug", rol.slug);
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    invalidarCacheRoles();
+    await registrarAuditoria(req.superAdminId!, "editar_rol", { ip: req.ip ?? null, detalle: rol.slug });
+    res.json({ slug: rol.slug });
+  })
+);
+
+superadminRouter.delete(
+  "/roles/:slug",
+  requiereSuperAdmin,
+  ah<RequestConSuperAdmin>(async (req, res) => {
+    const { data: rol } = await supabase.from("roles").select("slug, es_sistema, nombre").eq("slug", req.params.slug).maybeSingle();
+    if (!rol) {
+      res.status(404).json({ error: "Rol no encontrado" });
+      return;
+    }
+    if (rol.es_sistema) {
+      res.status(400).json({ error: "Los roles de sistema no se pueden borrar." });
+      return;
+    }
+    const { count } = await supabase.from("usuarios").select("id", { count: "exact", head: true }).eq("rol", rol.slug as never);
+    if ((count ?? 0) > 0) {
+      res.status(409).json({ error: `Hay ${count} usuario(s) con este rol. Reasígnalos antes de borrarlo.` });
+      return;
+    }
+    const { error } = await supabase.from("roles").delete().eq("slug", rol.slug);
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    invalidarCacheRoles();
+    await registrarAuditoria(req.superAdminId!, "borrar_rol", { ip: req.ip ?? null, detalle: `${rol.slug} (${rol.nombre})` });
+    res.json({ ok: true });
+  })
+);
+
+// Restringe un rol a empresas puntuales. Lista vacía = disponible para
+// todas las empresas (borra todas las filas de rol_empresas del slug).
+superadminRouter.put(
+  "/roles/:slug/empresas",
+  requiereSuperAdmin,
+  ah<RequestConSuperAdmin>(async (req, res) => {
+    const { data: rol } = await supabase.from("roles").select("slug").eq("slug", req.params.slug).maybeSingle();
+    if (!rol) {
+      res.status(404).json({ error: "Rol no encontrado" });
+      return;
+    }
+    const ids = req.body?.empresa_ids;
+    if (!Array.isArray(ids) || ids.some((x) => typeof x !== "string")) {
+      res.status(400).json({ error: "empresa_ids debe ser una lista de IDs" });
+      return;
+    }
+    const unicos = [...new Set(ids as string[])];
+    if (unicos.length > 0) {
+      const { data: existentes } = await supabase.from("empresas").select("id").in("id", unicos);
+      if ((existentes ?? []).length !== unicos.length) {
+        res.status(400).json({ error: "Alguna empresa indicada no existe" });
+        return;
+      }
+    }
+
+    const { error: errBorrar } = await supabase.from("rol_empresas").delete().eq("rol_slug", rol.slug);
+    if (errBorrar) {
+      res.status(500).json({ error: errBorrar.message });
+      return;
+    }
+    if (unicos.length > 0) {
+      const { error: errInsertar } = await supabase
+        .from("rol_empresas")
+        .insert(unicos.map((empresa_id) => ({ rol_slug: rol.slug, empresa_id })));
+      if (errInsertar) {
+        res.status(500).json({ error: errInsertar.message });
+        return;
+      }
+    }
+    invalidarCacheRoles();
+    await registrarAuditoria(req.superAdminId!, "restringir_rol_empresas", {
+      ip: req.ip ?? null,
+      detalle: `${rol.slug}: ${unicos.length === 0 ? "todas las empresas" : `${unicos.length} empresa(s)`}`,
+    });
+    res.json({ empresa_ids: unicos });
   })
 );

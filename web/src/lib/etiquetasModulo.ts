@@ -17,3 +17,13 @@ export const ETIQUETA_MODULO: Record<string, string> = {
   agenda_pro: "Agenda Pro (paquetes de sesiones y confirmación por el cliente)",
   remuneraciones: "Remuneraciones (liquidaciones de sueldo — legislación chilena)",
 };
+
+// Acciones sensibles delegables a un rol (además de sus módulos). Se
+// editan en el Panel de Super-Admin > Roles y el backend las exige con
+// requiereAccion(). El frontend las recibe en GET /api/me (`acciones`).
+export const ETIQUETA_ACCION: Record<string, string> = {
+  facturar: "Facturar viajes (emitir factura/boleta)",
+  gestionar_plan: "Gestionar el plan y la suscripción de la empresa",
+  config_agenda_pro: "Configurar Agenda Pro (servicios, horarios, paquetes)",
+  ver_dashboard: "Ver el Dashboard con KPIs y finanzas de la empresa",
+};

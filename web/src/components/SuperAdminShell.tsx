@@ -10,6 +10,7 @@ import { IconLogOut, IconUser } from "./icons";
 const NAV = [
   { href: "/superadmin/resumen", label: "Resumen" },
   { href: "/superadmin", label: "Empresas" },
+  { href: "/superadmin/roles", label: "Roles" },
 ];
 
 // Panel de Super-Admin: identidad de plataforma, sin nada compartido
