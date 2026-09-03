@@ -48,6 +48,7 @@ function NuevaOrdenServicioContenido() {
   const [clienteId, setClienteId] = useState(() => searchParams.get("cliente_id") ?? "");
   const [responsableId, setResponsableId] = useState("");
   const [tipoTrabajoId, setTipoTrabajoId] = useState("");
+  const [datosDinamicos, setDatosDinamicos] = useState<Record<string, string>>({});
   const [tipoOsId, setTipoOsId] = useState("");
   const [descripcion, setDescripcion] = useState("");
   const [fecha, setFecha] = useState(() => new Date().toISOString().slice(0, 10));
@@ -117,6 +118,7 @@ function NuevaOrdenServicioContenido() {
   }
 
   const clienteSeleccionado = clientes.find((c) => c.id === clienteId);
+  const tipoTrabajoSeleccionado = tiposTrabajo.find((t) => t.id === tipoTrabajoId);
   const equiposDelCliente = equipos.filter((e) => e.cliente_id === clienteId);
   const equipoSeleccionadoOS = equipos.find((e) => e.id === equipoIdOS);
   const itemsValidos = items.filter((it) => it.descripcion.trim());
@@ -152,6 +154,7 @@ function NuevaOrdenServicioContenido() {
         responsable_id: responsableId,
         tipo_trabajo_id: tipoTrabajoId || undefined,
         tipo_os_id: tipoOsId || undefined,
+        datos: Object.keys(datosDinamicos).length > 0 ? datosDinamicos : undefined,
         descripcion: descripcion.trim(),
         fecha,
         hora_programada: horaProgramada || undefined,
@@ -286,7 +289,10 @@ function NuevaOrdenServicioContenido() {
                 <Label>Tipo de servicio</Label>
                 <SelectCrear<TipoTrabajo>
                   value={tipoTrabajoId}
-                  onChange={setTipoTrabajoId}
+                  onChange={(id) => {
+                    setTipoTrabajoId(id);
+                    setDatosDinamicos({});
+                  }}
                   opciones={tiposTrabajo}
                   endpoint="/api/tipos-trabajo"
                   placeholder="Sin tipo específico"
@@ -295,6 +301,7 @@ function NuevaOrdenServicioContenido() {
                   gestionHref="/dashboard/configuracion/tipos-trabajo"
                   gestionLabel="Configurar tipos de trabajo →"
                 />
+                <p className="mt-1 text-xs text-muted">Qué trabajo es. Define los datos a medir en terreno.</p>
               </div>
               <div>
                 <Label>Tipo de OS (opcional)</Label>
@@ -309,7 +316,24 @@ function NuevaOrdenServicioContenido() {
                   gestionHref="/dashboard/configuracion/tipos-os"
                   gestionLabel="Configurar tipos de OS →"
                 />
+                <p className="mt-1 text-xs text-muted">Clasificación con color y checklist para el listado de OS.</p>
               </div>
+              {tipoTrabajoSeleccionado && tipoTrabajoSeleccionado.campos.length > 0 && (
+                <div className="grid gap-3 rounded-lg bg-brand-soft/40 p-3 sm:col-span-2 sm:grid-cols-2">
+                  <p className="text-xs font-medium text-muted sm:col-span-2">Datos medidos — {tipoTrabajoSeleccionado.nombre}</p>
+                  {tipoTrabajoSeleccionado.campos.map((campo) => (
+                    <div key={campo.clave}>
+                      <Label>{campo.etiqueta}</Label>
+                      <Input
+                        type={campo.tipo === "numero" ? "number" : campo.tipo === "fecha" ? "date" : "text"}
+                        value={datosDinamicos[campo.clave] ?? ""}
+                        onChange={(e) => setDatosDinamicos((prev) => ({ ...prev, [campo.clave]: e.target.value }))}
+                      />
+                    </div>
+                  ))}
+                  <p className="text-xs text-muted sm:col-span-2">Opcional — el técnico también puede completarlos en terreno.</p>
+                </div>
+              )}
             </div>
 
             {paradaPreview.length > 0 && (
@@ -339,7 +363,7 @@ function NuevaOrdenServicioContenido() {
                 <Select value={prioridad} onChange={(e) => setPrioridad(e.target.value as Prioridad)}>
                   {PRIORIDADES.map((p) => (
                     <option key={p} value={p}>
-                      {p}
+                      {p.charAt(0).toUpperCase() + p.slice(1)}
                     </option>
                   ))}
                 </Select>

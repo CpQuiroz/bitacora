@@ -50,6 +50,7 @@ export default function DetalleOrdenServicioPage() {
   const [notasEdit, setNotasEdit] = useState("");
   const [fechaEdit, setFechaEdit] = useState("");
   const [horaEdit, setHoraEdit] = useState("");
+  const [datosEdit, setDatosEdit] = useState<Record<string, string>>({});
   const [selectorAbierto, setSelectorAbierto] = useState(false);
   const [guardandoEdit, setGuardandoEdit] = useState(false);
   const [errorEdit, setErrorEdit] = useState<string | null>(null);
@@ -135,6 +136,11 @@ export default function DetalleOrdenServicioPage() {
     setNotasEdit(detalle.notas_internas ?? "");
     setFechaEdit(detalle.fecha);
     setHoraEdit(detalle.hora_programada ?? "");
+    setDatosEdit(
+      Object.fromEntries(
+        Object.entries((detalle.datos ?? {}) as Record<string, unknown>).map(([k, v]) => [k, String(v ?? "")])
+      )
+    );
     setErrorEdit(null);
     setEditando(true);
   }
@@ -165,6 +171,9 @@ export default function DetalleOrdenServicioPage() {
       fecha: fechaEdit,
       hora_programada: horaEdit || null,
     };
+    if (detalle?.tipo_trabajo && detalle.tipo_trabajo.campos.length > 0) {
+      body.datos = datosEdit;
+    }
     if (!tieneFirma) {
       body.descripcion = descEdit.trim() || null;
       body.items = JSON.stringify(
@@ -248,6 +257,22 @@ export default function DetalleOrdenServicioPage() {
                   disabled={tieneFirma}
                 />
               </div>
+
+              {detalle.tipo_trabajo && detalle.tipo_trabajo.campos.length > 0 && (
+                <div className="mb-5 grid gap-3 rounded-lg bg-brand-soft/40 p-3 sm:grid-cols-2">
+                  <p className="text-xs font-medium text-muted sm:col-span-2">Datos medidos — {detalle.tipo_trabajo.nombre}</p>
+                  {detalle.tipo_trabajo.campos.map((campo) => (
+                    <div key={campo.clave}>
+                      <Label>{campo.etiqueta}</Label>
+                      <Input
+                        type={campo.tipo === "numero" ? "number" : campo.tipo === "fecha" ? "date" : "text"}
+                        value={datosEdit[campo.clave] ?? ""}
+                        onChange={(e) => setDatosEdit((prev) => ({ ...prev, [campo.clave]: e.target.value }))}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
 
               <div className="mb-5">
                 <div className="mb-3 flex items-center justify-between">

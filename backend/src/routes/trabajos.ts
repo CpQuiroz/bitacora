@@ -5,7 +5,7 @@ import { sustituirVariables } from "@bitacora/shared";
 import { supabase } from "../supabase";
 import { subirFirma, subirFoto, urlFirmada, subirPdfOS, descargarPdfOS } from "../storage";
 import { analizarFoto, generarInformeOS } from "../claude";
-import { crearOrdenServicio, obtenerOCrearOrden } from "../ordenes";
+import { crearOrdenServicio, obtenerOCrearOrden, checklistDeTipoOs } from "../ordenes";
 import { enviarEncuestaSatisfaccion, enviarPdfOS } from "../email";
 import { generarPdfEnWorker } from "../pdfWorkerPool";
 import type { DatosOSPdf } from "../generarPdfOS";
@@ -426,7 +426,13 @@ trabajosRouter.post(
       prioridad,
       hora_programada,
       items,
+      datos,
     } = req.body ?? {};
+
+    if (datos !== undefined && datos !== null && (typeof datos !== "object" || Array.isArray(datos))) {
+      res.status(400).json({ error: "datos debe ser un objeto" });
+      return;
+    }
 
     if (typeof cliente !== "string" || !cliente.trim()) {
       res.status(400).json({ error: "Falta cliente" });
@@ -492,6 +498,7 @@ trabajosRouter.post(
         prioridad: prioridadFinal,
         tipo_trabajo_id: tipo_trabajo_id || null,
         tipo_os_id: tipo_os_id || null,
+        datos: datos && Object.keys(datos).length > 0 ? datos : null,
         responsable_id: responsable_id || req.userId!,
       })
       .select()
@@ -502,7 +509,10 @@ trabajosRouter.post(
       return;
     }
 
-    const orden = await crearOrdenServicio(req.empresaId!, data.id);
+    // Si el Tipo de OS elegido tiene una plantilla de checklist, la OS
+    // arranca con esos ítems (además de Check-in / Check-out).
+    const checklistPlantilla = await checklistDeTipoOs(req.empresaId!, tipo_os_id);
+    const orden = await crearOrdenServicio(req.empresaId!, data.id, checklistPlantilla);
 
     if (itemsParseados.length > 0) {
       await supabase.from("os_items").insert(
