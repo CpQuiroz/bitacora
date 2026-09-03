@@ -8,11 +8,11 @@ import { useTema } from "../../theme";
 import { Badge, Button, Card, ErrorState, LoadingScreen, Text } from "../../components/ui";
 import { useRed } from "../../services/sync/NetworkProvider";
 import { editarCliente, obtenerCliente } from "../../services/clientes";
-import type { GestionStackParamList } from "../../shell/navigation/types";
+import type { ClientesStackParamList } from "../../shell/navigation/types";
 
 const soloDigitos = (s: string) => s.replace(/[^\d]/g, "");
 
-export function ClienteDetalleScreen({ route, navigation }: NativeStackScreenProps<GestionStackParamList, "ClienteDetalle">) {
+export function ClienteDetalleScreen({ route, navigation }: NativeStackScreenProps<ClientesStackParamList, "ClienteDetalle">) {
   const t = useTema();
   const { clienteId } = route.params;
   const { enLinea } = useRed();

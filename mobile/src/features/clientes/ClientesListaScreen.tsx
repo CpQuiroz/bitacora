@@ -7,9 +7,9 @@ import { useTema } from "../../theme";
 import { Badge, Button, Card, EmptyState, ErrorState, Input, LoadingScreen, Text } from "../../components/ui";
 import { OfflineBanner } from "../../components/OfflineBanner";
 import { listarClientes, type ClienteConActividad } from "../../services/clientes";
-import type { GestionStackParamList } from "../../shell/navigation/types";
+import type { ClientesStackParamList } from "../../shell/navigation/types";
 
-export function ClientesListaScreen({ navigation }: NativeStackScreenProps<GestionStackParamList, "ClientesLista">) {
+export function ClientesListaScreen({ navigation }: NativeStackScreenProps<ClientesStackParamList, "ClientesLista">) {
   const t = useTema();
   const [clientes, setClientes] = useState<ClienteConActividad[] | null>(null);
   const [error, setError] = useState<string | null>(null);

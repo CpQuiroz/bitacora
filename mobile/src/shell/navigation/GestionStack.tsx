@@ -2,12 +2,10 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useTema } from "../../theme";
 import type { GestionStackParamList } from "./types";
 import { GestionInicioScreen } from "../../features/gestion/GestionInicioScreen";
-import { ClientesListaScreen } from "../../features/gestion/ClientesListaScreen";
-import { ClienteFormScreen } from "../../features/gestion/ClienteFormScreen";
-import { ClienteDetalleScreen } from "../../features/gestion/ClienteDetalleScreen";
 import { CobrosListaScreen } from "../../features/gestion/CobrosListaScreen";
 import { CobroFormScreen } from "../../features/gestion/CobroFormScreen";
 import { CobroDetalleScreen } from "../../features/gestion/CobroDetalleScreen";
+import { AsistenteScreen } from "../../features/asistente/AsistenteScreen";
 
 const Stack = createNativeStackNavigator<GestionStackParamList>();
 
@@ -24,12 +22,10 @@ export function GestionStack() {
       }}
     >
       <Stack.Screen name="GestionInicio" component={GestionInicioScreen} options={{ title: "Gestión" }} />
-      <Stack.Screen name="ClientesLista" component={ClientesListaScreen} options={{ title: "Clientes" }} />
-      <Stack.Screen name="ClienteForm" component={ClienteFormScreen} options={{ title: "Cliente" }} />
-      <Stack.Screen name="ClienteDetalle" component={ClienteDetalleScreen} options={{ title: "Cliente" }} />
       <Stack.Screen name="CobrosLista" component={CobrosListaScreen} options={{ title: "Cobros" }} />
       <Stack.Screen name="CobroForm" component={CobroFormScreen} options={{ title: "Nuevo cobro", presentation: "modal" }} />
       <Stack.Screen name="CobroDetalle" component={CobroDetalleScreen} options={{ title: "Cobro" }} />
+      <Stack.Screen name="Asistente" component={AsistenteScreen} options={{ title: "Asistente" }} />
     </Stack.Navigator>
   );
 }

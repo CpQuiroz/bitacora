@@ -5,11 +5,11 @@ import { useTema } from "../../theme";
 import { Button, Input, LoadingScreen } from "../../components/ui";
 import { useRed } from "../../services/sync/NetworkProvider";
 import { crearCliente, editarCliente, obtenerCliente, type BorradorCliente } from "../../services/clientes";
-import type { GestionStackParamList } from "../../shell/navigation/types";
+import type { ClientesStackParamList } from "../../shell/navigation/types";
 
 const VACIO: BorradorCliente = { nombre: "", rut: "", direccion: "", comuna: "", telefono: "", correo: "" , notas: "" };
 
-export function ClienteFormScreen({ navigation, route }: NativeStackScreenProps<GestionStackParamList, "ClienteForm">) {
+export function ClienteFormScreen({ navigation, route }: NativeStackScreenProps<ClientesStackParamList, "ClienteForm">) {
   const t = useTema();
   const { enLinea } = useRed();
   const editandoId = route.params?.clienteId ?? null;

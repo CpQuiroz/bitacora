@@ -7,6 +7,7 @@ import type { TabKey } from "./types";
 import { TrabajosStack } from "./TrabajosStack";
 import { AgendaStack } from "./AgendaStack";
 import { ViajesStack } from "./ViajesStack";
+import { ClientesStack } from "./ClientesStack";
 import { GestionStack } from "./GestionStack";
 import { RutaScreen } from "../../features/ruta/RutaScreen";
 import { PerfilScreen } from "../../features/perfil/PerfilScreen";
@@ -17,6 +18,7 @@ const ICONO: Record<TabKey, keyof typeof Ionicons.glyphMap> = {
   Trabajos: "clipboard-outline",
   Agenda: "calendar-outline",
   Ruta: "map-outline",
+  Clientes: "people-outline",
   Viajes: "car-outline",
   Gestion: "briefcase-outline",
   Perfil: "person-circle-outline",
@@ -26,6 +28,7 @@ const COMPONENTE: Record<TabKey, React.ComponentType> = {
   Trabajos: TrabajosStack,
   Agenda: AgendaStack,
   Ruta: RutaScreen,
+  Clientes: ClientesStack,
   Viajes: ViajesStack,
   Gestion: GestionStack,
   Perfil: PerfilScreen,

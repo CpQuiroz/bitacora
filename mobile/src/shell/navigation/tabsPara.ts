@@ -32,10 +32,13 @@ export function tabsPara(
   const tabs: TabKey[] = [];
   if (verTrabajos) tabs.push("Trabajos");
   if (verAgenda) tabs.push("Agenda");
-  tabs.push("Ruta");
+  // "Ruta" (ruta del día) es una vista de terreno — un rol de gestión no
+  // la usa y quedó como panel estático. Solo para no-gestión.
+  if (!esGestion) tabs.push("Ruta");
+  // Clientes y "Gestión" (cobros, asistente) son solo para roles que no
+  // son de terreno puro. El detalle de qué ve adentro se resuelve por módulo.
+  if (esGestion) tabs.push("Clientes");
   if (verViajes) tabs.push("Viajes");
-  // "Gestión" (clientes, cobros) es solo para roles que no son de
-  // terreno puro. El detalle de qué ve adentro se resuelve por módulo.
   if (esGestion) tabs.push("Gestion");
   tabs.push("Perfil");
 
