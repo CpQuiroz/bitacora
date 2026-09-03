@@ -14,6 +14,8 @@ export function SelectCrear<T extends { id: string; nombre: string }>({
   placeholder,
   etiquetaCrear,
   onCreado,
+  gestionHref,
+  gestionLabel,
 }: {
   value: string;
   onChange: (id: string) => void;
@@ -22,6 +24,9 @@ export function SelectCrear<T extends { id: string; nombre: string }>({
   placeholder: string;
   etiquetaCrear: string;
   onCreado: (nueva: T) => void;
+  // Enlace a la pantalla de gestión de esta entidad (abre pestaña nueva).
+  gestionHref?: string;
+  gestionLabel?: string;
 }) {
   const [creando, setCreando] = useState(false);
   const [nombreNuevo, setNombreNuevo] = useState("");
@@ -88,23 +93,35 @@ export function SelectCrear<T extends { id: string; nombre: string }>({
   }
 
   return (
-    <Select
-      value={value}
-      onChange={(e) => {
-        if (e.target.value === VALOR_CREAR) {
-          setCreando(true);
-          return;
-        }
-        onChange(e.target.value);
-      }}
-    >
-      <option value="">{placeholder}</option>
-      {opciones.map((o) => (
-        <option key={o.id} value={o.id}>
-          {o.nombre}
-        </option>
-      ))}
-      <option value={VALOR_CREAR}>{etiquetaCrear}</option>
-    </Select>
+    <div className="flex flex-col gap-1">
+      <Select
+        value={value}
+        onChange={(e) => {
+          if (e.target.value === VALOR_CREAR) {
+            setCreando(true);
+            return;
+          }
+          onChange(e.target.value);
+        }}
+      >
+        <option value="">{placeholder}</option>
+        {opciones.map((o) => (
+          <option key={o.id} value={o.id}>
+            {o.nombre}
+          </option>
+        ))}
+        <option value={VALOR_CREAR}>{etiquetaCrear}</option>
+      </Select>
+      {gestionHref && (
+        <a
+          href={gestionHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-block text-xs font-medium text-muted transition-colors hover:text-brand"
+        >
+          {gestionLabel ?? "Gestionar →"}
+        </a>
+      )}
+    </div>
   );
 }

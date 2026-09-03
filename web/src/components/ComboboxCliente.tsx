@@ -18,6 +18,8 @@ export function ComboboxCliente({
   onClienteCreado,
   opcionVacia,
   placeholder = "Selecciona un cliente",
+  gestionHref,
+  gestionLabel,
 }: {
   value: string;
   onChange: (id: string) => void;
@@ -27,6 +29,8 @@ export function ComboboxCliente({
   // (el campo queda obligatorio, como en Nueva OS).
   opcionVacia?: string;
   placeholder?: string;
+  gestionHref?: string;
+  gestionLabel?: string;
 }) {
   const [creando, setCreando] = useState(false);
   const [nombre, setNombre] = useState("");
@@ -123,6 +127,8 @@ export function ComboboxCliente({
       placeholder={placeholder}
       etiquetaCrear={(texto) => `+ Crear cliente "${texto}"`}
       onCrear={iniciarCreacion}
+      gestionHref={gestionHref}
+      gestionLabel={gestionLabel}
     />
   );
 }

@@ -9,6 +9,8 @@ import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Modal } from "@/components/Modal";
 import { DocumentoForm } from "@/components/DocumentoForm";
 import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText } from "@/components/ui";
+import { ComboboxCliente } from "@/components/ComboboxCliente";
+import { ComboboxResponsable } from "@/components/ComboboxResponsable";
 import { IconChartBar, IconPlus, IconWrench } from "@/components/icons";
 
 type EquipoConCliente = Equipo & {
@@ -276,14 +278,13 @@ export default function EquiposPage() {
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <Label>Cliente (opcional)</Label>
-                <Select value={clienteId} onChange={(e) => setClienteId(e.target.value)}>
-                  <option value={SIN_CLIENTE}>Sin cliente — activo propio de la empresa</option>
-                  {clientes.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.nombre}
-                    </option>
-                  ))}
-                </Select>
+                <ComboboxCliente
+                  value={clienteId}
+                  onChange={setClienteId}
+                  clientes={clientes}
+                  onClienteCreado={(c) => setClientes((prev) => [...prev, c])}
+                  opcionVacia="Sin cliente — activo propio de la empresa"
+                />
               </div>
               <div>
                 <Label>Nombre del equipo</Label>
@@ -492,15 +493,15 @@ export default function EquiposPage() {
                 <p className="text-sm text-muted">Sin asignar por ahora.</p>
               )}
             </div>
-            <div className="flex gap-2 border-t border-border pt-4">
-              <Select value={colaboradorAsignar} onChange={(e) => setColaboradorAsignar(e.target.value)} className="flex-1">
-                <option value="">{equipoAsignando.asignacion_vigente ? "Reasignar a…" : "Asignar a…"}</option>
-                {colaboradores.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nombre}
-                  </option>
-                ))}
-              </Select>
+            <div className="flex items-start gap-2 border-t border-border pt-4">
+              <div className="flex-1">
+                <ComboboxResponsable
+                  value={colaboradorAsignar}
+                  onChange={setColaboradorAsignar}
+                  equipo={colaboradores}
+                  placeholder={equipoAsignando.asignacion_vigente ? "Reasignar a…" : "Asignar a…"}
+                />
+              </div>
               <Button type="button" onClick={onAsignar} disabled={asignando || !colaboradorAsignar}>
                 {asignando ? "…" : "Asignar"}
               </Button>

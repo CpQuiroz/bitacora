@@ -8,6 +8,8 @@ import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText } from "@/components/ui";
+import { ComboboxCliente } from "@/components/ComboboxCliente";
+import { ComboboxResponsable } from "@/components/ComboboxResponsable";
 import { IconPlus, IconTruck } from "@/components/icons";
 
 type ViajeConDatos = Viaje & {
@@ -376,25 +378,23 @@ export default function ViajesPage() {
               </div>
               <div>
                 <Label>Cliente</Label>
-                <Select required value={clienteId} onChange={(e) => setClienteId(e.target.value)}>
-                  <option value="">Selecciona un cliente…</option>
-                  {clientes.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.nombre}
-                    </option>
-                  ))}
-                </Select>
+                <ComboboxCliente
+                  value={clienteId}
+                  onChange={setClienteId}
+                  clientes={clientes}
+                  onClienteCreado={(c) => setClientes((prev) => [...prev, c])}
+                  placeholder="Selecciona un cliente…"
+                />
               </div>
               <div>
                 <Label>Chofer (opcional)</Label>
-                <Select value={choferId} onChange={(e) => setChoferId(e.target.value)}>
-                  <option value="">Sin asignar</option>
-                  {choferes.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.nombre}
-                    </option>
-                  ))}
-                </Select>
+                <ComboboxResponsable
+                  value={choferId}
+                  onChange={setChoferId}
+                  equipo={choferes}
+                  opcionVacia="Sin asignar"
+                  placeholder="Sin asignar"
+                />
               </div>
               <div>
                 <Label>Origen</Label>
@@ -580,16 +580,15 @@ export default function ViajesPage() {
                             </div>
                           </div>
                           <div className="flex flex-wrap items-end gap-3">
-                            <div className="min-w-[200px]">
+                            <div className="min-w-[220px]">
                               <Label>Cliente</Label>
-                              <Select value={editClienteId} onChange={(e) => setEditClienteId(e.target.value)}>
-                                <option value="">Selecciona un cliente…</option>
-                                {clientes.map((c) => (
-                                  <option key={c.id} value={c.id}>
-                                    {c.nombre}
-                                  </option>
-                                ))}
-                              </Select>
+                              <ComboboxCliente
+                                value={editClienteId}
+                                onChange={setEditClienteId}
+                                clientes={clientes}
+                                onClienteCreado={(c) => setClientes((prev) => [...prev, c])}
+                                placeholder="Selecciona un cliente…"
+                              />
                             </div>
                             <div className="w-32">
                               <Label>Km inicial</Label>

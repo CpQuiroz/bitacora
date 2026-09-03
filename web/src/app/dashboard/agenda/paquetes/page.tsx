@@ -7,7 +7,8 @@ import type { Cliente, PaqueteSesionesConSaldo } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText, Textarea } from "@/components/ui";
+import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, SuccessText, Textarea } from "@/components/ui";
+import { ComboboxCliente } from "@/components/ComboboxCliente";
 import { IconBox, IconPlus } from "@/components/icons";
 
 type PaqueteListado = PaqueteSesionesConSaldo & { cliente: { nombre: string } | null };
@@ -134,14 +135,12 @@ export default function PaquetesSesionesPage() {
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <Label>Cliente</Label>
-                <Select value={clienteId} onChange={(e) => setClienteId(e.target.value)}>
-                  <option value="">Selecciona un cliente</option>
-                  {clientes.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.nombre}
-                    </option>
-                  ))}
-                </Select>
+                <ComboboxCliente
+                  value={clienteId}
+                  onChange={setClienteId}
+                  clientes={clientes}
+                  onClienteCreado={(c) => setClientes((prev) => [...prev, c])}
+                />
               </div>
               <div>
                 <Label>Nombre del paquete</Label>

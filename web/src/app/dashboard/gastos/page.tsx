@@ -255,6 +255,8 @@ export default function GastosPage() {
                   placeholder="Selecciona una categoría…"
                   etiquetaCrear="+ Nueva categoría…"
                   onCreado={(nueva) => setCategorias((prev) => [...prev, nueva])}
+                  gestionHref="/dashboard/configuracion/categorias-gastos"
+                  gestionLabel="Gestionar categorías →"
                 />
               </div>
               <div>
@@ -267,6 +269,8 @@ export default function GastosPage() {
                   placeholder="Sin centro de costo"
                   etiquetaCrear="+ Nuevo centro de costo…"
                   onCreado={(nuevo) => setCentrosCosto((prev) => [...prev, nuevo])}
+                  gestionHref="/dashboard/configuracion/centros-costo"
+                  gestionLabel="Gestionar centros de costo →"
                 />
               </div>
               <div>
@@ -279,6 +283,8 @@ export default function GastosPage() {
                   placeholder="Sin proveedor"
                   etiquetaCrear="+ Nuevo proveedor…"
                   onCreado={(nuevo) => setProveedores((prev) => [...prev, nuevo])}
+                  gestionHref="/dashboard/registros/proveedores"
+                  gestionLabel="Gestionar proveedores →"
                 />
               </div>
               <div>

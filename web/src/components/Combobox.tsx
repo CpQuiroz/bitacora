@@ -19,6 +19,8 @@ export function Combobox({
   etiquetaCrear,
   onCrear,
   disabled,
+  gestionHref,
+  gestionLabel,
 }: {
   value: string;
   onChange: (id: string) => void;
@@ -27,6 +29,11 @@ export function Combobox({
   etiquetaCrear?: (texto: string) => string;
   onCrear?: (texto: string) => void;
   disabled?: boolean;
+  // Enlace a la pantalla donde se gestiona/crea esta entidad — para
+  // casos donde crear inline no alcanza (la entidad necesita más que un
+  // nombre). Se abre en una pestaña nueva para no perder el formulario.
+  gestionHref?: string;
+  gestionLabel?: string;
 }) {
   const [abierto, setAbierto] = useState(false);
   const [texto, setTexto] = useState("");
@@ -155,6 +162,16 @@ export function Combobox({
             </button>
           ))}
         </div>
+      )}
+      {gestionHref && (
+        <a
+          href={gestionHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-1 inline-block text-xs font-medium text-muted transition-colors hover:text-brand"
+        >
+          {gestionLabel ?? "Gestionar →"}
+        </a>
       )}
     </div>
   );

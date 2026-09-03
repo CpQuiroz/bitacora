@@ -18,6 +18,8 @@ export function ComboboxResponsable({
   equipo,
   opcionVacia,
   placeholder = "Selecciona un responsable",
+  gestionHref,
+  gestionLabel,
 }: {
   value: string;
   onChange: (id: string) => void;
@@ -26,6 +28,8 @@ export function ComboboxResponsable({
   // (el campo queda obligatorio, como en Nueva OS).
   opcionVacia?: string;
   placeholder?: string;
+  gestionHref?: string;
+  gestionLabel?: string;
 }) {
   const rolesDisponibles = useRolesDisponibles();
   const [invitando, setInvitando] = useState(false);
@@ -120,6 +124,8 @@ export function ComboboxResponsable({
         placeholder={placeholder}
         etiquetaCrear={(texto) => `+ Invitar a "${texto}" como colaborador`}
         onCrear={iniciarInvitacion}
+        gestionHref={gestionHref}
+        gestionLabel={gestionLabel}
       />
       {aviso && <SuccessText>{aviso}</SuccessText>}
     </div>

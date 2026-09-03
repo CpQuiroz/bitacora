@@ -29,6 +29,9 @@ import {
   Textarea,
   WarningText,
 } from "@/components/ui";
+import { ComboboxCliente } from "@/components/ComboboxCliente";
+import { ComboboxResponsable } from "@/components/ComboboxResponsable";
+import { SelectCrear } from "@/components/SelectCrear";
 import { IconClock, IconPaperclip, IconPlus, IconRoute, IconTag } from "@/components/icons";
 import { MapaRutas, type Parada } from "@/components/MapaRutas";
 
@@ -80,9 +83,6 @@ export default function NuevaRutaPage() {
   // --- form: nueva tarea ---
   const [mostrarFormTarea, setMostrarFormTarea] = useState(false);
   const [clienteId, setClienteId] = useState("");
-  const [nuevoClienteModo, setNuevoClienteModo] = useState(false);
-  const [nuevoClienteNombre, setNuevoClienteNombre] = useState("");
-  const [nuevoClienteDireccion, setNuevoClienteDireccion] = useState("");
   const [tipoTrabajoId, setTipoTrabajoId] = useState("");
   const [datosDinamicos, setDatosDinamicos] = useState<Record<string, string>>({});
   const [etiquetas, setEtiquetas] = useState("");
@@ -193,21 +193,6 @@ export default function NuevaRutaPage() {
     setRuta(nueva);
     setTareas([]);
     cargarTrabajosSinRuta();
-  }
-
-  async function onCrearCliente() {
-    if (!nuevoClienteNombre.trim() || !nuevoClienteDireccion.trim()) return;
-    const res = await apiFetch("/api/clientes", {
-      method: "POST",
-      body: JSON.stringify({ nombre: nuevoClienteNombre, direccion: nuevoClienteDireccion }),
-    });
-    if (!res.ok) return;
-    const nuevo = await res.json();
-    setClientes((prev) => [...prev, nuevo]);
-    setClienteId(nuevo.id);
-    setNuevoClienteModo(false);
-    setNuevoClienteNombre("");
-    setNuevoClienteDireccion("");
   }
 
   const tipoTrabajoSeleccionado = tiposTrabajo.find((t) => t.id === tipoTrabajoId);
@@ -342,13 +327,12 @@ export default function NuevaRutaPage() {
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <Label>Colaborador</Label>
-                <Select value={responsableId} onChange={(e) => setResponsableId(e.target.value)} required>
-                  {equipo.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.nombre}
-                    </option>
-                  ))}
-                </Select>
+                <ComboboxResponsable
+                  value={responsableId}
+                  onChange={setResponsableId}
+                  equipo={equipo}
+                  placeholder="Selecciona un colaborador"
+                />
                 <p className="mt-1 text-xs text-muted">
                   {vehiculoDelResponsable
                     ? `Vehículo asignado: ${vehiculoDelResponsable.patente ?? vehiculoDelResponsable.nombre}`
@@ -483,56 +467,27 @@ export default function NuevaRutaPage() {
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="sm:col-span-2">
                     <Label>Cliente</Label>
-                    {!nuevoClienteModo ? (
-                      <div className="flex gap-2">
-                        <Select value={clienteId} onChange={(e) => setClienteId(e.target.value)} className="flex-1">
-                          <option value="">Selecciona un cliente</option>
-                          {clientes.map((c) => (
-                            <option key={c.id} value={c.id}>
-                              {c.nombre}
-                            </option>
-                          ))}
-                        </Select>
-                        <Button type="button" variant="outline" onClick={() => setNuevoClienteModo(true)}>
-                          + Nuevo
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col gap-2 rounded-lg border border-border p-3">
-                        <Input
-                          type="text"
-                          placeholder="Nombre del cliente"
-                          value={nuevoClienteNombre}
-                          onChange={(e) => setNuevoClienteNombre(e.target.value)}
-                        />
-                        <Input
-                          type="text"
-                          placeholder="Dirección"
-                          value={nuevoClienteDireccion}
-                          onChange={(e) => setNuevoClienteDireccion(e.target.value)}
-                        />
-                        <div className="flex gap-2">
-                          <Button type="button" onClick={onCrearCliente}>
-                            Guardar cliente
-                          </Button>
-                          <Button type="button" variant="outline" onClick={() => setNuevoClienteModo(false)}>
-                            Cancelar
-                          </Button>
-                        </div>
-                      </div>
-                    )}
+                    <ComboboxCliente
+                      value={clienteId}
+                      onChange={setClienteId}
+                      clientes={clientes}
+                      onClienteCreado={(c) => setClientes((prev) => [...prev, c])}
+                    />
                   </div>
 
                   <div>
                     <Label>Tipo de tarea</Label>
-                    <Select value={tipoTrabajoId} onChange={(e) => { setTipoTrabajoId(e.target.value); setDatosDinamicos({}); }}>
-                      <option value="">Sin tipo específico</option>
-                      {tiposTrabajo.map((t) => (
-                        <option key={t.id} value={t.id}>
-                          {t.nombre}
-                        </option>
-                      ))}
-                    </Select>
+                    <SelectCrear<TipoTrabajo>
+                      value={tipoTrabajoId}
+                      onChange={(id) => { setTipoTrabajoId(id); setDatosDinamicos({}); }}
+                      opciones={tiposTrabajo}
+                      endpoint="/api/tipos-trabajo"
+                      placeholder="Sin tipo específico"
+                      etiquetaCrear="+ Nuevo tipo de tarea…"
+                      onCreado={(nuevo) => setTiposTrabajo((prev) => [...prev, nuevo])}
+                      gestionHref="/dashboard/configuracion/tipos-trabajo"
+                      gestionLabel="Configurar tipos de trabajo →"
+                    />
                   </div>
                   <div>
                     <Label className="flex items-center gap-1">

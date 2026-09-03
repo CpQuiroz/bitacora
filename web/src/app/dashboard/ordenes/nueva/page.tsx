@@ -292,6 +292,8 @@ function NuevaOrdenServicioContenido() {
                   placeholder="Sin tipo específico"
                   etiquetaCrear="+ Crear tipo de servicio nuevo"
                   onCreado={(nuevo) => setTiposTrabajo((prev) => [...prev, nuevo])}
+                  gestionHref="/dashboard/configuracion/tipos-trabajo"
+                  gestionLabel="Configurar tipos de trabajo →"
                 />
               </div>
               <div>
@@ -304,6 +306,8 @@ function NuevaOrdenServicioContenido() {
                   placeholder="Sin clasificar"
                   etiquetaCrear="+ Crear tipo de OS nuevo"
                   onCreado={(nuevo) => setTiposOs((prev) => [...prev, nuevo])}
+                  gestionHref="/dashboard/configuracion/tipos-os"
+                  gestionLabel="Configurar tipos de OS →"
                 />
               </div>
             </div>
