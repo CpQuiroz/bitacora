@@ -74,6 +74,11 @@ async function equipoExiste(empresaId: string, equipoId: string) {
   return Boolean(data);
 }
 
+async function usuarioExiste(empresaId: string, usuarioId: string) {
+  const { data } = await supabase.from("usuarios").select("id").eq("empresa_id", empresaId).eq("id", usuarioId).maybeSingle();
+  return Boolean(data);
+}
+
 async function ordenDeTrabajo(empresaId: string, trabajoId: string) {
   const { data } = await supabase
     .from("ordenes_servicio")
@@ -166,8 +171,24 @@ trabajosRouter.patch(
       fecha,
       hora_programada,
       equipo_id,
+      responsable_id,
     } = req.body ?? {};
     const cambios: Partial<Trabajo> = {};
+
+    // Reasignar la OS a otra persona: lo hace quien gestiona (admin /
+    // supervisor / rol con acceso), nunca un colaborador (no se saca de
+    // encima su propio trabajo).
+    if (responsable_id !== undefined) {
+      if (req.rol === "colaborador") {
+        res.status(403).json({ error: "No puedes reasignar la orden a otra persona" });
+        return;
+      }
+      if (responsable_id !== null && !(await usuarioExiste(req.empresaId!, responsable_id))) {
+        res.status(400).json({ error: "responsable_id inválido" });
+        return;
+      }
+      cambios.responsable_id = responsable_id || null;
+    }
 
     if (datos !== undefined) {
       if (typeof datos !== "object" || datos === null || Array.isArray(datos)) {
@@ -315,13 +336,10 @@ trabajosRouter.patch(
       }
     }
 
-    const { data, error } = await supabase
-      .from("trabajos")
-      .update(cambios)
-      .eq("empresa_id", req.empresaId!)
-      .eq("id", req.params.id)
-      .select()
-      .maybeSingle();
+    let upd = supabase.from("trabajos").update(cambios).eq("empresa_id", req.empresaId!).eq("id", req.params.id);
+    // Un colaborador solo edita sus propios trabajos (mismo criterio que GET /:id).
+    if (req.rol === "colaborador") upd = upd.eq("responsable_id", req.userId!);
+    const { data, error } = await upd.select().maybeSingle();
 
     if (error) {
       res.status(500).json({ error: error.message });
@@ -330,6 +348,15 @@ trabajosRouter.patch(
     if (!data) {
       res.status(404).json({ error: "Trabajo no encontrado" });
       return;
+    }
+
+    // Avisar a quien quedó asignado (si cambió y no es quien hizo el cambio).
+    if (cambios.responsable_id && cambios.responsable_id !== req.userId) {
+      await notificar(req.empresaId!, cambios.responsable_id, "os_asignada", {
+        cuerpo: `${data.cliente} — ${data.fecha}`,
+        entidadTipo: "trabajo",
+        entidadId: data.id,
+      });
     }
 
     // Bloque B: si esta OS ya había descontado stock (se firmó) y ahora

@@ -11,6 +11,7 @@ import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, SuccessText, Textarea } from "@/components/ui";
 import { IconCamera, IconChevronLeft, IconClipboardCheck, IconMail, IconPlus } from "@/components/icons";
 import { CatalogoSelectorModal, type ItemSeleccionadoCatalogo } from "@/components/CatalogoSelectorModal";
+import { ComboboxResponsable } from "@/components/ComboboxResponsable";
 
 type ItemOS = { catalogo_item_id: string | null; descripcion: string; cantidad: string; precio_unitario: string };
 
@@ -51,6 +52,8 @@ export default function DetalleOrdenServicioPage() {
   const [fechaEdit, setFechaEdit] = useState("");
   const [horaEdit, setHoraEdit] = useState("");
   const [datosEdit, setDatosEdit] = useState<Record<string, string>>({});
+  const [responsableEdit, setResponsableEdit] = useState("");
+  const [equipo, setEquipo] = useState<Usuario[]>([]);
   const [catalogo, setCatalogo] = useState<CatalogoItem[]>([]);
   const [selectorAbierto, setSelectorAbierto] = useState(false);
   const [guardandoEdit, setGuardandoEdit] = useState(false);
@@ -62,12 +65,14 @@ export default function DetalleOrdenServicioPage() {
       router.replace("/login");
       return;
     }
-    const [resMe, resDetalle, resCatalogo] = await Promise.all([
+    const [resMe, resDetalle, resCatalogo, resEquipo] = await Promise.all([
       apiFetch("/api/me"),
       apiFetch(`/api/ordenes-servicio/${params.id}`),
       apiFetch("/api/catalogo"),
+      apiFetch("/api/usuarios"),
     ]);
     if (resCatalogo.ok) setCatalogo(await resCatalogo.json());
+    if (resEquipo.ok) setEquipo(await resEquipo.json());
     if (resMe.ok) {
       const { usuario: u } = await resMe.json();
       if (u) setUsuario({ nombre: u.nombre, rol: u.rol, empresaNombre: u.empresa?.nombre ?? "", empresaLogoUrl: u.empresa?.logo_url ?? null, colorPrimario: u.empresa?.color_primario ?? null, colorPrimarioForeground: u.empresa?.color_primario_foreground ?? null, colorSecundario: u.empresa?.color_secundario ?? null, fuente: u.empresa?.fuente ?? null, moneda: u.empresa?.moneda ?? "CLP" });
@@ -139,6 +144,7 @@ export default function DetalleOrdenServicioPage() {
     setNotasEdit(detalle.notas_internas ?? "");
     setFechaEdit(detalle.fecha);
     setHoraEdit(detalle.hora_programada ?? "");
+    setResponsableEdit(detalle.responsable_id ?? "");
     setDatosEdit(
       Object.fromEntries(
         Object.entries((detalle.datos ?? {}) as Record<string, unknown>).map(([k, v]) => [k, String(v ?? "")])
@@ -174,6 +180,9 @@ export default function DetalleOrdenServicioPage() {
       fecha: fechaEdit,
       hora_programada: horaEdit || null,
     };
+    if (usuario?.rol !== "colaborador") {
+      body.responsable_id = responsableEdit || null;
+    }
     if (detalle?.tipo_trabajo && detalle.tipo_trabajo.campos.length > 0) {
       body.datos = datosEdit;
     }
@@ -250,6 +259,20 @@ export default function DetalleOrdenServicioPage() {
                   <Input type="time" value={horaEdit} onChange={(e) => setHoraEdit(e.target.value)} />
                 </div>
               </div>
+
+              {usuario?.rol !== "colaborador" && (
+                <div className="mb-5">
+                  <Label>Colaborador asignado</Label>
+                  <ComboboxResponsable
+                    value={responsableEdit}
+                    onChange={setResponsableEdit}
+                    equipo={equipo}
+                    opcionVacia="Sin asignar"
+                    gestionHref="/dashboard/equipo"
+                    gestionLabel="Gestionar equipo"
+                  />
+                </div>
+              )}
 
               <div className="mb-5">
                 <Label>Descripción</Label>
