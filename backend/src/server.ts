@@ -95,8 +95,26 @@ app.use(
   })
 );
 
+// Liveness: el proceso Node responde. Lo usa keep-warm.yml (solo
+// necesita despertar a Render) y cualquier check "¿está vivo?".
 app.get("/health", (_req, res) => {
   res.json({ ok: true });
+});
+
+// Readiness: además verifica que el backend puede hablar con Supabase.
+// Es el que debe mirar un uptime monitor — devuelve 503 si la DB no
+// responde (AUDITORIA_RESILIENCIA.md R2).
+app.get("/health/ready", async (_req, res) => {
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 3000);
+    const { error } = await supabase.from("empresas").select("id", { head: true, count: "exact" }).abortSignal(ctrl.signal);
+    clearTimeout(t);
+    if (error) throw new Error(error.message);
+    res.json({ ok: true, db: "ok" });
+  } catch (e) {
+    res.status(503).json({ ok: false, db: "error", detalle: e instanceof Error ? e.message : String(e) });
+  }
 });
 
 // Usuario + empresa del token actual. usuario:null si el login ya
@@ -342,6 +360,21 @@ app.use((err: unknown, req: express.Request, res: express.Response, _next: expre
   }
 
   res.status(status).json({ error: mensaje });
+});
+
+// Red de seguridad a nivel proceso (AUDITORIA_RESILIENCIA.md R5). Casi
+// todo pasa por ah()/el handler global, pero un `void algoAsync()` que
+// rechace sin catch tumbaría el proceso en Node 22. Lo logueamos y —
+// para uncaughtException, que deja el proceso en estado dudoso — salimos
+// para que Render lo reinicie limpio.
+process.on("unhandledRejection", (motivo) => {
+  console.error("unhandledRejection:", motivo);
+  Sentry.captureException(motivo);
+});
+process.on("uncaughtException", (err) => {
+  console.error("uncaughtException:", err);
+  Sentry.captureException(err);
+  Sentry.flush(2000).finally(() => process.exit(1));
 });
 
 app.listen(env.PORT, () => {

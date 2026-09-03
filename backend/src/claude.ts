@@ -4,7 +4,10 @@ import { supabase } from "./supabase";
 import { verificarLimiteIA } from "./limites";
 import { crearLimitadorConcurrencia } from "./concurrencia";
 
-export const claude = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
+// timeout: el SDK trae 10 min por defecto — demasiado para no dejar una
+// request de Express colgada (AUDITORIA_RESILIENCIA.md R4). 90s cubre de
+// sobra un análisis de foto o un informe; el SDK reintenta ante 429.
+export const claude = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY, timeout: 90_000 });
 
 // Nada limitaba antes cuántas llamadas simultáneas salían a Claude —
 // un pico de varias empresas a la vez (ej. todas subiendo fotos de

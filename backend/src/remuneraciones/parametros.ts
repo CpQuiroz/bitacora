@@ -84,7 +84,16 @@ export async function asegurarParametros(periodo: string): Promise<ParametroPrev
   if (existente) return existente;
 
   const indicadores = await traerUfUtm(periodo);
-  if (!indicadores) return null;
+  if (!indicadores) {
+    // Dejar rastro: los 4xx/5xx no pasan por el handler global. Si
+    // mindicador estuvo caído medio día y nadie pudo generar nómina,
+    // que quede en errores_backend (AUDITORIA_RESILIENCIA.md R6).
+    await supabase
+      .from("errores_backend")
+      .insert({ empresa_id: null, ruta: "remuneraciones:asegurarParametros", metodo: "GET", mensaje: `mindicador.cl no devolvió UF/UTM para ${periodo}` })
+      .then(({ error }) => error && console.error("No se pudo loguear el fallo de mindicador:", error.message));
+    return null;
+  }
 
   const topeGratificacion = Math.round((4.75 * SEED.ingresoMinimo) / 12);
 

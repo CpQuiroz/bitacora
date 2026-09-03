@@ -51,6 +51,7 @@ async function llamarFlow<T = Record<string, unknown>>(
     method: metodo,
     headers: metodo === "POST" ? { "Content-Type": "application/x-www-form-urlencoded" } : undefined,
     body: metodo === "POST" ? body.toString() : undefined,
+    signal: AbortSignal.timeout(15_000),
   });
 
   const texto = await res.text();

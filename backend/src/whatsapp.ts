@@ -56,6 +56,7 @@ export async function enviarMensajeWhatsapp(to: string, texto: string): Promise<
         type: "text",
         text: { body: texto },
       }),
+      signal: AbortSignal.timeout(10_000),
     });
     if (!res.ok) {
       const detalle = await res.text().catch(() => "");
@@ -79,6 +80,7 @@ export async function descargarMediaWhatsapp(
   try {
     const resMeta = await fetch(`${GRAPH_URL}/${mediaId}`, {
       headers: { Authorization: `Bearer ${env.WHATSAPP_ACCESS_TOKEN}` },
+      signal: AbortSignal.timeout(10_000),
     });
     if (!resMeta.ok) return null;
     const meta = (await resMeta.json()) as { url?: unknown; mime_type?: unknown };
@@ -86,6 +88,7 @@ export async function descargarMediaWhatsapp(
 
     const resArchivo = await fetch(meta.url, {
       headers: { Authorization: `Bearer ${env.WHATSAPP_ACCESS_TOKEN}` },
+      signal: AbortSignal.timeout(20_000),
     });
     if (!resArchivo.ok) return null;
     const buffer = Buffer.from(await resArchivo.arrayBuffer());

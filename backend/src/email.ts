@@ -55,6 +55,7 @@ export async function enviarConReintento(body: Record<string, unknown>, contexto
           "Content-Type": "application/json",
         },
         body: JSON.stringify(body),
+        signal: AbortSignal.timeout(10_000),
       });
       if (res.ok) return;
       ultimoError = `Resend respondió ${res.status}: ${await res.text().catch(() => "")}`;
