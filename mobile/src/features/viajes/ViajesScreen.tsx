@@ -34,7 +34,8 @@ export function ViajesScreen({ navigation }: NativeStackScreenProps<ViajesStackP
   const t = useTema();
   const red = useRed();
   const pendientes = red.pendientes.filter((a) => a.recurso === "viajes").length;
-  const fallidos = red.fallidas.filter((a) => a.recurso === "viajes").length;
+  const viajesFallidos = red.fallidas.filter((a) => a.recurso === "viajes");
+  const fallidos = viajesFallidos.length;
 
   const [viajes, setViajes] = useState<ViajeConDatos[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -80,12 +81,27 @@ export function ViajesScreen({ navigation }: NativeStackScreenProps<ViajesStackP
       <View style={{ padding: t.espacio(4), gap: t.espacio(3) }}>
         <Button titulo="Nuevo viaje" onPress={() => navigation.navigate("ViajeForm")} />
         {fallidos > 0 ? (
-          <Text variante="caption" tono="danger">
-            {fallidos} viaje{fallidos === 1 ? "" : "s"} no se pudo enviar — revísalo en Perfil
-          </Text>
+          <Card plano style={{ backgroundColor: t.colores.dangerSoft, borderColor: "transparent", gap: t.espacio(2) }}>
+            <Text variante="etiqueta" weight="semibold" style={{ color: t.colores.danger }}>
+              {fallidos} viaje{fallidos === 1 ? " no se pudo enviar" : "s no se pudieron enviar"}
+            </Text>
+            {viajesFallidos.map((a) => (
+              <View key={a.id} style={{ gap: t.espacio(1.5) }}>
+                {a.ultimoError ? (
+                  <Text variante="caption" tono="danger">
+                    {a.ultimoError}
+                  </Text>
+                ) : null}
+                <View style={{ flexDirection: "row", gap: t.espacio(2) }}>
+                  <Button titulo="Reintentar" variante="secundario" onPress={() => red.reintentar(a.id)} />
+                  <Button titulo="Descartar" variante="ghost" onPress={() => red.descartar(a.id)} />
+                </View>
+              </View>
+            ))}
+          </Card>
         ) : pendientes > 0 ? (
           <Text variante="caption" tono="muted">
-            {pendientes} viaje{pendientes === 1 ? "" : "s"} sin sincronizar
+            {pendientes} viaje{pendientes === 1 ? "" : "s"} sin enviar — se reintenta solo
           </Text>
         ) : null}
         <View style={{ flexDirection: "row", gap: t.espacio(2) }}>

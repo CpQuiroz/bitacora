@@ -8,7 +8,7 @@ import { useTema } from "../../theme";
 import { Button, Card, Input, LoadingScreen, PickerBuscable, Text } from "../../components/ui";
 import { useRed } from "../../services/sync/NetworkProvider";
 import { comprimirImagen } from "../../lib/imagen";
-import { catalogoParaViaje, encolarViaje, type BorradorViaje } from "../../services/viajes";
+import { catalogoParaViaje, crearViaje, encolarViaje, type BorradorViaje } from "../../services/viajes";
 import type { ViajesStackParamList } from "../../shell/navigation/types";
 
 const VACIO: BorradorViaje = {
@@ -62,16 +62,38 @@ export function ViajeFormScreen({ navigation }: NativeStackScreenProps<ViajesSta
       return Alert.alert("Revisa los kilómetros", "El km final no puede ser menor que el inicial.");
     }
 
+    const borrador = { ...b, subtotal: b.subtotal.replace(/\D/g, "") };
+    const volver = () => navigation.goBack();
     setGuardando(true);
-    await encolarViaje({ ...b, subtotal: b.subtotal.replace(/\D/g, "") }, foto ?? undefined);
+
+    if (enLinea) {
+      const r = await crearViaje(borrador, foto ?? undefined);
+      if (r.ok) {
+        setGuardando(false);
+        Alert.alert("Viaje enviado", "Llegó a la oficina. Queda pendiente de aprobación.", [{ text: "Listo", onPress: volver }]);
+        return;
+      }
+      if (!r.reintentable) {
+        setGuardando(false);
+        Alert.alert("No se pudo registrar", r.error);
+        return;
+      }
+      // Señal inestable o servidor caído: lo guardamos y la cola lo reintenta sola.
+      await encolarViaje(borrador, foto ?? undefined);
+      setGuardando(false);
+      Alert.alert(
+        "Se reintentará solo",
+        "No se pudo enviar ahora (conexión o servidor). Lo guardamos y se reenvía cuando haya señal — lo ves en la lista de Viajes.",
+        [{ text: "Listo", onPress: volver }]
+      );
+      return;
+    }
+
+    await encolarViaje(borrador, foto ?? undefined);
     setGuardando(false);
-    Alert.alert(
-      "Viaje registrado",
-      enLinea
-        ? "Quedó como borrador. La oficina lo revisa."
-        : "Quedó guardado. Se enviará a la oficina cuando vuelvas a tener señal.",
-      [{ text: "Listo", onPress: () => navigation.goBack() }]
-    );
+    Alert.alert("Guardado sin conexión", "Se enviará a la oficina cuando vuelvas a tener señal.", [
+      { text: "Listo", onPress: volver },
+    ]);
   }
 
   if (clientes === null) return <LoadingScreen />;

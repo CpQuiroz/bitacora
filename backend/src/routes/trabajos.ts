@@ -7,6 +7,7 @@ import { subirFirma, subirFoto, urlFirmada, subirPdfOS, descargarPdfOS } from ".
 import { analizarFoto, generarInformeOS } from "../claude";
 import { crearOrdenServicio, obtenerOCrearOrden, checklistDeTipoOs } from "../ordenes";
 import { enviarEncuestaSatisfaccion, enviarPdfOS } from "../email";
+import { env } from "../env";
 import { generarPdfEnWorker } from "../pdfWorkerPool";
 import type { DatosOSPdf } from "../generarPdfOS";
 import { notificar, notificarGerencia } from "../notificar";
@@ -876,6 +877,9 @@ trabajosRouter.post(
     const key = await subirFoto(req.empresaId!, req.params.id, req.file.buffer, req.file.mimetype);
     const mediaType = req.file.mimetype as "image/jpeg" | "image/png" | "image/webp";
 
+    // Con la IA apagada la foto queda "listo" al toque, sin resumen.
+    const estadoInicial = env.ANALISIS_FOTOS_IA_ACTIVO ? "procesando" : "listo";
+
     const { data: fotoGuardada, error: errorInsert } = await supabase
       .from("analisis_fotos")
       .insert({
@@ -884,7 +888,7 @@ trabajosRouter.post(
         orden_servicio_id: orden.id,
         foto_url: key,
         subida_por: req.userId!,
-        estado: "procesando",
+        estado: estadoInicial,
       })
       .select()
       .single();
@@ -913,12 +917,14 @@ trabajosRouter.post(
 
     res.status(201).json(fotoGuardada);
 
-    void analizarFotoEnSegundoPlano(
-      req.empresaId!,
-      fotoGuardada.id,
-      req.file.buffer.toString("base64"),
-      mediaType
-    );
+    if (env.ANALISIS_FOTOS_IA_ACTIVO) {
+      void analizarFotoEnSegundoPlano(
+        req.empresaId!,
+        fotoGuardada.id,
+        req.file.buffer.toString("base64"),
+        mediaType
+      );
+    }
   })
 );
 

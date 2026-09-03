@@ -52,6 +52,10 @@ export const env = {
   // igual — Sentry solo agrega alertas y stack traces.
   SENTRY_DSN: process.env.SENTRY_DSN ?? null,
   SENTRY_ENVIRONMENT: process.env.SENTRY_ENVIRONMENT ?? process.env.NODE_ENV ?? "development",
+  // Análisis con IA de las fotos de un trabajo (Claude vision detecta
+  // daños/riesgos). Apagado por defecto: la foto se sube y se ve igual,
+  // solo sin el resumen automático. Poner en "true" para reactivarlo.
+  ANALISIS_FOTOS_IA_ACTIVO: process.env.ANALISIS_FOTOS_IA_ACTIVO === "true",
   // Opcionales: sin esto, el envío de la encuesta de satisfacción se
   // omite silenciosamente (no bloquea el resto del backend).
   RESEND_API_KEY: process.env.RESEND_API_KEY ?? null,

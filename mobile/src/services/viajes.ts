@@ -1,5 +1,5 @@
 import type { Cliente, Equipo, Viaje } from "@bitacora/shared";
-import { apiJson } from "./api";
+import { apiFetch, apiJson } from "./api";
 import { encolar } from "./sync/queue";
 import { guardarCache, leerCache } from "./sync/cache";
 
@@ -55,23 +55,67 @@ export type BorradorViaje = {
   aplica_iva: boolean;
 };
 
+function cuerpoViaje(b: BorradorViaje) {
+  return {
+    cliente_id: b.cliente_id,
+    numero_guia: b.numero_guia,
+    origen: b.origen,
+    destino: b.destino,
+    equipo_id: b.equipo_id || null,
+    km_inicial: b.km_inicial || null,
+    km_final: b.km_final || null,
+    subtotal: b.subtotal,
+    aplica_iva: b.aplica_iva,
+  };
+}
+
+export type ResultadoCrearViaje =
+  | { ok: true; viaje: ViajeConDatos }
+  | { ok: false; error: string; reintentable: boolean };
+
+/**
+ * Crea el viaje directo contra el servidor (no por la cola): así el
+ * chofer sabe al toque si llegó a la oficina o si hubo un error real.
+ * Si falla por señal/servidor, `reintentable: true` y la pantalla lo
+ * manda a la cola como respaldo.
+ */
+export async function crearViaje(
+  b: BorradorViaje,
+  foto?: { uri: string; name: string; type: string }
+): Promise<ResultadoCrearViaje> {
+  const fd = new FormData();
+  const c = cuerpoViaje(b);
+  fd.append("cliente_id", c.cliente_id);
+  fd.append("numero_guia", c.numero_guia);
+  fd.append("origen", c.origen);
+  fd.append("destino", c.destino);
+  if (c.equipo_id) fd.append("equipo_id", c.equipo_id);
+  if (c.km_inicial) fd.append("km_inicial", c.km_inicial);
+  if (c.km_final) fd.append("km_final", c.km_final);
+  fd.append("subtotal", c.subtotal);
+  fd.append("aplica_iva", String(c.aplica_iva));
+  if (foto) fd.append("foto", { uri: foto.uri, name: foto.name, type: foto.type } as unknown as Blob);
+
+  try {
+    const res = await apiFetch("/api/mis-viajes", { method: "POST", body: fd }, 45000);
+    const data = (await res.json().catch(() => ({}))) as ViajeConDatos & { error?: string };
+    if (res.ok) return { ok: true, viaje: data };
+    if (res.status >= 500) {
+      return { ok: false, error: data.error ?? "El servidor no respondió bien", reintentable: true };
+    }
+    return { ok: false, error: data.error ?? `Error ${res.status}`, reintentable: false };
+  } catch {
+    return { ok: false, error: "sin-conexion", reintentable: true };
+  }
+}
+
 export function encolarViaje(borrador: BorradorViaje, foto?: { uri: string; name: string; type: string }) {
   return encolar({
     etiqueta: "Registrar viaje",
     recurso: "viajes",
     path: "/api/mis-viajes",
     method: "POST",
-    body: {
-      cliente_id: borrador.cliente_id,
-      numero_guia: borrador.numero_guia,
-      origen: borrador.origen,
-      destino: borrador.destino,
-      equipo_id: borrador.equipo_id || null,
-      km_inicial: borrador.km_inicial || null,
-      km_final: borrador.km_final || null,
-      subtotal: borrador.subtotal,
-      aplica_iva: borrador.aplica_iva,
-    },
+    body: cuerpoViaje(borrador),
     archivo: foto ? { ...foto, campo: "foto" } : undefined,
   });
 }
