@@ -36,12 +36,14 @@ export function tabsPara(
   if (verViajes) tabs.push("Viajes");
   tabs.push("Perfil");
 
-  // Pestaña inicial: para transporte, arrancar en Viajes (o Ruta);
-  // para el resto, Trabajos.
+  // Pestaña inicial: transporte arranca en Viajes; si la empresa no
+  // tiene Viajes, cae a Trabajos (nunca a Ruta como landing — Ruta es
+  // secundaria y su mapa puede no estar disponible).
   let inicial: TabKey = "Trabajos";
-  if (!verTrabajos || rubroTransporte || funcion === "chofer") {
-    inicial = verViajes ? "Viajes" : "Ruta";
+  if (rubroTransporte || funcion === "chofer") {
+    inicial = verViajes ? "Viajes" : verTrabajos ? "Trabajos" : "Ruta";
   }
+  if (!verTrabajos && !verViajes) inicial = tabs[0];
   if (!tabs.includes(inicial)) inicial = tabs[0];
 
   return { tabs, inicial };

@@ -1,43 +1,22 @@
-import { Component, type ReactNode } from "react";
-import { Platform, View } from "react-native";
-import Constants from "expo-constants";
-import { AppleMaps, GoogleMaps } from "expo-maps";
+import { View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useTema } from "../../theme";
 import { Text } from "../../components/ui";
 
 type Marker = { id: string; coordinates: { latitude: number; longitude: number }; title: string };
 
-// expo-maps es un módulo nativo — NO funciona en Expo Go, solo en un
-// development build o en la app compilada. En Expo Go se muestra un
-// placeholder para que la pantalla igual sea usable (la lista de
-// paradas + los links a Waze siguen andando).
-const enExpoGo = Constants.appOwnership === "expo";
-
-class LimiteError extends Component<{ children: ReactNode; fallback: ReactNode }, { fallo: boolean }> {
-  state = { fallo: false };
-  static getDerivedStateFromError() {
-    return { fallo: true };
-  }
-  render() {
-    return this.state.fallo ? this.props.fallback : this.props.children;
-  }
-}
-
-export function MapaRuta({
-  centro,
-  markers,
-  alto = 260,
-}: {
-  centro: { latitude: number; longitude: number };
-  markers: Marker[];
-  alto?: number;
-}) {
+// El mapa nativo (expo-maps) se quitó por ahora: en Android necesita una
+// Google Maps API key en el build y sin ella tumbaba la app con un crash
+// nativo (que el ErrorBoundary de React no atrapa). La utilidad real de
+// la pantalla —la lista de paradas y el botón "abrir navegación" de cada
+// una— vive en RutaScreen y sigue funcionando. Cuando haya una API key,
+// se puede reponer expo-maps acá.
+export function MapaRuta({ markers, alto = 140 }: { centro?: unknown; markers: Marker[]; alto?: number }) {
   const t = useTema();
-
-  const placeholder = (
+  return (
     <View
       style={{
-        height: alto,
+        minHeight: alto,
         marginHorizontal: t.espacio(5),
         borderRadius: t.radio.lg,
         backgroundColor: t.colores.surface,
@@ -45,26 +24,15 @@ export function MapaRuta({
         borderColor: t.colores.border,
         alignItems: "center",
         justifyContent: "center",
+        gap: t.espacio(2),
         padding: t.espacio(4),
       }}
     >
+      <Ionicons name="navigate-circle-outline" size={28} color={t.colores.muted} />
       <Text variante="etiqueta" tono="muted" style={{ textAlign: "center" }}>
-        El mapa se ve en la app instalada (no en Expo Go).
+        {markers.length} parada{markers.length === 1 ? "" : "s"} con ubicación. Toca cada una abajo para abrir la
+        navegación.
       </Text>
     </View>
-  );
-
-  if (enExpoGo) return placeholder;
-
-  return (
-    <LimiteError fallback={placeholder}>
-      <View style={{ height: alto, marginHorizontal: t.espacio(5), borderRadius: t.radio.lg, overflow: "hidden" }}>
-        {Platform.OS === "ios" ? (
-          <AppleMaps.View style={{ flex: 1 }} cameraPosition={{ coordinates: centro, zoom: 11 }} markers={markers} />
-        ) : (
-          <GoogleMaps.View style={{ flex: 1 }} cameraPosition={{ coordinates: centro, zoom: 11 }} markers={markers} />
-        )}
-      </View>
-    </LimiteError>
   );
 }
