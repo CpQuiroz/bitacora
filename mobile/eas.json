@@ -34,6 +34,12 @@
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlqYnNrYnNreWFkeGpvb3huZ2p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgxMzgwNjMsImV4cCI6MjEwMzcxNDA2M30.mXmhvzW_iV32SE9F_NUDwyYKptJjg9DKBoTvLQXGsZ0"
       }
     },
+    "preview-ios-sim": {
+      "extends": "preview",
+      "ios": {
+        "simulator": true
+      }
+    },
     "production": {
       "channel": "production",
       "autoIncrement": true,
