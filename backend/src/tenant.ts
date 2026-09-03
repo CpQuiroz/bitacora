@@ -8,7 +8,7 @@ export const TABLAS_POR_EMPRESA = [
   "accesos_usuario", "agenda_pro_config", "agenda_pro_horarios", "analisis_fotos",
   "asistente_mensajes", "auditoria_usuarios",
   "catalogo_items", "catalogo_item_tipos_equipo", "catalogo_kit_items", "categorias_gasto", "centros_costo",
-  "checklist_templates", "clientes", "documentos", "empresa_modulos", "equipos", "facturas",
+  "checklist_templates", "clientes", "documentos", "empresa_modulos", "empresa_rol_modulos", "equipos", "facturas",
   "gastos", "gastos_fijos", "informes_generados", "informes_personalizados",
   "integraciones", "inventario", "inventario_movimientos", "mensajes_personalizados",
   "notificaciones", "notificaciones_cliente_log", "notificaciones_config",

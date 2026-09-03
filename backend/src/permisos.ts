@@ -43,7 +43,7 @@ export async function modulosDeshabilitadosDeEmpresa(empresaId: string): Promise
 // (y activos) por su empresa. Lo consume /api/me → el frontend filtra la
 // navegación con esto y ya no depende de la matriz hardcodeada.
 export async function modulosVisiblesDeUsuario(rol: string, empresaId: string): Promise<Modulo[]> {
-  const delRol = new Set(await modulosDeRol(rol));
+  const delRol = new Set(await modulosDeRol(rol, empresaId));
   const deshabilitados = new Set(await modulosDeshabilitadosDeEmpresa(empresaId));
   return MODULOS.filter((m) => delRol.has(m) && !deshabilitados.has(m));
 }
@@ -59,7 +59,7 @@ export async function featureFlagsDeEmpresa(empresaId: string): Promise<string[]
 
 export function requiereModulo(modulo: Modulo) {
   return ah<RequestConEmpresa>(async (req, res, next) => {
-    if (!(await rolPuedeVerModulo(req.rol ?? "colaborador", modulo))) {
+    if (!(await rolPuedeVerModulo(req.rol ?? "colaborador", modulo, req.empresaId))) {
       res.status(403).json({ error: "No tienes permiso para acceder a este módulo" });
       return;
     }

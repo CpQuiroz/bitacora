@@ -174,6 +174,17 @@ export type EmpresaModulo = {
   actualizado_en: string;
 };
 
+// Override por empresa de qué módulos ve un rol dentro de esa empresa
+// (lo edita el Admin en Configuración > Perfiles). Sin fila = el rol usa
+// su plantilla global (tabla `roles`). Ver migración 75.
+export type EmpresaRolModulo = {
+  empresa_id: string;
+  rol_slug: string;
+  modulo: string;
+  activado: boolean;
+  actualizado_en: string;
+};
+
 // Feature flag por empresa — funcionalidad en beta activada para 1-2
 // empresas puntuales antes de ofrecerla a todos. Eje separado de
 // EmpresaModulo (contratado vs. en prueba). Ver migración 61.
@@ -1349,6 +1360,7 @@ export type Database = {
       ia_uso: Tabla<IaUso>;
       errores_backend: Tabla<ErrorBackend>;
       empresa_modulos: Tabla<EmpresaModulo>;
+      empresa_rol_modulos: Tabla<EmpresaRolModulo>;
       paquetes_sesiones: Tabla<PaqueteSesiones>;
       agenda_pro_config: Tabla<AgendaProConfig>;
       agenda_pro_horarios: Tabla<AgendaProHorario>;

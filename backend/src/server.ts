@@ -45,6 +45,7 @@ import { asistenteRouter } from "./routes/asistente";
 import { viajesRouter } from "./routes/viajes";
 import { misViajesRouter } from "./routes/misViajes";
 import { accesosRouter } from "./routes/accesos";
+import { empresaRolesRouter } from "./routes/empresaRoles";
 import { remuneracionesRouter } from "./routes/remuneraciones";
 import { whatsappRouter } from "./routes/whatsapp";
 import { notificacionesFeedRouter } from "./routes/notificacionesFeed";
@@ -251,6 +252,7 @@ app.use("/api/informe", requiereAuth, requiereEmpresa, requiereModulo("informe_i
 app.use("/api/tipos-trabajo", requiereAuth, requiereEmpresa, tiposTrabajoRouter);
 app.use("/api/usuarios", requiereAuth, requiereEmpresa, usuariosRouter);
 app.use("/api/accesos", requiereAuth, requiereEmpresa, requiereModulo("gestion_control"), accesosRouter);
+app.use("/api/empresa/roles", requiereAuth, requiereEmpresa, empresaRolesRouter);
 app.use("/api/usuarios/me/mfa", requiereAuth, requiereEmpresa, mfaRouter);
 app.use("/api/auth", limitarLogin, authLoginRouter);
 app.use("/api/clientes", requiereAuth, requiereEmpresa, clientesRouter);

@@ -40,8 +40,19 @@ export const PERMISOS_POR_ROL: Record<Rol, Modulo[]> = {
   admin: [...MODULOS],
   supervisor: ["agenda", "ordenes_servicio", "viajes", "registros", "rutas", "flota", "agenda_pro"],
   contador: ["financiero", "informes", "remuneraciones"],
-  colaborador: [],
+  // El colaborador ve su Agenda (calendario + tareas asignadas). El
+  // resto de su trabajo en terreno vive en la app móvil.
+  colaborador: ["agenda"],
 };
+
+// Módulos que el Admin de una empresa puede activar/desactivar por rol
+// dentro de SU empresa (tabla empresa_rol_modulos, migración 75).
+// Se excluyen `configuracion` y `gestion_control`: delegarlos permitiría
+// que un rol operativo edite la empresa o gestione usuarios/roles —
+// esos siguen definidos solo por el Super-Admin en la plantilla global.
+export const MODULOS_DELEGABLES_POR_EMPRESA: Modulo[] = MODULOS.filter(
+  (m) => m !== "configuracion" && m !== "gestion_control"
+);
 
 // Capacidades sensibles delegables a un rol (además de sus módulos). El
 // rol `admin` las tiene todas siempre, no hace falta listarlas.
