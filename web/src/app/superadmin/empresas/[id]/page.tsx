@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import type { EstadoEmpresa, Plan, Suscripcion, SuscripcionCobro } from "@bitacora/shared";
 import { SuperAdminShell } from "@/components/SuperAdminShell";
-import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, Textarea } from "@/components/ui";
+import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText, Textarea } from "@/components/ui";
 import { IconChevronLeft, IconShield } from "@/components/icons";
 import { obtenerTokenSuperAdmin, superadminFetch } from "@/lib/superadminApi";
 import { guardarImpersonacion } from "@/lib/impersonacion";
@@ -79,6 +79,14 @@ export default function SuperAdminSaludEmpresaPage() {
   const [modulos, setModulos] = useState<{ modulo: string; activado: boolean }[] | null>(null);
   const [guardandoModulo, setGuardandoModulo] = useState<string | null>(null);
   const [errorModulos, setErrorModulos] = useState<string | null>(null);
+  const [perfiles, setPerfiles] = useState<{
+    roles: { slug: string; nombre: string; es_sistema: boolean; modulos: string[] }[];
+    catalogo: { modulo: string; contratado: boolean }[];
+  } | null>(null);
+  const [edicionPerfiles, setEdicionPerfiles] = useState<Record<string, Set<string>>>({});
+  const [guardandoPerfil, setGuardandoPerfil] = useState<string | null>(null);
+  const [errorPerfiles, setErrorPerfiles] = useState<string | null>(null);
+  const [okPerfiles, setOkPerfiles] = useState<string | null>(null);
   const [suscripcion, setSuscripcion] = useState<{ prueba_termina_en: string | null; suscripcion: Suscripcion | null; cobros: SuscripcionCobro[] } | null>(
     null
   );
@@ -150,6 +158,57 @@ export default function SuperAdminSaludEmpresaPage() {
     if (res.ok) setModulos(await res.json());
   }
 
+  async function cargarPerfiles() {
+    setErrorPerfiles(null);
+    const res = await superadminFetch(`/api/superadmin/empresas/${params.id}/roles-modulos`);
+    if (!res.ok) {
+      const b = await res.json().catch(() => ({}));
+      setErrorPerfiles(b.error ?? "No se pudieron cargar los perfiles");
+      return;
+    }
+    const body = await res.json();
+    setPerfiles(body);
+    setEdicionPerfiles(
+      Object.fromEntries((body.roles as { slug: string; modulos: string[] }[]).map((r) => [r.slug, new Set(r.modulos)]))
+    );
+  }
+
+  function togglePerfil(slug: string, modulo: string) {
+    setOkPerfiles(null);
+    setEdicionPerfiles((prev) => {
+      const next = new Set(prev[slug] ?? []);
+      if (next.has(modulo)) next.delete(modulo);
+      else next.add(modulo);
+      return { ...prev, [slug]: next };
+    });
+  }
+
+  function perfilSucio(slug: string): boolean {
+    const orig = new Set(perfiles?.roles.find((r) => r.slug === slug)?.modulos ?? []);
+    const edit = edicionPerfiles[slug] ?? new Set<string>();
+    if (orig.size !== edit.size) return true;
+    for (const m of orig) if (!edit.has(m)) return true;
+    return false;
+  }
+
+  async function guardarPerfil(slug: string) {
+    setGuardandoPerfil(slug);
+    setErrorPerfiles(null);
+    setOkPerfiles(null);
+    const res = await superadminFetch(`/api/superadmin/empresas/${params.id}/roles-modulos/${slug}`, {
+      method: "PUT",
+      body: JSON.stringify({ modulos: Array.from(edicionPerfiles[slug] ?? []) }),
+    });
+    setGuardandoPerfil(null);
+    if (!res.ok) {
+      const b = await res.json().catch(() => ({}));
+      setErrorPerfiles(b.error ?? "No se pudo guardar");
+      return;
+    }
+    setOkPerfiles("Guardado. Las personas con ese perfil lo verán al recargar la app.");
+    cargarPerfiles();
+  }
+
   async function cargarSuscripcion() {
     const res = await superadminFetch(`/api/superadmin/empresas/${params.id}/suscripcion`);
     if (res.ok) {
@@ -191,6 +250,7 @@ export default function SuperAdminSaludEmpresaPage() {
     }
     cargar();
     cargarModulos();
+    cargarPerfiles();
     cargarSuscripcion();
     cargarUsuarios();
     cargarFlags();
@@ -798,6 +858,76 @@ export default function SuperAdminSaludEmpresaPage() {
             {errorModulos && (
               <div className="mt-3">
                 <ErrorText>{errorModulos}</ErrorText>
+              </div>
+            )}
+          </Card>
+
+          <Card className="mt-4">
+            <h2 className="mb-2 text-sm font-semibold text-foreground">Perfiles y permisos (por rol)</h2>
+            <p className="mb-3 text-sm text-muted">
+              Qué módulos ve cada rol de esta empresa en la app y la web. Es lo mismo que el Admin de la empresa ajusta en
+              Configuración → Perfiles, pero desde acá. El rol <span className="font-medium text-foreground">Admin</span> siempre
+              tiene acceso total; <span className="font-medium text-foreground">Configuración</span> y{" "}
+              <span className="font-medium text-foreground">Grupo y usuario</span> se controlan desde la plantilla global del rol
+              (<Link href="/superadmin/roles" className="text-brand hover:underline">Roles</Link>). Un módulo atenuado no está en el
+              plan de la empresa.
+            </p>
+            {!perfiles ? (
+              <p className="text-sm text-muted">Cargando…</p>
+            ) : (
+              <div className="flex flex-col gap-4">
+                {perfiles.roles.map((rol) => (
+                  <div key={rol.slug} className="rounded-lg border border-border p-3">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">{rol.nombre}</p>
+                        <p className="text-xs text-muted">
+                          {rol.es_sistema ? "Perfil de sistema" : "Perfil personalizado"} · {rol.slug}
+                        </p>
+                      </div>
+                      {perfilSucio(rol.slug) && (
+                        <Button type="button" onClick={() => guardarPerfil(rol.slug)} disabled={guardandoPerfil === rol.slug}>
+                          {guardandoPerfil === rol.slug ? "Guardando…" : "Guardar"}
+                        </Button>
+                      )}
+                    </div>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {perfiles.catalogo.map((c) => {
+                        const marcado = (edicionPerfiles[rol.slug] ?? new Set()).has(c.modulo);
+                        return (
+                          <label
+                            key={c.modulo}
+                            className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm ${
+                              c.contratado ? "border-border text-foreground" : "border-dashed border-border text-muted"
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              className="accent-brand"
+                              checked={marcado}
+                              disabled={!c.contratado}
+                              onChange={() => togglePerfil(rol.slug, c.modulo)}
+                            />
+                            <span>
+                              {ETIQUETA_MODULO[c.modulo] ?? c.modulo}
+                              {!c.contratado && <span className="ml-1 text-xs">(no está en el plan)</span>}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {okPerfiles && (
+              <div className="mt-3">
+                <SuccessText>{okPerfiles}</SuccessText>
+              </div>
+            )}
+            {errorPerfiles && (
+              <div className="mt-3">
+                <ErrorText>{errorPerfiles}</ErrorText>
               </div>
             )}
           </Card>

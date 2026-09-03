@@ -1,8 +1,15 @@
 import { Router } from "express";
 import crypto from "node:crypto";
 import type { Accion, EstadoEmpresa, Modulo, Plan, Rol, Rubro } from "@bitacora/shared";
-import { ACCIONES, MODULOS, moduloActivadoPorDefecto, formatearRut, validarRut } from "@bitacora/shared";
-import { invalidarCacheRoles, empresaPuedeUsarRol, rolesDeEmpresa } from "../roles";
+import { ACCIONES, MODULOS, MODULOS_DELEGABLES_POR_EMPRESA, moduloActivadoPorDefecto, formatearRut, validarRut } from "@bitacora/shared";
+import {
+  invalidarCacheRoles,
+  empresaPuedeUsarRol,
+  rolesDeEmpresa,
+  modulosPorRolDeEmpresa,
+  fijarModulosDeRolEnEmpresa,
+} from "../roles";
+import { empresaTieneModulo } from "../permisos";
 import { validarValorAcceso } from "../accesosAutorizados";
 import { supabase } from "../supabase";
 import { env } from "../env";
@@ -1154,6 +1161,84 @@ superadminRouter.patch(
     });
 
     res.json({ modulo, activado });
+  })
+);
+
+// ── Perfiles y permisos por empresa (rol × módulo) ───────────────────
+// Lo mismo que el Admin de cada empresa hace en /dashboard/configuracion/
+// perfiles, pero desde el Super-Admin y para cualquier empresa (soporte).
+// Guarda overrides en empresa_rol_modulos (migración 75). Límites: solo
+// módulos delegables (todo menos configuración y gestión_control) y el
+// rol admin no se togglea — esos casos son de la plantilla global
+// (/superadmin/roles).
+superadminRouter.get(
+  "/empresas/:id/roles-modulos",
+  requiereSuperAdmin,
+  ah<RequestConSuperAdmin>(async (req, res) => {
+    const { data: empresa } = await supabase.from("empresas").select("id").eq("id", req.params.id).maybeSingle();
+    if (!empresa) {
+      res.status(404).json({ error: "Empresa no encontrada" });
+      return;
+    }
+    const [roles, contratados] = await Promise.all([
+      modulosPorRolDeEmpresa(req.params.id),
+      Promise.all(
+        MODULOS_DELEGABLES_POR_EMPRESA.map(async (m) => [m, await empresaTieneModulo(req.params.id, m)] as const)
+      ),
+    ]);
+    const mapaContratado = new Map(contratados);
+    res.json({
+      roles: roles
+        .filter((r) => r.slug !== "admin")
+        .sort((a, b) => a.orden - b.orden)
+        .map((r) => ({
+          slug: r.slug,
+          nombre: r.nombre,
+          es_sistema: r.es_sistema,
+          modulos: MODULOS_DELEGABLES_POR_EMPRESA.filter((m) => r.modulos.includes(m)),
+        })),
+      catalogo: MODULOS_DELEGABLES_POR_EMPRESA.map((m) => ({ modulo: m, contratado: mapaContratado.get(m) ?? false })),
+    });
+  })
+);
+
+superadminRouter.put(
+  "/empresas/:id/roles-modulos/:slug",
+  requiereSuperAdmin,
+  ah<RequestConSuperAdmin>(async (req, res) => {
+    const { id, slug } = req.params;
+    if (slug === "admin") {
+      res.status(400).json({ error: "El rol Admin tiene acceso total y no se edita." });
+      return;
+    }
+    const modulos = req.body?.modulos;
+    if (!Array.isArray(modulos) || modulos.some((m) => typeof m !== "string")) {
+      res.status(400).json({ error: "Falta la lista de módulos" });
+      return;
+    }
+    const invalido = modulos.find((m) => !(MODULOS_DELEGABLES_POR_EMPRESA as string[]).includes(m));
+    if (invalido) {
+      res.status(400).json({ error: `El módulo "${invalido}" no se puede delegar desde acá.` });
+      return;
+    }
+    const { data: empresa } = await supabase.from("empresas").select("nombre").eq("id", id).maybeSingle();
+    if (!empresa) {
+      res.status(404).json({ error: "Empresa no encontrada" });
+      return;
+    }
+    const disponibles = await modulosPorRolDeEmpresa(id);
+    if (!disponibles.some((r) => r.slug === slug)) {
+      res.status(404).json({ error: "Ese rol no está disponible para esa empresa." });
+      return;
+    }
+
+    await fijarModulosDeRolEnEmpresa(id, slug, modulos);
+    await registrarAuditoria(req.superAdminId!, "cambiar_perfil_empresa", {
+      empresaId: id,
+      ip: req.ip ?? null,
+      detalle: `${empresa.nombre}: rol ${slug} → [${modulos.join(", ") || "sin módulos delegables"}]`,
+    });
+    res.json({ ok: true });
   })
 );
 
