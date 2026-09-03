@@ -58,7 +58,6 @@
           "locationAlwaysAndWhenInUsePermission": "Bitácora registra tu ubicación al hacer check-in y check-out de un trabajo."
         }
       ],
-      "@sentry/react-native",
       "expo-web-browser"
     ],
     "extra": {

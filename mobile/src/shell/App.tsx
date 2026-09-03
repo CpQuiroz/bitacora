@@ -5,9 +5,6 @@ import { AuthProvider, useAuth } from "../features/auth/AuthContext";
 import { NetworkProvider } from "../services/sync/NetworkProvider";
 import { ThemeProvider } from "../theme";
 import { RootNavigator } from "./navigation/RootNavigator";
-import { Sentry, iniciarSentry } from "../lib/sentry";
-
-iniciarSentry();
 
 // El ThemeProvider necesita la marca de la empresa, que sale del
 // AuthProvider — por eso va anidado adentro.
@@ -31,7 +28,7 @@ function ConTema({ children }: { children: React.ReactNode }) {
   );
 }
 
-function App() {
+export default function App() {
   return (
     <SafeAreaProvider>
       <AuthProvider>
@@ -47,5 +44,3 @@ function App() {
     </SafeAreaProvider>
   );
 }
-
-export default Sentry.wrap(App);
