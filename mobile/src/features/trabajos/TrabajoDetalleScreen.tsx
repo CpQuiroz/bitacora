@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
-import { Alert, ScrollView, View } from "react-native";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Alert, Linking, Platform, ScrollView, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { ItemChecklist } from "@bitacora/shared";
+import { Ionicons } from "@expo/vector-icons";
 import { useTema } from "../../theme";
 import { Badge, Button, Card, ErrorState, LoadingScreen, Text } from "../../components/ui";
 import { OfflineBanner } from "../../components/OfflineBanner";
@@ -22,26 +23,35 @@ import { FotosSection } from "./components/FotosSection";
 import { CierreFirma } from "./components/CierreFirma";
 import type { TrabajosStackParamList } from "../../shell/navigation/types";
 
-export function TrabajoDetalleScreen({ route }: NativeStackScreenProps<TrabajosStackParamList, "TrabajoDetalle">) {
+const ETIQUETA_OS: Record<string, string> = {
+  pendiente: "Sin empezar",
+  enviada: "Sin empezar",
+  en_proceso: "En proceso",
+  completada: "Completado",
+  firmada: "Finalizado",
+};
+
+export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenProps<TrabajosStackParamList, "TrabajoDetalle">) {
   const t = useTema();
   const { trabajoId } = route.params;
-  const { cola } = useRed();
-  const pendientesAqui = cola.filter((a) => a.recurso === `trabajo:${trabajoId}`).length;
+  const { pendientes, enLinea } = useRed();
+  const accionesAqui = useMemo(() => pendientes.filter((a) => a.recurso === `trabajo:${trabajoId}`), [pendientes, trabajoId]);
+  const fotosEnCola = accionesAqui.filter((a) => a.etiqueta === "Foto").length;
 
   const [detalle, setDetalle] = useState<DetalleTrabajo | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [datosForm, setDatosForm] = useState<Record<string, string>>({});
   const [guardandoDatos, setGuardandoDatos] = useState(false);
   const [marcando, setMarcando] = useState<"Check-in" | "Check-out" | null>(null);
+  const [fotosLocales, setFotosLocales] = useState<string[]>([]);
+  const [finalizando, setFinalizando] = useState(false);
 
   const cargar = useCallback(async () => {
     setError(null);
     try {
       const d = await obtenerDetalle(trabajoId);
       setDetalle(d);
-      setDatosForm(
-        Object.fromEntries(Object.entries(d.trabajo.datos ?? {}).map(([k, v]) => [k, String(v ?? "")]))
-      );
+      setDatosForm(Object.fromEntries(Object.entries(d.trabajo.datos ?? {}).map(([k, v]) => [k, String(v ?? "")])));
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo cargar el trabajo");
     }
@@ -52,26 +62,47 @@ export function TrabajoDetalleScreen({ route }: NativeStackScreenProps<TrabajosS
   }, [cargar]);
   useFocusEffect(useCallback(() => void cargar(), [cargar]));
 
+  // Cuando ya no quedan fotos en cola, las de verdad vienen del servidor.
+  useEffect(() => {
+    if (fotosEnCola === 0 && fotosLocales.length > 0) setFotosLocales([]);
+  }, [fotosEnCola, fotosLocales.length]);
+
   if (!detalle && !error) return <LoadingScreen />;
   if (error && !detalle) return <ErrorState mensaje={error} onReintentar={cargar} />;
   if (!detalle) return null;
 
   const { trabajo, orden, fotos } = detalle;
-  const finalizada = Boolean(orden?.finalizada_en);
+  const cli = trabajo.cliente_info;
+  const finalizada = Boolean(orden?.finalizada_en) || finalizando;
   const checklist: ItemChecklist[] = orden?.checklist ?? [];
   const checkIn = checklist.find((c) => c.item === "Check-in");
   const checkOut = checklist.find((c) => c.item === "Check-out");
   const puedeFinalizar = Boolean(orden?.firma_url_firmada) && Boolean(checkOut?.hecho) && !finalizada;
+  const estadoMostrar = orden?.estado_os ? ETIQUETA_OS[orden.estado_os] ?? trabajo.estado : trabajo.estado;
+  const direccion = cli?.direccion || trabajo.ubicacion;
+  const coords = cli?.lat != null && cli?.lng != null ? { lat: cli.lat, lng: cli.lng } : null;
+
+  function abrirMapa() {
+    const destino = coords ? `${coords.lat},${coords.lng}` : encodeURIComponent(direccion ?? "");
+    if (!destino) return;
+    const url = Platform.select({
+      ios: `http://maps.apple.com/?daddr=${destino}`,
+      default: `https://www.google.com/maps/dir/?api=1&destination=${destino}`,
+    });
+    Linking.openURL(url!);
+  }
 
   async function marcar(item: "Check-in" | "Check-out") {
     setMarcando(item);
     const ubic = await ubicacionActual();
     if (!ubic) {
-      Alert.alert("Sin ubicación", `Se registrará el ${item.toLowerCase()} sin coordenadas (permiso denegado o GPS no disponible).`);
+      Alert.alert(
+        "Sin ubicación",
+        `Se registrará el ${item.toLowerCase()} sin coordenadas (permiso denegado o GPS no disponible).`
+      );
     }
     await encolarCheckin(trabajoId, item, ubic);
     setMarcando(null);
-    // Optimista: marcamos localmente; el fetch al volver al foco confirma.
     setDetalle((prev) =>
       prev
         ? {
@@ -92,38 +123,70 @@ export function TrabajoDetalleScreen({ route }: NativeStackScreenProps<TrabajosS
     setGuardandoDatos(true);
     await encolarDatos(trabajoId, datosForm);
     setGuardandoDatos(false);
-    Alert.alert("Guardado", pendientesAqui > 0 ? "Se sincronizará cuando haya conexión." : "Formulario guardado.");
+    Alert.alert("Guardado", enLinea ? "Datos guardados." : "Se enviarán cuando haya conexión.");
+  }
+
+  async function finalizar() {
+    setFinalizando(true);
+    await encolarFinalizar(trabajoId);
+    Alert.alert(
+      "Trabajo finalizado",
+      "Quedó cerrado. Si estás sin conexión, se enviará a la oficina apenas vuelvas a tener señal.",
+      [{ text: "Listo", onPress: () => navigation.goBack() }]
+    );
   }
 
   return (
     <View style={{ flex: 1, backgroundColor: t.colores.bg }}>
       <OfflineBanner guardadoEn={detalle.desdeCache ? detalle.guardadoEn : undefined} />
-      <ScrollView contentContainerStyle={{ padding: t.espacio(5), gap: t.espacio(4) }}>
-        <View style={{ gap: t.espacio(1) }}>
+      <ScrollView contentContainerStyle={{ padding: t.espacio(5), gap: t.espacio(4), paddingBottom: t.espacio(24) }}>
+        <View style={{ gap: t.espacio(1.5) }}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-            <Text variante="titulo">{trabajo.cliente}</Text>
-            <Badge estado={trabajo.estado} />
+            <Text variante="titulo" style={{ flex: 1 }}>
+              {cli?.nombre ?? trabajo.cliente}
+            </Text>
+            <Badge texto={estadoMostrar} estado={orden?.estado_os ?? trabajo.estado} />
           </View>
           <Text variante="etiqueta" tono="muted">
             {trabajo.fecha}
-            {trabajo.hora_programada ? ` · ${trabajo.hora_programada.slice(0, 5)}` : ""} · ${trabajo.monto.toLocaleString("es-CL")}
+            {trabajo.hora_programada ? ` · ${trabajo.hora_programada.slice(0, 5)}` : ""}
           </Text>
-          {trabajo.ubicacion ? (
-            <Text variante="etiqueta" tono="faint">
-              {trabajo.ubicacion}
-            </Text>
-          ) : null}
           {orden?.folio != null ? (
             <Text variante="etiqueta" tono="brand" weight="semibold">
-              OS N° {orden.folio}
+              Orden N° {orden.folio}
             </Text>
           ) : null}
         </View>
 
+        {/* Cliente: ir y llamar */}
+        {(direccion || cli?.telefono) && (
+          <Card plano style={{ gap: t.espacio(2.5) }}>
+            {direccion ? (
+              <View style={{ flexDirection: "row", gap: t.espacio(2), alignItems: "flex-start" }}>
+                <Ionicons name="location-outline" size={18} color={t.colores.muted} style={{ marginTop: 1 }} />
+                <Text variante="etiqueta" style={{ flex: 1 }}>
+                  {direccion}
+                </Text>
+              </View>
+            ) : null}
+            <View style={{ flexDirection: "row", gap: t.espacio(2.5) }}>
+              {direccion ? <Button titulo="Cómo llegar" variante="secundario" icono={<Ionicons name="navigate-outline" size={16} color={t.colores.foreground} />} onPress={abrirMapa} /> : null}
+              {cli?.telefono ? (
+                <Button
+                  titulo="Llamar"
+                  variante="secundario"
+                  icono={<Ionicons name="call-outline" size={16} color={t.colores.foreground} />}
+                  onPress={() => Linking.openURL(`tel:${cli.telefono}`)}
+                />
+              ) : null}
+            </View>
+          </Card>
+        )}
+
         {finalizada && (
           <Card plano style={{ backgroundColor: t.colores.successSoft, borderColor: "transparent" }}>
             <Text variante="etiqueta" weight="semibold" style={{ color: t.colores.success }}>
-              ✓ OS finalizada — ya no se puede editar
+              ✓ Trabajo finalizado — ya no se puede editar
             </Text>
           </Card>
         )}
@@ -163,20 +226,30 @@ export function TrabajoDetalleScreen({ route }: NativeStackScreenProps<TrabajosS
           />
         ) : null}
 
-        <FotosSection fotos={fotos} editable={!finalizada} onAgregar={(archivo) => encolarFoto(trabajoId, archivo)} />
+        <FotosSection
+          fotos={fotos}
+          previewsLocales={fotosLocales}
+          editable={!finalizada}
+          onAgregar={(archivo) => {
+            setFotosLocales((p) => [...p, archivo.uri]);
+            void encolarFoto(trabajoId, archivo);
+          }}
+        />
 
         <CierreFirma orden={orden} editable={!finalizada} onFirmar={(p) => encolarFirma(trabajoId, p)} />
 
         {!finalizada && (
           <>
             <Button
-              titulo="Finalizar OS"
-              onPress={() => encolarFinalizar(trabajoId)}
+              titulo="Finalizar trabajo"
+              tamano="lg"
+              onPress={finalizar}
               disabled={!puedeFinalizar}
+              cargando={finalizando}
               style={{ marginTop: t.espacio(2) }}
             />
             {!puedeFinalizar && (
-              <Text variante="caption" tono="faint" style={{ textAlign: "center" }}>
+              <Text variante="caption" tono="muted" style={{ textAlign: "center" }}>
                 Para finalizar: marca el check-out y registra la firma del cliente.
               </Text>
             )}

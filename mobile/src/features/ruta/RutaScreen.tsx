@@ -60,7 +60,7 @@ export function RutaScreen() {
           <EmptyState
             icono={<Ionicons name="map-outline" size={40} color={t.colores.faint} />}
             titulo="Sin ruta hoy"
-            mensaje="No tenés trabajos programados para hoy."
+            mensaje="No tienes trabajos programados para hoy."
           />
         ) : (
           <>

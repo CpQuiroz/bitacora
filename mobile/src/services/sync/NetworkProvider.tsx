@@ -1,15 +1,36 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { AppState } from "react-native";
 import NetInfo from "@react-native-community/netinfo";
-import { pendientes, procesar, suscribir, type AccionPendiente } from "./queue";
+import {
+  activas,
+  descartar,
+  fallidas,
+  pendientes,
+  procesar,
+  reintentar,
+  suscribir,
+  type AccionPendiente,
+} from "./queue";
 
 type RedContexto = {
   enLinea: boolean;
-  cola: AccionPendiente[];
+  cola: AccionPendiente[]; // todo
+  pendientes: AccionPendiente[]; // activas (no fallidas)
+  fallidas: AccionPendiente[];
   sincronizarAhora: () => void;
+  reintentar: (id: string) => void;
+  descartar: (id: string) => void;
 };
 
-const Ctx = createContext<RedContexto>({ enLinea: true, cola: [], sincronizarAhora: () => {} });
+const Ctx = createContext<RedContexto>({
+  enLinea: true,
+  cola: [],
+  pendientes: [],
+  fallidas: [],
+  sincronizarAhora: () => {},
+  reintentar: () => {},
+  descartar: () => {},
+});
 
 export function NetworkProvider({ children }: { children: ReactNode }) {
   const [enLinea, setEnLinea] = useState(true);
@@ -36,7 +57,20 @@ export function NetworkProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  return <Ctx.Provider value={{ enLinea, cola, sincronizarAhora: () => void procesar() }}>{children}</Ctx.Provider>;
+  const valor = useMemo<RedContexto>(
+    () => ({
+      enLinea,
+      cola,
+      pendientes: activas(cola),
+      fallidas: fallidas(cola),
+      sincronizarAhora: () => void procesar(),
+      reintentar: (id) => void reintentar(id),
+      descartar: (id) => void descartar(id),
+    }),
+    [enLinea, cola]
+  );
+
+  return <Ctx.Provider value={valor}>{children}</Ctx.Provider>;
 }
 
 export function useRed(): RedContexto {

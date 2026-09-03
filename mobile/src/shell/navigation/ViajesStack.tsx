@@ -18,7 +18,7 @@ export function ViajesStack() {
         contentStyle: { backgroundColor: t.colores.bg },
       }}
     >
-      <Stack.Screen name="ViajesLista" component={ViajesScreen} options={{ title: "Mis viajes" }} />
+      <Stack.Screen name="ViajesLista" component={ViajesScreen} options={{ title: "Viajes" }} />
       <Stack.Screen
         name="ViajeForm"
         component={ViajeFormScreen}

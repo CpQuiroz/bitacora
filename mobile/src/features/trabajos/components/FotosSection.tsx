@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Alert, Image, View } from "react-native";
+import { ActivityIndicator, Alert, Image, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { useTema } from "../../../theme";
 import { Button, Card, Text } from "../../../components/ui";
@@ -8,10 +8,12 @@ import type { FotoConUrl } from "../../../services/trabajos";
 
 export function FotosSection({
   fotos,
+  previewsLocales = [],
   editable,
   onAgregar,
 }: {
   fotos: FotoConUrl[];
+  previewsLocales?: string[];
   editable: boolean;
   onAgregar: (archivo: { uri: string; name: string; type: string }) => void;
 }) {
@@ -55,6 +57,19 @@ export function FotosSection({
           <Button titulo="Galería" variante="secundario" onPress={galeria} cargando={ocupado} />
         </View>
       )}
+
+      {previewsLocales.map((uri, i) => (
+        <Card key={`local-${i}`} plano>
+          <Image source={{ uri }} style={{ width: "100%", height: 200, borderRadius: t.radio.sm }} />
+          <View style={{ flexDirection: "row", alignItems: "center", gap: t.espacio(2), marginTop: t.espacio(2) }}>
+            <ActivityIndicator size="small" color={t.colores.muted} />
+            <Text variante="caption" tono="muted">
+              Subiendo…
+            </Text>
+          </View>
+        </Card>
+      ))}
+
       {fotos.map((f) => (
         <Card key={f.id} plano>
           <Image source={{ uri: f.url }} style={{ width: "100%", height: 200, borderRadius: t.radio.sm, marginBottom: t.espacio(2) }} />
@@ -70,6 +85,12 @@ export function FotosSection({
           ) : null}
         </Card>
       ))}
+
+      {fotos.length === 0 && previewsLocales.length === 0 ? (
+        <Text variante="caption" tono="muted">
+          Sin fotos todavía.
+        </Text>
+      ) : null}
     </View>
   );
 }

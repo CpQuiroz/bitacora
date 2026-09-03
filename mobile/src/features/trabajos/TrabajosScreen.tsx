@@ -86,7 +86,7 @@ export function TrabajosScreen({ navigation }: NativeStackScreenProps<TrabajosSt
           <EmptyState
             icono={<Ionicons name="clipboard-outline" size={40} color={t.colores.faint} />}
             titulo="Sin trabajos"
-            mensaje={equipo ? "El equipo no tiene trabajos asignados." : "No tenés trabajos asignados."}
+            mensaje={equipo ? "El equipo no tiene trabajos asignados." : "No tienes trabajos asignados."}
           />
         }
         renderItem={({ item }) => (

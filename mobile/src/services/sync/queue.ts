@@ -7,9 +7,12 @@ import { apiFetch } from "../api";
 // reconectar o al volver al foreground.
 //
 // v1 "liviano": sin resolución de conflictos. La última escritura gana.
+// Una acción que falla MAX_INTENTOS veces NO se borra: queda marcada
+// "fallida" y visible en Perfil para que el usuario la reintente o la
+// descarte a mano (nunca se pierde trabajo del usuario en silencio).
 
-const STORAGE_KEY = "sync:cola:v1";
-const MAX_INTENTOS = 10;
+const STORAGE_KEY = "sync:cola:v2";
+const MAX_INTENTOS = 6;
 
 export type AccionPendiente = {
   id: string;
@@ -22,6 +25,7 @@ export type AccionPendiente = {
   creadoEn: number;
   intentos: number;
   ultimoError?: string;
+  fallida?: boolean; // agotó los reintentos — necesita acción del usuario
 };
 
 type Listener = (cola: AccionPendiente[]) => void;
@@ -37,7 +41,7 @@ async function persistir() {
   } catch {
     /* best-effort */
   }
-  listeners.forEach((l) => l(cola));
+  listeners.forEach((l) => l([...cola]));
 }
 
 async function asegurarCargada() {
@@ -53,8 +57,10 @@ async function asegurarCargada() {
 
 export function suscribir(l: Listener): () => void {
   listeners.add(l);
-  l(cola);
-  return () => listeners.delete(l);
+  l([...cola]);
+  return () => {
+    listeners.delete(l);
+  };
 }
 
 export async function encolar(a: Omit<AccionPendiente, "id" | "creadoEn" | "intentos">): Promise<void> {
@@ -66,11 +72,15 @@ export async function encolar(a: Omit<AccionPendiente, "id" | "creadoEn" | "inte
 
 export async function pendientes(): Promise<AccionPendiente[]> {
   await asegurarCargada();
-  return cola;
+  return [...cola];
 }
 
-export function pendientesDe(cola: AccionPendiente[], recurso: string): AccionPendiente[] {
-  return cola.filter((a) => a.recurso === recurso);
+/** Acciones activas (no fallidas) — es el conteo que ve el usuario como "por sincronizar". */
+export function activas(c: AccionPendiente[]): AccionPendiente[] {
+  return c.filter((a) => !a.fallida);
+}
+export function fallidas(c: AccionPendiente[]): AccionPendiente[] {
+  return c.filter((a) => a.fallida);
 }
 
 async function ejecutar(a: AccionPendiente): Promise<Response> {
@@ -88,11 +98,14 @@ async function ejecutar(a: AccionPendiente): Promise<Response> {
 /** Intenta vaciar la cola. Se llama al encolar, al reconectar y al foreground. */
 export async function procesar(): Promise<void> {
   await asegurarCargada();
-  if (procesando || cola.length === 0) return;
+  if (procesando) return;
+  const cola0 = cola.filter((a) => !a.fallida);
+  if (cola0.length === 0) return;
   procesando = true;
   try {
-    // Copia estable: procesamos en orden FIFO.
-    for (const a of [...cola]) {
+    // FIFO por orden de creación.
+    for (const a of cola0) {
+      if (a.fallida) continue;
       try {
         const res = await ejecutar(a);
         if (res.ok || res.status === 409 || res.status === 404) {
@@ -104,12 +117,17 @@ export async function procesar(): Promise<void> {
           const body = await res.json().catch(() => ({}));
           a.intentos += 1;
           a.ultimoError = (body as { error?: string }).error ?? `Error ${res.status}`;
-          if (a.intentos >= MAX_INTENTOS) cola = cola.filter((x) => x.id !== a.id);
+          if (a.intentos >= MAX_INTENTOS) a.fallida = true;
           await persistir();
+          if (a.fallida) continue;
+          // Un error del servidor (400/422/500) casi nunca se arregla
+          // reintentando en loop — cortamos y que el resto lo intente
+          // en la próxima pasada.
+          break;
         }
       } catch {
-        // Sin señal — cortamos y reintentamos después.
-        a.intentos += 1;
+        // Sin señal — cortamos y reintentamos después. No cuenta como
+        // intento fallido (no llegó al servidor).
         a.ultimoError = "Sin conexión";
         await persistir();
         break;
@@ -118,6 +136,18 @@ export async function procesar(): Promise<void> {
   } finally {
     procesando = false;
   }
+}
+
+/** Reintenta una acción que había quedado como fallida. */
+export async function reintentar(id: string): Promise<void> {
+  await asegurarCargada();
+  const a = cola.find((x) => x.id === id);
+  if (!a) return;
+  a.fallida = false;
+  a.intentos = 0;
+  a.ultimoError = undefined;
+  await persistir();
+  void procesar();
 }
 
 export async function descartar(id: string): Promise<void> {

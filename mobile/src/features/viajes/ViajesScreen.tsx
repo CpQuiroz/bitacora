@@ -12,8 +12,9 @@ import type { ViajesStackParamList } from "../../shell/navigation/types";
 
 export function ViajesScreen({ navigation }: NativeStackScreenProps<ViajesStackParamList, "ViajesLista">) {
   const t = useTema();
-  const { cola } = useRed();
-  const pendientes = cola.filter((a) => a.recurso === "viajes").length;
+  const red = useRed();
+  const pendientes = red.pendientes.filter((a) => a.recurso === "viajes").length;
+  const fallidos = red.fallidas.filter((a) => a.recurso === "viajes").length;
 
   const [viajes, setViajes] = useState<ViajeConDatos[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -49,8 +50,12 @@ export function ViajesScreen({ navigation }: NativeStackScreenProps<ViajesStackP
     <View style={{ flex: 1, backgroundColor: t.colores.bg }}>
       <OfflineBanner guardadoEn={guardadoEn} />
       <View style={{ padding: t.espacio(4) }}>
-        <Button titulo="Registrar viaje" onPress={() => navigation.navigate("ViajeForm", {})} />
-        {pendientes > 0 ? (
+        <Button titulo="Nuevo viaje" onPress={() => navigation.navigate("ViajeForm", {})} />
+        {fallidos > 0 ? (
+          <Text variante="caption" tono="danger" style={{ marginTop: t.espacio(2) }}>
+            {fallidos} viaje{fallidos === 1 ? "" : "s"} no se pudo enviar — revísalo en Perfil
+          </Text>
+        ) : pendientes > 0 ? (
           <Text variante="caption" tono="muted" style={{ marginTop: t.espacio(2) }}>
             {pendientes} viaje{pendientes === 1 ? "" : "s"} sin sincronizar
           </Text>
@@ -65,7 +70,7 @@ export function ViajesScreen({ navigation }: NativeStackScreenProps<ViajesStackP
           <EmptyState
             icono={<Ionicons name="car-outline" size={40} color={t.colores.faint} />}
             titulo="Sin viajes"
-            mensaje="Registrá tu primer viaje con el botón de arriba."
+            mensaje="Registra tu primer viaje con el botón de arriba."
           />
         }
         renderItem={({ item }) => (

@@ -17,7 +17,7 @@ export function MfaRequeridoScreen() {
         </Text>
         <Text variante="cuerpo" tono="muted" style={{ textAlign: "center" }}>
           Tu rol requiere activar la verificación en dos pasos antes de continuar. Actívala desde el panel web, en Configuración →
-          Seguridad, y volvé a esta pantalla.
+          Seguridad, y vuelve a esta pantalla.
         </Text>
         <Button titulo="Ya la activé" onPress={refrescar} />
         <Button titulo="Cerrar sesión" variante="ghost" onPress={cerrarSesion} />

@@ -1,5 +1,6 @@
 import Constants from "expo-constants";
 import { View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useTema } from "../../theme";
 import { Button, Card, Screen, Text } from "../../components/ui";
 import { useAuth } from "../auth/AuthContext";
@@ -22,7 +23,7 @@ const ETIQUETA_FUNCION: Record<string, string> = {
 export function PerfilScreen() {
   const t = useTema();
   const auth = useAuth();
-  const { enLinea, cola, sincronizarAhora } = useRed();
+  const { enLinea, pendientes, fallidas, sincronizarAhora, reintentar, descartar } = useRed();
   if (auth.fase !== "listo" && auth.fase !== "mfa-requerido") return null;
   const u = auth.usuario;
 
@@ -44,11 +45,59 @@ export function PerfilScreen() {
 
       <Card>
         <Fila etiqueta="Conexión" valor={enLinea ? "En línea" : "Sin conexión"} />
-        <Fila etiqueta="Sin sincronizar" valor={cola.length === 0 ? "Nada pendiente" : `${cola.length} acción(es)`} />
-        {cola.length > 0 ? <Button titulo="Sincronizar ahora" variante="secundario" onPress={sincronizarAhora} style={{ marginTop: t.espacio(3) }} /> : null}
+        <Fila
+          etiqueta="Sin sincronizar"
+          valor={pendientes.length === 0 ? "Nada pendiente" : `${pendientes.length} acción(es)`}
+        />
+        {pendientes.length > 0 && (
+          <Button
+            titulo="Sincronizar ahora"
+            variante="secundario"
+            onPress={sincronizarAhora}
+            style={{ marginTop: t.espacio(3) }}
+          />
+        )}
       </Card>
 
-      <Text variante="caption" tono="faint" style={{ textAlign: "center" }}>
+      {fallidas.length > 0 && (
+        <Card style={{ borderColor: t.colores.danger, backgroundColor: t.colores.dangerSoft }} plano>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: t.espacio(2), marginBottom: t.espacio(3) }}>
+            <Ionicons name="alert-circle-outline" size={18} color={t.colores.danger} />
+            <Text variante="etiqueta" weight="semibold" style={{ color: t.colores.danger }}>
+              No se pudieron enviar
+            </Text>
+          </View>
+          <Text variante="caption" tono="muted" style={{ marginBottom: t.espacio(3) }}>
+            Estas acciones fallaron varias veces. Reinténtalas o, si ya no aplican, descártalas.
+          </Text>
+          {fallidas.map((a) => (
+            <View
+              key={a.id}
+              style={{
+                borderTopWidth: 1,
+                borderTopColor: t.colores.border,
+                paddingVertical: t.espacio(3),
+                gap: t.espacio(2),
+              }}
+            >
+              <Text variante="etiqueta" weight="semibold">
+                {a.etiqueta}
+              </Text>
+              {a.ultimoError ? (
+                <Text variante="caption" tono="danger">
+                  {a.ultimoError}
+                </Text>
+              ) : null}
+              <View style={{ flexDirection: "row", gap: t.espacio(2.5) }}>
+                <Button titulo="Reintentar" variante="secundario" tamano="md" onPress={() => reintentar(a.id)} />
+                <Button titulo="Descartar" variante="ghost" onPress={() => descartar(a.id)} />
+              </View>
+            </View>
+          ))}
+        </Card>
+      )}
+
+      <Text variante="caption" tono="muted" style={{ textAlign: "center" }}>
         Bitácora {Constants.expoConfig?.version ?? ""}
       </Text>
 

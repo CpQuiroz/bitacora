@@ -1,10 +1,11 @@
-import type { AnalisisFoto, OrdenServicio, TipoTrabajo, Trabajo } from "@bitacora/shared";
+import type { AnalisisFoto, Cliente, OrdenServicio, TipoTrabajo, Trabajo } from "@bitacora/shared";
 import { apiJson } from "./api";
 import { encolar } from "./sync/queue";
 import { guardarCache, leerCache } from "./sync/cache";
 import type { Ubicacion } from "../lib/geo";
 
-export type TrabajoConTipo = Trabajo & { tipo_trabajo: TipoTrabajo | null };
+export type ClienteContacto = Pick<Cliente, "id" | "nombre" | "telefono" | "direccion" | "lat" | "lng">;
+export type TrabajoConTipo = Trabajo & { tipo_trabajo: TipoTrabajo | null; cliente_info: ClienteContacto | null };
 export type FotoConUrl = AnalisisFoto & { url: string };
 export type OrdenConFirma = OrdenServicio & { firma_url_firmada: string | null };
 
