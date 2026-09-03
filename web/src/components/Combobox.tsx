@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { IconChevronDown } from "./icons";
 
 export type ComboboxOpcion = { id: string; label: string };
 
@@ -132,7 +133,14 @@ export function Combobox({
           if (!abierto) setAbierto(true);
         }}
         onKeyDown={onKeyDown}
-        className="w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        className={`w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 pr-9 text-sm text-foreground placeholder:text-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+          abierto ? "" : "cursor-pointer"
+        } ${disabled ? "cursor-not-allowed opacity-60" : ""}`}
+      />
+      <IconChevronDown
+        className={`pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted transition-transform ${
+          abierto ? "rotate-180" : ""
+        }`}
       />
       {abierto && (
         <div

@@ -56,12 +56,29 @@ export function Textarea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
   );
 }
 
-export function Select(props: SelectHTMLAttributes<HTMLSelectElement>) {
+// El chevron nativo del <select> varía por navegador/SO — se oculta con
+// appearance-none y se dibuja el mismo IconChevronDown que usa Combobox,
+// así todos los selectores de la app se ven igual (ver Combobox.tsx).
+export function Select({ className = "", ...props }: SelectHTMLAttributes<HTMLSelectElement>) {
   return (
-    <select
-      {...props}
-      className={`w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-foreground ${focusRing} ${props.className ?? ""}`}
-    />
+    <div className={`relative ${className}`}>
+      <select
+        {...props}
+        className={`w-full cursor-pointer appearance-none rounded-lg border border-border bg-surface px-3.5 py-2.5 pr-9 text-sm text-foreground ${focusRing}`}
+      />
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"
+        aria-hidden="true"
+      >
+        <path d="M6 9l6 6 6-6" />
+      </svg>
+    </div>
   );
 }
 

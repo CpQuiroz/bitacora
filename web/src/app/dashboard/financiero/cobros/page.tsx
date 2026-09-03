@@ -11,6 +11,7 @@ import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText } from "@/components/ui";
 import { IconPlus, IconReceipt } from "@/components/icons";
 import { ComboboxCliente } from "@/components/ComboboxCliente";
+import { Combobox } from "@/components/Combobox";
 
 type CobroConCliente = Factura & { cliente_info: { id: string; nombre: string } | null };
 
@@ -350,14 +351,12 @@ function CobrosContenido() {
             </div>
             <div>
               <Label>Cliente</Label>
-              <Select value={filtroClienteId} onChange={(e) => setFiltroClienteId(e.target.value)}>
-                <option value="todos">Todos</option>
-                {clientes.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nombre}
-                  </option>
-                ))}
-              </Select>
+              <Combobox
+                value={filtroClienteId}
+                onChange={setFiltroClienteId}
+                opciones={[{ id: "todos", label: "Todos" }, ...clientes.map((c) => ({ id: c.id, label: c.nombre }))]}
+                placeholder="Todos"
+              />
             </div>
             <div>
               <Label>Desde</Label>

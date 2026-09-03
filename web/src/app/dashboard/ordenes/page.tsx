@@ -9,6 +9,7 @@ import { apiFetch } from "@/lib/api";
 import { abrirPdfOS } from "@/lib/descargarPdf";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Badge, Button, Card, ErrorText, Input, Label, Select, SuccessText, buttonClass } from "@/components/ui";
+import { Combobox } from "@/components/Combobox";
 import { IconClipboardCheck, IconPlus, IconReceipt } from "@/components/icons";
 import { Modal } from "@/components/Modal";
 import { formatMoneda } from "@/lib/formatMoneda";
@@ -169,25 +170,21 @@ export default function OrdenesServicioPage() {
           </div>
           <div>
             <Label>Colaborador</Label>
-            <Select value={responsableId} onChange={(e) => setResponsableId(e.target.value)}>
-              <option value="">Todos</option>
-              {equipo.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.nombre}
-                </option>
-              ))}
-            </Select>
+            <Combobox
+              value={responsableId}
+              onChange={setResponsableId}
+              opciones={[{ id: "", label: "Todos" }, ...equipo.map((u) => ({ id: u.id, label: u.nombre }))]}
+              placeholder="Todos"
+            />
           </div>
           <div>
             <Label>Cliente</Label>
-            <Select value={clienteId} onChange={(e) => setClienteId(e.target.value)}>
-              <option value="">Todos</option>
-              {clientes.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nombre}
-                </option>
-              ))}
-            </Select>
+            <Combobox
+              value={clienteId}
+              onChange={setClienteId}
+              opciones={[{ id: "", label: "Todos" }, ...clientes.map((c) => ({ id: c.id, label: c.nombre }))]}
+              placeholder="Todos"
+            />
           </div>
           <div>
             <Label>Desde</Label>
