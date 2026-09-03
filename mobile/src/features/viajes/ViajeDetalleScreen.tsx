@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
-import { Image, ScrollView, View } from "react-native";
+import { Alert, Image, Linking, ScrollView, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { Ionicons } from "@expo/vector-icons";
 import type { EstadoViaje } from "@bitacora/shared";
 import { useTema } from "../../theme";
-import { Badge, Card, ErrorState, LoadingScreen, Text } from "../../components/ui";
+import { Badge, Button, Card, ErrorState, LoadingScreen, Text } from "../../components/ui";
 import { OfflineBanner } from "../../components/OfflineBanner";
-import { obtenerViaje, type ViajeDetalle } from "../../services/viajes";
+import { useRed } from "../../services/sync/NetworkProvider";
+import { useAuth } from "../auth/AuthContext";
+import { aprobarViaje, obtenerViaje, rechazarViaje, type ViajeDetalle } from "../../services/viajes";
 import type { ViajesStackParamList } from "../../shell/navigation/types";
 
 const NOTA_ESTADO: Record<EstadoViaje, string> = {
@@ -17,12 +20,27 @@ const NOTA_ESTADO: Record<EstadoViaje, string> = {
 
 const pesos = (n: number) => `$${Math.round(n).toLocaleString("es-CL")}`;
 
-export function ViajeDetalleScreen({ route }: NativeStackScreenProps<ViajesStackParamList, "ViajeDetalle">) {
+function abrirEnMapa(app: "google" | "waze", origen: string, destino: string) {
+  const o = encodeURIComponent(origen);
+  const d = encodeURIComponent(destino);
+  const url =
+    app === "waze"
+      ? `https://waze.com/ul?q=${d}&navigate=yes`
+      : `https://www.google.com/maps/dir/?api=1&origin=${o}&destination=${d}&travelmode=driving`;
+  Linking.openURL(url).catch(() => Alert.alert("No se pudo abrir", "Revisa que tengas la app instalada."));
+}
+
+export function ViajeDetalleScreen({ route, navigation }: NativeStackScreenProps<ViajesStackParamList, "ViajeDetalle">) {
   const t = useTema();
   const { viajeId } = route.params;
+  const { enLinea } = useRed();
+  const auth = useAuth();
+  const esGestion = auth.fase === "listo" && auth.usuario.rol !== "colaborador";
+
   const [viaje, setViaje] = useState<ViajeDetalle | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [guardadoEn, setGuardadoEn] = useState<number | undefined>();
+  const [ocupado, setOcupado] = useState(false);
 
   const cargar = useCallback(async () => {
     setError(null);
@@ -39,6 +57,33 @@ export function ViajeDetalleScreen({ route }: NativeStackScreenProps<ViajesStack
     cargar();
   }, [cargar]);
   useFocusEffect(useCallback(() => void cargar(), [cargar]));
+
+  async function aprobar() {
+    if (!enLinea) return Alert.alert("Sin conexión", "Necesitas conexión para aprobar un viaje.");
+    setOcupado(true);
+    const r = await aprobarViaje(viajeId);
+    setOcupado(false);
+    if (!r.ok) return Alert.alert("No se pudo aprobar", r.error ?? "Intenta de nuevo.");
+    cargar();
+  }
+
+  function rechazar() {
+    Alert.alert("Rechazar el viaje", "Se elimina de la lista. El chofer tendrá que registrarlo de nuevo si corresponde.", [
+      { text: "No", style: "cancel" },
+      {
+        text: "Sí, rechazar",
+        style: "destructive",
+        onPress: async () => {
+          if (!enLinea) return Alert.alert("Sin conexión", "Necesitas conexión para rechazar un viaje.");
+          setOcupado(true);
+          const r = await rechazarViaje(viajeId);
+          setOcupado(false);
+          if (!r.ok) return Alert.alert("No se pudo rechazar", r.error ?? "Intenta de nuevo.");
+          navigation.goBack();
+        },
+      },
+    ]);
+  }
 
   if (!viaje && !error) return <LoadingScreen />;
   if (error && !viaje) return <ErrorState mensaje={error} onReintentar={cargar} />;
@@ -61,6 +106,11 @@ export function ViajeDetalleScreen({ route }: NativeStackScreenProps<ViajesStack
           <Text variante="etiqueta" tono="muted">
             {viaje.fecha} · Guía {viaje.numero_guia}
           </Text>
+          {esGestion && viaje.chofer?.nombre ? (
+            <Text variante="etiqueta" tono="muted">
+              Chofer: {viaje.chofer.nombre}
+            </Text>
+          ) : null}
           <Text variante="caption" tono="muted">
             {NOTA_ESTADO[viaje.estado]}
           </Text>
@@ -78,6 +128,20 @@ export function ViajeDetalleScreen({ route }: NativeStackScreenProps<ViajesStack
           {viaje.km_inicial != null ? <Fila etiqueta="Km inicial" valor={String(viaje.km_inicial)} /> : null}
           {viaje.km_final != null ? <Fila etiqueta="Km final" valor={String(viaje.km_final)} /> : null}
           {kmRecorridos != null ? <Fila etiqueta="Km recorridos" valor={String(kmRecorridos)} /> : null}
+          <View style={{ flexDirection: "row", gap: t.espacio(2.5), marginTop: t.espacio(1) }}>
+            <Button
+              titulo="Google Maps"
+              variante="secundario"
+              icono={<Ionicons name="map-outline" size={16} color={t.colores.foreground} />}
+              onPress={() => abrirEnMapa("google", viaje.origen, viaje.destino)}
+            />
+            <Button
+              titulo="Waze"
+              variante="secundario"
+              icono={<Ionicons name="navigate-outline" size={16} color={t.colores.foreground} />}
+              onPress={() => abrirEnMapa("waze", viaje.origen, viaje.destino)}
+            />
+          </View>
         </Card>
 
         <Card plano style={{ gap: t.espacio(2) }}>
@@ -106,6 +170,26 @@ export function ViajeDetalleScreen({ route }: NativeStackScreenProps<ViajesStack
               resizeMode="cover"
             />
           </Card>
+        ) : null}
+
+        {esGestion && viaje.estado !== "facturado" ? (
+          <View style={{ gap: t.espacio(2.5), marginTop: t.espacio(1), borderTopWidth: 1, borderTopColor: t.colores.border, paddingTop: t.espacio(4) }}>
+            <Text variante="caption" tono="muted" weight="semibold" style={{ textTransform: "uppercase" }}>
+              Gestión
+            </Text>
+            {viaje.estado === "borrador" ? (
+              <Button titulo="Aprobar viaje" tamano="lg" onPress={aprobar} cargando={ocupado} />
+            ) : null}
+            <Button
+              titulo="Editar"
+              variante="secundario"
+              icono={<Ionicons name="create-outline" size={16} color={t.colores.foreground} />}
+              onPress={() => navigation.navigate("ViajeForm", { viajeId })}
+            />
+            {viaje.estado === "borrador" ? (
+              <Button titulo="Rechazar viaje" variante="peligro" onPress={rechazar} cargando={ocupado} />
+            ) : null}
+          </View>
         ) : null}
       </ScrollView>
     </View>

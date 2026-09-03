@@ -8,7 +8,14 @@ import { useTema } from "../../theme";
 import { Button, Card, Input, LoadingScreen, PickerBuscable, Text } from "../../components/ui";
 import { useRed } from "../../services/sync/NetworkProvider";
 import { comprimirImagen } from "../../lib/imagen";
-import { catalogoParaViaje, crearViaje, encolarViaje, type BorradorViaje } from "../../services/viajes";
+import {
+  catalogoParaViaje,
+  crearViaje,
+  editarViaje,
+  encolarViaje,
+  obtenerViaje,
+  type BorradorViaje,
+} from "../../services/viajes";
 import type { ViajesStackParamList } from "../../shell/navigation/types";
 
 const VACIO: BorradorViaje = {
@@ -23,14 +30,20 @@ const VACIO: BorradorViaje = {
   aplica_iva: true,
 };
 
-export function ViajeFormScreen({ navigation }: NativeStackScreenProps<ViajesStackParamList, "ViajeForm">) {
+export function ViajeFormScreen({ navigation, route }: NativeStackScreenProps<ViajesStackParamList, "ViajeForm">) {
   const t = useTema();
   const { enLinea } = useRed();
+  const editandoId = route.params?.viajeId ?? null;
   const [clientes, setClientes] = useState<Cliente[] | null>(null);
   const [equipos, setEquipos] = useState<Equipo[]>([]);
   const [b, setB] = useState<BorradorViaje>(VACIO);
   const [foto, setFoto] = useState<{ uri: string; name: string; type: string } | null>(null);
   const [guardando, setGuardando] = useState(false);
+  const [cargandoViaje, setCargandoViaje] = useState(Boolean(editandoId));
+
+  useEffect(() => {
+    navigation.setOptions({ title: editandoId ? "Editar viaje" : "Nuevo viaje" });
+  }, [navigation, editandoId]);
 
   useEffect(() => {
     catalogoParaViaje().then(({ clientes, equipos }) => {
@@ -38,6 +51,26 @@ export function ViajeFormScreen({ navigation }: NativeStackScreenProps<ViajesSta
       setEquipos(equipos.filter((e) => e.activo));
     });
   }, []);
+
+  useEffect(() => {
+    if (!editandoId) return;
+    obtenerViaje(editandoId)
+      .then(({ viaje }) => {
+        setB({
+          cliente_id: viaje.cliente_id ?? "",
+          numero_guia: viaje.numero_guia,
+          origen: viaje.origen,
+          destino: viaje.destino,
+          equipo_id: viaje.equipo_id ?? "",
+          km_inicial: viaje.km_inicial != null ? String(viaje.km_inicial) : "",
+          km_final: viaje.km_final != null ? String(viaje.km_final) : "",
+          subtotal: String(Math.round(viaje.subtotal)),
+          aplica_iva: viaje.aplica_iva,
+        });
+      })
+      .catch((e) => Alert.alert("No se pudo cargar el viaje", e instanceof Error ? e.message : "Intenta de nuevo"))
+      .finally(() => setCargandoViaje(false));
+  }, [editandoId]);
 
   const set = (k: keyof BorradorViaje, v: string | boolean) => setB((prev) => ({ ...prev, [k]: v }));
 
@@ -65,6 +98,27 @@ export function ViajeFormScreen({ navigation }: NativeStackScreenProps<ViajesSta
     const borrador = { ...b, subtotal: b.subtotal.replace(/\D/g, "") };
     const volver = () => navigation.goBack();
     setGuardando(true);
+
+    if (editandoId) {
+      if (!enLinea) {
+        setGuardando(false);
+        return Alert.alert("Sin conexión", "Necesitas conexión para editar un viaje.");
+      }
+      const r = await editarViaje(editandoId, {
+        numero_guia: borrador.numero_guia,
+        origen: borrador.origen,
+        destino: borrador.destino,
+        cliente_id: borrador.cliente_id,
+        km_inicial: borrador.km_inicial,
+        km_final: borrador.km_final,
+        subtotal: borrador.subtotal,
+        aplica_iva: borrador.aplica_iva,
+      });
+      setGuardando(false);
+      if (!r.ok) return Alert.alert("No se pudo guardar", r.error);
+      Alert.alert("Viaje actualizado", "Listo.", [{ text: "Listo", onPress: volver }]);
+      return;
+    }
 
     if (enLinea) {
       const r = await crearViaje(borrador, foto ?? undefined);
@@ -96,7 +150,7 @@ export function ViajeFormScreen({ navigation }: NativeStackScreenProps<ViajesSta
     ]);
   }
 
-  if (clientes === null) return <LoadingScreen />;
+  if (clientes === null || cargandoViaje) return <LoadingScreen />;
 
   return (
     <ScrollView
@@ -114,16 +168,18 @@ export function ViajeFormScreen({ navigation }: NativeStackScreenProps<ViajesSta
 
       <Input etiqueta="Número de guía" value={b.numero_guia} onChangeText={(v) => set("numero_guia", v)} />
 
-      <Card plano>
-        <Text variante="etiqueta" tono="muted" style={{ marginBottom: t.espacio(2) }}>
-          Foto de la guía
-        </Text>
-        <Button
-          titulo={foto ? "Cambiar foto ✓" : "Tomar foto de la guía"}
-          variante={foto ? "secundario" : "primario"}
-          onPress={adjuntarFoto}
-        />
-      </Card>
+      {!editandoId ? (
+        <Card plano>
+          <Text variante="etiqueta" tono="muted" style={{ marginBottom: t.espacio(2) }}>
+            Foto de la guía
+          </Text>
+          <Button
+            titulo={foto ? "Cambiar foto ✓" : "Tomar foto de la guía"}
+            variante={foto ? "secundario" : "primario"}
+            onPress={adjuntarFoto}
+          />
+        </Card>
+      ) : null}
 
       <Input etiqueta="Origen" value={b.origen} onChangeText={(v) => set("origen", v)} />
       <Input etiqueta="Destino" value={b.destino} onChangeText={(v) => set("destino", v)} />
@@ -168,7 +224,13 @@ export function ViajeFormScreen({ navigation }: NativeStackScreenProps<ViajesSta
         <Text variante="cuerpo">Aplicar IVA (19%)</Text>
       </Pressable>
 
-      <Button titulo="Registrar viaje" tamano="lg" onPress={guardar} cargando={guardando} style={{ marginTop: t.espacio(2) }} />
+      <Button
+        titulo={editandoId ? "Guardar cambios" : "Registrar viaje"}
+        tamano="lg"
+        onPress={guardar}
+        cargando={guardando}
+        style={{ marginTop: t.espacio(2) }}
+      />
     </ScrollView>
   );
 }

@@ -46,6 +46,7 @@ export default function ViajesPage() {
 
   const [filtroEstado, setFiltroEstado] = useState<"todos" | EstadoViaje>("todos");
   const [seleccionados, setSeleccionados] = useState<Set<string>>(new Set());
+  const [aprobAuto, setAprobAuto] = useState(false);
 
   const [formAbierto, setFormAbierto] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -102,7 +103,8 @@ export default function ViajesPage() {
     ]);
     if (resMe.ok) {
       const { usuario: u } = await resMe.json();
-      if (u)
+      if (u) {
+        setAprobAuto(Boolean(u.empresa?.viajes_aprobacion_automatica));
         setUsuario({
           nombre: u.nombre,
           rol: u.rol,
@@ -114,6 +116,7 @@ export default function ViajesPage() {
           fuente: u.empresa?.fuente ?? null,
           moneda: u.empresa?.moneda ?? "CLP",
         });
+      }
     }
     if (resClientes.ok) setClientes(await resClientes.json());
     if (resUsuarios.ok) {
@@ -121,6 +124,26 @@ export default function ViajesPage() {
       setChoferes(todos.filter((u) => u.rol === "colaborador"));
     }
     await Promise.all([cargarViajes(), cargarResumen(agrupacion)]);
+  }
+
+  async function cambiarAprobAuto(next: boolean) {
+    setAprobAuto(next);
+    setAviso(null);
+    const res = await apiFetch("/api/empresa", {
+      method: "PATCH",
+      body: JSON.stringify({ viajes_aprobacion_automatica: next }),
+    });
+    if (res.ok) {
+      setAviso(
+        next
+          ? "Listo. Los viajes que registren los choferes quedarán confirmados automáticamente."
+          : "Listo. Los viajes de los choferes volverán a entrar como borrador para que los revises."
+      );
+    } else {
+      setAprobAuto(!next);
+      const body = await res.json().catch(() => ({}));
+      setError(body.error ?? "No se pudo guardar el ajuste");
+    }
   }
 
   useEffect(() => {
@@ -445,6 +468,13 @@ export default function ViajesPage() {
         </div>
       )}
 
+      {usuario.rol === "admin" && (
+        <label className="mb-4 flex items-center gap-2 text-sm text-foreground">
+          <input type="checkbox" checked={aprobAuto} onChange={(e) => cambiarAprobAuto(e.target.checked)} />
+          Aprobar automáticamente los viajes que registran los choferes desde la app
+        </label>
+      )}
+
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <Select value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value as typeof filtroEstado)} className="w-48">
           <option value="todos">Todos los estados</option>
@@ -528,6 +558,17 @@ export default function ViajesPage() {
                       <td className="px-5 py-3 text-muted">{v.chofer?.nombre ?? "—"}</td>
                       <td className="px-5 py-3 text-muted">
                         {v.origen} → {v.destino}
+                        {v.origen && v.destino && (
+                          <a
+                            href={`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(v.origen)}&destination=${encodeURIComponent(v.destino)}&travelmode=driving`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="ml-2 text-xs font-medium text-brand hover:underline"
+                            title="Ver la ruta en Google Maps"
+                          >
+                            ruta
+                          </a>
+                        )}
                       </td>
                       <td className="px-5 py-3 tabular-nums text-muted">{kilometros != null ? `${kilometros.toLocaleString("es-CL")} km` : "—"}</td>
                       <td className="px-5 py-3">

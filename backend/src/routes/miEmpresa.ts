@@ -98,6 +98,7 @@ miEmpresaRouter.patch(
       inventario_descontar_en_estado,
       inventario_permitir_negativo,
       inventario_descontar_una_vez,
+      viajes_aprobacion_automatica,
     } = req.body ?? {};
     const cambios: Partial<Empresa> = {};
 
@@ -181,6 +182,7 @@ miEmpresaRouter.patch(
     }
     if (inventario_permitir_negativo !== undefined) cambios.inventario_permitir_negativo = Boolean(inventario_permitir_negativo);
     if (inventario_descontar_una_vez !== undefined) cambios.inventario_descontar_una_vez = Boolean(inventario_descontar_una_vez);
+    if (viajes_aprobacion_automatica !== undefined) cambios.viajes_aprobacion_automatica = Boolean(viajes_aprobacion_automatica);
 
     if (color_primario !== undefined) {
       if (color_primario !== null && !/^#[0-9a-fA-F]{6}$/.test(color_primario)) {

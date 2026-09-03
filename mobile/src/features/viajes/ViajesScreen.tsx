@@ -7,7 +7,8 @@ import { useTema } from "../../theme";
 import { Badge, Button, Card, EmptyState, ErrorState, LoadingScreen, Text } from "../../components/ui";
 import { OfflineBanner } from "../../components/OfflineBanner";
 import { useRed } from "../../services/sync/NetworkProvider";
-import { listarViajesPropios, type ViajeConDatos } from "../../services/viajes";
+import { useAuth } from "../auth/AuthContext";
+import { listarViajesEquipo, listarViajesPropios, type ViajeConDatos } from "../../services/viajes";
 import type { ViajesStackParamList } from "../../shell/navigation/types";
 
 type Periodo = "semana" | "mes" | "todos";
@@ -33,6 +34,8 @@ function desdeDe(periodo: Periodo): string {
 export function ViajesScreen({ navigation }: NativeStackScreenProps<ViajesStackParamList, "ViajesLista">) {
   const t = useTema();
   const red = useRed();
+  const auth = useAuth();
+  const esGestion = auth.fase === "listo" && auth.usuario.rol !== "colaborador";
   const pendientes = red.pendientes.filter((a) => a.recurso === "viajes").length;
   const viajesFallidos = red.fallidas.filter((a) => a.recurso === "viajes");
   const fallidos = viajesFallidos.length;
@@ -42,6 +45,7 @@ export function ViajesScreen({ navigation }: NativeStackScreenProps<ViajesStackP
   const [refrescando, setRefrescando] = useState(false);
   const [guardadoEn, setGuardadoEn] = useState<number | undefined>();
   const [periodo, setPeriodo] = useState<Periodo>("mes");
+  const [equipo, setEquipo] = useState(false);
 
   const visibles = useMemo(() => {
     const desde = desdeDe(periodo);
@@ -53,13 +57,13 @@ export function ViajesScreen({ navigation }: NativeStackScreenProps<ViajesStackP
   const cargar = useCallback(async () => {
     setError(null);
     try {
-      const r = await listarViajesPropios();
+      const r = equipo ? await listarViajesEquipo() : await listarViajesPropios();
       setViajes(r.viajes);
       setGuardadoEn(r.desdeCache ? r.guardadoEn : undefined);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "No se pudieron cargar tus viajes");
+      setError(e instanceof Error ? e.message : "No se pudieron cargar los viajes");
     }
-  }, []);
+  }, [equipo]);
 
   useEffect(() => {
     cargar();
@@ -80,6 +84,34 @@ export function ViajesScreen({ navigation }: NativeStackScreenProps<ViajesStackP
       <OfflineBanner guardadoEn={guardadoEn} />
       <View style={{ padding: t.espacio(4), gap: t.espacio(3) }}>
         <Button titulo="Nuevo viaje" onPress={() => navigation.navigate("ViajeForm")} />
+        {esGestion ? (
+          <View style={{ flexDirection: "row", gap: t.espacio(2) }}>
+            {[
+              { v: false, label: "Míos" },
+              { v: true, label: "Del equipo" },
+            ].map((o) => {
+              const activo = o.v === equipo;
+              return (
+                <Pressable
+                  key={o.label}
+                  onPress={() => setEquipo(o.v)}
+                  hitSlop={6}
+                  style={{
+                    flex: 1,
+                    alignItems: "center",
+                    paddingVertical: t.espacio(2),
+                    borderRadius: t.radio.md,
+                    backgroundColor: activo ? t.colores.brand : t.colores.surfaceAlt,
+                  }}
+                >
+                  <Text variante="etiqueta" weight="semibold" style={{ color: activo ? t.colores.brandForeground : t.colores.muted }}>
+                    {o.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        ) : null}
         {fallidos > 0 ? (
           <Card plano style={{ backgroundColor: t.colores.dangerSoft, borderColor: "transparent", gap: t.espacio(2) }}>
             <Text variante="etiqueta" weight="semibold" style={{ color: t.colores.danger }}>
@@ -159,6 +191,11 @@ export function ViajesScreen({ navigation }: NativeStackScreenProps<ViajesStackP
                 <Text variante="caption" tono="muted">
                   {item.origen} → {item.destino}
                 </Text>
+                {equipo && item.chofer?.nombre ? (
+                  <Text variante="caption" tono="muted">
+                    {item.chofer.nombre}
+                  </Text>
+                ) : null}
               </View>
               <View style={{ alignItems: "flex-end", gap: 4 }}>
                 <Badge estado={item.estado} />

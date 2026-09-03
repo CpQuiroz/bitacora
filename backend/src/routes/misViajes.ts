@@ -1,17 +1,22 @@
 import { Router } from "express";
 import multer from "multer";
+import type { EstadoViaje, Viaje } from "@bitacora/shared";
 import { supabase } from "../supabase";
 import { subirFotoGuiaConNombre, urlFirmadaFotoGuia } from "../storage";
 import { calcularMontos } from "../viajesMontos";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
 
-// Viajes de un colaborador desde la app móvil / el bot de WhatsApp.
-// Va aparte de /api/viajes (que exige requiereModulo("viajes"),
-// disponible solo para supervisor/admin) porque un chofer necesita
-// registrar y ver LOS SUYOS sin tener el módulo completo. Todo queda
-// scopeado a chofer_id = el usuario autenticado, en estado 'borrador'
-// para que la oficina lo revise.
+// Viajes desde la app móvil / el bot de WhatsApp.
+//
+//  - Un colaborador (chofer) registra y ve LOS SUYOS, sin necesitar el
+//    módulo "viajes" completo. Sus viajes entran en 'borrador' (o
+//    'confirmado' si la empresa activó la aprobación automática).
+//  - Un rol de gestión (admin/supervisor/…) puede además ver los de todo
+//    el equipo (?equipo=true), aprobarlos, editarlos y eliminarlos desde
+//    la app — todo scopeado a su empresa. Esto va acá y no en /api/viajes
+//    a propósito: así el admin gestiona viajes desde el celular aunque la
+//    empresa no tenga el módulo "viajes" de la web activado.
 export const misViajesRouter = Router();
 
 const upload = multer({
@@ -22,17 +27,24 @@ const upload = multer({
   },
 });
 
+const esGestion = (req: RequestConEmpresa) => req.rol !== "colaborador";
+
 misViajesRouter.get(
   "/",
   ah<RequestConEmpresa>(async (req, res) => {
-    const { data, error } = await supabase
+    const verEquipo = req.query.equipo === "true" && esGestion(req);
+
+    let query = supabase
       .from("viajes")
-      .select("*, cliente_info:clientes(id, nombre)")
+      .select("*, cliente_info:clientes(id, nombre), chofer:usuarios(id, nombre)")
       .eq("empresa_id", req.empresaId!)
-      .eq("chofer_id", req.userId!)
       .order("fecha", { ascending: false })
       .order("creado_en", { ascending: false })
       .limit(100);
+
+    if (!verEquipo) query = query.eq("chofer_id", req.userId!);
+
+    const { data, error } = await query;
     if (error) {
       res.status(500).json({ error: error.message });
       return;
@@ -41,18 +53,19 @@ misViajesRouter.get(
   })
 );
 
-// Un viaje puntual del chofer (pantalla de detalle en la app), con la
-// foto de la guía firmada. Scopeado a chofer_id = el usuario.
+// Un viaje puntual, con la foto de la guía firmada. El chofer solo ve los
+// suyos; un rol de gestión ve cualquiera de su empresa.
 misViajesRouter.get(
   "/:id",
   ah<RequestConEmpresa>(async (req, res) => {
-    const { data, error } = await supabase
+    let query = supabase
       .from("viajes")
-      .select("*, cliente_info:clientes(id, nombre), equipo_info:equipos(nombre, patente)")
+      .select("*, cliente_info:clientes(id, nombre), equipo_info:equipos(nombre, patente), chofer:usuarios(id, nombre)")
       .eq("empresa_id", req.empresaId!)
-      .eq("chofer_id", req.userId!)
-      .eq("id", req.params.id)
-      .maybeSingle();
+      .eq("id", req.params.id);
+    if (!esGestion(req)) query = query.eq("chofer_id", req.userId!);
+
+    const { data, error } = await query.maybeSingle();
     if (error) {
       res.status(500).json({ error: error.message });
       return;
@@ -119,6 +132,15 @@ misViajesRouter.post(
     const { subtotal: sub, iva, total } = calcularMontos(subtotalNum, aplicaIva);
     const aNum = (v: unknown) => (v === "" || v == null ? null : Number(v));
 
+    // Si la empresa activó la aprobación automática, el viaje entra
+    // directo como "confirmado" en vez de esperar al admin.
+    const { data: empresa } = await supabase
+      .from("empresas")
+      .select("viajes_aprobacion_automatica")
+      .eq("id", req.empresaId!)
+      .maybeSingle();
+    const estado: EstadoViaje = empresa?.viajes_aprobacion_automatica ? "confirmado" : "borrador";
+
     const { data, error } = await supabase
       .from("viajes")
       .insert({
@@ -137,7 +159,7 @@ misViajesRouter.post(
         aplica_iva: aplicaIva,
         iva,
         total,
-        estado: "borrador",
+        estado,
         origen_captura: "app",
         foto_guia_url: fotoKey,
       })
@@ -149,5 +171,135 @@ misViajesRouter.post(
       return;
     }
     res.status(201).json(data);
+  })
+);
+
+// Aprobar / editar un viaje desde la app. Solo roles de gestión.
+misViajesRouter.patch(
+  "/:id",
+  ah<RequestConEmpresa>(async (req, res) => {
+    if (!esGestion(req)) {
+      res.status(403).json({ error: "No puedes modificar viajes del equipo" });
+      return;
+    }
+
+    const { data: existente } = await supabase
+      .from("viajes")
+      .select("*")
+      .eq("empresa_id", req.empresaId!)
+      .eq("id", req.params.id)
+      .maybeSingle();
+    if (!existente) {
+      res.status(404).json({ error: "Viaje no encontrado" });
+      return;
+    }
+    if (existente.estado === "facturado") {
+      res.status(400).json({ error: "Este viaje ya fue facturado y no se puede editar" });
+      return;
+    }
+
+    const { numero_guia, origen, destino, cliente_id, km_inicial, km_final, subtotal, aplica_iva, comentarios, estado } = req.body ?? {};
+    const cambios: Partial<Viaje> = {};
+
+    if (numero_guia !== undefined) {
+      if (typeof numero_guia !== "string" || !numero_guia.trim()) {
+        res.status(400).json({ error: "Falta el número de guía" });
+        return;
+      }
+      cambios.numero_guia = numero_guia.trim();
+    }
+    if (origen !== undefined) cambios.origen = String(origen).trim();
+    if (destino !== undefined) cambios.destino = String(destino).trim();
+    if (comentarios !== undefined) cambios.comentarios = comentarios?.trim() || null;
+    if (km_inicial !== undefined) cambios.km_inicial = km_inicial === "" || km_inicial == null ? null : Number(km_inicial);
+    if (km_final !== undefined) cambios.km_final = km_final === "" || km_final == null ? null : Number(km_final);
+
+    if (cliente_id !== undefined && cliente_id) {
+      const { data: cliente } = await supabase
+        .from("clientes")
+        .select("id, nombre")
+        .eq("empresa_id", req.empresaId!)
+        .eq("id", cliente_id)
+        .maybeSingle();
+      if (!cliente) {
+        res.status(400).json({ error: "Selecciona un cliente válido" });
+        return;
+      }
+      cambios.cliente = cliente.nombre;
+      cambios.cliente_id = cliente.id;
+    }
+
+    if (subtotal !== undefined || aplica_iva !== undefined) {
+      const subtotalNum = subtotal !== undefined ? Number(subtotal) : Number(existente.subtotal);
+      if (!Number.isFinite(subtotalNum) || subtotalNum < 0) {
+        res.status(400).json({ error: "Monto inválido" });
+        return;
+      }
+      const aplicaIvaBool = aplica_iva !== undefined ? aplica_iva !== false && aplica_iva !== "false" : existente.aplica_iva;
+      const montos = calcularMontos(subtotalNum, aplicaIvaBool);
+      cambios.subtotal = montos.subtotal;
+      cambios.aplica_iva = aplicaIvaBool;
+      cambios.iva = montos.iva;
+      cambios.total = montos.total;
+    }
+
+    if (estado !== undefined) {
+      if (!["borrador", "confirmado"].includes(estado)) {
+        res.status(400).json({ error: "estado debe ser borrador o confirmado" });
+        return;
+      }
+      cambios.estado = estado;
+    }
+
+    if (Object.keys(cambios).length === 0) {
+      res.status(400).json({ error: "Nada que actualizar" });
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("viajes")
+      .update(cambios)
+      .eq("empresa_id", req.empresaId!)
+      .eq("id", req.params.id)
+      .select("*, cliente_info:clientes(id, nombre), chofer:usuarios(id, nombre)")
+      .single();
+
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    res.json(data);
+  })
+);
+
+// Rechazar (eliminar) un viaje desde la app. Solo roles de gestión y solo
+// si todavía no se facturó.
+misViajesRouter.delete(
+  "/:id",
+  ah<RequestConEmpresa>(async (req, res) => {
+    if (!esGestion(req)) {
+      res.status(403).json({ error: "No puedes eliminar viajes del equipo" });
+      return;
+    }
+    const { data: existente } = await supabase
+      .from("viajes")
+      .select("estado")
+      .eq("empresa_id", req.empresaId!)
+      .eq("id", req.params.id)
+      .maybeSingle();
+    if (!existente) {
+      res.status(404).json({ error: "Viaje no encontrado" });
+      return;
+    }
+    if (existente.estado === "facturado") {
+      res.status(400).json({ error: "Este viaje ya fue facturado y no se puede eliminar" });
+      return;
+    }
+    const { error } = await supabase.from("viajes").delete().eq("empresa_id", req.empresaId!).eq("id", req.params.id);
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    res.status(204).end();
   })
 );

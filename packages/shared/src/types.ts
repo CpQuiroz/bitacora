@@ -86,6 +86,9 @@ export type Empresa = {
   inventario_descontar_en_estado: EstadoOS;
   inventario_permitir_negativo: boolean;
   inventario_descontar_una_vez: boolean;
+  // Viajes registrados desde la app: en TRUE entran directo como
+  // "confirmado" (sin pasar por aprobación del admin). Ver migración 78.
+  viajes_aprobacion_automatica: boolean;
   // Contador aproximado, incrementado por la app en cada subida (ver
   // migración 56 y backend/src/limites.ts) — no un total exacto
   // recalculado, para no tener que escanear los buckets S3 en cada

@@ -10,7 +10,7 @@ export type TrabajosStackParamList = {
 
 export type ViajesStackParamList = {
   ViajesLista: undefined;
-  ViajeForm: undefined;
+  ViajeForm: { viajeId?: string } | undefined;
   ViajeDetalle: { viajeId: string };
 };
 
