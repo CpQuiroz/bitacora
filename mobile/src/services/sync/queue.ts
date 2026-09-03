@@ -103,8 +103,15 @@ export async function procesar(): Promise<void> {
   if (cola0.length === 0) return;
   procesando = true;
   try {
-    // FIFO por orden de creación.
-    for (const a of cola0) {
+    // Las fotos (subida + análisis con IA) son lo más lento y lo menos
+    // crítico: NUNCA deben bloquear el guardado del avance (check-in/out,
+    // formulario, firma, finalizar). Se procesan al final, respetando el
+    // orden FIFO dentro de cada grupo.
+    const ordenadas = [
+      ...cola0.filter((a) => a.etiqueta !== "Foto"),
+      ...cola0.filter((a) => a.etiqueta === "Foto"),
+    ];
+    for (const a of ordenadas) {
       if (a.fallida) continue;
       try {
         const res = await ejecutar(a);
@@ -119,15 +126,15 @@ export async function procesar(): Promise<void> {
           a.ultimoError = (body as { error?: string }).error ?? `Error ${res.status}`;
           if (a.intentos >= MAX_INTENTOS) a.fallida = true;
           await persistir();
-          if (a.fallida) continue;
-          // Un error del servidor (400/422/500) casi nunca se arregla
-          // reintentando en loop — cortamos y que el resto lo intente
-          // en la próxima pasada.
-          break;
+          // Un error del servidor es de ESA acción — seguimos con las
+          // demás en vez de congelar toda la cola detrás de una acción
+          // problemática.
+          continue;
         }
       } catch {
         // Sin señal — cortamos y reintentamos después. No cuenta como
-        // intento fallido (no llegó al servidor).
+        // intento fallido (no llegó al servidor). Todas las demás van a
+        // fallar igual, así que no tiene sentido seguir.
         a.ultimoError = "Sin conexión";
         await persistir();
         break;

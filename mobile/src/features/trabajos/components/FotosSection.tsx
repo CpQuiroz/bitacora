@@ -78,7 +78,18 @@ export function FotosSection({
               ⚠ {f.detalle_alerta}
             </Text>
           ) : null}
-          {f.resumen ? (
+          {f.estado === "procesando" ? (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: t.espacio(2) }}>
+              <ActivityIndicator size="small" color={t.colores.muted} />
+              <Text variante="cuerpo" tono="muted">
+                Analizando la foto…
+              </Text>
+            </View>
+          ) : f.estado === "error" ? (
+            <Text variante="cuerpo" tono="muted">
+              No se pudo analizar automáticamente.
+            </Text>
+          ) : f.resumen ? (
             <Text variante="cuerpo" tono="muted">
               {f.resumen}
             </Text>

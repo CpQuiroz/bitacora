@@ -64,6 +64,9 @@ export default function TrabajoDetallePage() {
     const comprimida = await comprimirImagen(archivo);
     const formData = new FormData();
     formData.append("foto", comprimida);
+    // foto_id estable: si apiFetch reintenta por timeout, el backend
+    // devuelve la foto ya creada en vez de duplicarla.
+    formData.append("foto_id", crypto.randomUUID());
     const res = await apiFetch(`/api/trabajos/${params.id}/fotos`, { method: "POST", body: formData });
     setSubiendo(false);
     if (inputRef.current) inputRef.current.value = "";
@@ -72,7 +75,11 @@ export default function TrabajoDetallePage() {
       setError(body.error ?? "No se pudo subir la foto");
       return;
     }
+    // El análisis con IA corre en segundo plano en el backend; refrescamos
+    // un par de veces para traer el resumen cuando esté listo.
     cargar();
+    setTimeout(cargar, 6000);
+    setTimeout(cargar, 15000);
   }
 
   if (!usuario) return null;
@@ -155,7 +162,7 @@ export default function TrabajoDetallePage() {
                 className="cursor-pointer"
                 onClick={() => inputRef.current?.click()}
               >
-                {subiendo ? "Subiendo y analizando…" : "Subir foto"}
+                {subiendo ? "Subiendo foto…" : "Subir foto"}
               </Button>
             </label>
             {error && (
@@ -176,7 +183,13 @@ export default function TrabajoDetallePage() {
                       {f.alerta && (
                         <p className="mb-1 text-sm font-medium text-danger">⚠ {f.detalle_alerta}</p>
                       )}
-                      <p className="text-sm text-muted">{f.resumen}</p>
+                      <p className="text-sm text-muted">
+                        {f.estado === "procesando"
+                          ? "Analizando la foto…"
+                          : f.estado === "error"
+                            ? "No se pudo analizar automáticamente."
+                            : f.resumen}
+                      </p>
                     </div>
                   </div>
                 ))}

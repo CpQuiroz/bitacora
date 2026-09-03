@@ -1,3 +1,4 @@
+import * as Crypto from "expo-crypto";
 import type { AnalisisFoto, Cliente, OrdenServicio, TipoTrabajo, Trabajo } from "@bitacora/shared";
 import { apiJson } from "./api";
 import { encolar } from "./sync/queue";
@@ -79,6 +80,9 @@ export function encolarFoto(trabajoId: string, archivo: { uri: string; name: str
     recurso: `trabajo:${trabajoId}`,
     path: `/api/trabajos/${trabajoId}/fotos`,
     method: "POST",
+    // foto_id estable: si un reintento tras timeout vuelve a subir la
+    // misma foto, el backend devuelve la que ya existe (nunca duplica).
+    body: { foto_id: Crypto.randomUUID() },
     archivo: { ...archivo, campo: "foto" },
   });
 }

@@ -786,9 +786,54 @@ trabajosRouter.post(
   })
 );
 
-// Sube una foto del trabajo y la analiza automáticamente con Claude
-// (detecta daños/riesgos visibles) — la orden de servicio se crea si
-// hace falta.
+// El análisis con IA corre DESPUÉS de responder al cliente: subir una
+// foto no puede quedar "pegado" esperando a Claude (Render free + cola
+// de IA pueden tardar >30s y el celular corta la conexión). La fila se
+// crea en estado "procesando" y esta función la completa en segundo
+// plano; la app refresca y muestra el resumen cuando está listo.
+async function analizarFotoEnSegundoPlano(
+  empresaId: string,
+  fotoId: string,
+  base64: string,
+  mediaType: "image/jpeg" | "image/png" | "image/webp"
+): Promise<void> {
+  try {
+    const analisis = await analizarFoto(empresaId, base64, mediaType);
+    const { error } = await supabase
+      .from("analisis_fotos")
+      .update({
+        estado: "listo",
+        resumen: analisis.resumen,
+        alerta: analisis.alerta,
+        detalle_alerta: analisis.detalle_alerta,
+      })
+      .eq("id", fotoId);
+    if (error) console.error("analizarFotoEnSegundoPlano (guardar):", error.message);
+  } catch (err) {
+    console.error("analizarFotoEnSegundoPlano:", err);
+    await supabase
+      .from("analisis_fotos")
+      .update({ estado: "error", resumen: "No se pudo analizar la foto automáticamente." })
+      .eq("id", fotoId)
+      .then(({ error }) => {
+        if (error) console.error("analizarFotoEnSegundoPlano (marcar error):", error.message);
+      });
+    try {
+      await supabase.from("errores_backend").insert({
+        empresa_id: empresaId,
+        ruta: "trabajos:analizarFotoEnSegundoPlano",
+        metodo: "POST",
+        mensaje: err instanceof Error ? err.message : String(err),
+      });
+    } catch {
+      /* best-effort */
+    }
+  }
+}
+
+// Sube una foto del trabajo. Responde apenas la imagen está guardada;
+// el análisis con IA (detecta daños/riesgos visibles) corre en segundo
+// plano. La orden de servicio se crea si hace falta.
 trabajosRouter.post(
   "/:id/fotos",
   upload.single("foto"),
@@ -806,30 +851,58 @@ trabajosRouter.post(
       return;
     }
 
+    // Idempotencia: el cliente manda un foto_id estable, así un reintento
+    // tras un timeout NUNCA crea una foto duplicada — devuelve la que ya
+    // existe.
+    const fotoIdCliente =
+      typeof req.body?.foto_id === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(req.body.foto_id)
+        ? (req.body.foto_id as string)
+        : null;
+    if (fotoIdCliente) {
+      const { data: existente } = await supabase
+        .from("analisis_fotos")
+        .select("*")
+        .eq("empresa_id", req.empresaId!)
+        .eq("id", fotoIdCliente)
+        .maybeSingle();
+      if (existente) {
+        res.status(201).json(existente);
+        return;
+      }
+    }
+
     const orden = await obtenerOCrearOrden(req.empresaId!, req.params.id);
 
     const key = await subirFoto(req.empresaId!, req.params.id, req.file.buffer, req.file.mimetype);
-
     const mediaType = req.file.mimetype as "image/jpeg" | "image/png" | "image/webp";
-    const analisis = await analizarFoto(req.empresaId!, req.file.buffer.toString("base64"), mediaType);
 
-    const { data: fotoGuardada, error: errorAnalisis } = await supabase
+    const { data: fotoGuardada, error: errorInsert } = await supabase
       .from("analisis_fotos")
       .insert({
+        ...(fotoIdCliente ? { id: fotoIdCliente } : {}),
         empresa_id: req.empresaId!,
         orden_servicio_id: orden.id,
         foto_url: key,
         subida_por: req.userId!,
-        estado: "listo",
-        resumen: analisis.resumen,
-        alerta: analisis.alerta,
-        detalle_alerta: analisis.detalle_alerta,
+        estado: "procesando",
       })
       .select()
       .single();
 
-    if (errorAnalisis) {
-      res.status(500).json({ error: errorAnalisis.message });
+    if (errorInsert) {
+      // Carrera con otro reintento del mismo foto_id que ya insertó.
+      if ((errorInsert as { code?: string }).code === "23505" && fotoIdCliente) {
+        const { data: yaCreada } = await supabase
+          .from("analisis_fotos")
+          .select("*")
+          .eq("id", fotoIdCliente)
+          .maybeSingle();
+        if (yaCreada) {
+          res.status(201).json(yaCreada);
+          return;
+        }
+      }
+      res.status(500).json({ error: errorInsert.message });
       return;
     }
 
@@ -839,6 +912,13 @@ trabajosRouter.post(
       .eq("id", orden.id);
 
     res.status(201).json(fotoGuardada);
+
+    void analizarFotoEnSegundoPlano(
+      req.empresaId!,
+      fotoGuardada.id,
+      req.file.buffer.toString("base64"),
+      mediaType
+    );
   })
 );
 
@@ -1173,6 +1253,7 @@ trabajosRouter.post(
       .join("\n");
 
     const fotosTexto = (fotos ?? [])
+      .filter((f) => f.resumen)
       .map((f, i) => `Foto ${i + 1}: ${f.resumen}${f.alerta ? ` — ALERTA: ${f.detalle_alerta}` : ""}`)
       .join("\n");
 

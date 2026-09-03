@@ -67,6 +67,16 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
     if (fotosEnCola === 0 && fotosLocales.length > 0) setFotosLocales([]);
   }, [fotosEnCola, fotosLocales.length]);
 
+  // El análisis con IA de cada foto termina en segundo plano en el
+  // backend: mientras haya alguna "procesando", refrescamos cada 8s para
+  // traer el resumen cuando esté listo.
+  const hayFotoProcesando = (detalle?.fotos ?? []).some((f) => f.estado === "procesando");
+  useEffect(() => {
+    if (!hayFotoProcesando) return;
+    const id = setInterval(() => void cargar(), 8000);
+    return () => clearInterval(id);
+  }, [hayFotoProcesando, cargar]);
+
   if (!detalle && !error) return <LoadingScreen />;
   if (error && !detalle) return <ErrorState mensaje={error} onReintentar={cargar} />;
   if (!detalle) return null;
