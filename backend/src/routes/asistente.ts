@@ -2,6 +2,7 @@ import { Router } from "express";
 import Anthropic from "@anthropic-ai/sdk";
 import { crearMensajeIA } from "../claude";
 import { supabase } from "../supabase";
+import { env } from "../env";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
 import { agregarDatosSeccion, SECCIONES_PERSONALIZADO } from "./informe";
@@ -10,6 +11,31 @@ export const asistenteRouter = Router();
 
 const MAX_HISTORIAL = 40;
 const MAX_ITERACIONES_HERRAMIENTA = 5;
+
+// Mapa curado a mano de cómo funciona Bitácora — para que el asistente
+// oriente con precisión ("andá a Informes → Informe IA") en vez de
+// inventar procedimientos. Mantener corto y actualizado a mano.
+const MAPA_APP = `Cómo se usa cada cosa en Bitácora (para orientar al usuario — NO inventes pasos fuera de esto):
+- Clientes, equipos/vehículos, catálogo, inventario, proveedores: menú Registros.
+- Órdenes de Servicio (OS): menú Órdenes de Servicio → "+ Nueva OS". El checklist, las fotos y la firma se cargan desde la app móvil o dentro de la OS.
+- Viajes / guías de despacho: menú Viajes.
+- Agenda y citas: menú Agenda. La reserva online para clientes (Agenda Pro) se configura en Configuración → Reserva online.
+- Cotizaciones, gastos, cobros: menú Financiero.
+- Informes de analítica: menú Informes (7 pestañas + exportar CSV/PDF).
+- Informe con IA a partir de FOTOS + texto (ej. informe de inspección): menú Informes → Informe IA → modo libre. Sube hasta 5 imágenes y describe qué necesitas.
+- Informe técnico de una OS puntual: dentro de la OS, botón "Generar informe con IA" (usa checklist, datos medidos, observaciones y análisis de fotos).
+- Invitar gente al equipo, roles, correos/dominios autorizados: Configuración → Grupo y usuario.
+- Personalización (logo, colores, datos de la empresa): Configuración → Empresa.
+- Plantillas de documentos, tipos de OS, tipos de trabajo, checklists, categorías de gasto, centros de costo, unidades: submenús de Configuración.
+- Avisos automáticos al cliente (correo y WhatsApp) y sus textos: Configuración → Notificaciones.
+- Plan y suscripción (trial, Básico, Pro), registrar tarjeta: Configuración → Plan.
+- Seguridad y verificación en dos pasos (2FA): Configuración → Seguridad.
+
+Cosas que el usuario NO puede configurar solo en la app (las activa el equipo de Bitácora — si te preguntan cómo, decí eso, no inventes un procedimiento con SMS ni códigos):
+- Conectar el bot de WhatsApp para choferes / la cuenta de Meta Business.
+- Conectar una pasarela de pago real (Webpay/Flow/Mercado Pago) para cobrar al cliente final — hoy el link de pago es simulado.
+- Crear o cambiar la definición de roles del sistema.
+- Emisión de documentos tributarios ante el SII o de datos a Previred/DT (Remuneraciones genera archivos para carga manual, no emite).`;
 
 function systemPrompt() {
   const hoy = new Date().toISOString().slice(0, 10);
@@ -24,6 +50,16 @@ inventes datos: si una herramienta no trae resultados, dilo. Si la pregunta menc
 período relativo ("hoy", "mañana", "esta semana", "este mes", "el año pasado"), calcula tú \
 las fechas desde/hasta a partir de hoy.
 
+QUÉ NO PUEDES HACER: no configuras integraciones, no cambias ni creas datos, no ejecutas \
+acciones, no ves imágenes ni archivos, no envías mensajes ni correos. Si te piden "cómo \
+configuro / cómo activo / cómo conecto X" o "cómo hago Y en la app", respóndelo SOLO con lo \
+que aparece en el mapa de abajo. Si no está en el mapa y no lo sabes con certeza, dilo \
+claramente ("no tengo esa información" o "esa parte la maneja el equipo de Bitácora") — \
+NUNCA inventes un procedimiento, pasos, nombres de botones ni menús. Puedes usar la \
+herramienta "estado_configuracion" para responder con el estado real de la empresa.
+
+${MAPA_APP}
+
 Herramientas y cuándo usarlas:
 - "datos_negocio": cifras YA AGREGADAS (KPIs de ingresos/cobros/gastos, ingresos vs gastos, \
 ranking de mejores clientes por facturación, cotizaciones por estado, servicios más \
@@ -37,11 +73,15 @@ viernes", "citas de la semana".
 - "consultar_registros": lista registros individuales de un área — viajes, órdenes de \
 servicio, cotizaciones, facturas, equipos/vehículos, colaboradores, inventario/catálogo, \
 proveedores, o mantenciones programadas. Acepta filtros de texto, estado y fechas.
+- "estado_configuracion": el estado real de configuración de la empresa — datos completos, \
+plan y trial, canales de aviso al cliente (correo/WhatsApp), pasarelas de pago conectadas, \
+y si el bot de WhatsApp está disponible en la plataforma. Úsala cuando pregunten "tengo X \
+activo", "por qué no me llegan los WhatsApp", "está conectado mi pago", "qué me falta configurar".
 
-Si la pregunta no requiere datos (saludo, cómo usar la app, consejo general), responde \
-directo. Sé conciso — texto plano puro, como en un chat real: SIN markdown de ningún tipo \
-(nada de **negrita**, #, tablas ni bullets con "-" o "*"). Si listas varias cosas, usa una \
-oración o numeración simple tipo "1) ... 2) ...".`;
+Si la pregunta no requiere datos (saludo, consejo general), responde directo. Sé conciso — \
+texto plano puro, como en un chat real: SIN markdown de ningún tipo (nada de **negrita**, \
+#, tablas ni bullets con "-" o "*"). Si listas varias cosas, usa una oración o numeración \
+simple tipo "1) ... 2) ...".`;
 }
 
 const HERRAMIENTAS: Anthropic.Tool[] = [
@@ -133,6 +173,12 @@ const HERRAMIENTAS: Anthropic.Tool[] = [
       },
       required: ["entidad"],
     },
+  },
+  {
+    name: "estado_configuracion",
+    description:
+      "Devuelve el estado real de configuración de la empresa: si los datos de la empresa están completos, el plan y los días de trial, si los avisos al cliente por correo y por WhatsApp están activos y si hay un número de WhatsApp cargado, qué pasarelas de pago están conectadas, y si el bot de WhatsApp para choferes está disponible en la plataforma. Úsala para preguntas de configuración ('tengo activo X', 'por qué no llegan los WhatsApp', 'qué me falta').",
+    input_schema: { type: "object", properties: {} },
   },
 ];
 
@@ -437,6 +483,54 @@ async function buscarClientes(input: Record<string, unknown>, empresaId: string)
   return { clientes: data };
 }
 
+async function consultarEstadoConfiguracion(empresaId: string): Promise<Record<string, unknown>> {
+  const [{ data: empresa }, { data: notif }, { data: integraciones }] = await Promise.all([
+    supabase
+      .from("empresas")
+      .select("nombre, rut, direccion_calle, telefono_empresa, whatsapp, logo_url, plan, prueba_termina_en")
+      .eq("id", empresaId)
+      .maybeSingle(),
+    supabase
+      .from("notificaciones_config")
+      .select("correo_activado, whatsapp_activado")
+      .eq("empresa_id", empresaId)
+      .maybeSingle(),
+    supabase.from("integraciones").select("proveedor, categoria, conectado").eq("empresa_id", empresaId),
+  ]);
+
+  const faltanDatosEmpresa = [
+    !empresa?.rut && "RUT",
+    !empresa?.direccion_calle && "dirección",
+    !empresa?.telefono_empresa && "teléfono",
+    !empresa?.logo_url && "logo",
+  ].filter(Boolean);
+
+  const pagos = (integraciones ?? []).filter((i) => i.categoria === "pagos");
+
+  return {
+    empresa: {
+      nombre: empresa?.nombre ?? null,
+      datos_incompletos: faltanDatosEmpresa.length > 0 ? faltanDatosEmpresa : "completos",
+      plan: empresa?.plan ?? "trial",
+      trial_termina: empresa?.prueba_termina_en ?? null,
+    },
+    avisos_al_cliente: {
+      correo_activado: notif?.correo_activado ?? true,
+      whatsapp_activado: notif?.whatsapp_activado ?? true,
+      numero_whatsapp_cargado: Boolean(empresa?.whatsapp),
+      nota: "El aviso por WhatsApp además requiere que el equipo de Bitácora haya conectado la cuenta de Meta Business de la plataforma.",
+    },
+    bot_whatsapp_choferes: {
+      disponible_en_plataforma: Boolean(env.WHATSAPP_ACCESS_TOKEN),
+      nota: "La conexión del bot de WhatsApp la hace el equipo de Bitácora, no se configura desde la app.",
+    },
+    pasarelas_de_pago: {
+      conectadas: pagos.filter((p) => p.conectado).map((p) => p.proveedor),
+      nota: "El link de pago al cliente final hoy es simulado — la integración real de pasarela la habilita el equipo de Bitácora.",
+    },
+  };
+}
+
 async function ejecutarHerramienta(
   nombre: string,
   input: Record<string, unknown>,
@@ -445,6 +539,7 @@ async function ejecutarHerramienta(
   if (nombre === "buscar_clientes") return buscarClientes(input, empresaId);
   if (nombre === "agenda") return consultarAgenda(input, empresaId);
   if (nombre === "consultar_registros") return consultarRegistros(input, empresaId);
+  if (nombre === "estado_configuracion") return consultarEstadoConfiguracion(empresaId);
   if (nombre !== "datos_negocio") return { error: `Herramienta desconocida: ${nombre}` };
 
   const seccion = input.seccion;
