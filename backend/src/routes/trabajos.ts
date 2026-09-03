@@ -498,7 +498,8 @@ trabajosRouter.post(
         prioridad: prioridadFinal,
         tipo_trabajo_id: tipo_trabajo_id || null,
         tipo_os_id: tipo_os_id || null,
-        datos: datos && Object.keys(datos).length > 0 ? datos : null,
+        // La columna es `jsonb not null default '{}'` — nunca null.
+        datos: datos && typeof datos === "object" && !Array.isArray(datos) && Object.keys(datos).length > 0 ? datos : {},
         responsable_id: responsable_id || req.userId!,
       })
       .select()
