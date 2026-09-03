@@ -15,7 +15,9 @@ export function tabsPara(
   empresa: Pick<Empresa, "rubro">,
   modulosDeshabilitados: Modulo[]
 ): { tabs: TabKey[]; inicial: TabKey } {
-  const esGestion = usuario.rol === "admin" || usuario.rol === "supervisor";
+  // "colaborador" es el rol de terreno puro; cualquier otro rol (admin,
+  // supervisor, o un rol custom del Panel) se trata como gestión.
+  const esGestion = usuario.rol !== "colaborador";
   const funcion = usuario.funcion;
   const empresaHaceViajes = !modulosDeshabilitados.includes("viajes");
   const rubroTransporte = empresa.rubro === "transporte";

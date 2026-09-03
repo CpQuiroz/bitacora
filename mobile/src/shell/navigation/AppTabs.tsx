@@ -39,7 +39,7 @@ export function AppTabs() {
         headerShown: false,
         tabBarActiveTintColor: t.colores.brand,
         tabBarInactiveTintColor: t.colores.faint,
-        tabBarStyle: { backgroundColor: t.colores.bg, borderTopColor: t.colores.border },
+        tabBarStyle: { backgroundColor: t.colores.surface, borderTopColor: t.colores.border },
       }}
     >
       {tabs.map((tab) => (

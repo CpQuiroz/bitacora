@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Alert, Image, View } from "react-native";
+import { Image, View } from "react-native";
 import { useTema } from "../../../theme";
 import { Card, Input, Text } from "../../../components/ui";
 import { SignaturePad } from "../../../components/SignaturePad";
@@ -46,23 +46,29 @@ export function CierreFirma({
         </Card>
       ) : editable ? (
         <>
-          <Input etiqueta="Nombre de quien firma *" value={nombre} onChangeText={setNombre} />
+          <Input
+            etiqueta="Nombre de quien firma (obligatorio)"
+            value={nombre}
+            onChangeText={setNombre}
+          />
           <Input etiqueta="RUT / documento" value={documento} onChangeText={setDocumento} />
           <Input etiqueta="Observaciones de cierre" multiline value={observaciones} onChangeText={setObservaciones} />
-          <SignaturePad
-            onGuardar={(base64) => {
-              if (!nombre.trim()) {
-                Alert.alert("Falta el nombre", "Ingresa el nombre de quien firma antes de guardar.");
-                return;
+          {nombre.trim() ? (
+            <SignaturePad
+              onGuardar={(base64) =>
+                onFirmar({
+                  firma_base64: base64,
+                  firmante_nombre: nombre.trim(),
+                  firmante_documento: documento.trim(),
+                  observaciones_cierre: observaciones.trim(),
+                })
               }
-              onFirmar({
-                firma_base64: base64,
-                firmante_nombre: nombre.trim(),
-                firmante_documento: documento.trim(),
-                observaciones_cierre: observaciones.trim(),
-              });
-            }}
-          />
+            />
+          ) : (
+            <Text variante="caption" tono="muted">
+              Ingresa el nombre de quien firma para habilitar la firma.
+            </Text>
+          )}
         </>
       ) : (
         <Text variante="cuerpo" tono="muted">

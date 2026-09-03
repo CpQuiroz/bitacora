@@ -58,7 +58,7 @@ import { mfaRouter } from "./routes/mfa";
 import { authLoginRouter } from "./routes/authLogin";
 import { limitarLogin, limitarEncuestaPublica } from "./rateLimiters";
 import { modulosDeshabilitadosDeEmpresa, featureFlagsDeEmpresa, modulosVisiblesDeUsuario, requiereModulo } from "./permisos";
-import { accionesDeRol } from "./roles";
+import { accionesDeRol, rolExigeMfa } from "./roles";
 import { resolverAccesoParaLogin, aprovisionarUsuario } from "./accesosAutorizados";
 import { revisarCumpleanosClientes } from "./cumpleanosClientes";
 import { sembrarSugerenciasRubro } from "./seedRubro";
@@ -138,14 +138,15 @@ app.get("/api/me", requiereAuth, ah<RequestConUsuario>(async (req, res) => {
     }
   }
 
-  const [modulosDeshabilitados, featureFlags, modulosVisibles, acciones] = usuario
+  const [modulosDeshabilitados, featureFlags, modulosVisibles, acciones, rolExige2fa] = usuario
     ? await Promise.all([
         modulosDeshabilitadosDeEmpresa(usuario.empresa_id),
         featureFlagsDeEmpresa(usuario.empresa_id),
         modulosVisiblesDeUsuario(usuario.rol, usuario.empresa_id),
         accionesDeRol(usuario.rol),
+        rolExigeMfa(usuario.rol),
       ])
-    : [[], [], [], []];
+    : [[], [], [], [], false];
   // Sin cron en este proyecto — /api/me es el endpoint más universal
   // (cualquier navegación del dashboard lo llama), así que es donde
   // más chances hay de que el chequeo corra el día justo. No bloquea
@@ -159,6 +160,10 @@ app.get("/api/me", requiereAuth, ah<RequestConUsuario>(async (req, res) => {
     // los botones con esto, ya no con la matriz hardcodeada.
     modulos_visibles: modulosVisibles,
     acciones,
+    // Si el rol del usuario exige 2FA (roles.requiere_2fa). Lo usa la app
+    // móvil para saber si debe pedir activar 2FA (el gate real lo hace
+    // requiereEmpresa en cada ruta, pero /api/me no pasa por ahí).
+    rol_exige_2fa: rolExige2fa,
     // Feature flags en beta activados para esta empresa (Panel de
     // Super-Admin). Lista de nombres; el frontend hace .includes(...).
     feature_flags: featureFlags,

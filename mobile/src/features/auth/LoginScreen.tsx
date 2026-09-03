@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { View } from "react-native";
+import { Alert, KeyboardAvoidingView, Platform, Pressable, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { supabase } from "../../lib/supabase";
 import { apiJson } from "../../services/api";
 import { useTema } from "../../theme";
-import { Button, Input, Screen, Text } from "../../components/ui";
+import { Button, Input, LogoMark, Screen, Text } from "../../components/ui";
 import type { RootStackParamList } from "../../shell/navigation/types";
 
 type RespuestaLogin =
@@ -39,26 +39,62 @@ export function LoginScreen({ navigation }: NativeStackScreenProps<RootStackPara
 
   return (
     <Screen>
-      <View style={{ flex: 1, justifyContent: "center", gap: t.espacio(3) }}>
-        <Text variante="titulo" style={{ textAlign: "center", marginBottom: t.espacio(4) }}>
-          Bitácora
-        </Text>
-        <Input
-          etiqueta="Correo"
-          autoCapitalize="none"
-          keyboardType="email-address"
-          value={email}
-          onChangeText={setEmail}
-          returnKeyType="next"
-        />
-        <Input etiqueta="Contraseña" secureTextEntry value={password} onChangeText={setPassword} returnKeyType="go" onSubmitEditing={entrar} />
-        {error ? (
-          <Text variante="etiqueta" tono="danger" style={{ textAlign: "center" }}>
-            {error}
-          </Text>
-        ) : null}
-        <Button titulo="Entrar" tamano="lg" onPress={entrar} cargando={cargando} disabled={!email.trim() || !password} />
-      </View>
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
+        <View style={{ flex: 1, justifyContent: "center", gap: t.espacio(3) }}>
+          <View style={{ alignItems: "center", gap: t.espacio(2.5), marginBottom: t.espacio(4) }}>
+            <LogoMark size={56} />
+            <Text variante="titulo">Bitácora</Text>
+            <Text variante="etiqueta" tono="muted">
+              App de trabajo en terreno
+            </Text>
+          </View>
+          <Input
+            etiqueta="Correo"
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="email-address"
+            textContentType="emailAddress"
+            value={email}
+            onChangeText={setEmail}
+            returnKeyType="next"
+          />
+          <Input
+            etiqueta="Contraseña"
+            secureTextEntry
+            textContentType="password"
+            value={password}
+            onChangeText={setPassword}
+            returnKeyType="go"
+            onSubmitEditing={entrar}
+          />
+          {error ? (
+            <Text variante="etiqueta" tono="danger" style={{ textAlign: "center" }}>
+              {error}
+            </Text>
+          ) : null}
+          <Button
+            titulo="Entrar"
+            tamano="lg"
+            onPress={entrar}
+            cargando={cargando}
+            disabled={!email.trim() || !password}
+          />
+          <Pressable
+            hitSlop={10}
+            style={{ alignSelf: "center", paddingVertical: t.espacio(2), minHeight: 44, justifyContent: "center" }}
+            onPress={() =>
+              Alert.alert(
+                "¿Olvidaste tu contraseña?",
+                "Pídele a quien administra Bitácora en tu empresa que te genere una clave nueva desde el panel web."
+              )
+            }
+          >
+            <Text variante="etiqueta" tono="muted">
+              ¿Olvidaste tu contraseña?
+            </Text>
+          </Pressable>
+        </View>
+      </KeyboardAvoidingView>
     </Screen>
   );
 }

@@ -15,7 +15,7 @@ export function Card({
 }) {
   const t = useTema();
   const base: ViewStyle = {
-    backgroundColor: t.colores.bg,
+    backgroundColor: t.colores.surface,
     borderWidth: 1,
     borderColor: t.colores.border,
     borderRadius: t.radio.lg,

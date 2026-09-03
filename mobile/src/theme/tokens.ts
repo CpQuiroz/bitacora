@@ -2,30 +2,30 @@
 // `brand` / `brandForeground` (ver ThemeProvider) — el resto es fijo.
 // v1: solo tema claro (app.json → userInterfaceStyle: "light").
 
-import { mezclar } from "./color";
-
-const MARCA_DEFECTO = "#4338ca";
-const FONDO = "#ffffff";
+// Alineado con web/src/app/globals.css (paleta clara).
+const MARCA_DEFECTO = "#1e4e8c";
 
 export const paletaBase = {
-  // Superficies
-  bg: FONDO,
-  surface: "#f6f6f8",
-  surfaceAlt: "#eeeef2",
-  border: "#e3e3e8",
+  // Superficies: fondo de pantalla gris, tarjetas/inputs blancos —
+  // así las tarjetas tienen jerarquía visual (no blanco sobre blanco).
+  bg: "#eef1f4",
+  surface: "#ffffff",
+  surfaceAlt: "#e4e7ec",
+  border: "#d8dee5",
   overlay: "rgba(17,17,17,0.45)",
 
   // Texto
-  foreground: "#141417",
-  muted: "#6b7280",
-  faint: "#9ca3af",
+  foreground: "#16161f",
+  muted: "#5b6572", // ~5.8:1 sobre blanco — pasa AA
+  faint: "#7c8593", // solo texto terciario (versión, ayudas), NUNCA info que importe
 
   // Marca (sobreescribible por empresa)
   brand: MARCA_DEFECTO,
-  brandSoft: mezclar(MARCA_DEFECTO, FONDO, 0.12),
   brandForeground: "#ffffff",
+  brandSoft: "#e8eef7",
 
-  // Estados — alineados con los del web (globals.css)
+  // Estados — más saturados que el web a propósito (legibilidad de
+  // badges en pantalla chica y a la luz del día).
   success: "#15803d",
   successSoft: "#dcfce7",
   warning: "#b45309",
@@ -54,10 +54,10 @@ export const tipografia = {
 
 export const sombra = {
   card: {
-    shadowColor: "#000",
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
+    shadowColor: "#0b1a2b",
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 },
     elevation: 2,
   },
   flotante: {

@@ -22,7 +22,7 @@ function construirTema(marca: MarcaEmpresa): Tema {
   if (marca && esHexValido(marca.color_primario)) {
     const brand = marca.color_primario.startsWith("#") ? marca.color_primario : `#${marca.color_primario}`;
     colores.brand = brand;
-    colores.brandSoft = mezclar(brand, paletaBase.bg, 0.12);
+    colores.brandSoft = mezclar(brand, "#ffffff", 0.12);
     colores.brandForeground = esHexValido(marca.color_primario_foreground)
       ? (marca.color_primario_foreground as string)
       : contraste(brand);

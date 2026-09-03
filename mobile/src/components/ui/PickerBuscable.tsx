@@ -57,7 +57,7 @@ export function PickerBuscable({
           paddingHorizontal: t.espacio(3.5),
           minHeight: 48,
           justifyContent: "center",
-          backgroundColor: t.colores.bg,
+          backgroundColor: t.colores.surface,
           opacity: pressed ? 0.7 : 1,
         })}
       >
@@ -110,7 +110,7 @@ export function PickerBuscable({
                     paddingVertical: t.espacio(3.5),
                     minHeight: 52,
                     justifyContent: "center",
-                    backgroundColor: pressed ? t.colores.surface : "transparent",
+                    backgroundColor: pressed ? t.colores.surfaceAlt : "transparent",
                   })}
                 >
                   <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>

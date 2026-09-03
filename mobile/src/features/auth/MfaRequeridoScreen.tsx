@@ -16,8 +16,8 @@ export function MfaRequeridoScreen() {
           Verificación en dos pasos requerida
         </Text>
         <Text variante="cuerpo" tono="muted" style={{ textAlign: "center" }}>
-          Tu rol requiere activar la verificación en dos pasos antes de continuar. Actívala desde el panel web, en Configuración →
-          Seguridad, y vuelve a esta pantalla.
+          Tu rol requiere verificación en dos pasos. Se activa desde el panel web (Configuración → Seguridad). Si no tienes acceso
+          al panel, pídele a quien administra Bitácora en tu empresa que lo haga por ti o que te cambie el rol.
         </Text>
         <Button titulo="Ya la activé" onPress={refrescar} />
         <Button titulo="Cerrar sesión" variante="ghost" onPress={cerrarSesion} />

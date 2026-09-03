@@ -29,7 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const resolverUsuario = useCallback(async () => {
     const [resMe, resMfa] = await Promise.all([
-      apiJson<{ usuario: UsuarioConEmpresa | null; modulos_deshabilitados: Modulo[] }>("/api/me"),
+      apiJson<{ usuario: UsuarioConEmpresa | null; modulos_deshabilitados: Modulo[]; rol_exige_2fa?: boolean }>("/api/me"),
       apiJson<{ activado: boolean }>("/api/usuarios/me/mfa"),
     ]);
 
@@ -52,7 +52,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const modulos = resMe.data.modulos_deshabilitados ?? [];
     await guardarCache(CACHE_ME, { usuario, modulos });
 
-    const rolExigeMfa = usuario.rol === "admin" || usuario.rol === "supervisor";
+    // La exigencia de 2FA la define roles.requiere_2fa (editable desde el
+    // Panel de Super-Admin) — el backend la manda en /api/me.
+    const rolExigeMfa = resMe.data.rol_exige_2fa ?? false;
     const mfaActivado = resMfa.ok ? resMfa.data.activado : true; // sin señal, no bloquear
     if (rolExigeMfa && !mfaActivado) {
       setEstado({ fase: "mfa-requerido", usuario });

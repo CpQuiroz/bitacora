@@ -4,7 +4,7 @@ import { guardarCache, leerCache } from "./sync/cache";
 export type Parada = {
   trabajo_id: string;
   cliente_nombre: string;
-  direccion: string;
+  direccion: string | null;
   lat: number | null;
   lng: number | null;
 };

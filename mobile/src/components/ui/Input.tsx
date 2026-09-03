@@ -42,7 +42,7 @@ export function Input({
             paddingVertical: t.espacio(3),
             fontSize: t.tipografia.tamano.base,
             color: t.colores.foreground,
-            backgroundColor: t.colores.bg,
+            backgroundColor: t.colores.surface,
             fontFamily: t.tipografia.familia,
           },
           props.multiline ? { minHeight: 88, textAlignVertical: "top" } : null,

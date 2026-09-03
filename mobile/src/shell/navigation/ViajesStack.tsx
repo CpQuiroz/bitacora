@@ -11,7 +11,7 @@ export function ViajesStack() {
   return (
     <Stack.Navigator
       screenOptions={{
-        headerStyle: { backgroundColor: t.colores.bg },
+        headerStyle: { backgroundColor: t.colores.surface },
         headerTintColor: t.colores.foreground,
         headerTitleStyle: { fontWeight: "600" },
         headerShadowVisible: false,

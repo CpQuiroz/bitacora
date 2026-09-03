@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { FlatList, RefreshControl, View } from "react-native";
+import { FlatList, Pressable, RefreshControl, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -14,7 +14,7 @@ import type { TrabajosStackParamList } from "../../shell/navigation/types";
 export function TrabajosScreen({ navigation }: NativeStackScreenProps<TrabajosStackParamList, "TrabajosLista">) {
   const t = useTema();
   const auth = useAuth();
-  const esGestion = auth.fase === "listo" && (auth.usuario.rol === "admin" || auth.usuario.rol === "supervisor");
+  const esGestion = auth.fase === "listo" && auth.usuario.rol !== "colaborador";
 
   const [equipo, setEquipo] = useState(false);
   const [trabajos, setTrabajos] = useState<Trabajo[] | null>(null);
@@ -53,26 +53,35 @@ export function TrabajosScreen({ navigation }: NativeStackScreenProps<TrabajosSt
     <View style={{ flex: 1, backgroundColor: t.colores.bg }}>
       <OfflineBanner guardadoEn={guardadoEn} />
       {esGestion && (
-        <View style={{ flexDirection: "row", gap: t.espacio(2), padding: t.espacio(4), paddingBottom: t.espacio(2) }}>
+        <View
+          style={{
+            flexDirection: "row",
+            gap: t.espacio(2),
+            padding: t.espacio(4),
+            paddingBottom: t.espacio(2),
+          }}
+        >
           {(["Míos", "Equipo"] as const).map((op, i) => {
             const activo = (i === 1) === equipo;
             return (
-              <Text
+              <Pressable
                 key={op}
-                variante="etiqueta"
-                weight="semibold"
                 onPress={() => setEquipo(i === 1)}
                 style={{
-                  color: activo ? t.colores.brand : t.colores.muted,
-                  backgroundColor: activo ? t.colores.brandSoft : "transparent",
-                  paddingHorizontal: t.espacio(3),
-                  paddingVertical: t.espacio(1.5),
-                  borderRadius: t.radio.full,
-                  overflow: "hidden",
+                  flex: 1,
+                  minHeight: 44,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: t.radio.md,
+                  backgroundColor: activo ? t.colores.brand : t.colores.surface,
+                  borderWidth: 1,
+                  borderColor: activo ? t.colores.brand : t.colores.border,
                 }}
               >
-                {op}
-              </Text>
+                <Text variante="etiqueta" weight="semibold" tono={activo ? "inverso" : "muted"}>
+                  {op}
+                </Text>
+              </Pressable>
             );
           })}
         </View>
