@@ -114,6 +114,88 @@ test("calcularImpuestoUnico: tramo exento y tramo con factor", () => {
   assert.equal(calcularImpuestoUnico(20 * P.utm, P.utm, P.tramosImpuesto), esperado);
 });
 
+test("calcularImpuestoUnico: un punto medio en cada tramo (factor/rebaja de TRAMOS_IMPUESTO_UNICO_BASE)", () => {
+  // Valor representativo dentro de cada tramo → impuesto en UTM = enUtm*factor − rebaja.
+  const casos: [utmBase: number, factor: number, rebaja: number][] = [
+    [22, 0.04, 0.54], // tramo 13,5–30
+    [40, 0.08, 1.74], // 30–50
+    [60, 0.135, 4.49], // 50–70
+    [80, 0.23, 11.14], // 70–90
+    [105, 0.304, 17.8], // 90–120
+    [200, 0.35, 23.32], // 120–310
+    [400, 0.4, 38.82], // 310+
+  ];
+  for (const [enUtm, factor, rebaja] of casos) {
+    const esperado = Math.max(0, Math.round((enUtm * factor - rebaja) * P.utm));
+    assert.equal(calcularImpuestoUnico(enUtm * P.utm, P.utm, P.tramosImpuesto), esperado, `${enUtm} UTM`);
+  }
+});
+
+test("TRAMOS_IMPUESTO_UNICO_BASE: la tabla es CONTINUA en cada borde (guarda contra un typo de factor/rebaja)", () => {
+  // Por diseño de la ley, en cada quiebre B el impuesto calculado con el
+  // tramo de abajo y con el de arriba coincide. Si algún factor o rebaja
+  // quedó mal tipeado, la función se vuelve discontinua acá y esto falla.
+  const T = TRAMOS_IMPUESTO_UNICO_BASE;
+  for (let i = 0; i < T.length - 1; i++) {
+    const B = T[i].hasta!;
+    const abajo = B * T[i].factor - T[i].rebaja;
+    const arriba = B * T[i + 1].factor - T[i + 1].rebaja;
+    assert.ok(Math.abs(abajo - arriba) < 1e-9, `discontinuidad en ${B} UTM: ${abajo} vs ${arriba}`);
+  }
+});
+
+test("calcularLiquidacion: impuesto único real para una renta alta", () => {
+  // Sueldo 4.500.000, Fonasa, indefinido, sin gratificación.
+  const r = calcularLiquidacion({ ...BASE, sueldoBaseMensual: 4_500_000 }, P);
+  const base = r.baseTributable;
+  const enUtm = base / P.utm;
+  const tramo = P.tramosImpuesto.find((t) => enUtm > t.desde && (t.hasta === null || enUtm <= t.hasta))!;
+  assert.equal(r.impuestoUnico, Math.max(0, Math.round((enUtm * tramo.factor - tramo.rebaja) * P.utm)));
+  assert.ok(r.impuestoUnico > 0);
+});
+
+test("cotizaAfp=false (sin AFP): no descuenta AFP ni comisión, pero sí salud y AFC", () => {
+  const r = calcularLiquidacion({ ...BASE, sueldoBaseMensual: 1_000_000, cotizaAfp: false }, P);
+  assert.equal(r.cotizacionAfp, 0);
+  assert.equal(r.comisionAfp, 0);
+  assert.equal(r.cotizacionSalud, Math.round(1_000_000 * 0.07));
+  assert.equal(r.cotizacionAfc, Math.round(1_000_000 * 0.006));
+});
+
+test("contrato por obra: AFC trabajador 0, aporte empleador 3%", () => {
+  const r = calcularLiquidacion({ ...BASE, sueldoBaseMensual: 1_000_000, tipoContrato: "por_obra" }, P);
+  assert.equal(r.cotizacionAfc, 0);
+  assert.equal(r.aporteAfcEmpleador, Math.round(1_000_000 * 0.03));
+});
+
+test("Isapre con plan en pesos: mismo tratamiento que en UF", () => {
+  const r = calcularLiquidacion(
+    { ...BASE, sueldoBaseMensual: 1_500_000, sistemaSalud: "isapre", planIsaprePesos: 200_000 },
+    P
+  );
+  const salud7 = Math.round(1_500_000 * 0.07);
+  assert.equal(r.cotizacionSalud, salud7);
+  assert.equal(r.saludAdicional, Math.max(0, 200_000 - salud7));
+});
+
+test("Isapre con plan más barato que el 7%: adicional 0, se paga el 7% igual", () => {
+  const r = calcularLiquidacion(
+    { ...BASE, sueldoBaseMensual: 2_000_000, sistemaSalud: "isapre", planIsaprePesos: 50_000 },
+    P
+  );
+  assert.equal(r.saludAdicional, 0);
+  assert.equal(r.cotizacionSalud, Math.round(2_000_000 * 0.07));
+});
+
+test("gratificación con días parciales: el tope también se prorratea", () => {
+  const r = calcularLiquidacion(
+    { ...BASE, sueldoBaseMensual: 4_000_000, gratificacionLegal: true, diasTrabajados: 15 },
+    P
+  );
+  // 25% de (sueldo prorrateado) vs tope prorrateado — gana el menor.
+  assert.equal(r.gratificacion, Math.round(P.topeGratificacionMensual * 0.5));
+});
+
 test("identidad contable: líquido = haberes − descuentos, siempre", () => {
   for (const sueldo of [400000, 750000, 1300000, 2800000, 6000000]) {
     for (const salud of ["fonasa", "isapre"] as const) {

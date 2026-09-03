@@ -1,7 +1,13 @@
 # Auditoría — Módulo Remuneraciones
 
-> **Fecha:** 3-sep-2026 · **Alcance:** solo lectura. No se modificó código ni se consultó
-> ninguna base de datos. Cada hallazgo cita archivo y línea.
+> **Fecha:** 3-sep-2026 · **Alcance original:** solo lectura, cada hallazgo cita archivo y línea.
+>
+> **Estado (3-sep, post-auditoría):** aplicados en `main` (migración 76) los hallazgos
+> **1, 2, 3, 5, 6, 7, 8, 11, 14** y los tests de **#4**. Ver commits
+> `Remuneraciones — hallazgos de auditoría`. Pendientes: **#9, #10, #15** (validación del
+> archivo Previred / Libro DT con un contador — no es código), **#12, #13, #16, #17, #18**
+> (Baja, no aplicados). Detalle de lo aplicado abajo, en cada fila de la tabla el texto
+> sigue describiendo el problema *original*.
 >
 > **Archivos revisados:**
 > `packages/shared/src/liquidacionChile.ts` (+`.test.ts`) ·

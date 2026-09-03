@@ -40,15 +40,26 @@ export const remuneraciones = {
     apiFetch("/api/remuneraciones/liquidaciones/generar", {
       method: "POST",
       body: JSON.stringify({ periodo, usuario_ids: usuarioIds }),
-    }).then((r) => json<{ periodo: string; generadas: number; omitidas_emitidas: number }>(r)),
+    }).then((r) =>
+      json<{
+        periodo: string;
+        generadas: number;
+        omitidas_emitidas: number;
+        prorrateadas: number;
+        incompletas: { usuario_id: string; faltan: string[] }[];
+      }>(r)
+    ),
 
   editar: (id: string, body: Record<string, unknown>) =>
     apiFetch(`/api/remuneraciones/liquidaciones/${id}`, { method: "PATCH", body: JSON.stringify(body) }).then((r) =>
       json<LiquidacionConNombre>(r)
     ),
 
-  emitir: (id: string) =>
-    apiFetch(`/api/remuneraciones/liquidaciones/${id}/emitir`, { method: "POST" }).then((r) => json<LiquidacionConNombre>(r)),
+  emitir: (id: string, confirmarLicencia = false) =>
+    apiFetch(`/api/remuneraciones/liquidaciones/${id}/emitir`, {
+      method: "POST",
+      body: JSON.stringify(confirmarLicencia ? { confirmar_licencia: true } : {}),
+    }).then((r) => json<LiquidacionConNombre>(r)),
 
   async abrirPdf(id: string): Promise<boolean> {
     const res = await apiFetch(`/api/remuneraciones/liquidaciones/${id}/pdf`);

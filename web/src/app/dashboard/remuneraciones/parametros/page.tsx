@@ -11,13 +11,15 @@ import type { ParametroPrevisional } from "@bitacora/shared";
 
 const PERIODOS = Array.from({ length: 12 }, (_, i) => periodoRelativo(-i));
 
-const CAMPOS: { clave: keyof ParametroPrevisional; label: string; step?: string }[] = [
-  { clave: "uf", label: "UF" },
-  { clave: "utm", label: "UTM" },
-  { clave: "ingreso_minimo", label: "Ingreso mínimo mensual" },
-  { clave: "tope_imponible_uf", label: "Tope imponible (UF)", step: "0.01" },
-  { clave: "tope_afc_uf", label: "Tope AFC (UF)", step: "0.01" },
-  { clave: "tope_gratificacion_mensual", label: "Tope gratificación mensual" },
+// `editable: false` = parámetro legal nacional, solo lectura desde acá
+// (lo mantiene el equipo de Bitácora). Ver AUDITORIA_REMUNERACIONES.md #2.
+const CAMPOS: { clave: keyof ParametroPrevisional; label: string; step?: string; editable: boolean }[] = [
+  { clave: "uf", label: "UF", editable: true },
+  { clave: "utm", label: "UTM", editable: true },
+  { clave: "tope_gratificacion_mensual", label: "Tope gratificación mensual", editable: true },
+  { clave: "ingreso_minimo", label: "Ingreso mínimo mensual", editable: false },
+  { clave: "tope_imponible_uf", label: "Tope imponible (UF)", step: "0.01", editable: false },
+  { clave: "tope_afc_uf", label: "Tope AFC (UF)", step: "0.01", editable: false },
 ];
 
 export default function ParametrosPage() {
@@ -54,7 +56,9 @@ export default function ParametrosPage() {
     setAviso(null);
     setError(null);
     try {
-      const body: Record<string, unknown> = Object.fromEntries(CAMPOS.map((c) => [c.clave, Number(form[c.clave]) || 0]));
+      const body: Record<string, unknown> = Object.fromEntries(
+        CAMPOS.filter((c) => c.editable).map((c) => [c.clave, Number(form[c.clave]) || 0])
+      );
       body.afp = afp.map((a) => ({ afp: a.afp, tasa_comision: Number(afpForm[a.afp]) || 0 }));
       const r = await remuneraciones.guardarParametros(periodo, body);
       setParams(r.parametros);
@@ -92,8 +96,10 @@ export default function ParametrosPage() {
       {params && (
         <>
           <p className="mb-4 text-sm text-muted">
-            UF y UTM se traen automáticamente de mindicador.cl ({params.fuente === "mindicador" ? "auto" : "editado a mano"}). El ingreso
-            mínimo, los topes y las comisiones AFP se revisan cuando la ley cambia.
+            UF y UTM se traen automáticamente de mindicador.cl para el mes del período (
+            {params.fuente === "mindicador" ? "auto" : "editado a mano"}). Podés corregir UF, UTM, el tope de
+            gratificación y las comisiones AFP si hiciera falta. El ingreso mínimo y los topes imponibles son ley
+            nacional — los mantiene el equipo de Bitácora y acá se muestran de solo lectura.
           </p>
 
           <div className="grid gap-6 lg:grid-cols-2">
@@ -102,10 +108,14 @@ export default function ParametrosPage() {
               <div className="grid gap-3 sm:grid-cols-2">
                 {CAMPOS.map((c) => (
                   <div key={c.clave}>
-                    <Label>{c.label}</Label>
+                    <Label>
+                      {c.label}
+                      {!c.editable && <span className="ml-1 text-xs font-normal text-muted">(solo lectura)</span>}
+                    </Label>
                     <Input
                       type="number"
                       step={c.step}
+                      disabled={!c.editable}
                       value={form[c.clave] ?? ""}
                       onChange={(e) => setForm((f) => ({ ...f, [c.clave]: e.target.value }))}
                     />

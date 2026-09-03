@@ -48,7 +48,17 @@ export default function RemuneracionesPage() {
     setError(null);
     try {
       const r = await remuneraciones.generar(periodo);
-      setAviso(`${r.generadas} liquidación(es) generada(s)${r.omitidas_emitidas ? ` · ${r.omitidas_emitidas} ya emitidas, sin cambios` : ""}.`);
+      const partes = [`${r.generadas} liquidación(es) generada(s)`];
+      if (r.omitidas_emitidas) partes.push(`${r.omitidas_emitidas} ya emitidas, sin cambios`);
+      if (r.prorrateadas) partes.push(`${r.prorrateadas} prorrateada(s) por fecha de ingreso`);
+      setAviso(partes.join(" · ") + ".");
+      if (r.incompletas.length > 0) {
+        setError(
+          `${r.incompletas.length} colaborador(es) sin liquidación por datos incompletos: ` +
+            r.incompletas.map((i) => i.faltan.join("/")).join("; ") +
+            ". Complétalos en Datos del equipo y volvé a generar."
+        );
+      }
       await cargar();
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudieron generar");

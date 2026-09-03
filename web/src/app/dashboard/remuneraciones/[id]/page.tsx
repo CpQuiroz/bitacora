@@ -28,12 +28,14 @@ export default function LiquidacionDetallePage() {
   const [aviso, setAviso] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [emitiendo, setEmitiendo] = useState(false);
+  const [tuvoLicencia, setTuvoLicencia] = useState(false);
 
   const cargar = useCallback(async () => {
     setError(null);
     try {
       const l = await remuneraciones.liquidacion(params.id);
       setLiq(l);
+      setTuvoLicencia(l.tuvo_licencia);
       setForm({
         dias_trabajados: String(l.dias_trabajados),
         horas_extra: String(l.horas_extra),
@@ -56,7 +58,8 @@ export default function LiquidacionDetallePage() {
     setAviso(null);
     setError(null);
     try {
-      const body = Object.fromEntries(VARIABLES.map((v) => [v.clave, Number(form[v.clave]) || 0]));
+      const body: Record<string, unknown> = Object.fromEntries(VARIABLES.map((v) => [v.clave, Number(form[v.clave]) || 0]));
+      body.tuvo_licencia = tuvoLicencia;
       setLiq(await remuneraciones.editar(params.id, body));
       setAviso("Recalculado.");
     } catch (e) {
@@ -67,9 +70,13 @@ export default function LiquidacionDetallePage() {
   }
 
   async function emitir() {
+    setError(null);
+    if (liq?.tuvo_licencia && !window.confirm("Esta liquidación tiene licencia médica marcada. ¿Confirmás que ajustaste los valores a mano y querés emitirla?")) {
+      return;
+    }
     setEmitiendo(true);
     try {
-      setLiq(await remuneraciones.emitir(params.id));
+      setLiq(await remuneraciones.emitir(params.id, Boolean(liq?.tuvo_licencia)));
       setAviso("Liquidación emitida.");
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo emitir");
@@ -112,6 +119,13 @@ export default function LiquidacionDetallePage() {
           {aviso && (
             <div className="mb-4">
               <SuccessText>{aviso}</SuccessText>
+            </div>
+          )}
+
+          {liq.tuvo_licencia && (
+            <div className="mb-4 rounded-lg bg-warning-soft px-4 py-3 text-sm text-warning">
+              <strong>Licencia médica en el período.</strong> El cálculo automático no descuenta días de licencia ni
+              trata el subsidio — ajustá los días trabajados y los haberes a mano antes de emitir.
             </div>
           )}
 
@@ -167,6 +181,15 @@ export default function LiquidacionDetallePage() {
                       />
                     </div>
                   ))}
+                  <label className="flex items-center gap-2 text-sm text-foreground">
+                    <input
+                      type="checkbox"
+                      className="accent-brand"
+                      checked={tuvoLicencia}
+                      onChange={(e) => setTuvoLicencia(e.target.checked)}
+                    />
+                    Tuvo licencia médica este mes
+                  </label>
                   <Button type="button" onClick={guardar} disabled={guardando} className="mt-1">
                     {guardando ? "Recalculando…" : "Recalcular"}
                   </Button>
