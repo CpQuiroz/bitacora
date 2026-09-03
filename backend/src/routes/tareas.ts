@@ -365,6 +365,12 @@ tareasRouter.delete(
   "/:id",
   requiereModulo("agenda"),
   ah<RequestConEmpresa>(async (req, res) => {
+    // Un colaborador no borra citas (suyas ni ajenas) — para eso está
+    // "cancelar", que deja el registro. Eliminar es de gestión.
+    if (req.rol === "colaborador") {
+      res.status(403).json({ error: "No puedes eliminar citas. Si no se va a realizar, cancélala." });
+      return;
+    }
     const { error } = await supabase.from("tareas").delete().eq("empresa_id", req.empresaId!).eq("id", req.params.id);
     if (error) {
       res.status(500).json({ error: error.message });

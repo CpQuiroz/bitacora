@@ -8,13 +8,19 @@ import { useTema } from "../../theme";
 import { Badge, Button, Card, ErrorState, LoadingScreen, Text } from "../../components/ui";
 import { OfflineBanner } from "../../components/OfflineBanner";
 import { useRed } from "../../services/sync/NetworkProvider";
+import { useAuth } from "../auth/AuthContext";
 import {
+  eliminarCita,
   encolarCancelarTarea,
   encolarEstadoTarea,
   obtenerTarea,
   type DetalleTarea,
 } from "../../services/agenda";
 import type { AgendaStackParamList } from "../../shell/navigation/types";
+
+function soloDigitos(tel: string): string {
+  return tel.replace(/[^\d]/g, "");
+}
 
 const ETIQUETA_ESTADO: Record<string, string> = {
   pendiente: "Sin confirmar",
@@ -27,16 +33,19 @@ const ETIQUETA_ESTADO: Record<string, string> = {
 
 const ACTIVA = new Set(["pendiente", "confirmada"]);
 
-export function TareaDetalleScreen({ route }: NativeStackScreenProps<AgendaStackParamList, "TareaDetalle">) {
+export function TareaDetalleScreen({ route, navigation }: NativeStackScreenProps<AgendaStackParamList, "TareaDetalle">) {
   const t = useTema();
   const { tareaId } = route.params;
   const { pendientes, enLinea } = useRed();
+  const auth = useAuth();
+  const esGestion = auth.fase === "listo" && auth.usuario.rol !== "colaborador";
   const accionesAqui = useMemo(() => pendientes.filter((a) => a.recurso === `tarea:${tareaId}`), [pendientes, tareaId]);
 
   const [detalle, setDetalle] = useState<DetalleTarea | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [estadoLocal, setEstadoLocal] = useState<EstadoTarea | null>(null);
   const [enviando, setEnviando] = useState(false);
+  const [eliminando, setEliminando] = useState(false);
 
   const cargar = useCallback(async () => {
     setError(null);
@@ -82,6 +91,30 @@ export function TareaDetalleScreen({ route }: NativeStackScreenProps<AgendaStack
       estadoNuevo === "completada" ? "Cita completada" : "Cita confirmada",
       enLinea ? "Listo." : "Se enviará a la oficina cuando vuelvas a tener señal."
     );
+  }
+
+  function eliminar() {
+    Alert.alert("Eliminar la cita", "Se borra de la agenda para siempre. ¿Seguro?", [
+      { text: "No", style: "cancel" },
+      {
+        text: "Sí, eliminar",
+        style: "destructive",
+        onPress: async () => {
+          if (!enLinea) {
+            Alert.alert("Sin conexión", "Necesitas conexión para eliminar una cita.");
+            return;
+          }
+          setEliminando(true);
+          const r = await eliminarCita(tareaId);
+          setEliminando(false);
+          if (!r.ok) {
+            Alert.alert("No se pudo eliminar", r.error ?? "Intenta de nuevo.");
+            return;
+          }
+          navigation.goBack();
+        },
+      },
+    ]);
   }
 
   function cancelar() {
@@ -156,6 +189,14 @@ export function TareaDetalleScreen({ route }: NativeStackScreenProps<AgendaStack
                   onPress={() => Linking.openURL(`tel:${cli.telefono}`)}
                 />
               ) : null}
+              {cli?.telefono ? (
+                <Button
+                  titulo="WhatsApp"
+                  variante="secundario"
+                  icono={<Ionicons name="logo-whatsapp" size={16} color={t.colores.foreground} />}
+                  onPress={() => Linking.openURL(`https://wa.me/${soloDigitos(cli.telefono!)}`)}
+                />
+              ) : null}
             </View>
           </Card>
         )}
@@ -201,6 +242,21 @@ export function TareaDetalleScreen({ route }: NativeStackScreenProps<AgendaStack
             </Text>
           </Card>
         )}
+
+        {esGestion ? (
+          <View style={{ gap: t.espacio(2.5), marginTop: t.espacio(2), borderTopWidth: 1, borderTopColor: t.colores.border, paddingTop: t.espacio(4) }}>
+            <Text variante="caption" tono="muted" weight="semibold" style={{ textTransform: "uppercase" }}>
+              Gestión
+            </Text>
+            <Button
+              titulo="Editar / reprogramar"
+              variante="secundario"
+              icono={<Ionicons name="create-outline" size={16} color={t.colores.foreground} />}
+              onPress={() => navigation.navigate("NuevaCita", { tareaId })}
+            />
+            <Button titulo="Eliminar cita" variante="peligro" onPress={eliminar} cargando={eliminando} />
+          </View>
+        ) : null}
       </ScrollView>
     </View>
   );

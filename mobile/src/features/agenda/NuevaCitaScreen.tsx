@@ -6,7 +6,7 @@ import { useTema } from "../../theme";
 import { Button, Input, LoadingScreen, PickerBuscable, Text } from "../../components/ui";
 import { useRed } from "../../services/sync/NetworkProvider";
 import { useAuth } from "../auth/AuthContext";
-import { catalogoParaCita, crearCita, type BorradorCita } from "../../services/agenda";
+import { catalogoParaCita, crearCita, editarCita, obtenerTarea, type BorradorCita } from "../../services/agenda";
 import type { AgendaStackParamList } from "../../shell/navigation/types";
 
 const DIAS = ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"];
@@ -22,25 +22,23 @@ const PRIORIDADES: { valor: Prioridad; label: string }[] = [
   { valor: "alta", label: "Alta" },
 ];
 
-export function NuevaCitaScreen({ navigation }: NativeStackScreenProps<AgendaStackParamList, "NuevaCita">) {
+export function NuevaCitaScreen({ navigation, route }: NativeStackScreenProps<AgendaStackParamList, "NuevaCita">) {
   const t = useTema();
   const { enLinea } = useRed();
   const auth = useAuth();
   const esGestion = auth.fase === "listo" && auth.usuario.rol !== "colaborador";
 
+  const editandoId = route.params?.tareaId ?? null;
+  const fechaInicial = route.params?.fecha ?? clave(new Date());
+
   const [clientes, setClientes] = useState<Cliente[] | null>(null);
   const [equipo, setEquipo] = useState<Usuario[]>([]);
+  const [cargandoCita, setCargandoCita] = useState(Boolean(editandoId));
   const [guardando, setGuardando] = useState(false);
-
-  const hoy = useMemo(() => new Date(), []);
-  const dias = useMemo(
-    () => Array.from({ length: 30 }, (_, i) => new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + i)),
-    [hoy]
-  );
 
   const [b, setB] = useState<BorradorCita>({
     titulo: "",
-    fecha: clave(hoy),
+    fecha: fechaInicial,
     hora: "",
     cliente_id: "",
     responsable_id: "",
@@ -49,6 +47,18 @@ export function NuevaCitaScreen({ navigation }: NativeStackScreenProps<AgendaSta
   });
   const set = <K extends keyof BorradorCita>(k: K, v: BorradorCita[K]) => setB((p) => ({ ...p, [k]: v }));
 
+  // Rango de fechas de los chips: desde hoy (o desde la fecha actual de
+  // la cita si está en el pasado, para poder mantenerla).
+  const dias = useMemo(() => {
+    const hoy = new Date();
+    const base = b.fecha < clave(hoy) ? new Date(b.fecha + "T00:00:00") : hoy;
+    return Array.from({ length: 45 }, (_, i) => new Date(base.getFullYear(), base.getMonth(), base.getDate() + i));
+  }, [b.fecha]);
+
+  useEffect(() => {
+    navigation.setOptions({ title: editandoId ? "Editar cita" : "Nueva cita" });
+  }, [navigation, editandoId]);
+
   useEffect(() => {
     catalogoParaCita().then(({ clientes, equipo }) => {
       setClientes(clientes.filter((c) => c.activo));
@@ -56,24 +66,44 @@ export function NuevaCitaScreen({ navigation }: NativeStackScreenProps<AgendaSta
     });
   }, []);
 
+  useEffect(() => {
+    if (!editandoId) return;
+    obtenerTarea(editandoId)
+      .then(({ tarea }) => {
+        setB({
+          titulo: tarea.titulo,
+          fecha: tarea.fecha,
+          hora: tarea.hora ? tarea.hora.slice(0, 5) : "",
+          cliente_id: tarea.cliente_id ?? "",
+          responsable_id: tarea.responsable_id ?? "",
+          descripcion: tarea.descripcion ?? "",
+          prioridad: tarea.prioridad,
+        });
+      })
+      .catch((e) => Alert.alert("No se pudo cargar la cita", e instanceof Error ? e.message : "Intenta de nuevo"))
+      .finally(() => setCargandoCita(false));
+  }, [editandoId]);
+
   async function guardar() {
     if (!b.titulo.trim()) return Alert.alert("Falta el título", "Escribe de qué se trata la cita.");
     if (b.hora && !/^([01]\d|2[0-3]):[0-5]\d$/.test(b.hora)) {
       return Alert.alert("Hora inválida", "Usa el formato HH:MM (ej. 09:30).");
     }
-    if (!enLinea) return Alert.alert("Sin conexión", "Necesitas conexión para agendar una cita.");
+    if (!enLinea) return Alert.alert("Sin conexión", "Necesitas conexión para guardar la cita.");
 
     setGuardando(true);
-    const r = await crearCita(b);
+    const r = editandoId ? await editarCita(editandoId, b) : await crearCita(b);
     setGuardando(false);
     if (!r.ok) {
-      Alert.alert("No se pudo agendar", r.error);
+      Alert.alert("No se pudo guardar", r.error);
       return;
     }
-    Alert.alert("Cita agendada", "Quedó en la agenda.", [{ text: "Listo", onPress: () => navigation.goBack() }]);
+    Alert.alert(editandoId ? "Cita actualizada" : "Cita agendada", "Listo.", [
+      { text: "Listo", onPress: () => navigation.goBack() },
+    ]);
   }
 
-  if (clientes === null) return <LoadingScreen />;
+  if (clientes === null || cargandoCita) return <LoadingScreen />;
 
   return (
     <ScrollView
@@ -81,7 +111,7 @@ export function NuevaCitaScreen({ navigation }: NativeStackScreenProps<AgendaSta
       contentContainerStyle={{ padding: t.espacio(5), gap: t.espacio(4), paddingBottom: t.espacio(12) }}
       keyboardShouldPersistTaps="handled"
     >
-      <Input etiqueta="Título" placeholder="Ej. Visita de seguimiento" value={b.titulo} onChangeText={(v) => set("titulo", v)} />
+      <Input etiqueta="Título" placeholder="Ej. Manicure + esmaltado" value={b.titulo} onChangeText={(v) => set("titulo", v)} />
 
       <View style={{ gap: t.espacio(1.5) }}>
         <Text variante="etiqueta" tono="muted">
@@ -142,7 +172,7 @@ export function NuevaCitaScreen({ navigation }: NativeStackScreenProps<AgendaSta
 
       {esGestion && equipo.length > 0 ? (
         <PickerBuscable
-          etiqueta="Asignar a (opcional)"
+          etiqueta="Atiende (opcional)"
           placeholder="Elegir responsable"
           valor={b.responsable_id}
           opcionVacia="Sin asignar"
@@ -190,7 +220,13 @@ export function NuevaCitaScreen({ navigation }: NativeStackScreenProps<AgendaSta
         onChangeText={(v) => set("descripcion", v)}
       />
 
-      <Button titulo="Agendar cita" tamano="lg" onPress={guardar} cargando={guardando} style={{ marginTop: t.espacio(2) }} />
+      <Button
+        titulo={editandoId ? "Guardar cambios" : "Agendar cita"}
+        tamano="lg"
+        onPress={guardar}
+        cargando={guardando}
+        style={{ marginTop: t.espacio(2) }}
+      />
     </ScrollView>
   );
 }

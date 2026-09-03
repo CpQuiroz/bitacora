@@ -1,5 +1,5 @@
 import type { Cliente, EstadoTarea, Prioridad, Tarea, Usuario } from "@bitacora/shared";
-import { apiJson } from "./api";
+import { apiFetch, apiJson } from "./api";
 import { encolar } from "./sync/queue";
 import { guardarCache, leerCache } from "./sync/cache";
 
@@ -11,14 +11,19 @@ export type TareaConDatos = Tarea & {
 
 export type ListaTareas = { tareas: TareaConDatos[]; desdeCache: boolean; guardadoEn?: number };
 
-/** Mis tareas/citas de agenda. El backend ya acota al colaborador a las suyas. */
-export async function listarMisTareas(): Promise<ListaTareas> {
-  const res = await apiJson<TareaConDatos[]>("/api/tareas");
+/**
+ * Citas en un rango de fechas (para la vista de calendario). El backend
+ * devuelve TODAS las de la empresa si el rol es de gestión, o solo las
+ * del colaborador si no. Se cachea por semana para poder verla offline.
+ */
+export async function listarTareasRango(desde: string, hasta: string): Promise<ListaTareas> {
+  const clave = `agenda:rango:${desde}`;
+  const res = await apiJson<TareaConDatos[]>(`/api/tareas?desde=${desde}&hasta=${hasta}`);
   if (res.ok) {
-    await guardarCache("agenda:mias", res.data);
+    await guardarCache(clave, res.data);
     return { tareas: res.data, desdeCache: false };
   }
-  const cache = await leerCache<TareaConDatos[]>("agenda:mias");
+  const cache = await leerCache<TareaConDatos[]>(clave);
   if (cache) return { tareas: cache.datos, desdeCache: true, guardadoEn: cache.guardadoEn };
   throw new Error(res.error);
 }
@@ -72,6 +77,32 @@ export async function crearCita(b: BorradorCita): Promise<{ ok: true; tarea: Tar
     }),
   });
   return res.ok ? { ok: true, tarea: res.data } : { ok: false, error: res.error };
+}
+
+export type EdicionCita = Partial<
+  Pick<BorradorCita, "titulo" | "fecha" | "hora" | "cliente_id" | "responsable_id" | "descripcion" | "prioridad">
+>;
+
+/** Edita/reprograma una cita (roles de gestión). Va directo: es acción de oficina y necesita respuesta. */
+export async function editarCita(id: string, c: EdicionCita): Promise<{ ok: true; tarea: Tarea } | { ok: false; error: string }> {
+  const body: Record<string, unknown> = {};
+  if (c.titulo !== undefined) body.titulo = c.titulo.trim();
+  if (c.fecha !== undefined) body.fecha = c.fecha;
+  if (c.hora !== undefined) body.hora = c.hora || null;
+  if (c.cliente_id !== undefined) body.cliente_id = c.cliente_id || null;
+  if (c.responsable_id !== undefined) body.responsable_id = c.responsable_id || null;
+  if (c.descripcion !== undefined) body.descripcion = c.descripcion.trim() || null;
+  if (c.prioridad !== undefined) body.prioridad = c.prioridad;
+  const res = await apiJson<Tarea>(`/api/tareas/${id}`, { method: "PATCH", body: JSON.stringify(body) });
+  return res.ok ? { ok: true, tarea: res.data } : { ok: false, error: res.error };
+}
+
+/** Elimina una cita (roles de gestión). */
+export async function eliminarCita(id: string): Promise<{ ok: boolean; error?: string }> {
+  const res = await apiFetch(`/api/tareas/${id}`, { method: "DELETE" });
+  if (res.status === 204 || res.ok) return { ok: true };
+  const body = await res.json().catch(() => ({}));
+  return { ok: false, error: (body as { error?: string }).error ?? `Error ${res.status}` };
 }
 
 // --- Mutaciones (por la cola: se intentan al toque, se reintentan al reconectar) ---
