@@ -189,7 +189,7 @@ function NuevaCotizacionContenido() {
 
           <Button type="button" variant="outline" onClick={() => setSelectorAbierto(true)} className="mt-4">
             <IconPlus className="h-4 w-4" />
-            Agregar ítem
+            Agregar del catálogo
           </Button>
 
           <CatalogoSelectorModal

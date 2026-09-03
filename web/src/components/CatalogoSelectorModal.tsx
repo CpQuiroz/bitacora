@@ -42,6 +42,7 @@ export function CatalogoSelectorModal({
   moneda,
   stockMinimoDefault = 5,
   categoriaEquipoDestacar,
+  avisaDescuentoStock = false,
 }: {
   open: boolean;
   onClose: () => void;
@@ -55,6 +56,9 @@ export function CatalogoSelectorModal({
   // los ítems etiquetados con ese tipo se muestran primero, con una
   // marca visual. No oculta el resto del catálogo.
   categoriaEquipoDestacar?: string | null;
+  // true en OS (los productos con stock se descuentan del inventario),
+  // false en Cotización (es solo una lista de precios).
+  avisaDescuentoStock?: boolean;
 }) {
   const [catalogo, setCatalogo] = useState<CatalogoItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -147,8 +151,14 @@ export function CatalogoSelectorModal({
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Agregar ítems del catálogo" wide>
+    <Modal open={open} onClose={onClose} title="Agregar del catálogo / inventario" wide>
       <div className="flex flex-col gap-3">
+        {avisaDescuentoStock && (
+          <p className="rounded-lg bg-brand-soft/60 px-3 py-2 text-xs text-muted">
+            Los productos con stock se descuentan del inventario cuando la OS llega al estado configurado en
+            Configuración → Inventario.
+          </p>
+        )}
         <Input type="text" placeholder="Buscar por nombre, SKU o categoría..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
 
         <div className="flex flex-wrap gap-2">

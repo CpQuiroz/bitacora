@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import type { Cliente, Equipo, Prioridad, TipoOS, TipoTrabajo, Usuario } from "@bitacora/shared";
+import type { CatalogoItem, Cliente, Equipo, Prioridad, TipoOS, TipoTrabajo, Usuario } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
@@ -42,6 +42,7 @@ function NuevaOrdenServicioContenido() {
   // confundir con "equipo" de arriba (colaboradores).
   const [equipos, setEquipos] = useState<Equipo[]>([]);
   const [equipoIdOS, setEquipoIdOS] = useState("");
+  const [catalogo, setCatalogo] = useState<CatalogoItem[]>([]);
 
   // Preselección desde la Vista 360° del Cliente ("+ Nueva OS" en la
   // ficha ya trae el cliente puesto).
@@ -68,13 +69,14 @@ function NuevaOrdenServicioContenido() {
         router.replace("/login");
         return;
       }
-      const [resMe, resEquipo, resClientes, resTipos, resTiposOs, resEquipos] = await Promise.all([
+      const [resMe, resEquipo, resClientes, resTipos, resTiposOs, resEquipos, resCatalogo] = await Promise.all([
         apiFetch("/api/me"),
         apiFetch("/api/usuarios"),
         apiFetch("/api/clientes"),
         apiFetch("/api/tipos-trabajo"),
         apiFetch("/api/tipos-os"),
         apiFetch("/api/equipos"),
+        apiFetch("/api/catalogo"),
       ]);
       if (resMe.ok) {
         const { usuario: u } = await resMe.json();
@@ -95,6 +97,7 @@ function NuevaOrdenServicioContenido() {
         setTiposOs(lista.filter((t) => t.activo));
       }
       if (resEquipos.ok) setEquipos(await resEquipos.json());
+      if (resCatalogo.ok) setCatalogo(await resCatalogo.json());
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -119,6 +122,13 @@ function NuevaOrdenServicioContenido() {
 
   const clienteSeleccionado = clientes.find((c) => c.id === clienteId);
   const tipoTrabajoSeleccionado = tiposTrabajo.find((t) => t.id === tipoTrabajoId);
+  // Stock actual de un ítem del catálogo, solo si es un producto con
+  // control de stock. null = no aplica (servicio, kit, o ítem manual).
+  function stockDe(catalogoItemId: string | null): number | null {
+    if (!catalogoItemId) return null;
+    const it = catalogo.find((c) => c.id === catalogoItemId);
+    return it && it.tipo === "producto" && it.stock_actual != null ? it.stock_actual : null;
+  }
   const equiposDelCliente = equipos.filter((e) => e.cliente_id === clienteId);
   const equipoSeleccionadoOS = equipos.find((e) => e.id === equipoIdOS);
   const itemsValidos = items.filter((it) => it.descripcion.trim());
@@ -376,12 +386,15 @@ function NuevaOrdenServicioContenido() {
               <h2 className="text-sm font-semibold text-foreground">Ítems / materiales</h2>
               <Button type="button" variant="outline" onClick={() => setSelectorAbierto(true)}>
                 <IconPlus className="h-4 w-4" />
-                Agregar ítem
+                Agregar del catálogo
               </Button>
             </div>
             <div className="flex flex-col gap-3">
-              {items.map((it, i) => (
-                <div key={i} className="grid grid-cols-[1fr_5rem_7rem_auto] items-end gap-2">
+              {items.map((it, i) => {
+                const stock = stockDe(it.catalogo_item_id);
+                const excede = stock != null && Number(it.cantidad || 0) > stock;
+                return (
+                <div key={i} className="grid grid-cols-[1fr_5rem_7rem_auto] items-start gap-2">
                   <div>
                     {i === 0 && <Label>Descripción</Label>}
                     <Input
@@ -390,6 +403,13 @@ function NuevaOrdenServicioContenido() {
                       value={it.descripcion}
                       onChange={(e) => actualizarItem(i, "descripcion", e.target.value)}
                     />
+                    {stock != null && (
+                      <p className={`mt-1 text-xs ${excede ? "text-danger" : "text-muted"}`}>
+                        {excede
+                          ? `Stock: ${stock} — vas a descontar ${it.cantidad}, quedaría en ${stock - Number(it.cantidad || 0)}`
+                          : `Stock: ${stock} — se descontará al llegar la OS al estado disparador`}
+                      </p>
+                    )}
                   </div>
                   <div>
                     {i === 0 && <Label>Cant.</Label>}
@@ -416,11 +436,13 @@ function NuevaOrdenServicioContenido() {
                     variant="ghost"
                     onClick={() => quitarItem(i)}
                     disabled={items.length === 1}
+                    className={i === 0 ? "mt-6" : ""}
                   >
                     Quitar
                   </Button>
                 </div>
-              ))}
+                );
+              })}
             </div>
             <p className="mt-4 text-right text-sm font-semibold text-foreground">
               Total: ${totalItems.toLocaleString("es-CL")}
@@ -433,6 +455,7 @@ function NuevaOrdenServicioContenido() {
             onAgregar={onAgregarDesdeSelector}
             moneda={usuario.moneda ?? "CLP"}
             categoriaEquipoDestacar={equipoSeleccionadoOS?.categoria}
+            avisaDescuentoStock
           />
 
           {error && <ErrorText>{error}</ErrorText>}

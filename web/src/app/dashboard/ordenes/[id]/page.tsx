@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import type { AnalisisFoto, Cliente, OrdenServicio, OsItem, Trabajo, TipoTrabajo, Usuario } from "@bitacora/shared";
+import type { AnalisisFoto, CatalogoItem, Cliente, OrdenServicio, OsItem, Trabajo, TipoTrabajo, Usuario } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { abrirPdfOS } from "@/lib/descargarPdf";
@@ -51,6 +51,7 @@ export default function DetalleOrdenServicioPage() {
   const [fechaEdit, setFechaEdit] = useState("");
   const [horaEdit, setHoraEdit] = useState("");
   const [datosEdit, setDatosEdit] = useState<Record<string, string>>({});
+  const [catalogo, setCatalogo] = useState<CatalogoItem[]>([]);
   const [selectorAbierto, setSelectorAbierto] = useState(false);
   const [guardandoEdit, setGuardandoEdit] = useState(false);
   const [errorEdit, setErrorEdit] = useState<string | null>(null);
@@ -61,10 +62,12 @@ export default function DetalleOrdenServicioPage() {
       router.replace("/login");
       return;
     }
-    const [resMe, resDetalle] = await Promise.all([
+    const [resMe, resDetalle, resCatalogo] = await Promise.all([
       apiFetch("/api/me"),
       apiFetch(`/api/ordenes-servicio/${params.id}`),
+      apiFetch("/api/catalogo"),
     ]);
+    if (resCatalogo.ok) setCatalogo(await resCatalogo.json());
     if (resMe.ok) {
       const { usuario: u } = await resMe.json();
       if (u) setUsuario({ nombre: u.nombre, rol: u.rol, empresaNombre: u.empresa?.nombre ?? "", empresaLogoUrl: u.empresa?.logo_url ?? null, colorPrimario: u.empresa?.color_primario ?? null, colorPrimarioForeground: u.empresa?.color_primario_foreground ?? null, colorSecundario: u.empresa?.color_secundario ?? null, fuente: u.empresa?.fuente ?? null, moneda: u.empresa?.moneda ?? "CLP" });
@@ -280,13 +283,17 @@ export default function DetalleOrdenServicioPage() {
                   {!tieneFirma && (
                     <Button type="button" variant="outline" onClick={() => setSelectorAbierto(true)}>
                       <IconPlus className="h-4 w-4" />
-                      Agregar ítem
+                      Agregar del catálogo
                     </Button>
                   )}
                 </div>
                 <div className="flex flex-col gap-2">
-                  {itemsEdit.map((it, i) => (
-                    <div key={i} className="grid grid-cols-[1fr_5rem_7rem_auto] items-end gap-2">
+                  {itemsEdit.map((it, i) => {
+                    const cat = it.catalogo_item_id ? catalogo.find((c) => c.id === it.catalogo_item_id) : null;
+                    const stock = cat && cat.tipo === "producto" && cat.stock_actual != null ? cat.stock_actual : null;
+                    return (
+                    <div key={i} className="grid grid-cols-[1fr_5rem_7rem_auto] items-start gap-2">
+                      <div>
                       <Input
                         type="text"
                         placeholder="Descripción"
@@ -294,6 +301,12 @@ export default function DetalleOrdenServicioPage() {
                         disabled={tieneFirma}
                         onChange={(e) => actualizarItemEdit(i, "descripcion", e.target.value)}
                       />
+                      {stock != null && (
+                        <p className={`mt-1 text-xs ${Number(it.cantidad || 0) > stock ? "text-danger" : "text-muted"}`}>
+                          Stock: {stock}
+                        </p>
+                      )}
+                      </div>
                       <Input
                         type="number"
                         min="0"
@@ -316,7 +329,8 @@ export default function DetalleOrdenServicioPage() {
                         </Button>
                       )}
                     </div>
-                  ))}
+                    );
+                  })}
                   {itemsEdit.length === 0 && <p className="text-sm text-muted">Sin ítems.</p>}
                 </div>
               </div>
@@ -345,6 +359,7 @@ export default function DetalleOrdenServicioPage() {
                 onClose={() => setSelectorAbierto(false)}
                 onAgregar={onAgregarDesdeSelectorEdit}
                 moneda={usuario.moneda ?? "CLP"}
+                avisaDescuentoStock
               />
             </Card>
           )}
