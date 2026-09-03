@@ -13,6 +13,26 @@
 
 ---
 
+## Estado de implementación (3-sep-2026)
+
+Se aplicaron las recomendaciones de **bajo riesgo** (commit siguiente al de esta
+auditoría). Pendiente: la reescritura de las agregaciones del dashboard a RPC (§1 #3)
+— más invasiva, se hace cuando haya volumen que lo justifique.
+
+| Recomendación | Estado |
+|---|---|
+| Índices faltantes (§2) | ✅ Migración 82: `usuarios(empresa_id)`, `inventario(empresa_id)`, `inventario_movimientos(empresa_id, creado_en)`, `accesos_usuario(empresa_id, creado_en)`, `trabajos(responsable_id)`, `trabajos(cliente_id)`, `facturas(cliente_id)`, `viajes(chofer_id)`. Aplicada a dev, **pendiente prod**. |
+| PDF workers sin límite (#4) | ✅ `generarPdfEnWorker` pasa por `crearLimitadorConcurrencia(MAX_PDF_SIMULTANEOS ?? 3)`. |
+| Concurrencia de Claude (#5) | ✅ `MAX_IA_SIMULTANEAS` (env, default 8) + `MAX_ESPERA_COLA_IA_MS` (default 2 min) → los informes largos se rinden con 503 en vez de colgar la request. |
+| Recharts/Leaflet sin code-splitting (#7) | ✅ `next/dynamic({ ssr: false })` en el dashboard home (charts) y las 4 páginas de rutas/OS (mapa). |
+| Instrumentación de latencia (§8) | ✅ Migración 83 `requests_lentos` + middleware `medirLatencia` (loguea solo requests > `LATENCIA_UMBRAL_MS` ?? 2s, con ruta/ms/status/empresa/tamaño-de-array). Retención 14 días. |
+| Paginación en listados (#1) | ⏳ No aplicado — necesita cambios de backend + frontend (scroll infinito / páginas). Decidir el alcance. |
+| Agregaciones del dashboard → RPC (#3) | ⏳ No aplicado — reescribir `agregacionesDashboard.ts` como funciones de Postgres. Más invasivo. |
+| Panel de consumo de IA por empresa (§8) | ⏳ No aplicado — el dato ya está en `ia_uso`, falta la vista en el Super-Admin. |
+| Snapshot mensual de storage por empresa (§8) | ⏳ No aplicado. |
+
+---
+
 ## Resumen ejecutivo
 
 **Código — nada urgente hoy, todo es "importa a partir de X empresas":**
