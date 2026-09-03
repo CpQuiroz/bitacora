@@ -166,7 +166,41 @@ export type OpcionesNotificarCliente = {
   // Si viene y el canal WhatsApp está activado para la empresa, se
   // manda también por WhatsApp — independiente de si hay correo.
   telefono?: string | null;
+  // Reenvío explícito pedido por el usuario (POST /:id/reenviar) —
+  // salta el anti-duplicado por ventana. Los disparos automáticos no
+  // lo pasan.
+  forzar?: boolean;
 };
+
+// Anti-duplicado (AUDITORIA_RESILIENCIA.md R3): si el mismo evento ya se
+// envió con éxito por este canal hace poco, un reintento de la request
+// que lo disparó (doble-click, reinicio de Render a mitad de camino) no
+// vuelve a molestar al cliente. Ventana corta: los eventos "de una vez"
+// (cotización enviada, OS completada, cita agendada) pasan solo la
+// primera vez; los recurrentes (cobro vencido) ya deduplican aguas
+// arriba para siempre, así que la ventana no los afecta.
+const VENTANA_DEDUPE_MIN = 120;
+
+async function yaEnviadoRecientemente(
+  empresaId: string,
+  tipo: TipoNotificacionCliente,
+  entidadId: string,
+  canal: CanalNotificacionCliente
+): Promise<boolean> {
+  const desde = new Date(Date.now() - VENTANA_DEDUPE_MIN * 60_000).toISOString();
+  const { data } = await supabase
+    .from("notificaciones_cliente_log")
+    .select("id")
+    .eq("empresa_id", empresaId)
+    .eq("tipo", tipo)
+    .eq("entidad_id", entidadId)
+    .eq("canal", canal)
+    .eq("exito", true)
+    .gte("creado_en", desde)
+    .limit(1)
+    .maybeSingle();
+  return Boolean(data);
+}
 
 async function enviarPorCorreo(
   empresaId: string,
@@ -238,9 +272,13 @@ export async function notificarCliente(
   const whatsappActivado = config?.whatsapp_activado ?? true;
 
   if (destinatario && correoActivado) {
-    await enviarPorCorreo(empresaId, tipo, destinatario, opciones, personalizado, url);
+    if (opciones.forzar || !(await yaEnviadoRecientemente(empresaId, tipo, opciones.entidadId, "correo"))) {
+      await enviarPorCorreo(empresaId, tipo, destinatario, opciones, personalizado, url);
+    }
   }
   if (opciones.telefono && whatsappActivado) {
-    await enviarPorWhatsapp(empresaId, tipo, opciones.telefono, opciones, personalizado?.mensaje_whatsapp, url);
+    if (opciones.forzar || !(await yaEnviadoRecientemente(empresaId, tipo, opciones.entidadId, "whatsapp"))) {
+      await enviarPorWhatsapp(empresaId, tipo, opciones.telefono, opciones, personalizado?.mensaje_whatsapp, url);
+    }
   }
 }

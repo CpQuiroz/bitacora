@@ -9,7 +9,14 @@ import { supabase } from "./supabase";
 import { empresaTieneModulo } from "./permisos";
 import { notificarCliente } from "./notificarCliente";
 
-export async function avisarCitaAgendada(empresaId: string, tareaId: string, fecha: string, hora: string | null, clienteId: string): Promise<void> {
+export async function avisarCitaAgendada(
+  empresaId: string,
+  tareaId: string,
+  fecha: string,
+  hora: string | null,
+  clienteId: string,
+  forzar = false
+): Promise<void> {
   try {
     if (!(await empresaTieneModulo(empresaId, "agenda_pro"))) return;
     // tenant-ok: clienteId siempre viene ya validado contra empresaId por
@@ -23,6 +30,7 @@ export async function avisarCitaAgendada(empresaId: string, tareaId: string, fec
       entidadTipo: "tarea",
       entidadId: tareaId,
       telefono: cliente.telefono,
+      forzar,
       variables: {
         cliente: cliente.nombre ?? "",
         empresa: empresa?.nombre ?? "",

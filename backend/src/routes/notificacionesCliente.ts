@@ -65,6 +65,7 @@ notificacionesClienteRouter.post(
         clienteId: datos.clienteId,
         entidadTipo: "cotizacion",
         entidadId: fila.entidad_id,
+        forzar: true,
         variables: {
           cliente: datos.clienteNombre,
           fecha: tipo === "cotizacion_por_vencer" ? datos.fechaVencimiento ?? datos.fecha : datos.fecha,
@@ -83,6 +84,7 @@ notificacionesClienteRouter.post(
         clienteId: datos.clienteId,
         entidadTipo: "trabajo",
         entidadId: fila.entidad_id,
+        forzar: true,
         variables: { cliente: datos.clienteNombre, empresa: datos.empresaNombre, tecnico: datos.colaboradorNombre },
         adjunto: { filename: `${datos.folioTexto}.pdf`, buffer: await generarPdfOS(datos) },
       });
@@ -102,6 +104,7 @@ notificacionesClienteRouter.post(
         clienteId: trabajo.cliente_id,
         entidadTipo: "trabajo",
         entidadId: fila.entidad_id,
+        forzar: true,
         variables: { cliente: trabajo.cliente, tecnico, empresa: empresa?.nombre ?? "" },
       });
     } else if (tipo === "cita_agendada") {
@@ -119,7 +122,7 @@ notificacionesClienteRouter.post(
         res.status(404).json({ error: "La cita ya no existe" });
         return;
       }
-      await avisarCitaAgendada(req.empresaId!, fila.entidad_id, tarea.fecha, tarea.hora, tarea.cliente_id);
+      await avisarCitaAgendada(req.empresaId!, fila.entidad_id, tarea.fecha, tarea.hora, tarea.cliente_id, true);
     } else if (tipo === "cobro_pendiente" || tipo === "cobro_vencido") {
       const { data: factura } = await supabase
         .from("facturas")
@@ -136,6 +139,7 @@ notificacionesClienteRouter.post(
         clienteId: factura.cliente_id,
         entidadTipo: "factura",
         entidadId: fila.entidad_id,
+        forzar: true,
         variables: {
           cliente: clienteInfo?.nombre ?? "",
           fecha: factura.fecha_vencimiento,
