@@ -3,6 +3,7 @@ import { useTema } from "../../theme";
 import type { AgendaStackParamList } from "./types";
 import { AgendaScreen } from "../../features/agenda/AgendaScreen";
 import { TareaDetalleScreen } from "../../features/agenda/TareaDetalleScreen";
+import { NuevaCitaScreen } from "../../features/agenda/NuevaCitaScreen";
 
 const Stack = createNativeStackNavigator<AgendaStackParamList>();
 
@@ -24,6 +25,7 @@ export function AgendaStack() {
         component={TareaDetalleScreen}
         options={({ route }) => ({ title: route.params.titulo ?? "Cita" })}
       />
+      <Stack.Screen name="NuevaCita" component={NuevaCitaScreen} options={{ title: "Nueva cita", presentation: "modal" }} />
     </Stack.Navigator>
   );
 }

@@ -111,7 +111,10 @@ tareasRouter.post(
       res.status(400).json({ error: "hora inválida (usa HH:MM)" });
       return;
     }
-    if (responsable_id && !(await usuarioExiste(req.empresaId!, responsable_id))) {
+    // Un colaborador (típicamente desde la app) solo agenda para sí
+    // mismo — no asigna citas a otra gente del equipo.
+    const responsableFinal = req.rol === "colaborador" ? req.userId! : responsable_id;
+    if (responsableFinal && !(await usuarioExiste(req.empresaId!, responsableFinal))) {
       res.status(400).json({ error: "responsable_id inválido" });
       return;
     }
@@ -141,7 +144,7 @@ tareasRouter.post(
         descripcion: descripcion?.trim() || null,
         fecha,
         hora: hora || null,
-        responsable_id: responsable_id || null,
+        responsable_id: responsableFinal || null,
         cliente_id: cliente_id || null,
         prioridad: prioridadFinal,
         paquete_id: paquete_id || null,

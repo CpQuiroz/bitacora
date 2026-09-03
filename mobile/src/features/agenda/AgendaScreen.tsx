@@ -4,7 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useTema } from "../../theme";
-import { Badge, Card, EmptyState, ErrorState, LoadingScreen, Text } from "../../components/ui";
+import { Badge, Button, Card, EmptyState, ErrorState, LoadingScreen, Text } from "../../components/ui";
 import { OfflineBanner } from "../../components/OfflineBanner";
 import { listarMisTareas, type TareaConDatos } from "../../services/agenda";
 import type { AgendaStackParamList } from "../../shell/navigation/types";
@@ -77,10 +77,13 @@ export function AgendaScreen({ navigation }: NativeStackScreenProps<AgendaStackP
   return (
     <View style={{ flex: 1, backgroundColor: t.colores.bg }}>
       <OfflineBanner guardadoEn={guardadoEn} />
+      <View style={{ padding: t.espacio(4), paddingBottom: t.espacio(2) }}>
+        <Button titulo="Nueva cita" onPress={() => navigation.navigate("NuevaCita")} />
+      </View>
       <SectionList
         sections={secciones}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={{ padding: t.espacio(4), paddingBottom: t.espacio(10), gap: t.espacio(3), flexGrow: 1 }}
+        contentContainerStyle={{ padding: t.espacio(4), paddingTop: 0, paddingBottom: t.espacio(10), gap: t.espacio(3), flexGrow: 1 }}
         stickySectionHeadersEnabled={false}
         refreshControl={<RefreshControl refreshing={refrescando} onRefresh={onRefresh} tintColor={t.colores.brand} />}
         renderSectionHeader={({ section }) => (

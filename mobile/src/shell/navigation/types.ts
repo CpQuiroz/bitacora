@@ -16,6 +16,7 @@ export type ViajesStackParamList = {
 export type AgendaStackParamList = {
   AgendaLista: undefined;
   TareaDetalle: { tareaId: string; titulo?: string };
+  NuevaCita: undefined;
 };
 
 export type TabKey = "Trabajos" | "Agenda" | "Ruta" | "Viajes" | "Perfil";
