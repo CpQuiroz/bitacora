@@ -10,6 +10,9 @@ type UsuarioConEmpresa = Usuario & { empresa: Empresa };
 type EstadoAuth =
   | { fase: "cargando" }
   | { fase: "sin-sesion" }
+  // Hay sesión válida (típico tras login con Google) pero ese correo no
+  // está asociado a ningún usuario/empresa en Bitácora.
+  | { fase: "sin-empresa" }
   | { fase: "mfa-requerido"; usuario: UsuarioConEmpresa }
   | {
       fase: "listo";
@@ -62,7 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     if (!resMe.data.usuario) {
-      setEstado({ fase: "sin-sesion" });
+      setEstado({ fase: "sin-empresa" });
       return;
     }
 

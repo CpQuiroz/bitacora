@@ -5,6 +5,7 @@ import type { RootStackParamList } from "./types";
 import { LoginScreen } from "../../features/auth/LoginScreen";
 import { Verify2faScreen } from "../../features/auth/Verify2faScreen";
 import { MfaRequeridoScreen } from "../../features/auth/MfaRequeridoScreen";
+import { SinEmpresaScreen } from "../../features/auth/SinEmpresaScreen";
 import { AppTabs } from "./AppTabs";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -22,6 +23,8 @@ export function RootNavigator() {
       </Stack.Navigator>
     );
   }
+
+  if (auth.fase === "sin-empresa") return <SinEmpresaScreen />;
 
   if (auth.fase === "mfa-requerido") return <MfaRequeridoScreen />;
 
