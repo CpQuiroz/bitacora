@@ -94,6 +94,24 @@ export default function CuentaPage() {
   const [nuevaPass, setNuevaPass] = useState("");
   const [confirmarPass, setConfirmarPass] = useState("");
   const [cambiandoPass, setCambiandoPass] = useState(false);
+  const [descargando, setDescargando] = useState(false);
+
+  async function descargarMisDatos() {
+    setDescargando(true);
+    try {
+      const res = await apiFetch("/api/usuarios/me/datos");
+      if (!res.ok) return;
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `mis-datos-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setDescargando(false);
+    }
+  }
   const [errorPass, setErrorPass] = useState<string | null>(null);
   const [avisoPass, setAvisoPass] = useState<string | null>(null);
 
@@ -330,6 +348,18 @@ export default function CuentaPage() {
             {cambiandoPass ? "Cambiando…" : "Cambiar contraseña"}
           </Button>
         </form>
+      </Card>
+
+      <Card>
+        <h2 className="mb-2 text-sm font-semibold text-foreground">Mis datos personales</h2>
+        <p className="mb-4 text-sm text-muted">
+          Descarga un archivo con todos los datos personales que Bitácora guarda sobre ti
+          (perfil, datos laborales, liquidaciones, accesos, avisos). Ley 21.719 — derecho
+          de acceso.
+        </p>
+        <Button type="button" variant="outline" disabled={descargando} onClick={descargarMisDatos}>
+          {descargando ? "Preparando…" : "Descargar mis datos (JSON)"}
+        </Button>
       </Card>
     </div>
   );

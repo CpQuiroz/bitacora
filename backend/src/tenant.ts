@@ -8,14 +8,14 @@ export const TABLAS_POR_EMPRESA = [
   "accesos_usuario", "agenda_pro_config", "agenda_pro_horarios", "analisis_fotos",
   "asistente_mensajes", "auditoria_usuarios",
   "catalogo_items", "catalogo_item_tipos_equipo", "catalogo_kit_items", "categorias_gasto", "centros_costo",
-  "checklist_templates", "clientes", "documentos", "empresa_modulos", "empresa_rol_modulos", "equipos", "facturas",
+  "checklist_templates", "clientes", "consentimientos", "documentos", "empresa_modulos", "empresa_rol_modulos", "equipos", "facturas",
   "gastos", "gastos_fijos", "informes_generados", "informes_personalizados",
   "integraciones", "inventario", "inventario_movimientos", "mensajes_personalizados",
   "notificaciones", "notificaciones_cliente_log", "notificaciones_config",
   "ordenes_servicio", "os_items", "paquetes_sesiones", "planes_mantencion", "plantillas_documento", "portal_accesos",
   "portal_codigos", "presupuesto_items", "presupuestos", "proveedores",
   "rutas_planificadas", "suscripciones", "suscripcion_cobros", "tareas", "tipos_documento", "tipos_os", "tipos_trabajo",
-  "trabajos", "unidades_medida", "usuarios", "vehiculo_asignaciones", "vehiculos",
+  "trabajos", "unidades_medida", "usuarios", "vehiculo_asignaciones",
   "viajes",
 ] as const;
 

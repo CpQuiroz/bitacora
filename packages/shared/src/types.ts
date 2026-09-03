@@ -182,6 +182,20 @@ export type Idempotencia = {
   creado_en: string;
 };
 
+// Ley 21.719 — registro de aceptación de Política de Privacidad / Términos.
+export type Consentimiento = {
+  id: string;
+  usuario_id: string | null;
+  cliente_id: string | null;
+  empresa_id: string | null;
+  documento: "privacidad" | "terminos";
+  version: string;
+  aceptado_en: string;
+  ip: string | null;
+  user_agent: string | null;
+  creado_en: string;
+};
+
 export type EmpresaModulo = {
   empresa_id: string;
   modulo: string;
@@ -297,23 +311,6 @@ export type Documento = {
   archivo_key: string | null;
   creado_en: string;
   actualizado_en: string;
-};
-
-// Tabla vehiculos: ya sin uso activo — los vehículos viven en equipos
-// (categoria = "Vehículo") desde la migración 52_fusion_vehiculos_equipos.
-// Se mantiene el tipo porque la tabla física sigue existiendo (por si
-// hace falta rollback), pero nada nuevo debería escribir acá.
-export type Vehiculo = {
-  id: string;
-  empresa_id: string;
-  patente: string;
-  marca: string | null;
-  modelo: string | null;
-  anio: number | null;
-  tipo: string | null;
-  capacidad_carga: string | null;
-  activo: boolean;
-  creado_en: string;
 };
 
 // equipo_id apunta a equipos(id) (categoria = "Vehículo") desde la
@@ -611,6 +608,9 @@ export type Cliente = {
   // (ver cumpleanosClientes.ts). Solo se usa mes/día, el año queda
   // ignorado a propósito.
   fecha_nacimiento: string | null;
+  // Ley 21.719 — el cliente ejerció su derecho de oposición ("no recibir
+  // más avisos", link en el pie de los correos).
+  notificaciones_opt_out: boolean;
   creado_en: string;
 };
 
@@ -1361,7 +1361,6 @@ export type Database = {
       portal_codigos: Tabla<PortalCodigo>;
       tipos_documento: Tabla<TipoDocumento>;
       documentos: Tabla<Documento>;
-      vehiculos: Tabla<Vehiculo>;
       vehiculo_asignaciones: Tabla<VehiculoAsignacion>;
       notificaciones: Tabla<Notificacion>;
       notificaciones_preferencias: Tabla<NotificacionPreferencia>;
@@ -1382,6 +1381,7 @@ export type Database = {
       ia_uso: Tabla<IaUso>;
       errores_backend: Tabla<ErrorBackend>;
       idempotencia: Tabla<Idempotencia>;
+      consentimientos: Tabla<Consentimiento>;
       empresa_modulos: Tabla<EmpresaModulo>;
       empresa_rol_modulos: Tabla<EmpresaRolModulo>;
       paquetes_sesiones: Tabla<PaqueteSesiones>;

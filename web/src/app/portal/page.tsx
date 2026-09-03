@@ -15,6 +15,18 @@ export default function PortalHomePage() {
   const [visitas, setVisitas] = useState<Visita[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  async function descargarMisDatos() {
+    const res = await portalFetch("/api/portal/mis-datos");
+    if (!res.ok) return;
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `mis-datos-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   useEffect(() => {
     if (!obtenerTokenPortal()) {
       router.replace("/portal/login");
@@ -76,6 +88,14 @@ export default function PortalHomePage() {
           </Card>
         ))}
       </div>
+
+      <button
+        type="button"
+        onClick={descargarMisDatos}
+        className="mt-10 text-xs text-muted underline hover:text-brand"
+      >
+        Descargar mis datos personales (Ley 21.719)
+      </button>
     </PortalShell>
   );
 }

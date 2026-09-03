@@ -10,6 +10,7 @@ import {
   fijarModulosDeRolEnEmpresa,
 } from "../roles";
 import { empresaTieneModulo } from "../permisos";
+import { anonimizarUsuario, anonimizarCliente } from "../anonimizar";
 import { validarValorAcceso } from "../accesosAutorizados";
 import { supabase } from "../supabase";
 import { env } from "../env";
@@ -819,6 +820,74 @@ superadminRouter.delete(
       empresaId: req.params.id,
       ip: req.ip ?? null,
       detalle: `${usuario.nombre} (${usuario.rol}, ${usuario.id}, ${correo})`,
+    });
+    res.status(204).end();
+  })
+);
+
+// ── Anonimizar un titular individual (Ley 21.719, derecho de supresión) ──
+// Reemplaza los datos identificatorios por un placeholder y elimina los
+// datos accesorios, manteniendo la integridad referencial (los trabajos/
+// OS donde figura siguen existiendo, sin nombre de persona). Irreversible.
+// Exige escribir el nombre exacto para confirmar (igual que "eliminar").
+superadminRouter.post(
+  "/empresas/:id/usuarios/:usuarioId/anonimizar",
+  requiereSuperAdmin,
+  ah<RequestConSuperAdmin>(async (req, res) => {
+    const usuario = await buscarUsuarioDeEmpresa(req.params.id, req.params.usuarioId);
+    if (!usuario) {
+      res.status(404).json({ error: "Usuario no encontrado en esta empresa" });
+      return;
+    }
+    if (typeof req.body?.confirmar !== "string" || req.body.confirmar.trim() !== usuario.nombre) {
+      res.status(400).json({ error: "Escribe el nombre exacto del usuario para confirmar" });
+      return;
+    }
+    if (await esUltimoAdminActivo(req.params.id, usuario.id)) {
+      res.status(409).json({ error: "Es el único administrador activo de la empresa. Deja otro admin antes de anonimizarlo." });
+      return;
+    }
+    const r = await anonimizarUsuario(usuario.id);
+    if (!r.ok) {
+      res.status(500).json({ error: r.error });
+      return;
+    }
+    await registrarAuditoria(req.superAdminId!, "anonimizar_usuario", {
+      empresaId: req.params.id,
+      ip: req.ip ?? null,
+      detalle: `${usuario.nombre} (${usuario.rol}, ${usuario.id})`,
+    });
+    res.status(204).end();
+  })
+);
+
+superadminRouter.post(
+  "/empresas/:id/clientes/:clienteId/anonimizar",
+  requiereSuperAdmin,
+  ah<RequestConSuperAdmin>(async (req, res) => {
+    const { data: cliente } = await supabase
+      .from("clientes")
+      .select("id, nombre")
+      .eq("id", req.params.clienteId)
+      .eq("empresa_id", req.params.id)
+      .maybeSingle();
+    if (!cliente) {
+      res.status(404).json({ error: "Cliente no encontrado en esta empresa" });
+      return;
+    }
+    if (typeof req.body?.confirmar !== "string" || req.body.confirmar.trim() !== cliente.nombre) {
+      res.status(400).json({ error: "Escribe el nombre exacto del cliente para confirmar" });
+      return;
+    }
+    const r = await anonimizarCliente(cliente.id);
+    if (!r.ok) {
+      res.status(500).json({ error: r.error });
+      return;
+    }
+    await registrarAuditoria(req.superAdminId!, "anonimizar_cliente", {
+      empresaId: req.params.id,
+      ip: req.ip ?? null,
+      detalle: `${cliente.nombre} (${cliente.id})`,
     });
     res.status(204).end();
   })

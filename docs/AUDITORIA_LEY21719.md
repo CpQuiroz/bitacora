@@ -10,6 +10,31 @@
 
 ---
 
+## Estado de implementación (3-sep-2026, mismo día)
+
+Se aplicó la parte **técnica** de los hallazgos (migraciones 79-80 + código). Lo
+**legal/manual** sigue pendiente y es lo que bloquea el cumplimiento real.
+
+| # | Hallazgo | Técnico | Qué falta (legal/manual) |
+|---|---|---|---|
+| 1 | Consentimiento | ✅ tabla `consentimientos`, checkbox obligatorio en `/onboarding` y `/invitacion`, `/api/consentimiento`, `consentimiento_pendiente` en `/api/me` + banner (web) y aviso (móvil), páginas `/privacidad` y `/terminos` | **Redactar el texto legal** de ambas páginas (hoy son esqueletos con marcadores). Definir base legal. |
+| 2 | Supresión individual | ✅ `POST …/usuarios/:id/anonimizar` y `…/clientes/:id/anonimizar` (Super-Admin), en el panel web | Confirmar con abogado el plazo de conservación posterior obligatorio (laboral/tributario). |
+| 3 | Acceso individual | ✅ `GET /api/usuarios/me/datos` (web: Configuración → Cuenta; móvil: Perfil) y `GET /api/portal/mis-datos` (Portal) | — |
+| 4 | Transferencia internacional | ✅ declarada en la Política de Privacidad (§4-5, con la lista real de proveedores) | Mecanismo de resguardo (cláusulas / consentimiento). Evaluar región Sudamérica de Supabase. |
+| 5 | Retención | ✅ `retencion.ts` — limpieza perezosa de `accesos_usuario` (12m), `portal_codigos` (30d), `portal_accesos` (30d post-exp), tokens 2FA vencidos | Confirmar plazos con abogado. |
+| 6 | Retención tras baja de empresa | ⏳ no implementado | Definir plazo + proceso con abogado. |
+| 7 | Tabla huérfana | ✅ migración 80 dropea `vehiculos` | — |
+| 8 | Notificación de brechas | ✅ sección "sospecha de brecha de datos personales" en `docs/RUNBOOK_INCIDENTES.md` | Configurar `SENTRY_DSN` en Render. Plantilla de notificación a APDP/titulares (abogado). |
+| 9 | Datos sensibles | ⏳ declarados en la Política; sin cambios de minimización | Evaluar minimización en `datos_laborales`. Confirmar si el volumen exige DPD/EIPD. |
+| 10 | Saber que la cuenta fue impersonada | ✅ el export individual (#3) incluye los eventos de impersonación con fecha + motivo | Confirmar con abogado si se debe mostrar la justificación completa. |
+| 11 | Rectificación por el cliente | ⏳ no implementado | Formulario de solicitud en el Portal (follow-up). |
+| 12 | Oposición del cliente | ✅ `clientes.notificaciones_opt_out` + link "darse de baja" al pie de los correos + `/baja-avisos` + `notificarCliente` lo respeta | — |
+
+**Migraciones nuevas:** `79_ley21719_consentimientos.sql`, `80_ley21719_optout_y_limpieza.sql`
+(aplicadas a dev; **pendiente prod**).
+
+---
+
 ## Resumen ejecutivo
 
 **Lo que más urge antes del 1-dic-2026, en orden:**

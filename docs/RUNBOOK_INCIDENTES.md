@@ -366,6 +366,44 @@ resto de la app, nada.
 
 ---
 
+## Escenario: sospecha de brecha de datos personales (Ley 21.719)
+
+**Síntomas / disparadores:**
+- Un pico de `errores_backend` o una alerta de Sentry sobre RLS, `403`/`401` masivos,
+  o accesos con patrón raro (misma IP, muchas empresas).
+- Un usuario/cliente reporta ver datos que no son suyos.
+- Un `select` de auditoría (`accesos_usuario`, `super_admin_auditoria`) con actividad
+  que no cuadra.
+- Aviso de un proveedor (Supabase, Resend, Vercel, Render) de un incidente de seguridad
+  de su lado.
+
+**Clasificación:** SEV1 si hay indicio de exposición real de datos personales; SEV2 si
+es sospecha sin confirmar.
+
+**Primeras 2 horas — evaluar alcance (la ley exige actuar "sin dilaciones indebidas"):**
+1. **Contener:** si el vector está claro (una ruta, un token filtrado, un usuario
+   comprometido), cerrarlo ya — desactivar el usuario, rotar el secreto, deshabilitar
+   la ruta. Anotar la hora exacta.
+2. **Determinar qué datos:** ¿qué tablas / qué personas? Usar `super_admin_auditoria`,
+   `accesos_usuario`, los logs de Render, y si hace falta un `select` puntual sobre las
+   tablas sospechosas. Foco en las categorías sensibles: `datos_laborales` (salud,
+   remuneración), `clientes` (RUT, contacto), fotos de terreno.
+3. **Determinar el número de afectados** (personas y empresas) — aunque sea un rango.
+4. **Guardar evidencia:** export de los logs relevantes ANTES de que la retención los
+   borre (`accesos_usuario` se limpia a 12 meses; los de Render son más cortos).
+
+**Notificación (confirmar con abogado los plazos y la forma exactos de la APDP):**
+- Si se confirma exposición de datos personales: notificar a la **Agencia de Protección
+  de Datos Personales (APDP)** y a los **titulares afectados**.
+- Contenido mínimo: qué pasó, qué datos, cuántas personas, qué se hizo para contener,
+  qué puede hacer el afectado, contacto.
+- **Plantilla:** [PENDIENTE — redactar con abogado antes del 1-dic-2026].
+
+**Después:** postmortem SEV1 obligatorio + revisar si el vector necesita un fix
+estructural (no solo el parche de contención).
+
+---
+
 ## Postmortem — cuándo escribir uno
 
 **Solo para SEV1 y SEV2.** Un SEV3/SEV4 no lo amerita (una línea en un TODO alcanza).

@@ -23,6 +23,7 @@ import { supabase } from "./supabase";
 import { env } from "./env";
 import { enviarConReintento } from "./email";
 import { enviarMensajeWhatsapp } from "./whatsapp";
+import { linkBajaAvisos } from "./bajaAvisos";
 
 const ASUNTOS_DEFAULT: Record<TipoNotificacionCliente, string> = {
   cotizacion_enviada: "Tu cotización de {empresa}",
@@ -217,11 +218,16 @@ async function enviarPorCorreo(
       cuerpo += `<p style="margin-top:20px;"><a href="${url}" style="display:inline-block;padding:10px 18px;background:#4338ca;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;">Ver en mi portal</a></p>`;
     }
 
+    // Ley 21.719 — link de oposición al contacto (derecho de baja).
+    const pieBaja = opciones.clienteId
+      ? `<p style="margin-top:28px;font-size:12px;color:#888;">Si no quieres recibir más avisos como este, <a href="${linkBajaAvisos(empresaId, opciones.clienteId)}" style="color:#888;">haz clic aquí para darte de baja</a>.</p>`
+      : "";
+
     const body: Record<string, unknown> = {
       from: env.RESEND_FROM_EMAIL,
       to: destinatario,
       subject: asunto,
-      html: `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;">${cuerpo}</div>`,
+      html: `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;">${cuerpo}${pieBaja}</div>`,
     };
     if (opciones.adjunto) {
       body.attachments = [{ filename: opciones.adjunto.filename, content: opciones.adjunto.buffer.toString("base64") }];
@@ -258,6 +264,17 @@ export async function notificarCliente(
 ): Promise<void> {
   const { data: config } = await supabase.from("notificaciones_config").select("*").eq("empresa_id", empresaId).maybeSingle();
   if (!tipoActivado(config, tipo)) return;
+
+  // Ley 21.719 — el cliente ejerció su derecho de oposición ("no recibir
+  // más avisos", link en los correos). Se respeta siempre, aun con forzar.
+  if (opciones.clienteId) {
+    const { data: cli } = await supabase
+      .from("clientes")
+      .select("notificaciones_opt_out")
+      .eq("id", opciones.clienteId)
+      .maybeSingle();
+    if (cli?.notificaciones_opt_out) return;
+  }
 
   const { data: personalizado } = await supabase
     .from("mensajes_personalizados")

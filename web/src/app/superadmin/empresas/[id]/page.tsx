@@ -105,6 +105,11 @@ export default function SuperAdminSaludEmpresaPage() {
   const [cambiandoEstadoId, setCambiandoEstadoId] = useState<string | null>(null);
   const [eliminarUsuario, setEliminarUsuario] = useState<{ id: string; nombre: string } | null>(null);
   const [confirmacionEliminarUsuario, setConfirmacionEliminarUsuario] = useState("");
+  const [anonimizandoUsuario, setAnonimizandoUsuario] = useState(false);
+  const [clienteAnonId, setClienteAnonId] = useState("");
+  const [clienteAnonNombre, setClienteAnonNombre] = useState("");
+  const [anonimizandoCliente, setAnonimizandoCliente] = useState(false);
+  const [msgAnonCliente, setMsgAnonCliente] = useState<{ tipo: "ok" | "error"; texto: string } | null>(null);
   const [eliminandoUsuario, setEliminandoUsuario] = useState(false);
   const [errorEliminarUsuario, setErrorEliminarUsuario] = useState<string | null>(null);
 
@@ -449,6 +454,47 @@ export default function SuperAdminSaludEmpresaPage() {
     setEliminarUsuario(null);
     setConfirmacionEliminarUsuario("");
     cargarUsuarios();
+  }
+
+  async function onAnonimizarUsuario() {
+    if (!eliminarUsuario) return;
+    setErrorEliminarUsuario(null);
+    setAnonimizandoUsuario(true);
+    const res = await superadminFetch(`/api/superadmin/empresas/${params.id}/usuarios/${eliminarUsuario.id}/anonimizar`, {
+      method: "POST",
+      body: JSON.stringify({ confirmar: confirmacionEliminarUsuario }),
+    });
+    setAnonimizandoUsuario(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setErrorEliminarUsuario(body.error ?? "No se pudo anonimizar");
+      return;
+    }
+    setEliminarUsuario(null);
+    setConfirmacionEliminarUsuario("");
+    cargarUsuarios();
+  }
+
+  async function onAnonimizarCliente() {
+    setMsgAnonCliente(null);
+    if (!clienteAnonId.trim() || !clienteAnonNombre.trim()) {
+      setMsgAnonCliente({ tipo: "error", texto: "Completa el ID y el nombre exacto del cliente." });
+      return;
+    }
+    setAnonimizandoCliente(true);
+    const res = await superadminFetch(
+      `/api/superadmin/empresas/${params.id}/clientes/${clienteAnonId.trim()}/anonimizar`,
+      { method: "POST", body: JSON.stringify({ confirmar: clienteAnonNombre.trim() }) }
+    );
+    setAnonimizandoCliente(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setMsgAnonCliente({ tipo: "error", texto: body.error ?? "No se pudo anonimizar" });
+      return;
+    }
+    setMsgAnonCliente({ tipo: "ok", texto: "Cliente anonimizado." });
+    setClienteAnonId("");
+    setClienteAnonNombre("");
   }
 
   async function onExtenderPrueba() {
@@ -1253,10 +1299,12 @@ export default function SuperAdminSaludEmpresaPage() {
 
             {eliminarUsuario && (
               <div className="mt-4 rounded-lg border border-danger/40 bg-danger/5 p-4">
-                <p className="text-sm font-semibold text-foreground">Eliminar definitivamente a {eliminarUsuario.nombre}</p>
+                <p className="text-sm font-semibold text-foreground">Eliminar o anonimizar a {eliminarUsuario.nombre}</p>
                 <p className="mt-1 text-sm text-muted">
-                  Borra la cuenta y libera su correo. Solo funciona si no tiene trabajos/OS, rutas, fotos ni informes
-                  asociados — si los tiene, usa <span className="font-medium">Desactivar</span>. Esto no se puede deshacer.
+                  <span className="font-medium">Eliminar</span> borra la cuenta y libera el correo — solo si no tiene
+                  trabajos/OS, rutas, fotos ni informes. <span className="font-medium">Anonimizar</span> (Ley 21.719)
+                  reemplaza nombre/RUT/contacto por un placeholder y borra contrato, accesos y consentimientos, dejando
+                  los registros operativos sin nombre de persona. Ambas son irreversibles.
                 </p>
                 <Label className="mt-3">
                   Escribe <span className="font-mono text-foreground">{eliminarUsuario.nombre}</span> para confirmar
@@ -1271,7 +1319,7 @@ export default function SuperAdminSaludEmpresaPage() {
                     <ErrorText>{errorEliminarUsuario}</ErrorText>
                   </div>
                 )}
-                <div className="mt-3 flex gap-2">
+                <div className="mt-3 flex flex-wrap gap-2">
                   <Button
                     type="button"
                     variant="danger"
@@ -1280,10 +1328,44 @@ export default function SuperAdminSaludEmpresaPage() {
                   >
                     {eliminandoUsuario ? "Eliminando…" : "Eliminar definitivamente"}
                   </Button>
+                  <Button
+                    type="button"
+                    variant="danger"
+                    disabled={anonimizandoUsuario || confirmacionEliminarUsuario.trim() !== eliminarUsuario.nombre}
+                    onClick={onAnonimizarUsuario}
+                  >
+                    {anonimizandoUsuario ? "Anonimizando…" : "Anonimizar (Ley 21.719)"}
+                  </Button>
                   <Button type="button" variant="ghost" onClick={() => setEliminarUsuario(null)}>
                     Cancelar
                   </Button>
                 </div>
+              </div>
+            )}
+          </Card>
+
+          <Card className="mt-4">
+            <h2 className="mb-2 text-sm font-semibold text-foreground">Anonimizar un cliente (Ley 21.719)</h2>
+            <p className="mb-3 text-sm text-muted">
+              Reemplaza nombre/RUT/contacto del cliente por un placeholder y borra sus accesos al Portal y consentimientos.
+              Los trabajos/cobros quedan sin nombre de persona. Irreversible. El ID sale del export de la empresa o de la base.
+            </p>
+            <div className="flex flex-wrap items-end gap-2">
+              <div>
+                <Label>ID del cliente</Label>
+                <Input value={clienteAnonId} onChange={(e) => setClienteAnonId(e.target.value)} className="w-72 font-mono text-xs" />
+              </div>
+              <div>
+                <Label>Nombre exacto (confirmación)</Label>
+                <Input value={clienteAnonNombre} onChange={(e) => setClienteAnonNombre(e.target.value)} className="w-56" />
+              </div>
+              <Button type="button" variant="danger" disabled={anonimizandoCliente} onClick={onAnonimizarCliente}>
+                {anonimizandoCliente ? "Anonimizando…" : "Anonimizar"}
+              </Button>
+            </div>
+            {msgAnonCliente && (
+              <div className="mt-2">
+                {msgAnonCliente.tipo === "ok" ? <SuccessText>{msgAnonCliente.texto}</SuccessText> : <ErrorText>{msgAnonCliente.texto}</ErrorText>}
               </div>
             )}
           </Card>

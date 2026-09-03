@@ -177,6 +177,8 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
   // todavía no cargó → se usa el fallback sync puedeVerModulo.
   const [modulosVisibles, setModulosVisibles] = useState<Modulo[] | null>(null);
   const [impersonando, setImpersonando] = useState(false);
+  const [consentimientoPendiente, setConsentimientoPendiente] = useState(false);
+  const [aceptandoConsentimiento, setAceptandoConsentimiento] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -198,9 +200,17 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
         // hay un token guardado, quedó viejo/vencido — limpiarlo.
         if (body.impersonacion) setImpersonando(true);
         else if (obtenerImpersonacion()) limpiarImpersonacion();
+        setConsentimientoPendiente(Boolean(body.consentimiento_pendiente));
       }
     })();
   }, []);
+
+  async function aceptarConsentimiento() {
+    setAceptandoConsentimiento(true);
+    const res = await apiFetch("/api/consentimiento", { method: "POST" });
+    setAceptandoConsentimiento(false);
+    if (res.ok) setConsentimientoPendiente(false);
+  }
 
   // Cuando se cumplen los 30 min, salir solo (el backend ya rechaza el
   // token vencido — esto es para que la UI no se quede colgada).
@@ -457,7 +467,23 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
           </button>
         </div>
       )}
-      <div className={`flex min-h-screen bg-background ${impersonando ? "pt-9" : ""}`} style={temaStyle}>
+      {consentimientoPendiente && !impersonando && (
+        <div className="fixed inset-x-0 top-0 z-[60] flex flex-wrap items-center justify-center gap-x-3 gap-y-1 bg-amber-500 px-4 py-2 text-center text-xs font-medium text-white print:hidden">
+          <span>
+            Actualizamos la Política de Privacidad y los Términos.{" "}
+            <a href="/privacidad" target="_blank" className="underline">Revisar</a>.
+          </span>
+          <button
+            type="button"
+            onClick={aceptarConsentimiento}
+            disabled={aceptandoConsentimiento}
+            className="rounded bg-white/20 px-2 py-0.5 font-semibold hover:bg-white/30 disabled:opacity-60"
+          >
+            {aceptandoConsentimiento ? "Guardando…" : "Aceptar"}
+          </button>
+        </div>
+      )}
+      <div className={`flex min-h-screen bg-background ${impersonando || (consentimientoPendiente && !impersonando) ? "pt-9" : ""}`} style={temaStyle}>
       {/* Sidebar de escritorio */}
       <aside
         className={`sticky top-0 hidden h-screen shrink-0 flex-col border-r border-border bg-surface transition-[width] duration-150 print:hidden sm:flex ${

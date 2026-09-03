@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
 import Constants from "expo-constants";
-import { Alert, Pressable, View } from "react-native";
+import { Alert, Linking, Pressable, Share, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTema } from "../../theme";
 import { Button, Card, Screen, Text } from "../../components/ui";
 import { useAuth } from "../auth/AuthContext";
 import { useRed } from "../../services/sync/NetworkProvider";
+import { apiFetch, apiJson } from "../../services/api";
 import { biometriaActivada, biometriaDisponible, nombreBiometria, pedirBiometria, setBiometriaActivada } from "../../lib/biometria";
+
+const WEB_URL = "https://app.transportesitineris.cl";
 
 const ETIQUETA_ROL: Record<string, string> = {
   admin: "Administrador",
@@ -30,6 +33,33 @@ export function PerfilScreen() {
   const [bioDisponible, setBioDisponible] = useState(false);
   const [bioNombre, setBioNombre] = useState("biometría");
   const [bioActiva, setBioActiva] = useState(false);
+  const [consentPend, setConsentPend] = useState(auth.fase === "listo" ? auth.consentimientoPendiente : false);
+  const [ocupado, setOcupado] = useState(false);
+
+  async function aceptarConsentimiento() {
+    setOcupado(true);
+    const r = await apiJson("/api/consentimiento", { method: "POST" });
+    setOcupado(false);
+    if (r.ok) setConsentPend(false);
+    else Alert.alert("No se pudo guardar", "Intenta de nuevo con conexión.");
+  }
+
+  async function descargarMisDatos() {
+    setOcupado(true);
+    try {
+      const res = await apiFetch("/api/usuarios/me/datos", {}, 30000);
+      if (!res.ok) {
+        Alert.alert("No se pudo generar", "Intenta de nuevo.");
+        return;
+      }
+      const texto = await res.text();
+      await Share.share({ message: texto });
+    } catch {
+      Alert.alert("Sin conexión", "Necesitas conexión para esto.");
+    } finally {
+      setOcupado(false);
+    }
+  }
 
   useEffect(() => {
     biometriaDisponible().then(setBioDisponible);
@@ -156,6 +186,39 @@ export function PerfilScreen() {
           </Pressable>
         </Card>
       )}
+
+      {consentPend && (
+        <Card style={{ borderColor: t.colores.warning, backgroundColor: t.colores.warningSoft, gap: t.espacio(2) }} plano>
+          <Text variante="etiqueta" weight="semibold" style={{ color: t.colores.warning }}>
+            Política de Privacidad actualizada
+          </Text>
+          <Text variante="caption" tono="muted">
+            Revisá y aceptá la Política de Privacidad y los Términos.
+          </Text>
+          <View style={{ flexDirection: "row", gap: t.espacio(2) }}>
+            <Button titulo="Aceptar" onPress={aceptarConsentimiento} cargando={ocupado} />
+            <Button titulo="Ver" variante="secundario" onPress={() => Linking.openURL(`${WEB_URL}/privacidad`)} />
+          </View>
+        </Card>
+      )}
+
+      <Card>
+        <Pressable
+          onPress={descargarMisDatos}
+          hitSlop={8}
+          style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: t.espacio(3), minHeight: 44, opacity: pressed ? 0.7 : 1 })}
+        >
+          <Ionicons name="download-outline" size={22} color={t.colores.muted} />
+          <View style={{ flex: 1 }}>
+            <Text variante="etiqueta" weight="medium">
+              Mis datos personales
+            </Text>
+            <Text variante="caption" tono="muted">
+              Descargá todo lo que Bitácora guarda sobre vos.
+            </Text>
+          </View>
+        </Pressable>
+      </Card>
 
       <Text variante="caption" tono="muted" style={{ textAlign: "center" }}>
         Bitácora {Constants.expoConfig?.version ?? ""}

@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { apiFetch } from "@/lib/api";
 import { AuthLayout } from "@/components/AuthLayout";
 import { Button, ErrorText, Input, Label } from "@/components/ui";
 
@@ -11,6 +13,7 @@ export default function InvitacionPage() {
   const [verificando, setVerificando] = useState(true);
   const [password, setPassword] = useState("");
   const [confirmar, setConfirmar] = useState("");
+  const [acepto, setAcepto] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,13 +41,20 @@ export default function InvitacionPage() {
       setError("Las contraseñas no coinciden");
       return;
     }
+    if (!acepto) {
+      setError("Debes aceptar la Política de Privacidad y los Términos para continuar.");
+      return;
+    }
     setGuardando(true);
     const { error } = await supabase.auth.updateUser({ password });
-    setGuardando(false);
     if (error) {
+      setGuardando(false);
       setError(error.message);
       return;
     }
+    // Ley 21.719 — deja constancia de la aceptación.
+    await apiFetch("/api/consentimiento", { method: "POST" }).catch(() => {});
+    setGuardando(false);
     router.push("/dashboard");
   }
 
@@ -77,7 +87,16 @@ export default function InvitacionPage() {
               onChange={(e) => setConfirmar(e.target.value)}
             />
           </div>
-          <Button type="submit" disabled={guardando} className="mt-2 w-full">
+          <label className="flex items-start gap-2 text-sm text-muted">
+            <input type="checkbox" className="mt-0.5" checked={acepto} onChange={(e) => setAcepto(e.target.checked)} />
+            <span>
+              Acepto la{" "}
+              <Link href="/privacidad" target="_blank" className="text-brand hover:underline">Política de Privacidad</Link>{" "}
+              y los{" "}
+              <Link href="/terminos" target="_blank" className="text-brand hover:underline">Términos</Link>.
+            </span>
+          </label>
+          <Button type="submit" disabled={guardando || !acepto} className="mt-2 w-full">
             {guardando ? "Guardando…" : "Entrar"}
           </Button>
         </form>

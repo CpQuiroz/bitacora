@@ -12,6 +12,7 @@ import { equipoAsignadoAColaborador } from "./equipos";
 import { enviarInvitacion } from "../email";
 import { limitarInvitacion } from "../rateLimiters";
 import { verificarLimiteUsuarios } from "../limites";
+import { datosPersonalesDeUsuario } from "../exportarDatosPersonales";
 
 export const usuariosRouter = Router();
 
@@ -372,6 +373,18 @@ usuariosRouter.patch(
       return;
     }
     res.json(data);
+  })
+);
+
+// Ley 21.719 — derecho de acceso: el usuario descarga TODOS sus datos
+// personales en un JSON. Distinto del export del Super-Admin (empresa
+// entera). tenant-ok: solo su propio userId.
+usuariosRouter.get(
+  "/me/datos",
+  ah<RequestConEmpresa>(async (req, res) => {
+    const datos = await datosPersonalesDeUsuario(req.userId!);
+    res.setHeader("Content-Disposition", `attachment; filename="mis-datos-${new Date().toISOString().slice(0, 10)}.json"`);
+    res.json(datos);
   })
 );
 

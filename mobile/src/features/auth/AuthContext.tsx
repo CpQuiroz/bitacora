@@ -22,6 +22,9 @@ type EstadoAuth =
       // ajustes por empresa de Configuración → Perfiles). Lo usa la
       // navegación para decidir pestañas.
       modulosVisibles: Modulo[];
+      // Ley 21.719 — true si no aceptó la versión vigente de la Política
+      // de Privacidad / Términos. Perfil muestra un aviso.
+      consentimientoPendiente: boolean;
     };
 
 type AuthContexto = EstadoAuth & {
@@ -45,6 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         modulos_deshabilitados: Modulo[];
         modulos_visibles?: Modulo[];
         rol_exige_2fa?: boolean;
+        consentimiento_pendiente?: boolean;
       }>("/api/me"),
       apiJson<{ activado: boolean }>("/api/usuarios/me/mfa"),
     ]);
@@ -58,6 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           usuario: cache.datos.usuario,
           modulosDeshabilitados: cache.datos.modulos,
           modulosVisibles: cache.datos.visibles ?? [],
+          consentimientoPendiente: false,
         });
       } else {
         setEstado({ fase: "sin-sesion" });
@@ -82,7 +87,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setEstado({ fase: "mfa-requerido", usuario });
       return;
     }
-    setEstado({ fase: "listo", usuario, modulosDeshabilitados: modulos, modulosVisibles: visibles });
+    setEstado({
+      fase: "listo",
+      usuario,
+      modulosDeshabilitados: modulos,
+      modulosVisibles: visibles,
+      consentimientoPendiente: resMe.data.consentimiento_pendiente ?? false,
+    });
   }, []);
 
   useEffect(() => {

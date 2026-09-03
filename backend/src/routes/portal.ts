@@ -14,6 +14,7 @@ import { enviarConReintento } from "../email";
 import { notificarGerencia } from "../notificar";
 import { crearTokenPortal, requierePortal, type RequestConPortal } from "../portalAuth";
 import { calcularEstadoCancelacion, obtenerOCrearAgendaProConfig } from "../agendaPro";
+import { datosPersonalesDeCliente } from "../exportarDatosPersonales";
 import { armarDatosPdf } from "./trabajos";
 import { generarPdfOS } from "../generarPdfOS";
 import { armarDatosPdfCotizacion } from "./cotizaciones";
@@ -140,6 +141,18 @@ portalRouter.post(
 );
 
 // ---------- Datos (requierePortal) ----------
+
+// Ley 21.719 — derecho de acceso: el cliente descarga todos sus datos
+// personales en un JSON.
+portalRouter.get(
+  "/mis-datos",
+  requierePortal,
+  ah<RequestConPortal>(async (req, res) => {
+    const datos = await datosPersonalesDeCliente(req.clienteId!);
+    res.setHeader("Content-Disposition", `attachment; filename="mis-datos-${new Date().toISOString().slice(0, 10)}.json"`);
+    res.json(datos);
+  })
+);
 
 portalRouter.get(
   "/datos/visitas",

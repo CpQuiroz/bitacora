@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Rubro } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
@@ -22,6 +23,7 @@ export default function OnboardingPage() {
   const [rubro, setRubro] = useState<Rubro>("transporte");
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [acepto, setAcepto] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -60,6 +62,7 @@ export default function OnboardingPage() {
         nombre_empresa: nombreEmpresa,
         rubro,
         nombre_usuario: nombreUsuario,
+        acepto_documentos: acepto,
       }),
     });
 
@@ -105,8 +108,22 @@ export default function OnboardingPage() {
             ))}
           </Select>
         </div>
+        <label className="flex items-start gap-2 text-sm text-muted">
+          <input
+            type="checkbox"
+            className="mt-0.5"
+            checked={acepto}
+            onChange={(e) => setAcepto(e.target.checked)}
+          />
+          <span>
+            He leído y acepto la{" "}
+            <Link href="/privacidad" target="_blank" className="text-brand hover:underline">Política de Privacidad</Link>{" "}
+            y los{" "}
+            <Link href="/terminos" target="_blank" className="text-brand hover:underline">Términos de Servicio</Link>.
+          </span>
+        </label>
         {error && <ErrorText>{error}</ErrorText>}
-        <Button type="submit" disabled={cargando} className="mt-2 w-full">
+        <Button type="submit" disabled={cargando || !acepto} className="mt-2 w-full">
           {cargando ? "Creando…" : "Crear empresa"}
         </Button>
       </form>

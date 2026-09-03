@@ -6,3 +6,4 @@ export * from "./regionesComunas";
 export * from "./plantillas";
 export * from "./limites";
 export * from "./liquidacionChile";
+export * from "./legales";

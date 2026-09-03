@@ -64,6 +64,9 @@ import { accionesDeRol, rolExigeMfa } from "./roles";
 import { resolverAccesoParaLogin, aprovisionarUsuario } from "./accesosAutorizados";
 import { revisarCumpleanosClientes } from "./cumpleanosClientes";
 import { sembrarSugerenciasRubro } from "./seedRubro";
+import { registrarConsentimiento, tieneConsentimientoVigente } from "./consentimiento";
+import { limpiarDatosVencidosSiCorresponde } from "./retencion";
+import { verificarTokenBajaAvisos } from "./bajaAvisos";
 import { ah } from "./asyncHandler";
 
 const RUBROS: Rubro[] = ["transporte", "servicio_tecnico", "otro"];
@@ -158,20 +161,23 @@ app.get("/api/me", requiereAuth, ah<RequestConUsuario>(async (req, res) => {
     }
   }
 
-  const [modulosDeshabilitados, featureFlags, modulosVisibles, acciones, rolExige2fa] = usuario
+  const [modulosDeshabilitados, featureFlags, modulosVisibles, acciones, rolExige2fa, consentimientoVigente] = usuario
     ? await Promise.all([
         modulosDeshabilitadosDeEmpresa(usuario.empresa_id),
         featureFlagsDeEmpresa(usuario.empresa_id),
         modulosVisiblesDeUsuario(usuario.rol, usuario.empresa_id),
         accionesDeRol(usuario.rol),
         rolExigeMfa(usuario.rol),
+        tieneConsentimientoVigente(usuario.id),
       ])
-    : [[], [], [], [], false];
+    : [[], [], [], [], false, true];
   // Sin cron en este proyecto — /api/me es el endpoint más universal
   // (cualquier navegación del dashboard lo llama), así que es donde
   // más chances hay de que el chequeo corra el día justo. No bloquea
   // la respuesta.
   if (usuario) revisarCumpleanosClientes(usuario.empresa_id).catch((err) => console.error("Error revisando cumpleaños de clientes:", err));
+  // Ley 21.719 — limpieza perezosa de logs/tokens vencidos (ver retencion.ts).
+  if (usuario) limpiarDatosVencidosSiCorresponde();
   res.json({
     usuario,
     modulos_deshabilitados: modulosDeshabilitados,
@@ -191,6 +197,10 @@ app.get("/api/me", requiereAuth, ah<RequestConUsuario>(async (req, res) => {
     // banner persistente de "estás impersonando". La verdad la tiene el
     // servidor: el token de este request es de impersonación o no.
     impersonacion: req.impersonacion ? { activa: true } : null,
+    // Ley 21.719 — true si el usuario nunca aceptó (o aceptó una versión
+    // anterior de) la Política de Privacidad / Términos. El frontend
+    // muestra un aviso para que lo acepte.
+    consentimiento_pendiente: usuario ? !consentimientoVigente : false,
   });
 }));
 
@@ -199,8 +209,14 @@ app.get("/api/me", requiereAuth, ah<RequestConUsuario>(async (req, res) => {
 // "empresas"/"usuarios" no tienen policy de INSERT para el cliente
 // (el aislamiento entre empresas se hace a propósito solo con SELECT/UPDATE).
 app.post("/api/registro-empresa", requiereAuth, ah<RequestConUsuario>(async (req, res) => {
-  const { nombre_empresa, rubro, nombre_usuario } = req.body ?? {};
+  const { nombre_empresa, rubro, nombre_usuario, acepto_documentos } = req.body ?? {};
 
+  // Ley 21.719 — sin aceptación de Política de Privacidad + Términos no
+  // se crea la cuenta. El frontend fuerza el checkbox; esto lo respalda.
+  if (acepto_documentos !== true) {
+    res.status(400).json({ error: "Debes aceptar la Política de Privacidad y los Términos para crear la cuenta." });
+    return;
+  }
   if (typeof nombre_empresa !== "string" || !nombre_empresa.trim()) {
     res.status(400).json({ error: "Falta nombre_empresa" });
     return;
@@ -258,11 +274,28 @@ app.post("/api/registro-empresa", requiereAuth, ah<RequestConUsuario>(async (req
     return;
   }
 
+  // Ley 21.719 — deja constancia de la aceptación (tabla consentimientos).
+  await registrarConsentimiento(
+    { usuarioId: req.userId! },
+    { empresaId: empresa.id, ip: req.ip ?? null, userAgent: req.headers["user-agent"] ?? null }
+  );
+
   // Deja la empresa con las sugerencias de su rubro ya cargadas en vez
   // de arrancar vacía. No bloquea ni falla el alta.
   await sembrarSugerenciasRubro(empresa.id, empresa.rubro as Rubro);
 
   res.status(201).json({ empresa, usuario });
+}));
+
+// Ley 21.719 — registra que el usuario autenticado aceptó la Política de
+// Privacidad + Términos vigentes. Lo llama la pantalla de invitación (al
+// activar la cuenta) y el banner de re-aceptación cuando sube la versión.
+app.post("/api/consentimiento", requiereAuth, ah<RequestConUsuario>(async (req, res) => {
+  await registrarConsentimiento(
+    { usuarioId: req.userId! },
+    { ip: req.ip ?? null, userAgent: req.headers["user-agent"] ?? null }
+  );
+  res.status(201).json({ ok: true });
 }));
 
 app.use("/api/trabajos", requiereAuth, requiereEmpresa, trabajosRouter);
@@ -314,6 +347,26 @@ app.use("/api/mis-viajes", requiereAuth, requiereEmpresa, misViajesRouter);
 app.use("/api/remuneraciones", requiereAuth, requiereEmpresa, requiereModulo("remuneraciones"), remuneracionesRouter);
 app.use("/api/tipos-documento", requiereAuth, requiereEmpresa, tiposDocumentoRouter);
 app.use("/api/documentos", requiereAuth, requiereEmpresa, documentosRouter);
+// Ley 21.719 — baja de avisos. Sin auth: la abre el cliente desde el
+// link del pie del correo. El token firmado identifica cliente+empresa.
+app.post("/api/baja-avisos", ah(async (req, res) => {
+  const info = verificarTokenBajaAvisos(typeof req.body?.token === "string" ? req.body.token : "");
+  if (!info) {
+    res.status(400).json({ error: "El link no es válido o está incompleto." });
+    return;
+  }
+  const { error } = await supabase
+    .from("clientes")
+    .update({ notificaciones_opt_out: true })
+    .eq("id", info.clienteId)
+    .eq("empresa_id", info.empresaId);
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
+  }
+  res.json({ ok: true });
+}));
+
 // Sin auth a propósito — la abre un cliente anónimo desde el correo.
 app.use("/api/encuesta", limitarEncuestaPublica, encuestaPublicaRouter);
 app.use("/api/reserva-publica", reservaPublicaRouter);
