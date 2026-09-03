@@ -127,7 +127,7 @@ trabajosRouter.get(
   ah<RequestConEmpresa>(async (req, res) => {
     let query = supabase
       .from("trabajos")
-      .select("*, tipo_trabajo:tipos_trabajo(*)")
+      .select("*, tipo_trabajo:tipos_trabajo(*), cliente_info:clientes(id, nombre, telefono, direccion, lat, lng)")
       .eq("empresa_id", req.empresaId!);
     // No revela que el trabajo existe si no es del colaborador — 404, no 403.
     if (req.rol === "colaborador") query = query.eq("responsable_id", req.userId!);
