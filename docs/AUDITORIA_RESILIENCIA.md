@@ -6,10 +6,10 @@
 >
 > Complemento operativo: `docs/RUNBOOK_INCIDENTES.md`.
 >
-> **Estado (3-sep, post-auditoría):** aplicados **R1, R2, R4, R5, R6** y **R3 (parte de
-> notificaciones)**. Pendientes: **R3 (idempotency-key para crear cobros)** y **R7**
-> (keep-warm) — se dejan como deuda consciente. El texto de cada hallazgo describe el
-> problema *original*.
+> **Estado (3-sep, post-auditoría):** aplicados **R1, R2, R3, R4, R5, R6** (R3: dedupe de
+> notificaciones + idempotency-key en crear cobros, migración 77). Pendiente: **R7**
+> (keep-warm) — deuda consciente. El texto de cada hallazgo describe el problema
+> *original*.
 
 ---
 
