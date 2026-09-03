@@ -2,32 +2,26 @@ import { View } from "react-native";
 import { useTema, type Tema } from "../../theme";
 import { Text } from "./Text";
 
-// Estado → (fondo, texto) — alineado con el Badge del web (ui.tsx).
 type ParClave = "neutro" | "exito" | "aviso" | "peligro" | "info" | "marca";
 
+// Estado de un trabajo/OS o de un viaje → color. Prioridad y sync tienen
+// sus propios helpers (no se mezclan acá para que "alta" no se vea igual
+// que "cancelado").
 const POR_ESTADO: Record<string, ParClave> = {
-  // Trabajo / OS
+  // Trabajo
   en_curso: "info",
-  en_proceso: "info",
-  pendiente: "neutro",
-  enviada: "info",
   completado: "exito",
+  cancelado: "peligro",
+  // OS (estado_os)
+  pendiente: "neutro",
+  enviada: "neutro",
+  en_proceso: "info",
   completada: "exito",
   firmada: "exito",
-  cancelado: "peligro",
   // Viaje
   borrador: "aviso",
   confirmado: "exito",
   facturado: "info",
-  // Prioridad
-  alta: "peligro",
-  media: "aviso",
-  baja: "neutro",
-  // Sync
-  sincronizado: "exito",
-  sincronizando: "info",
-  error: "peligro",
-  offline: "aviso",
 };
 
 function colores(clave: ParClave, t: Tema): { bg: string; fg: string } {
@@ -54,7 +48,14 @@ export function Badge({ estado, texto }: { estado?: string; texto?: string }) {
   const label = (texto ?? estado ?? "").replace(/_/g, " ");
 
   return (
-    <View style={{ backgroundColor: c.bg, borderRadius: t.radio.full, paddingHorizontal: t.espacio(2.5), paddingVertical: t.espacio(1) }}>
+    <View
+      style={{
+        backgroundColor: c.bg,
+        borderRadius: t.radio.full,
+        paddingHorizontal: t.espacio(2.5),
+        paddingVertical: t.espacio(1),
+      }}
+    >
       <Text variante="caption" weight="semibold" style={{ color: c.fg, textTransform: "capitalize" }}>
         {label}
       </Text>

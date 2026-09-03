@@ -19,11 +19,7 @@ export function ViajesStack() {
       }}
     >
       <Stack.Screen name="ViajesLista" component={ViajesScreen} options={{ title: "Viajes" }} />
-      <Stack.Screen
-        name="ViajeForm"
-        component={ViajeFormScreen}
-        options={({ route }) => ({ title: route.params?.viajeId ? "Editar viaje" : "Nuevo viaje" })}
-      />
+      <Stack.Screen name="ViajeForm" component={ViajeFormScreen} options={{ title: "Nuevo viaje" }} />
     </Stack.Navigator>
   );
 }

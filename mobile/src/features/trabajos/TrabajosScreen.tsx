@@ -89,7 +89,7 @@ export function TrabajosScreen({ navigation }: NativeStackScreenProps<TrabajosSt
       <FlatList
         data={trabajos ?? []}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={{ padding: t.espacio(4), gap: t.espacio(3), flexGrow: 1 }}
+        contentContainerStyle={{ padding: t.espacio(4), paddingBottom: t.espacio(10), gap: t.espacio(3), flexGrow: 1 }}
         refreshControl={<RefreshControl refreshing={refrescando} onRefresh={onRefresh} tintColor={t.colores.brand} />}
         ListEmptyComponent={
           <EmptyState
@@ -108,8 +108,8 @@ export function TrabajosScreen({ navigation }: NativeStackScreenProps<TrabajosSt
                   {item.hora_programada ? ` · ${item.hora_programada.slice(0, 5)}` : ""}
                 </Text>
                 {item.ubicacion ? (
-                  <Text variante="caption" tono="faint" numberOfLines={1}>
-                    {item.ubicacion}
+                  <Text variante="caption" tono="muted" numberOfLines={1}>
+
                   </Text>
                 ) : null}
               </View>

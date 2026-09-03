@@ -50,7 +50,7 @@ export function ViajesScreen({ navigation }: NativeStackScreenProps<ViajesStackP
     <View style={{ flex: 1, backgroundColor: t.colores.bg }}>
       <OfflineBanner guardadoEn={guardadoEn} />
       <View style={{ padding: t.espacio(4) }}>
-        <Button titulo="Nuevo viaje" onPress={() => navigation.navigate("ViajeForm", {})} />
+        <Button titulo="Nuevo viaje" onPress={() => navigation.navigate("ViajeForm")} />
         {fallidos > 0 ? (
           <Text variante="caption" tono="danger" style={{ marginTop: t.espacio(2) }}>
             {fallidos} viaje{fallidos === 1 ? "" : "s"} no se pudo enviar — revísalo en Perfil
@@ -64,7 +64,7 @@ export function ViajesScreen({ navigation }: NativeStackScreenProps<ViajesStackP
       <FlatList
         data={viajes ?? []}
         keyExtractor={(v) => v.id}
-        contentContainerStyle={{ padding: t.espacio(4), paddingTop: 0, gap: t.espacio(3), flexGrow: 1 }}
+        contentContainerStyle={{ padding: t.espacio(4), paddingTop: 0, paddingBottom: t.espacio(10), gap: t.espacio(3), flexGrow: 1 }}
         refreshControl={<RefreshControl refreshing={refrescando} onRefresh={onRefresh} tintColor={t.colores.brand} />}
         ListEmptyComponent={
           <EmptyState
@@ -81,8 +81,8 @@ export function ViajesScreen({ navigation }: NativeStackScreenProps<ViajesStackP
                 <Text variante="etiqueta" tono="muted">
                   {item.fecha} · Guía {item.numero_guia}
                 </Text>
-                <Text variante="caption" tono="faint">
-                  {item.origen} → {item.destino}
+                <Text variante="caption" tono="muted">
+ → {item.destino}
                 </Text>
               </View>
               <View style={{ alignItems: "flex-end", gap: 4 }}>

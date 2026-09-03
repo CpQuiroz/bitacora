@@ -10,7 +10,7 @@ export type TrabajosStackParamList = {
 
 export type ViajesStackParamList = {
   ViajesLista: undefined;
-  ViajeForm: { viajeId?: string };
+  ViajeForm: undefined;
 };
 
 export type TabKey = "Trabajos" | "Ruta" | "Viajes" | "Perfil";
