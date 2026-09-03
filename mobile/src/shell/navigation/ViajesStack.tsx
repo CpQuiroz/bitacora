@@ -3,6 +3,7 @@ import { useTema } from "../../theme";
 import type { ViajesStackParamList } from "./types";
 import { ViajesScreen } from "../../features/viajes/ViajesScreen";
 import { ViajeFormScreen } from "../../features/viajes/ViajeFormScreen";
+import { ViajeDetalleScreen } from "../../features/viajes/ViajeDetalleScreen";
 
 const Stack = createNativeStackNavigator<ViajesStackParamList>();
 
@@ -20,6 +21,7 @@ export function ViajesStack() {
     >
       <Stack.Screen name="ViajesLista" component={ViajesScreen} options={{ title: "Viajes" }} />
       <Stack.Screen name="ViajeForm" component={ViajeFormScreen} options={{ title: "Nuevo viaje" }} />
+      <Stack.Screen name="ViajeDetalle" component={ViajeDetalleScreen} options={{ title: "Viaje" }} />
     </Stack.Navigator>
   );
 }

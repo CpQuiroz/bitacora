@@ -5,6 +5,23 @@ import { guardarCache, leerCache } from "./sync/cache";
 
 export type ViajeConDatos = Viaje & { cliente_info?: Pick<Cliente, "id" | "nombre"> | null };
 
+export type ViajeDetalle = ViajeConDatos & {
+  equipo_info?: { nombre: string; patente: string | null } | null;
+  foto_guia_url_firmada: string | null;
+};
+
+export async function obtenerViaje(id: string): Promise<{ viaje: ViajeDetalle; desdeCache: boolean; guardadoEn?: number }> {
+  const clave = `viaje:${id}`;
+  const res = await apiJson<ViajeDetalle>(`/api/mis-viajes/${id}`);
+  if (res.ok) {
+    await guardarCache(clave, res.data);
+    return { viaje: res.data, desdeCache: false };
+  }
+  const cache = await leerCache<ViajeDetalle>(clave);
+  if (cache) return { viaje: cache.datos, desdeCache: true, guardadoEn: cache.guardadoEn };
+  throw new Error(res.error);
+}
+
 export async function listarViajesPropios(): Promise<{ viajes: ViajeConDatos[]; desdeCache: boolean; guardadoEn?: number }> {
   const res = await apiJson<ViajeConDatos[]>("/api/mis-viajes");
   if (res.ok) {

@@ -11,6 +11,7 @@ export type TrabajosStackParamList = {
 export type ViajesStackParamList = {
   ViajesLista: undefined;
   ViajeForm: undefined;
+  ViajeDetalle: { viajeId: string };
 };
 
 export type AgendaStackParamList = {

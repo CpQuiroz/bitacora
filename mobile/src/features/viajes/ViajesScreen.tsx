@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
-import { FlatList, RefreshControl, View } from "react-native";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { FlatList, Pressable, RefreshControl, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -9,6 +9,26 @@ import { OfflineBanner } from "../../components/OfflineBanner";
 import { useRed } from "../../services/sync/NetworkProvider";
 import { listarViajesPropios, type ViajeConDatos } from "../../services/viajes";
 import type { ViajesStackParamList } from "../../shell/navigation/types";
+
+type Periodo = "semana" | "mes" | "todos";
+const PERIODOS: { clave: Periodo; label: string }[] = [
+  { clave: "semana", label: "Esta semana" },
+  { clave: "mes", label: "Este mes" },
+  { clave: "todos", label: "Todos" },
+];
+
+function desdeDe(periodo: Periodo): string {
+  if (periodo === "todos") return "";
+  const hoy = new Date();
+  if (periodo === "mes") {
+    return `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}-01`;
+  }
+  // Semana: desde el lunes.
+  const dia = hoy.getDay(); // 0 = domingo
+  const lunes = new Date(hoy);
+  lunes.setDate(hoy.getDate() - ((dia + 6) % 7));
+  return lunes.toISOString().slice(0, 10);
+}
 
 export function ViajesScreen({ navigation }: NativeStackScreenProps<ViajesStackParamList, "ViajesLista">) {
   const t = useTema();
@@ -20,6 +40,14 @@ export function ViajesScreen({ navigation }: NativeStackScreenProps<ViajesStackP
   const [error, setError] = useState<string | null>(null);
   const [refrescando, setRefrescando] = useState(false);
   const [guardadoEn, setGuardadoEn] = useState<number | undefined>();
+  const [periodo, setPeriodo] = useState<Periodo>("mes");
+
+  const visibles = useMemo(() => {
+    const desde = desdeDe(periodo);
+    const lista = desde ? (viajes ?? []).filter((v) => v.fecha >= desde) : viajes ?? [];
+    return lista;
+  }, [viajes, periodo]);
+  const totalPeriodo = useMemo(() => visibles.reduce((s, v) => s + (v.total ?? 0), 0), [visibles]);
 
   const cargar = useCallback(async () => {
     setError(null);
@@ -49,32 +77,63 @@ export function ViajesScreen({ navigation }: NativeStackScreenProps<ViajesStackP
   return (
     <View style={{ flex: 1, backgroundColor: t.colores.bg }}>
       <OfflineBanner guardadoEn={guardadoEn} />
-      <View style={{ padding: t.espacio(4) }}>
+      <View style={{ padding: t.espacio(4), gap: t.espacio(3) }}>
         <Button titulo="Nuevo viaje" onPress={() => navigation.navigate("ViajeForm")} />
         {fallidos > 0 ? (
-          <Text variante="caption" tono="danger" style={{ marginTop: t.espacio(2) }}>
+          <Text variante="caption" tono="danger">
             {fallidos} viaje{fallidos === 1 ? "" : "s"} no se pudo enviar — revísalo en Perfil
           </Text>
         ) : pendientes > 0 ? (
-          <Text variante="caption" tono="muted" style={{ marginTop: t.espacio(2) }}>
+          <Text variante="caption" tono="muted">
             {pendientes} viaje{pendientes === 1 ? "" : "s"} sin sincronizar
+          </Text>
+        ) : null}
+        <View style={{ flexDirection: "row", gap: t.espacio(2) }}>
+          {PERIODOS.map((p) => {
+            const activo = p.clave === periodo;
+            return (
+              <Pressable
+                key={p.clave}
+                onPress={() => setPeriodo(p.clave)}
+                hitSlop={6}
+                style={{
+                  paddingHorizontal: t.espacio(3),
+                  paddingVertical: t.espacio(1.5),
+                  borderRadius: t.radio.full,
+                  backgroundColor: activo ? t.colores.brand : t.colores.surfaceAlt,
+                }}
+              >
+                <Text variante="caption" weight="semibold" style={{ color: activo ? t.colores.brandForeground : t.colores.muted }}>
+                  {p.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+        {viajes && viajes.length > 0 ? (
+          <Text variante="caption" tono="muted">
+            {visibles.length} viaje{visibles.length === 1 ? "" : "s"} · {`$${Math.round(totalPeriodo).toLocaleString("es-CL")}`}
           </Text>
         ) : null}
       </View>
       <FlatList
-        data={viajes ?? []}
+        data={visibles}
         keyExtractor={(v) => v.id}
         contentContainerStyle={{ padding: t.espacio(4), paddingTop: 0, paddingBottom: t.espacio(10), gap: t.espacio(3), flexGrow: 1 }}
         refreshControl={<RefreshControl refreshing={refrescando} onRefresh={onRefresh} tintColor={t.colores.brand} />}
         ListEmptyComponent={
           <EmptyState
             icono={<Ionicons name="car-outline" size={40} color={t.colores.faint} />}
-            titulo="Sin viajes"
-            mensaje="Registra tu primer viaje con el botón de arriba."
+            titulo={viajes && viajes.length > 0 ? "Sin viajes en este período" : "Sin viajes"}
+            mensaje={
+              viajes && viajes.length > 0
+                ? "Prueba con otro período o registra uno nuevo."
+                : "Registra tu primer viaje con el botón de arriba."
+            }
           />
         }
         renderItem={({ item }) => (
-          <Card>
+          <Card onPress={() => navigation.navigate("ViajeDetalle", { viajeId: item.id })}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: t.espacio(3) }}>
               <View style={{ flex: 1, gap: 2 }}>
                 <Text variante="subtitulo">{item.cliente_info?.nombre ?? item.cliente}</Text>

@@ -1,7 +1,7 @@
 import { Router } from "express";
 import multer from "multer";
 import { supabase } from "../supabase";
-import { subirFotoGuiaConNombre } from "../storage";
+import { subirFotoGuiaConNombre, urlFirmadaFotoGuia } from "../storage";
 import { calcularMontos } from "../viajesMontos";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
@@ -38,6 +38,31 @@ misViajesRouter.get(
       return;
     }
     res.json(data ?? []);
+  })
+);
+
+// Un viaje puntual del chofer (pantalla de detalle en la app), con la
+// foto de la guía firmada. Scopeado a chofer_id = el usuario.
+misViajesRouter.get(
+  "/:id",
+  ah<RequestConEmpresa>(async (req, res) => {
+    const { data, error } = await supabase
+      .from("viajes")
+      .select("*, cliente_info:clientes(id, nombre), equipo_info:equipos(nombre, patente)")
+      .eq("empresa_id", req.empresaId!)
+      .eq("chofer_id", req.userId!)
+      .eq("id", req.params.id)
+      .maybeSingle();
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    if (!data) {
+      res.status(404).json({ error: "Viaje no encontrado" });
+      return;
+    }
+    const foto_guia_url_firmada = data.foto_guia_url ? await urlFirmadaFotoGuia(data.foto_guia_url, 15) : null;
+    res.json({ ...data, foto_guia_url_firmada });
   })
 );
 
