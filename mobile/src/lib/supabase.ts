@@ -13,6 +13,9 @@ export const supabase = createClient<Database>(
       autoRefreshToken: true,
       persistSession: true,
       detectSessionInUrl: false,
+      // PKCE para el login con Google en nativo (se intercambia el
+      // `code` del deep link por sesión, ver features/auth/googleAuth.ts).
+      flowType: "pkce",
     },
   }
 );

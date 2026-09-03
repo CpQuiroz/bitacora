@@ -23,7 +23,9 @@
       "env": {
         "EXPO_PUBLIC_API_URL": "https://bitacora-cgt7.onrender.com",
         "EXPO_PUBLIC_SUPABASE_URL": "https://yjbskbskyadxjooxngjv.supabase.co",
-        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlqYnNrYnNreWFkeGpvb3huZ2p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgxMzgwNjMsImV4cCI6MjEwMzcxNDA2M30.mXmhvzW_iV32SE9F_NUDwyYKptJjg9DKBoTvLQXGsZ0"
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlqYnNrYnNreWFkeGpvb3huZ2p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgxMzgwNjMsImV4cCI6MjEwMzcxNDA2M30.mXmhvzW_iV32SE9F_NUDwyYKptJjg9DKBoTvLQXGsZ0",
+        "EXPO_PUBLIC_SENTRY_DSN": "",
+        "EXPO_PUBLIC_GOOGLE_LOGIN": "false"
       }
     },
     "production": {
@@ -33,7 +35,9 @@
       "env": {
         "EXPO_PUBLIC_API_URL": "https://bitacora-cgt7.onrender.com",
         "EXPO_PUBLIC_SUPABASE_URL": "https://yjbskbskyadxjooxngjv.supabase.co",
-        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlqYnNrYnNreWFkeGpvb3huZ2p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgxMzgwNjMsImV4cCI6MjEwMzcxNDA2M30.mXmhvzW_iV32SE9F_NUDwyYKptJjg9DKBoTvLQXGsZ0"
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlqYnNrYnNreWFkeGpvb3huZ2p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgxMzgwNjMsImV4cCI6MjEwMzcxNDA2M30.mXmhvzW_iV32SE9F_NUDwyYKptJjg9DKBoTvLQXGsZ0",
+        "EXPO_PUBLIC_SENTRY_DSN": "",
+        "EXPO_PUBLIC_GOOGLE_LOGIN": "false"
       }
     }
   },

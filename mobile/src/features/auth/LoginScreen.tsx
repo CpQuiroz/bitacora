@@ -3,9 +3,14 @@ import { Alert, KeyboardAvoidingView, Platform, Pressable, View } from "react-na
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { supabase } from "../../lib/supabase";
 import { apiJson } from "../../services/api";
+import { entrarConGoogle } from "./googleAuth";
 import { useTema } from "../../theme";
 import { Button, Input, LogoMark, Screen, Text } from "../../components/ui";
 import type { RootStackParamList } from "../../shell/navigation/types";
+
+// El botón de Google aparece solo cuando está configurado del lado
+// servidor (Google Cloud + Supabase). Se prende en eas.json.
+const GOOGLE_HABILITADO = process.env.EXPO_PUBLIC_GOOGLE_LOGIN === "true";
 
 type RespuestaLogin =
   | { requiere_codigo: true; ticket: string; metodo: "totp" | "email" }
@@ -16,6 +21,7 @@ export function LoginScreen({ navigation }: NativeStackScreenProps<RootStackPara
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [cargando, setCargando] = useState(false);
+  const [conGoogle, setConGoogle] = useState(false);
   const [lento, setLento] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const timerLento = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -48,6 +54,15 @@ export function LoginScreen({ navigation }: NativeStackScreenProps<RootStackPara
       return;
     }
     await supabase.auth.setSession({ access_token: res.data.access_token, refresh_token: res.data.refresh_token });
+  }
+
+  async function entrarGoogle() {
+    setError(null);
+    setConGoogle(true);
+    const r = await entrarConGoogle();
+    setConGoogle(false);
+    if (!r.ok && r.error !== "cancelado") setError(r.error);
+    // Si r.ok, el AuthContext toma la sesión nueva y navega solo.
   }
 
   return (
@@ -96,6 +111,24 @@ export function LoginScreen({ navigation }: NativeStackScreenProps<RootStackPara
             cargando={cargando}
             disabled={!email.trim() || !password}
           />
+          {GOOGLE_HABILITADO ? (
+            <>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: t.espacio(2) }}>
+                <View style={{ flex: 1, height: 1, backgroundColor: t.colores.border }} />
+                <Text variante="caption" tono="muted">
+                  o
+                </Text>
+                <View style={{ flex: 1, height: 1, backgroundColor: t.colores.border }} />
+              </View>
+              <Button
+                titulo="Continuar con Google"
+                variante="secundario"
+                tamano="lg"
+                onPress={entrarGoogle}
+                cargando={conGoogle}
+              />
+            </>
+          ) : null}
           <Pressable
             hitSlop={10}
             style={{ alignSelf: "center", paddingVertical: t.espacio(2), minHeight: 44, justifyContent: "center" }}
