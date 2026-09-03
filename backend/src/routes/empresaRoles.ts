@@ -11,14 +11,14 @@ import { Router } from "express";
 import { MODULOS_DELEGABLES_POR_EMPRESA } from "@bitacora/shared";
 import { ah } from "../asyncHandler";
 import type { RequestConEmpresa } from "../empresa";
-import { empresaTieneModulo, requiereRol } from "../permisos";
+import { empresaTieneModulo, requiereModulo } from "../permisos";
 import { fijarModulosDeRolEnEmpresa, modulosPorRolDeEmpresa } from "../roles";
 
 export const empresaRolesRouter = Router();
 
-// Solo el Admin de la empresa. (Supervisor administra su gente pero no
-// redefine qué ve cada rol.)
-empresaRolesRouter.use(requiereRol("admin"));
+// Mismo nivel que administrar usuarios (/api/accesos): quien tiene
+// "Grupo y usuario" (gestion_control) — de fábrica solo el Admin.
+empresaRolesRouter.use(requiereModulo("gestion_control"));
 
 const DELEGABLES = new Set<string>(MODULOS_DELEGABLES_POR_EMPRESA);
 

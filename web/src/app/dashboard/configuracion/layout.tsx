@@ -35,6 +35,7 @@ const SECCIONES: { valor: string; label: string; icon: typeof IconUser; modulo: 
   { valor: "cuenta", label: "Cuenta", icon: IconUser, modulo: null },
   { valor: "empresa", label: "Empresa", icon: IconBriefcase, modulo: "configuracion" },
   { valor: "equipo", label: "Equipo", icon: IconUsers, modulo: "gestion_control", href: "/dashboard/equipo" },
+  { valor: "perfiles", label: "Perfiles y permisos", icon: IconShield, modulo: "gestion_control" },
   { valor: "plan", label: "Plan", icon: IconCreditCard, modulo: "configuracion" },
   { valor: "plantillas", label: "Plantillas", icon: IconPaperclip, modulo: "configuracion" },
   { valor: "checklists", label: "Checklists", icon: IconClipboardCheck, modulo: "configuracion" },
