@@ -47,6 +47,11 @@ export const env = {
   // Deliberadamente distinta de las otras *_ENCRYPTION_KEY. Generar
   // con: openssl rand -base64 32.
   USUARIOS_MFA_ENCRYPTION_KEY: requerido("USUARIOS_MFA_ENCRYPTION_KEY"),
+  // Opcional: reporte de errores a Sentry. Sin DSN, el SDK queda inerte
+  // (no envía nada, no rompe nada). El logueo a `errores_backend` sigue
+  // igual — Sentry solo agrega alertas y stack traces.
+  SENTRY_DSN: process.env.SENTRY_DSN ?? null,
+  SENTRY_ENVIRONMENT: process.env.SENTRY_ENVIRONMENT ?? process.env.NODE_ENV ?? "development",
   // Opcionales: sin esto, el envío de la encuesta de satisfacción se
   // omite silenciosamente (no bloquea el resto del backend).
   RESEND_API_KEY: process.env.RESEND_API_KEY ?? null,

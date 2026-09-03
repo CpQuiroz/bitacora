@@ -1,3 +1,4 @@
+import { Sentry } from "./instrument"; // primero de todo (auto-instrumentación)
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -323,6 +324,7 @@ app.use((err: unknown, req: express.Request, res: express.Response, _next: expre
 
   if (status >= 500) {
     console.error(err);
+    Sentry.captureException(err, { extra: { ruta: req.path, metodo: req.method } });
     const empresaId = (req as express.Request & { empresaId?: string }).empresaId ?? null;
     void (async () => {
       try {
