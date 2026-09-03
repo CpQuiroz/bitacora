@@ -7,6 +7,7 @@ import type { TabKey } from "./types";
 import { TrabajosStack } from "./TrabajosStack";
 import { AgendaStack } from "./AgendaStack";
 import { ViajesStack } from "./ViajesStack";
+import { GestionStack } from "./GestionStack";
 import { RutaScreen } from "../../features/ruta/RutaScreen";
 import { PerfilScreen } from "../../features/perfil/PerfilScreen";
 
@@ -17,6 +18,7 @@ const ICONO: Record<TabKey, keyof typeof Ionicons.glyphMap> = {
   Agenda: "calendar-outline",
   Ruta: "map-outline",
   Viajes: "car-outline",
+  Gestion: "briefcase-outline",
   Perfil: "person-circle-outline",
 };
 
@@ -25,6 +27,7 @@ const COMPONENTE: Record<TabKey, React.ComponentType> = {
   Agenda: AgendaStack,
   Ruta: RutaScreen,
   Viajes: ViajesStack,
+  Gestion: GestionStack,
   Perfil: PerfilScreen,
 };
 
@@ -56,6 +59,7 @@ export function AppTabs() {
           name={tab}
           component={COMPONENTE[tab]}
           options={{
+            tabBarLabel: tab === "Gestion" ? "Gestión" : tab,
             tabBarIcon: ({ color, size }) => <Ionicons name={ICONO[tab]} size={size} color={color} />,
           }}
         />

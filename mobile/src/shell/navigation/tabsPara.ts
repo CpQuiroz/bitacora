@@ -34,6 +34,9 @@ export function tabsPara(
   if (verAgenda) tabs.push("Agenda");
   tabs.push("Ruta");
   if (verViajes) tabs.push("Viajes");
+  // "Gestión" (clientes, cobros) es solo para roles que no son de
+  // terreno puro. El detalle de qué ve adentro se resuelve por módulo.
+  if (esGestion) tabs.push("Gestion");
   tabs.push("Perfil");
 
   // Pestaña inicial: transporte arranca en Viajes; si la empresa no

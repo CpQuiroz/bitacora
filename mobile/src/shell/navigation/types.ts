@@ -20,4 +20,14 @@ export type AgendaStackParamList = {
   NuevaCita: { tareaId?: string; fecha?: string } | undefined;
 };
 
-export type TabKey = "Trabajos" | "Agenda" | "Ruta" | "Viajes" | "Perfil";
+export type GestionStackParamList = {
+  GestionInicio: undefined;
+  ClientesLista: undefined;
+  ClienteForm: { clienteId?: string } | undefined;
+  ClienteDetalle: { clienteId: string };
+  CobrosLista: undefined;
+  CobroForm: undefined;
+  CobroDetalle: { cobroId: string };
+};
+
+export type TabKey = "Trabajos" | "Agenda" | "Ruta" | "Viajes" | "Gestion" | "Perfil";

@@ -27,6 +27,9 @@ const POR_ESTADO: Record<string, ParClave> = {
   cancelada: "peligro",
   no_asistio: "peligro",
   cancelada_anticipada: "aviso",
+  // Cobro / factura
+  pagada: "exito",
+  vencida: "peligro",
 };
 
 function colores(clave: ParClave, t: Tema): { bg: string; fg: string } {
