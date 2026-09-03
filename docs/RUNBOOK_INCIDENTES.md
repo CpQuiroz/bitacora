@@ -37,6 +37,13 @@
 > No hay equipo de soporte. "Escalar" acá significa **avisarle al contacto de Transportes
 > Itineris** que hay un problema y un ETA, para que no descubran ellos que algo no anda.
 
+### Monitoreo propio
+
+- **`/health`** — liveness. Solo dice "el proceso Node responde". Lo usa `keep-warm.yml`.
+- **`/health/ready`** — readiness. Verifica que el backend puede hablar con Supabase
+  (503 si no). **Un uptime monitor externo (UptimeRobot / Better Uptime / etc.) debe
+  apuntar acá**, no a `/health` — es el que avisa si la DB dejó de responder.
+
 ### Status pages (revisá primero si el problema puede ser del proveedor)
 
 - Render: <https://status.render.com>

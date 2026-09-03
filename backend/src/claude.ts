@@ -5,9 +5,16 @@ import { verificarLimiteIA } from "./limites";
 import { crearLimitadorConcurrencia } from "./concurrencia";
 
 // timeout: el SDK trae 10 min por defecto — demasiado para no dejar una
-// request de Express colgada (AUDITORIA_RESILIENCIA.md R4). 90s cubre de
-// sobra un análisis de foto o un informe; el SDK reintenta ante 429.
-export const claude = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY, timeout: 90_000 });
+// request de Express colgada (AUDITORIA_RESILIENCIA.md R4). Default 120s
+// para las llamadas cortas (asistente, análisis de foto, OCR); los
+// informes largos lo suben a 240s por llamada (ver crearMensajeIA).
+// El SDK reintenta ante 429.
+export const claude = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY, timeout: 120_000 });
+
+// Los informes generan bastante texto (hasta ~2.5k tokens) sobre un
+// contexto grande — pueden tardar más que las llamadas cortas.
+const TIMEOUT_LARGO_MS = 240_000;
+const FEATURES_LARGAS = new Set(["informe_os", "informe_libre", "informe_estructurado", "informe_personalizado"]);
 
 // Nada limitaba antes cuántas llamadas simultáneas salían a Claude —
 // un pico de varias empresas a la vez (ej. todas subiendo fotos de
@@ -52,9 +59,10 @@ export async function crearMensajeIA(
   params: Anthropic.MessageCreateParamsNonStreaming
 ): Promise<Anthropic.Message> {
   await verificarLimiteIA(empresaId);
+  const opts = FEATURES_LARGAS.has(feature) ? { timeout: TIMEOUT_LARGO_MS } : undefined;
   let response: Anthropic.Message;
   try {
-    response = await limitarConcurrenciaIA(() => claude.messages.create(params));
+    response = await limitarConcurrenciaIA(() => claude.messages.create(params, opts));
   } catch (err) {
     if (err instanceof Anthropic.RateLimitError) void registrarRateLimit(empresaId, feature);
     throw err;

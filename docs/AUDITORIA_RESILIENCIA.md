@@ -78,14 +78,26 @@ Solo confirma que el proceso Node responde. Si Supabase está caído (DB/Auth/St
 `/health` sigue en 200 y **todo monitoreo externo da verde** mientras cada request real
 devuelve 500.
 
-**Recomendación:** un `/health` que haga un `select` trivial contra Supabase con timeout
-corto (ej. 3s) y devuelva 503 si falla — y un `/health/deep` opcional que además pruebe
-Storage. Mantener el `/health` liviano para el keep-warm si se quiere, pero tener uno que
-un uptime monitor pueda usar de verdad.
+**Aplicado:** `/health` sigue liviano (lo usa `keep-warm.yml` — no queremos que el cron
+tumbe la DB con un select cada 10 min). Nuevo **`/health/ready`** hace un `select head`
+contra Supabase con timeout 3s → **503 si la DB no responde**. Un uptime monitor externo
+(UptimeRobot / Better Uptime / etc.) debe apuntar a **`/health/ready`**, no a `/health`.
 
 ---
 
 ### R3 · Operaciones no idempotentes — **Alta** (para cobros y notificaciones)
+
+> **Estado:** aplicado para **cobros** (migración 77 + middleware `idempotente()` con
+> header `Idempotency-Key` en `POST /api/cobros` y `/api/cobros/desde-trabajos`) y para
+> **avisos al cliente** (`notificarCliente` deduplica por ventana de 120 min). El resto
+> de la tabla de abajo (crear OS, cotización) **sigue sin idempotencia** — deuda
+> consciente: el retry del `apiFetch` web quedó limitado a GET y los botones se
+> deshabilitan mientras el request está en vuelo, así que el riesgo real baja a "doble
+> click en la ventana de milisegundos antes de que el botón se deshabilite".
+>
+> **Cuando suba el volumen (2ª empresa, más cobros/OS por día):** aplicar el mismo
+> `idempotente()` a `POST /api/trabajos` y `POST /api/presupuestos` — el middleware ya
+> es genérico, es agregar una línea por ruta + generar la clave en el form.
 
 Si Render se reinicia a mitad de un request y el cliente (web) reintenta, o el usuario
 hace doble-click, o hay un retry de red:
@@ -124,7 +136,7 @@ hace doble-click, o hay un retry de red:
 | Resend | `backend/src/email.ts:51` | ❌ ninguno | El request de Express cuelga; reintenta 1× tras 1.5s pero sin cortar el intento colgado |
 | Flow | `backend/src/flow.ts:56` | ❌ ninguno | Request colgado (hay dinero — el usuario espera) |
 | WhatsApp / Meta Graph | `backend/src/whatsapp.ts:47,80,87` | ❌ ninguno | Request colgado, pero es no-throw así que al menos no rompe el flujo |
-| Anthropic API | SDK (`backend/src/claude.ts:7`) | Default del SDK (~10 min) | Request colgado hasta 10 min |
+| Anthropic API | SDK (`backend/src/claude.ts`) | ✅ 120s por defecto; **240s** para los informes largos (`informe_*`, hasta ~2.5k tokens sobre un contexto grande) — ver `FEATURES_LARGAS` en `crearMensajeIA` | Antes: 10 min. Ahora corta pero con margen suficiente para un informe personalizado lento |
 | Supabase (PostgREST) | `backend/src/supabase.ts` (`createClient` sin opciones) | Default del fetch de la plataforma | Request lento/colgado si Supabase está degradado |
 
 Render (según su doc) corta requests que superan ~100s a nivel de load balancer, así que
