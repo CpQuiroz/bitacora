@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Cliente, EstadoOS, OrdenServicio, Trabajo, Usuario } from "@bitacora/shared";
@@ -38,6 +38,7 @@ export default function OrdenesServicioPage() {
 
   const [seleccionados, setSeleccionados] = useState<Set<string>>(new Set());
   const [modalCobroAbierto, setModalCobroAbierto] = useState(false);
+  const claveCobro = useRef<string>(""); // idempotencia al generar el cobro
   const [semanaCobro, setSemanaCobro] = useState("");
   const [diasPlazoCobro, setDiasPlazoCobro] = useState("30");
   const [guardandoCobro, setGuardandoCobro] = useState(false);
@@ -119,8 +120,10 @@ export default function OrdenesServicioPage() {
     }
     setErrorCobro(null);
     setGuardandoCobro(true);
+    if (!claveCobro.current) claveCobro.current = crypto.randomUUID();
     const res = await apiFetch("/api/cobros/desde-trabajos", {
       method: "POST",
+      idempotencyKey: claveCobro.current,
       body: JSON.stringify({
         cliente: [...nombresClientesSeleccion][0],
         semana: semanaCobro,
@@ -134,6 +137,7 @@ export default function OrdenesServicioPage() {
       setErrorCobro(body.error ?? "No se pudo generar el cobro");
       return;
     }
+    claveCobro.current = "";
     setModalCobroAbierto(false);
     setSeleccionados(new Set());
     setAviso("Cobro generado a partir de las OS seleccionadas.");

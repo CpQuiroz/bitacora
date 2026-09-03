@@ -23,7 +23,12 @@ function respuestaError(mensaje: string): Response {
   });
 }
 
-export async function apiFetch(path: string, options: RequestInit = {}) {
+export async function apiFetch(
+  path: string,
+  options: RequestInit & { idempotencyKey?: string } = {}
+) {
+  const { idempotencyKey, ...fetchOptions } = options;
+  options = fetchOptions;
   // Si hay una sesión de impersonación activa (Super-Admin viendo como
   // un usuario), TODO el dashboard usa ese token en vez del de Supabase.
   const imp = obtenerImpersonacion();
@@ -40,12 +45,15 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
     headers.set("Content-Type", "application/json");
   }
   if (token) headers.set("Authorization", `Bearer ${token}`);
+  if (idempotencyKey) headers.set("Idempotency-Key", idempotencyKey);
 
-  // Solo se reintenta GET (idempotente). Un POST/PATCH/DELETE que se
-  // corta podría haber llegado al server — reintentarlo duplicaría
-  // (crear cobro, etc.). Esos fallan de una y el usuario reintenta.
+  // Se reintenta GET (idempotente por definición) y cualquier método que
+  // traiga Idempotency-Key (el backend deduplica → reintentar es seguro).
+  // Un POST sin key NO se reintenta: podría haber llegado al server y
+  // reintentarlo duplicaría.
   const metodo = (options.method ?? "GET").toUpperCase();
-  const reintentos = metodo === "GET" || metodo === "HEAD" ? REINTENTOS : 0;
+  const seguroReintentar = metodo === "GET" || metodo === "HEAD" || Boolean(idempotencyKey);
+  const reintentos = seguroReintentar ? REINTENTOS : 0;
   let ultimoFalloRed = false;
 
   for (let intento = 0; intento <= reintentos; intento++) {
@@ -57,7 +65,10 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
       const res = await fetch(`${API_URL}${path}`, { ...options, headers, signal: ctrl.signal });
       clearTimeout(timer);
       // 5xx: puede ser un server a medio arrancar — reintentar (solo GET).
-      if (res.status >= 500 && intento < reintentos) {
+      // 409 con Idempotency-Key = "la operación anterior está terminando",
+      // reintentar la trae ya resuelta.
+      const reintentable = res.status >= 500 || (res.status === 409 && Boolean(idempotencyKey));
+      if (reintentable && intento < reintentos) {
         ultimoFalloRed = false;
         continue;
       }

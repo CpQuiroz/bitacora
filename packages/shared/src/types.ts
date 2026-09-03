@@ -167,6 +167,18 @@ export type ErrorBackend = {
   creado_en: string;
 };
 
+// Idempotencia de operaciones que crean plata (migración 77). Ver
+// backend/src/idempotencia.ts.
+export type Idempotencia = {
+  clave: string;
+  empresa_id: string | null;
+  metodo: string;
+  ruta: string;
+  status_code: number | null;
+  respuesta: unknown;
+  creado_en: string;
+};
+
 export type EmpresaModulo = {
   empresa_id: string;
   modulo: string;
@@ -1366,6 +1378,7 @@ export type Database = {
       empresa_feature_flags: Tabla<EmpresaFeatureFlag>;
       ia_uso: Tabla<IaUso>;
       errores_backend: Tabla<ErrorBackend>;
+      idempotencia: Tabla<Idempotencia>;
       empresa_modulos: Tabla<EmpresaModulo>;
       empresa_rol_modulos: Tabla<EmpresaRolModulo>;
       paquetes_sesiones: Tabla<PaqueteSesiones>;

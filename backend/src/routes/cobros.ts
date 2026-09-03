@@ -4,6 +4,7 @@ import { supabase } from "../supabase";
 import { notificarCliente } from "../notificarCliente";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
+import { idempotente } from "../idempotencia";
 
 export const cobrosRouter = Router();
 
@@ -103,6 +104,7 @@ cobrosRouter.get(
 // Cobro manual: cliente + monto directos, sin pasar por trabajos.
 cobrosRouter.post(
   "/",
+  idempotente(),
   ah<RequestConEmpresa>(async (req, res) => {
     const { cliente_id, monto, fecha_emision, fecha_vencimiento, medio_pago } = req.body ?? {};
 
@@ -165,6 +167,7 @@ cobrosRouter.post(
 // trabajos seleccionados vía generar_factura() (04_generalizacion.sql).
 cobrosRouter.post(
   "/desde-trabajos",
+  idempotente(),
   ah<RequestConEmpresa>(async (req, res) => {
     const { cliente, semana, trabajo_ids, dias_plazo } = req.body ?? {};
 

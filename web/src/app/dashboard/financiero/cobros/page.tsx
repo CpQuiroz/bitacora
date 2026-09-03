@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState, type FormEvent } from "react";
+import { Suspense, useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { Cliente, EstadoFactura, Factura, MedioPago, Trabajo } from "@bitacora/shared";
@@ -140,16 +140,25 @@ function CobrosContenido() {
     });
   }
 
+  // Clave de idempotencia: se genera una vez por intento de creación y
+  // se mantiene si el request falla y se reintenta (así el backend NUNCA
+  // duplica el cobro); se resetea al lograr crear uno.
+  const claveIdempotencia = useRef<string>("");
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setFormError(null);
     setAviso(null);
     setGuardando(true);
 
+    if (!claveIdempotencia.current) claveIdempotencia.current = crypto.randomUUID();
+    const idempotencyKey = claveIdempotencia.current;
+
     const res =
       modo === "manual"
         ? await apiFetch("/api/cobros", {
             method: "POST",
+            idempotencyKey,
             body: JSON.stringify({
               cliente_id: clienteId,
               monto: Number(monto),
@@ -160,6 +169,7 @@ function CobrosContenido() {
           })
         : await apiFetch("/api/cobros/desde-trabajos", {
             method: "POST",
+            idempotencyKey,
             body: JSON.stringify({
               cliente: clienteTexto,
               semana,
@@ -174,6 +184,7 @@ function CobrosContenido() {
       setFormError(body.error ?? "No se pudo crear el cobro");
       return;
     }
+    claveIdempotencia.current = ""; // cobro creado — el próximo usa clave nueva
     setAviso("Cobro creado.");
     setFormAbierto(false);
     cargar();
