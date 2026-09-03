@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from "../features/auth/AuthContext";
 import { NetworkProvider } from "../services/sync/NetworkProvider";
 import { ThemeProvider } from "../theme";
 import { RootNavigator } from "./navigation/RootNavigator";
+import { BloqueoBiometrico } from "./BloqueoBiometrico";
 
 // El ThemeProvider necesita la marca de la empresa, que sale del
 // AuthProvider — por eso va anidado adentro.
@@ -34,10 +35,12 @@ export default function App() {
       <AuthProvider>
         <NetworkProvider>
           <ConTema>
-            <NavigationContainer>
-              <RootNavigator />
-              <StatusBar style="dark" />
-            </NavigationContainer>
+            <BloqueoBiometrico>
+              <NavigationContainer>
+                <RootNavigator />
+                <StatusBar style="dark" />
+              </NavigationContainer>
+            </BloqueoBiometrico>
           </ConTema>
         </NetworkProvider>
       </AuthProvider>

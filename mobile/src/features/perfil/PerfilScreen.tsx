@@ -1,10 +1,12 @@
+import { useEffect, useState } from "react";
 import Constants from "expo-constants";
-import { View } from "react-native";
+import { Alert, Pressable, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTema } from "../../theme";
 import { Button, Card, Screen, Text } from "../../components/ui";
 import { useAuth } from "../auth/AuthContext";
 import { useRed } from "../../services/sync/NetworkProvider";
+import { biometriaActivada, biometriaDisponible, nombreBiometria, pedirBiometria, setBiometriaActivada } from "../../lib/biometria";
 
 const ETIQUETA_ROL: Record<string, string> = {
   admin: "Administrador",
@@ -24,8 +26,35 @@ export function PerfilScreen() {
   const t = useTema();
   const auth = useAuth();
   const { enLinea, pendientes, fallidas, sincronizarAhora, reintentar, descartar } = useRed();
+
+  const [bioDisponible, setBioDisponible] = useState(false);
+  const [bioNombre, setBioNombre] = useState("biometría");
+  const [bioActiva, setBioActiva] = useState(false);
+
+  useEffect(() => {
+    biometriaDisponible().then(setBioDisponible);
+    nombreBiometria().then(setBioNombre);
+    biometriaActivada().then(setBioActiva);
+  }, []);
+
+  async function alternarBiometria() {
+    if (bioActiva) {
+      await setBiometriaActivada(false);
+      setBioActiva(false);
+      return;
+    }
+    const ok = await pedirBiometria(`Confirma con ${bioNombre} para activar el bloqueo`);
+    if (!ok) {
+      Alert.alert("No se pudo activar", "No se verificó tu identidad.");
+      return;
+    }
+    await setBiometriaActivada(true);
+    setBioActiva(true);
+  }
+
   if (auth.fase !== "listo" && auth.fase !== "mfa-requerido") return null;
   const u = auth.usuario;
+  const tituloBio = bioNombre === "Face ID" ? "Bloquear con Face ID" : "Bloquear con huella";
 
   return (
     <Screen scroll style={{ gap: t.espacio(4) }}>
@@ -94,6 +123,37 @@ export function PerfilScreen() {
               </View>
             </View>
           ))}
+        </Card>
+      )}
+
+      {bioDisponible && (
+        <Card>
+          <Pressable
+            onPress={alternarBiometria}
+            hitSlop={8}
+            style={({ pressed }) => ({
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: t.espacio(3),
+              minHeight: 44,
+              opacity: pressed ? 0.7 : 1,
+            })}
+          >
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text variante="etiqueta" weight="medium">
+                {tituloBio}
+              </Text>
+              <Text variante="caption" tono="muted">
+                Pide tu {bioNombre} al abrir la app.
+              </Text>
+            </View>
+            <Ionicons
+              name={bioActiva ? "toggle" : "toggle-outline"}
+              size={34}
+              color={bioActiva ? t.colores.brand : t.colores.muted}
+            />
+          </Pressable>
         </Card>
       )}
 
