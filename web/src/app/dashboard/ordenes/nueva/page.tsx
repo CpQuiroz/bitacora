@@ -23,6 +23,7 @@ import { CatalogoSelectorModal, type ItemSeleccionadoCatalogo } from "@/componen
 import { SelectCrear } from "@/components/SelectCrear";
 import { ComboboxCliente } from "@/components/ComboboxCliente";
 import { ComboboxResponsable } from "@/components/ComboboxResponsable";
+import { ComboboxEquipo } from "@/components/ComboboxEquipo";
 
 type ItemOS = { catalogo_item_id: string | null; descripcion: string; cantidad: string; precio_unitario: string };
 const ITEM_VACIO: ItemOS = { catalogo_item_id: null, descripcion: "", cantidad: "1", precio_unitario: "0" };
@@ -269,17 +270,16 @@ function NuevaOrdenServicioContenido() {
                   placeholder="Selecciona un colaborador"
                 />
               </div>
-              {equiposDelCliente.length > 0 && (
+              {clienteId && (
                 <div>
                   <Label>Equipo del cliente (opcional)</Label>
-                  <Select value={equipoIdOS} onChange={(e) => setEquipoIdOS(e.target.value)}>
-                    <option value="">Sin equipo específico</option>
-                    {equiposDelCliente.map((e) => (
-                      <option key={e.id} value={e.id}>
-                        {e.nombre}
-                      </option>
-                    ))}
-                  </Select>
+                  <ComboboxEquipo
+                    value={equipoIdOS}
+                    onChange={setEquipoIdOS}
+                    equipos={equiposDelCliente}
+                    clienteId={clienteId}
+                    onEquipoCreado={(nuevo) => setEquipos((prev) => [...prev, nuevo])}
+                  />
                 </div>
               )}
               <div>

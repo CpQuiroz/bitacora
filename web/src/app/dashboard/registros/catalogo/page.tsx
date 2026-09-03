@@ -9,6 +9,7 @@ import { formatMoneda } from "@/lib/formatMoneda";
 import { estadoStock } from "@/lib/estadoStock";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { SelectCrear } from "@/components/SelectCrear";
+import { Combobox } from "@/components/Combobox";
 import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText } from "@/components/ui";
 import { IconHelp, IconLayers, IconPlus } from "@/components/icons";
 import { ICONO_TIPO } from "@/components/CatalogoSelectorModal";
@@ -336,14 +337,15 @@ export default function CatalogoPage() {
                   {kitItems.map((k, idx) => (
                     <div key={idx} className="flex items-center gap-2">
                       <div className="min-w-0 flex-1">
-                        <Select value={k.item_id} onChange={(e) => cambiarItemKit(idx, { item_id: e.target.value })}>
-                          <option value="">Selecciona un ítem…</option>
-                          {disponiblesParaKit.map((it) => (
-                            <option key={it.id} value={it.id}>
-                              {TIPO_ETIQUETA[it.tipo]} — {it.nombre}
-                            </option>
-                          ))}
-                        </Select>
+                        <Combobox
+                          value={k.item_id}
+                          onChange={(id) => cambiarItemKit(idx, { item_id: id })}
+                          opciones={disponiblesParaKit.map((it) => ({
+                            id: it.id,
+                            label: `${TIPO_ETIQUETA[it.tipo]} — ${it.nombre}`,
+                          }))}
+                          placeholder="Buscar ítem del catálogo…"
+                        />
                       </div>
                       <div className="w-24">
                         <Input

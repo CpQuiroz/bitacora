@@ -200,6 +200,14 @@ export default function TiposOsPage() {
                   </option>
                 ))}
               </Select>
+              <a
+                href="/dashboard/configuracion/checklists"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-1 inline-block text-xs font-medium text-muted transition-colors hover:text-brand"
+              >
+                {checklists.length === 0 ? "Crear un checklist →" : "Gestionar checklists →"}
+              </a>
             </div>
             <div>
               <Label>Tiempo estimado (minutos)</Label>
