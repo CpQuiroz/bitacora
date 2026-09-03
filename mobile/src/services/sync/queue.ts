@@ -90,9 +90,9 @@ async function ejecutar(a: AccionPendiente): Promise<Response> {
     if (a.body && typeof a.body === "object") {
       for (const [k, v] of Object.entries(a.body as Record<string, unknown>)) fd.append(k, String(v));
     }
-    return apiFetch(a.path, { method: a.method, body: fd });
+    return apiFetch(a.path, { method: a.method, body: fd }, 30000);
   }
-  return apiFetch(a.path, { method: a.method, body: JSON.stringify(a.body ?? {}) });
+  return apiFetch(a.path, { method: a.method, body: JSON.stringify(a.body ?? {}) }, 30000);
 }
 
 /** Intenta vaciar la cola. Se llama al encolar, al reconectar y al foreground. */

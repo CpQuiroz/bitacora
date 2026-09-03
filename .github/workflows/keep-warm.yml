@@ -1,0 +1,39 @@
+name: Mantener backend despierto
+
+# El backend vive en Render (plan gratis) y se duerme tras ~15 min sin
+# tráfico. La primera petición después de eso tarda 30–60s en despertarlo
+# y la app móvil lo muestra como "sin conexión". Este job le pega a
+# /health cada ~10 min para que rara vez esté dormido en horario laboral.
+#
+# Nota: el scheduler de GitHub Actions no es exacto (puede atrasarse
+# varios minutos) y desactiva el cron tras 60 días sin actividad en el
+# repo. Si se necesita algo más firme, mover esto a pg_cron en Supabase
+# (la DB nunca duerme) o a un plan pago de Render.
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {}
+
+concurrency:
+  group: keep-warm
+  cancel-in-progress: true
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pegarle a /health
+        run: |
+          set -uo pipefail
+          URL="https://bitacora-cgt7.onrender.com/health"
+          for intento in 1 2 3 4 5; do
+            CODIGO="$(curl -s -o /dev/null -w '%{http_code}' --max-time 90 "$URL" || echo 000)"
+            echo "intento $intento → HTTP $CODIGO"
+            if [ "$CODIGO" = "200" ]; then
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "::warning::el backend no respondió 200 tras 5 intentos"
+          exit 0

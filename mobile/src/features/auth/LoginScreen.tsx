@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Alert, KeyboardAvoidingView, Platform, Pressable, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { supabase } from "../../lib/supabase";
@@ -16,16 +16,29 @@ export function LoginScreen({ navigation }: NativeStackScreenProps<RootStackPara
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [cargando, setCargando] = useState(false);
+  const [lento, setLento] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const timerLento = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timerLento.current) clearTimeout(timerLento.current);
+    };
+  }, []);
 
   async function entrar() {
     setError(null);
     setCargando(true);
+    setLento(false);
+    // El backend en Render puede tardar si estuvo inactivo: avisamos.
+    timerLento.current = setTimeout(() => setLento(true), 4000);
     const res = await apiJson<RespuestaLogin>("/api/auth/login", {
       method: "POST",
       body: JSON.stringify({ email: email.trim(), password }),
     });
+    if (timerLento.current) clearTimeout(timerLento.current);
     setCargando(false);
+    setLento(false);
     if (!res.ok) {
       setError(res.error);
       return;
@@ -70,6 +83,10 @@ export function LoginScreen({ navigation }: NativeStackScreenProps<RootStackPara
           {error ? (
             <Text variante="etiqueta" tono="danger" style={{ textAlign: "center" }}>
               {error}
+            </Text>
+          ) : lento ? (
+            <Text variante="etiqueta" tono="muted" style={{ textAlign: "center" }}>
+              Conectando… puede tardar unos segundos si el servidor estuvo inactivo.
             </Text>
           ) : null}
           <Button
