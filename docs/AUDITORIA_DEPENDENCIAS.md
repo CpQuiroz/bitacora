@@ -134,86 +134,116 @@ sospechosa:**
 
 Hoy **no hay ningún chequeo de dependencias en CI**. Los dos workflows existentes
 (`check-migraciones-prod.yml`, `keep-warm.yml`) no tocan `npm audit`. Propuesta —
-mismo patrón liviano, **para revisar antes de commitear, NO implementado todavía**:
+mismo patrón liviano, **para revisar antes de commitear, NO implementado todavía**.
+
+> **Ambos archivos se corrigieron tras una revisión el 3-sep** (ver los recuadros en
+> cada sub-sección). El error principal de la primera versión: tratar el monorepo como
+> 4 proyectos npm separados, cuando es **un solo lockfile con workspaces** — tanto
+> Dependabot como `npm audit` se configuran una sola vez en la raíz.
 
 ### 6.1 `.github/dependabot.yml` (nativo de GitHub, sin workflow que mantener)
+
+> **Corregido tras revisión (3-sep):** la primera versión tenía **un bloque `directory`
+> por workspace** — eso está **mal** para npm workspaces con lockfile único: Dependabot
+> espera un `package-lock.json` en cada `directory` y no lo hay → falla o genera PRs
+> rotas. Con workspaces va **un solo bloque `npm` con `directory: "/"`** (el
+> `package.json` raíz que declara `workspaces`); Dependabot descubre las 4 carpetas y
+> edita el lockfile raíz. Como ya no se puede agrupar por carpeta, se agrupa por
+> `patterns` (glob sobre el nombre del paquete).
 
 ```yaml
 version: 2
 updates:
-  # Un bloque por workspace. Actualizaciones agrupadas para no ahogarse
-  # en PRs sueltas; security y version separadas.
+  # --- npm: UN bloque para todo el monorepo (workspaces + lockfile raíz) ---
   - package-ecosystem: "npm"
-    directory: "/backend"
+    directory: "/"
     schedule: { interval: "weekly", day: "monday" }
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 8
+    # target-branch por defecto = la default branch (main). Merge de una
+    # PR de Dependabot = deploy automático (Vercel + Render). NUNCA activar
+    # auto-merge: revisar y mergear a mano, sobre todo bumps de runtime.
     groups:
+      # Security primero, todo junto — que un fix de CVE no espere a que
+      # cuadre con el resto.
       security:
         applies-to: security-updates
         patterns: ["*"]
-      backend-minor-patch:
+      # Version updates, agrupados por área para no ahogarse en PRs.
+      backend:
         applies-to: version-updates
+        patterns:
+          - "express*"
+          - "helmet"
+          - "cors"
+          - "multer"
+          - "pdfkit"
+          - "dotenv"
+          - "@aws-sdk/*"
+          - "@sentry/node"
+          - "@anthropic-ai/sdk"
+        update-types: ["minor", "patch"]
+      frontend-web:
+        applies-to: version-updates
+        patterns:
+          - "next"
+          - "eslint-config-next"
+          - "recharts"
+          - "leaflet"
+          - "@supabase/supabase-js"
+        update-types: ["minor", "patch"]
+      tooling:
+        applies-to: version-updates
+        patterns:
+          - "typescript"
+          - "tsx"
+          - "eslint"
+          - "@types/*"
         update-types: ["minor", "patch"]
     ignore:
-      # Express 5 = migración mayor, se decide a mano (ver auditoría §2)
+      # Express 5 = migración mayor, se decide a mano (ver §2). Sin tests e2e.
       - dependency-name: "express"
         update-types: ["version-update:semver-major"]
-
-  - package-ecosystem: "npm"
-    directory: "/web"
-    schedule: { interval: "weekly", day: "monday" }
-    open-pull-requests-limit: 5
-    groups:
-      security:
-        applies-to: security-updates
-        patterns: ["*"]
-      web-minor-patch:
-        applies-to: version-updates
-        update-types: ["minor", "patch"]
-    ignore:
-      # react/react-dom los pinea el proyecto a la par de Next
+      # Todo lo que pinea Expo SDK 57 — se actualiza SOLO con
+      # `npx expo install` (Dependabot rompe la compat). Dependabot no va a
+      # avisar de estos, ni siquiera de CVEs: para eso está la status page
+      # de Expo y `npx expo install --check` / `npx expo-doctor`.
+      - dependency-name: "expo"
+      - dependency-name: "expo-*"
+      - dependency-name: "@expo/*"
       - dependency-name: "react"
       - dependency-name: "react-dom"
-
-  - package-ecosystem: "npm"
-    directory: "/mobile"
-    schedule: { interval: "weekly", day: "monday" }
-    open-pull-requests-limit: 5
-    groups:
-      security:
-        applies-to: security-updates
-        patterns: ["*"]
-      mobile-minor-patch:
-        applies-to: version-updates
-        update-types: ["minor", "patch"]
-    ignore:
-      # Todo lo que pinea Expo SDK 57 — se actualiza con `npx expo install`,
-      # no con Dependabot (rompe la compat).
-      - dependency-name: "expo*"
-      - dependency-name: "react"
       - dependency-name: "react-native"
       - dependency-name: "react-native-*"
       - dependency-name: "@react-native-*"
+      - dependency-name: "@react-navigation/*"
+      # Majors de dev tooling — a mano (TS 7, eslint 10, @types/node 26…)
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "eslint"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
 
-  - package-ecosystem: "npm"
-    directory: "/packages/shared"
-    schedule: { interval: "weekly", day: "monday" }
-    open-pull-requests-limit: 3
-    groups:
-      shared-all:
-        patterns: ["*"]
-
-  # Los propios workflows de GitHub Actions
+  # --- Los propios workflows de GitHub Actions ---
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule: { interval: "monthly" }
 ```
 
-> Nota: Dependabot con `directory` por workspace en un monorepo de npm workspaces con
-> lockfile único a veces genera PRs que tocan el lockfile raíz — revisar las primeras
-> PRs a mano para confirmar que el diff del lockfile es el esperado.
+**Además del archivo, para que las security updates funcionen en un repo privado:**
+Settings → Code security → activar **"Dependabot alerts"** y **"Dependabot security
+updates"** (no vienen prendidos por defecto en repos privados). El bloque de
+`version-updates` del yml funciona sin eso; el de `security-updates` no.
 
 ### 6.2 `.github/workflows/deps-audit.yml` (gate en PR, mismo estilo que los existentes)
+
+> **Corregido tras revisión (3-sep):** la primera versión hacía un loop
+> `for dir in . backend web mobile packages/shared; do (cd $dir && npm audit)`. Eso **no
+> sirve**: `npm audit` desde una subcarpeta sin lockfile propio sube hasta el lockfile
+> raíz y audita **todo el árbol** — el loop corre el mismo audit completo 5 veces. Con
+> workspaces se corre **una sola vez en la raíz** (cubre los 4). Además: cache de npm
+> (el `npm ci` de este monorepo es lento) y un cron semanal (un CVE nuevo puede salir
+> sobre una dependencia que no cambió).
 
 ```yaml
 name: Auditoría de dependencias
@@ -223,6 +253,8 @@ on:
     paths:
       - "**/package.json"
       - "package-lock.json"
+  schedule:
+    - cron: "0 9 * * 1"   # lunes 09:00 UTC — CVEs nuevos sobre deps sin cambios
   workflow_dispatch: {}
 
 jobs:
@@ -231,23 +263,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: "22" }
+        with:
+          node-version: "22"
+          cache: "npm"
+      # npm ci ya valida que el lockfile esté sincronizado con los
+      # package.json (si alguien editó uno sin `npm install`, esto falla).
       - run: npm ci
-      # Falla solo ante high/critical — las moderate se ven pero no bloquean
-      # (hoy hay 20 moderate transitivas de Expo que no tienen fix).
-      - name: npm audit (raíz + workspaces)
-        run: |
-          set -e
-          for dir in . backend web mobile packages/shared; do
-            echo "::group::npm audit — $dir"
-            ( cd "$dir" && npm audit --audit-level=high ) || { echo "::error::vulnerabilidad high/critical en $dir"; exit 1; }
-            echo "::endgroup::"
-          done
-      - name: Reporte informativo de moderate (no bloquea)
+      # Un solo audit en la raíz cubre los 4 workspaces (lockfile único).
+      # Falla solo ante high/critical — las moderate se ven pero no
+      # bloquean (hoy hay 20 moderate transitivas de Expo/nav sin fix).
+      - name: npm audit (todo el monorepo)
+        run: npm audit --audit-level=high
+      - name: Detalle informativo (no bloquea)
         if: always()
         run: npm audit --audit-level=moderate || true
 ```
 
-**Antes de commitear esto:** decidir si el `--audit-level=high` es el umbral correcto
-(hoy pasaría — 0 high) y si Dependabot debe abrir PRs a `main` directo o a un branch
-`deps/`.
+**Antes de commitear esto — decisiones abiertas:**
+- **Umbral `--audit-level=high`**: hoy pasa (0 high/critical). Si en algún momento
+  aparece un high transitivo sin fix upstream, va a bloquear todas las PRs hasta que se
+  agregue un `--omit` o se acepte el riesgo. Alternativa: dejarlo informativo
+  (`|| true`) y revisar el resumen a mano.
+- **Repo privado + minutos de Actions**: el cron semanal + cada PR que toca deps consume
+  minutos. Con el plan actual de GitHub debería sobrar, pero tenerlo presente.
+- **Dependabot → `main` directo**: sus PRs apuntan a `main`, y mergear `main` deploya.
+  Si preferís un colchón, poner `target-branch: "develop"` en el `dependabot.yml` y
+  mergear `develop → main` por lotes revisados. Hoy no hay branch `develop`.
