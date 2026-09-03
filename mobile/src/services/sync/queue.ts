@@ -90,9 +90,36 @@ async function ejecutar(a: AccionPendiente): Promise<Response> {
     if (a.body && typeof a.body === "object") {
       for (const [k, v] of Object.entries(a.body as Record<string, unknown>)) fd.append(k, String(v));
     }
-    return apiFetch(a.path, { method: a.method, body: fd }, 30000);
+    // Más margen para las fotos: la petición despierta al backend en
+    // Render (cold start ~30–60s) además de subir la imagen.
+    return apiFetch(a.path, { method: a.method, body: fd }, 45000);
   }
   return apiFetch(a.path, { method: a.method, body: JSON.stringify(a.body ?? {}) }, 30000);
+}
+
+// Auto-reintento con backoff: sin esto, una acción que falla por señal
+// (o por un cold start que superó el timeout) se queda "pegada" hasta
+// que el usuario mande la app a segundo plano y la vuelva a abrir. Con
+// esto la cola se reintenta sola cada 5s, 10s, 20s… hasta 60s.
+let reintentoTimer: ReturnType<typeof setTimeout> | null = null;
+let reintentoIntento = 0;
+
+function cancelarAutoReintento() {
+  if (reintentoTimer) {
+    clearTimeout(reintentoTimer);
+    reintentoTimer = null;
+  }
+  reintentoIntento = 0;
+}
+
+function programarAutoReintento() {
+  if (reintentoTimer) return;
+  const espera = Math.min(5000 * 2 ** reintentoIntento, 60000);
+  reintentoIntento += 1;
+  reintentoTimer = setTimeout(() => {
+    reintentoTimer = null;
+    void procesar();
+  }, espera);
 }
 
 /** Intenta vaciar la cola. Se llama al encolar, al reconectar y al foreground. */
@@ -100,7 +127,10 @@ export async function procesar(): Promise<void> {
   await asegurarCargada();
   if (procesando) return;
   const cola0 = cola.filter((a) => !a.fallida);
-  if (cola0.length === 0) return;
+  if (cola0.length === 0) {
+    cancelarAutoReintento();
+    return;
+  }
   procesando = true;
   try {
     // Las fotos (subida + análisis con IA) son lo más lento y lo menos
@@ -119,6 +149,7 @@ export async function procesar(): Promise<void> {
           // 2xx = hecho. 409/404 = el servidor rechazó algo ya resuelto
           // (ej. OS ya finalizada) — no tiene sentido reintentar.
           cola = cola.filter((x) => x.id !== a.id);
+          reintentoIntento = 0; // algo salió: el backoff vuelve a empezar corto
           await persistir();
         } else {
           const body = await res.json().catch(() => ({}));
@@ -132,9 +163,9 @@ export async function procesar(): Promise<void> {
           continue;
         }
       } catch {
-        // Sin señal — cortamos y reintentamos después. No cuenta como
-        // intento fallido (no llegó al servidor). Todas las demás van a
-        // fallar igual, así que no tiene sentido seguir.
+        // Sin señal (o timeout) — cortamos y reintentamos después. No
+        // cuenta como intento fallido (no llegó al servidor). Todas las
+        // demás van a fallar igual, así que no tiene sentido seguir.
         a.ultimoError = "Sin conexión";
         await persistir();
         break;
@@ -142,6 +173,10 @@ export async function procesar(): Promise<void> {
     }
   } finally {
     procesando = false;
+    // Si quedan acciones activas (por señal o cold start), que la cola
+    // se reintente sola en vez de quedarse esperando un evento externo.
+    if (cola.some((a) => !a.fallida)) programarAutoReintento();
+    else cancelarAutoReintento();
   }
 }
 

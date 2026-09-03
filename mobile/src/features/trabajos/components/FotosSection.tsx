@@ -6,16 +6,20 @@ import { Button, Card, Text } from "../../../components/ui";
 import { comprimirImagen } from "../../../lib/imagen";
 import type { FotoConUrl } from "../../../services/trabajos";
 
+export type FotoPendiente = { id: string; uri: string; fallida: boolean; error?: string };
+
 export function FotosSection({
   fotos,
-  previewsLocales = [],
+  pendientes = [],
   editable,
   onAgregar,
+  onQuitarPendiente,
 }: {
   fotos: FotoConUrl[];
-  previewsLocales?: string[];
+  pendientes?: FotoPendiente[];
   editable: boolean;
   onAgregar: (archivo: { uri: string; name: string; type: string }) => void;
+  onQuitarPendiente?: (id: string) => void;
 }) {
   const t = useTema();
   const [ocupado, setOcupado] = useState(false);
@@ -58,14 +62,29 @@ export function FotosSection({
         </View>
       )}
 
-      {previewsLocales.map((uri, i) => (
-        <Card key={`local-${i}`} plano>
-          <Image source={{ uri }} style={{ width: "100%", height: 200, borderRadius: t.radio.sm }} />
-          <View style={{ flexDirection: "row", alignItems: "center", gap: t.espacio(2), marginTop: t.espacio(2) }}>
-            <ActivityIndicator size="small" color={t.colores.muted} />
-            <Text variante="caption" tono="muted">
-              Subiendo…
-            </Text>
+      {pendientes.map((p) => (
+        <Card key={p.id} plano>
+          {p.uri ? (
+            <Image source={{ uri: p.uri }} style={{ width: "100%", height: 200, borderRadius: t.radio.sm }} />
+          ) : null}
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: t.espacio(2), marginTop: t.espacio(2) }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: t.espacio(2), flex: 1 }}>
+              {p.fallida ? (
+                <Text variante="caption" tono="danger">
+                  No se pudo subir{p.error ? `: ${p.error}` : ""}
+                </Text>
+              ) : (
+                <>
+                  <ActivityIndicator size="small" color={t.colores.muted} />
+                  <Text variante="caption" tono="muted">
+                    Subiendo… (se reintenta solo)
+                  </Text>
+                </>
+              )}
+            </View>
+            {onQuitarPendiente ? (
+              <Button titulo="Quitar" variante="ghost" onPress={() => onQuitarPendiente(p.id)} />
+            ) : null}
           </View>
         </Card>
       ))}
@@ -97,7 +116,7 @@ export function FotosSection({
         </Card>
       ))}
 
-      {fotos.length === 0 && previewsLocales.length === 0 ? (
+      {fotos.length === 0 && pendientes.length === 0 ? (
         <Text variante="caption" tono="muted">
           Sin fotos todavía.
         </Text>

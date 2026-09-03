@@ -34,16 +34,21 @@ const ETIQUETA_OS: Record<string, string> = {
 export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenProps<TrabajosStackParamList, "TrabajoDetalle">) {
   const t = useTema();
   const { trabajoId } = route.params;
-  const { pendientes, enLinea } = useRed();
-  const accionesAqui = useMemo(() => pendientes.filter((a) => a.recurso === `trabajo:${trabajoId}`), [pendientes, trabajoId]);
-  const fotosEnCola = accionesAqui.filter((a) => a.etiqueta === "Foto").length;
+  const { pendientes, fallidas, enLinea, descartar } = useRed();
+  const fotosPendientes = useMemo(() => {
+    const esFotoDeAca = (a: (typeof pendientes)[number]) =>
+      a.recurso === `trabajo:${trabajoId}` && a.etiqueta === "Foto";
+    return [
+      ...pendientes.filter(esFotoDeAca).map((a) => ({ id: a.id, uri: a.archivo?.uri ?? "", fallida: false, error: a.ultimoError })),
+      ...fallidas.filter(esFotoDeAca).map((a) => ({ id: a.id, uri: a.archivo?.uri ?? "", fallida: true, error: a.ultimoError })),
+    ];
+  }, [pendientes, fallidas, trabajoId]);
 
   const [detalle, setDetalle] = useState<DetalleTrabajo | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [datosForm, setDatosForm] = useState<Record<string, string>>({});
   const [guardandoDatos, setGuardandoDatos] = useState(false);
   const [marcando, setMarcando] = useState<"Check-in" | "Check-out" | null>(null);
-  const [fotosLocales, setFotosLocales] = useState<string[]>([]);
   const [finalizando, setFinalizando] = useState(false);
 
   const cargar = useCallback(async () => {
@@ -62,10 +67,12 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
   }, [cargar]);
   useFocusEffect(useCallback(() => void cargar(), [cargar]));
 
-  // Cuando ya no quedan fotos en cola, las de verdad vienen del servidor.
+  // Cuando una foto de la cola se sube, refrescamos para traer la de
+  // verdad desde el servidor.
+  const fotosEnCola = fotosPendientes.filter((f) => !f.fallida).length;
   useEffect(() => {
-    if (fotosEnCola === 0 && fotosLocales.length > 0) setFotosLocales([]);
-  }, [fotosEnCola, fotosLocales.length]);
+    void cargar();
+  }, [fotosEnCola, cargar]);
 
   // El análisis con IA de cada foto termina en segundo plano en el
   // backend: mientras haya alguna "procesando", refrescamos cada 8s para
@@ -238,12 +245,10 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
 
         <FotosSection
           fotos={fotos}
-          previewsLocales={fotosLocales}
+          pendientes={fotosPendientes}
           editable={!finalizada}
-          onAgregar={(archivo) => {
-            setFotosLocales((p) => [...p, archivo.uri]);
-            void encolarFoto(trabajoId, archivo);
-          }}
+          onAgregar={(archivo) => void encolarFoto(trabajoId, archivo)}
+          onQuitarPendiente={descartar}
         />
 
         <CierreFirma orden={orden} editable={!finalizada} onFirmar={(p) => encolarFirma(trabajoId, p)} />
