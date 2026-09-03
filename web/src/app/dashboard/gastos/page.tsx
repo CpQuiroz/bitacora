@@ -253,7 +253,7 @@ export default function GastosPage() {
                   opciones={categorias}
                   endpoint="/api/categorias-gasto"
                   placeholder="Selecciona una categoría…"
-                  etiquetaCrear="+ Nueva categoría…"
+                  etiquetaCrear="+ Crear categoría"
                   onCreado={(nueva) => setCategorias((prev) => [...prev, nueva])}
                   gestionHref="/dashboard/configuracion/categorias-gastos"
                   gestionLabel="Gestionar categorías →"
@@ -267,7 +267,7 @@ export default function GastosPage() {
                   opciones={centrosCosto}
                   endpoint="/api/centros-costo"
                   placeholder="Sin centro de costo"
-                  etiquetaCrear="+ Nuevo centro de costo…"
+                  etiquetaCrear="+ Crear centro de costo"
                   onCreado={(nuevo) => setCentrosCosto((prev) => [...prev, nuevo])}
                   gestionHref="/dashboard/configuracion/centros-costo"
                   gestionLabel="Gestionar centros de costo →"
@@ -281,7 +281,7 @@ export default function GastosPage() {
                   opciones={proveedores}
                   endpoint="/api/proveedores"
                   placeholder="Sin proveedor"
-                  etiquetaCrear="+ Nuevo proveedor…"
+                  etiquetaCrear="+ Crear proveedor"
                   onCreado={(nuevo) => setProveedores((prev) => [...prev, nuevo])}
                   gestionHref="/dashboard/registros/proveedores"
                   gestionLabel="Gestionar proveedores →"

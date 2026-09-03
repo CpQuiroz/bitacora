@@ -187,7 +187,7 @@ export default function ProveedoresPage() {
                   opciones={categorias}
                   endpoint="/api/categorias-gasto"
                   placeholder="Sin categoría"
-                  etiquetaCrear="+ Nueva categoría…"
+                  etiquetaCrear="+ Crear categoría"
                   onCreado={(nueva) => setCategorias((prev) => [...prev, nueva])}
                 />
               </div>

@@ -290,7 +290,7 @@ function NuevaOrdenServicioContenido() {
                   opciones={tiposTrabajo}
                   endpoint="/api/tipos-trabajo"
                   placeholder="Sin tipo específico"
-                  etiquetaCrear="+ Crear tipo de servicio nuevo"
+                  etiquetaCrear="+ Crear tipo de servicio"
                   onCreado={(nuevo) => setTiposTrabajo((prev) => [...prev, nuevo])}
                   gestionHref="/dashboard/configuracion/tipos-trabajo"
                   gestionLabel="Configurar tipos de trabajo →"
@@ -304,7 +304,7 @@ function NuevaOrdenServicioContenido() {
                   opciones={tiposOs}
                   endpoint="/api/tipos-os"
                   placeholder="Sin clasificar"
-                  etiquetaCrear="+ Crear tipo de OS nuevo"
+                  etiquetaCrear="+ Crear tipo de OS"
                   onCreado={(nuevo) => setTiposOs((prev) => [...prev, nuevo])}
                   gestionHref="/dashboard/configuracion/tipos-os"
                   gestionLabel="Configurar tipos de OS →"

@@ -483,7 +483,7 @@ export default function NuevaRutaPage() {
                       opciones={tiposTrabajo}
                       endpoint="/api/tipos-trabajo"
                       placeholder="Sin tipo específico"
-                      etiquetaCrear="+ Nuevo tipo de tarea…"
+                      etiquetaCrear="+ Crear tipo de tarea"
                       onCreado={(nuevo) => setTiposTrabajo((prev) => [...prev, nuevo])}
                       gestionHref="/dashboard/configuracion/tipos-trabajo"
                       gestionLabel="Configurar tipos de trabajo →"

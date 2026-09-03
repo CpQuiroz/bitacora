@@ -306,7 +306,7 @@ export default function CatalogoPage() {
                   opciones={unidades}
                   endpoint="/api/unidades-medida"
                   placeholder={unidad ? unidad : "Selecciona una unidad…"}
-                  etiquetaCrear="+ Nueva unidad…"
+                  etiquetaCrear="+ Crear unidad"
                   onCreado={(nueva) => {
                     setUnidades((prev) => [...prev, nueva]);
                     setUnidad(nueva.nombre);
