@@ -22,6 +22,11 @@ const POR_ESTADO: Record<string, ParClave> = {
   borrador: "aviso",
   confirmado: "exito",
   facturado: "info",
+  // Tarea / cita de agenda
+  confirmada: "info",
+  cancelada: "peligro",
+  no_asistio: "peligro",
+  cancelada_anticipada: "aviso",
 };
 
 function colores(clave: ParClave, t: Tema): { bg: string; fg: string } {

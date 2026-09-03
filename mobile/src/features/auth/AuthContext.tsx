@@ -11,7 +11,15 @@ type EstadoAuth =
   | { fase: "cargando" }
   | { fase: "sin-sesion" }
   | { fase: "mfa-requerido"; usuario: UsuarioConEmpresa }
-  | { fase: "listo"; usuario: UsuarioConEmpresa; modulosDeshabilitados: Modulo[] };
+  | {
+      fase: "listo";
+      usuario: UsuarioConEmpresa;
+      modulosDeshabilitados: Modulo[];
+      // Módulos que este usuario realmente ve: rol ∩ contratado (con los
+      // ajustes por empresa de Configuración → Perfiles). Lo usa la
+      // navegación para decidir pestañas.
+      modulosVisibles: Modulo[];
+    };
 
 type AuthContexto = EstadoAuth & {
   session: Session | null;
@@ -29,15 +37,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const resolverUsuario = useCallback(async () => {
     const [resMe, resMfa] = await Promise.all([
-      apiJson<{ usuario: UsuarioConEmpresa | null; modulos_deshabilitados: Modulo[]; rol_exige_2fa?: boolean }>("/api/me"),
+      apiJson<{
+        usuario: UsuarioConEmpresa | null;
+        modulos_deshabilitados: Modulo[];
+        modulos_visibles?: Modulo[];
+        rol_exige_2fa?: boolean;
+      }>("/api/me"),
       apiJson<{ activado: boolean }>("/api/usuarios/me/mfa"),
     ]);
 
     if (!resMe.ok) {
       // Sin señal: intentar mostrar lo cacheado para no bloquear al técnico.
-      const cache = await leerCache<{ usuario: UsuarioConEmpresa; modulos: Modulo[] }>(CACHE_ME);
+      const cache = await leerCache<{ usuario: UsuarioConEmpresa; modulos: Modulo[]; visibles?: Modulo[] }>(CACHE_ME);
       if (cache) {
-        setEstado({ fase: "listo", usuario: cache.datos.usuario, modulosDeshabilitados: cache.datos.modulos });
+        setEstado({
+          fase: "listo",
+          usuario: cache.datos.usuario,
+          modulosDeshabilitados: cache.datos.modulos,
+          modulosVisibles: cache.datos.visibles ?? [],
+        });
       } else {
         setEstado({ fase: "sin-sesion" });
       }
@@ -50,7 +68,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const usuario = resMe.data.usuario;
     const modulos = resMe.data.modulos_deshabilitados ?? [];
-    await guardarCache(CACHE_ME, { usuario, modulos });
+    const visibles = resMe.data.modulos_visibles ?? [];
+    await guardarCache(CACHE_ME, { usuario, modulos, visibles });
 
     // La exigencia de 2FA la define roles.requiere_2fa (editable desde el
     // Panel de Super-Admin) — el backend la manda en /api/me.
@@ -60,7 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setEstado({ fase: "mfa-requerido", usuario });
       return;
     }
-    setEstado({ fase: "listo", usuario, modulosDeshabilitados: modulos });
+    setEstado({ fase: "listo", usuario, modulosDeshabilitados: modulos, modulosVisibles: visibles });
   }, []);
 
   useEffect(() => {

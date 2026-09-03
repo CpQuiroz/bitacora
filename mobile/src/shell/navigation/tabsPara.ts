@@ -13,7 +13,8 @@ import type { TabKey } from "./types";
 export function tabsPara(
   usuario: Pick<Usuario, "rol" | "funcion">,
   empresa: Pick<Empresa, "rubro">,
-  modulosDeshabilitados: Modulo[]
+  modulosDeshabilitados: Modulo[],
+  modulosVisibles: Modulo[] = []
 ): { tabs: TabKey[]; inicial: TabKey } {
   // "colaborador" es el rol de terreno puro; cualquier otro rol (admin,
   // supervisor, o un rol custom del Panel) se trata como gestión.
@@ -24,9 +25,13 @@ export function tabsPara(
 
   const verTrabajos = esGestion || funcion !== "chofer";
   const verViajes = empresaHaceViajes && (esGestion || funcion === "chofer" || rubroTransporte);
+  // La Agenda (tareas/citas asignadas) aparece si el rol la ve — se
+  // resuelve en el backend con la matriz de perfiles por empresa.
+  const verAgenda = modulosVisibles.includes("agenda");
 
   const tabs: TabKey[] = [];
   if (verTrabajos) tabs.push("Trabajos");
+  if (verAgenda) tabs.push("Agenda");
   tabs.push("Ruta");
   if (verViajes) tabs.push("Viajes");
   tabs.push("Perfil");

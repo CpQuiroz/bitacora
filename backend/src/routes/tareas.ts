@@ -68,6 +68,31 @@ tareasRouter.get(
   })
 );
 
+// Una tarea puntual (para el detalle en la app). Un colaborador solo
+// puede ver las suyas — igual regla que la lista.
+tareasRouter.get(
+  "/:id",
+  ah<RequestConEmpresa>(async (req, res) => {
+    let query = supabase
+      .from("tareas")
+      .select("*, cliente:clientes(id, nombre, telefono, direccion, lat, lng), responsable:usuarios(nombre)")
+      .eq("empresa_id", req.empresaId!)
+      .eq("id", req.params.id);
+    if (req.rol === "colaborador") query = query.eq("responsable_id", req.userId!);
+
+    const { data, error } = await query.maybeSingle();
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    if (!data) {
+      res.status(404).json({ error: "Tarea no encontrada" });
+      return;
+    }
+    res.json(data);
+  })
+);
+
 tareasRouter.post(
   "/",
   requiereModulo("agenda"),
@@ -178,6 +203,10 @@ tareasRouter.post(
       res.status(404).json({ error: "Tarea no encontrada" });
       return;
     }
+    if (req.rol === "colaborador" && tarea.responsable_id !== req.userId) {
+      res.status(403).json({ error: "Solo puedes cancelar tus propias citas" });
+      return;
+    }
     if (tarea.estado !== "pendiente" && tarea.estado !== "confirmada") {
       res.status(400).json({ error: "Esta cita ya no se puede cancelar" });
       return;
@@ -208,6 +237,26 @@ tareasRouter.patch(
   "/:id",
   requiereModulo("agenda"),
   ah<RequestConEmpresa>(async (req, res) => {
+    // Un colaborador (típicamente desde la app) solo cambia el ESTADO de
+    // SUS propias tareas — no reasigna ni reprograma la agenda ajena.
+    if (req.rol === "colaborador") {
+      const enviados = Object.keys(req.body ?? {});
+      if (enviados.length > 0 && enviados.some((k) => k !== "estado")) {
+        res.status(403).json({ error: "Solo puedes cambiar el estado de tus tareas" });
+        return;
+      }
+      const { data: propia } = await supabase
+        .from("tareas")
+        .select("responsable_id")
+        .eq("empresa_id", req.empresaId!)
+        .eq("id", req.params.id)
+        .maybeSingle();
+      if (!propia || propia.responsable_id !== req.userId) {
+        res.status(403).json({ error: "Solo puedes actualizar tus propias tareas" });
+        return;
+      }
+    }
+
     const { titulo, descripcion, fecha, hora, responsable_id, cliente_id, prioridad, estado, paquete_id, sesiones_consumidas, trabajo_id } = req.body ?? {};
     const cambios: Partial<Tarea> = {};
 

@@ -13,4 +13,9 @@ export type ViajesStackParamList = {
   ViajeForm: undefined;
 };
 
-export type TabKey = "Trabajos" | "Ruta" | "Viajes" | "Perfil";
+export type AgendaStackParamList = {
+  AgendaLista: undefined;
+  TareaDetalle: { tareaId: string; titulo?: string };
+};
+
+export type TabKey = "Trabajos" | "Agenda" | "Ruta" | "Viajes" | "Perfil";

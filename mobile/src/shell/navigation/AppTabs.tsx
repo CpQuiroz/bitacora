@@ -5,6 +5,7 @@ import { useAuth } from "../../features/auth/AuthContext";
 import { tabsPara } from "./tabsPara";
 import type { TabKey } from "./types";
 import { TrabajosStack } from "./TrabajosStack";
+import { AgendaStack } from "./AgendaStack";
 import { ViajesStack } from "./ViajesStack";
 import { RutaScreen } from "../../features/ruta/RutaScreen";
 import { PerfilScreen } from "../../features/perfil/PerfilScreen";
@@ -13,6 +14,7 @@ const Tab = createBottomTabNavigator();
 
 const ICONO: Record<TabKey, keyof typeof Ionicons.glyphMap> = {
   Trabajos: "clipboard-outline",
+  Agenda: "calendar-outline",
   Ruta: "map-outline",
   Viajes: "car-outline",
   Perfil: "person-circle-outline",
@@ -20,6 +22,7 @@ const ICONO: Record<TabKey, keyof typeof Ionicons.glyphMap> = {
 
 const COMPONENTE: Record<TabKey, React.ComponentType> = {
   Trabajos: TrabajosStack,
+  Agenda: AgendaStack,
   Ruta: RutaScreen,
   Viajes: ViajesStack,
   Perfil: PerfilScreen,
@@ -30,7 +33,12 @@ export function AppTabs() {
   const auth = useAuth();
   if (auth.fase !== "listo") return null;
 
-  const { tabs, inicial } = tabsPara(auth.usuario, auth.usuario.empresa, auth.modulosDeshabilitados);
+  const { tabs, inicial } = tabsPara(
+    auth.usuario,
+    auth.usuario.empresa,
+    auth.modulosDeshabilitados,
+    auth.modulosVisibles
+  );
 
   return (
     <Tab.Navigator
