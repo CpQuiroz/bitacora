@@ -33,7 +33,13 @@ import { ComboboxCliente } from "@/components/ComboboxCliente";
 import { ComboboxResponsable } from "@/components/ComboboxResponsable";
 import { SelectCrear } from "@/components/SelectCrear";
 import { IconClock, IconPaperclip, IconPlus, IconRoute, IconTag } from "@/components/icons";
-import { MapaRutas, type Parada } from "@/components/MapaRutas";
+import dynamic from "next/dynamic";
+import type { Parada } from "@/components/MapaRutas";
+// Leaflet ~148 KB — carga aparte (AUDITORIA_PERFORMANCE_COSTOS.md #7).
+const MapaRutas = dynamic(() => import("@/components/MapaRutas").then((m) => m.MapaRutas), {
+  ssr: false,
+  loading: () => <div className="h-64 animate-pulse rounded-lg bg-surface" />,
+});
 
 type TareaConCliente = Trabajo & { cliente_info: Cliente | null };
 type VehiculoConAsignacion = Equipo & { asignacion_vigente: { colaborador_id: string; colaborador_nombre: string } | null };

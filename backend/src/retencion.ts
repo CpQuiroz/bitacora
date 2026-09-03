@@ -51,6 +51,11 @@ async function limpiar(): Promise<void> {
       etiqueta: "mfa_codigo_pendiente",
       run: () => supabase.from("mfa_codigo_pendiente").delete().lt("expira_en", ahoraIso),
     },
+    {
+      // Instrumentación de latencia — retención corta (14 días).
+      etiqueta: "requests_lentos",
+      run: () => supabase.from("requests_lentos").delete().lt("creado_en", new Date(Date.now() - 14 * DIA).toISOString()),
+    },
   ];
 
   for (const t of tareas) {

@@ -67,6 +67,7 @@ import { sembrarSugerenciasRubro } from "./seedRubro";
 import { registrarConsentimiento, tieneConsentimientoVigente } from "./consentimiento";
 import { limpiarDatosVencidosSiCorresponde } from "./retencion";
 import { verificarTokenBajaAvisos } from "./bajaAvisos";
+import { medirLatencia } from "./instrumentacion";
 import { ah } from "./asyncHandler";
 
 const RUBROS: Rubro[] = ["transporte", "servicio_tecnico", "otro"];
@@ -97,6 +98,11 @@ app.use(
     },
   })
 );
+
+// Mide la latencia de cada request; solo persiste las que superan el
+// umbral (ver instrumentacion.ts). Va después de express.json (para
+// tener el body) y antes de las rutas.
+app.use(medirLatencia);
 
 // Liveness: el proceso Node responde. Lo usa keep-warm.yml (solo
 // necesita despertar a Render) y cualquier check "¿está vivo?".
@@ -392,8 +398,12 @@ app.use((err: unknown, req: express.Request, res: express.Response, _next: expre
   // loguean como si algo hubiera fallado de verdad.
   const posibleStatus = err instanceof Error ? (err as unknown as { status?: unknown }).status : undefined;
   const status = typeof posibleStatus === "number" ? posibleStatus : 500;
+  // Un error que trae su propio `.status` fue lanzado a propósito (freno
+  // de negocio, backpressure de la cola de IA…) — no es un bug, no se
+  // loguea aunque el status sea 5xx (ej. 503 de EsperaEnColaExcedida).
+  const esperado = typeof posibleStatus === "number";
 
-  if (status >= 500) {
+  if (status >= 500 && !esperado) {
     console.error(err);
     Sentry.captureException(err, { extra: { ruta: req.path, metodo: req.method } });
     const empresaId = (req as express.Request & { empresaId?: string }).empresaId ?? null;

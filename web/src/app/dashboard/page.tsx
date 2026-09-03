@@ -21,8 +21,20 @@ import {
   IconTag,
   IconWallet,
 } from "@/components/icons";
-import { GraficoDistribucion, type PuntoDistribucion } from "@/components/charts/GraficoDistribucion";
-import { GraficoIngresos, type PuntoIngresoMes } from "@/components/charts/GraficoIngresos";
+import dynamic from "next/dynamic";
+import type { PuntoDistribucion } from "@/components/charts/GraficoDistribucion";
+import type { PuntoIngresoMes } from "@/components/charts/GraficoIngresos";
+
+// Recharts pesa ~340 KB — se carga aparte para no meterlo en el
+// first-load del dashboard (AUDITORIA_PERFORMANCE_COSTOS.md #7).
+const GraficoDistribucion = dynamic(
+  () => import("@/components/charts/GraficoDistribucion").then((m) => m.GraficoDistribucion),
+  { ssr: false, loading: () => <div className="h-48 animate-pulse rounded-lg bg-surface" /> }
+);
+const GraficoIngresos = dynamic(
+  () => import("@/components/charts/GraficoIngresos").then((m) => m.GraficoIngresos),
+  { ssr: false, loading: () => <div className="h-48 animate-pulse rounded-lg bg-surface" /> }
+);
 
 type UsuarioConEmpresa = Usuario & { empresa: Empresa };
 

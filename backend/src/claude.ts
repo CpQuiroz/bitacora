@@ -21,7 +21,15 @@ const FEATURES_LARGAS = new Set(["informe_os", "informe_libre", "informe_estruct
 // una OS al mismo tiempo) podía chocar con los rate limits propios de
 // la cuenta de Anthropic. El SDK ya reintenta solo ante un 429, pero
 // eso no evita que salgan todas juntas en primer lugar.
-const limitarConcurrenciaIA = crearLimitadorConcurrencia(8);
+//
+// Configurable por env (AUDITORIA_PERFORMANCE_COSTOS.md #5) — el 8 se
+// eligió pensando en 1 empresa; con más habrá que subirlo o el tier de
+// Anthropic. `MAX_ESPERA_COLA_IA_MS`: cuánto puede esperar una tarea en
+// cola antes de rendirse (así una request no queda colgada minutos a
+// fin de mes) — solo se aplica a los informes largos.
+const MAX_IA_SIMULTANEAS = Number(process.env.MAX_IA_SIMULTANEAS ?? 8);
+const MAX_ESPERA_COLA_IA_MS = Number(process.env.MAX_ESPERA_COLA_IA_MS ?? 120_000);
+const limitarConcurrenciaIA = crearLimitadorConcurrencia(MAX_IA_SIMULTANEAS);
 
 // Etiquetas de feature para ia_uso — una por cada punto de llamada real
 // a Claude en el backend (ver Panel de Super-Admin, consumo por empresa).
@@ -59,10 +67,15 @@ export async function crearMensajeIA(
   params: Anthropic.MessageCreateParamsNonStreaming
 ): Promise<Anthropic.Message> {
   await verificarLimiteIA(empresaId);
-  const opts = FEATURES_LARGAS.has(feature) ? { timeout: TIMEOUT_LARGO_MS } : undefined;
+  const esLarga = FEATURES_LARGAS.has(feature);
+  const opts = esLarga ? { timeout: TIMEOUT_LARGO_MS } : undefined;
+  // Las llamadas cortas (asistente, foto) esperan lo que haga falta en
+  // cola; los informes largos se rinden tras MAX_ESPERA_COLA_IA_MS para
+  // no dejar una request de Express colgada varios minutos.
+  const maxEspera = esLarga ? MAX_ESPERA_COLA_IA_MS : undefined;
   let response: Anthropic.Message;
   try {
-    response = await limitarConcurrenciaIA(() => claude.messages.create(params, opts));
+    response = await limitarConcurrenciaIA(() => claude.messages.create(params, opts), maxEspera);
   } catch (err) {
     if (err instanceof Anthropic.RateLimitError) void registrarRateLimit(empresaId, feature);
     throw err;

@@ -9,7 +9,13 @@ import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Badge, Button, Card, ErrorText } from "@/components/ui";
 import { IconChevronLeft, IconRoute } from "@/components/icons";
-import { MapaRutas, type Parada } from "@/components/MapaRutas";
+import dynamic from "next/dynamic";
+import type { Parada } from "@/components/MapaRutas";
+// Leaflet ~148 KB — carga aparte (AUDITORIA_PERFORMANCE_COSTOS.md #7).
+const MapaRutas = dynamic(() => import("@/components/MapaRutas").then((m) => m.MapaRutas), {
+  ssr: false,
+  loading: () => <div className="h-64 animate-pulse rounded-lg bg-surface" />,
+});
 
 type TareaConCliente = Trabajo & { cliente_info: Cliente | null };
 type RutaConTareas = RutaPlanificada & { tareas: TareaConCliente[] };

@@ -172,6 +172,19 @@ export type ErrorBackend = {
   creado_en: string;
 };
 
+// Instrumentación de latencia — solo requests que superan el umbral
+// (ver backend/src/instrumentacion.ts, migración 83).
+export type RequestLento = {
+  id: string;
+  empresa_id: string | null;
+  ruta: string;
+  metodo: string;
+  ms: number;
+  status_code: number | null;
+  filas_devueltas: number | null;
+  creado_en: string;
+};
+
 // Idempotencia de operaciones que crean plata (migración 77). Ver
 // backend/src/idempotencia.ts.
 export type Idempotencia = {
@@ -1383,6 +1396,7 @@ export type Database = {
       empresa_feature_flags: Tabla<EmpresaFeatureFlag>;
       ia_uso: Tabla<IaUso>;
       errores_backend: Tabla<ErrorBackend>;
+      requests_lentos: Tabla<RequestLento>;
       idempotencia: Tabla<Idempotencia>;
       consentimientos: Tabla<Consentimiento>;
       empresa_modulos: Tabla<EmpresaModulo>;
