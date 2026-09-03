@@ -5,6 +5,11 @@
 > eso se verifica en los dashboards, ver la lista final.
 >
 > Complemento operativo: `docs/RUNBOOK_INCIDENTES.md`.
+>
+> **Estado (3-sep, post-auditoría):** aplicados **R1, R2, R4, R5, R6** y **R3 (parte de
+> notificaciones)**. Pendientes: **R3 (idempotency-key para crear cobros)** y **R7**
+> (keep-warm) — se dejan como deuda consciente. El texto de cada hallazgo describe el
+> problema *original*.
 
 ---
 
