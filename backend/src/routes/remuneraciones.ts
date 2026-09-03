@@ -3,8 +3,13 @@ import type { DatosLaborales, Liquidacion, ParametroPrevisional } from "@bitacor
 import { supabase } from "../supabase";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
-import { asegurarParametros, obtenerParametros } from "../remuneraciones/parametros";
-import { armarLiquidacion, type VariablesMes } from "../remuneraciones/calcular";
+import { asegurarParametros, crearParametrosManual, obtenerParametros } from "../remuneraciones/parametros";
+import {
+  armarLiquidacion,
+  diasTrabajadosDelPeriodo,
+  validarDatosLaborales,
+  type VariablesMes,
+} from "../remuneraciones/calcular";
 import { generarPdfLiquidacion } from "../generarPdfLiquidacion";
 import { subirPdfLiquidacion, urlFirmadaPdfLiquidacion } from "../storage";
 import { generarArchivoPrevired, type FilaPrevired } from "../remuneraciones/archivoPrevired";
@@ -54,6 +59,15 @@ remuneracionesRouter.get(
   })
 );
 
+// `parametros_previsionales` es GLOBAL (sin empresa_id). Desde la app de
+// empresa solo se pueden corregir los valores que cambian POR PERÍODO
+// (UF, UTM, tope de gratificación) — típico si mindicador.cl falló y hay
+// que cargarlos a mano. Los topes imponibles, tasas y la tabla de tramos
+// del impuesto único son ley nacional y quedan de solo lectura acá (los
+// mantiene el equipo de Bitácora). Ver docs/AUDITORIA_REMUNERACIONES.md #2.
+const CAMPOS_EDITABLES_EMPRESA = ["uf", "utm", "tope_gratificacion_mensual"] as const;
+const CAMPOS_SOLO_LECTURA = ["ingreso_minimo", "tope_imponible_uf", "tope_afc_uf", "tasa_sis", "tasa_mutual_base"];
+
 remuneracionesRouter.patch(
   "/parametros/:periodo",
   ah<RequestConEmpresa>(async (req, res) => {
@@ -63,35 +77,65 @@ remuneracionesRouter.patch(
       return;
     }
     const b = req.body ?? {};
+
+    // Rechazar explícitamente los campos legales que la empresa no puede tocar.
+    const bloqueado = [...CAMPOS_SOLO_LECTURA, "tramos_impuesto"].find((c) => b[c] !== undefined);
+    if (bloqueado) {
+      res.status(403).json({
+        error: `"${bloqueado}" es un parámetro legal nacional y no se edita desde acá — lo mantiene el equipo de Bitácora.`,
+      });
+      return;
+    }
+
     const cambios: Partial<ParametroPrevisional> = {};
-    for (const campo of ["uf", "utm", "ingreso_minimo", "tope_imponible_uf", "tope_afc_uf", "tope_gratificacion_mensual", "tasa_sis", "tasa_mutual_base"] as const) {
+    for (const campo of CAMPOS_EDITABLES_EMPRESA) {
       if (b[campo] !== undefined) {
         const n = Number(b[campo]);
-        if (!Number.isFinite(n) || n < 0) {
+        if (!Number.isFinite(n) || n <= 0) {
           res.status(400).json({ error: `${campo} inválido` });
           return;
         }
         (cambios as Record<string, unknown>)[campo] = n;
       }
     }
-    if (Array.isArray(b.tramos_impuesto)) cambios.tramos_impuesto = b.tramos_impuesto;
-    if (Object.keys(cambios).length > 0) {
+
+    const existente = await obtenerParametros(periodo);
+    if (!existente) {
+      // No hay fila del período (mindicador estaba caído). Crearla a mano
+      // requiere UF y UTM sí o sí; el resto sale del seed.
+      if (cambios.uf === undefined || cambios.utm === undefined) {
+        res.status(400).json({ error: "Para crear el período a mano hace falta la UF y la UTM." });
+        return;
+      }
+      const creado = await crearParametrosManual(periodo, Number(cambios.uf), Number(cambios.utm), {
+        usuarioId: req.userId!,
+        empresaId: req.empresaId!,
+      });
+      if (!creado) {
+        res.status(500).json({ error: "No se pudo crear el período." });
+        return;
+      }
+    } else if (Object.keys(cambios).length > 0 || Array.isArray(b.afp)) {
       cambios.fuente = "manual";
       cambios.actualizado_en = new Date().toISOString();
+      (cambios as Record<string, unknown>).actualizado_por_usuario = req.userId!;
+      (cambios as Record<string, unknown>).actualizado_por_empresa = req.empresaId!;
       const { error } = await supabase.from("parametros_previsionales").update(cambios).eq("periodo", periodo);
       if (error) {
         res.status(500).json({ error: error.message });
         return;
       }
     }
-    // Comisiones AFP: { afp: [{ afp, tasa_comision }] }
+
+    // Comisiones AFP: { afp: [{ afp, tasa_comision }] } — también por período, editable.
     if (Array.isArray(b.afp)) {
       for (const a of b.afp) {
-        if (typeof a?.afp === "string" && Number.isFinite(Number(a.tasa_comision))) {
+        if (typeof a?.afp === "string" && Number.isFinite(Number(a.tasa_comision)) && Number(a.tasa_comision) >= 0) {
           await supabase.from("afp_parametros").update({ tasa_comision: Number(a.tasa_comision) }).eq("periodo", periodo).eq("afp", a.afp);
         }
       }
     }
+
     const params = await obtenerParametros(periodo);
     const { data: afp } = await supabase.from("afp_parametros").select("*").eq("periodo", periodo).order("nombre");
     res.json({ parametros: params, afp: afp ?? [] });
@@ -224,6 +268,10 @@ remuneracionesRouter.post(
       res.status(400).json({ error: "periodo inválido (YYYY-MM)" });
       return;
     }
+    if (periodo > new Date().toISOString().slice(0, 7)) {
+      res.status(400).json({ error: "No se puede generar la nómina de un período futuro." });
+      return;
+    }
     const params = await asegurarParametros(periodo);
     if (!params) {
       res.status(503).json({ error: "Faltan UF/UTM del período. Cárgalas en Parámetros y reintenta." });
@@ -238,23 +286,37 @@ remuneracionesRouter.post(
       return;
     }
 
-    // No pisar las que ya están emitidas.
-    const { data: emitidas } = await supabase
-      .from("liquidaciones")
-      .select("usuario_id")
-      .eq("empresa_id", req.empresaId!)
-      .eq("periodo", periodo)
-      .eq("estado", "emitida");
+    const idsColab = (datos as DatosLaborales[]).map((d) => d.usuario_id);
+    const [{ data: emitidas }, { data: usuarios }] = await Promise.all([
+      // No pisar las que ya están emitidas.
+      supabase.from("liquidaciones").select("usuario_id").eq("empresa_id", req.empresaId!).eq("periodo", periodo).eq("estado", "emitida"),
+      supabase.from("usuarios").select("id, rut").eq("empresa_id", req.empresaId!).in("id", idsColab),
+    ]);
     const bloqueados = new Set((emitidas ?? []).map((e) => e.usuario_id));
+    const rutPorUsuario = new Map((usuarios ?? []).map((u) => [u.id, u.rut]));
 
     let creadas = 0;
     let omitidas = 0;
+    let prorrateadas = 0;
+    const incompletas: { usuario_id: string; faltan: string[] }[] = [];
+
     for (const d of datos as DatosLaborales[]) {
       if (bloqueados.has(d.usuario_id)) {
         omitidas++;
         continue;
       }
-      const armada = await armarLiquidacion(periodo, d, params, {});
+      // Validación: no generar liquidaciones con datos faltantes.
+      const faltan = validarDatosLaborales(d, rutPorUsuario.get(d.usuario_id) ?? null);
+      if (faltan.length > 0) {
+        incompletas.push({ usuario_id: d.usuario_id, faltan });
+        continue;
+      }
+      // Prorrateo por fecha de ingreso dentro del período.
+      const dias = diasTrabajadosDelPeriodo(periodo, d.fecha_ingreso);
+      const variables: VariablesMes = dias < 30 ? { dias_trabajados: dias } : {};
+      if (dias < 30) prorrateadas++;
+
+      const armada = await armarLiquidacion(periodo, d, params, variables);
       const { error } = await supabase.from("liquidaciones").upsert(
         {
           ...armada,
@@ -263,6 +325,7 @@ remuneracionesRouter.post(
           estado: "borrador",
           pdf_url: null,
           creado_por: req.userId!,
+          editado_por: null,
           actualizado_en: new Date().toISOString(),
         },
         { onConflict: "empresa_id,usuario_id,periodo" }
@@ -270,7 +333,7 @@ remuneracionesRouter.post(
       if (error) console.error("Error generando liquidación:", d.usuario_id, error.message);
       else creadas++;
     }
-    res.json({ periodo, generadas: creadas, omitidas_emitidas: omitidas });
+    res.json({ periodo, generadas: creadas, omitidas_emitidas: omitidas, prorrateadas, incompletas });
   })
 );
 
@@ -317,11 +380,12 @@ remuneracionesRouter.patch(
       asignacion_familiar: num(b.asignacion_familiar, (liq as Liquidacion).asignacion_familiar),
       otros_descuentos: num(b.otros_descuentos, (liq as Liquidacion).otros_descuentos),
     };
+    const tuvoLicencia = b.tuvo_licencia === undefined ? (liq as Liquidacion).tuvo_licencia : Boolean(b.tuvo_licencia);
 
     const armada = await armarLiquidacion((liq as Liquidacion).periodo, datos as DatosLaborales, params, variables);
     const { data, error } = await supabase
       .from("liquidaciones")
-      .update({ ...armada, actualizado_en: new Date().toISOString() })
+      .update({ ...armada, tuvo_licencia: tuvoLicencia, editado_por: req.userId!, actualizado_en: new Date().toISOString() })
       .eq("id", req.params.id)
       .select("*")
       .single();
@@ -347,13 +411,37 @@ remuneracionesRouter.post(
       return;
     }
     const L = liq as Liquidacion;
+    if (L.estado === "emitida") {
+      res.status(409).json({ error: "Esta liquidación ya fue emitida." });
+      return;
+    }
     const [conNombre] = await conNombreColaborador(req.empresaId!, [L]);
 
-    const [{ data: empresa }, { data: datos }] = await Promise.all([
+    const [{ data: empresa }, { data: datos }, { data: usuario }] = await Promise.all([
       supabase.from("empresas").select("nombre, rut, logo_url, color_primario").eq("id", req.empresaId!).single(),
       supabase.from("datos_laborales").select("*").eq("empresa_id", req.empresaId!).eq("usuario_id", L.usuario_id!).maybeSingle(),
+      supabase.from("usuarios").select("rut").eq("empresa_id", req.empresaId!).eq("id", L.usuario_id!).maybeSingle(),
     ]);
     const dl = datos as DatosLaborales | null;
+
+    // No emitir con datos laborales incompletos.
+    if (!dl) {
+      res.status(400).json({ error: "El colaborador ya no tiene datos laborales cargados." });
+      return;
+    }
+    const faltan = validarDatosLaborales(dl, usuario?.rut ?? null);
+    if (faltan.length > 0) {
+      res.status(400).json({ error: `Datos laborales incompletos: ${faltan.join(", ")}. Complétalos y vuelve a generar.` });
+      return;
+    }
+    // Licencia médica: el cálculo no la modela. Exigir confirmación explícita.
+    if (L.tuvo_licencia && req.body?.confirmar_licencia !== true) {
+      res.status(409).json({
+        error: "Esta liquidación está marcada con licencia médica. Ajusta los valores a mano y reenvía con confirmar_licencia=true.",
+        requiere: "confirmar_licencia",
+      });
+      return;
+    }
 
     const pdf = await generarPdfLiquidacion({
       empresaNombre: empresa?.nombre ?? "Empresa",
@@ -372,7 +460,13 @@ remuneracionesRouter.post(
 
     const { data, error } = await supabase
       .from("liquidaciones")
-      .update({ estado: "emitida", pdf_url: key, emitida_en: new Date().toISOString(), actualizado_en: new Date().toISOString() })
+      .update({
+        estado: "emitida",
+        pdf_url: key,
+        emitida_en: new Date().toISOString(),
+        emitida_por: req.userId!,
+        actualizado_en: new Date().toISOString(),
+      })
       .eq("id", L.id)
       .select("*")
       .single();

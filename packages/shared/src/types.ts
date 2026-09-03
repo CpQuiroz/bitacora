@@ -1028,6 +1028,9 @@ export type ParametroPrevisional = {
   tramos_impuesto: { desde: number; hasta: number | null; factor: number; rebaja: number }[];
   fuente: "mindicador" | "manual";
   actualizado_en: string;
+  // migración 76 — rastro del último cambio manual (la tabla es global)
+  actualizado_por_usuario: string | null;
+  actualizado_por_empresa: string | null;
 };
 
 export type AfpParametro = {
@@ -1110,6 +1113,10 @@ export type Liquidacion = {
   emitida_en: string | null;
   creado_en: string;
   actualizado_en: string;
+  // migración 76
+  emitida_por: string | null;
+  editado_por: string | null;
+  tuvo_licencia: boolean;
 };
 
 export type RolMensajeAsistente = "user" | "assistant";

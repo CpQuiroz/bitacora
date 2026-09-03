@@ -12,6 +12,36 @@ import {
 } from "@bitacora/shared";
 import { comisionDeAfp } from "./parametros";
 
+/**
+ * Problemas que impiden una liquidación correcta. Lista vacía = OK.
+ * Se corre antes de generar (se salta ese colaborador) y antes de
+ * emitir (bloquea). Ver docs/AUDITORIA_REMUNERACIONES.md #3.
+ */
+export function validarDatosLaborales(d: DatosLaborales, rut: string | null): string[] {
+  const faltan: string[] = [];
+  if (!(Number(d.sueldo_base) > 0)) faltan.push("sueldo base en 0");
+  if (!d.afp) faltan.push("sin AFP asignada");
+  if (!rut) faltan.push("sin RUT (se carga en Datos del equipo)");
+  if (d.sistema_salud === "isapre" && !d.plan_isapre_uf && !d.plan_isapre_pesos) {
+    faltan.push("Isapre sin plan pactado (UF o pesos)");
+  }
+  return faltan;
+}
+
+/**
+ * Días trabajados del período según la fecha de ingreso (mes base 30).
+ * Si el ingreso es anterior al período → 30. Si cae dentro → 30 − día + 1.
+ * Si es posterior al período → 0 (no debería generarse).
+ */
+export function diasTrabajadosDelPeriodo(periodo: string, fechaIngreso: string | null): number {
+  if (!fechaIngreso) return 30;
+  const ingreso = fechaIngreso.slice(0, 7); // 'YYYY-MM'
+  if (ingreso < periodo) return 30;
+  if (ingreso > periodo) return 0;
+  const dia = Math.min(30, Math.max(1, Number(fechaIngreso.slice(8, 10)) || 1));
+  return 30 - dia + 1;
+}
+
 // Haberes/descuentos variables que el contador ajusta por mes en la
 // pantalla de detalle. Los fijos (sueldo base, colación, movilización)
 // salen de datos_laborales.
@@ -29,7 +59,23 @@ export async function armarLiquidacion(
   datos: DatosLaborales,
   params: ParametroPrevisional,
   variables: VariablesMes
-): Promise<Omit<Liquidacion, "id" | "empresa_id" | "usuario_id" | "pdf_url" | "estado" | "creado_por" | "emitida_en" | "creado_en" | "actualizado_en">> {
+): Promise<
+  Omit<
+    Liquidacion,
+    | "id"
+    | "empresa_id"
+    | "usuario_id"
+    | "pdf_url"
+    | "estado"
+    | "creado_por"
+    | "emitida_en"
+    | "emitida_por"
+    | "editado_por"
+    | "tuvo_licencia"
+    | "creado_en"
+    | "actualizado_en"
+  >
+> {
   const comision = await comisionDeAfp(periodo, datos.afp);
 
   const entrada: EntradaLiquidacion = {
