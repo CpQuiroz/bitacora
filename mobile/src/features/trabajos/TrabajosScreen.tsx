@@ -109,7 +109,7 @@ export function TrabajosScreen({ navigation }: NativeStackScreenProps<TrabajosSt
                 </Text>
                 {item.ubicacion ? (
                   <Text variante="caption" tono="muted" numberOfLines={1}>
-
+                    {item.ubicacion}
                   </Text>
                 ) : null}
               </View>

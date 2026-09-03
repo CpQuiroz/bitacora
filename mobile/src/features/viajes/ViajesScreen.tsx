@@ -82,7 +82,7 @@ export function ViajesScreen({ navigation }: NativeStackScreenProps<ViajesStackP
                   {item.fecha} · Guía {item.numero_guia}
                 </Text>
                 <Text variante="caption" tono="muted">
- → {item.destino}
+                  {item.origen} → {item.destino}
                 </Text>
               </View>
               <View style={{ alignItems: "flex-end", gap: 4 }}>
