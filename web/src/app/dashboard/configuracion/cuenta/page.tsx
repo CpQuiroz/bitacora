@@ -22,6 +22,7 @@ const TIPO_LABEL: Record<TipoNotificacion, string> = {
   documento_por_vencer: "Documento próximo a vencer o vencido",
   cita_confirmada: "Cliente confirmó una cita",
   cita_cancelada: "Cliente canceló una cita",
+  solicitud_correccion_datos: "Un cliente pidió corregir sus datos",
 };
 
 const IDIOMAS = [

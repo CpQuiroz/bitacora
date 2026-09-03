@@ -15,6 +15,10 @@ export default function PortalHomePage() {
   const [visitas, setVisitas] = useState<Visita[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const [correccion, setCorreccion] = useState("");
+  const [enviandoCorr, setEnviandoCorr] = useState(false);
+  const [corrOk, setCorrOk] = useState(false);
+
   async function descargarMisDatos() {
     const res = await portalFetch("/api/portal/mis-datos");
     if (!res.ok) return;
@@ -25,6 +29,20 @@ export default function PortalHomePage() {
     a.download = `mis-datos-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  async function pedirCorreccion() {
+    if (correccion.trim().length < 5) return;
+    setEnviandoCorr(true);
+    const res = await portalFetch("/api/portal/solicitar-correccion", {
+      method: "POST",
+      body: JSON.stringify({ mensaje: correccion }),
+    });
+    setEnviandoCorr(false);
+    if (res.ok) {
+      setCorrOk(true);
+      setCorreccion("");
+    }
   }
 
   useEffect(() => {
@@ -89,13 +107,35 @@ export default function PortalHomePage() {
         ))}
       </div>
 
-      <button
-        type="button"
-        onClick={descargarMisDatos}
-        className="mt-10 text-xs text-muted underline hover:text-brand"
-      >
-        Descargar mis datos personales (Ley 21.719)
-      </button>
+      <div className="mt-10 border-t border-border pt-6">
+        <h2 className="mb-2 text-sm font-semibold text-foreground">Mis datos personales</h2>
+        <button type="button" onClick={descargarMisDatos} className="text-xs text-brand underline">
+          Descargar todos mis datos (Ley 21.719)
+        </button>
+
+        <p className="mt-4 mb-1 text-xs text-muted">¿Hay un dato tuyo mal (nombre, dirección, teléfono)? Pide la corrección:</p>
+        {corrOk ? (
+          <p className="text-xs text-green-700">Listo, le avisamos a la empresa.</p>
+        ) : (
+          <div className="flex flex-col gap-2">
+            <textarea
+              value={correccion}
+              onChange={(e) => setCorreccion(e.target.value)}
+              rows={2}
+              placeholder="Ej.: mi dirección correcta es…"
+              className="rounded-lg border border-border bg-surface p-2 text-sm"
+            />
+            <button
+              type="button"
+              onClick={pedirCorreccion}
+              disabled={enviandoCorr || correccion.trim().length < 5}
+              className="self-start rounded-lg bg-brand px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+            >
+              {enviandoCorr ? "Enviando…" : "Pedir corrección"}
+            </button>
+          </div>
+        )}
+      </div>
     </PortalShell>
   );
 }

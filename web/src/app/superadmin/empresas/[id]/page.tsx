@@ -15,7 +15,7 @@ const ESTADOS: EstadoEmpresa[] = ["activa", "suspendida", "dada_de_baja"];
 const PLANES: Plan[] = ["trial", "basico", "pro"];
 
 type Salud = {
-  empresa: { id: string; nombre: string; estado: EstadoEmpresa; plan: Plan; rut: string | null };
+  empresa: { id: string; nombre: string; estado: EstadoEmpresa; plan: Plan; rut: string | null; dada_de_baja_en: string | null };
   ultima_actividad: string | null;
   usuarios_activos_mes: number;
   os_creadas_mes: number;
@@ -750,6 +750,13 @@ export default function SuperAdminSaludEmpresaPage() {
               <p className="mb-3 text-sm text-muted">
                 Estado actual: <Badge value={salud.empresa.estado} />
               </p>
+              {salud.empresa.estado === "dada_de_baja" && salud.empresa.dada_de_baja_en && (
+                <p className="mb-3 rounded-lg bg-amber-50 p-2 text-xs text-amber-900">
+                  Dada de baja el {new Date(salud.empresa.dada_de_baja_en).toLocaleDateString("es-CL")} (
+                  {Math.floor((Date.now() - new Date(salud.empresa.dada_de_baja_en).getTime()) / 86400000)} días).
+                  Ley 21.719 — evaluar eliminar sus datos personales pasado el plazo de conservación.
+                </p>
+              )}
               <div className="flex flex-wrap gap-2">
                 {ESTADOS.filter((e) => e !== salud.empresa.estado).map((e) => (
                   <Button key={e} type="button" variant="outline" disabled={guardandoEstado} onClick={() => onCambiarEstado(e)}>

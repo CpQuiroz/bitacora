@@ -96,6 +96,8 @@ export type Empresa = {
   // de Super-Admin, con costo de latencia asumido para ese caso).
   storage_bytes_usado: number;
   estado: EstadoEmpresa;
+  // Ley 21.719 — cuándo se dio de baja (para el ejercicio de retención).
+  dada_de_baja_en: string | null;
   creado_en: string;
 };
 
@@ -370,7 +372,8 @@ export type TipoNotificacion =
   | "tarea_asignada"
   | "documento_por_vencer"
   | "cita_confirmada"
-  | "cita_cancelada";
+  | "cita_cancelada"
+  | "solicitud_correccion_datos";
 
 export type EntidadNotificacion = "trabajo" | "factura" | "ruta" | "usuario" | "cotizacion" | "tarea" | "documento";
 

@@ -154,6 +154,25 @@ portalRouter.get(
   })
 );
 
+// Ley 21.719 — el Portal es de solo lectura: el cliente pide una
+// corrección de sus datos y le llega al admin como notificación.
+portalRouter.post(
+  "/solicitar-correccion",
+  requierePortal,
+  ah<RequestConPortal>(async (req, res) => {
+    const mensaje = typeof req.body?.mensaje === "string" ? req.body.mensaje.trim() : "";
+    if (mensaje.length < 5) {
+      res.status(400).json({ error: "Escribe qué dato hay que corregir." });
+      return;
+    }
+    const { data: cli } = await supabase.from("clientes").select("nombre").eq("id", req.clienteId!).maybeSingle();
+    await notificarGerencia(req.empresaId!, "solicitud_correccion_datos", {
+      cuerpo: `${cli?.nombre ?? "Un cliente"} pidió corregir sus datos: "${mensaje.slice(0, 500)}"`,
+    });
+    res.status(201).json({ ok: true });
+  })
+);
+
 portalRouter.get(
   "/datos/visitas",
   requierePortal,

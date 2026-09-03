@@ -21,6 +21,7 @@ const TITULOS: Record<TipoNotificacion, string> = {
   documento_por_vencer: "Documento próximo a vencer",
   cita_confirmada: "Cliente confirmó una cita",
   cita_cancelada: "Cliente canceló una cita",
+  solicitud_correccion_datos: "Un cliente pidió corregir sus datos",
 };
 
 export async function notificar(

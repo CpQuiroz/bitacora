@@ -972,7 +972,7 @@ superadminRouter.get(
   requiereSuperAdmin,
   ah<RequestConSuperAdmin>(async (req, res) => {
     const empresaId = req.params.id;
-    const { data: empresa } = await supabase.from("empresas").select("id, nombre, estado, plan, rut").eq("id", empresaId).maybeSingle();
+    const { data: empresa } = await supabase.from("empresas").select("id, nombre, estado, plan, rut, dada_de_baja_en").eq("id", empresaId).maybeSingle();
     if (!empresa) {
       res.status(404).json({ error: "Empresa no encontrada" });
       return;
@@ -1053,9 +1053,15 @@ superadminRouter.patch(
       return;
     }
 
+    // Ley 21.719 — registra cuándo se dio de baja, para el ejercicio de
+    // retención. Se limpia si vuelve a activarse.
+    const cambiosEstado: { estado: EstadoEmpresa; dada_de_baja_en?: string | null } = { estado: estado as EstadoEmpresa };
+    if (estado === "dada_de_baja" && actual.estado !== "dada_de_baja") cambiosEstado.dada_de_baja_en = new Date().toISOString();
+    else if (estado !== "dada_de_baja") cambiosEstado.dada_de_baja_en = null;
+
     const { data, error } = await supabase
       .from("empresas")
-      .update({ estado: estado as EstadoEmpresa })
+      .update(cambiosEstado)
       .eq("id", req.params.id)
       .select("id, estado")
       .single();
