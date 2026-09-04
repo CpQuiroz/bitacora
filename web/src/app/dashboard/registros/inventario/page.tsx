@@ -9,6 +9,7 @@ import { estadoStock } from "@/lib/estadoStock";
 import { DashboardShell } from "@/components/DashboardShell";
 import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText, buttonClass } from "@/components/ui";
 import { IconAlertTriangle, IconBox, IconLayers, IconX } from "@/components/icons";
+import { EstadoCargando } from "@/components/estados";
 
 type UsuarioConEmpresa = Usuario & { empresa: Empresa };
 type MovimientoConNombre = InventarioMovimiento & { item_nombre: string | null };
@@ -130,7 +131,7 @@ export default function InventarioRegistroPage() {
             </div>
           )}
 
-          {productos === null && !error && <p className="my-6 text-sm text-muted">Cargando…</p>}
+          {productos === null && !error && <EstadoCargando />}
 
           {productos?.length === 0 && (
             <Card className="my-6">

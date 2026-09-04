@@ -13,6 +13,7 @@ import { Combobox } from "@/components/Combobox";
 import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText } from "@/components/ui";
 import { IconHelp, IconLayers, IconPlus } from "@/components/icons";
 import { ICONO_TIPO } from "@/components/CatalogoSelectorModal";
+import { EstadoCargando, EstadoVacio } from "@/components/estados";
 
 // Categorías sugeridas cuando el catálogo todavía no tiene ninguna
 // propia — una vez que existan categorías reales usadas, esas se
@@ -454,7 +455,7 @@ export default function CatalogoPage() {
       </div>
 
       {error && <ErrorText>{error}</ErrorText>}
-      {items === null && !error && <p className="text-sm text-muted">Cargando…</p>}
+      {items === null && !error && <EstadoCargando />}
 
       {items?.length === 0 && (
         <Card>
@@ -473,10 +474,7 @@ export default function CatalogoPage() {
       )}
 
       {items && items.length > 0 && filtrados.length === 0 && (
-        <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border py-16 text-center">
-          <IconLayers className="h-8 w-8 text-muted" />
-          <p className="text-sm text-muted">Ningún ítem coincide con la búsqueda o el filtro.</p>
-        </div>
+        <EstadoVacio icono={IconLayers} titulo="Ningún ítem coincide con la búsqueda o el filtro" />
       )}
 
       {filtrados.length > 0 && (

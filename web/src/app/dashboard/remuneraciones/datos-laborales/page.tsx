@@ -5,6 +5,7 @@ import Link from "next/link";
 import { DashboardShell } from "@/components/DashboardShell";
 import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText } from "@/components/ui";
 import { IconChevronLeft } from "@/components/icons";
+import { EstadoCargando } from "@/components/estados";
 import { useUsuarioShell } from "@/lib/useUsuarioShell";
 import { remuneraciones, type FilaDatosLaborales } from "@/lib/remuneracionesApi";
 import { AFP_CHILE, ISAPRES_CHILE } from "@bitacora/shared";
@@ -105,7 +106,7 @@ export default function DatosLaboralesPage() {
         {aviso && <SuccessText>{aviso}</SuccessText>}
       </div>
 
-      {filas === null && <p className="text-sm text-muted">Cargando…</p>}
+      {filas === null && <EstadoCargando />}
 
       {filas && (
         <Card className="overflow-x-auto p-0">

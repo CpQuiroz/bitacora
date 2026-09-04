@@ -5,6 +5,7 @@ import Link from "next/link";
 import { DashboardShell } from "@/components/DashboardShell";
 import { Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText } from "@/components/ui";
 import { IconChevronLeft } from "@/components/icons";
+import { EstadoCargando } from "@/components/estados";
 import { useUsuarioShell } from "@/lib/useUsuarioShell";
 import { nombrePeriodo, periodoRelativo, remuneraciones, type AfpParametro } from "@/lib/remuneracionesApi";
 import type { ParametroPrevisional } from "@bitacora/shared";
@@ -91,7 +92,7 @@ export default function ParametrosPage() {
       </div>
 
       {error && <ErrorText>{error}</ErrorText>}
-      {!params && !error && <p className="text-sm text-muted">Cargando…</p>}
+      {!params && !error && <EstadoCargando />}
 
       {params && (
         <>

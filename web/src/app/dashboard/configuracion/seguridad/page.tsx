@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { Button, Card, ErrorText, Input, Label, PageHeader, SuccessText } from "@/components/ui";
 import { IconShield } from "@/components/icons";
+import { EstadoCargando } from "@/components/estados";
 import { useConfiguracion } from "../ConfiguracionContext";
 
 function detectarNavegador(userAgent: string): string {
@@ -247,7 +248,7 @@ export default function SeguridadPage() {
 
       <Card>
         <h2 className="mb-4 text-sm font-semibold text-foreground">Historial de accesos</h2>
-        {accesos === null && <p className="text-sm text-muted">Cargando…</p>}
+        {accesos === null && <EstadoCargando />}
         {accesos?.length === 0 && <p className="text-sm text-muted">Todavía no hay accesos registrados.</p>}
         {accesos && accesos.length > 0 && (
           <div className="overflow-x-auto">
@@ -288,7 +289,7 @@ export default function SeguridadPage() {
         )}
 
         {mfa === null ? (
-          <p className="text-sm text-muted">Cargando…</p>
+          <EstadoCargando />
         ) : mfa.activado ? (
           <div className="flex items-center justify-between rounded-lg border border-border p-3 text-sm">
             <div>

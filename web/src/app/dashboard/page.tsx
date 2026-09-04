@@ -24,6 +24,7 @@ import {
 import dynamic from "next/dynamic";
 import type { PuntoDistribucion } from "@/components/charts/GraficoDistribucion";
 import type { PuntoIngresoMes } from "@/components/charts/GraficoIngresos";
+import { EstadoCargando } from "@/components/estados";
 
 // Recharts pesa ~340 KB — se carga aparte para no meterlo en el
 // first-load del dashboard (AUDITORIA_PERFORMANCE_COSTOS.md #7).
@@ -262,7 +263,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {verAnalitico && !datos && !error && <p className="text-sm text-muted">Cargando indicadores…</p>}
+      {verAnalitico && !datos && !error && <EstadoCargando mensaje="Indicadores" />}
 
       {verAnalitico && datos && (
         <>

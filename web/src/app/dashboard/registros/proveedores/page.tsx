@@ -9,6 +9,7 @@ import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { SelectCrear } from "@/components/SelectCrear";
 import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, SuccessText } from "@/components/ui";
 import { IconPlus, IconTruck } from "@/components/icons";
+import { EstadoCargando, EstadoVacio } from "@/components/estados";
 
 type ProveedorConCategoria = Proveedor & { categoria: Pick<CategoriaGasto, "id" | "nombre" | "color"> | null };
 
@@ -233,7 +234,7 @@ export default function ProveedoresPage() {
       </div>
 
       {error && <ErrorText>{error}</ErrorText>}
-      {proveedores === null && !error && <p className="text-sm text-muted">Cargando…</p>}
+      {proveedores === null && !error && <EstadoCargando />}
 
       {proveedores?.length === 0 && (
         <Card>
@@ -252,10 +253,7 @@ export default function ProveedoresPage() {
       )}
 
       {proveedores && proveedores.length > 0 && filtrados.length === 0 && (
-        <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border py-16 text-center">
-          <IconTruck className="h-8 w-8 text-muted" />
-          <p className="text-sm text-muted">Ningún proveedor coincide con la búsqueda.</p>
-        </div>
+        <EstadoVacio icono={IconTruck} titulo="Ningún proveedor coincide con la búsqueda" />
       )}
 
       {filtrados.length > 0 && (

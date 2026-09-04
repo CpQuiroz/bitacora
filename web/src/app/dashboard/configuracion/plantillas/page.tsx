@@ -5,6 +5,7 @@ import type { PlantillaDocumento, PosicionLogo, TipoPlantilla, VariablePlantilla
 import { VARIABLES_COBRANZA, VARIABLES_COTIZACION, VARIABLES_OS, sustituirVariables } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
 import { Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText, Textarea } from "@/components/ui";
+import { EstadoCargando } from "@/components/estados";
 import { useConfiguracion } from "../ConfiguracionContext";
 
 const VARIABLES_POR_TIPO: Record<TipoPlantilla, VariablePlantilla[]> = {
@@ -178,7 +179,7 @@ export default function PlantillasPage() {
       </div>
 
       {cargando ? (
-        <p className="text-sm text-muted">Cargando…</p>
+        <EstadoCargando />
       ) : (
         plantilla && (
           <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">

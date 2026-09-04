@@ -9,6 +9,7 @@ import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Badge, Button, Card, ErrorText, Input, PageHeader } from "@/components/ui";
 import { IconPlus, IconReceipt } from "@/components/icons";
+import { EstadoCargando, EstadoVacio } from "@/components/estados";
 
 type CotizacionConCliente = Presupuesto & { cliente_info: { nombre: string } | null };
 type Chip = "todos" | EstadoPresupuesto;
@@ -118,7 +119,7 @@ export default function CotizacionesPage() {
       </div>
 
       {error && <ErrorText>{error}</ErrorText>}
-      {cotizaciones === null && !error && <p className="text-sm text-muted">Cargando…</p>}
+      {cotizaciones === null && !error && <EstadoCargando />}
 
       {cotizaciones?.length === 0 && (
         <Card>
@@ -137,10 +138,7 @@ export default function CotizacionesPage() {
       )}
 
       {cotizaciones && cotizaciones.length > 0 && filtradas.length === 0 && (
-        <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border py-16 text-center">
-          <IconReceipt className="h-8 w-8 text-muted" />
-          <p className="text-sm text-muted">Ninguna cotización coincide con la búsqueda o el filtro.</p>
-        </div>
+        <EstadoVacio icono={IconReceipt} titulo="Ninguna cotización coincide con la búsqueda o el filtro" />
       )}
 
       {filtradas.length > 0 && (

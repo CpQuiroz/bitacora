@@ -11,6 +11,7 @@ import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { SelectCrear } from "@/components/SelectCrear";
 import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText } from "@/components/ui";
 import { IconPaperclip, IconPlus, IconWallet } from "@/components/icons";
+import { EstadoCargando, EstadoVacio } from "@/components/estados";
 
 type GastoConDatos = Gasto & {
   categoria_info: Pick<CategoriaGasto, "id" | "nombre" | "color"> | null;
@@ -362,7 +363,7 @@ export default function GastosPage() {
       </div>
 
       {error && <ErrorText>{error}</ErrorText>}
-      {gastos === null && !error && <p className="text-sm text-muted">Cargando…</p>}
+      {gastos === null && !error && <EstadoCargando />}
 
       {gastos?.length === 0 && (
         <Card>
@@ -381,10 +382,7 @@ export default function GastosPage() {
       )}
 
       {gastos && gastos.length > 0 && filtrados.length === 0 && (
-        <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border py-16 text-center">
-          <IconWallet className="h-8 w-8 text-muted" />
-          <p className="text-sm text-muted">Ningún gasto coincide con la búsqueda o el filtro.</p>
-        </div>
+        <EstadoVacio icono={IconWallet} titulo="Ningún gasto coincide con la búsqueda o el filtro" />
       )}
 
       {filtrados.length > 0 && (

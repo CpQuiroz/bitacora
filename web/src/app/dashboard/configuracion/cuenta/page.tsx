@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText } from "@/components/ui";
 import { IconBell, IconUser } from "@/components/icons";
+import { EstadoCargando } from "@/components/estados";
 import { useConfiguracion } from "../ConfiguracionContext";
 
 const TIPO_LABEL: Record<TipoNotificacion, string> = {
@@ -307,7 +308,7 @@ export default function CuentaPage() {
           Elige qué alertas quieres recibir dentro de la app. El envío por correo se activará más adelante.
         </p>
         {preferencias === null ? (
-          <p className="text-sm text-muted">Cargando…</p>
+          <EstadoCargando />
         ) : (
           <div className="flex flex-col divide-y divide-border">
             {preferencias.map((p) => (

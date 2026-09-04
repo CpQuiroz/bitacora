@@ -7,6 +7,7 @@ import { descargarCSV } from "@/lib/exportCsv";
 import { Card, ErrorText } from "@/components/ui";
 import { GraficoIngresos, type PuntoIngresoMes } from "@/components/charts/GraficoIngresos";
 import { GraficoDistribucion } from "@/components/charts/GraficoDistribucion";
+import { EstadoCargando } from "@/components/estados";
 import { useInformes } from "../InformesContext";
 
 type ResumenFinanciero = { recibido: number; pendiente: number; atrasado: number; total: number };
@@ -86,7 +87,7 @@ export default function InformeFinancieroPage() {
   }, [datos, desde, hasta, registrarExportCsv]);
 
   if (error) return <ErrorText>{error}</ErrorText>;
-  if (!datos) return <p className="text-sm text-muted">Cargando…</p>;
+  if (!datos) return <EstadoCargando />;
 
   const { resumen_financiero, ingresos_por_mes, por_forma_pago, mejores_clientes } = datos;
 

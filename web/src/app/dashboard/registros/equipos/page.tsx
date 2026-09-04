@@ -12,6 +12,7 @@ import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, Succe
 import { ComboboxCliente } from "@/components/ComboboxCliente";
 import { ComboboxResponsable } from "@/components/ComboboxResponsable";
 import { IconChartBar, IconPlus, IconWrench } from "@/components/icons";
+import { EstadoCargando, EstadoVacio } from "@/components/estados";
 
 type EquipoConCliente = Equipo & {
   cliente: Pick<Cliente, "id" | "nombre"> | null;
@@ -391,7 +392,7 @@ export default function EquiposPage() {
       </div>
 
       {error && <ErrorText>{error}</ErrorText>}
-      {equipos === null && !error && <p className="text-sm text-muted">Cargando…</p>}
+      {equipos === null && !error && <EstadoCargando />}
 
       {equipos?.length === 0 && (
         <Card>
@@ -410,10 +411,7 @@ export default function EquiposPage() {
       )}
 
       {equipos && equipos.length > 0 && filtrados.length === 0 && (
-        <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border py-16 text-center">
-          <IconWrench className="h-8 w-8 text-muted" />
-          <p className="text-sm text-muted">Ningún equipo coincide con la búsqueda o el filtro.</p>
-        </div>
+        <EstadoVacio icono={IconWrench} titulo="Ningún equipo coincide con la búsqueda o el filtro" />
       )}
 
       {filtrados.length > 0 && (

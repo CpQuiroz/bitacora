@@ -8,6 +8,7 @@ import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Card, ErrorText, PageHeader } from "@/components/ui";
 import { IconChevronLeft, IconClipboardCheck, IconClock, IconLayers, IconShield, IconWrench } from "@/components/icons";
+import { EstadoCargando } from "@/components/estados";
 
 type DashboardEquipos = {
   total_equipos: number;
@@ -87,7 +88,7 @@ export default function EquiposDashboardPage() {
           <ErrorText>{error}</ErrorText>
         </div>
       )}
-      {!datos && !error && <p className="mt-6 text-sm text-muted">Cargando…</p>}
+      {!datos && !error && <EstadoCargando />}
 
       {datos && (
         <div className="mt-6 flex flex-col gap-6">

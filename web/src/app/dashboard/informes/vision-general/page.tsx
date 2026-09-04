@@ -7,6 +7,7 @@ import { formatMoneda } from "@/lib/formatMoneda";
 import { Card, ErrorText } from "@/components/ui";
 import { GraficoIngresos, type PuntoIngresoMes } from "@/components/charts/GraficoIngresos";
 import { IconArrowRight, IconChartBar, IconClipboardCheck, IconTag, IconUsers, IconWallet } from "@/components/icons";
+import { EstadoCargando } from "@/components/estados";
 import { useInformes } from "../InformesContext";
 
 type Kpis = {
@@ -90,7 +91,7 @@ export default function VisionGeneralPage() {
   const moneda = usuario.empresa.moneda;
 
   if (error) return <ErrorText>{error}</ErrorText>;
-  if (!datos) return <p className="text-sm text-muted">Cargando…</p>;
+  if (!datos) return <EstadoCargando />;
 
   const { kpis, resumen_gastos, ingresos_vs_gastos, ingresos_por_mes } = datos;
 

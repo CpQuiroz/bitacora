@@ -9,6 +9,7 @@ import { Card, ErrorText } from "@/components/ui";
 import { GraficoDistribucion, type PuntoDistribucion } from "@/components/charts/GraficoDistribucion";
 import { GraficoRankingHorizontal, type PuntoRanking } from "@/components/charts/GraficoRankingHorizontal";
 import { GraficoEvolucionSimple, type PuntoEvolucionSimple } from "@/components/charts/GraficoEvolucionSimple";
+import { EstadoCargando } from "@/components/estados";
 import { useInformes } from "../InformesContext";
 
 type Agrupacion = "categoria" | "centro_costo" | "os";
@@ -109,7 +110,7 @@ function InformeGastosContenido() {
       </div>
 
       {error && <ErrorText>{error}</ErrorText>}
-      {!error && !datos && <p className="text-sm text-muted">Cargando…</p>}
+      {!error && !datos && <EstadoCargando />}
 
       {datos && (
         <>

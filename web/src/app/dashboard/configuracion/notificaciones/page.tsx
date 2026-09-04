@@ -6,6 +6,7 @@ import { apiFetch } from "@/lib/api";
 import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText, Textarea } from "@/components/ui";
 import { DataTable } from "@/components/DataTable";
 import { IconChat, IconClock, IconMail } from "@/components/icons";
+import { EstadoCargando } from "@/components/estados";
 
 type Tab = "correo" | "whatsapp" | "recordatorios" | "historial";
 
@@ -186,7 +187,7 @@ export default function NotificacionesPage() {
     return (
       <div className="flex flex-col gap-6">
         <PageHeader title="Notificaciones" subtitle="Correo, WhatsApp y recordatorios" />
-        {error ? <ErrorText>{error}</ErrorText> : <p className="text-sm text-muted">Cargando…</p>}
+        {error ? <ErrorText>{error}</ErrorText> : <EstadoCargando />}
       </div>
     );
   }

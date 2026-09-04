@@ -10,6 +10,7 @@ import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, SuccessText, Textarea } from "@/components/ui";
 import { ComboboxCliente } from "@/components/ComboboxCliente";
 import { IconBox, IconPlus } from "@/components/icons";
+import { EstadoCargando, EstadoVacio } from "@/components/estados";
 
 type PaqueteListado = PaqueteSesionesConSaldo & { cliente: { nombre: string } | null };
 
@@ -179,7 +180,7 @@ export default function PaquetesSesionesPage() {
       </div>
 
       {error && <ErrorText>{error}</ErrorText>}
-      {paquetes === null && !error && <p className="text-sm text-muted">Cargando…</p>}
+      {paquetes === null && !error && <EstadoCargando />}
 
       {paquetes?.length === 0 && (
         <Card>
@@ -198,10 +199,7 @@ export default function PaquetesSesionesPage() {
       )}
 
       {paquetes && paquetes.length > 0 && filtrados.length === 0 && (
-        <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border py-16 text-center">
-          <IconBox className="h-8 w-8 text-muted" />
-          <p className="text-sm text-muted">Ningún paquete coincide con la búsqueda.</p>
-        </div>
+        <EstadoVacio icono={IconBox} titulo="Ningún paquete coincide con la búsqueda" />
       )}
 
       {filtrados.length > 0 && (

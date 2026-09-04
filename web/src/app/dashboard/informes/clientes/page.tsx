@@ -9,6 +9,7 @@ import { GraficoDistribucion, type PuntoDistribucion } from "@/components/charts
 import { GraficoEvolucionDoble } from "@/components/charts/GraficoEvolucionDoble";
 import { GraficoEvolucionPorcentaje, type PuntoPorcentaje } from "@/components/charts/GraficoEvolucionPorcentaje";
 import { GraficoRankingHorizontal, type PuntoRanking } from "@/components/charts/GraficoRankingHorizontal";
+import { EstadoCargando } from "@/components/estados";
 import { useInformes } from "../InformesContext";
 
 type Kpis = { total_clientes: number; clientes_activos: number; nuevos_clientes: number; ingreso_promedio: number };
@@ -77,7 +78,7 @@ export default function InformeClientesPage() {
   );
 
   if (error) return <ErrorText>{error}</ErrorText>;
-  if (!datos) return <p className="text-sm text-muted">Cargando…</p>;
+  if (!datos) return <EstadoCargando />;
 
   const { kpis, distribucion_estado, tasa_retencion, por_comuna } = datos;
 

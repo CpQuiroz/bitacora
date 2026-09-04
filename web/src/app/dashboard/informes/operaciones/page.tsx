@@ -8,6 +8,7 @@ import { GraficoDistribucion, type PuntoDistribucion } from "@/components/charts
 import { GraficoEvolucionDoble } from "@/components/charts/GraficoEvolucionDoble";
 import { GraficoEvolucionPorcentaje, type PuntoPorcentaje } from "@/components/charts/GraficoEvolucionPorcentaje";
 import { GraficoBarras, type PuntoBarraMes } from "@/components/charts/GraficoBarras";
+import { EstadoCargando } from "@/components/estados";
 import { useInformes } from "../InformesContext";
 
 type Kpis = { total_os: number; completadas: number; pct_conclusion: number; en_curso: number; agendadas: number };
@@ -108,7 +109,7 @@ export default function InformeOperacionesPage() {
   );
 
   if (error) return <ErrorText>{error}</ErrorText>;
-  if (!datos) return <p className="text-sm text-muted">Cargando…</p>;
+  if (!datos) return <EstadoCargando />;
 
   const { kpis } = datos;
 

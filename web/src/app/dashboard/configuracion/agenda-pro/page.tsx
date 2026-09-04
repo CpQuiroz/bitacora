@@ -5,6 +5,7 @@ import type { AgendaProConfig, AgendaProHorario } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
 import { Button, Card, ErrorText, Input, Label, PageHeader, SuccessText } from "@/components/ui";
 import { IconCalendar, IconCheck } from "@/components/icons";
+import { EstadoCargando } from "@/components/estados";
 import { useConfiguracion } from "../ConfiguracionContext";
 
 const DIAS = [
@@ -106,7 +107,7 @@ export default function AgendaProConfigPage() {
     return (
       <div className="flex flex-col gap-6">
         <PageHeader title="Reserva online" subtitle="Horario de atención para que tus clientes agenden solos" />
-        {error ? <ErrorText>{error}</ErrorText> : <p className="text-sm text-muted">Cargando…</p>}
+        {error ? <ErrorText>{error}</ErrorText> : <EstadoCargando />}
       </div>
     );
   }

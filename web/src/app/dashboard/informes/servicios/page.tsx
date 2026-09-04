@@ -7,6 +7,7 @@ import { Card, ErrorText } from "@/components/ui";
 import { GraficoDistribucion, type PuntoDistribucion } from "@/components/charts/GraficoDistribucion";
 import { GraficoRankingHorizontal, type PuntoRanking } from "@/components/charts/GraficoRankingHorizontal";
 import { IconSparkle } from "@/components/icons";
+import { EstadoCargando } from "@/components/estados";
 import { useInformes } from "../InformesContext";
 
 type Kpis = { total_os: number; completadas: number; tipos_utilizados: number; tasa_promedio: number };
@@ -90,7 +91,7 @@ export default function InformeServiciosPage() {
   }, [datos]);
 
   if (error) return <ErrorText>{error}</ErrorText>;
-  if (!datos) return <p className="text-sm text-muted">Cargando…</p>;
+  if (!datos) return <EstadoCargando />;
 
   const { kpis, distribucion_tipo, ranking_tipos, top_clientes_por_tipo } = datos;
 

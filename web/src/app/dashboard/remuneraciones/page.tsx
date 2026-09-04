@@ -5,6 +5,7 @@ import Link from "next/link";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell } from "@/components/DashboardShell";
 import { Badge, Button, Card, ErrorText, PageHeader, Select, SuccessText } from "@/components/ui";
+import { EstadoCargando } from "@/components/estados";
 import { useUsuarioShell } from "@/lib/useUsuarioShell";
 import { nombrePeriodo, periodoRelativo, remuneraciones, type FormatoExport, type LiquidacionConNombre } from "@/lib/remuneracionesApi";
 
@@ -157,7 +158,7 @@ export default function RemuneracionesPage() {
         </Card>
       )}
 
-      {filas === null && !error && <p className="text-sm text-muted">Cargando…</p>}
+      {filas === null && !error && <EstadoCargando />}
 
       {filas && filas.length === 0 && (
         <Card>

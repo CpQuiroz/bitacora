@@ -5,6 +5,7 @@ import type { CampoTipoTrabajo, TipoTrabajo } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
 import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select } from "@/components/ui";
 import { IconPlus, IconWrench } from "@/components/icons";
+import { EstadoVacio } from "@/components/estados";
 
 const TIPOS_CAMPO: { valor: CampoTipoTrabajo["tipo"]; etiqueta: string }[] = [
   { valor: "texto", etiqueta: "Texto" },
@@ -246,10 +247,7 @@ export default function TiposTrabajoPage() {
       )}
 
       {filtrados.length === 0 && tipos !== null && tipos.length > 0 && (
-        <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border py-16 text-center">
-          <IconWrench className="h-8 w-8 text-muted" />
-          <p className="text-sm text-muted">No hay tipos que coincidan.</p>
-        </div>
+        <EstadoVacio icono={IconWrench} titulo="No hay tipos que coincidan" />
       )}
 
       {filtrados.length > 0 && (

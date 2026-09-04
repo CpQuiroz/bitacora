@@ -22,6 +22,7 @@ import {
   SuccessText,
 } from "@/components/ui";
 import { IconMail, IconUsers } from "@/components/icons";
+import { EstadoCargando, EstadoVacio } from "@/components/estados";
 
 type AuditoriaFila = AuditoriaUsuario & {
   usuario_afectado: { nombre: string } | null;
@@ -283,7 +284,7 @@ export default function EquipoPage() {
         </p>
 
         {accesos === null ? (
-          <p className="text-sm text-muted">Cargando…</p>
+          <EstadoCargando />
         ) : accesos.length === 0 ? (
           <p className="text-sm text-muted">Sin correos ni dominios autorizados.</p>
         ) : (
@@ -342,12 +343,9 @@ export default function EquipoPage() {
       </Card>
 
       {error && <ErrorText>{error}</ErrorText>}
-      {usuarios === null && !error && <p className="text-sm text-muted">Cargando…</p>}
+      {usuarios === null && !error && <EstadoCargando />}
       {usuarios?.length === 0 && (
-        <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border py-16 text-center">
-          <IconUsers className="h-8 w-8 text-muted" />
-          <p className="text-sm text-muted">Todavía no hay nadie en el equipo.</p>
-        </div>
+        <EstadoVacio icono={IconUsers} titulo="Todavía no hay nadie en el equipo" />
       )}
       {usuarios && usuarios.length > 0 && (
         <Card className="overflow-x-auto p-0">

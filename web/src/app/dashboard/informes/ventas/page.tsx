@@ -8,6 +8,7 @@ import { Card, ErrorText } from "@/components/ui";
 import { GraficoDistribucion, type PuntoDistribucion } from "@/components/charts/GraficoDistribucion";
 import { GraficoEvolucionDoble } from "@/components/charts/GraficoEvolucionDoble";
 import { GraficoEvolucionPorcentaje, type PuntoPorcentaje } from "@/components/charts/GraficoEvolucionPorcentaje";
+import { EstadoCargando } from "@/components/estados";
 import { useInformes } from "../InformesContext";
 
 type Kpis = { total_cotizaciones: number; valor_total: number; tasa_conversion: number; ticket_promedio: number };
@@ -89,7 +90,7 @@ export default function InformeVentasPage() {
   );
 
   if (error) return <ErrorText>{error}</ErrorText>;
-  if (!datos) return <p className="text-sm text-muted">Cargando…</p>;
+  if (!datos) return <EstadoCargando />;
 
   const { kpis, distribucion_estado, top_servicios } = datos;
 

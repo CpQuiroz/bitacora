@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { Button, Card, ErrorText, Input, Label, PageHeader, SuccessText } from "@/components/ui";
 import { IconChat, IconCreditCard, IconSparkle } from "@/components/icons";
+import { EstadoCargando } from "@/components/estados";
 
 type IntegracionPublica = {
   proveedor: string;
@@ -132,7 +133,7 @@ export default function IntegracionesPage() {
         ))}
       </div>
 
-      {integraciones === null && <p className="text-sm text-muted">Cargando…</p>}
+      {integraciones === null && <EstadoCargando />}
 
       <div className="grid gap-4 sm:grid-cols-2">
         {filtradas.map((i) => {

@@ -7,6 +7,7 @@ import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell } from "@/components/DashboardShell";
 import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, SuccessText } from "@/components/ui";
 import { IconChevronLeft } from "@/components/icons";
+import { EstadoCargando } from "@/components/estados";
 import { useUsuarioShell } from "@/lib/useUsuarioShell";
 import { nombrePeriodo, remuneraciones, type LiquidacionConNombre } from "@/lib/remuneracionesApi";
 
@@ -96,7 +97,7 @@ export default function LiquidacionDetallePage() {
       </Link>
 
       {error && <ErrorText>{error}</ErrorText>}
-      {!liq && !error && <p className="text-sm text-muted">Cargando…</p>}
+      {!liq && !error && <EstadoCargando />}
 
       {liq && (
         <>
