@@ -3,11 +3,11 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { Cliente, PaqueteSesionesConSaldo } from "@bitacora/shared";
+import type { Cliente, PaqueteSesionesConSaldo, TipoPack } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, SuccessText, Textarea } from "@/components/ui";
+import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText, Textarea } from "@/components/ui";
 import { ComboboxCliente } from "@/components/ComboboxCliente";
 import { IconBox, IconPlus } from "@/components/icons";
 import { EstadoCargando, EstadoVacio } from "@/components/estados";
@@ -19,11 +19,13 @@ export default function PaquetesSesionesPage() {
   const [usuario, setUsuario] = useState<UsuarioShell | null>(null);
   const [paquetes, setPaquetes] = useState<PaqueteListado[] | null>(null);
   const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [tiposPack, setTiposPack] = useState<TipoPack[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busqueda, setBusqueda] = useState("");
 
   const [formAbierto, setFormAbierto] = useState(false);
   const [clienteId, setClienteId] = useState("");
+  const [tipoPackId, setTipoPackId] = useState("");
   const [nombre, setNombre] = useState("");
   const [cantidadTotal, setCantidadTotal] = useState(5);
   const [notas, setNotas] = useState("");
@@ -37,10 +39,11 @@ export default function PaquetesSesionesPage() {
       router.replace("/login");
       return;
     }
-    const [resMe, resPaquetes, resClientes] = await Promise.all([
+    const [resMe, resPaquetes, resClientes, resTiposPack] = await Promise.all([
       apiFetch("/api/me"),
       apiFetch("/api/paquetes-sesiones"),
       apiFetch("/api/clientes"),
+      apiFetch("/api/tipos-pack?activo=1"),
     ]);
     if (resMe.ok) {
       const { usuario: u } = await resMe.json();
@@ -58,6 +61,7 @@ export default function PaquetesSesionesPage() {
         });
     }
     if (resClientes.ok) setClientes(await resClientes.json());
+    if (resTiposPack.ok) setTiposPack(await resTiposPack.json());
     if (!resPaquetes.ok) {
       setError("No se pudieron cargar los paquetes de sesiones");
       return;
@@ -72,11 +76,23 @@ export default function PaquetesSesionesPage() {
 
   function abrirNuevo() {
     setClienteId("");
+    setTipoPackId("");
     setNombre("");
     setCantidadTotal(5);
     setNotas("");
     setFormError(null);
     setFormAbierto(true);
+  }
+
+  // Elegir un tipo de pack precarga nombre y cantidad — quedan editables
+  // por si esta venta puntual difiere de la plantilla.
+  function elegirTipoPack(id: string) {
+    setTipoPackId(id);
+    const tipo = tiposPack.find((t) => t.id === id);
+    if (tipo) {
+      setNombre(tipo.nombre);
+      setCantidadTotal(tipo.cantidad_sesiones);
+    }
   }
 
   async function onSubmit(e: FormEvent) {
@@ -97,7 +113,13 @@ export default function PaquetesSesionesPage() {
     setGuardando(true);
     const res = await apiFetch("/api/paquetes-sesiones", {
       method: "POST",
-      body: JSON.stringify({ cliente_id: clienteId, nombre, cantidad_total: cantidadTotal, notas: notas || null }),
+      body: JSON.stringify({
+        cliente_id: clienteId,
+        tipo_pack_id: tipoPackId || null,
+        nombre,
+        cantidad_total: cantidadTotal,
+        notas: notas || null,
+      }),
     });
     setGuardando(false);
     if (!res.ok) {
@@ -143,6 +165,19 @@ export default function PaquetesSesionesPage() {
                   onClienteCreado={(c) => setClientes((prev) => [...prev, c])}
                 />
               </div>
+              {tiposPack.length > 0 && (
+                <div>
+                  <Label>Tipo de pack (opcional)</Label>
+                  <Select value={tipoPackId} onChange={(e) => elegirTipoPack(e.target.value)}>
+                    <option value="">Personalizado — completar a mano</option>
+                    {tiposPack.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.nombre} ({t.cantidad_sesiones} sesiones)
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+              )}
               <div>
                 <Label>Nombre del paquete</Label>
                 <Input type="text" placeholder="Ej: Pack 10 sesiones" value={nombre} onChange={(e) => setNombre(e.target.value)} />

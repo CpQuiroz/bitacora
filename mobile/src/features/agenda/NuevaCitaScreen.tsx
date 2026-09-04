@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Alert, Pressable, ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import type { Cliente, PaqueteSesionesConSaldo, Prioridad, Usuario } from "@bitacora/shared";
+import type { Cliente, PaqueteSesionesConSaldo, Prioridad, TipoPack, Usuario } from "@bitacora/shared";
 import { useTema } from "../../theme";
 import { Button, Card, Input, LoadingScreen, PickerBuscable, Text } from "../../components/ui";
 import { SelectorCliente } from "../../components/SelectorCliente";
@@ -10,6 +10,7 @@ import { useRed } from "../../services/sync/NetworkProvider";
 import { useAuth } from "../auth/AuthContext";
 import { catalogoParaCita, crearCita, editarCita, obtenerTarea, type BorradorCita } from "../../services/agenda";
 import { crearPaquete, listarPaquetesCliente } from "../../services/paquetes";
+import { listarTiposPack } from "../../services/tiposPack";
 import type { AgendaStackParamList } from "../../shell/navigation/types";
 
 const DIAS = ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"];
@@ -41,7 +42,9 @@ export function NuevaCitaScreen({ navigation, route }: NativeStackScreenProps<Ag
   const [guardando, setGuardando] = useState(false);
 
   const [paquetes, setPaquetes] = useState<PaqueteSesionesConSaldo[]>([]);
+  const [tiposPack, setTiposPack] = useState<TipoPack[]>([]);
   const [nuevoPaqueteAbierto, setNuevoPaqueteAbierto] = useState(false);
+  const [tipoPackId, setTipoPackId] = useState("");
   const [nombrePaquete, setNombrePaquete] = useState("");
   const [cantidadPaquete, setCantidadPaquete] = useState("10");
   const [creandoPaquete, setCreandoPaquete] = useState(false);
@@ -77,6 +80,11 @@ export function NuevaCitaScreen({ navigation, route }: NativeStackScreenProps<Ag
       setEquipo(equipo);
     });
   }, []);
+
+  useEffect(() => {
+    if (!agendaPro) return;
+    listarTiposPack().then(setTiposPack);
+  }, [agendaPro]);
 
   // Carga los paquetes del cliente elegido (Agenda Pro).
   useEffect(() => {
@@ -226,6 +234,23 @@ export function NuevaCitaScreen({ navigation, route }: NativeStackScreenProps<Ag
 
           {nuevoPaqueteAbierto ? (
             <View style={{ gap: t.espacio(2.5), borderTopWidth: 1, borderTopColor: t.colores.border, paddingTop: t.espacio(3) }}>
+              {tiposPack.length > 0 ? (
+                <PickerBuscable
+                  etiqueta="Tipo de pack (opcional)"
+                  placeholder="Personalizado"
+                  opcionVacia="Personalizado — completar a mano"
+                  valor={tipoPackId}
+                  opciones={tiposPack.map((tp) => ({ id: tp.id, label: tp.nombre, sublabel: `${tp.cantidad_sesiones} sesiones` }))}
+                  onElegir={(id) => {
+                    setTipoPackId(id);
+                    const tipo = tiposPack.find((tp) => tp.id === id);
+                    if (tipo) {
+                      setNombrePaquete(tipo.nombre);
+                      setCantidadPaquete(String(tipo.cantidad_sesiones));
+                    }
+                  }}
+                />
+              ) : null}
               <Input etiqueta="Nombre del paquete" placeholder="Ej. Pack 10 sesiones" value={nombrePaquete} onChangeText={setNombrePaquete} />
               <Input etiqueta="Cantidad de sesiones" keyboardType="numeric" value={cantidadPaquete} onChangeText={(v) => setCantidadPaquete(v.replace(/\D/g, ""))} />
               <View style={{ flexDirection: "row", gap: t.espacio(2) }}>
@@ -239,7 +264,12 @@ export function NuevaCitaScreen({ navigation, route }: NativeStackScreenProps<Ag
                       return;
                     }
                     setCreandoPaquete(true);
-                    const r = await crearPaquete({ cliente_id: b.cliente_id, nombre: nombrePaquete, cantidad_total: cant });
+                    const r = await crearPaquete({
+                      cliente_id: b.cliente_id,
+                      tipo_pack_id: tipoPackId || undefined,
+                      nombre: nombrePaquete,
+                      cantidad_total: cant,
+                    });
                     setCreandoPaquete(false);
                     if (!r.ok) {
                       Alert.alert("No se pudo crear el paquete", r.error);
@@ -249,11 +279,19 @@ export function NuevaCitaScreen({ navigation, route }: NativeStackScreenProps<Ag
                     setPaquetes(ps);
                     setB((p) => ({ ...p, paquete_id: r.paquete.id }));
                     setNuevoPaqueteAbierto(false);
+                    setTipoPackId("");
                     setNombrePaquete("");
                     setCantidadPaquete("10");
                   }}
                 />
-                <Button titulo="Cancelar" variante="ghost" onPress={() => setNuevoPaqueteAbierto(false)} />
+                <Button
+                  titulo="Cancelar"
+                  variante="ghost"
+                  onPress={() => {
+                    setNuevoPaqueteAbierto(false);
+                    setTipoPackId("");
+                  }}
+                />
               </View>
             </View>
           ) : (

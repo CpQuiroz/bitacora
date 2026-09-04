@@ -56,7 +56,7 @@ paquetesSesionesRouter.get(
 paquetesSesionesRouter.post(
   "/",
   ah<RequestConEmpresa>(async (req, res) => {
-    const { cliente_id, nombre, cantidad_total, fecha_compra, notas } = req.body ?? {};
+    const { cliente_id, nombre, cantidad_total, fecha_compra, notas, tipo_pack_id } = req.body ?? {};
 
     if (typeof cliente_id !== "string" || !cliente_id || !(await clienteExiste(req.empresaId!, cliente_id))) {
       res.status(400).json({ error: "cliente_id inválido" });
@@ -70,12 +70,27 @@ paquetesSesionesRouter.post(
       res.status(400).json({ error: "cantidad_total debe ser un entero mayor a 0" });
       return;
     }
+    // tipo_pack_id es solo trazabilidad (de qué plantilla del catálogo
+    // salió) — nombre/cantidad_total siempre se copian, así que un tipo
+    // inválido o de otra empresa simplemente se ignora en vez de bloquear
+    // la venta.
+    let tipoPackId: string | null = null;
+    if (typeof tipo_pack_id === "string" && tipo_pack_id) {
+      const { data: tipo } = await supabase
+        .from("tipos_pack")
+        .select("id")
+        .eq("id", tipo_pack_id)
+        .eq("empresa_id", req.empresaId!)
+        .maybeSingle();
+      if (tipo) tipoPackId = tipo.id;
+    }
 
     const { data, error } = await supabase
       .from("paquetes_sesiones")
       .insert({
         empresa_id: req.empresaId!,
         cliente_id,
+        tipo_pack_id: tipoPackId,
         nombre: nombre.trim(),
         cantidad_total,
         fecha_compra: fecha_compra || new Date().toISOString().slice(0, 10),

@@ -1,11 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import type { AgendaProConfig, AgendaProHorario } from "@bitacora/shared";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
+import type { AgendaProConfig, AgendaProHorario, TipoPack } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
-import { Button, Card, ErrorText, Input, Label, PageHeader, SuccessText } from "@/components/ui";
-import { IconCalendar, IconCheck } from "@/components/icons";
-import { EstadoCargando } from "@/components/estados";
+import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, SuccessText } from "@/components/ui";
+import { IconCalendar, IconCheck, IconLayers, IconPlus } from "@/components/icons";
+import { EstadoCargando, EstadoVacio } from "@/components/estados";
 import { useConfiguracion } from "../ConfiguracionContext";
 
 const DIAS = [
@@ -19,6 +19,194 @@ const DIAS = [
 ];
 
 type DiaEditable = { abierto: boolean; hora_inicio: string; hora_fin: string };
+
+function formatoPrecio(precio: number | null) {
+  if (precio === null) return "—";
+  return precio.toLocaleString("es-CL", { style: "currency", currency: "CLP", maximumFractionDigits: 0 });
+}
+
+// Catálogo reutilizable de "tipos de pack" (ver 84_tipos_pack.sql) — se
+// vende como plantilla al crear un paquete de sesiones a un cliente, tanto
+// desde Paquetes de sesiones (web) como desde Nueva cita (móvil).
+function TiposPackCard() {
+  const [tipos, setTipos] = useState<TipoPack[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
+
+  const [editandoId, setEditandoId] = useState<string | null>(null); // null = form cerrado; "nuevo" = creando
+  const [nombre, setNombre] = useState("");
+  const [cantidadSesiones, setCantidadSesiones] = useState(5);
+  const [precio, setPrecio] = useState("");
+  const [guardando, setGuardando] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const cargar = useCallback(async () => {
+    const res = await apiFetch("/api/tipos-pack");
+    if (!res.ok) {
+      setError("No se pudieron cargar los tipos de pack");
+      return;
+    }
+    setTipos(await res.json());
+  }, []);
+
+  useEffect(() => {
+    cargar();
+  }, [cargar]);
+
+  function abrirNuevo() {
+    setEditandoId("nuevo");
+    setNombre("");
+    setCantidadSesiones(5);
+    setPrecio("");
+    setFormError(null);
+  }
+
+  function abrirEdicion(t: TipoPack) {
+    setEditandoId(t.id);
+    setNombre(t.nombre);
+    setCantidadSesiones(t.cantidad_sesiones);
+    setPrecio(t.precio !== null ? String(t.precio) : "");
+    setFormError(null);
+  }
+
+  async function onSubmit(e: FormEvent) {
+    e.preventDefault();
+    setFormError(null);
+    if (!nombre.trim()) {
+      setFormError("Falta nombre");
+      return;
+    }
+    if (!Number.isInteger(cantidadSesiones) || cantidadSesiones <= 0) {
+      setFormError("La cantidad debe ser un entero mayor a 0");
+      return;
+    }
+    const precioNumero = precio.trim() ? Number(precio) : null;
+    if (precioNumero !== null && (Number.isNaN(precioNumero) || precioNumero < 0)) {
+      setFormError("Precio inválido");
+      return;
+    }
+    setGuardando(true);
+    const cuerpo = { nombre: nombre.trim(), cantidad_sesiones: cantidadSesiones, precio: precioNumero };
+    const res =
+      editandoId === "nuevo"
+        ? await apiFetch("/api/tipos-pack", { method: "POST", body: JSON.stringify(cuerpo) })
+        : await apiFetch(`/api/tipos-pack/${editandoId}`, { method: "PATCH", body: JSON.stringify(cuerpo) });
+    setGuardando(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setFormError(body.error ?? "No se pudo guardar");
+      return;
+    }
+    setEditandoId(null);
+    setAviso(editandoId === "nuevo" ? "Tipo de pack creado." : "Tipo de pack actualizado.");
+    cargar();
+  }
+
+  async function alternarActivo(t: TipoPack) {
+    setAviso(null);
+    const res = await apiFetch(`/api/tipos-pack/${t.id}`, { method: "PATCH", body: JSON.stringify({ activo: !t.activo }) });
+    if (!res.ok) {
+      setError("No se pudo actualizar el estado");
+      return;
+    }
+    cargar();
+  }
+
+  return (
+    <Card>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-sm font-semibold text-foreground">Tipos de pack</h2>
+          <p className="text-sm text-muted">Plantillas de packs que vendes — evita tipear nombre y cantidad cada vez.</p>
+        </div>
+        {editandoId === null && (
+          <Button type="button" variant="outline" onClick={abrirNuevo}>
+            <IconPlus className="h-4 w-4" />
+            Nuevo tipo de pack
+          </Button>
+        )}
+      </div>
+
+      {editandoId !== null && (
+        <form onSubmit={onSubmit} className="mb-4 flex flex-col gap-4 rounded-lg border border-border p-3">
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div>
+              <Label>Nombre</Label>
+              <Input type="text" placeholder="Ej: Pack 5 sesiones" value={nombre} onChange={(e) => setNombre(e.target.value)} />
+            </div>
+            <div>
+              <Label>Cantidad de sesiones</Label>
+              <Input
+                type="number"
+                min={1}
+                value={cantidadSesiones}
+                onChange={(e) => setCantidadSesiones(Number(e.target.value) || 1)}
+              />
+            </div>
+            <div>
+              <Label>Precio (opcional)</Label>
+              <Input type="number" min={0} placeholder="45000" value={precio} onChange={(e) => setPrecio(e.target.value)} />
+            </div>
+          </div>
+          {formError && <ErrorText>{formError}</ErrorText>}
+          <div className="flex gap-2">
+            <Button type="submit" disabled={guardando} className="self-start">
+              {guardando ? "Guardando…" : editandoId === "nuevo" ? "Crear" : "Guardar cambios"}
+            </Button>
+            <Button type="button" variant="ghost" onClick={() => setEditandoId(null)}>
+              Cancelar
+            </Button>
+          </div>
+        </form>
+      )}
+
+      {error && <ErrorText>{error}</ErrorText>}
+      {aviso && <SuccessText>{aviso}</SuccessText>}
+      {tipos === null && !error && <EstadoCargando />}
+      {tipos?.length === 0 && (
+        <EstadoVacio icono={IconLayers} titulo="Ningún tipo de pack todavía" mensaje="Crea el primero para reutilizarlo al vender paquetes." />
+      )}
+
+      {tipos && tipos.length > 0 && (
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
+                <th className="px-3 py-2 font-medium">Nombre</th>
+                <th className="px-3 py-2 font-medium">Sesiones</th>
+                <th className="px-3 py-2 font-medium">Precio</th>
+                <th className="px-3 py-2 font-medium">Estado</th>
+                <th className="px-3 py-2 font-medium"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {tipos.map((t) => (
+                <tr key={t.id} className="border-b border-border-soft last:border-0">
+                  <td className="px-3 py-2 font-medium text-foreground">{t.nombre}</td>
+                  <td className="px-3 py-2 text-foreground">{t.cantidad_sesiones}</td>
+                  <td className="px-3 py-2 text-muted">{formatoPrecio(t.precio)}</td>
+                  <td className="px-3 py-2">
+                    <Badge value={t.activo ? "activo" : "inactivo"} />
+                  </td>
+                  <td className="px-3 py-2">
+                    <div className="flex justify-end gap-2">
+                      <Button type="button" variant="ghost" onClick={() => abrirEdicion(t)}>
+                        Editar
+                      </Button>
+                      <Button type="button" variant="ghost" onClick={() => alternarActivo(t)}>
+                        {t.activo ? "Descontinuar" : "Reactivar"}
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Card>
+  );
+}
 
 export default function AgendaProConfigPage() {
   const { usuario } = useConfiguracion();
@@ -175,6 +363,8 @@ export default function AgendaProConfigPage() {
           })}
         </div>
       </Card>
+
+      <TiposPackCard />
 
       <Card>
         <h2 className="mb-4 text-sm font-semibold text-foreground">Reglas de la reserva</h2>

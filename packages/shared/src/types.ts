@@ -509,6 +509,10 @@ export type PaqueteSesiones = {
   id: string;
   empresa_id: string;
   cliente_id: string;
+  // Si el paquete se creó a partir de un TipoPack del catálogo, queda la
+  // referencia acá (solo trazabilidad — nombre/cantidad_total quedan
+  // copiados en el paquete y se pueden editar sin afectar el catálogo).
+  tipo_pack_id: string | null;
   nombre: string;
   cantidad_total: number;
   fecha_compra: string;
@@ -517,6 +521,21 @@ export type PaqueteSesiones = {
 };
 
 export type PaqueteSesionesConSaldo = PaqueteSesiones & { saldo: number };
+
+// Agenda Pro: catálogo reutilizable de "tipos de pack" que la empresa
+// vende (ej. "Pack 5 sesiones" a $45.000) — se administra en la web
+// (Configuración → Agenda Pro) y se usa para no tener que tipear nombre y
+// cantidad a mano cada vez que se vende un paquete a un cliente. `activo`
+// permite descontinuar un tipo sin borrar los paquetes ya vendidos con él.
+export type TipoPack = {
+  id: string;
+  empresa_id: string;
+  nombre: string;
+  cantidad_sesiones: number;
+  precio: number | null;
+  activo: boolean;
+  creado_en: string;
+};
 
 // Agenda Pro — reserva online pública: horario único por empresa
 // (ver backend/src/routes/reservaPublica.ts).
@@ -1402,6 +1421,7 @@ export type Database = {
       empresa_modulos: Tabla<EmpresaModulo>;
       empresa_rol_modulos: Tabla<EmpresaRolModulo>;
       paquetes_sesiones: Tabla<PaqueteSesiones>;
+      tipos_pack: Tabla<TipoPack>;
       agenda_pro_config: Tabla<AgendaProConfig>;
       agenda_pro_horarios: Tabla<AgendaProHorario>;
       suscripciones: Tabla<Suscripcion>;

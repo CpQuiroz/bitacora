@@ -19,6 +19,7 @@ import { rutasPlanificadasRouter } from "./routes/rutasPlanificadas";
 import { ordenesServicioRouter } from "./routes/ordenesServicio";
 import { tareasRouter } from "./routes/tareas";
 import { paquetesSesionesRouter } from "./routes/paquetesSesiones";
+import { tiposPackRouter } from "./routes/tiposPack";
 import { suscripcionRouter } from "./routes/suscripcion";
 import { planRouter } from "./routes/plan";
 import { flowWebhookRouter } from "./routes/flowWebhook";
@@ -320,6 +321,7 @@ app.use("/api/rutas-planificadas", requiereAuth, requiereEmpresa, rutasPlanifica
 app.use("/api/ordenes-servicio", requiereAuth, requiereEmpresa, ordenesServicioRouter);
 app.use("/api/tareas", requiereAuth, requiereEmpresa, tareasRouter);
 app.use("/api/paquetes-sesiones", requiereAuth, requiereEmpresa, paquetesSesionesRouter);
+app.use("/api/tipos-pack", requiereAuth, requiereEmpresa, tiposPackRouter);
 app.use("/api/suscripcion", requiereAuth, requiereEmpresa, suscripcionRouter);
 app.use("/api/plan", requiereAuth, requiereEmpresa, planRouter);
 app.use("/api/agenda-pro/config", requiereAuth, requiereEmpresa, agendaProConfigRouter);

@@ -15,12 +15,18 @@ export async function listarPaquetesCliente(clienteId: string): Promise<PaqueteS
 
 export async function crearPaquete(b: {
   cliente_id: string;
+  tipo_pack_id?: string;
   nombre: string;
   cantidad_total: number;
 }): Promise<{ ok: true; paquete: PaqueteSesiones } | { ok: false; error: string }> {
   const res = await apiJson<PaqueteSesiones>("/api/paquetes-sesiones", {
     method: "POST",
-    body: JSON.stringify({ cliente_id: b.cliente_id, nombre: b.nombre.trim(), cantidad_total: b.cantidad_total }),
+    body: JSON.stringify({
+      cliente_id: b.cliente_id,
+      tipo_pack_id: b.tipo_pack_id || null,
+      nombre: b.nombre.trim(),
+      cantidad_total: b.cantidad_total,
+    }),
   });
   return res.ok ? { ok: true, paquete: res.data } : { ok: false, error: res.error };
 }
