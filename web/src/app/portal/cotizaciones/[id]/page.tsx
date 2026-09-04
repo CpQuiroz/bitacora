@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { PortalShell } from "@/components/PortalShell";
 import { Badge, Button, Card, ErrorText, SuccessText } from "@/components/ui";
 import { IconChevronLeft } from "@/components/icons";
+import { EstadoCargando } from "@/components/estados";
 import { obtenerTokenPortal, portalFetch } from "@/lib/portalApi";
 
 type Item = { id: string; descripcion: string; cantidad: number; precio_unitario: number };
@@ -86,7 +87,7 @@ export default function PortalCotizacionDetallePage() {
       </Link>
 
       {error && <ErrorText>{error}</ErrorText>}
-      {!cotizacion && !error && <p className="text-sm text-muted">Cargando…</p>}
+      {!cotizacion && !error && <EstadoCargando />}
 
       {cotizacion && (
         <div className="flex flex-col gap-4">

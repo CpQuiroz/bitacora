@@ -30,7 +30,7 @@ export function PortalShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <header className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-surface/80 px-4 py-3 backdrop-blur">
+      <header className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-surface px-4 py-3">
         <Link href="/portal" className="flex items-center gap-2">
           <Logo markClassName="h-7 w-7" />
           <span className="text-sm font-semibold text-foreground">Mi portal</span>
@@ -43,7 +43,7 @@ export function PortalShell({ children }: { children: ReactNode }) {
 
       <main className="mx-auto w-full max-w-md flex-1 px-4 pb-24 pt-5">{children}</main>
 
-      <nav className="fixed inset-x-0 bottom-0 z-10 border-t border-border bg-surface/95 backdrop-blur">
+      <nav className="fixed inset-x-0 bottom-0 z-10 border-t border-border bg-surface">
         <div className="mx-auto flex max-w-md">
           {NAV.map((item) => {
             const activo = item.href === "/portal" ? pathname === "/portal" : pathname.startsWith(item.href);
@@ -51,8 +51,8 @@ export function PortalShell({ children }: { children: ReactNode }) {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors ${
-                  activo ? "text-brand" : "text-muted"
+                className={`flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] transition-colors ${
+                  activo ? "font-semibold text-brand" : "font-medium text-muted"
                 }`}
               >
                 <item.icon className="h-5 w-5" />

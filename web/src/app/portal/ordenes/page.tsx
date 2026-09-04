@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { PortalShell } from "@/components/PortalShell";
 import { Badge, Card, ErrorText } from "@/components/ui";
 import { IconClipboardCheck } from "@/components/icons";
+import { EstadoCargando, EstadoVacio } from "@/components/estados";
 import { obtenerTokenPortal, portalFetch } from "@/lib/portalApi";
 
 type OrdenListado = {
@@ -46,12 +47,9 @@ export default function PortalOrdenesPage() {
       <h1 className="mb-4 text-xl font-semibold text-foreground">Mis Órdenes de Servicio</h1>
 
       {error && <ErrorText>{error}</ErrorText>}
-      {ordenes === null && !error && <p className="text-sm text-muted">Cargando…</p>}
+      {ordenes === null && !error && <EstadoCargando />}
       {ordenes?.length === 0 && (
-        <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-border py-16 text-center">
-          <IconClipboardCheck className="h-8 w-8 text-muted" />
-          <p className="text-sm text-muted">Todavía no tienes órdenes de servicio.</p>
-        </div>
+        <EstadoVacio icono={IconClipboardCheck} titulo="Todavía no tienes órdenes de servicio" />
       )}
 
       <div className="flex flex-col gap-3">

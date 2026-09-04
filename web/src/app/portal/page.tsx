@@ -4,8 +4,9 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PortalShell } from "@/components/PortalShell";
-import { Badge, Card, ErrorText } from "@/components/ui";
+import { Badge, Button, Card, ErrorText, SuccessText, Textarea } from "@/components/ui";
 import { IconCalendar, IconClipboardCheck, IconReceipt, IconWallet } from "@/components/icons";
+import { EstadoCargando } from "@/components/estados";
 import { obtenerTokenPortal, portalFetch } from "@/lib/portalApi";
 
 type Visita = { id: string; cliente: string; fecha: string; hora_programada: string | null; descripcion: string | null; estado: string };
@@ -91,7 +92,7 @@ export default function PortalHomePage() {
       </h2>
 
       {error && <ErrorText>{error}</ErrorText>}
-      {visitas === null && !error && <p className="text-sm text-muted">Cargando…</p>}
+      {visitas === null && !error && <EstadoCargando />}
       {visitas?.length === 0 && <p className="text-sm text-muted">No tienes visitas programadas por ahora.</p>}
 
       <div className="flex flex-col gap-3">
@@ -113,26 +114,26 @@ export default function PortalHomePage() {
           Descargar todos mis datos (Ley 21.719)
         </button>
 
-        <p className="mt-4 mb-1 text-xs text-muted">¿Hay un dato tuyo mal (nombre, dirección, teléfono)? Pide la corrección:</p>
+        <p className="mt-4 mb-2 text-xs text-muted">¿Hay un dato tuyo mal (nombre, dirección, teléfono)? Pide la corrección:</p>
         {corrOk ? (
-          <p className="text-xs text-green-700">Listo, le avisamos a la empresa.</p>
+          <SuccessText>Listo, le avisamos a la empresa.</SuccessText>
         ) : (
           <div className="flex flex-col gap-2">
-            <textarea
+            <Textarea
               value={correccion}
               onChange={(e) => setCorreccion(e.target.value)}
               rows={2}
               placeholder="Ej.: mi dirección correcta es…"
-              className="rounded-lg border border-border bg-surface p-2 text-sm"
             />
-            <button
+            <Button
               type="button"
+              size="sm"
               onClick={pedirCorreccion}
               disabled={enviandoCorr || correccion.trim().length < 5}
-              className="self-start rounded-lg bg-brand px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+              className="self-start"
             >
               {enviandoCorr ? "Enviando…" : "Pedir corrección"}
-            </button>
+            </Button>
           </div>
         )}
       </div>

@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { PortalShell } from "@/components/PortalShell";
 import { Badge, Button, Card, ErrorText } from "@/components/ui";
 import { IconChevronLeft } from "@/components/icons";
+import { EstadoCargando } from "@/components/estados";
 import { obtenerTokenPortal, portalFetch } from "@/lib/portalApi";
 
 type OrdenDetalle = {
@@ -61,7 +62,7 @@ export default function PortalOrdenDetallePage() {
       </Link>
 
       {error && <ErrorText>{error}</ErrorText>}
-      {!orden && !error && <p className="text-sm text-muted">Cargando…</p>}
+      {!orden && !error && <EstadoCargando />}
 
       {orden && (
         <div className="flex flex-col gap-4">

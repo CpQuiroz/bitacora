@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { PortalShell } from "@/components/PortalShell";
 import { Badge, Card, ErrorText } from "@/components/ui";
 import { IconReceipt } from "@/components/icons";
+import { EstadoCargando, EstadoVacio } from "@/components/estados";
 import { obtenerTokenPortal, portalFetch } from "@/lib/portalApi";
 
 type CotizacionListado = { id: string; numero: number | null; descripcion: string | null; monto: number; fecha: string; fecha_vencimiento: string | null; estado: string };
@@ -40,12 +41,9 @@ export default function PortalCotizacionesPage() {
       <h1 className="mb-4 text-xl font-semibold text-foreground">Mis Cotizaciones</h1>
 
       {error && <ErrorText>{error}</ErrorText>}
-      {cotizaciones === null && !error && <p className="text-sm text-muted">Cargando…</p>}
+      {cotizaciones === null && !error && <EstadoCargando />}
       {cotizaciones?.length === 0 && (
-        <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-border py-16 text-center">
-          <IconReceipt className="h-8 w-8 text-muted" />
-          <p className="text-sm text-muted">Todavía no tienes cotizaciones.</p>
-        </div>
+        <EstadoVacio icono={IconReceipt} titulo="Todavía no tienes cotizaciones" />
       )}
 
       <div className="flex flex-col gap-3">

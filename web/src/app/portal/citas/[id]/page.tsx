@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { PortalShell } from "@/components/PortalShell";
 import { Badge, Button, Card, ErrorText, SuccessText, WarningText } from "@/components/ui";
 import { IconChevronLeft } from "@/components/icons";
+import { EstadoCargando } from "@/components/estados";
 import { obtenerTokenPortal, portalFetch } from "@/lib/portalApi";
 
 type CitaDetalle = {
@@ -77,7 +78,7 @@ export default function PortalCitaDetallePage() {
       </Link>
 
       {error && <ErrorText>{error}</ErrorText>}
-      {!cita && !error && <p className="text-sm text-muted">Cargando…</p>}
+      {!cita && !error && <EstadoCargando />}
 
       {cita && (
         <div className="flex flex-col gap-4">

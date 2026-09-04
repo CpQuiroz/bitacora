@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { PortalShell } from "@/components/PortalShell";
 import { Badge, Card, ErrorText } from "@/components/ui";
 import { IconWallet } from "@/components/icons";
+import { EstadoCargando, EstadoVacio } from "@/components/estados";
 import { obtenerTokenPortal, portalFetch } from "@/lib/portalApi";
 
 type Cobro = { id: string; monto: number; fecha_emision: string; fecha_vencimiento: string; fecha_pago: string | null; estado: string };
@@ -39,12 +40,9 @@ export default function PortalCobrosPage() {
       <h1 className="mb-4 text-xl font-semibold text-foreground">Mis Cobros</h1>
 
       {error && <ErrorText>{error}</ErrorText>}
-      {cobros === null && !error && <p className="text-sm text-muted">Cargando…</p>}
+      {cobros === null && !error && <EstadoCargando />}
       {cobros?.length === 0 && (
-        <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-border py-16 text-center">
-          <IconWallet className="h-8 w-8 text-muted" />
-          <p className="text-sm text-muted">No tienes cobros registrados.</p>
-        </div>
+        <EstadoVacio icono={IconWallet} titulo="No tienes cobros registrados" />
       )}
 
       <div className="flex flex-col gap-3">

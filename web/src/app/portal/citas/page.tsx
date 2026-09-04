@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { PortalShell } from "@/components/PortalShell";
 import { Badge, Card, ErrorText } from "@/components/ui";
 import { IconCalendar } from "@/components/icons";
+import { EstadoCargando, EstadoVacio } from "@/components/estados";
 import { obtenerTokenPortal, portalFetch } from "@/lib/portalApi";
 
 type CitaListado = { id: string; titulo: string; fecha: string; hora: string | null; estado: string };
@@ -40,12 +41,9 @@ export default function PortalCitasPage() {
       <h1 className="mb-4 text-xl font-semibold text-foreground">Mis Citas</h1>
 
       {error && <ErrorText>{error}</ErrorText>}
-      {citas === null && !error && <p className="text-sm text-muted">Cargando…</p>}
+      {citas === null && !error && <EstadoCargando />}
       {citas?.length === 0 && (
-        <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-border py-16 text-center">
-          <IconCalendar className="h-8 w-8 text-muted" />
-          <p className="text-sm text-muted">Todavía no tienes citas agendadas.</p>
-        </div>
+        <EstadoVacio icono={IconCalendar} titulo="Todavía no tienes citas agendadas" />
       )}
 
       <div className="flex flex-col gap-3">

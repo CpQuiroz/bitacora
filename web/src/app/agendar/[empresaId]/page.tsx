@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { Button, ErrorText, Input, Label, Textarea } from "@/components/ui";
+import { EstadoCargando } from "@/components/estados";
 import { IconCalendar, IconCheck } from "@/components/icons";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
@@ -87,7 +88,7 @@ export default function ReservaPublicaPage() {
   if (info === null) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <p className="text-sm text-muted">Cargando…</p>
+        <EstadoCargando />
       </div>
     );
   }
@@ -136,7 +137,7 @@ export default function ReservaPublicaPage() {
           <div>
             <p className="mb-2 text-sm font-medium text-foreground">Elige un día</p>
             {disponibilidad === null ? (
-              <p className="text-sm text-muted">Cargando disponibilidad…</p>
+              <EstadoCargando mensaje="Cargando disponibilidad" />
             ) : fechasConCupo.length === 0 ? (
               <p className="text-sm text-muted">No hay horas disponibles por ahora — vuelve a intentar más tarde.</p>
             ) : (
