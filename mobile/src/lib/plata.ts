@@ -15,3 +15,15 @@ export function agruparMiles(digitos: string): string {
 export function pesos(n: number): string {
   return `$${Math.round(n || 0).toLocaleString("es-CL")}`;
 }
+
+/**
+ * Monto en la moneda de la empresa. La mayoría son CLP (usa `pesos`);
+ * para otras monedas antepone el código en vez de usar
+ * Intl.NumberFormat con `currency` (no probado en Hermes/RN todavía —
+ * la web sí lo usa vía formatMoneda, acá se prefiere el camino ya
+ * probado en el resto de la app).
+ */
+export function formatearMoneda(n: number, moneda = "CLP"): string {
+  const monto = Math.round(n || 0).toLocaleString("es-CL");
+  return !moneda || moneda === "CLP" ? `$${monto}` : `${moneda} ${monto}`;
+}

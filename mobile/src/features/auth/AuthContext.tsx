@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
-import type { Empresa, Modulo, Usuario } from "@bitacora/shared";
+import type { Accion, Empresa, Modulo, Usuario } from "@bitacora/shared";
 import { supabase } from "../../lib/supabase";
 import { apiJson } from "../../services/api";
 import { guardarCache, leerCache } from "../../services/sync/cache";
@@ -22,6 +22,10 @@ type EstadoAuth =
       // ajustes por empresa de Configuración → Perfiles). Lo usa la
       // navegación para decidir pestañas.
       modulosVisibles: Modulo[];
+      // Acciones sensibles delegadas del rol (facturar, ver_dashboard,
+      // etc. — packages/shared/src/permisos.ts). Mismo dato que ya usa
+      // la web para decidir, por ejemplo, quién ve el Dashboard/Informes.
+      acciones: Accion[];
       // Ley 21.719 — true si no aceptó la versión vigente de la Política
       // de Privacidad / Términos. Perfil muestra un aviso.
       consentimientoPendiente: boolean;
@@ -47,6 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         usuario: UsuarioConEmpresa | null;
         modulos_deshabilitados: Modulo[];
         modulos_visibles?: Modulo[];
+        acciones?: Accion[];
         rol_exige_2fa?: boolean;
         consentimiento_pendiente?: boolean;
       }>("/api/me"),
@@ -63,13 +68,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
       // Sin señal: intentar mostrar lo cacheado para no bloquear al técnico.
-      const cache = await leerCache<{ usuario: UsuarioConEmpresa; modulos: Modulo[]; visibles?: Modulo[] }>(CACHE_ME);
+      const cache = await leerCache<{ usuario: UsuarioConEmpresa; modulos: Modulo[]; visibles?: Modulo[]; acciones?: Accion[] }>(
+        CACHE_ME
+      );
       if (cache) {
         setEstado({
           fase: "listo",
           usuario: cache.datos.usuario,
           modulosDeshabilitados: cache.datos.modulos,
           modulosVisibles: cache.datos.visibles ?? [],
+          acciones: cache.datos.acciones ?? [],
           consentimientoPendiente: false,
         });
       } else {
@@ -85,7 +93,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const usuario = resMe.data.usuario;
     const modulos = resMe.data.modulos_deshabilitados ?? [];
     const visibles = resMe.data.modulos_visibles ?? [];
-    await guardarCache(CACHE_ME, { usuario, modulos, visibles });
+    const acciones = resMe.data.acciones ?? [];
+    await guardarCache(CACHE_ME, { usuario, modulos, visibles, acciones });
 
     // La exigencia de 2FA la define roles.requiere_2fa (editable desde el
     // Panel de Super-Admin) — el backend la manda en /api/me.
@@ -100,6 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       usuario,
       modulosDeshabilitados: modulos,
       modulosVisibles: visibles,
+      acciones,
       consentimientoPendiente: resMe.data.consentimiento_pendiente ?? false,
     });
   }, []);

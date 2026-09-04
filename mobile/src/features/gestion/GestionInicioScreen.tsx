@@ -10,6 +10,7 @@ export function GestionInicioScreen({ navigation }: NativeStackScreenProps<Gesti
   const t = useTema();
   const auth = useAuth();
   const visibles = auth.fase === "listo" ? auth.modulosVisibles : [];
+  const acciones = auth.fase === "listo" ? auth.acciones : [];
 
   const items: { titulo: string; sub: string; icono: keyof typeof Ionicons.glyphMap; ir: () => void }[] = [];
   if (visibles.includes("financiero")) {
@@ -24,6 +25,18 @@ export function GestionInicioScreen({ navigation }: NativeStackScreenProps<Gesti
       sub: "Registra un gasto con categoría, centro de costo y comprobante",
       icono: "wallet-outline",
       ir: () => navigation.navigate("GastoForm"),
+    });
+  }
+  // ver_dashboard es la misma acción sensible que ya gatea el Dashboard
+  // en la web (admin/supervisor/contador); se combina con el módulo
+  // informes por si la empresa lo desactivó para ese rol — evita un tab
+  // que siempre daría 403.
+  if (acciones.includes("ver_dashboard") && visibles.includes("informes")) {
+    items.push({
+      titulo: "Informes",
+      sub: "Visión general, financiero, ventas, operaciones, servicios, clientes y gastos",
+      icono: "bar-chart-outline",
+      ir: () => navigation.navigate("Informes"),
     });
   }
   if (visibles.includes("asistente")) {
