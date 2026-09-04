@@ -8,6 +8,7 @@ import { useTema } from "../../theme";
 import { Badge, Button, Card, ErrorState, LoadingScreen, Text } from "../../components/ui";
 import { OfflineBanner } from "../../components/OfflineBanner";
 import { useRed } from "../../services/sync/NetworkProvider";
+import { useAuth } from "../auth/AuthContext";
 import { ubicacionActual } from "../../lib/geo";
 import {
   encolarCheckin,
@@ -34,6 +35,8 @@ const ETIQUETA_OS: Record<string, string> = {
 export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenProps<TrabajosStackParamList, "TrabajoDetalle">) {
   const t = useTema();
   const { trabajoId } = route.params;
+  const auth = useAuth();
+  const esGestion = auth.fase === "listo" && auth.usuario.rol !== "colaborador";
   const { pendientes, fallidas, enLinea, descartar } = useRed();
   const fotosPendientes = useMemo(() => {
     const esFotoDeAca = (a: (typeof pendientes)[number]) =>
@@ -172,6 +175,16 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
             <Text variante="etiqueta" tono="brand" weight="semibold">
               Orden N° {orden.folio}
             </Text>
+          ) : null}
+          {esGestion ? (
+            <View style={{ flexDirection: "row", marginTop: t.espacio(1) }}>
+              <Button
+                titulo="Editar datos"
+                variante="secundario"
+                icono={<Ionicons name="create-outline" size={16} color={t.colores.foreground} />}
+                onPress={() => navigation.navigate("TrabajoForm", { trabajoId })}
+              />
+            </View>
           ) : null}
         </View>
 

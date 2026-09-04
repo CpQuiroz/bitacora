@@ -6,6 +6,7 @@ export type RootStackParamList = {
 export type TrabajosStackParamList = {
   TrabajosLista: undefined;
   TrabajoDetalle: { trabajoId: string; titulo?: string };
+  TrabajoForm: { trabajoId?: string } | undefined;
 };
 
 export type ViajesStackParamList = {

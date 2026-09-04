@@ -173,8 +173,49 @@ trabajosRouter.patch(
       hora_programada,
       equipo_id,
       responsable_id,
+      cliente,
+      cliente_id,
+      ubicacion,
+      codigo,
+      monto,
     } = req.body ?? {};
     const cambios: Partial<Trabajo> = {};
+
+    // Editar los datos base del trabajo (cliente, ubicación, código,
+    // monto) es tarea de gestión. Un colaborador solo completa lo suyo
+    // en terreno (formulario, check-in, fotos, firma).
+    const CAMPOS_GESTION = { cliente, cliente_id, ubicacion, codigo, monto };
+    if (req.rol === "colaborador" && Object.values(CAMPOS_GESTION).some((v) => v !== undefined)) {
+      res.status(403).json({ error: "Tu rol no puede editar los datos del trabajo" });
+      return;
+    }
+
+    if (cliente !== undefined) {
+      if (typeof cliente !== "string" || !cliente.trim()) {
+        res.status(400).json({ error: "El cliente no puede quedar vacío" });
+        return;
+      }
+      cambios.cliente = cliente.trim();
+    }
+    if (cliente_id !== undefined) {
+      if (cliente_id && !(await clienteExiste(req.empresaId!, cliente_id))) {
+        res.status(400).json({ error: "cliente_id inválido" });
+        return;
+      }
+      cambios.cliente_id = cliente_id || null;
+    }
+    if (ubicacion !== undefined) cambios.ubicacion = ubicacion?.trim() || null;
+    if (codigo !== undefined) cambios.codigo = codigo?.trim() || null;
+    // Monto suelto: solo para trabajos simples (sin ítems de OS). Si vienen
+    // ítems en el mismo request, manda el cálculo por ítems (más abajo).
+    if (monto !== undefined && items === undefined) {
+      const montoNum = Number(monto ?? 0);
+      if (Number.isNaN(montoNum) || montoNum < 0) {
+        res.status(400).json({ error: "monto inválido" });
+        return;
+      }
+      cambios.monto = montoNum;
+    }
 
     // Reasignar la OS a otra persona: lo hace quien gestiona (admin /
     // supervisor / rol con acceso), nunca un colaborador (no se saca de
@@ -438,6 +479,13 @@ function parsearItemsOS(items: unknown): ItemOsParseado[] | null {
 trabajosRouter.post(
   "/",
   ah<RequestConEmpresa>(async (req, res) => {
+    // Crear trabajos/OS es tarea de gestión. Un colaborador (chofer /
+    // técnico) trabaja sobre los que ya tiene asignados (check-in, fotos,
+    // firma), pero no crea nuevos desde la app.
+    if (req.rol === "colaborador") {
+      res.status(403).json({ error: "Tu rol no puede crear trabajos" });
+      return;
+    }
     const {
       cliente,
       cliente_id,

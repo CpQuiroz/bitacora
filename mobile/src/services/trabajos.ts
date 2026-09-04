@@ -1,5 +1,5 @@
 import * as Crypto from "expo-crypto";
-import type { AnalisisFoto, Cliente, OrdenServicio, TipoTrabajo, Trabajo } from "@bitacora/shared";
+import type { AnalisisFoto, Cliente, EstadoTrabajo, OrdenServicio, TipoTrabajo, Trabajo, Usuario } from "@bitacora/shared";
 import { apiJson } from "./api";
 import { encolar } from "./sync/queue";
 import { guardarCache, leerCache } from "./sync/cache";
@@ -49,6 +49,59 @@ export async function obtenerDetalle(trabajoId: string): Promise<DetalleTrabajo>
   const cache = await leerCache<Omit<DetalleTrabajo, "desdeCache" | "guardadoEn">>(clave);
   if (cache) return { ...cache.datos, desdeCache: true, guardadoEn: cache.guardadoEn };
   throw new Error(t.error);
+}
+
+// --- Crear / editar el trabajo (solo roles de gestión) ---
+// Van directo contra el servidor (no por la cola): es una acción de
+// oficina y necesitamos el id / el error real al toque.
+
+/** Clientes + equipo de la empresa, para los selectores del formulario. */
+export async function catalogoParaTrabajo(): Promise<{ clientes: Cliente[]; equipo: Usuario[] }> {
+  const [c, e] = await Promise.all([apiJson<Cliente[]>("/api/clientes"), apiJson<Usuario[]>("/api/usuarios")]);
+  if (c.ok) await guardarCache("trabajos:clientes", c.data);
+  if (e.ok) await guardarCache("trabajos:equipo", e.data);
+  const clientes = c.ok ? c.data : (await leerCache<Cliente[]>("trabajos:clientes"))?.datos ?? [];
+  const equipo = e.ok ? e.data : (await leerCache<Usuario[]>("trabajos:equipo"))?.datos ?? [];
+  return { clientes, equipo };
+}
+
+export type BorradorTrabajo = {
+  cliente_id: string; // cliente guardado (opcional)
+  cliente: string; // nombre a mostrar / facturar (requerido)
+  responsable_id: string;
+  fecha: string;
+  monto: string;
+  ubicacion: string;
+  codigo: string;
+  estado: EstadoTrabajo;
+};
+
+function cuerpoTrabajo(b: BorradorTrabajo) {
+  return {
+    cliente: b.cliente.trim(),
+    cliente_id: b.cliente_id || null,
+    responsable_id: b.responsable_id || null,
+    fecha: b.fecha,
+    monto: Number(String(b.monto).replace(/\D/g, "") || 0),
+    ubicacion: b.ubicacion.trim() || null,
+    codigo: b.codigo.trim() || null,
+    estado: b.estado,
+  };
+}
+
+export async function crearTrabajo(
+  b: BorradorTrabajo
+): Promise<{ ok: true; trabajo: Trabajo } | { ok: false; error: string }> {
+  const res = await apiJson<Trabajo>("/api/trabajos", { method: "POST", body: JSON.stringify(cuerpoTrabajo(b)) });
+  return res.ok ? { ok: true, trabajo: res.data } : { ok: false, error: res.error };
+}
+
+export async function editarTrabajo(
+  id: string,
+  b: BorradorTrabajo
+): Promise<{ ok: true; trabajo: Trabajo } | { ok: false; error: string }> {
+  const res = await apiJson<Trabajo>(`/api/trabajos/${id}`, { method: "PATCH", body: JSON.stringify(cuerpoTrabajo(b)) });
+  return res.ok ? { ok: true, trabajo: res.data } : { ok: false, error: res.error };
 }
 
 // --- Mutaciones: todas van por la cola (se intentan al toque y se

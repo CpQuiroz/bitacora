@@ -172,12 +172,14 @@ export function ViajeDetalleScreen({ route, navigation }: NativeStackScreenProps
           </Card>
         ) : null}
 
-        {esGestion && viaje.estado !== "facturado" ? (
+        {viaje.estado !== "facturado" ? (
           <View style={{ gap: t.espacio(2.5), marginTop: t.espacio(1), borderTopWidth: 1, borderTopColor: t.colores.border, paddingTop: t.espacio(4) }}>
-            <Text variante="caption" tono="muted" weight="semibold" style={{ textTransform: "uppercase" }}>
-              Gestión
-            </Text>
-            {viaje.estado === "borrador" ? (
+            {esGestion ? (
+              <Text variante="caption" tono="muted" weight="semibold" style={{ textTransform: "uppercase" }}>
+                Gestión
+              </Text>
+            ) : null}
+            {esGestion && viaje.estado === "borrador" ? (
               <Button titulo="Aprobar viaje" tamano="lg" onPress={aprobar} cargando={ocupado} />
             ) : null}
             <Button
@@ -186,7 +188,7 @@ export function ViajeDetalleScreen({ route, navigation }: NativeStackScreenProps
               icono={<Ionicons name="create-outline" size={16} color={t.colores.foreground} />}
               onPress={() => navigation.navigate("ViajeForm", { viajeId })}
             />
-            {viaje.estado === "borrador" ? (
+            {esGestion && viaje.estado === "borrador" ? (
               <Button titulo="Rechazar viaje" variante="peligro" onPress={rechazar} cargando={ocupado} />
             ) : null}
           </View>

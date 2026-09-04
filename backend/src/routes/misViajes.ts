@@ -174,14 +174,15 @@ misViajesRouter.post(
   })
 );
 
-// Aprobar / editar un viaje desde la app. Solo roles de gestión.
+// Editar un viaje desde la app.
+//  - Gestión: cualquier viaje de la empresa, y además puede aprobarlo
+//    (cambiar el estado a "confirmado").
+//  - Colaborador: solo los suyos y solo mientras no estén facturados; no
+//    puede cambiar el estado (aprobar es de la oficina).
 misViajesRouter.patch(
   "/:id",
   ah<RequestConEmpresa>(async (req, res) => {
-    if (!esGestion(req)) {
-      res.status(403).json({ error: "No puedes modificar viajes del equipo" });
-      return;
-    }
+    const gestion = esGestion(req);
 
     const { data: existente } = await supabase
       .from("viajes")
@@ -193,12 +194,21 @@ misViajesRouter.patch(
       res.status(404).json({ error: "Viaje no encontrado" });
       return;
     }
+    if (!gestion && existente.chofer_id !== req.userId) {
+      res.status(403).json({ error: "Solo puedes editar tus propios viajes" });
+      return;
+    }
     if (existente.estado === "facturado") {
       res.status(400).json({ error: "Este viaje ya fue facturado y no se puede editar" });
       return;
     }
 
     const { numero_guia, origen, destino, cliente_id, km_inicial, km_final, subtotal, aplica_iva, comentarios, estado } = req.body ?? {};
+
+    if (!gestion && (estado !== undefined || comentarios !== undefined)) {
+      res.status(403).json({ error: "Aprobar y comentar el viaje es tarea de la oficina" });
+      return;
+    }
     const cambios: Partial<Viaje> = {};
 
     if (numero_guia !== undefined) {

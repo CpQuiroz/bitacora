@@ -144,6 +144,9 @@ export async function crearViaje(
     if (res.status >= 500) {
       return { ok: false, error: data.error ?? "El servidor no respondió bien", reintentable: true };
     }
+    if (res.status === 401) {
+      return { ok: false, error: "Tu sesión venció. Sal y vuelve a entrar para registrar el viaje.", reintentable: false };
+    }
     return { ok: false, error: data.error ?? `Error ${res.status}`, reintentable: false };
   } catch {
     return { ok: false, error: "sin-conexion", reintentable: true };

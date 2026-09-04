@@ -5,7 +5,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { Trabajo } from "@bitacora/shared";
 import { useTema } from "../../theme";
-import { Badge, Card, EmptyState, ErrorState, LoadingScreen, Text } from "../../components/ui";
+import { Badge, Button, Card, EmptyState, ErrorState, LoadingScreen, Text } from "../../components/ui";
 import { OfflineBanner } from "../../components/OfflineBanner";
 import { useAuth } from "../auth/AuthContext";
 import { listarTrabajos } from "../../services/trabajos";
@@ -53,11 +53,17 @@ export function TrabajosScreen({ navigation }: NativeStackScreenProps<TrabajosSt
     <View style={{ flex: 1, backgroundColor: t.colores.bg }}>
       <OfflineBanner guardadoEn={guardadoEn} />
       {esGestion && (
+        <View style={{ padding: t.espacio(4), paddingBottom: t.espacio(2) }}>
+          <Button titulo="Nuevo trabajo" onPress={() => navigation.navigate("TrabajoForm")} />
+        </View>
+      )}
+      {esGestion && (
         <View
           style={{
             flexDirection: "row",
             gap: t.espacio(2),
             padding: t.espacio(4),
+            paddingTop: 0,
             paddingBottom: t.espacio(2),
           }}
         >

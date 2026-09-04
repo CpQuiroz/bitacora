@@ -3,6 +3,7 @@ import { useTema } from "../../theme";
 import type { TrabajosStackParamList } from "./types";
 import { TrabajosScreen } from "../../features/trabajos/TrabajosScreen";
 import { TrabajoDetalleScreen } from "../../features/trabajos/TrabajoDetalleScreen";
+import { TrabajoFormScreen } from "../../features/trabajos/TrabajoFormScreen";
 
 const Stack = createNativeStackNavigator<TrabajosStackParamList>();
 
@@ -24,6 +25,7 @@ export function TrabajosStack() {
         component={TrabajoDetalleScreen}
         options={({ route }) => ({ title: route.params.titulo ?? "Trabajo" })}
       />
+      <Stack.Screen name="TrabajoForm" component={TrabajoFormScreen} options={{ title: "Nuevo trabajo", presentation: "modal" }} />
     </Stack.Navigator>
   );
 }
