@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { Alert, Pressable, ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import type { Cliente, Prioridad, Usuario } from "@bitacora/shared";
+import type { Cliente, PaqueteSesionesConSaldo, Prioridad, Usuario } from "@bitacora/shared";
 import { useTema } from "../../theme";
-import { Button, Input, LoadingScreen, PickerBuscable, Text } from "../../components/ui";
+import { Button, Card, Input, LoadingScreen, PickerBuscable, Text } from "../../components/ui";
+import { SelectorCliente } from "../../components/SelectorCliente";
 import { useRed } from "../../services/sync/NetworkProvider";
 import { useAuth } from "../auth/AuthContext";
 import { catalogoParaCita, crearCita, editarCita, obtenerTarea, type BorradorCita } from "../../services/agenda";
+import { crearPaquete, listarPaquetesCliente } from "../../services/paquetes";
 import type { AgendaStackParamList } from "../../shell/navigation/types";
 
 const DIAS = ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"];
@@ -27,6 +29,7 @@ export function NuevaCitaScreen({ navigation, route }: NativeStackScreenProps<Ag
   const { enLinea } = useRed();
   const auth = useAuth();
   const esGestion = auth.fase === "listo" && auth.usuario.rol !== "colaborador";
+  const agendaPro = auth.fase === "listo" && auth.modulosVisibles.includes("agenda_pro");
 
   const editandoId = route.params?.tareaId ?? null;
   const fechaInicial = route.params?.fecha ?? clave(new Date());
@@ -36,6 +39,12 @@ export function NuevaCitaScreen({ navigation, route }: NativeStackScreenProps<Ag
   const [cargandoCita, setCargandoCita] = useState(Boolean(editandoId));
   const [guardando, setGuardando] = useState(false);
 
+  const [paquetes, setPaquetes] = useState<PaqueteSesionesConSaldo[]>([]);
+  const [nuevoPaqueteAbierto, setNuevoPaqueteAbierto] = useState(false);
+  const [nombrePaquete, setNombrePaquete] = useState("");
+  const [cantidadPaquete, setCantidadPaquete] = useState("10");
+  const [creandoPaquete, setCreandoPaquete] = useState(false);
+
   const [b, setB] = useState<BorradorCita>({
     titulo: "",
     fecha: fechaInicial,
@@ -44,6 +53,8 @@ export function NuevaCitaScreen({ navigation, route }: NativeStackScreenProps<Ag
     responsable_id: "",
     descripcion: "",
     prioridad: "media",
+    paquete_id: "",
+    sesiones_consumidas: 1,
   });
   const set = <K extends keyof BorradorCita>(k: K, v: BorradorCita[K]) => setB((p) => ({ ...p, [k]: v }));
 
@@ -66,6 +77,21 @@ export function NuevaCitaScreen({ navigation, route }: NativeStackScreenProps<Ag
     });
   }, []);
 
+  // Carga los paquetes del cliente elegido (Agenda Pro).
+  useEffect(() => {
+    if (!agendaPro || !b.cliente_id) {
+      setPaquetes([]);
+      return;
+    }
+    let vivo = true;
+    listarPaquetesCliente(b.cliente_id).then((ps) => {
+      if (vivo) setPaquetes(ps);
+    });
+    return () => {
+      vivo = false;
+    };
+  }, [agendaPro, b.cliente_id]);
+
   useEffect(() => {
     if (!editandoId) return;
     obtenerTarea(editandoId)
@@ -77,6 +103,8 @@ export function NuevaCitaScreen({ navigation, route }: NativeStackScreenProps<Ag
           cliente_id: tarea.cliente_id ?? "",
           responsable_id: tarea.responsable_id ?? "",
           descripcion: tarea.descripcion ?? "",
+          paquete_id: tarea.paquete_id ?? "",
+          sesiones_consumidas: tarea.sesiones_consumidas ?? 1,
           prioridad: tarea.prioridad,
         });
       })
@@ -161,14 +189,81 @@ export function NuevaCitaScreen({ navigation, route }: NativeStackScreenProps<Ag
         onChangeText={(v) => set("hora", v)}
       />
 
-      <PickerBuscable
+      <SelectorCliente
         etiqueta="Cliente (opcional)"
-        placeholder="Elegir cliente"
         valor={b.cliente_id}
-        opcionVacia="Sin cliente"
-        opciones={clientes.map((c) => ({ id: c.id, label: c.nombre }))}
         onElegir={(id) => set("cliente_id", id)}
+        clientes={clientes}
+        onClienteCreado={(c) => setClientes((prev) => [...(prev ?? []), c])}
       />
+
+      {agendaPro && b.cliente_id ? (
+        <Card plano style={{ gap: t.espacio(3) }}>
+          <Text variante="etiqueta" weight="semibold">
+            Paquete de sesiones (Agenda Pro)
+          </Text>
+          <PickerBuscable
+            etiqueta="Paquete"
+            placeholder="Sin paquete — cita suelta"
+            opcionVacia="Sin paquete — cita suelta"
+            valor={b.paquete_id}
+            opciones={paquetes.map((p) => ({
+              id: p.id,
+              label: p.nombre,
+              sublabel: `${p.saldo}/${p.cantidad_total} sesiones disponibles`,
+            }))}
+            onElegir={(id) => set("paquete_id", id)}
+          />
+          {b.paquete_id ? (
+            <Input
+              etiqueta="Sesiones que descuenta esta cita"
+              keyboardType="numeric"
+              value={String(b.sesiones_consumidas)}
+              onChangeText={(v) => set("sesiones_consumidas", Math.max(1, Number(v.replace(/\D/g, "")) || 1))}
+            />
+          ) : null}
+
+          {nuevoPaqueteAbierto ? (
+            <View style={{ gap: t.espacio(2.5), borderTopWidth: 1, borderTopColor: t.colores.border, paddingTop: t.espacio(3) }}>
+              <Input etiqueta="Nombre del paquete" placeholder="Ej. Pack 10 sesiones" value={nombrePaquete} onChangeText={setNombrePaquete} />
+              <Input etiqueta="Cantidad de sesiones" keyboardType="numeric" value={cantidadPaquete} onChangeText={(v) => setCantidadPaquete(v.replace(/\D/g, ""))} />
+              <View style={{ flexDirection: "row", gap: t.espacio(2) }}>
+                <Button
+                  titulo="Crear paquete"
+                  cargando={creandoPaquete}
+                  onPress={async () => {
+                    const cant = Number(cantidadPaquete) || 0;
+                    if (!nombrePaquete.trim() || cant <= 0) {
+                      Alert.alert("Faltan datos", "Ponle un nombre y una cantidad de sesiones.");
+                      return;
+                    }
+                    setCreandoPaquete(true);
+                    const r = await crearPaquete({ cliente_id: b.cliente_id, nombre: nombrePaquete, cantidad_total: cant });
+                    setCreandoPaquete(false);
+                    if (!r.ok) {
+                      Alert.alert("No se pudo crear el paquete", r.error);
+                      return;
+                    }
+                    const ps = await listarPaquetesCliente(b.cliente_id);
+                    setPaquetes(ps);
+                    setB((p) => ({ ...p, paquete_id: r.paquete.id }));
+                    setNuevoPaqueteAbierto(false);
+                    setNombrePaquete("");
+                    setCantidadPaquete("10");
+                  }}
+                />
+                <Button titulo="Cancelar" variante="ghost" onPress={() => setNuevoPaqueteAbierto(false)} />
+              </View>
+            </View>
+          ) : (
+            <Pressable onPress={() => setNuevoPaqueteAbierto(true)} hitSlop={6}>
+              <Text variante="caption" weight="semibold" tono="brand">
+                ＋ Crear paquete nuevo para este cliente
+              </Text>
+            </Pressable>
+          )}
+        </Card>
+      ) : null}
 
       {esGestion && equipo.length > 0 ? (
         <PickerBuscable

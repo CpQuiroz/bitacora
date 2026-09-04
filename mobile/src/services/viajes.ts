@@ -110,50 +110,77 @@ function cuerpoViaje(b: BorradorViaje) {
   };
 }
 
+export type Foto = { uri: string; name: string; type: string };
+
 export type ResultadoCrearViaje =
-  | { ok: true; viaje: ViajeConDatos }
+  | { ok: true; viaje: ViajeConDatos; fotoPendiente: boolean }
   | { ok: false; error: string; reintentable: boolean };
 
 /**
- * Crea el viaje directo contra el servidor (no por la cola): así el
- * chofer sabe al toque si llegó a la oficina o si hubo un error real.
- * Si falla por señal/servidor, `reintentable: true` y la pantalla lo
- * manda a la cola como respaldo.
+ * Crea el viaje contra el servidor y devuelve al toque si llegó o si
+ * hubo un error real.
+ *
+ * Clave: los datos del viaje van como **JSON** (rápido, con reintentos,
+ * aguanta el arranque en frío de Render). La foto de la guía se sube
+ * **aparte**, contra el viaje ya creado — así el viaje nunca se pierde
+ * aunque la foto falle o no haya señal. Si la subida de la foto falla,
+ * queda en la cola (`fotoPendiente: true`) y se reintenta sola.
+ *
+ * Si la creación misma falla por señal/servidor → `reintentable: true` y
+ * la pantalla manda TODO (viaje + foto) a la cola como respaldo.
  */
-export async function crearViaje(
-  b: BorradorViaje,
-  foto?: { uri: string; name: string; type: string }
-): Promise<ResultadoCrearViaje> {
-  const fd = new FormData();
-  const c = cuerpoViaje(b);
-  fd.append("cliente_id", c.cliente_id);
-  fd.append("numero_guia", c.numero_guia);
-  fd.append("origen", c.origen);
-  fd.append("destino", c.destino);
-  if (c.equipo_id) fd.append("equipo_id", c.equipo_id);
-  if (c.km_inicial) fd.append("km_inicial", c.km_inicial);
-  if (c.km_final) fd.append("km_final", c.km_final);
-  fd.append("subtotal", c.subtotal);
-  fd.append("aplica_iva", String(c.aplica_iva));
-  if (foto) fd.append("foto", { uri: foto.uri, name: foto.name, type: foto.type } as unknown as Blob);
+export async function crearViaje(b: BorradorViaje, foto?: Foto): Promise<ResultadoCrearViaje> {
+  const res = await apiJson<ViajeConDatos>("/api/mis-viajes", {
+    method: "POST",
+    body: JSON.stringify(cuerpoViaje(b)),
+  });
 
-  try {
-    const res = await apiFetch("/api/mis-viajes", { method: "POST", body: fd }, 45000);
-    const data = (await res.json().catch(() => ({}))) as ViajeConDatos & { error?: string };
-    if (res.ok) return { ok: true, viaje: data };
-    if (res.status >= 500) {
-      return { ok: false, error: data.error ?? "El servidor no respondió bien", reintentable: true };
-    }
+  if (!res.ok) {
     if (res.status === 401) {
       return { ok: false, error: "Tu sesión venció. Sal y vuelve a entrar para registrar el viaje.", reintentable: false };
     }
-    return { ok: false, error: data.error ?? `Error ${res.status}`, reintentable: false };
+    // 4xx (validación) = error real, no se reintenta. 0 (red/timeout) o
+    // 5xx = transitorio, la pantalla lo encola.
+    const reintentable = res.status === 0 || res.status >= 500;
+    return { ok: false, error: res.error, reintentable };
+  }
+
+  let fotoPendiente = false;
+  if (foto) {
+    const okFoto = await subirFotoGuia(res.data.id, foto);
+    if (!okFoto) {
+      await encolarFotoGuia(res.data.id, foto);
+      fotoPendiente = true;
+    }
+  }
+  return { ok: true, viaje: res.data, fotoPendiente };
+}
+
+/** Sube la foto de la guía a un viaje existente. `true` si quedó guardada. */
+export async function subirFotoGuia(viajeId: string, foto: Foto): Promise<boolean> {
+  const fd = new FormData();
+  fd.append("foto", { uri: foto.uri, name: foto.name, type: foto.type } as unknown as Blob);
+  try {
+    const res = await apiFetch(`/api/mis-viajes/${viajeId}/foto-guia`, { method: "POST", body: fd }, 45000);
+    return res.ok;
   } catch {
-    return { ok: false, error: "sin-conexion", reintentable: true };
+    return false;
   }
 }
 
-export function encolarViaje(borrador: BorradorViaje, foto?: { uri: string; name: string; type: string }) {
+export function encolarFotoGuia(viajeId: string, foto: Foto) {
+  return encolar({
+    etiqueta: "Foto de la guía",
+    recurso: "viajes",
+    path: `/api/mis-viajes/${viajeId}/foto-guia`,
+    method: "POST",
+    body: {},
+    archivo: { ...foto, campo: "foto" },
+  });
+}
+
+/** Respaldo: encola la creación completa del viaje (JSON, + foto si hay). */
+export function encolarViaje(borrador: BorradorViaje, foto?: Foto) {
   return encolar({
     etiqueta: "Registrar viaje",
     recurso: "viajes",

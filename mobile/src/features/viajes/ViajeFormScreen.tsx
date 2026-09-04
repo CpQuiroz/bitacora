@@ -6,8 +6,10 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { Cliente, Equipo } from "@bitacora/shared";
 import { useTema } from "../../theme";
 import { Button, Card, Input, LoadingScreen, PickerBuscable, Text } from "../../components/ui";
+import { SelectorCliente } from "../../components/SelectorCliente";
 import { useRed } from "../../services/sync/NetworkProvider";
 import { comprimirImagen } from "../../lib/imagen";
+import { CIUDADES_CHILE } from "../../lib/ciudadesChile";
 import {
   catalogoParaViaje,
   crearViaje,
@@ -124,7 +126,13 @@ export function ViajeFormScreen({ navigation, route }: NativeStackScreenProps<Vi
       const r = await crearViaje(borrador, foto ?? undefined);
       if (r.ok) {
         setGuardando(false);
-        Alert.alert("Viaje enviado", "Llegó a la oficina. Queda pendiente de aprobación.", [{ text: "Listo", onPress: volver }]);
+        Alert.alert(
+          "Viaje registrado",
+          r.fotoPendiente
+            ? "Llegó a la oficina. La foto de la guía se está subiendo y se reintenta sola si falla."
+            : "Llegó a la oficina. Queda pendiente de aprobación.",
+          [{ text: "Listo", onPress: volver }]
+        );
         return;
       }
       if (!r.reintentable) {
@@ -158,12 +166,11 @@ export function ViajeFormScreen({ navigation, route }: NativeStackScreenProps<Vi
       contentContainerStyle={{ padding: t.espacio(5), gap: t.espacio(4), paddingBottom: t.espacio(10) }}
       keyboardShouldPersistTaps="handled"
     >
-      <PickerBuscable
-        etiqueta="Cliente"
-        placeholder="Elegir cliente"
+      <SelectorCliente
         valor={b.cliente_id}
-        opciones={clientes.map((c) => ({ id: c.id, label: c.nombre }))}
         onElegir={(id) => set("cliente_id", id)}
+        clientes={clientes}
+        onClienteCreado={(c) => setClientes((prev) => [...(prev ?? []), c])}
       />
 
       <Input etiqueta="Número de guía" value={b.numero_guia} onChangeText={(v) => set("numero_guia", v)} />
@@ -181,8 +188,24 @@ export function ViajeFormScreen({ navigation, route }: NativeStackScreenProps<Vi
         </Card>
       ) : null}
 
-      <Input etiqueta="Origen" value={b.origen} onChangeText={(v) => set("origen", v)} />
-      <Input etiqueta="Destino" value={b.destino} onChangeText={(v) => set("destino", v)} />
+      <PickerBuscable
+        etiqueta="Origen"
+        placeholder="Elegir ciudad de origen"
+        valor={b.origen}
+        opciones={CIUDADES_CHILE.map((c) => ({ id: c, label: c }))}
+        onElegir={(v) => set("origen", v)}
+        permitirLibre
+        textoLibre={(texto) => `Usar "${texto}" (no está en la lista)`}
+      />
+      <PickerBuscable
+        etiqueta="Destino"
+        placeholder="Elegir ciudad de destino"
+        valor={b.destino}
+        opciones={CIUDADES_CHILE.map((c) => ({ id: c, label: c }))}
+        onElegir={(v) => set("destino", v)}
+        permitirLibre
+        textoLibre={(texto) => `Usar "${texto}" (no está en la lista)`}
+      />
 
       {equipos.length > 0 ? (
         <PickerBuscable

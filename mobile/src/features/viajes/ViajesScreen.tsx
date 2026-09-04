@@ -36,9 +36,16 @@ export function ViajesScreen({ navigation }: NativeStackScreenProps<ViajesStackP
   const red = useRed();
   const auth = useAuth();
   const esGestion = auth.fase === "listo" && auth.usuario.rol !== "colaborador";
-  const pendientes = red.pendientes.filter((a) => a.recurso === "viajes").length;
-  const viajesFallidos = red.fallidas.filter((a) => a.recurso === "viajes");
-  const fallidos = viajesFallidos.length;
+  // "Registrar viaje" = la creación completa; "Foto de la guía" = solo la
+  // imagen de un viaje que ya se guardó (no bloquea nada).
+  const esCreacion = (a: (typeof red.pendientes)[number]) => a.recurso === "viajes" && a.etiqueta === "Registrar viaje";
+  const creacionesPendientes = red.pendientes.filter(esCreacion);
+  const creacionesFallidas = red.fallidas.filter(esCreacion);
+  const fotosPendientes = red.pendientes.filter((a) => a.recurso === "viajes" && a.etiqueta === "Foto de la guía").length;
+  const guiaDe = (a: (typeof red.pendientes)[number]) => {
+    const b = (a.body ?? {}) as { numero_guia?: string; origen?: string; destino?: string };
+    return { guia: b.numero_guia ?? "sin número", ruta: b.origen && b.destino ? `${b.origen} → ${b.destino}` : "" };
+  };
 
   const [viajes, setViajes] = useState<ViajeConDatos[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -112,28 +119,57 @@ export function ViajesScreen({ navigation }: NativeStackScreenProps<ViajesStackP
             })}
           </View>
         ) : null}
-        {fallidos > 0 ? (
-          <Card plano style={{ backgroundColor: t.colores.dangerSoft, borderColor: "transparent", gap: t.espacio(2) }}>
-            <Text variante="etiqueta" weight="semibold" style={{ color: t.colores.danger }}>
-              {fallidos} viaje{fallidos === 1 ? " no se pudo enviar" : "s no se pudieron enviar"}
-            </Text>
-            {viajesFallidos.map((a) => (
-              <View key={a.id} style={{ gap: t.espacio(1.5) }}>
-                {a.ultimoError ? (
-                  <Text variante="caption" tono="danger">
-                    {a.ultimoError}
-                  </Text>
-                ) : null}
-                <View style={{ flexDirection: "row", gap: t.espacio(2) }}>
-                  <Button titulo="Reintentar" variante="secundario" onPress={() => red.reintentar(a.id)} />
-                  <Button titulo="Descartar" variante="ghost" onPress={() => red.descartar(a.id)} />
-                </View>
+        {creacionesPendientes.map((a) => {
+          const { guia, ruta } = guiaDe(a);
+          return (
+            <Card key={a.id} plano style={{ backgroundColor: t.colores.surfaceAlt, borderColor: "transparent", gap: t.espacio(1) }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: t.espacio(2) }}>
+                <Ionicons name="cloud-upload-outline" size={16} color={t.colores.muted} />
+                <Text variante="etiqueta" weight="semibold" style={{ flex: 1 }}>
+                  Guía {guia}
+                </Text>
+                <Text variante="caption" tono="muted">
+                  Enviando…
+                </Text>
               </View>
-            ))}
-          </Card>
-        ) : pendientes > 0 ? (
+              {ruta ? (
+                <Text variante="caption" tono="muted">
+                  {ruta}
+                </Text>
+              ) : null}
+              <Text variante="caption" tono="muted">
+                Sin enviar todavía — se reintenta solo. No lo registres de nuevo.
+              </Text>
+            </Card>
+          );
+        })}
+        {creacionesFallidas.map((a) => {
+          const { guia, ruta } = guiaDe(a);
+          return (
+            <Card key={a.id} plano style={{ backgroundColor: t.colores.dangerSoft, borderColor: "transparent", gap: t.espacio(1.5) }}>
+              <Text variante="etiqueta" weight="semibold" style={{ color: t.colores.danger }}>
+                Guía {guia} — no se pudo enviar
+              </Text>
+              {ruta ? (
+                <Text variante="caption" tono="muted">
+                  {ruta}
+                </Text>
+              ) : null}
+              {a.ultimoError ? (
+                <Text variante="caption" tono="danger">
+                  {a.ultimoError}
+                </Text>
+              ) : null}
+              <View style={{ flexDirection: "row", gap: t.espacio(2) }}>
+                <Button titulo="Reintentar" variante="secundario" onPress={() => red.reintentar(a.id)} />
+                <Button titulo="Descartar" variante="ghost" onPress={() => red.descartar(a.id)} />
+              </View>
+            </Card>
+          );
+        })}
+        {fotosPendientes > 0 ? (
           <Text variante="caption" tono="muted">
-            {pendientes} viaje{pendientes === 1 ? "" : "s"} sin enviar — se reintenta solo
+            {fotosPendientes} foto{fotosPendientes === 1 ? "" : "s"} de guía subiéndose — el viaje ya quedó guardado
           </Text>
         ) : null}
         <View style={{ flexDirection: "row", gap: t.espacio(2) }}>

@@ -60,6 +60,9 @@ export type BorradorCita = {
   responsable_id: string;
   descripcion: string;
   prioridad: Prioridad;
+  // Agenda Pro: si la cita descuenta de un pack de sesiones del cliente.
+  paquete_id: string;
+  sesiones_consumidas: number;
 };
 
 /** Crea una cita/tarea. Va directo (no por la cola): necesitamos el id que asigna el servidor. */
@@ -74,13 +77,18 @@ export async function crearCita(b: BorradorCita): Promise<{ ok: true; tarea: Tar
       responsable_id: b.responsable_id || null,
       descripcion: b.descripcion.trim() || null,
       prioridad: b.prioridad,
+      paquete_id: b.paquete_id || null,
+      sesiones_consumidas: b.paquete_id ? b.sesiones_consumidas || 1 : undefined,
     }),
   });
   return res.ok ? { ok: true, tarea: res.data } : { ok: false, error: res.error };
 }
 
 export type EdicionCita = Partial<
-  Pick<BorradorCita, "titulo" | "fecha" | "hora" | "cliente_id" | "responsable_id" | "descripcion" | "prioridad">
+  Pick<
+    BorradorCita,
+    "titulo" | "fecha" | "hora" | "cliente_id" | "responsable_id" | "descripcion" | "prioridad" | "paquete_id" | "sesiones_consumidas"
+  >
 >;
 
 /** Edita/reprograma una cita (roles de gestión). Va directo: es acción de oficina y necesita respuesta. */
@@ -93,6 +101,8 @@ export async function editarCita(id: string, c: EdicionCita): Promise<{ ok: true
   if (c.responsable_id !== undefined) body.responsable_id = c.responsable_id || null;
   if (c.descripcion !== undefined) body.descripcion = c.descripcion.trim() || null;
   if (c.prioridad !== undefined) body.prioridad = c.prioridad;
+  if (c.paquete_id !== undefined) body.paquete_id = c.paquete_id || null;
+  if (c.sesiones_consumidas !== undefined && c.paquete_id) body.sesiones_consumidas = c.sesiones_consumidas || 1;
   const res = await apiJson<Tarea>(`/api/tareas/${id}`, { method: "PATCH", body: JSON.stringify(body) });
   return res.ok ? { ok: true, tarea: res.data } : { ok: false, error: res.error };
 }

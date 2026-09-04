@@ -19,6 +19,10 @@ export function PickerBuscable({
   opciones,
   onElegir,
   opcionVacia,
+  permitirLibre,
+  textoLibre,
+  alCrear,
+  etiquetaCrear = "Crear nuevo",
 }: {
   etiqueta: string;
   placeholder?: string;
@@ -26,19 +30,34 @@ export function PickerBuscable({
   opciones: Opcion[];
   onElegir: (id: string) => void;
   opcionVacia?: string; // ej. "Sin vehículo" → id ""
+  // Deja escribir un valor que no está en la lista (ej. una localidad
+  // chica que no está entre las ciudades). El `id` elegido ES el texto.
+  permitirLibre?: boolean;
+  textoLibre?: (texto: string) => string; // cómo rotular la opción libre
+  // Muestra un botón "crear" al pie del modal; el padre abre su propio
+  // flujo de alta con el texto buscado.
+  alCrear?: (texto: string) => void;
+  etiquetaCrear?: string;
 }) {
   const t = useTema();
   const [abierto, setAbierto] = useState(false);
   const [q, setQ] = useState("");
 
   const seleccionada = valor === "" ? undefined : opciones.find((o) => o.id === valor);
-  const textoBoton = seleccionada?.label ?? (valor === "" && opcionVacia ? opcionVacia : placeholder);
+  const textoBoton =
+    seleccionada?.label ??
+    (valor === "" && opcionVacia ? opcionVacia : valor !== "" && permitirLibre ? valor : placeholder);
 
   const filtradas = useMemo(() => {
     const term = q.trim().toLowerCase();
     const base = term ? opciones.filter((o) => o.label.toLowerCase().includes(term) || o.sublabel?.toLowerCase().includes(term)) : opciones;
-    return opcionVacia ? [{ id: "", label: opcionVacia }, ...base] : base;
-  }, [q, opciones, opcionVacia]);
+    const conVacia = opcionVacia ? [{ id: "", label: opcionVacia }, ...base] : base;
+    const texto = q.trim();
+    if (permitirLibre && texto && !base.some((o) => o.label.toLowerCase() === texto.toLowerCase())) {
+      return [{ id: texto, label: textoLibre ? textoLibre(texto) : `Usar "${texto}"` }, ...conVacia];
+    }
+    return conVacia;
+  }, [q, opciones, opcionVacia, permitirLibre, textoLibre]);
 
   return (
     <View style={{ gap: t.espacio(1.5) }}>
@@ -135,6 +154,30 @@ export function PickerBuscable({
               </Text>
             }
           />
+          {alCrear ? (
+            <Pressable
+              onPress={() => {
+                const texto = q.trim();
+                setAbierto(false);
+                alCrear(texto);
+              }}
+              style={({ pressed }) => ({
+                flexDirection: "row",
+                alignItems: "center",
+                gap: t.espacio(2),
+                paddingHorizontal: t.espacio(4),
+                paddingVertical: t.espacio(4),
+                borderTopWidth: 1,
+                borderTopColor: t.colores.border,
+                backgroundColor: pressed ? t.colores.surfaceAlt : "transparent",
+              })}
+            >
+              <Ionicons name="add-circle-outline" size={20} color={t.colores.brand} />
+              <Text variante="cuerpo" weight="semibold" tono="brand">
+                {q.trim() ? `${etiquetaCrear}: "${q.trim()}"` : etiquetaCrear}
+              </Text>
+            </Pressable>
+          ) : null}
         </View>
       </Modal>
     </View>

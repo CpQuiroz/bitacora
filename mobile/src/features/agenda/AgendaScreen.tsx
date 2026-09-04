@@ -32,8 +32,8 @@ function sumarDias(d: Date, n: number): Date {
 
 const ACTIVAS = new Set(["pendiente", "confirmada"]);
 
-type Modo = "semana" | "mes" | "planificacion";
-// Se recuerda mientras la app siga abierta (no vale la pena persistir).
+type Modo = "mes" | "semana" | "dia";
+// Se recuerda mientras la app siga abierta.
 let ultimoModo: Modo = "mes";
 
 export function AgendaScreen({ navigation }: NativeStackScreenProps<AgendaStackParamList, "AgendaLista">) {
@@ -45,9 +45,7 @@ export function AgendaScreen({ navigation }: NativeStackScreenProps<AgendaStackP
   const hoyKey = clave(hoy);
 
   const [modo, setModo] = useState<Modo>(ultimoModo);
-  const [lunes, setLunes] = useState(() => lunesDe(hoy));
-  const [mesAncla, setMesAncla] = useState(() => new Date(hoy.getFullYear(), hoy.getMonth(), 1));
-  const [diaSel, setDiaSel] = useState(hoyKey);
+  const [ancla, setAncla] = useState(hoyKey); // día de referencia según el modo
   const [tareas, setTareas] = useState<TareaConDatos[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refrescando, setRefrescando] = useState(false);
@@ -57,20 +55,24 @@ export function AgendaScreen({ navigation }: NativeStackScreenProps<AgendaStackP
     ultimoModo = modo;
   }, [modo]);
 
-  // Rango de fechas a pedir según el modo.
-  const { desde, hasta } = useMemo(() => {
+  const anclaDate = useMemo(() => new Date(ancla + "T00:00:00"), [ancla]);
+
+  // Rango de días visible según el modo.
+  const { desde, hasta, diasDelRango } = useMemo(() => {
+    if (modo === "dia") {
+      return { desde: ancla, hasta: ancla, diasDelRango: [anclaDate] };
+    }
     if (modo === "semana") {
-      return { desde: clave(lunes), hasta: clave(sumarDias(lunes, 6)) };
+      const l = lunesDe(anclaDate);
+      const dias = Array.from({ length: 7 }, (_, i) => sumarDias(l, i));
+      return { desde: clave(dias[0]), hasta: clave(dias[6]), diasDelRango: dias };
     }
-    if (modo === "mes") {
-      // La grilla del mes muestra semanas completas (lun–dom): parte en
-      // el lunes de la semana del día 1 y son 6 semanas.
-      const inicioGrilla = lunesDe(mesAncla);
-      return { desde: clave(inicioGrilla), hasta: clave(sumarDias(inicioGrilla, 41)) };
-    }
-    // planificación: desde hoy, 45 días hacia adelante.
-    return { desde: hoyKey, hasta: clave(sumarDias(hoy, 45)) };
-  }, [modo, lunes, mesAncla, hoyKey]);
+    // mes: mes completo del ancla
+    const primero = new Date(anclaDate.getFullYear(), anclaDate.getMonth(), 1);
+    const ultimo = new Date(anclaDate.getFullYear(), anclaDate.getMonth() + 1, 0);
+    const dias = Array.from({ length: ultimo.getDate() }, (_, i) => new Date(primero.getFullYear(), primero.getMonth(), i + 1));
+    return { desde: clave(primero), hasta: clave(ultimo), diasDelRango: dias };
+  }, [modo, ancla, anclaDate]);
 
   const cargar = useCallback(async () => {
     setError(null);
@@ -105,18 +107,44 @@ export function AgendaScreen({ navigation }: NativeStackScreenProps<AgendaStackP
     return m;
   }, [tareas]);
 
-  function irHoy() {
-    setLunes(lunesDe(hoy));
-    setMesAncla(new Date(hoy.getFullYear(), hoy.getMonth(), 1));
-    setDiaSel(hoyKey);
+  const totalRango = useMemo(
+    () => diasDelRango.reduce((s, d) => s + (porDia.get(clave(d))?.length ?? 0), 0),
+    [diasDelRango, porDia]
+  );
+
+  function mover(delta: number) {
+    if (modo === "dia") setAncla(clave(sumarDias(anclaDate, delta)));
+    else if (modo === "semana") setAncla(clave(sumarDias(anclaDate, delta * 7)));
+    else setAncla(clave(new Date(anclaDate.getFullYear(), anclaDate.getMonth() + delta, 1)));
   }
+
+  const titulo = useMemo(() => {
+    if (modo === "dia") {
+      if (ancla === hoyKey) return "Hoy";
+      return `${DIAS_LARGO[anclaDate.getDay()]} ${anclaDate.getDate()} ${MESES[anclaDate.getMonth()]}`;
+    }
+    if (modo === "semana") {
+      const l = lunesDe(anclaDate);
+      const dom = sumarDias(l, 6);
+      if (l.getMonth() === dom.getMonth()) return `${l.getDate()}–${dom.getDate()} ${MESES[l.getMonth()]}`;
+      return `${l.getDate()} ${MESES[l.getMonth()].slice(0, 3)} – ${dom.getDate()} ${MESES[dom.getMonth()].slice(0, 3)}`;
+    }
+    return `${MESES[anclaDate.getMonth()]} ${anclaDate.getFullYear()}`;
+  }, [modo, ancla, anclaDate, hoyKey]);
+
+  const irAncla = () => setAncla(hoyKey);
+  const abrirCita = (item: TareaConDatos) => navigation.navigate("TareaDetalle", { tareaId: item.id, titulo: item.titulo });
+  const nuevaCita = (fecha?: string) => navigation.navigate("NuevaCita", { fecha: fecha && fecha >= hoyKey ? fecha : undefined });
+  const verDia = (k: string) => {
+    setAncla(k);
+    setModo("dia");
+  };
 
   if (tareas === null && !error) return <LoadingScreen />;
   if (error && !tareas) return <ErrorState mensaje={error} onReintentar={cargar} />;
 
-  const abrirCita = (item: TareaConDatos) => navigation.navigate("TareaDetalle", { tareaId: item.id, titulo: item.titulo });
-  const nuevaCita = (fecha?: string) =>
-    navigation.navigate("NuevaCita", { fecha: fecha && fecha >= hoyKey ? fecha : undefined });
+  // Días del rango que tienen citas (para el listado).
+  const diasConCitas = diasDelRango.map((d) => clave(d)).filter((k) => (porDia.get(k)?.length ?? 0) > 0);
 
   return (
     <View style={{ flex: 1, backgroundColor: t.colores.bg }}>
@@ -125,9 +153,9 @@ export function AgendaScreen({ navigation }: NativeStackScreenProps<AgendaStackP
       {/* Selector de modo */}
       <View style={{ flexDirection: "row", gap: t.espacio(2), padding: t.espacio(4), paddingBottom: t.espacio(3) }}>
         {([
-          { k: "semana", label: "Semana" },
           { k: "mes", label: "Mes" },
-          { k: "planificacion", label: "Planificación" },
+          { k: "semana", label: "Semana" },
+          { k: "dia", label: "Día" },
         ] as const).map((o) => {
           const activo = o.k === modo;
           return (
@@ -151,359 +179,78 @@ export function AgendaScreen({ navigation }: NativeStackScreenProps<AgendaStackP
         })}
       </View>
 
-      {modo === "semana" ? (
-        <VistaSemana
-          lunes={lunes}
-          setLunes={setLunes}
-          diaSel={diaSel}
-          setDiaSel={setDiaSel}
-          hoyKey={hoyKey}
-          porDia={porDia}
-          esGestion={esGestion}
-          refrescando={refrescando}
-          onRefresh={onRefresh}
-          onAbrir={abrirCita}
-          onNueva={nuevaCita}
-          onHoy={irHoy}
-        />
-      ) : modo === "mes" ? (
-        <VistaMes
-          mesAncla={mesAncla}
-          setMesAncla={setMesAncla}
-          diaSel={diaSel}
-          setDiaSel={setDiaSel}
-          hoyKey={hoyKey}
-          porDia={porDia}
-          esGestion={esGestion}
-          refrescando={refrescando}
-          onRefresh={onRefresh}
-          onAbrir={abrirCita}
-          onNueva={nuevaCita}
-          onHoy={irHoy}
-        />
-      ) : (
-        <VistaPlanificacion
-          desde={desde}
-          hasta={hasta}
-          hoyKey={hoyKey}
-          porDia={porDia}
-          esGestion={esGestion}
-          refrescando={refrescando}
-          onRefresh={onRefresh}
-          onAbrir={abrirCita}
-          onNueva={nuevaCita}
-        />
-      )}
-    </View>
-  );
-}
-
-// ---------------------------------------------------------------------------
-
-type VistaProps = {
-  diaSel: string;
-  setDiaSel: (k: string) => void;
-  hoyKey: string;
-  porDia: Map<string, TareaConDatos[]>;
-  esGestion: boolean;
-  refrescando: boolean;
-  onRefresh: () => void;
-  onAbrir: (item: TareaConDatos) => void;
-  onNueva: (fecha?: string) => void;
-  onHoy: () => void;
-};
-
-function VistaSemana({
-  lunes,
-  setLunes,
-  diaSel,
-  setDiaSel,
-  hoyKey,
-  porDia,
-  esGestion,
-  refrescando,
-  onRefresh,
-  onAbrir,
-  onNueva,
-  onHoy,
-}: VistaProps & { lunes: Date; setLunes: (fn: (l: Date) => Date) => void }) {
-  const t = useTema();
-  const diasSemana = useMemo(() => Array.from({ length: 7 }, (_, i) => sumarDias(lunes, i)), [lunes]);
-  const citasDelDia = porDia.get(diaSel) ?? [];
-  const dSel = new Date(diaSel + "T00:00:00");
-  const tituloDia = diaSel === hoyKey ? "Hoy" : `${DIAS_LARGO[dSel.getDay()]} ${dSel.getDate()} de ${MESES[dSel.getMonth()]}`;
-  const feriadoSel = esFeriado(diaSel);
-  const mesRango =
-    diasSemana[0].getMonth() === diasSemana[6].getMonth()
-      ? `${MESES[diasSemana[0].getMonth()]} ${diasSemana[0].getFullYear()}`
-      : `${MESES[diasSemana[0].getMonth()]} – ${MESES[diasSemana[6].getMonth()]}`;
-
-  return (
-    <View style={{ flex: 1 }}>
-      <View style={{ padding: t.espacio(4), paddingTop: 0, gap: t.espacio(3), borderBottomWidth: 1, borderBottomColor: t.colores.border }}>
-        <NavPeriodo
-          titulo={mesRango}
-          onPrev={() => setLunes((l) => sumarDias(l, -7))}
-          onNext={() => setLunes((l) => sumarDias(l, 7))}
-          onHoy={onHoy}
-        />
-        <View style={{ flexDirection: "row", gap: t.espacio(1.5) }}>
-          {diasSemana.map((d) => {
-            const k = clave(d);
-            const sel = k === diaSel;
-            const esHoy = k === hoyKey;
-            const n = (porDia.get(k) ?? []).length;
-            const feriado = Boolean(esFeriado(k));
-            return (
-              <Pressable
-                key={k}
-                onPress={() => setDiaSel(k)}
-                style={{
-                  flex: 1,
-                  alignItems: "center",
-                  paddingVertical: t.espacio(1.5),
-                  borderRadius: t.radio.md,
-                  backgroundColor: sel ? t.colores.brand : "transparent",
-                  borderWidth: esHoy && !sel ? 1 : 0,
-                  borderColor: t.colores.brand,
-                }}
-              >
-                <Text variante="caption" tono={sel ? "inverso" : "muted"}>
-                  {DIAS[d.getDay()]}
-                </Text>
-                <Text variante="subtitulo" tono={sel ? "inverso" : "normal"}>
-                  {d.getDate()}
-                </Text>
-                <Puntos citas={n} feriado={feriado} sel={sel} />
-              </Pressable>
-            );
-          })}
+      {/* Navegación de período */}
+      <View style={{ paddingHorizontal: t.espacio(4), paddingBottom: t.espacio(3) }}>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+          <Pressable onPress={() => mover(-1)} hitSlop={10} style={{ padding: t.espacio(1) }}>
+            <Ionicons name="chevron-back" size={22} color={t.colores.foreground} />
+          </Pressable>
+          <Pressable onPress={irAncla} hitSlop={10} style={{ alignItems: "center" }}>
+            <Text variante="etiqueta" weight="semibold" style={{ textTransform: "capitalize" }}>
+              {titulo}
+            </Text>
+            <Text variante="caption" tono="muted">
+              {totalRango} {totalRango === 1 ? "cita" : "citas"}
+            </Text>
+          </Pressable>
+          <Pressable onPress={() => mover(1)} hitSlop={10} style={{ padding: t.espacio(1) }}>
+            <Ionicons name="chevron-forward" size={22} color={t.colores.foreground} />
+          </Pressable>
         </View>
       </View>
 
+      {/* Grilla del mes / tira de la semana */}
+      {modo === "mes" ? (
+        <GrillaMes ancla={anclaDate} hoyKey={hoyKey} porDia={porDia} onDia={verDia} />
+      ) : modo === "semana" ? (
+        <TiraSemana dias={diasDelRango} hoyKey={hoyKey} porDia={porDia} onDia={verDia} />
+      ) : null}
+
+      {/* Listado de citas del período */}
       <ScrollView
-        contentContainerStyle={{ padding: t.espacio(4), gap: t.espacio(3), flexGrow: 1 }}
+        contentContainerStyle={{ padding: t.espacio(4), gap: t.espacio(4), flexGrow: 1 }}
         refreshControl={<RefreshControl refreshing={refrescando} onRefresh={onRefresh} tintColor={t.colores.brand} />}
       >
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-          <Text variante="subtitulo">{tituloDia}</Text>
-          <Text variante="caption" tono="muted">
-            {citasDelDia.length} {citasDelDia.length === 1 ? "cita" : "citas"}
-          </Text>
-        </View>
-        {feriadoSel ? <ChipFeriado nombre={feriadoSel} /> : null}
-        {citasDelDia.length === 0 ? (
+        {diasConCitas.length === 0 ? (
           <EmptyState
             icono={<Ionicons name="calendar-outline" size={40} color={t.colores.faint} />}
-            titulo="Sin citas este día"
+            titulo={modo === "dia" ? "Sin citas este día" : modo === "semana" ? "Sin citas esta semana" : "Sin citas este mes"}
             mensaje="Toca «Nueva cita» para agendar una."
           />
         ) : (
-          citasDelDia.map((item) => <CitaCard key={item.id} item={item} esGestion={esGestion} onPress={() => onAbrir(item)} />)
-        )}
-      </ScrollView>
-
-      <View style={{ padding: t.espacio(4), paddingTop: t.espacio(2) }}>
-        <Button titulo="Nueva cita" onPress={() => onNueva(diaSel)} />
-      </View>
-    </View>
-  );
-}
-
-// ---------------------------------------------------------------------------
-
-function VistaMes({
-  mesAncla,
-  setMesAncla,
-  diaSel,
-  setDiaSel,
-  hoyKey,
-  porDia,
-  esGestion,
-  refrescando,
-  onRefresh,
-  onAbrir,
-  onNueva,
-  onHoy,
-}: VistaProps & { mesAncla: Date; setMesAncla: (fn: (m: Date) => Date) => void }) {
-  const t = useTema();
-  const inicioGrilla = useMemo(() => lunesDe(mesAncla), [mesAncla]);
-  const celdas = useMemo(() => Array.from({ length: 42 }, (_, i) => sumarDias(inicioGrilla, i)), [inicioGrilla]);
-  const mesNum = mesAncla.getMonth();
-
-  const citasDelDia = porDia.get(diaSel) ?? [];
-  const dSel = new Date(diaSel + "T00:00:00");
-  const tituloDia = diaSel === hoyKey ? "Hoy" : `${DIAS_LARGO[dSel.getDay()]} ${dSel.getDate()} de ${MESES[dSel.getMonth()]}`;
-  const feriadoSel = esFeriado(diaSel);
-
-  return (
-    <ScrollView
-      style={{ flex: 1 }}
-      contentContainerStyle={{ flexGrow: 1, paddingBottom: t.espacio(4) }}
-      refreshControl={<RefreshControl refreshing={refrescando} onRefresh={onRefresh} tintColor={t.colores.brand} />}
-    >
-      <View style={{ padding: t.espacio(4), paddingTop: 0, gap: t.espacio(3) }}>
-        <NavPeriodo
-          titulo={`${MESES[mesNum]} ${mesAncla.getFullYear()}`}
-          onPrev={() => setMesAncla((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1))}
-          onNext={() => setMesAncla((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1))}
-          onHoy={onHoy}
-        />
-
-        <View style={{ flexDirection: "row" }}>
-          {DIAS_SEMANA_LUNES.map((d, i) => (
-            <View key={i} style={{ flex: 1, alignItems: "center" }}>
-              <Text variante="caption" tono="faint" weight="semibold">
-                {d}
-              </Text>
-            </View>
-          ))}
-        </View>
-
-        <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
-          {celdas.map((d) => {
-            const k = clave(d);
-            const delMes = d.getMonth() === mesNum;
-            const sel = k === diaSel;
-            const esHoy = k === hoyKey;
-            const n = (porDia.get(k) ?? []).length;
-            const feriado = Boolean(esFeriado(k));
-            return (
-              <Pressable
-                key={k}
-                onPress={() => setDiaSel(k)}
-                style={{
-                  width: `${100 / 7}%`,
-                  aspectRatio: 1,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  paddingVertical: t.espacio(1),
-                }}
-              >
-                <View
-                  style={{
-                    width: 30,
-                    height: 30,
-                    borderRadius: 15,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    backgroundColor: sel ? t.colores.brand : esHoy ? t.colores.brandSoft : "transparent",
-                  }}
-                >
-                  <Text
-                    variante="etiqueta"
-                    weight={esHoy || sel ? "semibold" : "regular"}
-                    tono={sel ? "inverso" : delMes ? "normal" : "faint"}
-                  >
-                    {d.getDate()}
-                  </Text>
-                </View>
-                <Puntos citas={n} feriado={feriado} sel={sel} />
-              </Pressable>
-            );
-          })}
-        </View>
-      </View>
-
-      <View style={{ height: 1, backgroundColor: t.colores.border }} />
-
-      <View style={{ padding: t.espacio(4), gap: t.espacio(3) }}>
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-          <Text variante="subtitulo">{tituloDia}</Text>
-          <Text variante="caption" tono="muted">
-            {citasDelDia.length} {citasDelDia.length === 1 ? "cita" : "citas"}
-          </Text>
-        </View>
-        {feriadoSel ? <ChipFeriado nombre={feriadoSel} /> : null}
-        {citasDelDia.length === 0 ? (
-          <EmptyState
-            icono={<Ionicons name="calendar-outline" size={40} color={t.colores.faint} />}
-            titulo="Sin citas este día"
-            mensaje="Toca «Nueva cita» para agendar una."
-          />
-        ) : (
-          citasDelDia.map((item) => <CitaCard key={item.id} item={item} esGestion={esGestion} onPress={() => onAbrir(item)} />)
-        )}
-        <Button titulo="Nueva cita" onPress={() => onNueva(diaSel)} style={{ marginTop: t.espacio(1) }} />
-      </View>
-    </ScrollView>
-  );
-}
-
-// ---------------------------------------------------------------------------
-
-function VistaPlanificacion({
-  desde,
-  hasta,
-  hoyKey,
-  porDia,
-  esGestion,
-  refrescando,
-  onRefresh,
-  onAbrir,
-  onNueva,
-}: Omit<VistaProps, "diaSel" | "setDiaSel" | "onHoy"> & { desde: string; hasta: string }) {
-  const t = useTema();
-
-  // Días con citas dentro del rango, ordenados.
-  const dias = useMemo(() => {
-    return [...porDia.keys()]
-      .filter((k) => k >= desde && k <= hasta)
-      .sort()
-      .map((k) => ({ k, citas: porDia.get(k)! }));
-  }, [porDia, desde, hasta]);
-
-  const etiquetaDia = (k: string) => {
-    const d = new Date(k + "T00:00:00");
-    const manana = clave(sumarDias(new Date(hoyKey + "T00:00:00"), 1));
-    if (k === hoyKey) return "Hoy";
-    if (k === manana) return "Mañana";
-    return `${DIAS_LARGO[d.getDay()]} ${d.getDate()} de ${MESES[d.getMonth()]}`;
-  };
-
-  return (
-    <View style={{ flex: 1 }}>
-      <ScrollView
-        contentContainerStyle={{ padding: t.espacio(4), paddingTop: t.espacio(2), gap: t.espacio(4), flexGrow: 1 }}
-        refreshControl={<RefreshControl refreshing={refrescando} onRefresh={onRefresh} tintColor={t.colores.brand} />}
-      >
-        <Text variante="caption" tono="muted">
-          Próximos 45 días
-        </Text>
-        {dias.length === 0 ? (
-          <EmptyState
-            icono={<Ionicons name="calendar-outline" size={40} color={t.colores.faint} />}
-            titulo="Nada agendado"
-            mensaje="No tienes citas en los próximos 45 días."
-          />
-        ) : (
-          dias.map(({ k, citas }) => {
+          diasConCitas.map((k) => {
+            const d = new Date(k + "T00:00:00");
             const feriado = esFeriado(k);
+            const etiqueta =
+              k === hoyKey
+                ? "Hoy"
+                : modo === "dia"
+                ? `${DIAS_LARGO[d.getDay()]} ${d.getDate()} de ${MESES[d.getMonth()]}`
+                : `${DIAS_LARGO[d.getDay()].slice(0, 3)} ${d.getDate()}`;
             return (
               <View key={k} style={{ gap: t.espacio(2) }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: t.espacio(2) }}>
                   <Text variante="etiqueta" weight="semibold" style={{ textTransform: "capitalize" }}>
-                    {etiquetaDia(k)}
+                    {etiqueta}
                   </Text>
-                  {feriado ? (
-                    <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: t.colores.success }} />
-                  ) : null}
+                  {feriado ? <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: t.colores.success }} /> : null}
                 </View>
                 {feriado ? (
                   <Text variante="caption" tono="success">
-                    {feriado}
+                    Feriado · {feriado}
                   </Text>
                 ) : null}
-                {citas.map((item) => (
-                  <CitaCard key={item.id} item={item} esGestion={esGestion} onPress={() => onAbrir(item)} />
+                {porDia.get(k)!.map((item) => (
+                  <CitaCard key={item.id} item={item} esGestion={esGestion} onPress={() => abrirCita(item)} />
                 ))}
               </View>
             );
           })
         )}
       </ScrollView>
+
       <View style={{ padding: t.espacio(4), paddingTop: t.espacio(2) }}>
-        <Button titulo="Nueva cita" onPress={() => onNueva()} />
+        <Button titulo="Nueva cita" onPress={() => nuevaCita(modo === "dia" ? ancla : undefined)} />
       </View>
     </View>
   );
@@ -511,21 +258,118 @@ function VistaPlanificacion({
 
 // ---------------------------------------------------------------------------
 
-function NavPeriodo({ titulo, onPrev, onNext, onHoy }: { titulo: string; onPrev: () => void; onNext: () => void; onHoy: () => void }) {
+function GrillaMes({
+  ancla,
+  hoyKey,
+  porDia,
+  onDia,
+}: {
+  ancla: Date;
+  hoyKey: string;
+  porDia: Map<string, TareaConDatos[]>;
+  onDia: (k: string) => void;
+}) {
+  const t = useTema();
+  const inicioGrilla = useMemo(() => lunesDe(new Date(ancla.getFullYear(), ancla.getMonth(), 1)), [ancla]);
+  const celdas = useMemo(() => Array.from({ length: 42 }, (_, i) => sumarDias(inicioGrilla, i)), [inicioGrilla]);
+  const mesNum = ancla.getMonth();
+
+  return (
+    <View style={{ paddingHorizontal: t.espacio(4), paddingBottom: t.espacio(3), borderBottomWidth: 1, borderBottomColor: t.colores.border }}>
+      <View style={{ flexDirection: "row" }}>
+        {DIAS_SEMANA_LUNES.map((d, i) => (
+          <View key={i} style={{ flex: 1, alignItems: "center" }}>
+            <Text variante="caption" tono="faint" weight="semibold">
+              {d}
+            </Text>
+          </View>
+        ))}
+      </View>
+      <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
+        {celdas.map((d) => {
+          const k = clave(d);
+          const delMes = d.getMonth() === mesNum;
+          const esHoy = k === hoyKey;
+          const n = porDia.get(k)?.length ?? 0;
+          const feriado = Boolean(esFeriado(k));
+          return (
+            <Pressable
+              key={k}
+              onPress={() => onDia(k)}
+              style={{ width: `${100 / 7}%`, aspectRatio: 1, alignItems: "center", justifyContent: "center" }}
+            >
+              <View
+                style={{
+                  width: 30,
+                  height: 30,
+                  borderRadius: 15,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: esHoy ? t.colores.brand : "transparent",
+                }}
+              >
+                <Text variante="etiqueta" weight={esHoy ? "semibold" : "regular"} tono={esHoy ? "inverso" : delMes ? "normal" : "faint"}>
+                  {d.getDate()}
+                </Text>
+              </View>
+              <Puntos citas={n} feriado={feriado} sel={esHoy} />
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+function TiraSemana({
+  dias,
+  hoyKey,
+  porDia,
+  onDia,
+}: {
+  dias: Date[];
+  hoyKey: string;
+  porDia: Map<string, TareaConDatos[]>;
+  onDia: (k: string) => void;
+}) {
   const t = useTema();
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-      <Pressable onPress={onPrev} hitSlop={10} style={{ padding: t.espacio(1) }}>
-        <Ionicons name="chevron-back" size={22} color={t.colores.foreground} />
-      </Pressable>
-      <Pressable onPress={onHoy} hitSlop={10}>
-        <Text variante="etiqueta" weight="semibold" style={{ textTransform: "capitalize" }}>
-          {titulo}
-        </Text>
-      </Pressable>
-      <Pressable onPress={onNext} hitSlop={10} style={{ padding: t.espacio(1) }}>
-        <Ionicons name="chevron-forward" size={22} color={t.colores.foreground} />
-      </Pressable>
+    <View
+      style={{
+        flexDirection: "row",
+        gap: t.espacio(1.5),
+        paddingHorizontal: t.espacio(4),
+        paddingBottom: t.espacio(3),
+        borderBottomWidth: 1,
+        borderBottomColor: t.colores.border,
+      }}
+    >
+      {dias.map((d) => {
+        const k = clave(d);
+        const esHoy = k === hoyKey;
+        const n = porDia.get(k)?.length ?? 0;
+        const feriado = Boolean(esFeriado(k));
+        return (
+          <Pressable
+            key={k}
+            onPress={() => onDia(k)}
+            style={{
+              flex: 1,
+              alignItems: "center",
+              paddingVertical: t.espacio(1.5),
+              borderRadius: t.radio.md,
+              borderWidth: esHoy ? 1 : 0,
+              borderColor: t.colores.brand,
+            }}
+          >
+            <Text variante="caption" tono="muted">
+              {DIAS[d.getDay()]}
+            </Text>
+            <Text variante="subtitulo">{d.getDate()}</Text>
+            <Puntos citas={n} feriado={feriado} sel={false} />
+          </Pressable>
+        );
+      })}
     </View>
   );
 }
@@ -537,29 +381,6 @@ function Puntos({ citas, feriado, sel }: { citas: number; feriado: boolean; sel:
     <View style={{ flexDirection: "row", gap: 2, marginTop: 3, height: 5, alignItems: "center" }}>
       {citas > 0 ? <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: azul }} /> : null}
       {feriado ? <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: t.colores.success }} /> : null}
-    </View>
-  );
-}
-
-function ChipFeriado({ nombre }: { nombre: string }) {
-  const t = useTema();
-  return (
-    <View
-      style={{
-        flexDirection: "row",
-        alignItems: "center",
-        gap: t.espacio(2),
-        alignSelf: "flex-start",
-        backgroundColor: t.colores.successSoft,
-        paddingHorizontal: t.espacio(3),
-        paddingVertical: t.espacio(1.5),
-        borderRadius: t.radio.full,
-      }}
-    >
-      <Ionicons name="flag" size={13} color={t.colores.success} />
-      <Text variante="caption" weight="semibold" tono="success">
-        Feriado · {nombre}
-      </Text>
     </View>
   );
 }

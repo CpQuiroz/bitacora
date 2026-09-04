@@ -4,6 +4,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { Cliente, EstadoTrabajo, Usuario } from "@bitacora/shared";
 import { useTema } from "../../theme";
 import { Button, Input, LoadingScreen, PickerBuscable, Text } from "../../components/ui";
+import { SelectorCliente } from "../../components/SelectorCliente";
 import { useRed } from "../../services/sync/NetworkProvider";
 import {
   type BorradorTrabajo,
@@ -116,18 +117,18 @@ export function TrabajoFormScreen({ navigation, route }: NativeStackScreenProps<
       contentContainerStyle={{ padding: t.espacio(5), gap: t.espacio(4), paddingBottom: t.espacio(12) }}
       keyboardShouldPersistTaps="handled"
     >
-      {clientes.length > 0 ? (
-        <PickerBuscable
-          etiqueta="Cliente guardado (opcional)"
-          placeholder="Sin cliente guardado — solo texto"
-          opcionVacia="Sin cliente guardado — solo texto"
-          valor={b.cliente_id}
-          opciones={clientes.map((c) => ({ id: c.id, label: c.nombre }))}
-          onElegir={elegirClienteGuardado}
-        />
-      ) : null}
+      <SelectorCliente
+        etiqueta="Cliente guardado (opcional)"
+        valor={b.cliente_id}
+        onElegir={elegirClienteGuardado}
+        clientes={clientes}
+        onClienteCreado={(c) => {
+          setClientes((prev) => [...(prev ?? []), c]);
+          setB((p) => ({ ...p, cliente_id: c.id, cliente: c.nombre, ubicacion: c.direccion || p.ubicacion }));
+        }}
+      />
 
-      <Input etiqueta="Cliente" value={b.cliente} onChangeText={(v) => set("cliente", v)} />
+      <Input etiqueta="Cliente (nombre a mostrar / facturar)" value={b.cliente} onChangeText={(v) => set("cliente", v)} />
 
       {equipo.length > 0 ? (
         <PickerBuscable

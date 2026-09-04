@@ -174,6 +174,52 @@ misViajesRouter.post(
   })
 );
 
+// Adjuntar / reemplazar la foto de la guía de un viaje YA creado. La app
+// guarda primero el viaje (JSON, rápido y confiable) y sube la foto
+// aparte — así el viaje nunca se pierde aunque la foto falle o no haya
+// señal. Colaborador: solo los suyos. No si ya está facturado.
+misViajesRouter.post(
+  "/:id/foto-guia",
+  upload.single("foto"),
+  ah<RequestConEmpresa>(async (req, res) => {
+    if (!req.file) {
+      res.status(400).json({ error: "Falta la foto" });
+      return;
+    }
+    const { data: viaje } = await supabase
+      .from("viajes")
+      .select("id, numero_guia, chofer_id, estado")
+      .eq("empresa_id", req.empresaId!)
+      .eq("id", req.params.id)
+      .maybeSingle();
+    if (!viaje) {
+      res.status(404).json({ error: "Viaje no encontrado" });
+      return;
+    }
+    if (req.rol === "colaborador" && viaje.chofer_id !== req.userId) {
+      res.status(403).json({ error: "Solo puedes editar tus propios viajes" });
+      return;
+    }
+    if (viaje.estado === "facturado") {
+      res.status(400).json({ error: "Este viaje ya fue facturado" });
+      return;
+    }
+    const fotoKey = await subirFotoGuiaConNombre(req.empresaId!, viaje.numero_guia, req.file.buffer, req.file.mimetype);
+    const { data, error } = await supabase
+      .from("viajes")
+      .update({ foto_guia_url: fotoKey })
+      .eq("empresa_id", req.empresaId!)
+      .eq("id", req.params.id)
+      .select("*, cliente_info:clientes(id, nombre)")
+      .single();
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    res.json(data);
+  })
+);
+
 // Editar un viaje desde la app.
 //  - Gestión: cualquier viaje de la empresa, y además puede aprobarlo
 //    (cambiar el estado a "confirmado").
