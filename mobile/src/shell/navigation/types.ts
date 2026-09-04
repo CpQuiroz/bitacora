@@ -32,6 +32,7 @@ export type GestionStackParamList = {
   CobrosLista: undefined;
   CobroForm: undefined;
   CobroDetalle: { cobroId: string };
+  GastoForm: undefined;
   Asistente: undefined;
 };
 

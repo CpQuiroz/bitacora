@@ -19,6 +19,12 @@ export function GestionInicioScreen({ navigation }: NativeStackScreenProps<Gesti
       icono: "cash-outline",
       ir: () => navigation.navigate("CobrosLista"),
     });
+    items.push({
+      titulo: "Nuevo gasto",
+      sub: "Registra un gasto con categoría, centro de costo y comprobante",
+      icono: "wallet-outline",
+      ir: () => navigation.navigate("GastoForm"),
+    });
   }
   if (visibles.includes("asistente")) {
     items.push({

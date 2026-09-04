@@ -5,6 +5,7 @@ import { GestionInicioScreen } from "../../features/gestion/GestionInicioScreen"
 import { CobrosListaScreen } from "../../features/gestion/CobrosListaScreen";
 import { CobroFormScreen } from "../../features/gestion/CobroFormScreen";
 import { CobroDetalleScreen } from "../../features/gestion/CobroDetalleScreen";
+import { NuevoGastoScreen } from "../../features/gastos/NuevoGastoScreen";
 import { AsistenteScreen } from "../../features/asistente/AsistenteScreen";
 
 const Stack = createNativeStackNavigator<GestionStackParamList>();
@@ -25,6 +26,7 @@ export function GestionStack() {
       <Stack.Screen name="CobrosLista" component={CobrosListaScreen} options={{ title: "Cobros" }} />
       <Stack.Screen name="CobroForm" component={CobroFormScreen} options={{ title: "Nuevo cobro", presentation: "modal" }} />
       <Stack.Screen name="CobroDetalle" component={CobroDetalleScreen} options={{ title: "Cobro" }} />
+      <Stack.Screen name="GastoForm" component={NuevoGastoScreen} options={{ title: "Nuevo gasto", presentation: "modal" }} />
       <Stack.Screen name="Asistente" component={AsistenteScreen} options={{ title: "Asistente" }} />
     </Stack.Navigator>
   );
