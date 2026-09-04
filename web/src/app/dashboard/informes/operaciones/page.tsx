@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { descargarCSV } from "@/lib/exportCsv";
-import { Card, ErrorText } from "@/components/ui";
+import { Card, ErrorText, Stat } from "@/components/ui";
 import { GraficoDistribucion, type PuntoDistribucion } from "@/components/charts/GraficoDistribucion";
 import { GraficoEvolucionDoble } from "@/components/charts/GraficoEvolucionDoble";
 import { GraficoEvolucionPorcentaje, type PuntoPorcentaje } from "@/components/charts/GraficoEvolucionPorcentaje";
@@ -37,13 +37,7 @@ const COLOR_ESTADO: Record<string, string> = {
 };
 
 function KpiCard({ etiqueta, valor, sub }: { etiqueta: string; valor: string; sub?: string }) {
-  return (
-    <Card className="p-4">
-      <p className="text-xs font-medium text-muted">{etiqueta}</p>
-      <p className="mt-1 text-xl font-semibold tabular-nums text-foreground">{valor}</p>
-      {sub && <p className="mt-0.5 text-xs text-muted">{sub}</p>}
-    </Card>
-  );
+  return <Stat etiqueta={etiqueta} valor={valor} nota={sub} />;
 }
 
 export default function InformeOperacionesPage() {

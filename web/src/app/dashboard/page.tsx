@@ -9,7 +9,7 @@ import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell } from "@/components/DashboardShell";
-import { Button, buttonClass, Card, ErrorText, Select } from "@/components/ui";
+import { Button, buttonClass, Card, ErrorText, Select, Stat } from "@/components/ui";
 import {
   IconBriefcase,
   IconClipboardCheck,
@@ -89,13 +89,7 @@ const ACCESOS: { href: string; label: string; icon: typeof IconBriefcase; modulo
 ];
 
 function KpiCard({ etiqueta, valor, sub }: { etiqueta: string; valor: string; sub?: string }) {
-  return (
-    <Card className="p-4">
-      <p className="text-xs font-medium text-muted">{etiqueta}</p>
-      <p className="mt-1 text-xl font-semibold tabular-nums text-foreground">{valor}</p>
-      {sub && <p className="mt-0.5 text-xs text-muted">{sub}</p>}
-    </Card>
-  );
+  return <Stat etiqueta={etiqueta} valor={valor} nota={sub} />;
 }
 
 const pct = (n: number) => `${n.toFixed(0)}%`;

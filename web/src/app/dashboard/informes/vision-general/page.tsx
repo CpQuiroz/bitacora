@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
-import { Card, ErrorText } from "@/components/ui";
+import { Card, ErrorText, Stat } from "@/components/ui";
 import { GraficoIngresos, type PuntoIngresoMes } from "@/components/charts/GraficoIngresos";
 import { IconArrowRight, IconChartBar, IconClipboardCheck, IconTag, IconUsers, IconWallet } from "@/components/icons";
 import { EstadoCargando } from "@/components/estados";
@@ -40,13 +40,7 @@ type Datos = {
 };
 
 function KpiCard({ etiqueta, valor, sub }: { etiqueta: string; valor: string; sub?: string }) {
-  return (
-    <Card className="p-4">
-      <p className="text-xs font-medium text-muted">{etiqueta}</p>
-      <p className="mt-1 text-xl font-semibold tabular-nums text-foreground">{valor}</p>
-      {sub && <p className="mt-0.5 text-xs text-muted">{sub}</p>}
-    </Card>
-  );
+  return <Stat etiqueta={etiqueta} valor={valor} nota={sub} />;
 }
 
 function MiniCard({ etiqueta, valor, cantidad, color }: { etiqueta: string; valor: string; cantidad: number; color: string }) {

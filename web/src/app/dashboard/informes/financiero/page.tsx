@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { descargarCSV } from "@/lib/exportCsv";
-import { Card, ErrorText } from "@/components/ui";
+import { Card, ErrorText, Stat } from "@/components/ui";
 import { GraficoIngresos, type PuntoIngresoMes } from "@/components/charts/GraficoIngresos";
 import { GraficoDistribucion } from "@/components/charts/GraficoDistribucion";
 import { EstadoCargando } from "@/components/estados";
@@ -32,13 +32,7 @@ const ETIQUETA_MEDIO: Record<string, string> = {
 };
 
 function KpiCard({ etiqueta, valor, sub }: { etiqueta: string; valor: string; sub?: string }) {
-  return (
-    <Card className="p-4">
-      <p className="text-xs font-medium text-muted">{etiqueta}</p>
-      <p className="mt-1 text-xl font-semibold tabular-nums text-foreground">{valor}</p>
-      {sub && <p className="mt-0.5 text-xs text-muted">{sub}</p>}
-    </Card>
-  );
+  return <Stat etiqueta={etiqueta} valor={valor} nota={sub} />;
 }
 
 const pct = (parte: number, total: number) => (total > 0 ? `${((parte / total) * 100).toFixed(0)}% del total` : undefined);
