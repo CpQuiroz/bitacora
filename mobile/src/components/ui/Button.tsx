@@ -2,7 +2,7 @@ import { ActivityIndicator, Pressable, View, type ViewStyle } from "react-native
 import { useTema } from "../../theme";
 import { Text } from "./Text";
 
-type Variante = "primario" | "secundario" | "ghost" | "peligro";
+type Variante = "primario" | "secundario" | "ghost" | "peligro" | "acento";
 type Tamano = "md" | "lg";
 
 export function Button({
@@ -34,8 +34,10 @@ export function Button({
     secundario: t.colores.surface,
     ghost: "transparent",
     peligro: t.colores.danger,
+    acento: t.colores.accent,
   };
-  const textoTono = variante === "primario" || variante === "peligro" ? "inverso" : variante === "ghost" ? "brand" : "normal";
+  const solido = variante === "primario" || variante === "peligro" || variante === "acento";
+  const textoTono = solido ? "inverso" : variante === "ghost" ? "brand" : "normal";
   const borde = variante === "secundario" ? t.colores.border : "transparent";
 
   return (

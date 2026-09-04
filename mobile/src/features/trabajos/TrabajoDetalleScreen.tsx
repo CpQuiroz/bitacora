@@ -229,14 +229,14 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
           <View style={{ flexDirection: "row", gap: t.espacio(2.5) }}>
             <Button
               titulo={checkIn?.hecho ? `Check-in ✓ ${checkIn.hora?.slice(11, 16) ?? ""}` : "Marcar check-in"}
-              variante={checkIn?.hecho ? "secundario" : "primario"}
+              variante={checkIn?.hecho ? "secundario" : finalizada ? "primario" : "acento"}
               onPress={() => marcar("Check-in")}
               disabled={Boolean(checkIn?.hecho) || finalizada}
               cargando={marcando === "Check-in"}
             />
             <Button
               titulo={checkOut?.hecho ? `Check-out ✓ ${checkOut.hora?.slice(11, 16) ?? ""}` : "Marcar check-out"}
-              variante={checkOut?.hecho ? "secundario" : "primario"}
+              variante={checkOut?.hecho ? "secundario" : checkIn?.hecho && !finalizada ? "acento" : "primario"}
               onPress={() => marcar("Check-out")}
               disabled={Boolean(checkOut?.hecho) || finalizada}
               cargando={marcando === "Check-out"}

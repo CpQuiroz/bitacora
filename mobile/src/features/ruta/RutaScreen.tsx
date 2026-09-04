@@ -83,7 +83,9 @@ export function RutaScreen() {
           />
         ) : (
           <>
-            {conCoords.map((p, i) => (
+            {conCoords.map((p, i) => {
+              const actual = i === 0; // la primera parada = "siguiente a visitar"
+              return (
               <Pressable
                 key={p.trabajo_id}
                 onPress={() => abrirNavegacion(p)}
@@ -91,6 +93,9 @@ export function RutaScreen() {
                   flexDirection: "row",
                   gap: t.espacio(3),
                   paddingVertical: t.espacio(3),
+                  paddingLeft: actual ? t.espacio(2.5) : 0,
+                  borderLeftWidth: actual ? 3 : 0,
+                  borderLeftColor: t.colores.accent,
                   minHeight: 56,
                   opacity: pressed ? 0.6 : 1,
                 })}
@@ -100,7 +105,7 @@ export function RutaScreen() {
                     width: 26,
                     height: 26,
                     borderRadius: 13,
-                    backgroundColor: t.colores.brand,
+                    backgroundColor: actual ? t.colores.accent : t.colores.brand,
                     alignItems: "center",
                     justifyContent: "center",
                   }}
@@ -119,7 +124,8 @@ export function RutaScreen() {
                 </View>
                 <Ionicons name="navigate-outline" size={20} color={t.colores.brand} style={{ alignSelf: "center" }} />
               </Pressable>
-            ))}
+              );
+            })}
             {sinCoords.length > 0 && (
               <View style={{ marginTop: t.espacio(3), gap: t.espacio(2) }}>
                 <Text variante="caption" tono="muted" weight="semibold" style={{ textTransform: "uppercase" }}>

@@ -105,7 +105,10 @@ export function TrabajosScreen({ navigation }: NativeStackScreenProps<TrabajosSt
           />
         }
         renderItem={({ item }) => (
-          <Card onPress={() => navigation.navigate("TrabajoDetalle", { trabajoId: item.id, titulo: item.cliente })}>
+          <Card
+            onPress={() => navigation.navigate("TrabajoDetalle", { trabajoId: item.id, titulo: item.cliente })}
+            style={item.estado === "en_curso" ? { borderLeftWidth: 3, borderLeftColor: t.colores.accent } : undefined}
+          >
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: t.espacio(3) }}>
               <View style={{ flex: 1, gap: t.espacio(1) }}>
                 <Text variante="subtitulo">{item.cliente}</Text>

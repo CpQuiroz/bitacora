@@ -102,7 +102,7 @@ export function PerfilScreen() {
         {u.zona ? <Fila etiqueta="Zona" valor={u.zona} /> : null}
       </Card>
 
-      <Card>
+      <Card style={pendientes.length > 0 ? { borderLeftWidth: 3, borderLeftColor: t.colores.accent } : undefined}>
         <Fila etiqueta="Conexión" valor={enLinea ? "En línea" : "Sin conexión"} />
         <Fila
           etiqueta="Sin sincronizar"
