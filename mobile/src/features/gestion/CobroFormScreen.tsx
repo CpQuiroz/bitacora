@@ -143,7 +143,7 @@ export function CobroFormScreen({ navigation }: NativeStackScreenProps<GestionSt
                     minHeight: 40,
                     justifyContent: "center",
                     paddingHorizontal: t.espacio(3.5),
-                    borderRadius: t.radio.full,
+                    borderRadius: t.radio.md,
                     backgroundColor: activo ? t.colores.brand : t.colores.surfaceAlt,
                   }}
                 >

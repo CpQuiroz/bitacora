@@ -132,13 +132,14 @@ export function CobroDetalleScreen({ route }: NativeStackScreenProps<GestionStac
                     key={m.v}
                     onPress={() => setMedio(activo ? "" : m.v)}
                     style={{
+                      minHeight: 36,
+                      justifyContent: "center",
                       paddingHorizontal: t.espacio(3),
-                      paddingVertical: t.espacio(1.5),
-                      borderRadius: t.radio.full,
+                      borderRadius: t.radio.md,
                       backgroundColor: activo ? t.colores.brand : t.colores.surfaceAlt,
                     }}
                   >
-                    <Text variante="caption" weight="semibold" style={{ color: activo ? t.colores.brandForeground : t.colores.muted }}>
+                    <Text variante="caption" weight="semibold" tono={activo ? "inverso" : "muted"}>
                       {m.label}
                     </Text>
                   </Pressable>

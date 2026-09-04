@@ -184,7 +184,7 @@ export function ViajesScreen({ navigation }: NativeStackScreenProps<ViajesStackP
                 style={{
                   paddingHorizontal: t.espacio(3),
                   paddingVertical: t.espacio(1.5),
-                  borderRadius: t.radio.full,
+                  borderRadius: t.radio.md,
                   backgroundColor: activo ? t.colores.brand : t.colores.surfaceAlt,
                 }}
               >
