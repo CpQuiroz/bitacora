@@ -134,11 +134,11 @@ export function NuevaCitaScreen({ navigation, route }: NativeStackScreenProps<Ag
   if (clientes === null || cargandoCita) return <LoadingScreen />;
 
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: t.colores.bg }}
-      contentContainerStyle={{ padding: t.espacio(5), gap: t.espacio(4), paddingBottom: t.espacio(12) }}
-      keyboardShouldPersistTaps="handled"
-    >
+    <View style={{ flex: 1, backgroundColor: t.colores.bg }}>
+      <ScrollView
+        contentContainerStyle={{ padding: t.espacio(5), gap: t.espacio(4), paddingBottom: t.espacio(8) }}
+        keyboardShouldPersistTaps="handled"
+      >
       <Input etiqueta="Título" placeholder="Ej. Manicure + esmaltado" value={b.titulo} onChangeText={(v) => set("titulo", v)} />
 
       <View style={{ gap: t.espacio(1.5) }}>
@@ -314,14 +314,24 @@ export function NuevaCitaScreen({ navigation, route }: NativeStackScreenProps<Ag
         value={b.descripcion}
         onChangeText={(v) => set("descripcion", v)}
       />
+      </ScrollView>
 
-      <Button
-        titulo={editandoId ? "Guardar cambios" : "Agendar cita"}
-        tamano="lg"
-        onPress={guardar}
-        cargando={guardando}
-        style={{ marginTop: t.espacio(2) }}
-      />
-    </ScrollView>
+      <View
+        style={{
+          padding: t.espacio(4),
+          paddingBottom: t.espacio(6),
+          borderTopWidth: 1,
+          borderTopColor: t.colores.border,
+          backgroundColor: t.colores.surface,
+        }}
+      >
+        <Button
+          titulo={editandoId ? "Guardar cambios" : "Agendar cita"}
+          tamano="lg"
+          onPress={guardar}
+          cargando={guardando}
+        />
+      </View>
+    </View>
   );
 }

@@ -5,6 +5,7 @@ import type { Cliente, EstadoTrabajo, Usuario } from "@bitacora/shared";
 import { useTema } from "../../theme";
 import { Button, Input, LoadingScreen, PickerBuscable, Text } from "../../components/ui";
 import { SelectorCliente } from "../../components/SelectorCliente";
+import { InputMonto } from "../../components/InputMonto";
 import { useRed } from "../../services/sync/NetworkProvider";
 import {
   type BorradorTrabajo,
@@ -141,11 +142,11 @@ export function TrabajoFormScreen({ navigation, route }: NativeStackScreenProps<
   if (clientes === null || cargando) return <LoadingScreen />;
 
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: t.colores.bg }}
-      contentContainerStyle={{ padding: t.espacio(5), gap: t.espacio(4), paddingBottom: t.espacio(12) }}
-      keyboardShouldPersistTaps="handled"
-    >
+    <View style={{ flex: 1, backgroundColor: t.colores.bg }}>
+      <ScrollView
+        contentContainerStyle={{ padding: t.espacio(5), gap: t.espacio(4), paddingBottom: t.espacio(8) }}
+        keyboardShouldPersistTaps="handled"
+      >
       <SelectorCliente
         etiqueta="Cliente guardado (opcional)"
         valor={b.cliente_id}
@@ -208,7 +209,7 @@ export function TrabajoFormScreen({ navigation, route }: NativeStackScreenProps<
         </ScrollView>
       </View>
 
-      <Input etiqueta="Monto" keyboardType="numeric" value={b.monto} onChangeText={(v) => set("monto", v)} />
+      <InputMonto valor={b.monto} onChangeText={(v) => set("monto", v)} />
       <Input etiqueta="Código / n° guía" value={b.codigo} onChangeText={(v) => set("codigo", v)} />
       <Input etiqueta="Ubicación" value={b.ubicacion} onChangeText={(v) => set("ubicacion", v)} />
 
@@ -242,14 +243,19 @@ export function TrabajoFormScreen({ navigation, route }: NativeStackScreenProps<
           })}
         </View>
       </View>
+      </ScrollView>
 
-      <Button
-        titulo={editandoId ? "Guardar cambios" : "Crear trabajo"}
-        tamano="lg"
-        onPress={guardar}
-        cargando={guardando}
-        style={{ marginTop: t.espacio(2) }}
-      />
-    </ScrollView>
+      <View
+        style={{
+          padding: t.espacio(4),
+          paddingBottom: t.espacio(6),
+          borderTopWidth: 1,
+          borderTopColor: t.colores.border,
+          backgroundColor: t.colores.surface,
+        }}
+      >
+        <Button titulo={editandoId ? "Guardar cambios" : "Crear trabajo"} tamano="lg" onPress={guardar} cargando={guardando} />
+      </View>
+    </View>
   );
 }

@@ -7,6 +7,7 @@ import type { Cliente, Equipo } from "@bitacora/shared";
 import { useTema } from "../../theme";
 import { Button, Card, Input, LoadingScreen, PickerBuscable, Text } from "../../components/ui";
 import { SelectorCliente } from "../../components/SelectorCliente";
+import { InputMonto } from "../../components/InputMonto";
 import { useRed } from "../../services/sync/NetworkProvider";
 import { comprimirImagen } from "../../lib/imagen";
 import { CIUDADES_CHILE } from "../../lib/ciudadesChile";
@@ -161,11 +162,11 @@ export function ViajeFormScreen({ navigation, route }: NativeStackScreenProps<Vi
   if (clientes === null || cargandoViaje) return <LoadingScreen />;
 
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: t.colores.bg }}
-      contentContainerStyle={{ padding: t.espacio(5), gap: t.espacio(4), paddingBottom: t.espacio(10) }}
-      keyboardShouldPersistTaps="handled"
-    >
+    <View style={{ flex: 1, backgroundColor: t.colores.bg }}>
+      <ScrollView
+        contentContainerStyle={{ padding: t.espacio(5), gap: t.espacio(4), paddingBottom: t.espacio(8) }}
+        keyboardShouldPersistTaps="handled"
+      >
       <SelectorCliente
         valor={b.cliente_id}
         onElegir={(id) => set("cliente_id", id)}
@@ -226,7 +227,7 @@ export function ViajeFormScreen({ navigation, route }: NativeStackScreenProps<Vi
         </View>
       </View>
 
-      <Input etiqueta="Monto del viaje (sin IVA)" keyboardType="numeric" value={b.subtotal} onChangeText={(v) => set("subtotal", v)} />
+      <InputMonto etiqueta="Monto del viaje (sin IVA)" valor={b.subtotal} onChangeText={(v) => set("subtotal", v)} />
 
       <Pressable
         onPress={() => set("aplica_iva", !b.aplica_iva)}
@@ -246,14 +247,19 @@ export function ViajeFormScreen({ navigation, route }: NativeStackScreenProps<Vi
         />
         <Text variante="cuerpo">Aplicar IVA (19%)</Text>
       </Pressable>
+      </ScrollView>
 
-      <Button
-        titulo={editandoId ? "Guardar cambios" : "Registrar viaje"}
-        tamano="lg"
-        onPress={guardar}
-        cargando={guardando}
-        style={{ marginTop: t.espacio(2) }}
-      />
-    </ScrollView>
+      <View
+        style={{
+          padding: t.espacio(4),
+          paddingBottom: t.espacio(6),
+          borderTopWidth: 1,
+          borderTopColor: t.colores.border,
+          backgroundColor: t.colores.surface,
+        }}
+      >
+        <Button titulo={editandoId ? "Guardar cambios" : "Registrar viaje"} tamano="lg" onPress={guardar} cargando={guardando} />
+      </View>
+    </View>
   );
 }

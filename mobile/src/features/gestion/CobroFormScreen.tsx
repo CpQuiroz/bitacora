@@ -3,14 +3,22 @@ import { Alert, Pressable, ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { Cliente, MedioPago } from "@bitacora/shared";
 import { useTema } from "../../theme";
-import { Button, Input, LoadingScreen, PickerBuscable, Text } from "../../components/ui";
+import { Button, LoadingScreen, Text } from "../../components/ui";
+import { InputMonto } from "../../components/InputMonto";
+import { SelectorCliente } from "../../components/SelectorCliente";
 import { useRed } from "../../services/sync/NetworkProvider";
 import { listarClientes } from "../../services/clientes";
 import { crearCobro, type BorradorCobro } from "../../services/cobros";
 import type { GestionStackParamList } from "../../shell/navigation/types";
 
+const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+
 function clave(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function fechaLarga(iso: string): string {
+  const d = new Date(iso + "T00:00:00");
+  return `${d.getDate()} de ${MESES[d.getMonth()]}`;
 }
 
 const MEDIOS: { v: MedioPago | ""; label: string }[] = [
@@ -72,83 +80,94 @@ export function CobroFormScreen({ navigation }: NativeStackScreenProps<GestionSt
   const vencDiasActual = Math.round((new Date(b.fecha_vencimiento).getTime() - new Date(b.fecha_emision).getTime()) / 86400000);
 
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: t.colores.bg }}
-      contentContainerStyle={{ padding: t.espacio(5), gap: t.espacio(4), paddingBottom: t.espacio(12) }}
-      keyboardShouldPersistTaps="handled"
-    >
-      <PickerBuscable
-        etiqueta="Cliente"
-        placeholder="Elegir cliente"
-        valor={b.cliente_id}
-        opciones={clientes.map((c) => ({ id: c.id, label: c.nombre }))}
-        onElegir={(id) => set("cliente_id", id)}
-      />
+    <View style={{ flex: 1, backgroundColor: t.colores.bg }}>
+      <ScrollView
+        contentContainerStyle={{ padding: t.espacio(5), gap: t.espacio(4), paddingBottom: t.espacio(8) }}
+        keyboardShouldPersistTaps="handled"
+      >
+        <SelectorCliente
+          valor={b.cliente_id}
+          onElegir={(id) => set("cliente_id", id)}
+          clientes={clientes}
+          onClienteCreado={(c) => setClientes((prev) => [...(prev ?? []), c])}
+        />
 
-      <Input etiqueta="Monto" keyboardType="numeric" value={b.monto} onChangeText={(v) => set("monto", v)} />
+        <InputMonto valor={b.monto} onChangeText={(v) => set("monto", v)} />
 
-      <View style={{ gap: t.espacio(1.5) }}>
-        <Text variante="etiqueta" tono="muted">
-          Vence en
-        </Text>
-        <View style={{ flexDirection: "row", gap: t.espacio(2) }}>
-          {VENC_OPCIONES.map((o) => {
-            const activo = o.dias === vencDiasActual;
-            return (
-              <Pressable
-                key={o.dias}
-                onPress={() => setVencDias(o.dias)}
-                style={{
-                  flex: 1,
-                  minHeight: 44,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  borderRadius: t.radio.md,
-                  backgroundColor: activo ? t.colores.brand : t.colores.surface,
-                  borderWidth: 1,
-                  borderColor: activo ? t.colores.brand : t.colores.border,
-                }}
-              >
-                <Text variante="caption" weight="semibold" tono={activo ? "inverso" : "muted"}>
-                  {o.label}
-                </Text>
-              </Pressable>
-            );
-          })}
+        <View style={{ gap: t.espacio(1.5) }}>
+          <Text variante="etiqueta" tono="muted">
+            Vence en
+          </Text>
+          <View style={{ flexDirection: "row", gap: t.espacio(2) }}>
+            {VENC_OPCIONES.map((o) => {
+              const activo = o.dias === vencDiasActual;
+              return (
+                <Pressable
+                  key={o.dias}
+                  onPress={() => setVencDias(o.dias)}
+                  style={{
+                    flex: 1,
+                    minHeight: 44,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: t.radio.md,
+                    backgroundColor: activo ? t.colores.brand : t.colores.surface,
+                    borderWidth: 1,
+                    borderColor: activo ? t.colores.brand : t.colores.border,
+                  }}
+                >
+                  <Text variante="caption" weight="semibold" tono={activo ? "inverso" : "muted"}>
+                    {o.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          <Text variante="caption" tono="muted">
+            Vence el {fechaLarga(b.fecha_vencimiento)}
+          </Text>
         </View>
-        <Text variante="caption" tono="muted">
-          Vence el {b.fecha_vencimiento}
-        </Text>
-      </View>
 
-      <View style={{ gap: t.espacio(1.5) }}>
-        <Text variante="etiqueta" tono="muted">
-          Medio de pago previsto (opcional)
-        </Text>
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: t.espacio(2) }}>
-          {MEDIOS.map((m) => {
-            const activo = b.medio_pago === m.v;
-            return (
-              <Pressable
-                key={m.label}
-                onPress={() => set("medio_pago", m.v)}
-                style={{
-                  paddingHorizontal: t.espacio(3),
-                  paddingVertical: t.espacio(1.5),
-                  borderRadius: t.radio.full,
-                  backgroundColor: activo ? t.colores.brand : t.colores.surfaceAlt,
-                }}
-              >
-                <Text variante="caption" weight="semibold" style={{ color: activo ? t.colores.brandForeground : t.colores.muted }}>
-                  {m.label}
-                </Text>
-              </Pressable>
-            );
-          })}
+        <View style={{ gap: t.espacio(1.5) }}>
+          <Text variante="etiqueta" tono="muted">
+            Medio de pago previsto (opcional)
+          </Text>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: t.espacio(2) }}>
+            {MEDIOS.map((m) => {
+              const activo = b.medio_pago === m.v;
+              return (
+                <Pressable
+                  key={m.label}
+                  onPress={() => set("medio_pago", m.v)}
+                  style={{
+                    minHeight: 40,
+                    justifyContent: "center",
+                    paddingHorizontal: t.espacio(3.5),
+                    borderRadius: t.radio.full,
+                    backgroundColor: activo ? t.colores.brand : t.colores.surfaceAlt,
+                  }}
+                >
+                  <Text variante="caption" weight="semibold" tono={activo ? "inverso" : "muted"}>
+                    {m.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
         </View>
-      </View>
+      </ScrollView>
 
-      <Button titulo="Crear cobro" tamano="lg" onPress={guardar} cargando={guardando} style={{ marginTop: t.espacio(2) }} />
-    </ScrollView>
+      <View
+        style={{
+          padding: t.espacio(4),
+          paddingBottom: t.espacio(6),
+          borderTopWidth: 1,
+          borderTopColor: t.colores.border,
+          backgroundColor: t.colores.surface,
+        }}
+      >
+        <Button titulo="Crear cobro" tamano="lg" onPress={guardar} cargando={guardando} />
+      </View>
+    </View>
   );
 }
