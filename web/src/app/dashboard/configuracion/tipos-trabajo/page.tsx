@@ -235,15 +235,11 @@ export default function TiposTrabajoPage() {
       {error && <ErrorText>{error}</ErrorText>}
 
       {tipos !== null && tipos.length === 0 && (
-        <Card>
-          <div className="flex flex-col items-center gap-3 py-16 text-center">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-brand-soft text-brand">
-              <IconWrench className="h-6 w-6" />
-            </div>
-            <p className="font-medium text-foreground">Ningún tipo de trabajo creado</p>
-            <p className="text-sm text-muted">Crea uno para pedir datos específicos según el servicio</p>
-          </div>
-        </Card>
+        <EstadoVacio
+          icono={IconWrench}
+          titulo="Ningún tipo de trabajo creado"
+          mensaje="Crea uno para pedir datos específicos según el servicio"
+        />
       )}
 
       {filtrados.length === 0 && tipos !== null && tipos.length > 0 && (

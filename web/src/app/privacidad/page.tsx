@@ -8,13 +8,13 @@ export const metadata = { title: "Política de Privacidad · Bitácora" };
 // abogado antes del 1-dic-2026 (Ley 21.719). Ver docs/AUDITORIA_LEY21719.md.
 
 function Marca({ children }: { children: React.ReactNode }) {
-  return <span className="rounded bg-amber-100 px-1 text-amber-900">[PENDIENTE: abogado] {children}</span>;
+  return <span className="rounded bg-warning-soft px-1 text-warning">[PENDIENTE: abogado] {children}</span>;
 }
 
 export default function PrivacidadPage() {
   return (
     <main className="mx-auto max-w-3xl px-6 py-12 text-sm leading-relaxed text-foreground">
-      <div className="mb-8 rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-900">
+      <div className="mb-8 rounded-lg border border-warning/40 bg-warning-soft p-4 text-warning">
         <strong>Borrador — pendiente de revisión legal.</strong> Este documento tiene la
         estructura y los datos técnicos correctos, pero el texto legal definitivo lo
         debe redactar un abogado.

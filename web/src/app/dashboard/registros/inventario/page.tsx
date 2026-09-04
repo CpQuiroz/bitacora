@@ -9,7 +9,7 @@ import { estadoStock } from "@/lib/estadoStock";
 import { DashboardShell } from "@/components/DashboardShell";
 import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText, buttonClass } from "@/components/ui";
 import { IconAlertTriangle, IconBox, IconLayers, IconX } from "@/components/icons";
-import { EstadoCargando } from "@/components/estados";
+import { EstadoCargando, EstadoVacio } from "@/components/estados";
 
 type UsuarioConEmpresa = Usuario & { empresa: Empresa };
 type MovimientoConNombre = InventarioMovimiento & { item_nombre: string | null };
@@ -104,20 +104,18 @@ export default function InventarioRegistroPage() {
       <PageHeader title="Inventario" subtitle="Stock de los productos de tu Catálogo" />
 
       {!usuario.empresa.inventario_activado ? (
-        <Card className="my-6">
-          <div className="flex flex-col items-center gap-3 py-16 text-center">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-brand-soft text-brand">
-              <IconBox className="h-6 w-6" />
-            </div>
-            <p className="font-medium text-foreground">Control de Inventario Desactivado</p>
-            <p className="max-w-sm text-sm text-muted">
-              Activa el control de inventario en la configuración para empezar a rastrear tus productos.
-            </p>
-            <a href="/dashboard/configuracion/inventario" className={buttonClass("primary")}>
-              Configurar Inventario
-            </a>
-          </div>
-        </Card>
+        <div className="my-6">
+          <EstadoVacio
+            icono={IconBox}
+            titulo="Control de inventario desactivado"
+            mensaje="Actívalo en la configuración para empezar a rastrear el stock de tus productos."
+            accion={
+              <a href="/dashboard/configuracion/inventario" className={buttonClass("primary")}>
+                Configurar inventario
+              </a>
+            }
+          />
+        </div>
       ) : (
         <>
           {error && (
@@ -134,20 +132,18 @@ export default function InventarioRegistroPage() {
           {productos === null && !error && <EstadoCargando />}
 
           {productos?.length === 0 && (
-            <Card className="my-6">
-              <div className="flex flex-col items-center gap-3 py-16 text-center">
-                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-brand-soft text-brand">
-                  <IconBox className="h-6 w-6" />
-                </div>
-                <p className="font-medium text-foreground">Ningún producto en el catálogo</p>
-                <p className="max-w-sm text-sm text-muted">
-                  Agrega ítems de tipo &quot;Producto&quot; en el Catálogo para empezar a controlar su stock acá.
-                </p>
-                <a href="/dashboard/registros/catalogo" className={buttonClass("primary")}>
-                  Ir al Catálogo
-                </a>
-              </div>
-            </Card>
+            <div className="my-6">
+              <EstadoVacio
+                icono={IconBox}
+                titulo="Ningún producto en el catálogo"
+                mensaje="Agrega ítems de tipo «Producto» en el Catálogo para empezar a controlar su stock acá."
+                accion={
+                  <a href="/dashboard/registros/catalogo" className={buttonClass("primary")}>
+                    Ir al Catálogo
+                  </a>
+                }
+              />
+            </div>
           )}
 
           {productos && productos.length > 0 && (

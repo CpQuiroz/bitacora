@@ -238,19 +238,15 @@ export default function ClientesPage() {
       {clientes === null && !error && <EstadoCargando />}
 
       {clientes?.length === 0 && (
-        <Card>
-          <div className="flex flex-col items-center gap-3 py-16 text-center">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-brand-soft text-brand">
-              <IconMapPin className="h-6 w-6" />
-            </div>
-            <p className="font-medium text-foreground">Ningún cliente registrado</p>
-            <p className="text-sm text-muted">Registra tu primer cliente para comenzar.</p>
-            <Button type="button" onClick={() => setFormAbierto(true)}>
+        <EstadoVacio
+          icono={IconMapPin}
+          titulo="Ningún cliente registrado"
+          mensaje="Registra tu primer cliente para comenzar"
+          accion={<Button type="button" onClick={() => setFormAbierto(true)}>
               <IconPlus className="h-4 w-4" />
               Nuevo Cliente
-            </Button>
-          </div>
-        </Card>
+            </Button>}
+        />
       )}
 
       {clientes && clientes.length > 0 && filtrados.length === 0 && (

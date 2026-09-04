@@ -458,19 +458,15 @@ export default function CatalogoPage() {
       {items === null && !error && <EstadoCargando />}
 
       {items?.length === 0 && (
-        <Card>
-          <div className="flex flex-col items-center gap-3 py-16 text-center">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-brand-soft text-brand">
-              <IconLayers className="h-6 w-6" />
-            </div>
-            <p className="font-medium text-foreground">Ningún ítem en el catálogo</p>
-            <p className="text-sm text-muted">Agrega tu primer producto, servicio o kit.</p>
-            <Button type="button" onClick={abrirNuevo}>
+        <EstadoVacio
+          icono={IconLayers}
+          titulo="Ningún ítem en el catálogo"
+          mensaje="Agrega tu primer producto, servicio o kit"
+          accion={<Button type="button" onClick={abrirNuevo}>
               <IconPlus className="h-4 w-4" />
               Nuevo Ítem
-            </Button>
-          </div>
-        </Card>
+            </Button>}
+        />
       )}
 
       {items && items.length > 0 && filtrados.length === 0 && (

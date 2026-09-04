@@ -122,19 +122,15 @@ export default function CotizacionesPage() {
       {cotizaciones === null && !error && <EstadoCargando />}
 
       {cotizaciones?.length === 0 && (
-        <Card>
-          <div className="flex flex-col items-center gap-3 py-16 text-center">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-brand-soft text-brand">
-              <IconReceipt className="h-6 w-6" />
-            </div>
-            <p className="font-medium text-foreground">Ninguna cotización registrada</p>
-            <p className="text-sm text-muted">Crea tu primera cotización para comenzar</p>
-            <Button type="button" onClick={() => router.push("/dashboard/financiero/cotizaciones/nueva")}>
+        <EstadoVacio
+          icono={IconReceipt}
+          titulo="Ninguna cotización registrada"
+          mensaje="Crea tu primera cotización para comenzar"
+          accion={<Button type="button" onClick={() => router.push("/dashboard/financiero/cotizaciones/nueva")}>
               <IconPlus className="h-4 w-4" />
               Nueva Cotización
-            </Button>
-          </div>
-        </Card>
+            </Button>}
+        />
       )}
 
       {cotizaciones && cotizaciones.length > 0 && filtradas.length === 0 && (

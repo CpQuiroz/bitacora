@@ -395,19 +395,15 @@ export default function EquiposPage() {
       {equipos === null && !error && <EstadoCargando />}
 
       {equipos?.length === 0 && (
-        <Card>
-          <div className="flex flex-col items-center gap-3 py-16 text-center">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-brand-soft text-brand">
-              <IconWrench className="h-6 w-6" />
-            </div>
-            <p className="font-medium text-foreground">Ningún equipo registrado</p>
-            <p className="text-sm text-muted">Registra el primer equipo — de un cliente, o propio de la empresa (ej. un vehículo).</p>
-            <Button type="button" onClick={abrirNuevo}>
+        <EstadoVacio
+          icono={IconWrench}
+          titulo="Ningún equipo registrado"
+          mensaje="Registra el primer equipo — de un cliente, o propio de la empresa (ej. un vehículo)"
+          accion={<Button type="button" onClick={abrirNuevo}>
               <IconPlus className="h-4 w-4" />
               Nuevo Equipo
-            </Button>
-          </div>
-        </Card>
+            </Button>}
+        />
       )}
 
       {equipos && equipos.length > 0 && filtrados.length === 0 && (
