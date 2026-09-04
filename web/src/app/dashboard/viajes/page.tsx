@@ -360,7 +360,7 @@ export default function ViajesPage() {
         {resumen && resumen.length > 0 ? (
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-border text-xs text-muted">
+              <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
                 <th className="px-5 py-2.5 font-medium">{agrupacion === "semana" ? "Semana de" : "Mes"}</th>
                 <th className="px-5 py-2.5 font-medium">Guías</th>
                 <th className="px-5 py-2.5 font-medium">Km recorridos</th>
@@ -521,7 +521,7 @@ export default function ViajesPage() {
         <Card className="overflow-x-auto p-0">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-border text-xs text-muted">
+              <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
                 <th className="px-5 py-3 font-medium"></th>
                 <th className="px-5 py-3 font-medium">Fecha</th>
                 <th className="px-5 py-3 font-medium">Guía</th>
@@ -541,7 +541,7 @@ export default function ViajesPage() {
                 return (
                   <Fragment key={v.id}>
                     <tr
-                      className={`border-b border-border last:border-0 hover:bg-brand-soft/40 ${esBorrador ? "bg-warning-soft/40" : ""}`}
+                      className={`border-b border-border-soft last:border-0 hover:bg-surface-sunken ${esBorrador ? "bg-warning-soft/40" : ""}`}
                     >
                       <td className="px-5 py-3">
                         <input

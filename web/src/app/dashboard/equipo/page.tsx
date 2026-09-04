@@ -351,7 +351,7 @@ export default function EquipoPage() {
         <Card className="overflow-x-auto p-0">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-border text-xs text-muted">
+              <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
                 <th className="px-5 py-3 font-medium">Nombre</th>
                 <th className="px-5 py-3 font-medium">Rol</th>
                 <th className="px-5 py-3 font-medium">Estado</th>
@@ -399,7 +399,7 @@ export default function EquipoPage() {
                     </td>
                   </tr>
                 ) : (
-                  <tr key={u.id} className="border-b border-border last:border-0 hover:bg-brand-soft/40">
+                  <tr key={u.id} className="border-b border-border-soft last:border-0 hover:bg-surface-sunken">
                     <td className="px-5 py-3 font-medium text-foreground">{u.nombre}</td>
                     <td className="px-5 py-3">
                       <Badge value={etiquetaRol(u.rol)} />
@@ -432,7 +432,7 @@ export default function EquipoPage() {
           <h2 className="px-5 pt-5 text-sm font-semibold text-foreground">Historial de cambios</h2>
           <table className="mt-3 w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-border text-xs text-muted">
+              <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
                 <th className="px-5 py-3 font-medium">Usuario</th>
                 <th className="px-5 py-3 font-medium">Campo</th>
                 <th className="px-5 py-3 font-medium">Cambio</th>

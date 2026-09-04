@@ -254,7 +254,7 @@ export default function SeguridadPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-border text-xs text-muted">
+                <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
                   <th className="py-2 pr-4 font-medium">Fecha</th>
                   <th className="py-2 pr-4 font-medium">IP</th>
                   <th className="py-2 font-medium">Dispositivo</th>

@@ -987,7 +987,7 @@ function AgendaContenido() {
                         else abrirTareaRapida(clave);
                       }
                     }}
-                    className={`flex min-h-[6.5rem] flex-col items-stretch gap-1 border-b border-r border-border p-1.5 text-left transition-colors last:border-r-0 hover:bg-brand-soft/40 ${
+                    className={`flex min-h-[6.5rem] flex-col items-stretch gap-1 border-b border-r border-border p-1.5 text-left transition-colors last:border-r-0 hover:bg-surface-sunken ${
                       seleccionado ? "bg-brand-soft/60" : ""
                     }`}
                   >
@@ -1094,7 +1094,7 @@ function AgendaContenido() {
                     title={puedeGestionarAgenda ? "Nueva tarea este día" : undefined}
                     className={`flex items-center justify-center gap-2 border-b px-3 py-2 text-xs font-medium transition-colors sm:flex-col sm:gap-1 ${
                       tareaRapidaFecha === clave ? "border-brand bg-brand-soft/60" : "border-border"
-                    } ${esHoy ? "text-brand" : "text-muted"} ${puedeGestionarAgenda ? "hover:bg-brand-soft/40" : ""}`}
+                    } ${esHoy ? "text-brand" : "text-muted"} ${puedeGestionarAgenda ? "hover:bg-surface-sunken" : ""}`}
                   >
                     <span className="capitalize">{NOMBRES_DIA_CORTOS[dia.getDay()]}</span>
                     <span

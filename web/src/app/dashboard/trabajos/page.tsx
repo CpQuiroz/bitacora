@@ -211,7 +211,7 @@ export default function TrabajosPage() {
           <Card className="overflow-x-auto p-0">
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-border text-xs text-muted">
+                <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
                   <th className="px-5 py-3 font-medium">Fecha</th>
                   <th className="px-5 py-3 font-medium">Cliente</th>
                   <th className="px-5 py-3 font-medium">Monto</th>
@@ -223,7 +223,7 @@ export default function TrabajosPage() {
                   <tr
                     key={t.id}
                     onClick={() => router.push(`/dashboard/trabajos/${t.id}`)}
-                    className="cursor-pointer border-b border-border last:border-0 hover:bg-brand-soft/40"
+                    className="cursor-pointer border-b border-border-soft last:border-0 hover:bg-surface-sunken"
                   >
                     <td className="px-5 py-3">{t.fecha}</td>
                     <td className="px-5 py-3 font-medium text-foreground">{t.cliente}</td>

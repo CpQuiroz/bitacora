@@ -152,7 +152,7 @@ export default function VisionGeneralPage() {
         <h2 className="mb-4 text-sm font-semibold text-foreground">Informes Detallados</h2>
         <div className="flex flex-col divide-y divide-border">
           {ACCESOS.map((a) => (
-            <Link key={a.titulo} href={a.href} className="flex items-center gap-3 py-3 hover:bg-brand-soft/40">
+            <Link key={a.titulo} href={a.href} className="flex items-center gap-3 py-3 hover:bg-surface-sunken">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-soft text-brand">
                 <a.icon className="h-4 w-4" />
               </div>

@@ -412,7 +412,7 @@ function CobrosContenido() {
         <Card className="overflow-x-auto p-0">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-border text-xs text-muted">
+              <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
                 <th className="px-5 py-3 font-medium">Cliente</th>
                 <th className="px-5 py-3 font-medium">Monto</th>
                 <th className="px-5 py-3 font-medium">Medio de pago</th>
@@ -425,7 +425,7 @@ function CobrosContenido() {
             </thead>
             <tbody>
               {filtrados.map((c) => (
-                <tr key={c.id} className="border-b border-border last:border-0 hover:bg-brand-soft/40">
+                <tr key={c.id} className="border-b border-border-soft last:border-0 hover:bg-surface-sunken">
                   <td className="px-5 py-3 font-medium text-foreground">
                     <Link href={`/dashboard/financiero/cobros/${c.id}`} className="hover:text-brand hover:underline">
                       {c.cliente}

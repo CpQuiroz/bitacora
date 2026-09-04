@@ -368,7 +368,7 @@ export default function CotizacionDetallePage() {
                 ) : (
                   <table className="w-full text-left text-sm">
                     <thead>
-                      <tr className="border-b border-border text-xs text-muted">
+                      <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
                         <th className="py-2 font-medium">Descripción</th>
                         <th className="py-2 font-medium">Cantidad</th>
                         <th className="py-2 font-medium">Precio unitario</th>

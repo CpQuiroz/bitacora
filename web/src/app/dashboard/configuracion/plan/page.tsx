@@ -389,7 +389,7 @@ function PlanContenido() {
           <h2 className="p-6 pb-3 text-sm font-semibold text-foreground">Historial de cambios de plan</h2>
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-border text-xs text-muted">
+              <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
                 <th className="px-5 py-3 font-medium">Fecha</th>
                 <th className="px-5 py-3 font-medium">Cambio</th>
                 <th className="px-5 py-3 font-medium">Quién</th>
@@ -416,7 +416,7 @@ function PlanContenido() {
           <h2 className="p-6 pb-3 text-sm font-semibold text-foreground">Historial de cobros</h2>
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-border text-xs text-muted">
+              <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
                 <th className="px-5 py-3 font-medium">Fecha</th>
                 <th className="px-5 py-3 font-medium">Monto</th>
                 <th className="px-5 py-3 font-medium">Intento</th>

@@ -145,7 +145,7 @@ export default function CotizacionesPage() {
         <Card className="overflow-x-auto p-0">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-border text-xs text-muted">
+              <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
                 <th className="px-5 py-3 font-medium">N°</th>
                 <th className="px-5 py-3 font-medium">Cliente</th>
                 <th className="px-5 py-3 font-medium">Monto</th>
@@ -159,7 +159,7 @@ export default function CotizacionesPage() {
                 <tr
                   key={c.id}
                   onClick={() => router.push(`/dashboard/financiero/cotizaciones/${c.id}`)}
-                  className="cursor-pointer border-b border-border last:border-0 hover:bg-brand-soft/40"
+                  className="cursor-pointer border-b border-border-soft last:border-0 hover:bg-surface-sunken"
                 >
                   <td className="px-5 py-3 font-medium text-foreground">{c.numero != null ? `#${String(c.numero).padStart(4, "0")}` : "—"}</td>
                   <td className="px-5 py-3 text-foreground">{c.cliente_info?.nombre ?? "—"}</td>

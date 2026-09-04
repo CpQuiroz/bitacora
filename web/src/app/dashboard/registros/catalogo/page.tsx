@@ -481,7 +481,7 @@ export default function CatalogoPage() {
         <Card className="overflow-x-auto p-0">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-border text-xs text-muted">
+              <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
                 <th className="px-5 py-3 font-medium">Tipo</th>
                 <th className="px-5 py-3 font-medium">Ítem</th>
                 <th className="px-5 py-3 font-medium">SKU</th>
@@ -495,7 +495,7 @@ export default function CatalogoPage() {
             </thead>
             <tbody>
               {filtrados.map((i) => (
-                <tr key={i.id} className="border-b border-border last:border-0 hover:bg-brand-soft/40">
+                <tr key={i.id} className="border-b border-border-soft last:border-0 hover:bg-surface-sunken">
                   <td className="px-5 py-3">
                     <span className="flex items-center gap-1.5">
                       {(() => {

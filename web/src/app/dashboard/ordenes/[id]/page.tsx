@@ -285,7 +285,7 @@ export default function DetalleOrdenServicioPage() {
               </div>
 
               {detalle.tipo_trabajo && detalle.tipo_trabajo.campos.length > 0 && (
-                <div className="mb-5 grid gap-3 rounded-lg bg-brand-soft/40 p-3 sm:grid-cols-2">
+                <div className="mb-5 grid gap-3 rounded-lg bg-surface-sunken p-3 sm:grid-cols-2">
                   <p className="text-xs font-medium text-muted sm:col-span-2">Datos medidos — {detalle.tipo_trabajo.nombre}</p>
                   {detalle.tipo_trabajo.campos.map((campo) => (
                     <div key={campo.clave}>
@@ -448,7 +448,7 @@ export default function DetalleOrdenServicioPage() {
             <Card className="my-6 overflow-x-auto p-0">
               <table className="w-full text-left text-sm">
                 <thead>
-                  <tr className="border-b border-border text-xs text-muted">
+                  <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
                     <th className="px-5 py-3 font-medium">Ítem</th>
                     <th className="px-5 py-3 font-medium">Cant.</th>
                     <th className="px-5 py-3 font-medium">P. unitario</th>

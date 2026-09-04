@@ -418,7 +418,7 @@ export default function EquiposPage() {
         <Card className="overflow-x-auto p-0">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-border text-xs text-muted">
+              <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
                 <th className="px-5 py-3 font-medium">Nombre</th>
                 <th className="px-5 py-3 font-medium">Cliente</th>
                 <th className="px-5 py-3 font-medium">Marca / Modelo</th>
@@ -431,7 +431,7 @@ export default function EquiposPage() {
             </thead>
             <tbody>
               {filtrados.map((e) => (
-                <tr key={e.id} className="border-b border-border last:border-0 hover:bg-brand-soft/40">
+                <tr key={e.id} className="border-b border-border-soft last:border-0 hover:bg-surface-sunken">
                   <td className="px-5 py-3 font-medium text-foreground">{e.nombre}</td>
                   <td className="px-5 py-3 text-muted">{e.cliente?.nombre ?? "Propio de la empresa"}</td>
                   <td className="px-5 py-3 text-muted">

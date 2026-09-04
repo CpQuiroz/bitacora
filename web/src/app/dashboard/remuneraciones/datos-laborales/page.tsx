@@ -112,7 +112,7 @@ export default function DatosLaboralesPage() {
         <Card className="overflow-x-auto p-0">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-border text-xs text-muted">
+              <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
                 <th className="px-5 py-3 font-medium">Colaborador</th>
                 <th className="px-5 py-3 font-medium">Contrato</th>
                 <th className="px-5 py-3 font-medium">Sueldo base</th>

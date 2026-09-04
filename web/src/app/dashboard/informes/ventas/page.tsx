@@ -132,7 +132,7 @@ export default function InformeVentasPage() {
         ) : (
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-border text-xs text-muted">
+              <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
                 <th className="py-2 font-medium">Servicio</th>
                 <th className="py-2 font-medium">Cantidad</th>
                 <th className="py-2 text-right font-medium">Valor</th>

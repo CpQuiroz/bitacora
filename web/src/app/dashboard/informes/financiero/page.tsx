@@ -144,7 +144,7 @@ export default function InformeFinancieroPage() {
         ) : (
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-border text-xs text-muted">
+              <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
                 <th className="py-2 font-medium">Cliente</th>
                 <th className="py-2 font-medium">Cobros</th>
                 <th className="py-2 text-right font-medium">Ingreso</th>

@@ -335,7 +335,7 @@ function NuevaOrdenServicioContenido() {
                 <p className="mt-1 text-xs text-muted">Clasificación con color y checklist para el listado de OS.</p>
               </div>
               {tipoTrabajoSeleccionado && tipoTrabajoSeleccionado.campos.length > 0 && (
-                <div className="grid gap-3 rounded-lg bg-brand-soft/40 p-3 sm:col-span-2 sm:grid-cols-2">
+                <div className="grid gap-3 rounded-lg bg-surface-sunken p-3 sm:col-span-2 sm:grid-cols-2">
                   <p className="text-xs font-medium text-muted sm:col-span-2">Datos medidos — {tipoTrabajoSeleccionado.nombre}</p>
                   {tipoTrabajoSeleccionado.campos.map((campo) => (
                     <div key={campo.clave}>

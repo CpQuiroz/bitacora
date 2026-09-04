@@ -206,7 +206,7 @@ export default function PaquetesSesionesPage() {
         <Card className="overflow-x-auto p-0">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-border text-xs text-muted">
+              <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
                 <th className="px-5 py-3 font-medium">Cliente</th>
                 <th className="px-5 py-3 font-medium">Paquete</th>
                 <th className="px-5 py-3 font-medium">Saldo</th>
@@ -217,7 +217,7 @@ export default function PaquetesSesionesPage() {
             </thead>
             <tbody>
               {filtrados.map((p) => (
-                <tr key={p.id} className="border-b border-border last:border-0 hover:bg-brand-soft/40">
+                <tr key={p.id} className="border-b border-border-soft last:border-0 hover:bg-surface-sunken">
                   <td className="px-5 py-3 font-medium text-foreground">{p.cliente?.nombre ?? "—"}</td>
                   <td className="px-5 py-3 text-foreground">{p.nombre}</td>
                   <td className="px-5 py-3 text-foreground">

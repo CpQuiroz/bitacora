@@ -260,7 +260,7 @@ export default function ProveedoresPage() {
         <Card className="overflow-x-auto p-0">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-border text-xs text-muted">
+              <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
                 <th className="px-5 py-3 font-medium">Nombre</th>
                 <th className="px-5 py-3 font-medium">Razón social</th>
                 <th className="px-5 py-3 font-medium">RUT</th>
@@ -272,7 +272,7 @@ export default function ProveedoresPage() {
             </thead>
             <tbody>
               {filtrados.map((p) => (
-                <tr key={p.id} className="border-b border-border last:border-0 hover:bg-brand-soft/40">
+                <tr key={p.id} className="border-b border-border-soft last:border-0 hover:bg-surface-sunken">
                   <td className="px-5 py-3 font-medium text-foreground">{p.nombre}</td>
                   <td className="px-5 py-3 text-muted">{p.razon_social || "—"}</td>
                   <td className="px-5 py-3 text-muted">{p.rut || "—"}</td>

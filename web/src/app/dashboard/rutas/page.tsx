@@ -104,7 +104,7 @@ export default function RutasPage() {
         <Card className="mb-6 overflow-x-auto p-0">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-border text-xs text-muted">
+              <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
                 <th className="px-5 py-3 font-medium">Ruta</th>
                 <th className="px-5 py-3 font-medium">Fecha</th>
                 <th className="px-5 py-3 font-medium">Estado</th>
@@ -112,7 +112,7 @@ export default function RutasPage() {
             </thead>
             <tbody>
               {rutasGuardadas.map((r) => (
-                <tr key={r.id} className="border-b border-border last:border-0 hover:bg-brand-soft/40">
+                <tr key={r.id} className="border-b border-border-soft last:border-0 hover:bg-surface-sunken">
                   <td className="px-5 py-3">
                     <Link href={`/dashboard/rutas/${r.id}`} className="font-medium text-brand hover:underline">
                       {r.nombre || equipo.find((u) => u.id === r.responsable_id)?.nombre || "Ruta"}

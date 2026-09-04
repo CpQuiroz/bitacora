@@ -79,7 +79,7 @@ function SeccionDatos({ etiqueta, datos, moneda }: { etiqueta: string; datos: Re
           <div key={clave} className="overflow-x-auto rounded-lg border border-border">
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-border text-xs text-muted">
+                <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
                   {columnas.map((c) => (
                     <th key={c} className="px-3 py-2 font-medium">
                       {humanizar(c)}
@@ -150,7 +150,7 @@ function DatosAgregados({ datos, moneda }: { datos: Record<string, unknown>; mon
         <div className="overflow-x-auto rounded-lg border border-border">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-border text-xs text-muted">
+              <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
                 <th className="px-3 py-2 font-medium">Cliente</th>
                 <th className="px-3 py-2 font-medium">Trabajos</th>
                 <th className="px-3 py-2 font-medium">Facturado</th>
@@ -174,7 +174,7 @@ function DatosAgregados({ datos, moneda }: { datos: Record<string, unknown>; mon
         <div className="overflow-x-auto rounded-lg border border-border">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-border text-xs text-muted">
+              <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
                 <th className="px-3 py-2 font-medium">Colaborador</th>
                 <th className="px-3 py-2 font-medium">Trabajos</th>
                 <th className="px-3 py-2 font-medium">Completados</th>

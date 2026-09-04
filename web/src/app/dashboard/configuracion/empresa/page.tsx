@@ -413,7 +413,7 @@ export default function EmpresaPage() {
                 onDrop={onSoltarLogo}
                 onClick={() => inputLogoRef.current?.click()}
                 className={`flex flex-1 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-4 py-5 text-center transition-colors ${
-                  arrastrando ? "border-brand bg-brand-soft" : "border-border hover:border-brand hover:bg-brand-soft/40"
+                  arrastrando ? "border-brand bg-brand-soft" : "border-border hover:border-brand hover:bg-surface-sunken"
                 }`}
               >
                 <p className="text-sm font-medium text-foreground">

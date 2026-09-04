@@ -539,7 +539,7 @@ export default function NuevaRutaPage() {
                   </div>
 
                   {tipoTrabajoSeleccionado && tipoTrabajoSeleccionado.campos.length > 0 && (
-                    <div className="sm:col-span-2 grid gap-3 rounded-lg bg-brand-soft/40 p-3 sm:grid-cols-2">
+                    <div className="sm:col-span-2 grid gap-3 rounded-lg bg-surface-sunken p-3 sm:grid-cols-2">
                       {tipoTrabajoSeleccionado.campos.map((campo) => (
                         <div key={campo.clave}>
                           <Label>{campo.etiqueta}</Label>
