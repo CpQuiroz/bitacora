@@ -315,14 +315,10 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
     // solo sobreescribir la variable no alcanza porque <body> ya resolvió
     // la suya con el valor de :root, más arriba en el árbol.
     fontFamily: "var(--font-sans)",
-    ...(usuario.colorPrimario
-      ? {
-          "--brand": usuario.colorPrimario,
-          "--brand-foreground": usuario.colorPrimarioForeground || "#ffffff",
-          "--brand-soft": `color-mix(in srgb, ${usuario.colorPrimario} 14%, var(--surface))`,
-        }
-      : {}),
-    ...(usuario.colorSecundario ? { "--accent": usuario.colorSecundario } : {}),
+    // Refresco 1a — el color de la empresa pasa a --accent: la identidad
+    // Bitácora (--brand) ya no se reemplaza por tenant. El logo sí se
+    // mantiene. Ver GUIA-REFRESCO-1a paso 6.
+    ...(usuario.colorPrimario ? { "--accent": usuario.colorPrimario } : {}),
     ...(usuario.fuente && usuario.fuente !== "sistema" ? { "--font-sans": fuenteInfo.pila } : {}),
   } as CSSProperties;
 
@@ -372,7 +368,7 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
             </div>
           ) : (
             <div key={grupo.titulo}>
-              <p className={`px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted ${i > 0 ? "pt-4" : "pt-1"}`}>
+              <p className={`px-3 pb-1 font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-muted ${i > 0 ? "pt-4" : "pt-1"}`}>
                 {grupo.titulo}
               </p>
               {renderItems(grupo.items, compacto)}
@@ -397,7 +393,7 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
                   onClick={() => alternarGrupo(item.label)}
                   title={compacto ? item.label : undefined}
                   className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                    activo ? "bg-brand-soft text-brand" : "text-muted hover:bg-brand-soft hover:text-brand"
+                    activo ? "bg-brand text-brand-foreground" : "text-muted hover:bg-surface-sunken hover:text-foreground"
                   }`}
                 >
                   <item.icon className="h-4.5 w-4.5 shrink-0" />
@@ -438,7 +434,7 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
               onClick={() => setMenuMovilAbierto(false)}
               title={compacto ? item.label : undefined}
               className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                activo ? "bg-brand-soft text-brand" : "text-muted hover:bg-brand-soft hover:text-brand"
+                activo ? "bg-brand text-brand-foreground" : "text-muted hover:bg-surface-sunken hover:text-foreground"
               }`}
             >
               <item.icon className="h-4.5 w-4.5 shrink-0" />
@@ -532,7 +528,7 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-surface/80 px-4 py-3 backdrop-blur print:hidden sm:px-6">
+        <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-surface px-4 py-3 print:hidden sm:px-6">
           <button
             type="button"
             onClick={() => setMenuMovilAbierto(true)}
@@ -553,9 +549,9 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
             >
               <span className="hidden text-right text-sm sm:block">
                 <span className="block font-medium text-foreground">{usuario.nombre}</span>
-                <span className="block text-xs text-muted capitalize">{usuario.rol}</span>
+                <span className="block font-mono text-[10px] uppercase tracking-[0.08em] text-muted">{usuario.rol}</span>
               </span>
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand text-xs font-semibold text-brand-foreground">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand text-xs font-semibold text-brand-foreground">
                 {iniciales(usuario.nombre)}
               </span>
             </button>
