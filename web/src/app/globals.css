@@ -1,40 +1,58 @@
 @import "tailwindcss";
 
+/* ─────────────────────────────────────────────────────────────
+   Bitácora — dirección "Faena" (refresco 1a)
+   Azul tinta + naranja señal. Tipografía IBM Plex Sans, cifras
+   en IBM Plex Mono. Forma: esquinas cortas, borde firme, sin
+   sombras difusas.
+   Los radios se redefinen en @theme, así todo `rounded-lg` /
+   `rounded-2xl` que ya existe en la app cambia de forma sin
+   tocar cada componente.
+   ───────────────────────────────────────────────────────────── */
+
 :root {
-  /* Paleta "Terreno" — azul marino + acento ámbar, en vez del indigo
-     genérico por defecto. Solo color: tipografía y forma de los
-     componentes (radios, sombras) se dejaron igual a propósito. */
-  --background: #eef1f4;
+  --background: #e9eaec;
   --surface: #ffffff;
-  --foreground: #16161f;
-  --muted: #5b6572;
-  --border: #d8dee5;
+  --surface-sunken: #f3f5f7;
+  --foreground: #101720;
+  --muted: #5c6672;
+  --muted-soft: #8b939d;
+  --border: #d3d8dd;
+  --border-soft: #eceef1;
 
-  --brand: #1e4e8c;
+  --brand: #14314f;
   --brand-foreground: #ffffff;
-  --brand-soft: #e8eef7;
+  --brand-soft: #e4eaf1;
 
-  --accent: #c07a1f;
+  --accent: #c2500f;
+  --accent-foreground: #8a4a10;
+  --accent-soft: #fdf1e6;
 
-  --success: #15803d;
-  --success-soft: #ecfdf3;
-  --warning: #b45309;
-  --warning-soft: #fffbeb;
-  --danger: #b91c1c;
-  --danger-soft: #fef2f2;
+  --success: #14663c;
+  --success-soft: #e7f2eb;
+  --warning: #8a5a00;
+  --warning-soft: #fdf1e6;
+  --danger: #a02020;
+  --danger-soft: #fbeaea;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-surface: var(--surface);
+  --color-surface-sunken: var(--surface-sunken);
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
+  --color-muted-soft: var(--muted-soft);
   --color-border: var(--border);
+  --color-border-soft: var(--border-soft);
 
   --color-brand: var(--brand);
   --color-brand-foreground: var(--brand-foreground);
   --color-brand-soft: var(--brand-soft);
+
   --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-soft: var(--accent-soft);
 
   --color-success: var(--success);
   --color-success-soft: var(--success-soft);
@@ -43,29 +61,43 @@
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
 
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-plex-sans);
+  --font-mono: var(--font-plex-mono);
+
+  /* Forma global: 1a es de esquina corta. Reasignar estas claves
+     re-dibuja toda la app (botones, inputs, cards) de una vez. */
+  --radius-sm: 4px;
+  --radius-md: 5px;
+  --radius-lg: 6px;
+  --radius-xl: 7px;
+  --radius-2xl: 8px;
+  --radius-3xl: 10px;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0f16;
-    --surface: #121822;
-    --foreground: #f1f1f6;
-    --muted: #8b96a3;
-    --border: #232c38;
+    --background: #0c121a;
+    --surface: #141c26;
+    --surface-sunken: #101822;
+    --foreground: #eef1f4;
+    --muted: #93a0ae;
+    --muted-soft: #6d7a88;
+    --border: #253040;
+    --border-soft: #1c2531;
 
-    --brand: #5b9bdb;
-    --brand-foreground: #0a0f16;
-    --brand-soft: #16283d;
+    --brand: #6fa4dd;
+    --brand-foreground: #0c121a;
+    --brand-soft: #17293e;
 
-    --accent: #e2a35a;
+    --accent: #e78b4a;
+    --accent-foreground: #f0a06a;
+    --accent-soft: #2a1d10;
 
-    --success: #4ade80;
+    --success: #4fbd83;
     --success-soft: #10281a;
-    --warning: #fbbf24;
+    --warning: #d99b2b;
     --warning-soft: #2a2007;
-    --danger: #f87171;
+    --danger: #e5706e;
     --danger-soft: #2a1212;
   }
 }
@@ -74,4 +106,14 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Cifras, folios, RUT, fechas y montos: mono con ancho fijo para que
+   las columnas de las tablas queden alineadas. Se aplica con la clase
+   `font-mono` o con el helper <Cifra> de ui.tsx. */
+.font-mono,
+[data-cifra] {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
 }
