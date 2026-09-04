@@ -5,6 +5,7 @@
 // plantilla configurable con variables ya sustituidas.
 // ============================================================
 import PDFDocument from "pdfkit";
+import { PDF, regla, tituloSeccion } from "./pdfEstilo";
 
 export type ItemCotizacionPdf = {
   descripcion: string;
@@ -45,7 +46,7 @@ async function descargar(url: string): Promise<Buffer | null> {
 
 export async function generarPdfCotizacion(datos: DatosCotizacionPdf): Promise<Buffer> {
   const logoBuffer = datos.empresaLogoUrl ? await descargar(datos.empresaLogoUrl) : null;
-  const colorMarca = datos.colorPrimario ?? "#4338ca";
+  const colorMarca = datos.colorPrimario ?? PDF.marca;
 
   const doc = new PDFDocument({ size: "A4", margin: 50 });
   const chunks: Buffer[] = [];
@@ -70,15 +71,14 @@ export async function generarPdfCotizacion(datos: DatosCotizacionPdf): Promise<B
   doc
     .fontSize(20)
     .font("Helvetica-Bold")
-    .fillColor("#000000")
+    .fillColor(PDF.tinta)
     .text(`Cotización N° ${datos.numero ?? "—"}`, 300, 50, { align: "right" });
-  doc.moveTo(50, 108).lineTo(545, 108).strokeColor(colorMarca).lineWidth(2).stroke();
-  doc.strokeColor("#000000").lineWidth(1);
+  regla(doc, 108, colorMarca, 2);
   doc.y = 120;
 
   if (datos.textoEncabezado) {
-    doc.font("Helvetica").fontSize(9).fillColor("#555555").text(datos.textoEncabezado, { width: 495 });
-    doc.fillColor("#000000");
+    doc.font("Helvetica").fontSize(9).fillColor(PDF.muted).text(datos.textoEncabezado, { width: 495 });
+    doc.fillColor(PDF.tinta);
     doc.moveDown(0.8);
   }
 
@@ -95,7 +95,7 @@ export async function generarPdfCotizacion(datos: DatosCotizacionPdf): Promise<B
   doc.moveDown(1);
 
   if (datos.descripcion) {
-    doc.font("Helvetica-Bold").text("Descripción:");
+    tituloSeccion(doc, "Descripción", colorMarca, 50);
     doc.font("Helvetica").text(datos.descripcion, { width: 495 });
     doc.moveDown(1);
   }
@@ -104,15 +104,15 @@ export async function generarPdfCotizacion(datos: DatosCotizacionPdf): Promise<B
   if (datos.items.length > 0) {
     doc.moveDown(0.5);
     const top = doc.y;
-    doc.font("Helvetica-Bold").fontSize(10).fillColor(colorMarca);
-    doc.text("Descripción", 50, top, { width: 245 });
-    doc.text("Cant.", 300, top, { width: 60, align: "right" });
-    doc.text("P. unitario", 365, top, { width: 80, align: "right" });
-    doc.text("Total", 450, top, { width: 95, align: "right" });
-    doc.moveTo(50, top + 15).lineTo(545, top + 15).strokeColor("#cccccc").stroke();
+    doc.font("Helvetica-Bold").fontSize(8.5).fillColor(colorMarca);
+    doc.text("DESCRIPCIÓN", 50, top, { width: 245, characterSpacing: 1 });
+    doc.text("CANT.", 300, top, { width: 60, align: "right", characterSpacing: 1 });
+    doc.text("P. UNITARIO", 365, top, { width: 80, align: "right", characterSpacing: 1 });
+    doc.text("TOTAL", 450, top, { width: 95, align: "right", characterSpacing: 1 });
+    regla(doc, top + 15, PDF.regla);
     doc.y = top + 20;
 
-    doc.font("Helvetica").fontSize(10).fillColor("#000000");
+    doc.font("Helvetica").fontSize(10).fillColor(PDF.tinta);
     for (const item of datos.items) {
       const totalItem = item.cantidad * item.precio_unitario;
       const filaY = doc.y;
@@ -122,19 +122,19 @@ export async function generarPdfCotizacion(datos: DatosCotizacionPdf): Promise<B
       doc.text(monto(totalItem), 450, filaY, { width: 95, align: "right" });
       doc.moveDown(0.6);
     }
-    doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor("#cccccc").stroke();
+    regla(doc, doc.y, PDF.regla);
     doc.moveDown(0.4);
 
-    doc.font("Helvetica").fontSize(9).text(`Subtotal: ${monto(datos.subtotal)}`, 50, doc.y, { width: 495, align: "right" });
+    doc.font("Helvetica").fontSize(9).fillColor(PDF.muted).text(`Subtotal: ${monto(datos.subtotal)}`, 50, doc.y, { width: 495, align: "right" });
     doc.text(`IVA (19%): ${monto(datos.iva)}`, { width: 495, align: "right" });
-    doc.font("Helvetica-Bold").fontSize(11).text(`Total: ${monto(datos.total)}`, { width: 495, align: "right" });
+    doc.font("Helvetica-Bold").fontSize(11).fillColor(PDF.tinta).text(`Total: ${monto(datos.total)}`, { width: 495, align: "right" });
     doc.moveDown(1);
   }
 
   if (datos.textoPie) {
     doc.moveDown(1.5);
-    doc.font("Helvetica").fontSize(8).fillColor("#555555").text(datos.textoPie, { width: 495 });
-    doc.fillColor("#000000");
+    doc.font("Helvetica").fontSize(8).fillColor(PDF.faint).text(datos.textoPie, { width: 495 });
+    doc.fillColor(PDF.tinta);
   }
 
   doc.end();
