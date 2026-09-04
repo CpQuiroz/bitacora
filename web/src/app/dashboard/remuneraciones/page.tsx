@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell } from "@/components/DashboardShell";
-import { Badge, Button, Card, ErrorText, PageHeader, Select, SuccessText } from "@/components/ui";
+import { Badge, Button, Card, Cifra, ErrorText, PageHeader, Select, Stat, SuccessText } from "@/components/ui";
 import { EstadoCargando } from "@/components/estados";
 import { useUsuarioShell } from "@/lib/useUsuarioShell";
 import { nombrePeriodo, periodoRelativo, remuneraciones, type FormatoExport, type LiquidacionConNombre } from "@/lib/remuneracionesApi";
@@ -119,20 +119,9 @@ export default function RemuneracionesPage() {
 
       {filas && filas.length > 0 && (
         <div className="mb-4 grid gap-3 sm:grid-cols-3">
-          <Card className="p-4">
-            <p className="text-xs text-muted">Total líquido</p>
-            <p className="mt-1 text-lg font-semibold tabular-nums text-foreground">{formatMoneda(totales.liquido, moneda)}</p>
-          </Card>
-          <Card className="p-4">
-            <p className="text-xs text-muted">Costo empresa (aprox.)</p>
-            <p className="mt-1 text-lg font-semibold tabular-nums text-foreground">{formatMoneda(totales.costoEmpresa, moneda)}</p>
-          </Card>
-          <Card className="p-4">
-            <p className="text-xs text-muted">Emitidas</p>
-            <p className="mt-1 text-lg font-semibold tabular-nums text-foreground">
-              {totales.emitidas} / {filas.length}
-            </p>
-          </Card>
+          <Stat etiqueta="Total líquido" valor={formatMoneda(totales.liquido, moneda)} />
+          <Stat etiqueta="Costo empresa (aprox.)" valor={formatMoneda(totales.costoEmpresa, moneda)} />
+          <Stat etiqueta="Emitidas" valor={`${totales.emitidas} / ${filas.length}`} />
         </div>
       )}
 
@@ -181,22 +170,22 @@ export default function RemuneracionesPage() {
             <thead>
               <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
                 <th className="px-5 py-3 font-medium">Colaborador</th>
-                <th className="px-5 py-3 font-medium">Días</th>
-                <th className="px-5 py-3 font-medium">Imponible</th>
-                <th className="px-5 py-3 font-medium">Descuentos</th>
-                <th className="px-5 py-3 font-medium">Líquido</th>
+                <th className="px-5 py-3 text-right font-medium">Días</th>
+                <th className="px-5 py-3 text-right font-medium">Imponible</th>
+                <th className="px-5 py-3 text-right font-medium">Descuentos</th>
+                <th className="px-5 py-3 text-right font-medium">Líquido</th>
                 <th className="px-5 py-3 font-medium">Estado</th>
                 <th className="px-5 py-3 font-medium"></th>
               </tr>
             </thead>
             <tbody>
               {filas.map((l) => (
-                <tr key={l.id} className="border-b border-border last:border-0">
+                <tr key={l.id} className="border-b border-border-soft last:border-0 even:bg-[#fafbfc]">
                   <td className="px-5 py-3 font-medium text-foreground">{l.colaborador?.nombre ?? "—"}</td>
-                  <td className="px-5 py-3 text-muted">{l.dias_trabajados}</td>
-                  <td className="px-5 py-3 tabular-nums text-muted">{formatMoneda(l.base_imponible, moneda)}</td>
-                  <td className="px-5 py-3 tabular-nums text-muted">{formatMoneda(l.total_descuentos, moneda)}</td>
-                  <td className="px-5 py-3 tabular-nums font-medium text-foreground">{formatMoneda(l.liquido_pagar, moneda)}</td>
+                  <td className="px-5 py-3 text-right"><Cifra className="text-muted">{l.dias_trabajados}</Cifra></td>
+                  <td className="px-5 py-3 text-right"><Cifra className="text-muted">{formatMoneda(l.base_imponible, moneda)}</Cifra></td>
+                  <td className="px-5 py-3 text-right"><Cifra className="text-muted">{formatMoneda(l.total_descuentos, moneda)}</Cifra></td>
+                  <td className="px-5 py-3 text-right font-medium text-foreground"><Cifra>{formatMoneda(l.liquido_pagar, moneda)}</Cifra></td>
                   <td className="px-5 py-3">
                     <Badge value={l.estado} />
                   </td>
