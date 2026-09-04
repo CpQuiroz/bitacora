@@ -147,6 +147,7 @@ function AgendaContenido() {
   const [descripcionTarea, setDescripcionTarea] = useState("");
   const [fechaTarea, setFechaTarea] = useState("");
   const [horaTarea, setHoraTarea] = useState("");
+  const [duracionTarea, setDuracionTarea] = useState("");
   const [clienteIdTarea, setClienteIdTarea] = useState("");
   const [responsableIdTarea, setResponsableIdTarea] = useState("");
   const [prioridadTarea, setPrioridadTarea] = useState<Prioridad>("media");
@@ -259,6 +260,7 @@ function AgendaContenido() {
     setDescripcionTarea(borrador.descripcion ?? "");
     setFechaTarea(fecha);
     setHoraTarea(borrador.hora ?? "");
+    setDuracionTarea("");
     setClienteIdTarea(borrador.cliente_id ?? "");
     setResponsableIdTarea(borrador.responsable_id ?? "");
     setPrioridadTarea((borrador.prioridad as Prioridad) || "media");
@@ -366,6 +368,7 @@ function AgendaContenido() {
     setDescripcionTarea("");
     setFechaTarea(fecha);
     setHoraTarea("");
+    setDuracionTarea("");
     setClienteIdTarea("");
     setResponsableIdTarea("");
     setPrioridadTarea("media");
@@ -446,6 +449,7 @@ function AgendaContenido() {
     setDescripcionTarea(t.descripcion ?? "");
     setFechaTarea(t.fecha);
     setHoraTarea(t.hora ?? "");
+    setDuracionTarea(t.duracion_min ? String(t.duracion_min) : "");
     setClienteIdTarea(t.cliente_id ?? "");
     setResponsableIdTarea(t.responsable_id ?? "");
     setPrioridadTarea(t.prioridad);
@@ -520,6 +524,7 @@ function AgendaContenido() {
       descripcion: descripcionTarea || null,
       fecha: fechaTarea,
       hora: horaTarea || null,
+      duracion_min: duracionTarea ? Number(duracionTarea) : null,
       cliente_id: clienteIdTarea || null,
       responsable_id: responsableIdTarea || null,
       prioridad: prioridadTarea,
@@ -662,6 +667,16 @@ function AgendaContenido() {
               <Label>Hora (opcional)</Label>
               <Input type="time" value={horaTarea} onChange={(e) => setHoraTarea(e.target.value)} />
             </div>
+            <div>
+              <Label>Duración en minutos (opcional)</Label>
+              <Input
+                type="number"
+                min={1}
+                placeholder="Ej: 60"
+                value={duracionTarea}
+                onChange={(e) => setDuracionTarea(e.target.value.replace(/\D/g, ""))}
+              />
+            </div>
           </div>
           <div>
             <Label>Cliente (opcional)</Label>
@@ -763,6 +778,16 @@ function AgendaContenido() {
               <div>
                 <Label>Hora (opcional)</Label>
                 <Input type="time" value={horaTarea} onChange={(e) => setHoraTarea(e.target.value)} />
+              </div>
+              <div>
+                <Label>Duración en minutos (opcional)</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  placeholder="Ej: 60"
+                  value={duracionTarea}
+                  onChange={(e) => setDuracionTarea(e.target.value.replace(/\D/g, ""))}
+                />
               </div>
               <div>
                 <Label>Cliente (opcional)</Label>

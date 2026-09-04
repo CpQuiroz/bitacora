@@ -33,6 +33,7 @@ const ASUNTOS_DEFAULT: Record<TipoNotificacionCliente, string> = {
   cobro_pendiente: "Tienes un cobro pendiente",
   cobro_vencido: "Tienes un cobro vencido",
   cita_agendada: "Tu cita con {empresa}",
+  cita_cancelada: "Tu cita con {empresa} fue cancelada",
   cliente_cumpleanos: "¡Feliz cumpleaños de parte de {empresa}!",
 };
 
@@ -44,7 +45,8 @@ const CUERPOS_DEFAULT: Record<TipoNotificacionCliente, string> = {
   cobro_pendiente: "<p>Hola {cliente}, tienes un cobro pendiente de {monto} con vencimiento el {fecha}.</p>",
   cobro_vencido: "<p>Hola {cliente}, tu cobro de {monto} venció el {fecha}. Contáctanos para regularizarlo.</p>",
   cita_agendada:
-    "<p>Hola {cliente}, tienes una cita agendada con {empresa} el {fecha}{hora}. Confírmala o cancélala desde tu portal.</p>",
+    "<p>Hola {cliente}, tienes una cita agendada con {empresa} el {fecha}{hora}.</p>{direccion}<p>Confírmala o cancélala desde tu portal.</p>",
+  cita_cancelada: "<p>Hola {cliente}, tu cita con {empresa} del {fecha}{hora} fue cancelada. Si fue un error o quieres reagendar, contáctanos.</p>",
   cliente_cumpleanos: "<p>¡Feliz cumpleaños, {cliente}! Todo el equipo de {empresa} te desea un gran día.{descuento}</p>",
 };
 
@@ -58,6 +60,7 @@ const WHATSAPP_DEFAULT: Record<TipoNotificacionCliente, string> = {
   cobro_pendiente: "Hola {cliente}, tienes un cobro pendiente de {monto} con vencimiento el {fecha}.",
   cobro_vencido: "Hola {cliente}, tu cobro de {monto} venció el {fecha}. Contáctanos para regularizarlo.",
   cita_agendada: "Hola {cliente}, tienes una cita agendada con {empresa} el {fecha}{hora}. Confírmala o cancélala desde tu portal.",
+  cita_cancelada: "Hola {cliente}, tu cita con {empresa} del {fecha}{hora} fue cancelada. Si fue un error o quieres reagendar, contáctanos.",
   cliente_cumpleanos: "¡Feliz cumpleaños, {cliente}! Todo el equipo de {empresa} te desea un gran día.{descuento}",
 };
 
@@ -71,6 +74,7 @@ const TIPO_MENSAJE: Record<TipoNotificacionCliente, TipoMensajePersonalizado> = 
   cobro_pendiente: "cobranza",
   cobro_vencido: "cobranza",
   cita_agendada: "cita_agendada",
+  cita_cancelada: "cita_cancelada",
   cliente_cumpleanos: "cumpleanos",
 };
 
@@ -96,6 +100,8 @@ function tipoActivado(config: NotificacionesConfig | null, tipo: TipoNotificacio
       return config.cobranza_atrasada;
     case "cita_agendada":
       return config.cita_agendada;
+    case "cita_cancelada":
+      return config.cita_cancelada;
     case "cliente_cumpleanos":
       return config.cliente_cumpleanos;
   }

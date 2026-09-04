@@ -42,7 +42,10 @@ const TOGGLES: { grupo: string; items: { campo: keyof NotificacionesConfig; etiq
   },
   {
     grupo: "Agenda Pro",
-    items: [{ campo: "cita_agendada", etiqueta: "Nueva cita agendada (con link para confirmar o cancelar)" }],
+    items: [
+      { campo: "cita_agendada", etiqueta: "Nueva cita agendada (con link para confirmar o cancelar)" },
+      { campo: "cita_cancelada", etiqueta: "Cita cancelada" },
+    ],
   },
   {
     grupo: "Clientes",
@@ -55,7 +58,8 @@ const TIPOS_MENSAJE: { valor: TipoMensajePersonalizado; etiqueta: string; variab
   { valor: "orden_servicio", etiqueta: "Órdenes de Trabajo/Servicio", variables: "{cliente}, {empresa}, {tecnico}" },
   { valor: "tecnico_en_camino", etiqueta: "Técnico en camino", variables: "{cliente}, {tecnico}, {empresa}" },
   { valor: "cobranza", etiqueta: "Cobranzas", variables: "{cliente}, {fecha}, {monto}, {empresa}" },
-  { valor: "cita_agendada", etiqueta: "Agenda Pro", variables: "{cliente}, {fecha}, {hora}, {empresa}" },
+  { valor: "cita_agendada", etiqueta: "Agenda Pro — cita agendada", variables: "{cliente}, {fecha}, {hora}, {empresa}" },
+  { valor: "cita_cancelada", etiqueta: "Agenda Pro — cita cancelada", variables: "{cliente}, {fecha}, {hora}, {empresa}" },
   {
     valor: "cumpleanos",
     etiqueta: "Cumpleaños de cliente",
@@ -71,6 +75,7 @@ const ETIQUETA_TIPO_LOG: Record<string, string> = {
   cobro_pendiente: "Cobro pendiente",
   cobro_vencido: "Cobro vencido",
   cita_agendada: "Cita agendada",
+  cita_cancelada: "Cita cancelada",
   cliente_cumpleanos: "Cumpleaños de cliente",
 };
 
@@ -162,6 +167,7 @@ export default function NotificacionesPage() {
         cobro_pendiente: config.cobro_pendiente,
         cobranza_atrasada: config.cobranza_atrasada,
         cita_agendada: config.cita_agendada,
+        cita_cancelada: config.cita_cancelada,
         cliente_cumpleanos: config.cliente_cumpleanos,
         cliente_cumpleanos_descuento_pct: config.cliente_cumpleanos_descuento_pct,
       }),

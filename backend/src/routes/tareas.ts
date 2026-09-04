@@ -2,7 +2,7 @@ import { Router } from "express";
 import type { EstadoTarea, Prioridad, Tarea } from "@bitacora/shared";
 import { supabase } from "../supabase";
 import { notificar } from "../notificar";
-import { avisarCitaAgendada } from "../agendaProAvisos";
+import { avisarCitaAgendada, avisarCitaCancelada } from "../agendaProAvisos";
 import { calcularEstadoCancelacion, obtenerOCrearAgendaProConfig } from "../agendaPro";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
@@ -97,7 +97,8 @@ tareasRouter.post(
   "/",
   requiereModulo("agenda"),
   ah<RequestConEmpresa>(async (req, res) => {
-    const { titulo, descripcion, fecha, hora, responsable_id, cliente_id, prioridad, paquete_id, sesiones_consumidas, trabajo_id } = req.body ?? {};
+    const { titulo, descripcion, fecha, hora, responsable_id, cliente_id, prioridad, paquete_id, sesiones_consumidas, trabajo_id, duracion_min } =
+      req.body ?? {};
 
     if (typeof titulo !== "string" || !titulo.trim()) {
       res.status(400).json({ error: "Falta título" });
@@ -109,6 +110,10 @@ tareasRouter.post(
     }
     if (hora !== undefined && hora !== null && hora !== "" && !HORA_REGEX.test(hora)) {
       res.status(400).json({ error: "hora inválida (usa HH:MM)" });
+      return;
+    }
+    if (duracion_min !== undefined && duracion_min !== null && (!Number.isInteger(duracion_min) || duracion_min <= 0)) {
+      res.status(400).json({ error: "duracion_min debe ser un entero mayor a 0" });
       return;
     }
     // Un colaborador (típicamente desde la app) solo agenda para sí
@@ -144,6 +149,7 @@ tareasRouter.post(
         descripcion: descripcion?.trim() || null,
         fecha,
         hora: hora || null,
+        duracion_min: duracion_min || null,
         responsable_id: responsableFinal || null,
         cliente_id: cliente_id || null,
         prioridad: prioridadFinal,
@@ -232,6 +238,14 @@ tareasRouter.post(
       res.status(500).json({ error: error.message });
       return;
     }
+
+    // Aviso de cancelación al cliente — mismo criterio que el de "cita
+    // agendada" en la creación: no bloquea la respuesta si falla, y solo
+    // aplica si la empresa tiene Agenda Pro (lo valida avisarCitaCancelada).
+    if (data.cliente_id) {
+      void avisarCitaCancelada(req.empresaId!, data.id, data.fecha, data.hora, data.cliente_id);
+    }
+
     res.json({ ...data, descuenta: nuevoEstado === "no_asistio" });
   })
 );
@@ -260,7 +274,8 @@ tareasRouter.patch(
       }
     }
 
-    const { titulo, descripcion, fecha, hora, responsable_id, cliente_id, prioridad, estado, paquete_id, sesiones_consumidas, trabajo_id } = req.body ?? {};
+    const { titulo, descripcion, fecha, hora, responsable_id, cliente_id, prioridad, estado, paquete_id, sesiones_consumidas, trabajo_id, duracion_min } =
+      req.body ?? {};
     const cambios: Partial<Tarea> = {};
 
     if (titulo !== undefined) {
@@ -284,6 +299,13 @@ tareasRouter.patch(
         return;
       }
       cambios.hora = hora || null;
+    }
+    if (duracion_min !== undefined) {
+      if (duracion_min !== null && (!Number.isInteger(duracion_min) || duracion_min <= 0)) {
+        res.status(400).json({ error: "duracion_min debe ser un entero mayor a 0" });
+        return;
+      }
+      cambios.duracion_min = duracion_min;
     }
     if (responsable_id !== undefined) {
       if (responsable_id && !(await usuarioExiste(req.empresaId!, responsable_id))) {

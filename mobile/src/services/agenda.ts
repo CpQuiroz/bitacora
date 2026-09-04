@@ -56,6 +56,8 @@ export type BorradorCita = {
   titulo: string;
   fecha: string;
   hora: string;
+  // Duración estimada en minutos — "" = sin definir.
+  duracion_min: string;
   cliente_id: string;
   responsable_id: string;
   descripcion: string;
@@ -73,6 +75,7 @@ export async function crearCita(b: BorradorCita): Promise<{ ok: true; tarea: Tar
       titulo: b.titulo.trim(),
       fecha: b.fecha,
       hora: b.hora || null,
+      duracion_min: b.duracion_min ? Number(b.duracion_min) : null,
       cliente_id: b.cliente_id || null,
       responsable_id: b.responsable_id || null,
       descripcion: b.descripcion.trim() || null,
@@ -87,7 +90,16 @@ export async function crearCita(b: BorradorCita): Promise<{ ok: true; tarea: Tar
 export type EdicionCita = Partial<
   Pick<
     BorradorCita,
-    "titulo" | "fecha" | "hora" | "cliente_id" | "responsable_id" | "descripcion" | "prioridad" | "paquete_id" | "sesiones_consumidas"
+    | "titulo"
+    | "fecha"
+    | "hora"
+    | "duracion_min"
+    | "cliente_id"
+    | "responsable_id"
+    | "descripcion"
+    | "prioridad"
+    | "paquete_id"
+    | "sesiones_consumidas"
   >
 >;
 
@@ -97,6 +109,7 @@ export async function editarCita(id: string, c: EdicionCita): Promise<{ ok: true
   if (c.titulo !== undefined) body.titulo = c.titulo.trim();
   if (c.fecha !== undefined) body.fecha = c.fecha;
   if (c.hora !== undefined) body.hora = c.hora || null;
+  if (c.duracion_min !== undefined) body.duracion_min = c.duracion_min ? Number(c.duracion_min) : null;
   if (c.cliente_id !== undefined) body.cliente_id = c.cliente_id || null;
   if (c.responsable_id !== undefined) body.responsable_id = c.responsable_id || null;
   if (c.descripcion !== undefined) body.descripcion = c.descripcion.trim() || null;

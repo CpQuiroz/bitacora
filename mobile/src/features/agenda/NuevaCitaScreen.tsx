@@ -3,7 +3,7 @@ import { Alert, Pressable, ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { Cliente, PaqueteSesionesConSaldo, Prioridad, TipoPack, Usuario } from "@bitacora/shared";
 import { useTema } from "../../theme";
-import { Button, Card, Input, LoadingScreen, PickerBuscable, Text } from "../../components/ui";
+import { Button, Card, Input, LoadingScreen, PickerBuscable, SelectorHora, Text } from "../../components/ui";
 import { SelectorCliente } from "../../components/SelectorCliente";
 import { SelectorResponsable } from "../../components/SelectorResponsable";
 import { useRed } from "../../services/sync/NetworkProvider";
@@ -53,6 +53,7 @@ export function NuevaCitaScreen({ navigation, route }: NativeStackScreenProps<Ag
     titulo: "",
     fecha: fechaInicial,
     hora: "",
+    duracion_min: "",
     cliente_id: "",
     responsable_id: "",
     descripcion: "",
@@ -109,6 +110,7 @@ export function NuevaCitaScreen({ navigation, route }: NativeStackScreenProps<Ag
           titulo: tarea.titulo,
           fecha: tarea.fecha,
           hora: tarea.hora ? tarea.hora.slice(0, 5) : "",
+          duracion_min: tarea.duracion_min ? String(tarea.duracion_min) : "",
           cliente_id: tarea.cliente_id ?? "",
           responsable_id: tarea.responsable_id ?? "",
           descripcion: tarea.descripcion ?? "",
@@ -189,14 +191,17 @@ export function NuevaCitaScreen({ navigation, route }: NativeStackScreenProps<Ag
         </ScrollView>
       </View>
 
-      <Input
-        etiqueta="Hora (opcional)"
-        placeholder="HH:MM"
-        keyboardType="numbers-and-punctuation"
-        maxLength={5}
-        value={b.hora}
-        onChangeText={(v) => set("hora", v)}
-      />
+      <SelectorHora etiqueta="Hora (opcional)" valor={b.hora} onCambiar={(v) => set("hora", v)} />
+
+      {b.hora ? (
+        <Input
+          etiqueta="Duración en minutos (opcional)"
+          placeholder="Ej. 60"
+          keyboardType="numeric"
+          value={b.duracion_min}
+          onChangeText={(v) => set("duracion_min", v.replace(/\D/g, ""))}
+        />
+      ) : null}
 
       <SelectorCliente
         etiqueta="Cliente (opcional)"

@@ -47,7 +47,14 @@ export type TipoPlantilla = "cotizacion" | "orden_servicio" | "cobranza" | "term
 export type PosicionLogo = "izquierda" | "centro" | "derecha";
 export type ProveedorIntegracion = "webpay" | "flow" | "mercadopago" | "whatsapp" | "anthropic" | "google_document_ai";
 export type CategoriaIntegracion = "pagos" | "comunicacion" | "ia";
-export type TipoMensajePersonalizado = "cotizacion" | "orden_servicio" | "cobranza" | "tecnico_en_camino" | "cita_agendada" | "cumpleanos";
+export type TipoMensajePersonalizado =
+  | "cotizacion"
+  | "orden_servicio"
+  | "cobranza"
+  | "tecnico_en_camino"
+  | "cita_agendada"
+  | "cita_cancelada"
+  | "cumpleanos";
 
 export type Empresa = {
   id: string;
@@ -494,6 +501,12 @@ export type Tarea = {
   estado: EstadoTarea;
   paquete_id: string | null;
   sesiones_consumidas: number;
+  // Duración estimada de la cita, en minutos — opcional, solo para
+  // mostrar "hasta las HH:MM" y prevenir choques de horario. No hay
+  // columna hora_fin: se calcula siempre a partir de hora+duracion_min
+  // (mismo criterio que el saldo de paquetes_sesiones, nunca guardar lo
+  // que se puede derivar).
+  duracion_min: number | null;
   // OS (trabajo) creada desde el flujo "Nueva tarea → Crear Orden de
   // Servicio" en Agenda. Nullable: casi ninguna tarea tiene OS asociada.
   trabajo_id: string | null;
@@ -1287,6 +1300,7 @@ export type NotificacionesConfig = {
   tecnico_en_camino: boolean;
   cobro_pendiente: boolean;
   cita_agendada: boolean;
+  cita_cancelada: boolean;
   cliente_cumpleanos: boolean;
   // Solo informativo — nunca se calcula ni se aplica en la app, la
   // empresa lo honra a mano. null = no mencionar ningún descuento.
@@ -1305,6 +1319,7 @@ export type TipoNotificacionCliente =
   | "cobro_pendiente"
   | "cobro_vencido"
   | "cita_agendada"
+  | "cita_cancelada"
   | "cliente_cumpleanos";
 
 export type EntidadNotificacionCliente = "cotizacion" | "trabajo" | "factura" | "tarea" | "cliente";
