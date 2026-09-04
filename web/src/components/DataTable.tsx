@@ -52,7 +52,7 @@ export function DataTable<T>({ columns, rows, rowKey, actions, loading, error, e
     <Card className="overflow-x-auto p-0">
       <table className="w-full text-left text-sm">
         <thead>
-          <tr className="border-b border-border text-xs text-muted">
+          <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
             {columns.map((col) => (
               <th key={col.header} className={`px-5 py-3 font-medium ${col.className ?? ""}`}>
                 {col.header}
@@ -63,7 +63,10 @@ export function DataTable<T>({ columns, rows, rowKey, actions, loading, error, e
         </thead>
         <tbody>
           {rows.map((row) => (
-            <tr key={rowKey(row)} className="border-b border-border last:border-0 hover:bg-brand-soft/40">
+            <tr
+              key={rowKey(row)}
+              className="border-b border-border-soft last:border-0 even:bg-[#fafbfc] hover:bg-surface-sunken"
+            >
               {columns.map((col) => (
                 <td key={col.header} className={`px-5 py-3 ${col.className ?? ""}`}>
                   {col.cell(row)}
