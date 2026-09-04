@@ -7,7 +7,7 @@ import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Badge, Button, Card, ErrorText, Input, PageHeader } from "@/components/ui";
+import { Badge, Button, Card, Cifra, ErrorText, Input, PageHeader } from "@/components/ui";
 import { IconPlus, IconReceipt } from "@/components/icons";
 import { EstadoCargando, EstadoVacio } from "@/components/estados";
 
@@ -144,7 +144,7 @@ export default function CotizacionesPage() {
               <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
                 <th className="px-5 py-3 font-medium">N°</th>
                 <th className="px-5 py-3 font-medium">Cliente</th>
-                <th className="px-5 py-3 font-medium">Monto</th>
+                <th className="px-5 py-3 text-right font-medium">Monto</th>
                 <th className="px-5 py-3 font-medium">Estado</th>
                 <th className="px-5 py-3 font-medium">Creación</th>
                 <th className="px-5 py-3 font-medium">Vencimiento</th>
@@ -159,7 +159,7 @@ export default function CotizacionesPage() {
                 >
                   <td className="px-5 py-3 font-medium text-foreground">{c.numero != null ? `#${String(c.numero).padStart(4, "0")}` : "—"}</td>
                   <td className="px-5 py-3 text-foreground">{c.cliente_info?.nombre ?? "—"}</td>
-                  <td className="px-5 py-3">{formatMoneda(c.monto, usuario.moneda)}</td>
+                  <td className="px-5 py-3 text-right"><Cifra>{formatMoneda(c.monto, usuario.moneda)}</Cifra></td>
                   <td className="px-5 py-3">
                     <Badge value={c.estado} />
                   </td>

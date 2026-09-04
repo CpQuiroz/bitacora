@@ -9,7 +9,7 @@ import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { SelectCrear } from "@/components/SelectCrear";
-import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText } from "@/components/ui";
+import { Badge, Button, Card, Cifra, ErrorText, Input, Label, PageHeader, Select, SuccessText } from "@/components/ui";
 import { IconPaperclip, IconPlus, IconWallet } from "@/components/icons";
 import { EstadoCargando, EstadoVacio } from "@/components/estados";
 
@@ -391,7 +391,7 @@ export default function GastosPage() {
                 <th className="px-5 py-3 font-medium">Categoría</th>
                 <th className="px-5 py-3 font-medium">Centro de costo</th>
                 <th className="px-5 py-3 font-medium">Proveedor</th>
-                <th className="px-5 py-3 font-medium">Monto</th>
+                <th className="px-5 py-3 text-right font-medium">Monto</th>
                 <th className="px-5 py-3 font-medium">Estado</th>
                 <th className="px-5 py-3 font-medium">Acciones</th>
               </tr>
@@ -417,7 +417,7 @@ export default function GastosPage() {
                   </td>
                   <td className="px-5 py-3 text-muted">{g.centro_costo_info?.nombre ?? "—"}</td>
                   <td className="px-5 py-3 text-muted">{g.proveedor_info?.nombre ?? "—"}</td>
-                  <td className="px-5 py-3">{formatMoneda(g.monto, usuario.moneda)}</td>
+                  <td className="px-5 py-3 text-right"><Cifra>{formatMoneda(g.monto, usuario.moneda)}</Cifra></td>
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-1.5">
                       <Badge value={estadoMostrado(g)} />

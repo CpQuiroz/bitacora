@@ -8,7 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText } from "@/components/ui";
+import { Badge, Button, Card, Cifra, ErrorText, Input, Label, PageHeader, Select, SuccessText } from "@/components/ui";
 import { IconPlus, IconReceipt } from "@/components/icons";
 import { EstadoCargando, EstadoError, EstadoVacio } from "@/components/estados";
 import { ComboboxCliente } from "@/components/ComboboxCliente";
@@ -414,7 +414,7 @@ function CobrosContenido() {
             <thead>
               <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
                 <th className="px-5 py-3 font-medium">Cliente</th>
-                <th className="px-5 py-3 font-medium">Monto</th>
+                <th className="px-5 py-3 text-right font-medium">Monto</th>
                 <th className="px-5 py-3 font-medium">Medio de pago</th>
                 <th className="px-5 py-3 font-medium">Estado</th>
                 <th className="px-5 py-3 font-medium">Emisión</th>
@@ -431,7 +431,7 @@ function CobrosContenido() {
                       {c.cliente}
                     </Link>
                   </td>
-                  <td className="px-5 py-3">{formatMoneda(c.monto, usuario.moneda)}</td>
+                  <td className="px-5 py-3 text-right"><Cifra>{formatMoneda(c.monto, usuario.moneda)}</Cifra></td>
                   <td className="px-5 py-3 text-muted">{c.medio_pago ? MEDIOS_ETIQUETA[c.medio_pago] : "—"}</td>
                   <td className="px-5 py-3">
                     <Badge value={c.estado} />
