@@ -11,6 +11,7 @@ import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Badge, Button, Card, ErrorText, Input, Label, Select, SuccessText, buttonClass } from "@/components/ui";
 import { Combobox } from "@/components/Combobox";
 import { IconClipboardCheck, IconPlus, IconReceipt } from "@/components/icons";
+import { EstadoCargando, EstadoError, EstadoVacio } from "@/components/estados";
 import { Modal } from "@/components/Modal";
 import { formatMoneda } from "@/lib/formatMoneda";
 
@@ -234,13 +235,10 @@ export default function OrdenesServicioPage() {
         </Card>
       )}
 
-      {error && <ErrorText>{error}</ErrorText>}
-      {ordenes === null && !error && <p className="text-sm text-muted">Cargando…</p>}
+      {error && <EstadoError mensaje={error} onReintentar={cargarOrdenes} />}
+      {ordenes === null && !error && <EstadoCargando />}
       {ordenes?.length === 0 && (
-        <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border py-16 text-center">
-          <IconClipboardCheck className="h-8 w-8 text-muted" />
-          <p className="text-sm text-muted">No hay órdenes de servicio con estos filtros.</p>
-        </div>
+        <EstadoVacio icono={IconClipboardCheck} titulo="No hay órdenes de servicio con estos filtros" />
       )}
       {ordenes && ordenes.length > 0 && (
         <Card className="overflow-x-auto p-0">

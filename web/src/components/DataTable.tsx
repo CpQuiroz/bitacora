@@ -1,5 +1,6 @@
 import type { ComponentType, ReactNode } from "react";
 import { Card } from "./ui";
+import { EstadoCargando, EstadoError, EstadoVacio } from "./estados";
 
 export type ColumnaTabla<T> = {
   header: string;
@@ -36,16 +37,10 @@ const VARIANT_CLASS: Record<NonNullable<AccionFila<unknown>["variant"]>, string>
 // formulario de alta/edición se queda en cada página: varía demasiado
 // entre pantallas para valer la pena abstraerlo también.
 export function DataTable<T>({ columns, rows, rowKey, actions, loading, error, emptyState }: DataTableProps<T>) {
-  if (loading) return <p className="text-sm text-muted">Cargando…</p>;
-  if (error) return <p className="text-sm text-danger">{error}</p>;
+  if (loading) return <EstadoCargando />;
+  if (error) return <EstadoError mensaje={error} />;
   if (rows.length === 0) {
-    const Icon = emptyState.icon;
-    return (
-      <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border py-16 text-center">
-        <Icon className="h-8 w-8 text-muted" />
-        <p className="text-sm text-muted">{emptyState.message}</p>
-      </div>
-    );
+    return <EstadoVacio icono={emptyState.icon} titulo={emptyState.message} />;
   }
 
   return (

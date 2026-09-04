@@ -20,6 +20,7 @@ import {
   Select,
 } from "@/components/ui";
 import { IconBriefcase, IconPlus } from "@/components/icons";
+import { EstadoCargando, EstadoError, EstadoVacio } from "@/components/estados";
 
 const ESTADOS: EstadoTrabajo[] = ["en_curso", "completado", "cancelado"];
 const SIN_CLIENTE_GUARDADO = "";
@@ -197,13 +198,14 @@ export default function TrabajosPage() {
       </Modal>
 
       <div className="mt-6">
-        {error && <ErrorText>{error}</ErrorText>}
-        {trabajos === null && !error && <p className="text-sm text-muted">Cargando…</p>}
+        {error && <EstadoError mensaje={error} onReintentar={cargar} />}
+        {trabajos === null && !error && <EstadoCargando />}
         {trabajos?.length === 0 && (
-          <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border py-16 text-center">
-            <IconBriefcase className="h-8 w-8 text-muted" />
-            <p className="text-sm text-muted">Todavía no hay trabajos.</p>
-          </div>
+          <EstadoVacio
+            icono={IconBriefcase}
+            titulo="Todavía no hay trabajos"
+            mensaje="Registra el primero con el botón «Nuevo trabajo»."
+          />
         )}
         {trabajos && trabajos.length > 0 && (
           <Card className="overflow-x-auto p-0">

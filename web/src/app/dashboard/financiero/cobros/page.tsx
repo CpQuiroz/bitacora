@@ -10,6 +10,7 @@ import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText } from "@/components/ui";
 import { IconPlus, IconReceipt } from "@/components/icons";
+import { EstadoCargando, EstadoError, EstadoVacio } from "@/components/estados";
 import { ComboboxCliente } from "@/components/ComboboxCliente";
 import { Combobox } from "@/components/Combobox";
 
@@ -381,35 +382,30 @@ function CobrosContenido() {
         </Card>
       )}
 
-      {error && <ErrorText>{error}</ErrorText>}
+      {error && <EstadoError mensaje={error} onReintentar={cargar} />}
       {errorLink && (
         <div className="mb-4">
           <ErrorText>{errorLink}</ErrorText>
         </div>
       )}
-      {cobros === null && !error && <p className="text-sm text-muted">Cargando…</p>}
+      {cobros === null && !error && <EstadoCargando />}
 
       {cobros?.length === 0 && (
-        <Card>
-          <div className="flex flex-col items-center gap-3 py-16 text-center">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-brand-soft text-brand">
-              <IconReceipt className="h-6 w-6" />
-            </div>
-            <p className="font-medium text-foreground">Ningún cobro encontrado</p>
-            <p className="text-sm text-muted">Crea tu primer cobro para comenzar</p>
+        <EstadoVacio
+          icono={IconReceipt}
+          titulo="Ningún cobro encontrado"
+          mensaje="Crea tu primer cobro para comenzar."
+          accion={
             <Button type="button" onClick={abrirNuevo}>
               <IconPlus className="h-4 w-4" />
               Crear Cobro
             </Button>
-          </div>
-        </Card>
+          }
+        />
       )}
 
       {cobros && cobros.length > 0 && filtrados.length === 0 && (
-        <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border py-16 text-center">
-          <IconReceipt className="h-8 w-8 text-muted" />
-          <p className="text-sm text-muted">Ningún cobro coincide con la búsqueda o los filtros.</p>
-        </div>
+        <EstadoVacio icono={IconReceipt} titulo="Ningún cobro coincide con la búsqueda o los filtros" />
       )}
 
       {filtrados.length > 0 && (

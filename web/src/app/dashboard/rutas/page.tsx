@@ -9,6 +9,7 @@ import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Badge, Card, ErrorText, Label, Select, buttonClass } from "@/components/ui";
 import { IconMapPin, IconRoute } from "@/components/icons";
+import { EstadoCargando, EstadoError, EstadoVacio } from "@/components/estados";
 import dynamic from "next/dynamic";
 import type { Parada } from "@/components/MapaRutas";
 // Leaflet ~148 KB — carga aparte (AUDITORIA_PERFORMANCE_COSTOS.md #7).
@@ -158,14 +159,11 @@ export default function RutasPage() {
         </div>
       </div>
 
-      {error && <ErrorText>{error}</ErrorText>}
-      {cargando && <p className="text-sm text-muted">Cargando…</p>}
+      {error && <EstadoError mensaje={error} />}
+      {cargando && <EstadoCargando />}
 
       {paradas && paradas.length === 0 && (
-        <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border py-16 text-center">
-          <IconMapPin className="h-8 w-8 text-muted" />
-          <p className="text-sm text-muted">No hay trabajos para esta fecha.</p>
-        </div>
+        <EstadoVacio icono={IconMapPin} titulo="No hay trabajos para esta fecha" />
       )}
 
       {paradas && paradas.length > 0 && (

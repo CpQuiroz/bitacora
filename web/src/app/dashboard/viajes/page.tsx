@@ -11,6 +11,7 @@ import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, Succe
 import { ComboboxCliente } from "@/components/ComboboxCliente";
 import { ComboboxResponsable } from "@/components/ComboboxResponsable";
 import { IconPlus, IconTruck } from "@/components/icons";
+import { EstadoCargando, EstadoError, EstadoVacio } from "@/components/estados";
 
 type ViajeConDatos = Viaje & {
   cliente_info: Pick<Cliente, "id" | "nombre"> | null;
@@ -499,23 +500,21 @@ export default function ViajesPage() {
         </p>
       )}
 
-      {error && <ErrorText>{error}</ErrorText>}
-      {viajes === null && !error && <p className="text-sm text-muted">Cargando…</p>}
+      {error && <EstadoError mensaje={error} onReintentar={cargar} />}
+      {viajes === null && !error && <EstadoCargando />}
 
       {viajes?.length === 0 && (
-        <Card>
-          <div className="flex flex-col items-center gap-3 py-16 text-center">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-brand-soft text-brand">
-              <IconTruck className="h-6 w-6" />
-            </div>
-            <p className="font-medium text-foreground">Ningún viaje registrado</p>
-            <p className="text-sm text-muted">Registra tu primer viaje para comenzar</p>
+        <EstadoVacio
+          icono={IconTruck}
+          titulo="Ningún viaje registrado"
+          mensaje="Registra tu primer viaje para comenzar."
+          accion={
             <Button type="button" onClick={abrirNuevo}>
               <IconPlus className="h-4 w-4" />
               Nuevo Viaje
             </Button>
-          </div>
-        </Card>
+          }
+        />
       )}
 
       {lista.length > 0 && (
