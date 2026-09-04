@@ -5,6 +5,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
 import type { EstadoViaje } from "@bitacora/shared";
 import { useTema } from "../../theme";
+import { pesos } from "../../lib/plata";
 import { Badge, Button, Card, ErrorState, LoadingScreen, Text } from "../../components/ui";
 import { OfflineBanner } from "../../components/OfflineBanner";
 import { useRed } from "../../services/sync/NetworkProvider";
@@ -18,7 +19,6 @@ const NOTA_ESTADO: Record<EstadoViaje, string> = {
   facturado: "Facturado al cliente.",
 };
 
-const pesos = (n: number) => `$${Math.round(n).toLocaleString("es-CL")}`;
 
 function abrirEnMapa(app: "google" | "waze", origen: string, destino: string) {
   const o = encodeURIComponent(origen);

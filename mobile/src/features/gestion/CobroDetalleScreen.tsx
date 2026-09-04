@@ -5,12 +5,12 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
 import type { MedioPago } from "@bitacora/shared";
 import { useTema } from "../../theme";
+import { pesos } from "../../lib/plata";
 import { Badge, Button, Card, ErrorState, Input, LoadingScreen, Text } from "../../components/ui";
 import { useRed } from "../../services/sync/NetworkProvider";
 import { estaVencido, marcarPagado, obtenerCobro, reabrirCobro, type CobroConCliente } from "../../services/cobros";
 import type { GestionStackParamList } from "../../shell/navigation/types";
 
-const pesos = (n: number) => `$${Math.round(n).toLocaleString("es-CL")}`;
 const hoyKey = () => new Date().toISOString().slice(0, 10);
 
 const MEDIOS: { v: MedioPago; label: string }[] = [

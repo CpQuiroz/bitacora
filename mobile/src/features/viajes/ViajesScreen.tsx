@@ -4,6 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useTema } from "../../theme";
+import { pesos } from "../../lib/plata";
 import { Badge, Button, Card, EmptyState, ErrorState, LoadingScreen, Text } from "../../components/ui";
 import { OfflineBanner } from "../../components/OfflineBanner";
 import { useRed } from "../../services/sync/NetworkProvider";
@@ -196,7 +197,7 @@ export function ViajesScreen({ navigation }: NativeStackScreenProps<ViajesStackP
         </View>
         {viajes && viajes.length > 0 ? (
           <Text variante="caption" tono="muted">
-            {visibles.length} viaje{visibles.length === 1 ? "" : "s"} · {`$${Math.round(totalPeriodo).toLocaleString("es-CL")}`}
+            {visibles.length} viaje{visibles.length === 1 ? "" : "s"} · {pesos(totalPeriodo)}
           </Text>
         ) : null}
       </View>
@@ -236,7 +237,7 @@ export function ViajesScreen({ navigation }: NativeStackScreenProps<ViajesStackP
               <View style={{ alignItems: "flex-end", gap: 4 }}>
                 <Badge estado={item.estado} />
                 <Text variante="etiqueta" weight="semibold">
-                  ${Math.round(item.total).toLocaleString("es-CL")}
+                  {pesos(item.total)}
                 </Text>
               </View>
             </View>
