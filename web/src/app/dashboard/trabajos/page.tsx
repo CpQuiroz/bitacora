@@ -13,6 +13,7 @@ import {
   Badge,
   Button,
   Card,
+  Cifra,
   ErrorText,
   Input,
   Label,
@@ -214,7 +215,7 @@ export default function TrabajosPage() {
                 <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
                   <th className="px-5 py-3 font-medium">Fecha</th>
                   <th className="px-5 py-3 font-medium">Cliente</th>
-                  <th className="px-5 py-3 font-medium">Monto</th>
+                  <th className="px-5 py-3 text-right font-medium">Monto</th>
                   <th className="px-5 py-3 font-medium">Estado</th>
                 </tr>
               </thead>
@@ -225,9 +226,9 @@ export default function TrabajosPage() {
                     onClick={() => router.push(`/dashboard/trabajos/${t.id}`)}
                     className="cursor-pointer border-b border-border-soft last:border-0 hover:bg-surface-sunken"
                   >
-                    <td className="px-5 py-3">{t.fecha}</td>
+                    <td className="px-5 py-3"><Cifra>{t.fecha}</Cifra></td>
                     <td className="px-5 py-3 font-medium text-foreground">{t.cliente}</td>
-                    <td className="px-5 py-3">${t.monto.toLocaleString("es-CL")}</td>
+                    <td className="px-5 py-3 text-right"><Cifra>${t.monto.toLocaleString("es-CL")}</Cifra></td>
                     <td className="px-5 py-3">
                       <Badge value={t.estado} />
                     </td>

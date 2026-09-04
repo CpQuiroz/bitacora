@@ -6,8 +6,8 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Card, ErrorText, PageHeader } from "@/components/ui";
-import { IconChevronLeft, IconClipboardCheck, IconClock, IconLayers, IconShield, IconWrench } from "@/components/icons";
+import { Card, ErrorText, PageHeader, Stat } from "@/components/ui";
+import { IconChevronLeft, IconClipboardCheck, IconClock } from "@/components/icons";
 import { EstadoCargando } from "@/components/estados";
 
 type DashboardEquipos = {
@@ -93,50 +93,15 @@ export default function EquiposDashboardPage() {
       {datos && (
         <div className="mt-6 flex flex-col gap-6">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Card>
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-soft text-brand">
-                  <IconLayers className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="text-2xl font-semibold text-foreground">{datos.total_equipos}</p>
-                  <p className="text-xs text-muted">Total de equipos</p>
-                </div>
-              </div>
-            </Card>
-            <Card>
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-success-soft text-success">
-                  <IconWrench className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="text-2xl font-semibold text-foreground">{datos.equipos_activos}</p>
-                  <p className="text-xs text-muted">Equipos activos</p>
-                </div>
-              </div>
-            </Card>
-            <Card>
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-soft text-brand">
-                  <IconClock className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="text-2xl font-semibold text-foreground">{datos.planes_mantencion_activos}</p>
-                  <p className="text-xs text-muted">Planes de mantención activos</p>
-                </div>
-              </div>
-            </Card>
-            <Card>
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-warning-soft text-warning">
-                  <IconShield className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="text-2xl font-semibold text-foreground">{datos.garantias_por_vencer}</p>
-                  <p className="text-xs text-muted">Garantías por vencer (30 días)</p>
-                </div>
-              </div>
-            </Card>
+            <Stat etiqueta="Total de equipos" valor={datos.total_equipos} />
+            <Stat etiqueta="Equipos activos" valor={datos.equipos_activos} />
+            <Stat etiqueta="Planes de mantención activos" valor={datos.planes_mantencion_activos} />
+            <Stat
+              etiqueta="Garantías por vencer"
+              valor={datos.garantias_por_vencer}
+              nota={datos.garantias_por_vencer > 0 ? "en los próximos 30 días" : undefined}
+              tono="alerta"
+            />
           </div>
 
           <div className="grid gap-6 lg:grid-cols-2">

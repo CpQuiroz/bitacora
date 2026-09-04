@@ -7,8 +7,8 @@ import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { estadoStock } from "@/lib/estadoStock";
 import { DashboardShell } from "@/components/DashboardShell";
-import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText, buttonClass } from "@/components/ui";
-import { IconAlertTriangle, IconBox, IconLayers, IconX } from "@/components/icons";
+import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, Stat, SuccessText, buttonClass } from "@/components/ui";
+import { IconBox } from "@/components/icons";
 import { EstadoCargando, EstadoVacio } from "@/components/estados";
 
 type UsuarioConEmpresa = Usuario & { empresa: Empresa };
@@ -146,60 +146,18 @@ export default function InventarioRegistroPage() {
             </div>
           )}
 
-          {productos && productos.length > 0 && (
-            <div className="my-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <Card>
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-soft text-brand">
-                    <IconLayers className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-semibold text-foreground">{productos.length}</p>
-                    <p className="text-xs text-muted">SKUs con stock</p>
-                  </div>
-                </div>
-              </Card>
-              <Card>
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-soft text-brand">
-                    <IconBox className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-semibold text-foreground">
-                      {productos.reduce((acc, p) => acc + (p.stock_actual ?? 0), 0)}
-                    </p>
-                    <p className="text-xs text-muted">Cantidad total</p>
-                  </div>
-                </div>
-              </Card>
-              <Card>
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-warning-soft text-warning">
-                    <IconAlertTriangle className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-semibold text-foreground">
-                      {productos.filter((p) => estadoStock(p, usuario.empresa.inventario_stock_minimo_default) === "stock_bajo").length}
-                    </p>
-                    <p className="text-xs text-muted">Stock bajo</p>
-                  </div>
-                </div>
-              </Card>
-              <Card>
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-danger-soft text-danger">
-                    <IconX className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-semibold text-foreground">
-                      {productos.filter((p) => estadoStock(p, usuario.empresa.inventario_stock_minimo_default) === "sin_stock").length}
-                    </p>
-                    <p className="text-xs text-muted">Sin stock</p>
-                  </div>
-                </div>
-              </Card>
-            </div>
-          )}
+          {productos && productos.length > 0 && (() => {
+            const bajo = productos.filter((p) => estadoStock(p, usuario.empresa.inventario_stock_minimo_default) === "stock_bajo").length;
+            const sin = productos.filter((p) => estadoStock(p, usuario.empresa.inventario_stock_minimo_default) === "sin_stock").length;
+            return (
+              <div className="my-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <Stat etiqueta="SKUs con stock" valor={productos.length} />
+                <Stat etiqueta="Cantidad total" valor={productos.reduce((acc, p) => acc + (p.stock_actual ?? 0), 0)} />
+                <Stat etiqueta="Stock bajo" valor={bajo} nota={bajo > 0 ? "revisar reposición" : undefined} tono="alerta" />
+                <Stat etiqueta="Sin stock" valor={sin} nota={sin > 0 ? "sin unidades" : undefined} tono="riesgo" />
+              </div>
+            );
+          })()}
 
           {productos && productos.length > 0 && (
             <Card className="my-6 overflow-x-auto p-0">
