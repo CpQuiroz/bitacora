@@ -1,39 +1,47 @@
-// Tokens base del sistema de diseño. La empresa puede sobreescribir
-// `brand` / `brandForeground` (ver ThemeProvider) — el resto es fijo.
+// Tokens base del sistema de diseño — dirección "Faena" (refresco 1a).
+// Reemplaza mobile/src/theme/tokens.ts. Mismas claves y misma forma que
+// el archivo actual: solo cambian los valores, más `accent` / `accentSoft`
+// que antes no existían.
 // v1: solo tema claro (app.json → userInterfaceStyle: "light").
 
-// Alineado con web/src/app/globals.css (paleta clara).
-const MARCA_DEFECTO = "#1e4e8c";
+// Alineado con web/src/app/globals.css (paleta 1a).
+const MARCA_DEFECTO = "#14314f";
 
 export const paletaBase = {
   // Superficies: fondo de pantalla gris, tarjetas/inputs blancos —
   // así las tarjetas tienen jerarquía visual (no blanco sobre blanco).
-  bg: "#eef1f4",
+  bg: "#e9eaec",
   surface: "#ffffff",
-  surfaceAlt: "#e4e7ec",
-  border: "#d8dee5",
-  overlay: "rgba(17,17,17,0.45)",
+  surfaceAlt: "#f3f5f7",
+  border: "#d3d8dd",
+  overlay: "rgba(16,23,32,0.5)",
 
   // Texto
-  foreground: "#16161f",
-  muted: "#5b6572", // ~5.8:1 sobre blanco — pasa AA
-  faint: "#7c8593", // solo texto terciario (versión, ayudas), NUNCA info que importe
+  foreground: "#101720",
+  muted: "#5c6672", // ~5.8:1 sobre blanco — pasa AA
+  faint: "#8b939d", // solo texto terciario (versión, ayudas), NUNCA info que importe
 
-  // Marca (sobreescribible por empresa)
+  // Marca
   brand: MARCA_DEFECTO,
   brandForeground: "#ffffff",
-  brandSoft: "#e8eef7",
+  brandSoft: "#e4eaf1",
+
+  // Acento (naranja señal): SOLO para la acción de terreno en curso —
+  // botón "Continuar", ítem activo, parada actual de la ruta. El color
+  // de la empresa se escribe acá (ver ThemeProvider), no en `brand`.
+  accent: "#c2500f",
+  accentSoft: "#fdf1e6",
 
   // Estados — más saturados que el web a propósito (legibilidad de
   // badges en pantalla chica y a la luz del día).
   success: "#15803d",
-  successSoft: "#dcfce7",
+  successSoft: "#e7f2eb",
   warning: "#b45309",
-  warningSoft: "#fef3c7",
+  warningSoft: "#fdf1e6",
   danger: "#b91c1c",
-  dangerSoft: "#fee2e2",
-  info: "#1d4ed8",
-  infoSoft: "#dbeafe",
+  dangerSoft: "#fbeaea",
+  info: "#14314f",
+  infoSoft: "#e4eaf1",
 };
 
 export type Paleta = typeof paletaBase;
@@ -41,24 +49,28 @@ export type Paleta = typeof paletaBase;
 // Escala de espaciado en múltiplos de 4.
 export const espacio = (n: number) => n * 4;
 
-export const radio = { sm: 8, md: 12, lg: 18, xl: 24, full: 999 };
+// 1a es de esquina corta — antes { sm: 8, md: 12, lg: 18, xl: 24 }.
+export const radio = { sm: 6, md: 8, lg: 10, xl: 12, full: 999 };
 
 export const tipografia = {
   // Familias: se resuelven en el ThemeProvider (empresa.fuente o sistema).
   familia: undefined as string | undefined,
   familiaBold: undefined as string | undefined,
-  tamano: { xs: 11, sm: 13, base: 15, md: 17, lg: 20, xl: 26, xxl: 32 },
+  // Subida de escala para terreno: base 15 → 16. `xs` sigue siendo solo
+  // para texto terciario.
+  tamano: { xs: 12, sm: 14, base: 16, md: 18, lg: 21, xl: 26, xxl: 32 },
   peso: { regular: "400", medium: "500", semibold: "600", bold: "700" } as const,
   interlineado: { ajustado: 1.2, normal: 1.4, holgado: 1.6 },
 };
 
+// En 1a separa el borde, no la sombra.
 export const sombra = {
   card: {
     shadowColor: "#0b1a2b",
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 2,
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
   },
   flotante: {
     shadowColor: "#000",

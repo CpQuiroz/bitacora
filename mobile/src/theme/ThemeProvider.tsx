@@ -1,6 +1,6 @@
 import { createContext, useContext, useMemo, type ReactNode } from "react";
 import type { Empresa } from "@bitacora/shared";
-import { contraste, esHexValido, mezclar } from "./color";
+import { esHexValido, mezclar } from "./color";
 import { duracion, espacio, paletaBase, radio, sombra, tipografia, type Paleta } from "./tokens";
 
 export type Tema = {
@@ -19,13 +19,13 @@ export type MarcaEmpresa = Pick<Empresa, "color_primario" | "color_primario_fore
 function construirTema(marca: MarcaEmpresa): Tema {
   const colores: Paleta = { ...paletaBase };
 
+  // Refresco 1a — el color de la empresa se escribe en `accent`, no en
+  // `brand`: `brand` es la identidad Bitácora y ya no se reemplaza por
+  // tenant. El accent se usa solo en la acción de terreno en curso.
   if (marca && esHexValido(marca.color_primario)) {
-    const brand = marca.color_primario.startsWith("#") ? marca.color_primario : `#${marca.color_primario}`;
-    colores.brand = brand;
-    colores.brandSoft = mezclar(brand, "#ffffff", 0.12);
-    colores.brandForeground = esHexValido(marca.color_primario_foreground)
-      ? (marca.color_primario_foreground as string)
-      : contraste(brand);
+    const c = marca.color_primario.startsWith("#") ? marca.color_primario : `#${marca.color_primario}`;
+    colores.accent = c;
+    colores.accentSoft = mezclar(c, "#ffffff", 0.12);
   }
 
   // La empresa puede elegir una fuente del sistema (helper del web:
