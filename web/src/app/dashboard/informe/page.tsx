@@ -444,7 +444,7 @@ export default function InformePage() {
                   type="date"
                   value={desde}
                   onChange={(e) => setDesde(e.target.value)}
-                  className="w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                  className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground transition-colors hover:border-muted-soft focus:outline-none focus-visible:ring-[3px] focus-visible:ring-brand/25 focus-visible:border-brand"
                 />
               </div>
               <div>
@@ -453,7 +453,7 @@ export default function InformePage() {
                   type="date"
                   value={hasta}
                   onChange={(e) => setHasta(e.target.value)}
-                  className="w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                  className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground transition-colors hover:border-muted-soft focus:outline-none focus-visible:ring-[3px] focus-visible:ring-brand/25 focus-visible:border-brand"
                 />
               </div>
             </div>
@@ -518,8 +518,8 @@ export default function InformePage() {
                     key={s.valor}
                     type="button"
                     onClick={() => toggleSeccion(s.valor)}
-                    className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
-                      activo ? "border-transparent bg-brand-soft text-brand" : "border-border text-muted"
+                    className={`rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${
+                      activo ? "border-brand bg-brand-soft text-brand" : "border-border text-muted hover:border-muted-soft"
                     }`}
                   >
                     {s.etiqueta}
@@ -535,7 +535,7 @@ export default function InformePage() {
                   type="date"
                   value={desdeP}
                   onChange={(e) => setDesdeP(e.target.value)}
-                  className="w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                  className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground transition-colors hover:border-muted-soft focus:outline-none focus-visible:ring-[3px] focus-visible:ring-brand/25 focus-visible:border-brand"
                 />
               </div>
               <div>
@@ -544,7 +544,7 @@ export default function InformePage() {
                   type="date"
                   value={hastaP}
                   onChange={(e) => setHastaP(e.target.value)}
-                  className="w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                  className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground transition-colors hover:border-muted-soft focus:outline-none focus-visible:ring-[3px] focus-visible:ring-brand/25 focus-visible:border-brand"
                 />
               </div>
             </div>
@@ -567,7 +567,7 @@ export default function InformePage() {
                   value={nombreP}
                   onChange={(e) => setNombreP(e.target.value)}
                   placeholder="ej: Resumen mensual para el dueño"
-                  className="w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                  className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground transition-colors hover:border-muted-soft focus:outline-none focus-visible:ring-[3px] focus-visible:ring-brand/25 focus-visible:border-brand"
                 />
               </div>
               <label className="flex items-center gap-2 pb-2.5 text-sm text-foreground">
@@ -662,8 +662,8 @@ export default function InformePage() {
                                     activo ? prev.filter((x) => x !== s.valor) : [...prev, s.valor]
                                   )
                                 }
-                                className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                                  activo ? "border-transparent bg-brand-soft text-brand" : "border-border text-muted"
+                                className={`rounded-md border px-3 py-1 text-xs font-medium transition-colors ${
+                                  activo ? "border-brand bg-brand-soft text-brand" : "border-border text-muted hover:border-muted-soft"
                                 }`}
                               >
                                 {s.etiqueta}

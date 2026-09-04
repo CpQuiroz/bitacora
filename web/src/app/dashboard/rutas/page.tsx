@@ -153,7 +153,7 @@ export default function RutasPage() {
               type="date"
               value={fecha}
               onChange={(e) => setFecha(e.target.value)}
-              className="w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+              className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground transition-colors hover:border-muted-soft focus:outline-none focus-visible:ring-[3px] focus-visible:ring-brand/25 focus-visible:border-brand"
             />
           </div>
         </div>
