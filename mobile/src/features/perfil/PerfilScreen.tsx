@@ -28,7 +28,7 @@ const ETIQUETA_FUNCION: Record<string, string> = {
 export function PerfilScreen() {
   const t = useTema();
   const auth = useAuth();
-  const { enLinea, pendientes, fallidas, sincronizarAhora, reintentar, descartar } = useRed();
+  const { enLinea, pendientes, fallidas, sincronizarAhora, reintentar, descartar, descartarTodo } = useRed();
 
   const [bioDisponible, setBioDisponible] = useState(false);
   const [bioNombre, setBioNombre] = useState("biometría");
@@ -109,12 +109,23 @@ export function PerfilScreen() {
           valor={pendientes.length === 0 ? "Nada pendiente" : `${pendientes.length} acción(es)`}
         />
         {pendientes.length > 0 && (
-          <Button
-            titulo="Sincronizar ahora"
-            variante="secundario"
-            onPress={sincronizarAhora}
-            style={{ marginTop: t.espacio(3) }}
-          />
+          <View style={{ marginTop: t.espacio(3), gap: t.espacio(2) }}>
+            <Button titulo="Sincronizar ahora" variante="secundario" onPress={sincronizarAhora} />
+            <Button
+              titulo="Descartar lo pendiente"
+              variante="ghost"
+              onPress={() =>
+                Alert.alert(
+                  "Descartar lo pendiente",
+                  `Se borran ${pendientes.length} acción(es) que no se pudieron enviar. Úsalo solo si quedó algo trancado que ya no necesitas.`,
+                  [
+                    { text: "No", style: "cancel" },
+                    { text: "Sí, descartar", style: "destructive", onPress: descartarTodo },
+                  ]
+                )
+              }
+            />
+          </View>
         )}
       </Card>
 

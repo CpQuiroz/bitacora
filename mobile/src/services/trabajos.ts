@@ -91,9 +91,25 @@ function cuerpoTrabajo(b: BorradorTrabajo) {
 
 export async function crearTrabajo(
   b: BorradorTrabajo
-): Promise<{ ok: true; trabajo: Trabajo } | { ok: false; error: string }> {
+): Promise<{ ok: true; trabajo: Trabajo } | { ok: false; error: string; reintentable: boolean }> {
   const res = await apiJson<Trabajo>("/api/trabajos", { method: "POST", body: JSON.stringify(cuerpoTrabajo(b)) });
-  return res.ok ? { ok: true, trabajo: res.data } : { ok: false, error: res.error };
+  if (res.ok) return { ok: true, trabajo: res.data };
+  if (res.status === 401) {
+    return { ok: false, error: "Tu sesión venció. Sal y vuelve a entrar para crear el trabajo.", reintentable: false };
+  }
+  const reintentable = res.status === 0 || res.status >= 500;
+  return { ok: false, error: res.error, reintentable };
+}
+
+/** Respaldo: encola la creación del trabajo (se reintenta al reconectar). */
+export function encolarTrabajo(b: BorradorTrabajo) {
+  return encolar({
+    etiqueta: "Crear trabajo",
+    recurso: "trabajos",
+    path: "/api/trabajos",
+    method: "POST",
+    body: cuerpoTrabajo(b),
+  });
 }
 
 export async function editarTrabajo(

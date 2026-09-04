@@ -54,6 +54,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     ]);
 
     if (!resMe.ok) {
+      // Sesión vencida (401) → cerrar sesión de verdad. Si mostramos el
+      // caché acá, la app queda "abierta" pero cada llamada da 401 y todo
+      // parece que "no guarda" / "no sincroniza".
+      if (resMe.status === 401 || resMe.status === 403) {
+        await supabase.auth.signOut().catch(() => {});
+        setEstado({ fase: "sin-sesion" });
+        return;
+      }
       // Sin señal: intentar mostrar lo cacheado para no bloquear al técnico.
       const cache = await leerCache<{ usuario: UsuarioConEmpresa; modulos: Modulo[]; visibles?: Modulo[] }>(CACHE_ME);
       if (cache) {

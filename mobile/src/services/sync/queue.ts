@@ -11,8 +11,13 @@ import { apiFetch } from "../api";
 // "fallida" y visible en Perfil para que el usuario la reintente o la
 // descarte a mano (nunca se pierde trabajo del usuario en silencio).
 
-const STORAGE_KEY = "sync:cola:v2";
+const STORAGE_KEY = "sync:cola:v3";
+const STORAGE_KEY_VIEJO = "sync:cola:v2";
 const MAX_INTENTOS = 6;
+// Una acción que lleva más de esto sin poder enviarse se marca fallida
+// (aunque los fallos hayan sido "sin señal") — así deja de aparecer como
+// "sin sincronizar" para siempre y el usuario la puede descartar.
+const VENCE_MS = 24 * 60 * 60 * 1000;
 
 export type AccionPendiente = {
   id: string;
@@ -48,7 +53,18 @@ async function asegurarCargada() {
   if (cargada) return;
   try {
     const raw = await AsyncStorage.getItem(STORAGE_KEY);
-    cola = raw ? (JSON.parse(raw) as AccionPendiente[]) : [];
+    if (raw) {
+      cola = JSON.parse(raw) as AccionPendiente[];
+    } else {
+      // Migración v2 → v3: nos quedamos solo con lo reciente (< 6 h). Una
+      // acción que sobrevivió una actualización de la app casi siempre
+      // estaba trancada — arrastrarla solo repite el problema.
+      const viejo = await AsyncStorage.getItem(STORAGE_KEY_VIEJO);
+      const previas = viejo ? (JSON.parse(viejo) as AccionPendiente[]) : [];
+      cola = previas.filter((a) => Date.now() - (a.creadoEn ?? 0) < 6 * 60 * 60 * 1000 && !a.fallida);
+      await AsyncStorage.removeItem(STORAGE_KEY_VIEJO).catch(() => {});
+      if (cola.length) await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(cola)).catch(() => {});
+    }
   } catch {
     cola = [];
   }
@@ -143,6 +159,15 @@ export async function procesar(): Promise<void> {
     ];
     for (const a of ordenadas) {
       if (a.fallida) continue;
+      // Escape hatch: una acción trancada más de 24 h se marca fallida
+      // (quede como quede la señal) para que deje de aparecer como "sin
+      // sincronizar" y el usuario la pueda descartar desde Perfil.
+      if (Date.now() - (a.creadoEn ?? 0) > VENCE_MS) {
+        a.fallida = true;
+        a.ultimoError = a.ultimoError ?? "No se pudo enviar en 24 h";
+        await persistir();
+        continue;
+      }
       try {
         const res = await ejecutar(a);
         if (res.ok || res.status === 409 || res.status === 404) {
@@ -151,6 +176,12 @@ export async function procesar(): Promise<void> {
           cola = cola.filter((x) => x.id !== a.id);
           reintentoIntento = 0; // algo salió: el backoff vuelve a empezar corto
           await persistir();
+        } else if (res.status === 401 || res.status === 403) {
+          // Sesión vencida o sin permiso — reintentar no lo va a arreglar.
+          a.fallida = true;
+          a.ultimoError = res.status === 401 ? "Tu sesión venció — sal y vuelve a entrar" : "Tu rol no tiene permiso para esto";
+          await persistir();
+          continue;
         } else {
           const body = await res.json().catch(() => ({}));
           a.intentos += 1;
@@ -162,12 +193,21 @@ export async function procesar(): Promise<void> {
           // problemática.
           continue;
         }
-      } catch {
-        // Sin señal (o timeout) — cortamos y reintentamos después. No
-        // cuenta como intento fallido (no llegó al servidor). Todas las
-        // demás van a fallar igual, así que no tiene sentido seguir.
-        a.ultimoError = "Sin conexión";
+      } catch (e) {
+        // Timeout (el server no respondió a tiempo) SÍ cuenta como
+        // intento: si pasa MAX_INTENTOS veces, la acción se marca fallida
+        // en vez de reintentar para siempre. Un "sin señal" seco no
+        // cuenta (el escape hatch de 24 h la cubre igual).
+        const esTimeout = e instanceof Error && e.name === "AbortError";
+        if (esTimeout) {
+          a.intentos += 1;
+          a.ultimoError = "El servidor no respondió a tiempo";
+          if (a.intentos >= MAX_INTENTOS) a.fallida = true;
+        } else {
+          a.ultimoError = "Sin conexión";
+        }
         await persistir();
+        if (a.fallida) continue;
         break;
       }
     }
@@ -195,5 +235,14 @@ export async function reintentar(id: string): Promise<void> {
 export async function descartar(id: string): Promise<void> {
   await asegurarCargada();
   cola = cola.filter((a) => a.id !== id);
+  await persistir();
+}
+
+/** Vacía la cola entera — para cuando quedó algo trancado que el usuario
+ * ya no necesita. */
+export async function descartarTodo(): Promise<void> {
+  await asegurarCargada();
+  cola = [];
+  cancelarAutoReintento();
   await persistir();
 }

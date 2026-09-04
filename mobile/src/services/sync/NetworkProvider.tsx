@@ -4,6 +4,7 @@ import NetInfo from "@react-native-community/netinfo";
 import {
   activas,
   descartar,
+  descartarTodo,
   fallidas,
   pendientes,
   procesar,
@@ -20,6 +21,7 @@ type RedContexto = {
   sincronizarAhora: () => void;
   reintentar: (id: string) => void;
   descartar: (id: string) => void;
+  descartarTodo: () => void;
 };
 
 const Ctx = createContext<RedContexto>({
@@ -30,6 +32,7 @@ const Ctx = createContext<RedContexto>({
   sincronizarAhora: () => {},
   reintentar: () => {},
   descartar: () => {},
+  descartarTodo: () => {},
 });
 
 export function NetworkProvider({ children }: { children: ReactNode }) {
@@ -66,6 +69,7 @@ export function NetworkProvider({ children }: { children: ReactNode }) {
       sincronizarAhora: () => void procesar(),
       reintentar: (id) => void reintentar(id),
       descartar: (id) => void descartar(id),
+      descartarTodo: () => void descartarTodo(),
     }),
     [enLinea, cola]
   );

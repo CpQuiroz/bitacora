@@ -11,6 +11,7 @@ import {
   catalogoParaTrabajo,
   crearTrabajo,
   editarTrabajo,
+  encolarTrabajo,
   obtenerDetalle,
 } from "../../services/trabajos";
 import type { TrabajosStackParamList } from "../../shell/navigation/types";
@@ -98,15 +99,43 @@ export function TrabajoFormScreen({ navigation, route }: NativeStackScreenProps<
   async function guardar() {
     if (!b.cliente.trim()) return Alert.alert("Falta el cliente", "Escribe el nombre del cliente.");
     if (!b.fecha) return Alert.alert("Falta la fecha", "Elige una fecha.");
-    if (!enLinea) return Alert.alert("Sin conexión", "Necesitas conexión para guardar el trabajo.");
 
+    const volver = () => navigation.goBack();
     setGuardando(true);
-    const r = editandoId ? await editarTrabajo(editandoId, b) : await crearTrabajo(b);
+
+    if (editandoId) {
+      if (!enLinea) {
+        setGuardando(false);
+        return Alert.alert("Sin conexión", "Necesitas conexión para editar un trabajo.");
+      }
+      const r = await editarTrabajo(editandoId, b);
+      setGuardando(false);
+      if (!r.ok) return Alert.alert("No se pudo guardar", r.error);
+      return Alert.alert("Trabajo actualizado", "Listo.", [{ text: "Listo", onPress: volver }]);
+    }
+
+    if (enLinea) {
+      const r = await crearTrabajo(b);
+      if (r.ok) {
+        setGuardando(false);
+        return Alert.alert("Trabajo creado", "Listo.", [{ text: "Listo", onPress: volver }]);
+      }
+      if (!r.reintentable) {
+        setGuardando(false);
+        return Alert.alert("No se pudo crear", r.error);
+      }
+      await encolarTrabajo(b);
+      setGuardando(false);
+      return Alert.alert(
+        "Se reintentará solo",
+        "No se pudo enviar ahora (conexión o servidor). Lo guardamos y se reenvía cuando haya señal.",
+        [{ text: "Listo", onPress: volver }]
+      );
+    }
+
+    await encolarTrabajo(b);
     setGuardando(false);
-    if (!r.ok) return Alert.alert("No se pudo guardar", r.error);
-    Alert.alert(editandoId ? "Trabajo actualizado" : "Trabajo creado", "Listo.", [
-      { text: "Listo", onPress: () => navigation.goBack() },
-    ]);
+    Alert.alert("Guardado sin conexión", "Se enviará cuando vuelvas a tener señal.", [{ text: "Listo", onPress: volver }]);
   }
 
   if (clientes === null || cargando) return <LoadingScreen />;

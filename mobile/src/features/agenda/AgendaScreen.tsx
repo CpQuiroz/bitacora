@@ -208,6 +208,7 @@ export function AgendaScreen({ navigation }: NativeStackScreenProps<AgendaStackP
 
       {/* Listado de citas del período */}
       <ScrollView
+        style={{ flex: 1 }}
         contentContainerStyle={{ padding: t.espacio(4), gap: t.espacio(4), flexGrow: 1 }}
         refreshControl={<RefreshControl refreshing={refrescando} onRefresh={onRefresh} tintColor={t.colores.brand} />}
       >
@@ -270,13 +271,22 @@ function GrillaMes({
   onDia: (k: string) => void;
 }) {
   const t = useTema();
-  const inicioGrilla = useMemo(() => lunesDe(new Date(ancla.getFullYear(), ancla.getMonth(), 1)), [ancla]);
-  const celdas = useMemo(() => Array.from({ length: 42 }, (_, i) => sumarDias(inicioGrilla, i)), [inicioGrilla]);
   const mesNum = ancla.getMonth();
+  const inicioGrilla = useMemo(() => lunesDe(new Date(ancla.getFullYear(), ancla.getMonth(), 1)), [ancla]);
+  // Solo las semanas necesarias para este mes (5 casi siempre, 6 a veces).
+  const semanas = useMemo(() => {
+    const finMes = new Date(ancla.getFullYear(), ancla.getMonth() + 1, 0);
+    const dias = Math.round((finMes.getTime() - inicioGrilla.getTime()) / 86400000) + 1;
+    return Math.ceil(dias / 7);
+  }, [ancla, inicioGrilla]);
+  const celdas = useMemo(
+    () => Array.from({ length: semanas * 7 }, (_, i) => sumarDias(inicioGrilla, i)),
+    [inicioGrilla, semanas]
+  );
 
   return (
-    <View style={{ paddingHorizontal: t.espacio(4), paddingBottom: t.espacio(3), borderBottomWidth: 1, borderBottomColor: t.colores.border }}>
-      <View style={{ flexDirection: "row" }}>
+    <View style={{ paddingHorizontal: t.espacio(4), paddingBottom: t.espacio(2), borderBottomWidth: 1, borderBottomColor: t.colores.border }}>
+      <View style={{ flexDirection: "row", marginBottom: 2 }}>
         {DIAS_SEMANA_LUNES.map((d, i) => (
           <View key={i} style={{ flex: 1, alignItems: "center" }}>
             <Text variante="caption" tono="faint" weight="semibold">
@@ -296,19 +306,19 @@ function GrillaMes({
             <Pressable
               key={k}
               onPress={() => onDia(k)}
-              style={{ width: `${100 / 7}%`, aspectRatio: 1, alignItems: "center", justifyContent: "center" }}
+              style={{ width: `${100 / 7}%`, height: 40, alignItems: "center", justifyContent: "center", gap: 1 }}
             >
               <View
                 style={{
-                  width: 30,
-                  height: 30,
-                  borderRadius: 15,
+                  width: 26,
+                  height: 26,
+                  borderRadius: 13,
                   alignItems: "center",
                   justifyContent: "center",
                   backgroundColor: esHoy ? t.colores.brand : "transparent",
                 }}
               >
-                <Text variante="etiqueta" weight={esHoy ? "semibold" : "regular"} tono={esHoy ? "inverso" : delMes ? "normal" : "faint"}>
+                <Text variante="caption" weight={esHoy ? "semibold" : "regular"} tono={esHoy ? "inverso" : delMes ? "normal" : "faint"}>
                   {d.getDate()}
                 </Text>
               </View>
