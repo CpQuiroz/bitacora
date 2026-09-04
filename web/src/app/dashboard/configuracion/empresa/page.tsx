@@ -430,10 +430,13 @@ export default function EmpresaPage() {
           </Card>
 
           <Card>
-            <h2 className="mb-4 text-sm font-semibold text-foreground">Colores de marca</h2>
+            <h2 className="mb-1 text-sm font-semibold text-foreground">Color de acento</h2>
+            <p className="mb-4 text-xs text-muted">
+              Se usa para resaltar acciones y estados en la app. El resto de la interfaz mantiene la identidad de Bitácora. Tu logo se muestra igual.
+            </p>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <Label>Color primario</Label>
+                <Label>Color de acento</Label>
                 <div className="flex items-center gap-3">
                   <input
                     type="color"
@@ -442,18 +445,6 @@ export default function EmpresaPage() {
                     className="h-10 w-14 cursor-pointer rounded-lg border border-border bg-surface p-1"
                   />
                   <span className="text-sm text-muted">{color}</span>
-                </div>
-              </div>
-              <div>
-                <Label>Color secundario</Label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="color"
-                    value={colorSecundario}
-                    onChange={(e) => setColorSecundario(e.target.value)}
-                    className="h-10 w-14 cursor-pointer rounded-lg border border-border bg-surface p-1"
-                  />
-                  <span className="text-sm text-muted">{colorSecundario}</span>
                 </div>
               </div>
             </div>
