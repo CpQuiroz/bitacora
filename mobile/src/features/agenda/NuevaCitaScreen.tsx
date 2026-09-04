@@ -5,6 +5,7 @@ import type { Cliente, PaqueteSesionesConSaldo, Prioridad, Usuario } from "@bita
 import { useTema } from "../../theme";
 import { Button, Card, Input, LoadingScreen, PickerBuscable, Text } from "../../components/ui";
 import { SelectorCliente } from "../../components/SelectorCliente";
+import { SelectorResponsable } from "../../components/SelectorResponsable";
 import { useRed } from "../../services/sync/NetworkProvider";
 import { useAuth } from "../auth/AuthContext";
 import { catalogoParaCita, crearCita, editarCita, obtenerTarea, type BorradorCita } from "../../services/agenda";
@@ -265,14 +266,14 @@ export function NuevaCitaScreen({ navigation, route }: NativeStackScreenProps<Ag
         </Card>
       ) : null}
 
-      {esGestion && equipo.length > 0 ? (
-        <PickerBuscable
+      {esGestion ? (
+        <SelectorResponsable
           etiqueta="Atiende (opcional)"
-          placeholder="Elegir responsable"
           valor={b.responsable_id}
-          opcionVacia="Sin asignar"
-          opciones={equipo.map((u) => ({ id: u.id, label: u.nombre }))}
           onElegir={(id) => set("responsable_id", id)}
+          equipo={equipo}
+          opcionVacia="Sin asignar"
+          permitirInvitar={auth.fase === "listo" && auth.modulosVisibles.includes("gestion_control")}
         />
       ) : null}
 
