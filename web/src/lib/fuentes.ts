@@ -1,5 +1,5 @@
 // Catálogo curado de tipografías para Personalización — "sistema" es el
-// default actual de la app (Geist) y no carga nada de Google Fonts.
+// default actual de la app (IBM Plex Sans) y no carga nada de Google Fonts.
 export type FuenteInfo = {
   valor: string;
   etiqueta: string;
@@ -8,7 +8,7 @@ export type FuenteInfo = {
 };
 
 export const FUENTES: FuenteInfo[] = [
-  { valor: "sistema", etiqueta: "Sistema (por defecto)", googleFamily: null, pila: "var(--font-geist-sans), system-ui, sans-serif" },
+  { valor: "sistema", etiqueta: "Sistema (por defecto)", googleFamily: null, pila: "var(--font-plex-sans), system-ui, sans-serif" },
   { valor: "inter", etiqueta: "Inter", googleFamily: "Inter:wght@400;500;600;700", pila: "'Inter', system-ui, sans-serif" },
   { valor: "roboto", etiqueta: "Roboto", googleFamily: "Roboto:wght@400;500;700", pila: "'Roboto', system-ui, sans-serif" },
   { valor: "poppins", etiqueta: "Poppins", googleFamily: "Poppins:wght@400;500;600;700", pila: "'Poppins', system-ui, sans-serif" },
