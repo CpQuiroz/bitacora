@@ -109,7 +109,7 @@ export default function InformesLayout({ children }: { children: ReactNode }) {
             type="button"
             onClick={() => setPeriodo(p.valor)}
             className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-              periodo === p.valor ? "border-transparent bg-brand-soft text-brand" : "border-border text-muted"
+              periodo === p.valor ? "border-brand bg-brand-soft text-brand" : "border-border text-muted hover:border-muted-soft"
             }`}
           >
             {p.etiqueta}

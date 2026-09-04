@@ -225,7 +225,7 @@ export default function ClientesPage() {
               type="button"
               onClick={() => setFiltro(c.valor)}
               className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                filtro === c.valor ? "border-transparent bg-brand-soft text-brand" : "border-border text-muted"
+                filtro === c.valor ? "border-brand bg-brand-soft text-brand" : "border-border text-muted hover:border-muted-soft"
               }`}
             >
               {c.etiqueta} ({contadores[c.valor]})

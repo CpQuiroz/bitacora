@@ -291,7 +291,7 @@ export default function CatalogoPage() {
                       type="button"
                       onClick={() => setCategoria(c)}
                       className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-colors ${
-                        categoria === c ? "border-transparent bg-brand-soft text-brand" : "border-border text-muted hover:bg-brand-soft"
+                        categoria === c ? "border-brand bg-brand-soft text-brand" : "border-border text-muted hover:border-muted-soft"
                       }`}
                     >
                       {c}
@@ -384,7 +384,7 @@ export default function CatalogoPage() {
                     type="button"
                     onClick={() => alternarTipoEquipo(t)}
                     className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-colors ${
-                      tiposEquipo.includes(t) ? "border-transparent bg-brand-soft text-brand" : "border-border text-muted hover:bg-brand-soft"
+                      tiposEquipo.includes(t) ? "border-brand bg-brand-soft text-brand" : "border-border text-muted hover:border-muted-soft"
                     }`}
                   >
                     {t}
@@ -433,7 +433,7 @@ export default function CatalogoPage() {
               type="button"
               onClick={() => setCategoriaFiltro(null)}
               className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                categoriaFiltro === null ? "border-transparent bg-brand-soft text-brand" : "border-border text-muted hover:bg-brand-soft"
+                categoriaFiltro === null ? "border-brand bg-brand-soft text-brand" : "border-border text-muted hover:border-muted-soft"
               }`}
             >
               Todas las categorías
@@ -444,7 +444,7 @@ export default function CatalogoPage() {
                 type="button"
                 onClick={() => setCategoriaFiltro(categoriaFiltro === c ? null : c)}
                 className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                  categoriaFiltro === c ? "border-transparent bg-brand-soft text-brand" : "border-border text-muted hover:bg-brand-soft"
+                  categoriaFiltro === c ? "border-brand bg-brand-soft text-brand" : "border-border text-muted hover:border-muted-soft"
                 }`}
               >
                 {c}

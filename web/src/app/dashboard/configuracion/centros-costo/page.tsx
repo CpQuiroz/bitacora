@@ -89,7 +89,7 @@ export default function CentrosCostoPage() {
                 type="button"
                 onClick={() => toggleCategoria(c.id)}
                 className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                  seleccionadas.has(c.id) ? "border-transparent bg-brand-soft text-brand" : "border-border text-muted"
+                  seleccionadas.has(c.id) ? "border-brand bg-brand-soft text-brand" : "border-border text-muted hover:border-muted-soft"
                 }`}
               >
                 <span className="h-2 w-2 rounded-full" style={{ background: c.color }} />

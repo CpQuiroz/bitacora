@@ -98,8 +98,8 @@ export default function DocumentosPorVencerPage() {
             key={f.valor}
             type="button"
             onClick={() => setFiltro(f.valor)}
-            className={`rounded-lg border px-3 py-1.5 text-sm transition ${
-              filtro === f.valor ? "border-transparent bg-brand-soft text-brand" : "border-border text-muted"
+            className={`rounded-md border px-3 py-1.5 text-sm transition-colors ${
+              filtro === f.valor ? "border-brand bg-brand-soft text-brand" : "border-border text-muted hover:border-muted-soft"
             }`}
           >
             {f.etiqueta}

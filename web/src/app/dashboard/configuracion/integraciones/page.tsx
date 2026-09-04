@@ -125,7 +125,7 @@ export default function IntegracionesPage() {
             type="button"
             onClick={() => setCategoria(c.valor)}
             className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-              categoria === c.valor ? "border-transparent bg-brand-soft text-brand" : "border-border text-muted"
+              categoria === c.valor ? "border-brand bg-brand-soft text-brand" : "border-border text-muted hover:border-muted-soft"
             }`}
           >
             {c.etiqueta}
