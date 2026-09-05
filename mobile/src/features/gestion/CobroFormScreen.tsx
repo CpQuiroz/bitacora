@@ -9,7 +9,7 @@ import { SelectorCliente } from "../../components/SelectorCliente";
 import { useRed } from "../../services/sync/NetworkProvider";
 import { listarClientes } from "../../services/clientes";
 import { crearCobro, type BorradorCobro } from "../../services/cobros";
-import type { GestionStackParamList } from "../../shell/navigation/types";
+import type { MasStackParamList } from "../../shell/navigation/types";
 
 const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
 
@@ -37,7 +37,7 @@ const VENC_OPCIONES = [
   { dias: 60, label: "60 días" },
 ];
 
-export function CobroFormScreen({ navigation }: NativeStackScreenProps<GestionStackParamList, "CobroForm">) {
+export function CobroFormScreen({ navigation }: NativeStackScreenProps<MasStackParamList, "CobroForm">) {
   const t = useTema();
   const { enLinea } = useRed();
   const [clientes, setClientes] = useState<Cliente[] | null>(null);

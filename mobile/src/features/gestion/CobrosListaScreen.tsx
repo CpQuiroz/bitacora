@@ -8,7 +8,7 @@ import { pesos } from "../../lib/plata";
 import { Badge, Button, Card, EmptyState, ErrorState, LoadingScreen, Text } from "../../components/ui";
 import { OfflineBanner } from "../../components/OfflineBanner";
 import { estaVencido, listarCobros, type CobroConCliente } from "../../services/cobros";
-import type { GestionStackParamList } from "../../shell/navigation/types";
+import type { MasStackParamList } from "../../shell/navigation/types";
 
 
 type Filtro = "pendientes" | "vencidas" | "pagadas" | "todas";
@@ -19,7 +19,7 @@ const FILTROS: { clave: Filtro; label: string }[] = [
   { clave: "todas", label: "Todas" },
 ];
 
-export function CobrosListaScreen({ navigation }: NativeStackScreenProps<GestionStackParamList, "CobrosLista">) {
+export function CobrosListaScreen({ navigation }: NativeStackScreenProps<MasStackParamList, "CobrosLista">) {
   const t = useTema();
   const [cobros, setCobros] = useState<CobroConCliente[] | null>(null);
   const [error, setError] = useState<string | null>(null);

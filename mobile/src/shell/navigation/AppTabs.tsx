@@ -2,53 +2,31 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 import { useTema } from "../../theme";
 import { useAuth } from "../../features/auth/AuthContext";
-import { tabsPara } from "./tabsPara";
 import type { TabKey } from "./types";
-import { TrabajosStack } from "./TrabajosStack";
+import { HoyStack } from "./HoyStack";
 import { AgendaStack } from "./AgendaStack";
-import { ViajesStack } from "./ViajesStack";
 import { ClientesStack } from "./ClientesStack";
-import { GestionStack } from "./GestionStack";
-import { RutaScreen } from "../../features/ruta/RutaScreen";
-import { PerfilScreen } from "../../features/perfil/PerfilScreen";
+import { MasStack } from "./MasStack";
 
 const Tab = createBottomTabNavigator();
 
-const ICONO: Record<TabKey, keyof typeof Ionicons.glyphMap> = {
-  Trabajos: "clipboard-outline",
-  Agenda: "calendar-outline",
-  Ruta: "map-outline",
-  Clientes: "people-outline",
-  Viajes: "car-outline",
-  Gestion: "briefcase-outline",
-  Perfil: "person-circle-outline",
-};
-
-const COMPONENTE: Record<TabKey, React.ComponentType> = {
-  Trabajos: TrabajosStack,
-  Agenda: AgendaStack,
-  Ruta: RutaScreen,
-  Clientes: ClientesStack,
-  Viajes: ViajesStack,
-  Gestion: GestionStack,
-  Perfil: PerfilScreen,
-};
+// Barra IDÉNTICA para todos los roles. El rol cambia el CONTENIDO de
+// cada pestaña (sobre todo "Hoy"), no qué pestañas existen.
+const TABS: { key: TabKey; label: string; icono: keyof typeof Ionicons.glyphMap; componente: React.ComponentType }[] = [
+  { key: "Hoy", label: "Hoy", icono: "today-outline", componente: HoyStack },
+  { key: "Agenda", label: "Agenda", icono: "calendar-outline", componente: AgendaStack },
+  { key: "Clientes", label: "Clientes", icono: "people-outline", componente: ClientesStack },
+  { key: "Mas", label: "Más", icono: "ellipsis-horizontal", componente: MasStack },
+];
 
 export function AppTabs() {
   const t = useTema();
   const auth = useAuth();
   if (auth.fase !== "listo") return null;
 
-  const { tabs, inicial } = tabsPara(
-    auth.usuario,
-    auth.usuario.empresa,
-    auth.modulosDeshabilitados,
-    auth.modulosVisibles
-  );
-
   return (
     <Tab.Navigator
-      initialRouteName={inicial}
+      initialRouteName="Hoy"
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: t.colores.brand,
@@ -56,14 +34,14 @@ export function AppTabs() {
         tabBarStyle: { backgroundColor: t.colores.surface, borderTopColor: t.colores.border },
       }}
     >
-      {tabs.map((tab) => (
+      {TABS.map((tab) => (
         <Tab.Screen
-          key={tab}
-          name={tab}
-          component={COMPONENTE[tab]}
+          key={tab.key}
+          name={tab.key}
+          component={tab.componente}
           options={{
-            tabBarLabel: tab === "Gestion" ? "Gestión" : tab,
-            tabBarIcon: ({ color, size }) => <Ionicons name={ICONO[tab]} size={size} color={color} />,
+            tabBarLabel: tab.label,
+            tabBarIcon: ({ color, size }) => <Ionicons name={tab.icono} size={size} color={color} />,
           }}
         />
       ))}

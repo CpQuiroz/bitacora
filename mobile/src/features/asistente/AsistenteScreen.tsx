@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ActivityIndicator, Alert, FlatList, KeyboardAvoidingView, Platform, Pressable, TextInput, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import type { NativeStackNavigationOptions } from "@react-navigation/native-stack";
 import type { MensajeAsistente } from "@bitacora/shared";
 import { useTema } from "../../theme";
 import { EmptyState, ErrorState, LoadingScreen, Text } from "../../components/ui";
 import { borrarHistorialAsistente, enviarAlAsistente, historialAsistente } from "../../services/asistente";
-import type { GestionStackParamList } from "../../shell/navigation/types";
+
+// Se entra desde el botón de la cabecera de "Hoy" y desde "Más" → solo
+// necesita setOptions, así que no se ata a un ParamList concreto.
+type NavConOpciones = { setOptions: (o: Partial<NativeStackNavigationOptions>) => void };
 
 type Fila = MensajeAsistente | { id: "pensando"; rol: "assistant"; contenido: "__pensando__" };
 
@@ -16,7 +19,7 @@ const SUGERENCIAS = [
   "Resumen de viajes del mes",
 ];
 
-export function AsistenteScreen({ navigation }: NativeStackScreenProps<GestionStackParamList, "Asistente">) {
+export function AsistenteScreen({ navigation }: { navigation: NavConOpciones }) {
   const t = useTema();
   const listaRef = useRef<FlatList<Fila>>(null);
   const [mensajes, setMensajes] = useState<MensajeAsistente[] | null>(null);

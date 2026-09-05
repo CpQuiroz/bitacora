@@ -22,6 +22,9 @@ export function ClienteDetalleScreen({ route, navigation }: NativeStackScreenPro
   const { enLinea } = useRed();
   const auth = useAuth();
   const tieneAgendaPro = auth.fase === "listo" && auth.modulosVisibles.includes("agenda_pro");
+  // Un rol de terreno (colaborador) ve la ficha para contactar al
+  // cliente, pero no edita datos comerciales.
+  const esGestion = auth.fase === "listo" && auth.usuario.rol !== "colaborador";
   const [cliente, setCliente] = useState<Cliente | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
@@ -137,11 +140,13 @@ export function ClienteDetalleScreen({ route, navigation }: NativeStackScreenPro
             <Text variante="etiqueta" tono="muted" weight="semibold" style={{ textTransform: "uppercase" }}>
               Packs de sesiones
             </Text>
-            <Pressable onPress={() => setAsignando(true)} hitSlop={8}>
-              <Text variante="caption" weight="semibold" tono="brand">
-                ＋ Asignar pack
-              </Text>
-            </Pressable>
+            {esGestion ? (
+              <Pressable onPress={() => setAsignando(true)} hitSlop={8}>
+                <Text variante="caption" weight="semibold" tono="brand">
+                  ＋ Asignar pack
+                </Text>
+              </Pressable>
+            ) : null}
           </View>
           {paquetes.length === 0 ? (
             <Text variante="caption" tono="muted">
@@ -171,20 +176,22 @@ export function ClienteDetalleScreen({ route, navigation }: NativeStackScreenPro
         </Card>
       ) : null}
 
-      <View style={{ gap: t.espacio(2.5), marginTop: t.espacio(1), borderTopWidth: 1, borderTopColor: t.colores.border, paddingTop: t.espacio(4) }}>
-        <Button
-          titulo="Editar"
-          variante="secundario"
-          icono={<Ionicons name="create-outline" size={16} color={t.colores.foreground} />}
-          onPress={() => navigation.navigate("ClienteForm", { clienteId })}
-        />
-        <Button
-          titulo={cliente.activo ? "Marcar como inactivo" : "Reactivar cliente"}
-          variante={cliente.activo ? "peligro" : "primario"}
-          onPress={alternarActivo}
-          cargando={ocupado}
-        />
-      </View>
+      {esGestion ? (
+        <View style={{ gap: t.espacio(2.5), marginTop: t.espacio(1), borderTopWidth: 1, borderTopColor: t.colores.border, paddingTop: t.espacio(4) }}>
+          <Button
+            titulo="Editar"
+            variante="secundario"
+            icono={<Ionicons name="create-outline" size={16} color={t.colores.foreground} />}
+            onPress={() => navigation.navigate("ClienteForm", { clienteId })}
+          />
+          <Button
+            titulo={cliente.activo ? "Marcar como inactivo" : "Reactivar cliente"}
+            variante={cliente.activo ? "peligro" : "primario"}
+            onPress={alternarActivo}
+            cargando={ocupado}
+          />
+        </View>
+      ) : null}
 
       <AsignarPackModal
         visible={asignando}

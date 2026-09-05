@@ -9,7 +9,7 @@ import { pesos } from "../../lib/plata";
 import { Badge, Button, Card, ErrorState, Input, LoadingScreen, Text } from "../../components/ui";
 import { useRed } from "../../services/sync/NetworkProvider";
 import { estaVencido, marcarPagado, obtenerCobro, reabrirCobro, type CobroConCliente } from "../../services/cobros";
-import type { GestionStackParamList } from "../../shell/navigation/types";
+import type { MasStackParamList } from "../../shell/navigation/types";
 
 const hoyKey = () => new Date().toISOString().slice(0, 10);
 
@@ -22,7 +22,7 @@ const MEDIOS: { v: MedioPago; label: string }[] = [
   { v: "otro", label: "Otro" },
 ];
 
-export function CobroDetalleScreen({ route }: NativeStackScreenProps<GestionStackParamList, "CobroDetalle">) {
+export function CobroDetalleScreen({ route }: NativeStackScreenProps<MasStackParamList, "CobroDetalle">) {
   const t = useTema();
   const { cobroId } = route.params;
   const { enLinea } = useRed();

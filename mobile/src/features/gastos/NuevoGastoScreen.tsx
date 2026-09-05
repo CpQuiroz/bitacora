@@ -19,7 +19,7 @@ import {
   type BorradorGasto,
   type Foto,
 } from "../../services/gastos";
-import type { GestionStackParamList } from "../../shell/navigation/types";
+import type { MasStackParamList } from "../../shell/navigation/types";
 
 const DIAS = ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"];
 const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
@@ -91,7 +91,7 @@ function DiasChips({ valor, onElegir }: { valor: string; onElegir: (k: string) =
   );
 }
 
-export function NuevoGastoScreen({ navigation }: NativeStackScreenProps<GestionStackParamList, "GastoForm">) {
+export function NuevoGastoScreen({ navigation }: NativeStackScreenProps<MasStackParamList, "GastoForm">) {
   const t = useTema();
   const { enLinea } = useRed();
   const [categorias, setCategorias] = useState<CategoriaGasto[] | null>(null);

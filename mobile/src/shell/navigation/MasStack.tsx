@@ -1,17 +1,20 @@
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useTema } from "../../theme";
-import type { GestionStackParamList } from "./types";
-import { GestionInicioScreen } from "../../features/gestion/GestionInicioScreen";
+import type { MasStackParamList } from "./types";
+import { MasScreen } from "../../features/mas/MasScreen";
 import { CobrosListaScreen } from "../../features/gestion/CobrosListaScreen";
 import { CobroFormScreen } from "../../features/gestion/CobroFormScreen";
 import { CobroDetalleScreen } from "../../features/gestion/CobroDetalleScreen";
 import { NuevoGastoScreen } from "../../features/gastos/NuevoGastoScreen";
 import { InformesScreen } from "../../features/informes/InformesScreen";
 import { AsistenteScreen } from "../../features/asistente/AsistenteScreen";
+import { PerfilScreen } from "../../features/perfil/PerfilScreen";
+import { TrabajosStack } from "./TrabajosStack";
+import { ViajesStack } from "./ViajesStack";
 
-const Stack = createNativeStackNavigator<GestionStackParamList>();
+const Stack = createNativeStackNavigator<MasStackParamList>();
 
-export function GestionStack() {
+export function MasStack() {
   const t = useTema();
   return (
     <Stack.Navigator
@@ -23,13 +26,16 @@ export function GestionStack() {
         contentStyle: { backgroundColor: t.colores.bg },
       }}
     >
-      <Stack.Screen name="GestionInicio" component={GestionInicioScreen} options={{ title: "Gestión" }} />
+      <Stack.Screen name="MasInicio" component={MasScreen} options={{ title: "Más" }} />
       <Stack.Screen name="CobrosLista" component={CobrosListaScreen} options={{ title: "Cobros" }} />
       <Stack.Screen name="CobroForm" component={CobroFormScreen} options={{ title: "Nuevo cobro", presentation: "modal" }} />
       <Stack.Screen name="CobroDetalle" component={CobroDetalleScreen} options={{ title: "Cobro" }} />
       <Stack.Screen name="GastoForm" component={NuevoGastoScreen} options={{ title: "Nuevo gasto", presentation: "modal" }} />
       <Stack.Screen name="Informes" component={InformesScreen} options={{ title: "Informes" }} />
       <Stack.Screen name="Asistente" component={AsistenteScreen} options={{ title: "Asistente" }} />
+      <Stack.Screen name="Perfil" component={PerfilScreen} options={{ title: "Perfil" }} />
+      <Stack.Screen name="Trabajos" component={TrabajosStack} options={{ headerShown: false }} />
+      <Stack.Screen name="Viajes" component={ViajesStack} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 }

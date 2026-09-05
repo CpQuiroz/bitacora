@@ -6,11 +6,15 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useTema } from "../../theme";
 import { Badge, Button, Card, EmptyState, ErrorState, Input, LoadingScreen, Text } from "../../components/ui";
 import { OfflineBanner } from "../../components/OfflineBanner";
+import { useAuth } from "../auth/AuthContext";
 import { listarClientes, type ClienteConActividad } from "../../services/clientes";
 import type { ClientesStackParamList } from "../../shell/navigation/types";
 
 export function ClientesListaScreen({ navigation }: NativeStackScreenProps<ClientesStackParamList, "ClientesLista">) {
   const t = useTema();
+  const auth = useAuth();
+  // Terreno (colaborador) ve la lista para consultar; no crea clientes.
+  const esGestion = auth.fase === "listo" && auth.usuario.rol !== "colaborador";
   const [clientes, setClientes] = useState<ClienteConActividad[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refrescando, setRefrescando] = useState(false);
@@ -58,7 +62,7 @@ export function ClientesListaScreen({ navigation }: NativeStackScreenProps<Clien
     <View style={{ flex: 1, backgroundColor: t.colores.bg }}>
       <OfflineBanner guardadoEn={guardadoEn} />
       <View style={{ padding: t.espacio(4), gap: t.espacio(3) }}>
-        <Button titulo="Nuevo cliente" onPress={() => navigation.navigate("ClienteForm")} />
+        {esGestion ? <Button titulo="Nuevo cliente" onPress={() => navigation.navigate("ClienteForm")} /> : null}
         <Input placeholder="Buscar por nombre, RUT o comuna" value={busqueda} onChangeText={setBusqueda} />
       </View>
       <FlatList

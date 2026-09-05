@@ -1,3 +1,5 @@
+import type { NavigatorScreenParams } from "@react-navigation/native";
+
 export type RootStackParamList = {
   Login: undefined;
   Verify2fa: { ticket: string; metodo: "totp" | "email" };
@@ -27,14 +29,31 @@ export type ClientesStackParamList = {
   ClienteDetalle: { clienteId: string };
 };
 
-export type GestionStackParamList = {
-  GestionInicio: undefined;
+// "Más" absorbe la vieja pestaña Gestión (Cobros, Gasto, Informes,
+// Asistente) + Perfil + las listas completas de Trabajos y Viajes. Las
+// listas del día viven en "Hoy"; acá se entra al histórico.
+export type MasStackParamList = {
+  MasInicio: undefined;
   CobrosLista: undefined;
   CobroForm: undefined;
   CobroDetalle: { cobroId: string };
   GastoForm: undefined;
   Informes: undefined;
   Asistente: undefined;
+  Perfil: undefined;
+  Trabajos: NavigatorScreenParams<TrabajosStackParamList> | undefined;
+  Viajes: NavigatorScreenParams<ViajesStackParamList> | undefined;
 };
 
-export type TabKey = "Trabajos" | "Agenda" | "Ruta" | "Clientes" | "Viajes" | "Gestion" | "Perfil";
+// "Hoy": pantalla nueva con la lista cronológica del día (trabajos +
+// citas + viajes) y un interruptor lista/mapa. Desde acá se entra al
+// detalle de cada ítem a través de los stacks anidados.
+export type HoyStackParamList = {
+  HoyInicio: undefined;
+  Asistente: undefined;
+  Trabajos: NavigatorScreenParams<TrabajosStackParamList> | undefined;
+  Agenda: NavigatorScreenParams<AgendaStackParamList> | undefined;
+  Viajes: NavigatorScreenParams<ViajesStackParamList> | undefined;
+};
+
+export type TabKey = "Hoy" | "Agenda" | "Clientes" | "Mas";
