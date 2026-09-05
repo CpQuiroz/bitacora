@@ -519,6 +519,9 @@ export type Tarea = {
   // notificaciones_config.whatsapp_activado a nivel empresa, esto es
   // el opt-out por cita.
   avisar_whatsapp: boolean;
+  // Precio final de la cita — precarga desde servicios.precio pero es
+  // editable (descuentos puntuales). Null = usar el de lista del servicio.
+  precio: number | null;
   // OS (trabajo) creada desde el flujo "Nueva tarea → Crear Orden de
   // Servicio" en Agenda. Nullable: casi ninguna tarea tiene OS asociada.
   trabajo_id: string | null;

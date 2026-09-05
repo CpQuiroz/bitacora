@@ -12,6 +12,7 @@ import { catalogoParaCita, crearCita, editarCita, obtenerTarea, type BorradorCit
 import { crearPaquete, listarPaquetesCliente } from "../../services/paquetes";
 import { listarTiposPack } from "../../services/tiposPack";
 import type { AgendaStackParamList } from "../../shell/navigation/types";
+import { NuevaReservaCosmetologia } from "./NuevaReservaCosmetologia";
 
 const DIAS = ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"];
 const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
@@ -35,6 +36,13 @@ export function NuevaCitaScreen({ navigation, route }: NativeStackScreenProps<Ag
 
   const editandoId = route.params?.tareaId ?? null;
   const fechaInicial = route.params?.fecha ?? clave(new Date());
+
+  // Tema por rubro: cosmetología tiene su propia pantalla de creación
+  // ("Nueva reserva") — solo para crear, editar sigue con el genérico
+  // de acá abajo. El resto de los rubros no la ve nunca.
+  if (!editandoId && auth.fase === "listo" && auth.usuario.empresa.rubro === "cosmetologia") {
+    return <NuevaReservaCosmetologia navigation={navigation} route={route} />;
+  }
 
   const [clientes, setClientes] = useState<Cliente[] | null>(null);
   const [equipo, setEquipo] = useState<Usuario[]>([]);

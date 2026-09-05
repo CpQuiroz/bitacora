@@ -117,6 +117,7 @@ tareasRouter.post(
       servicio_id,
       nota_cliente,
       avisar_whatsapp,
+      precio,
     } = req.body ?? {};
 
     if (typeof titulo !== "string" || !titulo.trim()) {
@@ -133,6 +134,10 @@ tareasRouter.post(
     }
     if (duracion_min !== undefined && duracion_min !== null && (!Number.isInteger(duracion_min) || duracion_min <= 0)) {
       res.status(400).json({ error: "duracion_min debe ser un entero mayor a 0" });
+      return;
+    }
+    if (precio !== undefined && precio !== null && (typeof precio !== "number" || precio < 0)) {
+      res.status(400).json({ error: "precio inválido" });
       return;
     }
     // Un colaborador (típicamente desde la app) solo agenda para sí
@@ -176,6 +181,7 @@ tareasRouter.post(
         servicio_id: servicio_id || null,
         nota_cliente: nota_cliente?.trim() || null,
         avisar_whatsapp: avisar_whatsapp === undefined ? true : Boolean(avisar_whatsapp),
+        precio: precio ?? null,
         responsable_id: responsableFinal || null,
         cliente_id: cliente_id || null,
         prioridad: prioridadFinal,
@@ -316,6 +322,7 @@ tareasRouter.patch(
       servicio_id,
       nota_cliente,
       avisar_whatsapp,
+      precio,
     } = req.body ?? {};
     const cambios: Partial<Tarea> = {};
 
@@ -357,6 +364,13 @@ tareasRouter.patch(
     }
     if (nota_cliente !== undefined) cambios.nota_cliente = nota_cliente?.trim() || null;
     if (avisar_whatsapp !== undefined) cambios.avisar_whatsapp = Boolean(avisar_whatsapp);
+    if (precio !== undefined) {
+      if (precio !== null && (typeof precio !== "number" || precio < 0)) {
+        res.status(400).json({ error: "precio inválido" });
+        return;
+      }
+      cambios.precio = precio;
+    }
     if (responsable_id !== undefined) {
       if (responsable_id && !(await usuarioExiste(req.empresaId!, responsable_id))) {
         res.status(400).json({ error: "responsable_id inválido" });

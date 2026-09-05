@@ -39,3 +39,24 @@ export function formatearFechaCompleta(fechaISO: string): string {
   const d = new Date(`${fechaISO}T00:00:00`);
   return `${String(d.getDate()).padStart(2, "0")}-${String(d.getMonth() + 1).padStart(2, "0")}-${d.getFullYear()}`;
 }
+
+/** "09:00", "18:00", 30 → ["09:00", "09:30", ..., "17:30"] (excluye horaFin). */
+export function generarSlots(horaInicio: string, horaFin: string, pasoMin: number): string[] {
+  const slots: string[] = [];
+  const [hi, mi] = horaInicio.split(":").map(Number);
+  const [hf, mf] = horaFin.split(":").map(Number);
+  let actual = hi * 60 + mi;
+  const fin = hf * 60 + mf;
+  while (actual < fin) {
+    slots.push(`${String(Math.floor(actual / 60)).padStart(2, "0")}:${String(actual % 60).padStart(2, "0")}`);
+    actual += pasoMin;
+  }
+  return slots;
+}
+
+/** true si `fecha`+`hora` cae antes de "ahora + anticipacionHoras". */
+export function fueraDeAnticipacion(fecha: string, hora: string, anticipacionHoras: number, ahora: Date = new Date()): boolean {
+  const momento = new Date(`${fecha}T${hora}:00`);
+  const limite = new Date(ahora.getTime() + anticipacionHoras * 60 * 60 * 1000);
+  return momento < limite;
+}

@@ -65,6 +65,12 @@ export type BorradorCita = {
   // Agenda Pro: si la cita descuenta de un pack de sesiones del cliente.
   paquete_id: string;
   sesiones_consumidas: number;
+  // Solo usados por Nueva reserva (tema cosmetología) — opcionales para
+  // no afectar el formulario genérico de Nueva Cita.
+  servicio_id?: string;
+  nota_cliente?: string;
+  avisar_whatsapp?: boolean;
+  precio?: string; // "" = usar el precio de lista del servicio
 };
 
 /** Crea una cita/tarea. Va directo (no por la cola): necesitamos el id que asigna el servidor. */
@@ -82,6 +88,10 @@ export async function crearCita(b: BorradorCita): Promise<{ ok: true; tarea: Tar
       prioridad: b.prioridad,
       paquete_id: b.paquete_id || null,
       sesiones_consumidas: b.paquete_id ? b.sesiones_consumidas || 1 : undefined,
+      servicio_id: b.servicio_id || undefined,
+      nota_cliente: b.nota_cliente?.trim() || undefined,
+      avisar_whatsapp: b.avisar_whatsapp,
+      precio: b.precio ? Number(b.precio) : undefined,
     }),
   });
   return res.ok ? { ok: true, tarea: res.data } : { ok: false, error: res.error };
@@ -100,8 +110,12 @@ export type EdicionCita = Partial<
     | "prioridad"
     | "paquete_id"
     | "sesiones_consumidas"
+    | "servicio_id"
+    | "nota_cliente"
+    | "avisar_whatsapp"
+    | "precio"
   >
->;
+> & { estado?: EstadoTarea };
 
 /** Edita/reprograma una cita (roles de gestión). Va directo: es acción de oficina y necesita respuesta. */
 export async function editarCita(id: string, c: EdicionCita): Promise<{ ok: true; tarea: Tarea } | { ok: false; error: string }> {
@@ -116,6 +130,11 @@ export async function editarCita(id: string, c: EdicionCita): Promise<{ ok: true
   if (c.prioridad !== undefined) body.prioridad = c.prioridad;
   if (c.paquete_id !== undefined) body.paquete_id = c.paquete_id || null;
   if (c.sesiones_consumidas !== undefined && c.paquete_id) body.sesiones_consumidas = c.sesiones_consumidas || 1;
+  if (c.servicio_id !== undefined) body.servicio_id = c.servicio_id || null;
+  if (c.nota_cliente !== undefined) body.nota_cliente = c.nota_cliente?.trim() || null;
+  if (c.avisar_whatsapp !== undefined) body.avisar_whatsapp = c.avisar_whatsapp;
+  if (c.precio !== undefined) body.precio = c.precio ? Number(c.precio) : null;
+  if (c.estado !== undefined) body.estado = c.estado;
   const res = await apiJson<Tarea>(`/api/tareas/${id}`, { method: "PATCH", body: JSON.stringify(body) });
   return res.ok ? { ok: true, tarea: res.data } : { ok: false, error: res.error };
 }
