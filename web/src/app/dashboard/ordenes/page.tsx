@@ -32,6 +32,9 @@ export default function OrdenesServicioPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [estadoOs, setEstadoOs] = useState("");
+  // "Documento" = la OS tiene folio emitido. "sin documento" son los
+  // trabajos rápidos que todavía no generaron una orden formal.
+  const [documento, setDocumento] = useState<"" | "con" | "sin">("");
   const [responsableId, setResponsableId] = useState("");
   const [clienteId, setClienteId] = useState("");
   const [desde, setDesde] = useState("");
@@ -98,9 +101,16 @@ export default function OrdenesServicioPage() {
     });
   }
 
+  const ordenesFiltradas = (ordenes ?? []).filter((o) => {
+    if (documento === "con") return o.orden?.folio != null;
+    if (documento === "sin") return o.orden?.folio == null;
+    return true;
+  });
+
   function toggleSeleccionTodos() {
-    if (!ordenes) return;
-    setSeleccionados((prev) => (prev.size === ordenes.length ? new Set() : new Set(ordenes.map((o) => o.id))));
+    setSeleccionados((prev) =>
+      prev.size === ordenesFiltradas.length ? new Set() : new Set(ordenesFiltradas.map((o) => o.id))
+    );
   }
 
   const ordenesSeleccionadas = (ordenes ?? []).filter((o) => seleccionados.has(o.id));
@@ -152,7 +162,7 @@ export default function OrdenesServicioPage() {
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight text-foreground">
           <IconClipboardCheck className="h-6 w-6 text-brand" />
-          Órdenes de Trabajo/Servicio
+          Órdenes de servicio
         </h1>
         <Link href="/dashboard/ordenes/nueva" className={buttonClass("primary")}>
           <IconPlus className="h-4 w-4" />
@@ -161,7 +171,15 @@ export default function OrdenesServicioPage() {
       </div>
 
       <Card className="mb-6">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
+          <div>
+            <Label>Documento</Label>
+            <Select value={documento} onChange={(e) => setDocumento(e.target.value as "" | "con" | "sin")}>
+              <option value="">Todas</option>
+              <option value="con">Con documento</option>
+              <option value="sin">Sin documento</option>
+            </Select>
+          </div>
           <div>
             <Label>Estado</Label>
             <Select value={estadoOs} onChange={(e) => setEstadoOs(e.target.value)}>
@@ -237,10 +255,10 @@ export default function OrdenesServicioPage() {
 
       {error && <EstadoError mensaje={error} onReintentar={cargarOrdenes} />}
       {ordenes === null && !error && <EstadoCargando />}
-      {ordenes?.length === 0 && (
+      {ordenes !== null && ordenesFiltradas.length === 0 && (
         <EstadoVacio icono={IconClipboardCheck} titulo="No hay órdenes de servicio con estos filtros" />
       )}
-      {ordenes && ordenes.length > 0 && (
+      {ordenesFiltradas.length > 0 && (
         <Card className="overflow-x-auto p-0">
           <table className="w-full text-left text-sm">
             <thead>
@@ -248,7 +266,7 @@ export default function OrdenesServicioPage() {
                 <th className="px-5 py-3 font-medium">
                   <input
                     type="checkbox"
-                    checked={seleccionados.size > 0 && seleccionados.size === ordenes.length}
+                    checked={seleccionados.size > 0 && seleccionados.size === ordenesFiltradas.length}
                     onChange={toggleSeleccionTodos}
                     className="accent-brand"
                     aria-label="Seleccionar todas"
@@ -263,7 +281,7 @@ export default function OrdenesServicioPage() {
               </tr>
             </thead>
             <tbody>
-              {ordenes.map((o) => (
+              {ordenesFiltradas.map((o) => (
                 <tr
                   key={o.id}
                   onClick={() => router.push(`/dashboard/ordenes/${o.id}`)}

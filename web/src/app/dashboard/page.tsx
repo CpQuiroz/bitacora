@@ -78,8 +78,7 @@ const PERIODOS = [
 // filtraba por módulo opt-in, así que un colaborador (sin módulos) veía
 // atajos a Trabajos, Clientes, Cobros, etc. que no puede abrir.
 const ACCESOS: { href: string; label: string; icon: typeof IconBriefcase; modulo: Modulo }[] = [
-  { href: "/dashboard/trabajos", label: "Trabajos", icon: IconBriefcase, modulo: "ordenes_servicio" },
-  { href: "/dashboard/ordenes", label: "Órdenes de Trabajo/Servicio", icon: IconClipboardCheck, modulo: "ordenes_servicio" },
+  { href: "/dashboard/ordenes", label: "Órdenes de servicio", icon: IconClipboardCheck, modulo: "ordenes_servicio" },
   { href: "/dashboard/registros/clientes", label: "Clientes", icon: IconMapPin, modulo: "registros" },
   { href: "/dashboard/rutas", label: "Rutas", icon: IconRoute, modulo: "rutas" },
   { href: "/dashboard/financiero/cobros", label: "Cobros", icon: IconReceipt, modulo: "financiero" },

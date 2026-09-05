@@ -45,6 +45,9 @@ const SECCIONES: { valor: string; label: string; icon: typeof IconUser; modulo: 
   { valor: "inventario", label: "Inventario", icon: IconBox, modulo: "configuracion" },
   { valor: "categorias-gastos", label: "Categorías de Gastos", icon: IconWallet, modulo: "configuracion" },
   { valor: "centros-costo", label: "Centros de Costo", icon: IconLayers, modulo: "configuracion" },
+  // Remuneraciones dejó de ser grupo del sidebar: sus parámetros (tope
+  // imponible, UF, tasas AFP…) se tocan un par de veces al año.
+  { valor: "parametros-remuneracion", label: "Parámetros de remuneración", icon: IconCreditCard, modulo: "remuneraciones", href: "/dashboard/remuneraciones/parametros" },
   { valor: "tipos-documento", label: "Tipos de Documento", icon: IconPaperclip, modulo: "flota" },
   { valor: "agenda-pro", label: "Reserva online", icon: IconCalendar, modulo: "agenda_pro" },
   { valor: "notificaciones", label: "Notificaciones", icon: IconBell, modulo: "configuracion" },

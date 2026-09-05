@@ -14,15 +14,19 @@ import { limpiarImpersonacion, obtenerImpersonacion } from "@/lib/impersonacion"
 import { asegurarFuenteCargada, fuenteDe } from "@/lib/fuentes";
 import {
   IconBox,
+  IconBriefcase,
   IconCalendar,
-  IconChat,
   IconChevronRight,
   IconClipboardCheck,
+  IconCreditCard,
   IconHelp,
   IconHome,
+  IconLayers,
   IconLogOut,
   IconMapPin,
   IconMenu,
+  IconMessageShare,
+  IconPaperclip,
   IconReceipt,
   IconRoute,
   IconSettings,
@@ -32,6 +36,7 @@ import {
   IconUser,
   IconUsers,
   IconWallet,
+  IconWrench,
 } from "./icons";
 
 type NavLeaf = { href: string; label: string };
@@ -41,100 +46,66 @@ type NavItem =
 type NavGroup = { titulo: string; items: NavItem[] };
 
 // modulo: null = siempre visible (la página misma decide qué mostrarle a
-// cada rol, ej. Dashboard). Todo lo demás se filtra con puedeVerModulo.
-// Agrupado en bloques visuales (encabezado sutil, no acordeón) — un grupo
-// entero se oculta si ningún ítem suyo es visible para el rol actual.
+// cada rol, ej. Visión general). Todo lo demás se filtra con
+// puedeVerModulo. Grupos ordenados por frecuencia de uso (PASO 4 de la
+// reestructuración) — un grupo entero se oculta si ningún ítem suyo es
+// visible para el rol actual. Un grupo con un solo ítem visible se
+// muestra como link suelto, sin encabezado.
 const NAV_GROUPS: NavGroup[] = [
+  {
+    titulo: "Hoy",
+    items: [{ href: "/dashboard", label: "Visión general", icon: IconHome, modulo: null }],
+  },
   {
     titulo: "Operación",
     items: [
-      { href: "/dashboard", label: "Dashboard", icon: IconHome, modulo: null },
       { href: "/dashboard/agenda", label: "Agenda", icon: IconCalendar, modulo: "agenda" },
-      // Superficie propia de Agenda Pro — solo aparece para empresas con el
-      // módulo opt-in activado (ver empresa_modulos / Etapa 5). Ítem aparte
-      // de "Agenda" (no anidado) para no convertir el link directo de
-      // Agenda en un desplegable.
-      { href: "/dashboard/agenda/paquetes", label: "Paquetes", icon: IconBox, modulo: "agenda_pro" },
-      {
-        label: "Órdenes de Servicio",
-        icon: IconClipboardCheck,
-        modulo: "ordenes_servicio",
-        children: [
-          // "Nueva OS" ya no vive acá — es el botón "+ Nueva OS" del
-          // listado (mismo patrón que Clientes/Equipos/Catálogo).
-          { href: "/dashboard/ordenes", label: "Todas las OS" },
-          { href: "/dashboard/trabajos", label: "Trabajos" },
-        ],
-      },
-      // Módulo propio "rutas" (distinto de "ordenes_servicio") — antes vivía
-      // anidado dentro de Órdenes de Servicio y se gateaba con el módulo del
-      // padre, no el suyo.
+      // Una sola lista: trabajos y OS son la misma fila. El filtro
+      // "con documento / sin documento" y el alta rápida ("Nueva OS")
+      // viven dentro de la página.
+      { href: "/dashboard/ordenes", label: "Órdenes de servicio", icon: IconClipboardCheck, modulo: "ordenes_servicio" },
+      // Módulos apagables, cada uno con su propio gate.
       { href: "/dashboard/rutas", label: "Rutas", icon: IconRoute, modulo: "rutas" },
       { href: "/dashboard/viajes", label: "Viajes", icon: IconTruck, modulo: "viajes" },
     ],
   },
   {
-    titulo: "Datos",
+    titulo: "Clientes",
     items: [
-      {
-        label: "Registros",
-        icon: IconMapPin,
-        modulo: "registros",
-        children: [
-          { href: "/dashboard/registros/clientes", label: "Clientes" },
-          { href: "/dashboard/registros/equipos", label: "Equipos" },
-          { href: "/dashboard/registros/catalogo", label: "Catálogo" },
-          { href: "/dashboard/registros/inventario", label: "Inventario" },
-          { href: "/dashboard/registros/proveedores", label: "Proveedores" },
-        ],
-      },
-      {
-        label: "Flota",
-        icon: IconTruck,
-        modulo: "flota",
-        children: [
-          { href: "/dashboard/flota/documentos-por-vencer", label: "Documentos por vencer" },
-        ],
-      },
+      { href: "/dashboard/registros/clientes", label: "Clientes", icon: IconMapPin, modulo: "registros" },
+      // Un pack es una relación comercial con el cliente, no una pieza de
+      // la operación diaria.
+      { href: "/dashboard/agenda/paquetes", label: "Packs de sesiones", icon: IconBox, modulo: "agenda_pro" },
+      { href: "/dashboard/portal-cliente", label: "Portal del cliente", icon: IconMessageShare, modulo: "configuracion" },
     ],
   },
   {
-    titulo: "Financiero",
+    titulo: "Dinero",
     items: [
       { href: "/dashboard/financiero/cotizaciones", label: "Cotizaciones", icon: IconTag, modulo: "financiero" },
-      { href: "/dashboard/gastos", label: "Gastos", icon: IconWallet, modulo: "financiero" },
       { href: "/dashboard/financiero/cobros", label: "Cobros", icon: IconReceipt, modulo: "financiero" },
+      { href: "/dashboard/gastos", label: "Gastos", icon: IconWallet, modulo: "financiero" },
+      // Remuneraciones deja de ser grupo de primer nivel: se usa una vez
+      // al mes. Parámetros de remuneración pasa a Configuración.
+      { href: "/dashboard/remuneraciones", label: "Liquidaciones", icon: IconCreditCard, modulo: "remuneraciones" },
     ],
   },
   {
-    titulo: "Remuneraciones",
+    titulo: "Recursos",
     items: [
-      {
-        label: "Remuneraciones",
-        icon: IconWallet,
-        modulo: "remuneraciones",
-        children: [
-          { href: "/dashboard/remuneraciones", label: "Liquidaciones" },
-          { href: "/dashboard/remuneraciones/parametros", label: "Parámetros" },
-        ],
-      },
-    ],
-  },
-  {
-    titulo: "Análisis",
-    items: [
-      { href: "/dashboard/informes", label: "Informes", icon: IconSparkle, modulo: "informes" },
-      { href: "/dashboard/informe", label: "Generar con IA", icon: IconChat, modulo: "informe_ia" },
+      { href: "/dashboard/registros/equipos", label: "Equipos", icon: IconWrench, modulo: "registros" },
+      { href: "/dashboard/registros/inventario", label: "Inventario", icon: IconLayers, modulo: "registros" },
+      { href: "/dashboard/registros/catalogo", label: "Catálogo", icon: IconTag, modulo: "registros" },
+      { href: "/dashboard/registros/proveedores", label: "Proveedores", icon: IconBriefcase, modulo: "registros" },
     ],
   },
   {
     titulo: "Equipo",
     items: [
       // Ficha única de cada persona (identidad + acceso + datos laborales
-      // + documentos). Reemplaza las 3 entradas viejas: Flota →
-      // Colaboradores, Administración → Grupo y usuario, Remuneraciones →
-      // Datos del equipo. Cada pestaña de la ficha conserva su propio
-      // gate de módulo; el ítem se muestra si el rol ve cualquiera.
+      // + documentos) — reemplaza Flota → Colaboradores, Grupo y usuario y
+      // Remuneraciones → Datos del equipo. Cada pestaña conserva su gate;
+      // el ítem se muestra si el rol ve cualquiera.
       {
         href: "/dashboard/personas",
         label: "Personas",
@@ -142,9 +113,20 @@ const NAV_GROUPS: NavGroup[] = [
         modulo: null,
         modulos: ["gestion_control", "flota", "remuneraciones"],
       },
-      // "Configuración" vive en el menú del usuario (arriba a la derecha),
-      // no acá.
+      { href: "/dashboard/flota/documentos-por-vencer", label: "Documentos", icon: IconPaperclip, modulo: "flota" },
     ],
+  },
+  {
+    titulo: "Informes",
+    items: [
+      // "Generar con IA" se fusiona: es una acción sobre los informes,
+      // no un lugar aparte (se entra desde el dashboard y desde Informes).
+      { href: "/dashboard/informes", label: "Informes", icon: IconSparkle, modulo: "informes" },
+    ],
+  },
+  {
+    titulo: "Configuración",
+    items: [{ href: "/dashboard/configuracion/cuenta", label: "Configuración", icon: IconSettings, modulo: null }],
   },
 ];
 
