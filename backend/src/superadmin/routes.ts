@@ -34,7 +34,7 @@ import {
 
 const ESTADOS_EMPRESA: EstadoEmpresa[] = ["activa", "suspendida", "dada_de_baja"];
 const PLANES: Plan[] = ["trial", "basico", "pro"];
-const RUBROS: Rubro[] = ["transporte", "servicio_tecnico", "otro"];
+const RUBROS: Rubro[] = ["transporte", "servicio_tecnico", "cosmetologia", "otro"];
 
 export const superadminRouter = Router();
 

@@ -1,9 +1,10 @@
+import { useFonts } from "expo-font";
 import { StatusBar } from "expo-status-bar";
 import { NavigationContainer } from "@react-navigation/native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AuthProvider, useAuth } from "../features/auth/AuthContext";
 import { NetworkProvider } from "../services/sync/NetworkProvider";
-import { ThemeProvider } from "../theme";
+import { ThemeProvider, fuentesCosmetologia } from "../theme";
 import { RootNavigator } from "./navigation/RootNavigator";
 import { BloqueoBiometrico } from "./BloqueoBiometrico";
 
@@ -20,6 +21,7 @@ function ConTema({ children }: { children: React.ReactNode }) {
               color_primario: empresa.color_primario,
               color_primario_foreground: empresa.color_primario_foreground,
               fuente: empresa.fuente,
+              rubro: empresa.rubro,
             }
           : null
       }
@@ -30,6 +32,14 @@ function ConTema({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  // Karla + Bodoni Moda del tema "Vino y eucalipto" (cosmetología) — se
+  // cargan siempre (pesan poco, ~300KB) para no bifurcar el arranque
+  // según rubro; el resto de la app no las referencia si no está en ese
+  // tema. Mientras cargan no se pinta nada (mismo criterio que el splash
+  // nativo de Expo, sin agregar expo-splash-screen).
+  const [fuentesListas, errorFuentes] = useFonts(fuentesCosmetologia);
+  if (!fuentesListas && !errorFuentes) return null;
+
   return (
     <SafeAreaProvider>
       <AuthProvider>

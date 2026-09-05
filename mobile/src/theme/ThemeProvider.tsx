@@ -2,6 +2,7 @@ import { createContext, useContext, useMemo, type ReactNode } from "react";
 import type { Empresa } from "@bitacora/shared";
 import { esHexValido, mezclar } from "./color";
 import { duracion, espacio, paletaBase, radio, sombra, tipografia, type Paleta } from "./tokens";
+import { paletaCosmetologia, radioCosmetologia, sombraCosmetologia, tipografiaCosmetologia } from "./temas/cosmetologia";
 
 export type Tema = {
   colores: Paleta;
@@ -14,9 +15,24 @@ export type Tema = {
 
 // Marca de la empresa (subconjunto de Empresa) — lo que el ThemeProvider
 // necesita para personalizar. Viene de /api/me → usuario.empresa.
-export type MarcaEmpresa = Pick<Empresa, "color_primario" | "color_primario_foreground" | "fuente"> | null;
+export type MarcaEmpresa = Pick<Empresa, "color_primario" | "color_primario_foreground" | "fuente" | "rubro"> | null;
 
 function construirTema(marca: MarcaEmpresa): Tema {
+  // Tema por rubro "Vino y eucalipto" (ver theme/temas/cosmetologia.ts):
+  // reemplaza colores/radio/sombra/tipografía enteros, con una paleta e
+  // identidad tipográfica fijas — a propósito NO se mezcla con el color
+  // de marca de la empresa (esa personalización es del tema por defecto).
+  if (marca?.rubro === "cosmetologia") {
+    return {
+      colores: { ...paletaCosmetologia },
+      espacio,
+      radio: radioCosmetologia,
+      tipografia: tipografiaCosmetologia,
+      sombra: sombraCosmetologia,
+      duracion,
+    };
+  }
+
   const colores: Paleta = { ...paletaBase };
 
   // Refresco 1a — el color de la empresa se escribe en `accent`, no en
@@ -46,7 +62,10 @@ function construirTema(marca: MarcaEmpresa): Tema {
 const TemaContext = createContext<Tema>(construirTema(null));
 
 export function ThemeProvider({ marca, children }: { marca: MarcaEmpresa; children: ReactNode }) {
-  const tema = useMemo(() => construirTema(marca), [marca?.color_primario, marca?.color_primario_foreground, marca?.fuente]);
+  const tema = useMemo(
+    () => construirTema(marca),
+    [marca?.color_primario, marca?.color_primario_foreground, marca?.fuente, marca?.rubro]
+  );
   return <TemaContext.Provider value={tema}>{children}</TemaContext.Provider>;
 }
 

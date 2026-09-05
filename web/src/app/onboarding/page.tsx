@@ -12,6 +12,7 @@ import { Button, ErrorText, Input, Label, Select } from "@/components/ui";
 const RUBROS: { value: Rubro; label: string }[] = [
   { value: "transporte", label: "Transporte" },
   { value: "servicio_tecnico", label: "Servicio técnico / mantención" },
+  { value: "cosmetologia", label: "Cosmetología / belleza" },
   { value: "otro", label: "Otro" },
 ];
 

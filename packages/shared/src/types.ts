@@ -18,7 +18,7 @@ export type Rol = "admin" | "supervisor" | "contador" | "colaborador";
 // rol (ver migración 65). La usa la app móvil para mostrar solo las
 // herramientas que ese colaborador realmente usa. null = sin definir.
 export type FuncionColaborador = "tecnico" | "chofer" | "instalador" | "administrativo" | "otro";
-export type Rubro = "transporte" | "servicio_tecnico" | "otro";
+export type Rubro = "transporte" | "servicio_tecnico" | "cosmetologia" | "otro";
 export type Plan = "trial" | "basico" | "pro";
 export type EstadoEmpresa = "activa" | "suspendida" | "dada_de_baja";
 export type EstadoTrabajo = "en_curso" | "completado" | "cancelado";

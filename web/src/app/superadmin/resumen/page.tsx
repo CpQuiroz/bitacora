@@ -21,6 +21,7 @@ const ETIQUETA_ESTADO_SUSCRIPCION: Record<string, string> = {
 const ETIQUETA_RUBRO: Record<string, string> = {
   transporte: "Transporte",
   servicio_tecnico: "Servicio técnico",
+  cosmetologia: "Cosmetología",
   otro: "Otro",
 };
 

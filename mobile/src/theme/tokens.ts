@@ -56,6 +56,15 @@ export const tipografia = {
   // Familias: se resuelven en el ThemeProvider (empresa.fuente o sistema).
   familia: undefined as string | undefined,
   familiaBold: undefined as string | undefined,
+  // Tema por rubro (ver theme/temas/cosmetologia.ts): cuando un tema
+  // carga fuentes locales por peso (no hay "negrita sintética" con
+  // fuentes custom), familiaPorPeso manda sobre familia/familiaBold para
+  // cada peso puntual. familiaDisplay/familiaDisplayBold es la familia
+  // de despliegue (hora, precio, título de pantalla) — undefined en el
+  // tema por defecto, que sigue usando familia/familiaBold para todo.
+  familiaPorPeso: undefined as Partial<Record<"regular" | "medium" | "semibold" | "bold", string>> | undefined,
+  familiaDisplay: undefined as string | undefined,
+  familiaDisplayBold: undefined as string | undefined,
   // Subida de escala para terreno: base 15 → 16. `xs` sigue siendo solo
   // para texto terciario.
   tamano: { xs: 12, sm: 14, base: 16, md: 18, lg: 21, xl: 26, xxl: 32 },

@@ -71,7 +71,7 @@ import { verificarTokenBajaAvisos } from "./bajaAvisos";
 import { medirLatencia } from "./instrumentacion";
 import { ah } from "./asyncHandler";
 
-const RUBROS: Rubro[] = ["transporte", "servicio_tecnico", "otro"];
+const RUBROS: Rubro[] = ["transporte", "servicio_tecnico", "cosmetologia", "otro"];
 
 const app = express();
 // Cabeceras de seguridad estándar (X-Content-Type-Options,
