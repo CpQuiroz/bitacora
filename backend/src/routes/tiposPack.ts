@@ -5,9 +5,10 @@ import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
 import { requiereModulo } from "../permisos";
 
-// Catálogo de "tipos de pack" (Agenda Pro) — se administra en la web y lo
-// consume también móvil al vender un paquete a un cliente puntual. Ver
-// supabase/migrations/84_tipos_pack.sql.
+// CATÁLOGO de packs (Agenda Pro) — la plantilla que define el negocio
+// una sola vez. No tiene saldo: vender un pack crea una INSTANCIA aparte
+// (paquetes_sesiones) con un snapshot de estos valores. Ver
+// supabase/migrations/84_tipos_pack.sql y 90.
 export const tiposPackRouter = Router();
 
 tiposPackRouter.use(requiereModulo("agenda_pro"));
@@ -37,7 +38,7 @@ tiposPackRouter.get(
 tiposPackRouter.post(
   "/",
   ah<RequestConEmpresa>(async (req, res) => {
-    const { nombre, cantidad_sesiones, precio, servicio_id, vigencia_meses } = req.body ?? {};
+    const { nombre, cantidad_sesiones, precio, servicio_id, vigencia_dias } = req.body ?? {};
 
     if (typeof nombre !== "string" || !nombre.trim()) {
       res.status(400).json({ error: "Falta nombre" });
@@ -55,9 +56,9 @@ tiposPackRouter.post(
       res.status(400).json({ error: "servicio_id inválido" });
       return;
     }
-    const vigenciaFinal = vigencia_meses !== undefined && vigencia_meses !== null ? vigencia_meses : 6;
-    if (!Number.isInteger(vigenciaFinal) || vigenciaFinal <= 0) {
-      res.status(400).json({ error: "vigencia_meses debe ser un entero mayor a 0" });
+    // Opcional — null/ausente = el pack no vence.
+    if (vigencia_dias !== null && vigencia_dias !== undefined && (!Number.isInteger(vigencia_dias) || vigencia_dias <= 0)) {
+      res.status(400).json({ error: "vigencia_dias debe ser un entero mayor a 0" });
       return;
     }
 
@@ -69,7 +70,7 @@ tiposPackRouter.post(
         cantidad_sesiones,
         precio: precio ?? null,
         servicio_id: servicio_id || null,
-        vigencia_meses: vigenciaFinal,
+        vigencia_dias: vigencia_dias ?? null,
       })
       .select()
       .single();
@@ -85,7 +86,7 @@ tiposPackRouter.post(
 tiposPackRouter.patch(
   "/:id",
   ah<RequestConEmpresa>(async (req, res) => {
-    const { nombre, cantidad_sesiones, precio, activo, servicio_id, vigencia_meses } = req.body ?? {};
+    const { nombre, cantidad_sesiones, precio, activo, servicio_id, vigencia_dias } = req.body ?? {};
     const cambios: Partial<TipoPack> = {};
 
     if (nombre !== undefined) {
@@ -117,12 +118,12 @@ tiposPackRouter.patch(
       }
       cambios.servicio_id = servicio_id || null;
     }
-    if (vigencia_meses !== undefined) {
-      if (!Number.isInteger(vigencia_meses) || vigencia_meses <= 0) {
-        res.status(400).json({ error: "vigencia_meses debe ser un entero mayor a 0" });
+    if (vigencia_dias !== undefined) {
+      if (vigencia_dias !== null && (!Number.isInteger(vigencia_dias) || vigencia_dias <= 0)) {
+        res.status(400).json({ error: "vigencia_dias debe ser un entero mayor a 0" });
         return;
       }
-      cambios.vigencia_meses = vigencia_meses;
+      cambios.vigencia_dias = vigencia_dias;
     }
 
     const { data, error } = await supabase

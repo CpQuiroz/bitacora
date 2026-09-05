@@ -39,47 +39,68 @@ paquetesSesionesRouter.get(
   })
 );
 
+// Vender/asignar un pack a un cliente = crear una INSTANCIA en
+// paquetes_sesiones. Si viene tipo_pack_id, el snapshot (nombre,
+// cantidad, precio, servicio, vencimiento) se copia AUTORITATIVAMENTE
+// desde el catálogo — no se confía en lo que mande el cliente para esos
+// campos. Si el negocio cambia el catálogo después, esta instancia no se
+// entera. `precio_pagado` sí lo pone quien vende (descuento puntual).
 paquetesSesionesRouter.post(
   "/",
   ah<RequestConEmpresa>(async (req, res) => {
-    const { cliente_id, nombre, cantidad_total, fecha_compra, notas, tipo_pack_id } = req.body ?? {};
+    const { cliente_id, nombre, cantidad_total, fecha_compra, notas, tipo_pack_id, precio_pagado } = req.body ?? {};
 
     if (typeof cliente_id !== "string" || !cliente_id || !(await clienteExiste(req.empresaId!, cliente_id))) {
       res.status(400).json({ error: "cliente_id inválido" });
       return;
     }
-    if (typeof nombre !== "string" || !nombre.trim()) {
-      res.status(400).json({ error: "Falta nombre" });
+    if (precio_pagado !== null && precio_pagado !== undefined && (typeof precio_pagado !== "number" || precio_pagado < 0)) {
+      res.status(400).json({ error: "precio_pagado inválido" });
       return;
     }
-    if (!Number.isInteger(cantidad_total) || cantidad_total <= 0) {
-      res.status(400).json({ error: "cantidad_total debe ser un entero mayor a 0" });
-      return;
-    }
-    // tipo_pack_id es solo trazabilidad (de qué plantilla del catálogo
-    // salió) — nombre/cantidad_total siempre se copian, así que un tipo
-    // inválido o de otra empresa simplemente se ignora en vez de bloquear
-    // la venta. servicio_id y vence_el también se copian del tipo acá —
-    // un pack "personalizado" (sin tipo) queda sin servicio ni
-    // vencimiento, no se puede auto-detectar en Nueva reserva.
+
+    const fechaCompraFinal = fecha_compra || new Date().toISOString().slice(0, 10);
+
+    // Valores de la instancia: por defecto los que manda el cliente
+    // (pack "personalizado" sin catálogo); si hay tipo_pack_id válido,
+    // se pisan con el snapshot del catálogo.
     let tipoPackId: string | null = null;
     let servicioId: string | null = null;
     let venceEl: string | null = null;
-    const fechaCompraFinal = fecha_compra || new Date().toISOString().slice(0, 10);
+    let nombreFinal = typeof nombre === "string" ? nombre.trim() : "";
+    let cantidadFinal = cantidad_total;
+    let precioSnapshot: number | null = null;
+
     if (typeof tipo_pack_id === "string" && tipo_pack_id) {
       const { data: tipo } = await supabase
         .from("tipos_pack")
-        .select("id, servicio_id, vigencia_meses")
+        .select("id, nombre, cantidad_sesiones, precio, servicio_id, vigencia_dias")
         .eq("id", tipo_pack_id)
         .eq("empresa_id", req.empresaId!)
         .maybeSingle();
-      if (tipo) {
-        tipoPackId = tipo.id;
-        servicioId = tipo.servicio_id;
+      if (!tipo) {
+        res.status(400).json({ error: "tipo_pack_id inválido" });
+        return;
+      }
+      tipoPackId = tipo.id;
+      nombreFinal = tipo.nombre;
+      cantidadFinal = tipo.cantidad_sesiones;
+      precioSnapshot = tipo.precio;
+      servicioId = tipo.servicio_id;
+      if (tipo.vigencia_dias) {
         const vence = new Date(`${fechaCompraFinal}T00:00:00`);
-        vence.setMonth(vence.getMonth() + tipo.vigencia_meses);
+        vence.setDate(vence.getDate() + tipo.vigencia_dias);
         venceEl = vence.toISOString().slice(0, 10);
       }
+    }
+
+    if (!nombreFinal) {
+      res.status(400).json({ error: "Falta nombre" });
+      return;
+    }
+    if (!Number.isInteger(cantidadFinal) || cantidadFinal <= 0) {
+      res.status(400).json({ error: "cantidad_total debe ser un entero mayor a 0" });
+      return;
     }
 
     const { data, error } = await supabase
@@ -90,8 +111,10 @@ paquetesSesionesRouter.post(
         tipo_pack_id: tipoPackId,
         servicio_id: servicioId,
         vence_el: venceEl,
-        nombre: nombre.trim(),
-        cantidad_total,
+        nombre: nombreFinal,
+        cantidad_total: cantidadFinal,
+        precio: precioSnapshot,
+        precio_pagado: precio_pagado ?? null,
         fecha_compra: fechaCompraFinal,
         notas: notas?.trim() || null,
       })

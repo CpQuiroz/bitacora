@@ -9,6 +9,7 @@ import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText, Textarea } from "@/components/ui";
 import { ComboboxCliente } from "@/components/ComboboxCliente";
+import { formatMoneda } from "@/lib/formatMoneda";
 import { IconBox, IconPlus } from "@/components/icons";
 import { EstadoCargando, EstadoVacio } from "@/components/estados";
 
@@ -28,6 +29,7 @@ export default function PaquetesSesionesPage() {
   const [tipoPackId, setTipoPackId] = useState("");
   const [nombre, setNombre] = useState("");
   const [cantidadTotal, setCantidadTotal] = useState(5);
+  const [precioPagado, setPrecioPagado] = useState(""); // lo realmente cobrado; "" = precio de lista
   const [notas, setNotas] = useState("");
   const [guardando, setGuardando] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -79,19 +81,24 @@ export default function PaquetesSesionesPage() {
     setTipoPackId("");
     setNombre("");
     setCantidadTotal(5);
+    setPrecioPagado("");
     setNotas("");
     setFormError(null);
     setFormAbierto(true);
   }
 
-  // Elegir un tipo de pack precarga nombre y cantidad — quedan editables
-  // por si esta venta puntual difiere de la plantilla.
+  const tipoElegido = tiposPack.find((t) => t.id === tipoPackId) ?? null;
+
+  // Elegir un tipo de pack fija nombre/cantidad desde el catálogo (el
+  // backend igual los copia autoritativamente) y precarga el precio
+  // pagado con el de lista — editable para un descuento puntual.
   function elegirTipoPack(id: string) {
     setTipoPackId(id);
     const tipo = tiposPack.find((t) => t.id === id);
     if (tipo) {
       setNombre(tipo.nombre);
       setCantidadTotal(tipo.cantidad_sesiones);
+      setPrecioPagado(tipo.precio !== null ? String(tipo.precio) : "");
     }
   }
 
@@ -102,12 +109,19 @@ export default function PaquetesSesionesPage() {
       setFormError("Selecciona un cliente");
       return;
     }
-    if (!nombre.trim()) {
+    // Para packs personalizados (sin tipo de catálogo) el nombre/cantidad
+    // los pone el form; para packs de catálogo los copia el backend.
+    if (!tipoPackId && !nombre.trim()) {
       setFormError("Falta nombre");
       return;
     }
-    if (!Number.isInteger(cantidadTotal) || cantidadTotal <= 0) {
+    if (!tipoPackId && (!Number.isInteger(cantidadTotal) || cantidadTotal <= 0)) {
       setFormError("La cantidad debe ser un entero mayor a 0");
+      return;
+    }
+    const precioPagadoNumero = precioPagado.trim() ? Number(precioPagado) : null;
+    if (precioPagadoNumero !== null && (Number.isNaN(precioPagadoNumero) || precioPagadoNumero < 0)) {
+      setFormError("Precio pagado inválido");
       return;
     }
     setGuardando(true);
@@ -118,6 +132,7 @@ export default function PaquetesSesionesPage() {
         tipo_pack_id: tipoPackId || null,
         nombre,
         cantidad_total: cantidadTotal,
+        precio_pagado: precioPagadoNumero,
         notas: notas || null,
       }),
     });
@@ -178,13 +193,36 @@ export default function PaquetesSesionesPage() {
                   </Select>
                 </div>
               )}
+              {tipoElegido ? (
+                <div className="sm:col-span-2 rounded-lg border border-border bg-surface-sunken px-3 py-2 text-xs text-muted">
+                  Se copia del catálogo: <span className="font-medium text-foreground">{tipoElegido.nombre}</span> ·{" "}
+                  {tipoElegido.cantidad_sesiones} sesiones
+                  {tipoElegido.precio !== null && ` · lista ${formatMoneda(tipoElegido.precio, usuario.moneda)}`}
+                  {tipoElegido.vigencia_dias !== null && ` · vence a los ${tipoElegido.vigencia_dias} días`}. Si el catálogo cambia
+                  después, este paquete no se ve afectado.
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <Label>Nombre del paquete</Label>
+                    <Input type="text" placeholder="Ej: Pack 10 sesiones" value={nombre} onChange={(e) => setNombre(e.target.value)} />
+                  </div>
+                  <div>
+                    <Label>Cantidad de sesiones</Label>
+                    <Input type="number" min={1} value={cantidadTotal} onChange={(e) => setCantidadTotal(Number(e.target.value) || 1)} />
+                  </div>
+                </>
+              )}
               <div>
-                <Label>Nombre del paquete</Label>
-                <Input type="text" placeholder="Ej: Pack 10 sesiones" value={nombre} onChange={(e) => setNombre(e.target.value)} />
-              </div>
-              <div>
-                <Label>Cantidad de sesiones</Label>
-                <Input type="number" min={1} value={cantidadTotal} onChange={(e) => setCantidadTotal(Number(e.target.value) || 1)} />
+                <Label>Precio pagado (opcional)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  placeholder={tipoElegido?.precio != null ? String(tipoElegido.precio) : "0"}
+                  value={precioPagado}
+                  onChange={(e) => setPrecioPagado(e.target.value)}
+                />
+                <p className="mt-1 text-xs text-muted">Lo realmente cobrado. Vacío = el precio de lista.</p>
               </div>
               <div className="sm:col-span-2">
                 <Label>Notas (opcional)</Label>
@@ -241,7 +279,9 @@ export default function PaquetesSesionesPage() {
                 <th className="px-5 py-3 font-medium">Cliente</th>
                 <th className="px-5 py-3 font-medium">Paquete</th>
                 <th className="px-5 py-3 font-medium">Saldo</th>
+                <th className="px-5 py-3 font-medium">Cobrado</th>
                 <th className="px-5 py-3 font-medium">Fecha de compra</th>
+                <th className="px-5 py-3 font-medium">Vence</th>
                 <th className="px-5 py-3 font-medium">Notas</th>
                 <th className="px-5 py-3 font-medium">Estado</th>
               </tr>
@@ -254,7 +294,17 @@ export default function PaquetesSesionesPage() {
                   <td className="px-5 py-3 text-foreground">
                     {p.saldo} / {p.cantidad_total}
                   </td>
+                  <td className="px-5 py-3 text-muted">
+                    {p.precio_pagado != null
+                      ? formatMoneda(p.precio_pagado, usuario.moneda)
+                      : p.precio != null
+                        ? formatMoneda(p.precio, usuario.moneda)
+                        : "—"}
+                  </td>
                   <td className="px-5 py-3 text-muted">{new Date(`${p.fecha_compra}T00:00:00`).toLocaleDateString("es-CL")}</td>
+                  <td className="px-5 py-3 text-muted">
+                    {p.vence_el ? new Date(`${p.vence_el}T00:00:00`).toLocaleDateString("es-CL") : "No vence"}
+                  </td>
                   <td className="px-5 py-3 text-muted">{p.notas || "—"}</td>
                   <td className="px-5 py-3">
                     <Badge value={p.saldo <= 0 ? "agotado" : "disponible"} />

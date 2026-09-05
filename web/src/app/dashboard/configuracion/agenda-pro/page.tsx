@@ -188,10 +188,9 @@ function ServiciosCard({ servicios, onCambio }: { servicios: Servicio[] | null; 
   );
 }
 
-// Catálogo reutilizable de "tipos de pack" (ver 84_tipos_pack.sql,
-// extendido en 88 con servicio_id/vigencia_meses) — se vende como
-// plantilla al crear un paquete de sesiones a un cliente, tanto desde
-// Paquetes de sesiones (web) como desde Nueva cita (móvil).
+// CATÁLOGO de packs (ver 84_tipos_pack.sql, 88, 90) — la plantilla que
+// el negocio define una vez. No tiene saldo: vender un pack crea una
+// instancia aparte en paquetes_sesiones con un snapshot de estos valores.
 function TiposPackCard({ servicios }: { servicios: Servicio[] | null }) {
   const [tipos, setTipos] = useState<TipoPack[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -202,7 +201,7 @@ function TiposPackCard({ servicios }: { servicios: Servicio[] | null }) {
   const [cantidadSesiones, setCantidadSesiones] = useState(5);
   const [precio, setPrecio] = useState("");
   const [servicioId, setServicioId] = useState("");
-  const [vigenciaMeses, setVigenciaMeses] = useState(6);
+  const [vigenciaDias, setVigenciaDias] = useState(""); // "" = no vence
   const [guardando, setGuardando] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -225,7 +224,7 @@ function TiposPackCard({ servicios }: { servicios: Servicio[] | null }) {
     setCantidadSesiones(5);
     setPrecio("");
     setServicioId("");
-    setVigenciaMeses(6);
+    setVigenciaDias("");
     setFormError(null);
   }
 
@@ -235,7 +234,7 @@ function TiposPackCard({ servicios }: { servicios: Servicio[] | null }) {
     setCantidadSesiones(t.cantidad_sesiones);
     setPrecio(t.precio !== null ? String(t.precio) : "");
     setServicioId(t.servicio_id ?? "");
-    setVigenciaMeses(t.vigencia_meses);
+    setVigenciaDias(t.vigencia_dias !== null ? String(t.vigencia_dias) : "");
     setFormError(null);
   }
 
@@ -255,8 +254,9 @@ function TiposPackCard({ servicios }: { servicios: Servicio[] | null }) {
       setFormError("Precio inválido");
       return;
     }
-    if (!Number.isInteger(vigenciaMeses) || vigenciaMeses <= 0) {
-      setFormError("La vigencia debe ser un entero mayor a 0");
+    const vigenciaNumero = vigenciaDias.trim() ? Number(vigenciaDias) : null;
+    if (vigenciaNumero !== null && (!Number.isInteger(vigenciaNumero) || vigenciaNumero <= 0)) {
+      setFormError("La vigencia debe ser un entero de días mayor a 0 (o vacío si el pack no vence)");
       return;
     }
     setGuardando(true);
@@ -265,7 +265,7 @@ function TiposPackCard({ servicios }: { servicios: Servicio[] | null }) {
       cantidad_sesiones: cantidadSesiones,
       precio: precioNumero,
       servicio_id: servicioId || null,
-      vigencia_meses: vigenciaMeses,
+      vigencia_dias: vigenciaNumero,
     };
     const res =
       editandoId === "nuevo"
@@ -341,8 +341,14 @@ function TiposPackCard({ servicios }: { servicios: Servicio[] | null }) {
               </Select>
             </div>
             <div>
-              <Label>Vigencia (meses)</Label>
-              <Input type="number" min={1} value={vigenciaMeses} onChange={(e) => setVigenciaMeses(Number(e.target.value) || 1)} />
+              <Label>Vigencia en días (opcional)</Label>
+              <Input
+                type="number"
+                min={1}
+                placeholder="Vacío = no vence"
+                value={vigenciaDias}
+                onChange={(e) => setVigenciaDias(e.target.value)}
+              />
             </div>
           </div>
           {formError && <ErrorText>{formError}</ErrorText>}
@@ -385,7 +391,7 @@ function TiposPackCard({ servicios }: { servicios: Servicio[] | null }) {
                   <td className="px-3 py-2 text-foreground">{t.cantidad_sesiones}</td>
                   <td className="px-3 py-2 text-muted">{formatoPrecio(t.precio)}</td>
                   <td className="px-3 py-2 text-muted">{nombreServicio(t.servicio_id)}</td>
-                  <td className="px-3 py-2 text-muted">{t.vigencia_meses} meses</td>
+                  <td className="px-3 py-2 text-muted">{t.vigencia_dias !== null ? `${t.vigencia_dias} días` : "No vence"}</td>
                   <td className="px-3 py-2">
                     <Badge value={t.activo ? "activo" : "inactivo"} />
                   </td>

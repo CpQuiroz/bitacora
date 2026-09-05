@@ -543,50 +543,57 @@ export type Servicio = {
   creado_en: string;
 };
 
-// Agenda Pro: pack de N sesiones comprado por un cliente (ej. 5 o 10).
-// El saldo restante no se guarda acá — se calcula siempre a partir de
-// las tareas con este paquete_id (ver backend/src/routes/paquetesSesiones.ts).
+// Agenda Pro: INSTANCIA de pack comprada por un cliente puntual. NO es
+// el catálogo (TipoPack) — es una copia con su propio saldo. El saldo
+// restante no se guarda acá: se calcula siempre a partir de las tareas
+// con este paquete_id (ver backend/src/agendaPro.ts:calcularConsumoPorPaquete).
+// El descuento de sesiones apunta SIEMPRE a esta instancia, jamás al
+// catálogo (el catálogo no tiene saldo).
 export type PaqueteSesiones = {
   id: string;
   empresa_id: string;
   cliente_id: string;
-  // Si el paquete se creó a partir de un TipoPack del catálogo, queda la
-  // referencia acá (solo trazabilidad — nombre/cantidad_total quedan
-  // copiados en el paquete y se pueden editar sin afectar el catálogo).
+  // De qué TipoPack del catálogo salió esta instancia (trazabilidad /
+  // reportes: "cuántos Pack Detox se vendieron este mes"). null = pack
+  // "personalizado", tipeado a mano sin catálogo.
   tipo_pack_id: string | null;
+  // Snapshot inmutable tomado del catálogo al momento de la venta — si
+  // el negocio cambia el catálogo después, esta instancia NO se ve
+  // afectada (mismo criterio que liquidaciones.detalle).
   nombre: string;
   cantidad_total: number;
+  precio: number | null; // precio de lista del catálogo al vender
+  servicio_id: string | null;
+  vence_el: string | null; // fecha_compra + tipo_pack.vigencia_dias, o null si no vence
+  // Lo realmente cobrado — puede diferir del snapshot `precio` por un
+  // descuento puntual. null = se cobró el precio de lista.
+  precio_pagado: number | null;
   fecha_compra: string;
   notas: string | null;
-  // Copiados del TipoPack al vender (mismo criterio que nombre/
-  // cantidad_total) — servicio_id null si el pack es "personalizado"
-  // (sin tipo de catálogo, no se puede auto-detectar en Nueva reserva).
-  // vence_el = fecha_compra + tipo_pack.vigencia_meses, o null si el
-  // pack es personalizado y no tiene vigencia definida.
-  servicio_id: string | null;
-  vence_el: string | null;
   creado_en: string;
 };
 
 export type PaqueteSesionesConSaldo = PaqueteSesiones & { saldo: number };
 
-// Agenda Pro: catálogo reutilizable de "tipos de pack" que la empresa
-// vende (ej. "Pack 5 sesiones" a $45.000) — se administra en la web
-// (Configuración → Agenda Pro) y se usa para no tener que tipear nombre y
-// cantidad a mano cada vez que se vende un paquete a un cliente. `activo`
-// permite descontinuar un tipo sin borrar los paquetes ya vendidos con él.
+// Agenda Pro: CATÁLOGO de packs — la plantilla reutilizable que define
+// el negocio una sola vez (ej. "Plan Reductor Básico 4 sesiones" a
+// $45.000). NO tiene saldo: no se descuenta nunca de acá. Vender un pack
+// crea una fila nueva en PaqueteSesiones (la instancia del cliente) con
+// un snapshot de estos valores. `activo` permite dejar de ofrecerlo sin
+// borrar el historial de quienes ya lo compraron.
 export type TipoPack = {
   id: string;
   empresa_id: string;
   nombre: string;
   cantidad_sesiones: number;
-  precio: number | null;
+  precio: number | null; // precio de lista del pack
   // Servicio al que está atado — permite ofrecer el pack automáticamente
   // al elegir ese servicio en Nueva reserva. Null = no atado a ninguno.
   servicio_id: string | null;
-  // Meses de vigencia desde la fecha de compra — se copia a
+  // Días de vigencia desde la fecha de compra — se copia a
   // PaqueteSesiones.vence_el al vender, no se recalcula después.
-  vigencia_meses: number;
+  // null = el pack no vence.
+  vigencia_dias: number | null;
   activo: boolean;
   creado_en: string;
 };
