@@ -26,7 +26,6 @@ import {
   IconReceipt,
   IconRoute,
   IconSettings,
-  IconShield,
   IconSparkle,
   IconTag,
   IconTruck,
@@ -37,8 +36,8 @@ import {
 
 type NavLeaf = { href: string; label: string };
 type NavItem =
-  | { href: string; label: string; icon: typeof IconHome; modulo: Modulo | null; children?: undefined }
-  | { label: string; icon: typeof IconHome; children: NavLeaf[]; modulo: Modulo | null; href?: undefined };
+  | { href: string; label: string; icon: typeof IconHome; modulo: Modulo | null; modulos?: Modulo[]; children?: undefined }
+  | { label: string; icon: typeof IconHome; children: NavLeaf[]; modulo: Modulo | null; modulos?: Modulo[]; href?: undefined };
 type NavGroup = { titulo: string; items: NavItem[] };
 
 // modulo: null = siempre visible (la página misma decide qué mostrarle a
@@ -91,11 +90,10 @@ const NAV_GROUPS: NavGroup[] = [
       },
       {
         label: "Flota",
-        icon: IconUsers,
+        icon: IconTruck,
         modulo: "flota",
         children: [
-          { href: "/dashboard/flota/colaboradores", label: "Colaboradores" },
-          { href: "/dashboard/flota/documentos-por-vencer", label: "Documentos" },
+          { href: "/dashboard/flota/documentos-por-vencer", label: "Documentos por vencer" },
         ],
       },
     ],
@@ -117,7 +115,6 @@ const NAV_GROUPS: NavGroup[] = [
         modulo: "remuneraciones",
         children: [
           { href: "/dashboard/remuneraciones", label: "Liquidaciones" },
-          { href: "/dashboard/remuneraciones/datos-laborales", label: "Datos del equipo" },
           { href: "/dashboard/remuneraciones/parametros", label: "Parámetros" },
         ],
       },
@@ -131,9 +128,20 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    titulo: "Administración",
+    titulo: "Equipo",
     items: [
-      { href: "/dashboard/equipo", label: "Grupo y usuario", icon: IconShield, modulo: "gestion_control" },
+      // Ficha única de cada persona (identidad + acceso + datos laborales
+      // + documentos). Reemplaza las 3 entradas viejas: Flota →
+      // Colaboradores, Administración → Grupo y usuario, Remuneraciones →
+      // Datos del equipo. Cada pestaña de la ficha conserva su propio
+      // gate de módulo; el ítem se muestra si el rol ve cualquiera.
+      {
+        href: "/dashboard/personas",
+        label: "Personas",
+        icon: IconUsers,
+        modulo: null,
+        modulos: ["gestion_control", "flota", "remuneraciones"],
+      },
       // "Configuración" vive en el menú del usuario (arriba a la derecha),
       // no acá.
     ],
@@ -340,7 +348,9 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
   // muestra un encabezado de sección flotando sin nada debajo.
   const gruposVisibles = NAV_GROUPS.map((g) => ({
     ...g,
-    items: g.items.filter((item) => item.modulo === null || moduloVisible(item.modulo)),
+    items: g.items.filter((item) =>
+      item.modulos ? item.modulos.some(moduloVisible) : item.modulo === null || moduloVisible(item.modulo)
+    ),
   })).filter((g) => g.items.length > 0);
 
   function esActivoLeaf(href: string): boolean {

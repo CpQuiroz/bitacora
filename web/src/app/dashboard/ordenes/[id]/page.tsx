@@ -268,7 +268,7 @@ export default function DetalleOrdenServicioPage() {
                     onChange={setResponsableEdit}
                     equipo={equipo}
                     opcionVacia="Sin asignar"
-                    gestionHref="/dashboard/equipo"
+                    gestionHref="/dashboard/personas"
                     gestionLabel="Gestionar equipo"
                   />
                 </div>

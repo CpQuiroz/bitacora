@@ -23,7 +23,7 @@ const FILTROS: { valor: Filtro; etiqueta: string }[] = [
 // Vehículos ya no tienen ficha propia (viven en Equipos, sin ruta por
 // id) — se manda a la lista y ahí se busca/filtra por patente.
 const RUTA_POR_ENTIDAD: Record<EntidadDocumento, (id: string) => string> = {
-  colaborador: (id) => `/dashboard/flota/colaboradores/${id}`,
+  colaborador: (id) => `/dashboard/personas/${id}`,
   vehiculo: () => `/dashboard/registros/equipos`,
 };
 

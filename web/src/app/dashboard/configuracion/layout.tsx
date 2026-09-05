@@ -34,7 +34,7 @@ import { ConfiguracionContext, type UsuarioConEmpresa } from "./ConfiguracionCon
 const SECCIONES: { valor: string; label: string; icon: typeof IconUser; modulo: Modulo | null; href?: string }[] = [
   { valor: "cuenta", label: "Cuenta", icon: IconUser, modulo: null },
   { valor: "empresa", label: "Empresa", icon: IconBriefcase, modulo: "configuracion" },
-  { valor: "equipo", label: "Equipo", icon: IconUsers, modulo: "gestion_control", href: "/dashboard/equipo" },
+  { valor: "equipo", label: "Personas", icon: IconUsers, modulo: "gestion_control", href: "/dashboard/personas" },
   { valor: "perfiles", label: "Perfiles y permisos", icon: IconShield, modulo: "gestion_control" },
   { valor: "plan", label: "Plan", icon: IconCreditCard, modulo: "configuracion" },
   { valor: "plantillas", label: "Plantillas", icon: IconPaperclip, modulo: "configuracion" },

@@ -155,10 +155,10 @@ export default function RemuneracionesPage() {
             <p className="font-medium text-foreground">Sin liquidaciones para {nombrePeriodo(periodo)}</p>
             <p className="mt-1 text-sm text-muted">
               Cargá los datos del equipo en{" "}
-              <Link href="/dashboard/remuneraciones/datos-laborales" className="font-medium text-brand hover:underline">
-                Datos del equipo
+              <Link href="/dashboard/personas" className="font-medium text-brand hover:underline">
+                Personas
               </Link>{" "}
-              y usá “Generar mes”.
+              (pestaña «Datos laborales» de cada persona) y usá “Generar mes”.
             </p>
           </div>
         </Card>
