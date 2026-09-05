@@ -1,14 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Cliente, PaqueteSesionesConSaldo, TipoPack } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText, Textarea } from "@/components/ui";
-import { ComboboxCliente } from "@/components/ComboboxCliente";
+import { Badge, Button, Card, ErrorText, Input, PageHeader, SuccessText } from "@/components/ui";
+import { AsignarPackForm } from "@/components/AsignarPackForm";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { IconBox, IconPlus } from "@/components/icons";
 import { EstadoCargando, EstadoVacio } from "@/components/estados";
@@ -25,14 +25,6 @@ export default function PaquetesSesionesPage() {
   const [busqueda, setBusqueda] = useState("");
 
   const [formAbierto, setFormAbierto] = useState(false);
-  const [clienteId, setClienteId] = useState("");
-  const [tipoPackId, setTipoPackId] = useState("");
-  const [nombre, setNombre] = useState("");
-  const [cantidadTotal, setCantidadTotal] = useState(5);
-  const [precioPagado, setPrecioPagado] = useState(""); // lo realmente cobrado; "" = precio de lista
-  const [notas, setNotas] = useState("");
-  const [guardando, setGuardando] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
 
   async function cargar() {
@@ -76,77 +68,6 @@ export default function PaquetesSesionesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function abrirNuevo() {
-    setClienteId("");
-    setTipoPackId("");
-    setNombre("");
-    setCantidadTotal(5);
-    setPrecioPagado("");
-    setNotas("");
-    setFormError(null);
-    setFormAbierto(true);
-  }
-
-  const tipoElegido = tiposPack.find((t) => t.id === tipoPackId) ?? null;
-
-  // Elegir un tipo de pack fija nombre/cantidad desde el catálogo (el
-  // backend igual los copia autoritativamente) y precarga el precio
-  // pagado con el de lista — editable para un descuento puntual.
-  function elegirTipoPack(id: string) {
-    setTipoPackId(id);
-    const tipo = tiposPack.find((t) => t.id === id);
-    if (tipo) {
-      setNombre(tipo.nombre);
-      setCantidadTotal(tipo.cantidad_sesiones);
-      setPrecioPagado(tipo.precio !== null ? String(tipo.precio) : "");
-    }
-  }
-
-  async function onSubmit(e: FormEvent) {
-    e.preventDefault();
-    setFormError(null);
-    if (!clienteId) {
-      setFormError("Selecciona un cliente");
-      return;
-    }
-    // Para packs personalizados (sin tipo de catálogo) el nombre/cantidad
-    // los pone el form; para packs de catálogo los copia el backend.
-    if (!tipoPackId && !nombre.trim()) {
-      setFormError("Falta nombre");
-      return;
-    }
-    if (!tipoPackId && (!Number.isInteger(cantidadTotal) || cantidadTotal <= 0)) {
-      setFormError("La cantidad debe ser un entero mayor a 0");
-      return;
-    }
-    const precioPagadoNumero = precioPagado.trim() ? Number(precioPagado) : null;
-    if (precioPagadoNumero !== null && (Number.isNaN(precioPagadoNumero) || precioPagadoNumero < 0)) {
-      setFormError("Precio pagado inválido");
-      return;
-    }
-    setGuardando(true);
-    const res = await apiFetch("/api/paquetes-sesiones", {
-      method: "POST",
-      body: JSON.stringify({
-        cliente_id: clienteId,
-        tipo_pack_id: tipoPackId || null,
-        nombre,
-        cantidad_total: cantidadTotal,
-        precio_pagado: precioPagadoNumero,
-        notas: notas || null,
-      }),
-    });
-    setGuardando(false);
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      setFormError(body.error ?? "No se pudo crear el paquete");
-      return;
-    }
-    setFormAbierto(false);
-    setAviso("Paquete creado.");
-    cargar();
-  }
-
   const filtrados = useMemo(() => {
     if (!paquetes) return [];
     const q = busqueda.trim().toLowerCase();
@@ -160,85 +81,29 @@ export default function PaquetesSesionesPage() {
     <DashboardShell usuario={usuario}>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <PageHeader title="Paquetes de sesiones" subtitle="Packs de sesiones vendidos a tus clientes — Agenda Pro" />
-        <Button type="button" onClick={abrirNuevo}>
-          <IconPlus className="h-4 w-4" />
-          Nuevo Paquete
-        </Button>
+        {!formAbierto && (
+          <Button type="button" onClick={() => setFormAbierto(true)}>
+            <IconPlus className="h-4 w-4" />
+            Nuevo Paquete
+          </Button>
+        )}
       </div>
 
       {formAbierto && (
         <Card className="mb-6">
           <h2 className="mb-4 text-sm font-semibold text-foreground">Nuevo paquete</h2>
-          <form onSubmit={onSubmit} className="flex flex-col gap-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <Label>Cliente</Label>
-                <ComboboxCliente
-                  value={clienteId}
-                  onChange={setClienteId}
-                  clientes={clientes}
-                  onClienteCreado={(c) => setClientes((prev) => [...prev, c])}
-                />
-              </div>
-              {tiposPack.length > 0 && (
-                <div>
-                  <Label>Tipo de pack (opcional)</Label>
-                  <Select value={tipoPackId} onChange={(e) => elegirTipoPack(e.target.value)}>
-                    <option value="">Personalizado — completar a mano</option>
-                    {tiposPack.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.nombre} ({t.cantidad_sesiones} sesiones)
-                      </option>
-                    ))}
-                  </Select>
-                </div>
-              )}
-              {tipoElegido ? (
-                <div className="sm:col-span-2 rounded-lg border border-border bg-surface-sunken px-3 py-2 text-xs text-muted">
-                  Se copia del catálogo: <span className="font-medium text-foreground">{tipoElegido.nombre}</span> ·{" "}
-                  {tipoElegido.cantidad_sesiones} sesiones
-                  {tipoElegido.precio !== null && ` · lista ${formatMoneda(tipoElegido.precio, usuario.moneda)}`}
-                  {tipoElegido.vigencia_dias !== null && ` · vence a los ${tipoElegido.vigencia_dias} días`}. Si el catálogo cambia
-                  después, este paquete no se ve afectado.
-                </div>
-              ) : (
-                <>
-                  <div>
-                    <Label>Nombre del paquete</Label>
-                    <Input type="text" placeholder="Ej: Pack 10 sesiones" value={nombre} onChange={(e) => setNombre(e.target.value)} />
-                  </div>
-                  <div>
-                    <Label>Cantidad de sesiones</Label>
-                    <Input type="number" min={1} value={cantidadTotal} onChange={(e) => setCantidadTotal(Number(e.target.value) || 1)} />
-                  </div>
-                </>
-              )}
-              <div>
-                <Label>Precio pagado (opcional)</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  placeholder={tipoElegido?.precio != null ? String(tipoElegido.precio) : "0"}
-                  value={precioPagado}
-                  onChange={(e) => setPrecioPagado(e.target.value)}
-                />
-                <p className="mt-1 text-xs text-muted">Lo realmente cobrado. Vacío = el precio de lista.</p>
-              </div>
-              <div className="sm:col-span-2">
-                <Label>Notas (opcional)</Label>
-                <Textarea rows={2} value={notas} onChange={(e) => setNotas(e.target.value)} />
-              </div>
-            </div>
-            {formError && <ErrorText>{formError}</ErrorText>}
-            <div className="flex gap-2">
-              <Button type="submit" disabled={guardando} className="self-start">
-                {guardando ? "Guardando…" : "Crear paquete"}
-              </Button>
-              <Button type="button" variant="ghost" onClick={() => setFormAbierto(false)}>
-                Cancelar
-              </Button>
-            </div>
-          </form>
+          <AsignarPackForm
+            clientes={clientes}
+            onClienteCreado={(c) => setClientes((prev) => [...prev, c])}
+            tiposPack={tiposPack}
+            moneda={usuario.moneda ?? "CLP"}
+            onAsignado={() => {
+              setFormAbierto(false);
+              setAviso("Paquete creado.");
+              cargar();
+            }}
+            onCancelar={() => setFormAbierto(false)}
+          />
         </Card>
       )}
 
@@ -260,7 +125,7 @@ export default function PaquetesSesionesPage() {
           icono={IconBox}
           titulo="Ningún paquete registrado"
           mensaje="Crea el primer paquete de sesiones para un cliente"
-          accion={<Button type="button" onClick={abrirNuevo}>
+          accion={<Button type="button" onClick={() => setFormAbierto(true)}>
               <IconPlus className="h-4 w-4" />
               Nuevo Paquete
             </Button>}

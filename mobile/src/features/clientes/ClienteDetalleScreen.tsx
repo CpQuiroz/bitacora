@@ -1,13 +1,17 @@
 import { useCallback, useEffect, useState } from "react";
-import { Alert, Linking, ScrollView, View } from "react-native";
+import { Alert, Linking, Pressable, ScrollView, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
-import type { Cliente } from "@bitacora/shared";
+import type { Cliente, PaqueteSesionesConSaldo } from "@bitacora/shared";
 import { useTema } from "../../theme";
 import { Badge, Button, Card, ErrorState, LoadingScreen, Text } from "../../components/ui";
 import { useRed } from "../../services/sync/NetworkProvider";
+import { useAuth } from "../auth/AuthContext";
 import { editarCliente, obtenerCliente } from "../../services/clientes";
+import { listarPaquetesCliente } from "../../services/paquetes";
+import { formatearMoneda } from "../../lib/plata";
+import { AsignarPackModal } from "./AsignarPackModal";
 import type { ClientesStackParamList } from "../../shell/navigation/types";
 
 const soloDigitos = (s: string) => s.replace(/[^\d]/g, "");
@@ -16,9 +20,13 @@ export function ClienteDetalleScreen({ route, navigation }: NativeStackScreenPro
   const t = useTema();
   const { clienteId } = route.params;
   const { enLinea } = useRed();
+  const auth = useAuth();
+  const tieneAgendaPro = auth.fase === "listo" && auth.modulosVisibles.includes("agenda_pro");
   const [cliente, setCliente] = useState<Cliente | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
+  const [paquetes, setPaquetes] = useState<PaqueteSesionesConSaldo[]>([]);
+  const [asignando, setAsignando] = useState(false);
 
   const cargar = useCallback(async () => {
     setError(null);
@@ -29,10 +37,21 @@ export function ClienteDetalleScreen({ route, navigation }: NativeStackScreenPro
     }
   }, [clienteId]);
 
+  const cargarPaquetes = useCallback(async () => {
+    if (!tieneAgendaPro) return;
+    setPaquetes(await listarPaquetesCliente(clienteId));
+  }, [clienteId, tieneAgendaPro]);
+
   useEffect(() => {
     cargar();
-  }, [cargar]);
-  useFocusEffect(useCallback(() => void cargar(), [cargar]));
+    cargarPaquetes();
+  }, [cargar, cargarPaquetes]);
+  useFocusEffect(
+    useCallback(() => {
+      void cargar();
+      void cargarPaquetes();
+    }, [cargar, cargarPaquetes])
+  );
 
   async function alternarActivo() {
     if (!cliente) return;
@@ -112,6 +131,46 @@ export function ClienteDetalleScreen({ route, navigation }: NativeStackScreenPro
         </View>
       ) : null}
 
+      {tieneAgendaPro ? (
+        <Card plano style={{ gap: t.espacio(2.5) }}>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <Text variante="etiqueta" tono="muted" weight="semibold" style={{ textTransform: "uppercase" }}>
+              Packs de sesiones
+            </Text>
+            <Pressable onPress={() => setAsignando(true)} hitSlop={8}>
+              <Text variante="caption" weight="semibold" tono="brand">
+                ＋ Asignar pack
+              </Text>
+            </Pressable>
+          </View>
+          {paquetes.length === 0 ? (
+            <Text variante="caption" tono="muted">
+              Este cliente no tiene packs.
+            </Text>
+          ) : (
+            paquetes.map((p) => (
+              <View key={p.id} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: t.espacio(3) }}>
+                <View style={{ flex: 1 }}>
+                  <Text variante="etiqueta" weight="medium">
+                    {p.nombre}
+                  </Text>
+                  <Text variante="caption" tono="muted">
+                    {p.saldo}/{p.cantidad_total} sesiones
+                    {p.precio_pagado != null
+                      ? ` · cobrado ${formatearMoneda(p.precio_pagado)}`
+                      : p.precio != null
+                        ? ` · lista ${formatearMoneda(p.precio)}`
+                        : ""}
+                    {p.vence_el ? ` · vence ${p.vence_el}` : " · no vence"}
+                  </Text>
+                </View>
+                <Badge texto={p.saldo <= 0 ? "agotado" : "disponible"} estado={p.saldo <= 0 ? "cancelado" : "confirmado"} />
+              </View>
+            ))
+          )}
+        </Card>
+      ) : null}
+
       <View style={{ gap: t.espacio(2.5), marginTop: t.espacio(1), borderTopWidth: 1, borderTopColor: t.colores.border, paddingTop: t.espacio(4) }}>
         <Button
           titulo="Editar"
@@ -126,6 +185,16 @@ export function ClienteDetalleScreen({ route, navigation }: NativeStackScreenPro
           cargando={ocupado}
         />
       </View>
+
+      <AsignarPackModal
+        visible={asignando}
+        clienteId={clienteId}
+        onCerrar={() => setAsignando(false)}
+        onAsignado={() => {
+          setAsignando(false);
+          cargarPaquetes();
+        }}
+      />
     </ScrollView>
   );
 }

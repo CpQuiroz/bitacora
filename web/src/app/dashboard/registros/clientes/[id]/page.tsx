@@ -3,12 +3,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import type { Cliente, Equipo, Factura, Presupuesto, Trabajo, OrdenServicio } from "@bitacora/shared";
+import type { Cliente, Equipo, Factura, PaqueteSesionesConSaldo, Presupuesto, TipoPack, Trabajo, OrdenServicio } from "@bitacora/shared";
 import { formatearRut, validarRut } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
+import { AsignarPackForm } from "@/components/AsignarPackForm";
 import { Badge, Button, buttonClass, Card, ErrorText, Input, Label, PageHeader, SuccessText } from "@/components/ui";
 import { IconChat, IconChevronLeft, IconMapPin, IconPlus, IconReceipt, IconTag, IconWrench } from "@/components/icons";
 import { linkWhatsapp } from "@/lib/whatsapp";
@@ -59,6 +60,22 @@ export default function ClienteDetallePage() {
   const [errorForm, setErrorForm] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
 
+  // Agenda Pro — packs del cliente. `null` = todavía no cargó o la
+  // empresa no tiene Agenda Pro (en cuyo caso la card no se muestra).
+  const [paquetes, setPaquetes] = useState<PaqueteSesionesConSaldo[] | null>(null);
+  const [tiposPack, setTiposPack] = useState<TipoPack[]>([]);
+  const [asignandoPack, setAsignandoPack] = useState(false);
+  const [avisoPack, setAvisoPack] = useState<string | null>(null);
+
+  const cargarPacks = useCallback(async () => {
+    const [resPaquetes, resTipos] = await Promise.all([
+      apiFetch(`/api/paquetes-sesiones?cliente_id=${params.id}`),
+      apiFetch("/api/tipos-pack?activo=1"),
+    ]);
+    if (resPaquetes.ok) setPaquetes(await resPaquetes.json());
+    if (resTipos.ok) setTiposPack(await resTipos.json());
+  }, [params.id]);
+
   const cargar = useCallback(async () => {
     const { data } = await supabase.auth.getSession();
     if (!data.session) {
@@ -98,7 +115,8 @@ export default function ClienteDetallePage() {
 
   useEffect(() => {
     cargar();
-  }, [cargar]);
+    cargarPacks();
+  }, [cargar, cargarPacks]);
 
   async function onGuardar() {
     setErrorForm(null);
@@ -403,29 +421,93 @@ export default function ClienteDetallePage() {
           )}
 
           {tab === "financiero" && (
-            <Card>
-              <h2 className="mb-4 text-sm font-semibold text-foreground">Cobros ({cliente.facturas.length})</h2>
-              {cliente.facturas.length === 0 ? (
-                <p className="text-sm text-muted">Sin cobros todavía.</p>
-              ) : (
-                <div className="flex flex-col divide-y divide-border">
-                  {cliente.facturas.map((f) => (
-                    <div key={f.id} className="flex items-center justify-between py-2.5 text-sm">
-                      <div>
-                        <p className="font-medium text-foreground">Factura</p>
-                        <p className="text-xs text-muted">
-                          Emitida {f.fecha_emision} · Vence {f.fecha_vencimiento}
-                        </p>
+            <div className="flex flex-col gap-4">
+              <Card>
+                <h2 className="mb-4 text-sm font-semibold text-foreground">Cobros ({cliente.facturas.length})</h2>
+                {cliente.facturas.length === 0 ? (
+                  <p className="text-sm text-muted">Sin cobros todavía.</p>
+                ) : (
+                  <div className="flex flex-col divide-y divide-border">
+                    {cliente.facturas.map((f) => (
+                      <div key={f.id} className="flex items-center justify-between py-2.5 text-sm">
+                        <div>
+                          <p className="font-medium text-foreground">Factura</p>
+                          <p className="text-xs text-muted">
+                            Emitida {f.fecha_emision} · Vence {f.fecha_vencimiento}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-foreground">{formatMoneda(f.monto, usuario.moneda)}</span>
+                          <Badge value={f.estado} />
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-foreground">{formatMoneda(f.monto, usuario.moneda)}</span>
-                        <Badge value={f.estado} />
-                      </div>
+                    ))}
+                  </div>
+                )}
+              </Card>
+
+              {/* Packs de sesiones — solo si la empresa tiene Agenda Pro
+                  (si no, el fetch da 403 y `paquetes` queda en null). */}
+              {paquetes !== null && (
+                <Card>
+                  <div className="mb-4 flex items-center justify-between gap-3">
+                    <h2 className="text-sm font-semibold text-foreground">Packs de sesiones ({paquetes.length})</h2>
+                    {!asignandoPack && (
+                      <Button type="button" variant="outline" onClick={() => setAsignandoPack(true)}>
+                        <IconPlus className="h-4 w-4" />
+                        Asignar pack
+                      </Button>
+                    )}
+                  </div>
+
+                  {avisoPack && (
+                    <div className="mb-4">
+                      <SuccessText>{avisoPack}</SuccessText>
                     </div>
-                  ))}
-                </div>
+                  )}
+
+                  {asignandoPack && (
+                    <div className="mb-4 rounded-lg border border-border p-3">
+                      <AsignarPackForm
+                        clienteId={cliente.id}
+                        tiposPack={tiposPack}
+                        moneda={usuario.moneda ?? "CLP"}
+                        onAsignado={() => {
+                          setAsignandoPack(false);
+                          setAvisoPack("Pack asignado.");
+                          cargarPacks();
+                        }}
+                        onCancelar={() => setAsignandoPack(false)}
+                      />
+                    </div>
+                  )}
+
+                  {paquetes.length === 0 && !asignandoPack ? (
+                    <p className="text-sm text-muted">Este cliente no tiene packs.</p>
+                  ) : (
+                    <div className="flex flex-col divide-y divide-border">
+                      {paquetes.map((p) => (
+                        <div key={p.id} className="flex items-center justify-between gap-3 py-2.5 text-sm">
+                          <div>
+                            <p className="font-medium text-foreground">{p.nombre}</p>
+                            <p className="text-xs text-muted">
+                              {p.saldo} / {p.cantidad_total} sesiones ·{" "}
+                              {p.precio_pagado != null
+                                ? `cobrado ${formatMoneda(p.precio_pagado, usuario.moneda)}`
+                                : p.precio != null
+                                  ? `lista ${formatMoneda(p.precio, usuario.moneda)}`
+                                  : "sin precio"}
+                              {p.vence_el ? ` · vence ${new Date(`${p.vence_el}T00:00:00`).toLocaleDateString("es-CL")}` : " · no vence"}
+                            </p>
+                          </div>
+                          <Badge value={p.saldo <= 0 ? "agotado" : "disponible"} />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </Card>
               )}
-            </Card>
+            </div>
           )}
         </>
       )}
