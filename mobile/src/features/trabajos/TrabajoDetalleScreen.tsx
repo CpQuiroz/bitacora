@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, Linking, Platform, ScrollView, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import type { ItemChecklist } from "@bitacora/shared";
+import type { EstadoTrabajo, ItemChecklist } from "@bitacora/shared";
+import { estadoOsDeTrabajo } from "@bitacora/shared";
 import { Ionicons } from "@expo/vector-icons";
 import { useTema } from "../../theme";
 import { Badge, Button, Card, ErrorState, LoadingScreen, Text } from "../../components/ui";
@@ -30,6 +31,7 @@ const ETIQUETA_OS: Record<string, string> = {
   en_proceso: "En proceso",
   completada: "Completado",
   firmada: "Finalizado",
+  cancelada: "Cancelado",
 };
 
 export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenProps<TrabajosStackParamList, "TrabajoDetalle">) {
@@ -98,7 +100,8 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
   const checkIn = checklist.find((c) => c.item === "Check-in");
   const checkOut = checklist.find((c) => c.item === "Check-out");
   const puedeFinalizar = Boolean(orden?.firma_url_firmada) && Boolean(checkOut?.hecho) && !finalizada;
-  const estadoMostrar = orden?.estado_os ? ETIQUETA_OS[orden.estado_os] ?? trabajo.estado : trabajo.estado;
+  const estadoOsEfectivo = orden?.estado_os ?? estadoOsDeTrabajo(trabajo.estado as EstadoTrabajo);
+  const estadoMostrar = ETIQUETA_OS[estadoOsEfectivo] ?? estadoOsEfectivo;
   const direccion = cli?.direccion || trabajo.ubicacion;
   const coords = cli?.lat != null && cli?.lng != null ? { lat: cli.lat, lng: cli.lng } : null;
 
@@ -165,7 +168,7 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
             <Text variante="titulo" style={{ flex: 1 }}>
               {cli?.nombre ?? trabajo.cliente}
             </Text>
-            <Badge texto={estadoMostrar} estado={orden?.estado_os ?? trabajo.estado} />
+            <Badge texto={estadoMostrar} estado={estadoOsEfectivo} />
           </View>
           <Text variante="etiqueta" tono="muted">
             {trabajo.fecha}

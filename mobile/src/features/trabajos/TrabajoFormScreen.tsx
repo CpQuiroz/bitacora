@@ -24,10 +24,12 @@ function clave(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+// El form escribe trabajos.estado; el backend sincroniza estado_os. Las
+// etiquetas usan el vocabulario visible (EstadoOS).
 const ESTADOS: { valor: EstadoTrabajo; label: string }[] = [
-  { valor: "completado", label: "Completado" },
-  { valor: "en_curso", label: "En curso" },
-  { valor: "cancelado", label: "Cancelado" },
+  { valor: "completado", label: "Completada" },
+  { valor: "en_curso", label: "En proceso" },
+  { valor: "cancelado", label: "Cancelada" },
 ];
 
 const VACIO: BorradorTrabajo = {

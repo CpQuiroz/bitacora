@@ -104,7 +104,7 @@ trabajosRouter.get(
   ah<RequestConEmpresa>(async (req, res) => {
     let query = supabase
       .from("trabajos")
-      .select("*")
+      .select("*, orden:ordenes_servicio(folio, estado_os)")
       .eq("empresa_id", req.empresaId!)
       .order("fecha", { ascending: false });
 
@@ -407,6 +407,19 @@ trabajosRouter.patch(
       await revertirStockPorOS(req.empresaId!, orden.id, req.params.id, orden.folio);
     }
 
+    // PASO 1: sincroniza estado_os con el estado del trabajo — así la UI
+    // y los informes miran un solo campo. "completado"/"cancelado"
+    // pisan el estado_os; "en_curso" no lo baja (puede ir más avanzado
+    // por el flujo de check-in/out). "firmada" nunca se pisa (ese
+    // trabajo ya está bloqueado, salvo el cancelar aislado de arriba).
+    if (cambios.estado && orden) {
+      const nuevoEstadoOs =
+        cambios.estado === "cancelado" ? "cancelada" : cambios.estado === "completado" ? "completada" : null;
+      if (nuevoEstadoOs && orden.estado_os !== nuevoEstadoOs && (nuevoEstadoOs === "cancelada" || orden.estado_os !== "firmada")) {
+        await supabase.from("ordenes_servicio").update({ estado_os: nuevoEstadoOs }).eq("id", orden.id);
+      }
+    }
+
     if (tocaItems) {
       await supabase.from("os_items").delete().eq("empresa_id", req.empresaId!).eq("trabajo_id", req.params.id);
       if (itemsParseados!.length > 0) {
@@ -589,7 +602,22 @@ trabajosRouter.post(
     // Si el Tipo de OS elegido tiene una plantilla de checklist, la OS
     // arranca con esos ítems (además de Check-in / Check-out).
     const checklistPlantilla = await checklistDeTipoOs(req.empresaId!, tipo_os_id);
-    const orden = await crearOrdenServicio(req.empresaId!, data.id, checklistPlantilla);
+    let orden = await crearOrdenServicio(req.empresaId!, data.id, checklistPlantilla);
+
+    // PASO 1: un trabajo cargado ya cerrado (formulario liviano, típico
+    // de rubros que no hacen el flujo de terreno) nace con la orden en
+    // "enviada" — se alinea acá para que el badge no muestre "enviada"
+    // sobre algo que ya está hecho/cancelado.
+    if (estadoFinal !== "en_curso") {
+      const estadoOsInicial = estadoFinal === "completado" ? "completada" : "cancelada";
+      const { data: ordenAlineada } = await supabase
+        .from("ordenes_servicio")
+        .update({ estado_os: estadoOsInicial })
+        .eq("id", orden.id)
+        .select()
+        .single();
+      if (ordenAlineada) orden = ordenAlineada;
+    }
 
     if (itemsParseados.length > 0) {
       await supabase.from("os_items").insert(

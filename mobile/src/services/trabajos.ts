@@ -1,5 +1,5 @@
 import * as Crypto from "expo-crypto";
-import type { AnalisisFoto, Cliente, EstadoTrabajo, OrdenServicio, TipoTrabajo, Trabajo, Usuario } from "@bitacora/shared";
+import type { AnalisisFoto, Cliente, EstadoOS, EstadoTrabajo, OrdenServicio, TipoTrabajo, Trabajo, Usuario } from "@bitacora/shared";
 import { apiJson } from "./api";
 import { encolar } from "./sync/queue";
 import { guardarCache, leerCache } from "./sync/cache";
@@ -10,18 +10,21 @@ export type TrabajoConTipo = Trabajo & { tipo_trabajo: TipoTrabajo | null; clien
 export type FotoConUrl = AnalisisFoto & { url: string };
 export type OrdenConFirma = OrdenServicio & { firma_url_firmada: string | null };
 
-export type ListaTrabajos = { trabajos: Trabajo[]; desdeCache: boolean; guardadoEn?: number };
+// El estado visible sale SIEMPRE de la orden (PASO 1) — el backend la
+// adjunta a cada trabajo en la lista.
+export type TrabajoLista = Trabajo & { orden: { folio: number | null; estado_os: EstadoOS } | null };
+export type ListaTrabajos = { trabajos: TrabajoLista[]; desdeCache: boolean; guardadoEn?: number };
 
 /** Lista de trabajos. `equipo=true` (solo supervisor/admin) trae los de todo el equipo. */
 export async function listarTrabajos(equipo: boolean): Promise<ListaTrabajos> {
   const path = equipo ? "/api/trabajos" : "/api/trabajos?propio=true";
   const clave = equipo ? "trabajos:equipo" : "trabajos:propios";
-  const res = await apiJson<Trabajo[]>(path);
+  const res = await apiJson<TrabajoLista[]>(path);
   if (res.ok) {
     await guardarCache(clave, res.data);
     return { trabajos: res.data, desdeCache: false };
   }
-  const cache = await leerCache<Trabajo[]>(clave);
+  const cache = await leerCache<TrabajoLista[]>(clave);
   if (cache) return { trabajos: cache.datos, desdeCache: true, guardadoEn: cache.guardadoEn };
   throw new Error(res.error);
 }

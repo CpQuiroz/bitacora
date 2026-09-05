@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import type { Cliente, Equipo, Factura, PaqueteSesionesConSaldo, Presupuesto, TipoPack, Trabajo, OrdenServicio } from "@bitacora/shared";
-import { formatearRut, validarRut } from "@bitacora/shared";
+import { estadoOsDeTrabajo, formatearRut, validarRut } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
@@ -155,7 +155,7 @@ export default function ClienteDetallePage() {
         tipo: "os" as const,
         fecha: t.fecha,
         titulo: t.orden?.folio != null ? `OS N° ${t.orden.folio}` : t.descripcion || t.codigo || "Orden de servicio",
-        badgeValue: t.orden?.estado_os ?? t.estado,
+        badgeValue: t.orden?.estado_os ?? estadoOsDeTrabajo(t.estado),
         onClick: () => router.push(`/dashboard/ordenes/${t.id}`),
       })),
       ...cliente.presupuestos.map((p) => ({

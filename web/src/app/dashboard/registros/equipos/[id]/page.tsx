@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import type { Equipo, OrdenServicio, PlanMantencion, Trabajo } from "@bitacora/shared";
+import { estadoOsDeTrabajo } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
@@ -268,7 +269,7 @@ export default function EquipoDetallePage() {
                     <p className="text-xs text-muted">{t.fecha}</p>
                   </div>
                 </div>
-                <Badge value={t.orden?.estado_os ?? t.estado} />
+                <Badge value={t.orden?.estado_os ?? estadoOsDeTrabajo(t.estado)} />
               </button>
             ))}
           </div>

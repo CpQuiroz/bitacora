@@ -21,6 +21,11 @@ export type FuncionColaborador = "tecnico" | "chofer" | "instalador" | "administ
 export type Rubro = "transporte" | "servicio_tecnico" | "cosmetologia" | "otro";
 export type Plan = "trial" | "basico" | "pro";
 export type EstadoEmpresa = "activa" | "suspendida" | "dada_de_baja";
+// @internal — columna `trabajos.estado`. NO usar para pintar UI ni sumar
+// informes: eso va SIEMPRE contra `ordenes_servicio.estado_os` (PASO 1
+// del rediseño). El backend mantiene estado_os sincronizado desde cada
+// write de trabajos.estado, así que estado_os es la única verdad visible.
+// Mapeo 1:1 → en_curso≈en_proceso · completado≈completada · cancelado≈cancelada.
 export type EstadoTrabajo = "en_curso" | "completado" | "cancelado";
 export type Prioridad = "alta" | "media" | "baja";
 export type TipoCheckin = "manual" | "ubicacion";
@@ -36,7 +41,17 @@ export type DiaSemana =
 export type EstadoFactura = "pendiente" | "pagada" | "vencida";
 export type EstadoAnalisisFoto = "procesando" | "listo" | "error";
 export type TipoGasto = "negocio" | "personal";
-export type EstadoOS = "pendiente" | "enviada" | "en_proceso" | "completada" | "firmada";
+// Vocabulario ÚNICO de estado de un trabajo/OS visible en toda la app
+// (badges, filtros, informes). "cancelada" se sumó en PASO 1 (antes solo
+// existía como EstadoTrabajo.cancelado).
+export type EstadoOS = "pendiente" | "enviada" | "en_proceso" | "completada" | "firmada" | "cancelada";
+
+// Mapea el estado interno del trabajo al vocabulario visible (EstadoOS).
+// Solo hace falta como fallback: cada trabajo tiene una orden y su
+// estado_os es la fuente de verdad — esto cubre el caso teórico sin orden.
+export function estadoOsDeTrabajo(estado: EstadoTrabajo): EstadoOS {
+  return estado === "completado" ? "completada" : estado === "cancelado" ? "cancelada" : "en_proceso";
+}
 export type EstadoGasto = "pagado" | "pendiente";
 export type EstadoPresupuesto = "borrador" | "enviado" | "aprobado" | "rechazado" | "expirado";
 export type TipoInforme = "financiero" | "operativo" | "clientes" | "colaboradores" | "personalizado";

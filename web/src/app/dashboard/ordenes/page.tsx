@@ -21,7 +21,7 @@ type OrdenListado = Trabajo & {
   orden: OrdenServicio | null;
 };
 
-const ESTADOS_OS: EstadoOS[] = ["enviada", "en_proceso", "completada", "firmada"];
+const ESTADOS_OS: EstadoOS[] = ["enviada", "en_proceso", "completada", "firmada", "cancelada"];
 
 export default function OrdenesServicioPage() {
   const router = useRouter();

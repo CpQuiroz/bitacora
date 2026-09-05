@@ -3,12 +3,24 @@ import { FlatList, Pressable, RefreshControl, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import type { Trabajo } from "@bitacora/shared";
+import type { EstadoTrabajo } from "@bitacora/shared";
+import { estadoOsDeTrabajo } from "@bitacora/shared";
 import { useTema } from "../../theme";
 import { Badge, Button, Card, EmptyState, ErrorState, LoadingScreen, Text } from "../../components/ui";
 import { OfflineBanner } from "../../components/OfflineBanner";
 import { useAuth } from "../auth/AuthContext";
-import { listarTrabajos } from "../../services/trabajos";
+import { listarTrabajos, type TrabajoLista } from "../../services/trabajos";
+
+// El estado visible sale SIEMPRE de la orden (PASO 1); si aún no llega,
+// se deriva del estado del trabajo.
+const ETIQUETA_OS: Record<string, string> = {
+  pendiente: "Pendiente",
+  enviada: "Enviada",
+  en_proceso: "En proceso",
+  completada: "Completada",
+  firmada: "Firmada",
+  cancelada: "Cancelado",
+};
 import type { TrabajosStackParamList } from "../../shell/navigation/types";
 
 export function TrabajosScreen({ navigation }: NativeStackScreenProps<TrabajosStackParamList, "TrabajosLista">) {
@@ -17,7 +29,7 @@ export function TrabajosScreen({ navigation }: NativeStackScreenProps<TrabajosSt
   const esGestion = auth.fase === "listo" && auth.usuario.rol !== "colaborador";
 
   const [equipo, setEquipo] = useState(false);
-  const [trabajos, setTrabajos] = useState<Trabajo[] | null>(null);
+  const [trabajos, setTrabajos] = useState<TrabajoLista[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refrescando, setRefrescando] = useState(false);
   const [guardadoEn, setGuardadoEn] = useState<number | undefined>();
@@ -104,10 +116,12 @@ export function TrabajosScreen({ navigation }: NativeStackScreenProps<TrabajosSt
             mensaje={equipo ? "El equipo no tiene trabajos asignados." : "No tienes trabajos asignados."}
           />
         }
-        renderItem={({ item }) => (
+        renderItem={({ item }) => {
+          const estadoOs = item.orden?.estado_os ?? estadoOsDeTrabajo(item.estado as EstadoTrabajo);
+          return (
           <Card
             onPress={() => navigation.navigate("TrabajoDetalle", { trabajoId: item.id, titulo: item.cliente })}
-            style={item.estado === "en_curso" ? { borderLeftWidth: 3, borderLeftColor: t.colores.accent } : undefined}
+            style={estadoOs === "en_proceso" ? { borderLeftWidth: 3, borderLeftColor: t.colores.accent } : undefined}
           >
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: t.espacio(3) }}>
               <View style={{ flex: 1, gap: t.espacio(1) }}>
@@ -122,10 +136,11 @@ export function TrabajosScreen({ navigation }: NativeStackScreenProps<TrabajosSt
                   </Text>
                 ) : null}
               </View>
-              <Badge estado={item.estado} />
+              <Badge estado={estadoOs} texto={ETIQUETA_OS[estadoOs] ?? estadoOs} />
             </View>
           </Card>
-        )}
+          );
+        }}
       />
     </View>
   );

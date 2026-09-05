@@ -2,7 +2,8 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import type { Cliente, EstadoTrabajo, Trabajo, Usuario } from "@bitacora/shared";
+import type { Cliente, EstadoOS, EstadoTrabajo, Trabajo, Usuario } from "@bitacora/shared";
+import { estadoOsDeTrabajo } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
@@ -23,13 +24,19 @@ import {
 import { IconBriefcase, IconPlus } from "@/components/icons";
 import { EstadoCargando, EstadoError, EstadoVacio } from "@/components/estados";
 
-const ESTADOS: EstadoTrabajo[] = ["en_curso", "completado", "cancelado"];
+// El form escribe trabajos.estado; el backend sincroniza estado_os. Se
+// muestran las etiquetas del vocabulario visible (EstadoOS).
+const ESTADOS: { valor: EstadoTrabajo; label: string }[] = [
+  { valor: "en_curso", label: "En proceso" },
+  { valor: "completado", label: "Completada" },
+  { valor: "cancelado", label: "Cancelada" },
+];
 const SIN_CLIENTE_GUARDADO = "";
 
 export default function TrabajosPage() {
   const router = useRouter();
   const [usuario, setUsuario] = useState<UsuarioShell | null>(null);
-  const [trabajos, setTrabajos] = useState<Trabajo[] | null>(null);
+  const [trabajos, setTrabajos] = useState<(Trabajo & { orden: { estado_os: EstadoOS } | null })[] | null>(null);
   const [equipo, setEquipo] = useState<Usuario[]>([]);
   const [clientesGuardados, setClientesGuardados] = useState<Cliente[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -184,8 +191,8 @@ export default function TrabajosPage() {
               <Label>Estado</Label>
               <Select value={estado} onChange={(e) => setEstado(e.target.value as EstadoTrabajo)}>
                 {ESTADOS.map((e) => (
-                  <option key={e} value={e}>
-                    {e.replace("_", " ")}
+                  <option key={e.valor} value={e.valor}>
+                    {e.label}
                   </option>
                 ))}
               </Select>
@@ -230,7 +237,7 @@ export default function TrabajosPage() {
                     <td className="px-5 py-3 font-medium text-foreground">{t.cliente}</td>
                     <td className="px-5 py-3 text-right"><Cifra>${t.monto.toLocaleString("es-CL")}</Cifra></td>
                     <td className="px-5 py-3">
-                      <Badge value={t.estado} />
+                      <Badge value={t.orden?.estado_os ?? estadoOsDeTrabajo(t.estado)} />
                     </td>
                   </tr>
                 ))}

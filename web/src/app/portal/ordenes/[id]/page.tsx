@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import type { EstadoTrabajo } from "@bitacora/shared";
+import { estadoOsDeTrabajo } from "@bitacora/shared";
 import { PortalShell } from "@/components/PortalShell";
 import { Badge, Button, Card, ErrorText } from "@/components/ui";
 import { IconChevronLeft } from "@/components/icons";
@@ -69,7 +71,7 @@ export default function PortalOrdenDetallePage() {
           <Card>
             <div className="flex items-center justify-between">
               <h1 className="text-lg font-semibold text-foreground">{orden.orden?.folio ? `OS N° ${orden.orden.folio}` : "Orden de servicio"}</h1>
-              <Badge value={orden.orden?.estado_os ?? orden.estado} />
+              <Badge value={orden.orden?.estado_os ?? estadoOsDeTrabajo(orden.estado as EstadoTrabajo)} />
             </div>
             <p className="mt-2 text-sm text-muted">{new Date(orden.fecha).toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" })}</p>
             {orden.descripcion && (

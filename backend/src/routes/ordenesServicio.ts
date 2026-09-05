@@ -7,7 +7,7 @@ import { ah } from "../asyncHandler";
 
 export const ordenesServicioRouter = Router();
 
-const ESTADOS_OS: EstadoOS[] = ["pendiente", "enviada", "en_proceso", "completada", "firmada"];
+const ESTADOS_OS: EstadoOS[] = ["pendiente", "enviada", "en_proceso", "completada", "firmada", "cancelada"];
 
 type TrabajoConOrden = {
   id: string;
