@@ -48,6 +48,22 @@ usuariosRouter.get(
       res.status(500).json({ error: error.message });
       return;
     }
+
+    // ?con_correo=1 — resuelve el correo real de cada usuario desde
+    // auth.users (la tabla `usuarios` no lo guarda). Solo lo pide el
+    // panel de Grupo y usuario; el resto de los consumidores (selectores
+    // de responsable, etc.) no lo necesitan y así no pagan N lookups.
+    if (req.query.con_correo === "1") {
+      const conCorreo = await Promise.all(
+        (data ?? []).map(async (u) => {
+          const { data: authUser } = await supabase.auth.admin.getUserById(u.id);
+          return { ...u, correo: authUser?.user?.email ?? null };
+        })
+      );
+      res.json(conCorreo);
+      return;
+    }
+
     res.json(data);
   })
 );

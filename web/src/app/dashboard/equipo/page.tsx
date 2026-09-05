@@ -41,7 +41,7 @@ export default function EquipoPage() {
   const router = useRouter();
   const [usuario, setUsuario] = useState<UsuarioShell | null>(null);
   const [usuarioId, setUsuarioId] = useState<string | null>(null);
-  const [usuarios, setUsuarios] = useState<Usuario[] | null>(null);
+  const [usuarios, setUsuarios] = useState<(Usuario & { correo: string | null })[] | null>(null);
   const [auditoria, setAuditoria] = useState<AuditoriaFila[] | null>(null);
   const [sinAcceso, setSinAcceso] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -82,7 +82,7 @@ export default function EquipoPage() {
     }
     const [resMe, resUsuarios, resAuditoria] = await Promise.all([
       apiFetch("/api/me"),
-      apiFetch("/api/usuarios"),
+      apiFetch("/api/usuarios?con_correo=1"),
       apiFetch("/api/usuarios/auditoria"),
     ]);
     if (resMe.ok) {
@@ -390,6 +390,7 @@ export default function EquipoPage() {
             <thead>
               <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
                 <th className="px-5 py-3 font-medium">Nombre</th>
+                <th className="px-5 py-3 font-medium">Correo</th>
                 <th className="px-5 py-3 font-medium">Rol</th>
                 <th className="px-5 py-3 font-medium">Estado</th>
                 <th className="px-5 py-3 font-medium">Documentos</th>
@@ -401,6 +402,7 @@ export default function EquipoPage() {
                 editandoId === u.id ? (
                   <tr key={u.id} className="border-b border-border bg-brand-soft/30 last:border-0">
                     <td className="px-5 py-3 font-medium text-foreground">{u.nombre}</td>
+                    <td className="px-5 py-3 text-muted">{u.correo ?? "—"}</td>
                     <td className="px-5 py-3">
                       <Select value={editRol} onChange={(e) => setEditRol(e.target.value)} className="min-w-36">
                         {rolesDisponibles.map((r) => (
@@ -449,6 +451,7 @@ export default function EquipoPage() {
                 ) : (
                   <tr key={u.id} className="border-b border-border-soft last:border-0 hover:bg-surface-sunken">
                     <td className="px-5 py-3 font-medium text-foreground">{u.nombre}</td>
+                    <td className="px-5 py-3 text-muted">{u.correo ?? "—"}</td>
                     <td className="px-5 py-3">
                       <Badge value={etiquetaRol(u.rol)} />
                     </td>
