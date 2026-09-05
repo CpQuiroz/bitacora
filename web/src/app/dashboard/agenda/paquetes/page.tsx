@@ -25,6 +25,8 @@ export default function PaquetesSesionesPage() {
   const [busqueda, setBusqueda] = useState("");
 
   const [formAbierto, setFormAbierto] = useState(false);
+  // Pack agotado que se está renovando (precarga el form).
+  const [renovando, setRenovando] = useState<PaqueteListado | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
 
   async function cargar() {
@@ -107,6 +109,36 @@ export default function PaquetesSesionesPage() {
         </Card>
       )}
 
+      {renovando && (
+        <Card className="mb-6">
+          <h2 className="mb-1 text-sm font-semibold text-foreground">Renovar paquete</h2>
+          <p className="mb-4 text-xs text-muted">
+            {renovando.cliente?.nombre ?? "Cliente"} · <span className="font-medium text-foreground">{renovando.nombre}</span> —
+            mismo servicio y cantidad. Ajusta el precio si corresponde.
+          </p>
+          <AsignarPackForm
+            clienteId={renovando.cliente_id ?? undefined}
+            tiposPack={tiposPack}
+            moneda={usuario.moneda ?? "CLP"}
+            inicial={{
+              tipoPackId:
+                renovando.tipo_pack_id && tiposPack.some((t) => t.id === renovando.tipo_pack_id)
+                  ? renovando.tipo_pack_id
+                  : undefined,
+              nombre: renovando.nombre,
+              cantidadTotal: renovando.cantidad_total,
+              precioPagado: renovando.precio_pagado != null ? String(renovando.precio_pagado) : "",
+            }}
+            onAsignado={() => {
+              setRenovando(null);
+              setAviso("Paquete renovado.");
+              cargar();
+            }}
+            onCancelar={() => setRenovando(null)}
+          />
+        </Card>
+      )}
+
       {aviso && (
         <div className="mb-6">
           <SuccessText>{aviso}</SuccessText>
@@ -172,7 +204,21 @@ export default function PaquetesSesionesPage() {
                   </td>
                   <td className="px-5 py-3 text-muted">{p.notas || "—"}</td>
                   <td className="px-5 py-3">
-                    <Badge value={p.saldo <= 0 ? "agotado" : "disponible"} />
+                    <div className="flex items-center gap-2">
+                      <Badge value={p.saldo <= 0 ? "agotado" : "disponible"} />
+                      {p.saldo <= 0 && !renovando && !formAbierto && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            setAviso(null);
+                            setRenovando(p);
+                          }}
+                        >
+                          Renovar
+                        </Button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

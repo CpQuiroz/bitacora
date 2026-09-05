@@ -65,6 +65,8 @@ export default function ClienteDetallePage() {
   const [paquetes, setPaquetes] = useState<PaqueteSesionesConSaldo[] | null>(null);
   const [tiposPack, setTiposPack] = useState<TipoPack[]>([]);
   const [asignandoPack, setAsignandoPack] = useState(false);
+  // Pack agotado que se está renovando (precarga el form con sus datos).
+  const [renovandoPack, setRenovandoPack] = useState<PaqueteSesionesConSaldo | null>(null);
   const [avisoPack, setAvisoPack] = useState<string | null>(null);
 
   const cargarPacks = useCallback(async () => {
@@ -179,6 +181,15 @@ export default function ClienteDetallePage() {
   }, [cliente, usuario?.moneda, router]);
 
   const ICONO_EVENTO = { os: IconWrench, cotizacion: IconTag, cobro: IconReceipt } as const;
+
+  // Saldo del cliente: total por cobrar y cuánto de eso está vencido
+  // (fecha de vencimiento pasada y sin pagar).
+  const hoyISO = new Date().toISOString().slice(0, 10);
+  const facturasCliente = cliente?.facturas ?? [];
+  const totalPorCobrar = facturasCliente.filter((f) => f.estado !== "pagada").reduce((s, f) => s + f.monto, 0);
+  const totalVencido = facturasCliente
+    .filter((f) => f.estado !== "pagada" && f.fecha_vencimiento < hoyISO)
+    .reduce((s, f) => s + f.monto, 0);
 
   if (!usuario) return null;
 
@@ -424,6 +435,22 @@ export default function ClienteDetallePage() {
             <div className="flex flex-col gap-4">
               <Card>
                 <h2 className="mb-4 text-sm font-semibold text-foreground">Cobros ({cliente.facturas.length})</h2>
+                {cliente.facturas.length > 0 && (
+                  <div className="mb-4 grid grid-cols-2 gap-3">
+                    <div className="rounded-lg border border-border p-3">
+                      <p className="text-xs text-muted">Por cobrar</p>
+                      <p className="mt-1 text-lg font-semibold tabular-nums text-foreground">
+                        {formatMoneda(totalPorCobrar, usuario.moneda)}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border border-border p-3">
+                      <p className="text-xs text-muted">Vencido</p>
+                      <p className={`mt-1 text-lg font-semibold tabular-nums ${totalVencido > 0 ? "text-danger" : "text-foreground"}`}>
+                        {formatMoneda(totalVencido, usuario.moneda)}
+                      </p>
+                    </div>
+                  </div>
+                )}
                 {cliente.facturas.length === 0 ? (
                   <p className="text-sm text-muted">Sin cobros todavía.</p>
                 ) : (
@@ -482,6 +509,35 @@ export default function ClienteDetallePage() {
                     </div>
                   )}
 
+                  {renovandoPack && (
+                    <div className="mb-4 rounded-lg border border-border p-3">
+                      <p className="mb-3 text-xs text-muted">
+                        Renovando <span className="font-medium text-foreground">{renovandoPack.nombre}</span> — mismo servicio y
+                        cantidad. Ajusta el precio si corresponde.
+                      </p>
+                      <AsignarPackForm
+                        clienteId={cliente.id}
+                        tiposPack={tiposPack}
+                        moneda={usuario.moneda ?? "CLP"}
+                        inicial={{
+                          tipoPackId:
+                            renovandoPack.tipo_pack_id && tiposPack.some((t) => t.id === renovandoPack.tipo_pack_id)
+                              ? renovandoPack.tipo_pack_id
+                              : undefined,
+                          nombre: renovandoPack.nombre,
+                          cantidadTotal: renovandoPack.cantidad_total,
+                          precioPagado: renovandoPack.precio_pagado != null ? String(renovandoPack.precio_pagado) : "",
+                        }}
+                        onAsignado={() => {
+                          setRenovandoPack(null);
+                          setAvisoPack("Pack renovado.");
+                          cargarPacks();
+                        }}
+                        onCancelar={() => setRenovandoPack(null)}
+                      />
+                    </div>
+                  )}
+
                   {paquetes.length === 0 && !asignandoPack ? (
                     <p className="text-sm text-muted">Este cliente no tiene packs.</p>
                   ) : (
@@ -500,7 +556,21 @@ export default function ClienteDetallePage() {
                               {p.vence_el ? ` · vence ${new Date(`${p.vence_el}T00:00:00`).toLocaleDateString("es-CL")}` : " · no vence"}
                             </p>
                           </div>
-                          <Badge value={p.saldo <= 0 ? "agotado" : "disponible"} />
+                          <div className="flex items-center gap-2">
+                            {p.saldo <= 0 && !renovandoPack && !asignandoPack && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => {
+                                  setAvisoPack(null);
+                                  setRenovandoPack(p);
+                                }}
+                              >
+                                Renovar
+                              </Button>
+                            )}
+                            <Badge value={p.saldo <= 0 ? "agotado" : "disponible"} />
+                          </div>
                         </div>
                       ))}
                     </div>

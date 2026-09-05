@@ -20,6 +20,7 @@ export function AsignarPackForm({
   onClienteCreado,
   tiposPack,
   moneda,
+  inicial,
   onAsignado,
   onCancelar,
 }: {
@@ -28,15 +29,18 @@ export function AsignarPackForm({
   onClienteCreado?: (c: Cliente) => void;
   tiposPack: TipoPack[];
   moneda: string;
+  // Valores de arranque — lo usa "Renovar pack": precarga el mismo
+  // tipo/nombre/cantidad/precio del pack agotado.
+  inicial?: { tipoPackId?: string; nombre?: string; cantidadTotal?: number; precioPagado?: string };
   onAsignado: () => void;
   onCancelar: () => void;
 }) {
   const clienteFijo = Boolean(clienteIdFijo);
   const [clienteId, setClienteId] = useState(clienteIdFijo ?? "");
-  const [tipoPackId, setTipoPackId] = useState("");
-  const [nombre, setNombre] = useState("");
-  const [cantidadTotal, setCantidadTotal] = useState(5);
-  const [precioPagado, setPrecioPagado] = useState(""); // lo realmente cobrado; "" = precio de lista
+  const [tipoPackId, setTipoPackId] = useState(inicial?.tipoPackId ?? "");
+  const [nombre, setNombre] = useState(inicial?.nombre ?? "");
+  const [cantidadTotal, setCantidadTotal] = useState(inicial?.cantidadTotal ?? 5);
+  const [precioPagado, setPrecioPagado] = useState(inicial?.precioPagado ?? ""); // lo realmente cobrado; "" = precio de lista
   const [notas, setNotas] = useState("");
   const [guardando, setGuardando] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
