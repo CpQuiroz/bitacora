@@ -180,6 +180,21 @@ cobrosRouter.post(
       return;
     }
 
+    // Anti-duplicado (puente OS → Cobro, migración 91): si alguno de los
+    // trabajos seleccionados ya tiene un cobro (automático al firmar o de
+    // un batch anterior), se avisa en vez de facturar dos veces.
+    const { data: yaConCobro } = await supabase
+      .from("ordenes_servicio")
+      .select("folio, trabajo_id")
+      .eq("empresa_id", req.empresaId!)
+      .in("trabajo_id", trabajo_ids)
+      .not("cobro_id", "is", null);
+    if (yaConCobro && yaConCobro.length > 0) {
+      const folios = yaConCobro.map((o) => (o.folio != null ? `N° ${o.folio}` : "sin folio")).join(", ");
+      res.status(409).json({ error: `Estas OS ya tienen cobro generado: ${folios}. Quítalas de la selección.` });
+      return;
+    }
+
     const { data: facturaId, error } = await supabase.rpc("generar_factura", {
       p_empresa_id: req.empresaId!,
       p_cliente: cliente.trim(),
@@ -204,6 +219,10 @@ cobrosRouter.post(
     if (primerTrabajo?.cliente_id) {
       await supabase.from("facturas").update({ cliente_id: primerTrabajo.cliente_id }).eq("id", facturaId);
     }
+
+    // Marca las OS de estos trabajos como ya cobradas (migración 91) —
+    // así un segundo batch sobre los mismos trabajos rebota.
+    await supabase.from("ordenes_servicio").update({ cobro_id: facturaId }).eq("empresa_id", req.empresaId!).in("trabajo_id", trabajo_ids);
 
     const { data: factura, error: errorFactura } = await supabase
       .from("facturas")

@@ -1059,7 +1059,7 @@ trabajosRouter.post(
       .from("trabajos")
       .update({ estado: "completado" })
       .eq("id", req.params.id)
-      .select("cliente, cliente_id, ruta_id")
+      .select("cliente, cliente_id, ruta_id, monto")
       .single();
 
     await notificarGerencia(req.empresaId!, "os_completada", {
@@ -1067,6 +1067,45 @@ trabajosRouter.post(
       entidadTipo: "trabajo",
       entidadId: req.params.id,
     });
+
+    // Puente OS → Cobro (migración 91) — no bloqueante: si falla, se
+    // loguea y no rompe la firma (mismo criterio que el PDF/notifs).
+    // Solo si la empresa lo tiene activo, la orden no tiene cobro
+    // todavía, y el trabajo tiene monto > 0.
+    let cobroGenerado: { id: string; monto: number } | null = null;
+    if (!orden.cobro_id && trabajoActualizado?.cliente_id && Number(trabajoActualizado.monto) > 0) {
+      try {
+        const { data: empresa } = await supabase
+          .from("empresas")
+          .select("cobro_automatico_al_firmar")
+          .eq("id", req.empresaId!)
+          .single();
+        if (empresa?.cobro_automatico_al_firmar) {
+          const hoy = new Date();
+          const venc = new Date(hoy);
+          venc.setDate(venc.getDate() + 30);
+          const { data: factura, error: errFactura } = await supabase
+            .from("facturas")
+            .insert({
+              empresa_id: req.empresaId!,
+              cliente: trabajoActualizado.cliente,
+              cliente_id: trabajoActualizado.cliente_id,
+              monto: Number(trabajoActualizado.monto),
+              fecha_emision: hoy.toISOString().slice(0, 10),
+              fecha_vencimiento: venc.toISOString().slice(0, 10),
+              estado: "pendiente",
+              trabajo_ids: [req.params.id],
+            })
+            .select("id, monto")
+            .single();
+          if (errFactura) throw new Error(errFactura.message);
+          await supabase.from("ordenes_servicio").update({ cobro_id: factura.id }).eq("id", orden.id);
+          cobroGenerado = factura;
+        }
+      } catch (err) {
+        console.error("Puente OS→Cobro falló al finalizar OS:", err instanceof Error ? err.message : err);
+      }
+    }
 
     // OS completada Y firmada (esto es "/finalizar", el cierre real —
     // "/firma" solo guarda la firma) — se le manda el PDF al cliente
@@ -1111,7 +1150,7 @@ trabajosRouter.post(
     // estado configurado como disparador en esta empresa.
     const advertenciasStock = await aplicarDescuentoInventarioSiCorresponde(req.empresaId!, orden.id, req.params.id, data.folio, "firmada");
 
-    res.json({ ...data, advertencias_stock: advertenciasStock });
+    res.json({ ...data, cobro_id: cobroGenerado?.id ?? data.cobro_id ?? null, advertencias_stock: advertenciasStock, cobro_generado: cobroGenerado });
   })
 );
 

@@ -93,6 +93,11 @@ export type Empresa = {
   inventario_descontar_en_estado: EstadoOS;
   inventario_permitir_negativo: boolean;
   inventario_descontar_una_vez: boolean;
+  // Puente OS → Cobro (migración 91): en TRUE, finalizar/firmar una OS
+  // con monto > 0 crea automáticamente una factura "pendiente" por ese
+  // trabajo. FALSE = la empresa factura por fuera (ej. contra guía
+  // semanal) y sigue usando "desde trabajos" a mano.
+  cobro_automatico_al_firmar: boolean;
   // Viajes registrados desde la app: en TRUE entran directo como
   // "confirmado" (sin pasar por aprobación del admin). Ver migración 78.
   viajes_aprobacion_automatica: boolean;
@@ -794,6 +799,11 @@ export type OrdenServicio = {
   // Cacheado solo una vez firmada — ver migración 57 y obtenerPdfOS en
   // backend/src/routes/trabajos.ts.
   pdf_url: string | null;
+  // Factura generada automáticamente al finalizar/firmar esta OS (puente
+  // OS → Cobro, migración 91). Null = todavía no se generó (o la empresa
+  // tiene el cobro automático apagado). El batch "desde trabajos" avisa
+  // si un trabajo ya tiene cobro para no facturar dos veces.
+  cobro_id: string | null;
   creado_en: string;
 };
 
