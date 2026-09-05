@@ -40,3 +40,26 @@ export function calcularEstadoCancelacion(
   const diffHoras = (momentoSesion.getTime() - ahora.getTime()) / (1000 * 60 * 60);
   return diffHoras >= ventanaHoras ? "cancelada_anticipada" : "no_asistio";
 }
+
+// Sesiones ya descontadas de cada paquete — ÚNICA fuente de verdad para
+// "saldo" en toda la app (Paquetes de sesiones, Nueva cita, Detalle de
+// reserva). Regla (Fase "estados de cita" del rediseño Agenda Pro):
+// Asistió (completada) y No asistió descuentan 1 sesión; Reservado,
+// Confirmado y Cancelado (en cualquiera de sus dos variantes) no —
+// reservar/confirmar ya no reserva provisoriamente el cupo, se descuenta
+// recién cuando la cita se resuelve.
+export async function calcularConsumoPorPaquete(empresaId: string, paqueteIds: string[]): Promise<Map<string, number>> {
+  const consumo = new Map<string, number>();
+  if (paqueteIds.length === 0) return consumo;
+  const { data } = await supabase
+    .from("tareas")
+    .select("paquete_id, sesiones_consumidas")
+    .eq("empresa_id", empresaId)
+    .in("paquete_id", paqueteIds)
+    .in("estado", ["completada", "no_asistio"]);
+  for (const c of data ?? []) {
+    if (!c.paquete_id) continue;
+    consumo.set(c.paquete_id, (consumo.get(c.paquete_id) ?? 0) + c.sesiones_consumidas);
+  }
+  return consumo;
+}

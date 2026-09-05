@@ -4,6 +4,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
 import type { EstadoTarea } from "@bitacora/shared";
+import { ETIQUETA_ESTADO_TAREA } from "@bitacora/shared";
 import { useTema } from "../../theme";
 import { Badge, Button, Card, ErrorState, LoadingScreen, Text } from "../../components/ui";
 import { OfflineBanner } from "../../components/OfflineBanner";
@@ -17,19 +18,11 @@ import {
   type DetalleTarea,
 } from "../../services/agenda";
 import type { AgendaStackParamList } from "../../shell/navigation/types";
+import { EstadoCitaRiel } from "./EstadoCitaRiel";
 
 function soloDigitos(tel: string): string {
   return tel.replace(/[^\d]/g, "");
 }
-
-const ETIQUETA_ESTADO: Record<string, string> = {
-  pendiente: "Sin confirmar",
-  confirmada: "Confirmada",
-  completada: "Completada",
-  cancelada: "Cancelada",
-  no_asistio: "No asistió",
-  cancelada_anticipada: "Cancelada a tiempo",
-};
 
 const ACTIVA = new Set(["pendiente", "confirmada"]);
 
@@ -118,15 +111,33 @@ export function TareaDetalleScreen({ route, navigation }: NativeStackScreenProps
   }
 
   function cancelar() {
-    Alert.alert("Cancelar la cita", "El cliente no asistió o la cita no se realizará. ¿Confirmas?", [
+    Alert.alert("Cancelar la reserva", "La cita no se va a realizar. ¿Confirmas?", [
       { text: "No", style: "cancel" },
       {
         text: "Sí, cancelar",
         style: "destructive",
         onPress: async () => {
           setEnviando(true);
+          // El backend decide "cancelada" o "cancelada_anticipada" según
+          // la ventana de aviso — ambas se ven como "Cancelado" acá.
           await encolarCancelarTarea(tareaId);
           setEstadoLocal("cancelada");
+          setEnviando(false);
+        },
+      },
+    ]);
+  }
+
+  function noAsistio() {
+    Alert.alert("Marcar que no asistió", "Se descuenta 1 sesión del pack si esta cita tiene uno asociado. ¿Confirmas?", [
+      { text: "No", style: "cancel" },
+      {
+        text: "Sí, no asistió",
+        style: "destructive",
+        onPress: async () => {
+          setEnviando(true);
+          await encolarEstadoTarea(tareaId, "no_asistio");
+          setEstadoLocal("no_asistio");
           setEnviando(false);
         },
       },
@@ -142,7 +153,7 @@ export function TareaDetalleScreen({ route, navigation }: NativeStackScreenProps
             <Text variante="titulo" style={{ flex: 1 }}>
               {tarea.titulo}
             </Text>
-            <Badge texto={ETIQUETA_ESTADO[estado] ?? estado} estado={estado} />
+            <Badge texto={ETIQUETA_ESTADO_TAREA[estado] ?? estado} estado={estado} />
           </View>
           <Text variante="etiqueta" tono="muted">
             {tarea.fecha}
@@ -204,7 +215,7 @@ export function TareaDetalleScreen({ route, navigation }: NativeStackScreenProps
         {tarea.paquete_id ? (
           <Card plano style={{ backgroundColor: t.colores.brandSoft, borderColor: "transparent" }}>
             <Text variante="etiqueta" style={{ color: t.colores.brand }}>
-              Esta cita es parte de un paquete de sesiones. Al completarla o marcar que no asistió, se descuenta 1 sesión.
+              Esta cita es parte de un paquete de sesiones. Al marcar Asistió o No asistió se descuenta 1 sesión.
             </Text>
           </Card>
         ) : null}
@@ -225,20 +236,22 @@ export function TareaDetalleScreen({ route, navigation }: NativeStackScreenProps
           </Card>
         )}
 
-        {activa ? (
-          <View style={{ gap: t.espacio(2.5), marginTop: t.espacio(1) }}>
-            {estado === "pendiente" ? (
-              <Button titulo="Confirmar cita" variante="secundario" onPress={() => cambiar("confirmada")} cargando={enviando} />
-            ) : null}
-            <Button titulo="Marcar completada" tamano="lg" onPress={() => cambiar("completada")} cargando={enviando} />
-            <Button titulo="Canceló / no asistió" variante="peligro" onPress={cancelar} cargando={enviando} />
-          </View>
-        ) : (
+        <View style={{ gap: t.espacio(3), marginTop: t.espacio(1) }}>
+          {activa ? <Button titulo="Marcar Asistió" tamano="lg" onPress={() => cambiar("completada")} cargando={enviando} /> : null}
+          <EstadoCitaRiel
+            estado={estado}
+            activa={activa}
+            cargando={enviando}
+            onConfirmar={estado === "pendiente" ? () => cambiar("confirmada") : undefined}
+            onNoAsistio={noAsistio}
+            onCancelar={cancelar}
+          />
+        </View>
+
+        {!activa && accionesAqui.length > 0 && (
           <Card plano style={{ backgroundColor: t.colores.surfaceAlt, borderColor: "transparent" }}>
             <Text variante="etiqueta" tono="muted">
-              {accionesAqui.length > 0
-                ? "Esperando a que se sincronice el último cambio."
-                : `Esta cita está ${(ETIQUETA_ESTADO[estado] ?? estado).toLowerCase()} y ya no se puede modificar desde acá.`}
+              Esperando a que se sincronice el último cambio.
             </Text>
           </Card>
         )}

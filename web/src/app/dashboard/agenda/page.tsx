@@ -20,6 +20,7 @@ import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Modal } from "@/components/Modal";
 import { ComboboxCliente } from "@/components/ComboboxCliente";
 import { ComboboxResponsable } from "@/components/ComboboxResponsable";
+import { EstadoCitaRiel } from "@/components/EstadoCitaRiel";
 import { Badge, Button, Card, ErrorText, Input, Label, Select, Textarea } from "@/components/ui";
 import { IconCalendar, IconChevronLeft, IconChevronRight, IconClipboardCheck, IconPlus, IconWrench } from "@/components/icons";
 
@@ -556,14 +557,18 @@ function AgendaContenido() {
   // confirme, no la decisión final).
   async function onCancelarTarea() {
     if (!tareaEditandoId) return;
-    const horaSesion = horaTarea || "23:59";
-    const momentoSesion = new Date(`${fechaTarea}T${horaSesion}:00`);
-    const diffHoras = (momentoSesion.getTime() - Date.now()) / (1000 * 60 * 60);
-    if (diffHoras < ventanaCancelacionHoras) {
-      const confirmado = confirm(
-        `Esta cancelación es con menos de ${ventanaCancelacionHoras} horas de anticipación y se descontará del paquete de todas formas. ¿Confirmas?`
-      );
-      if (!confirmado) return;
+    // El aviso de descuento solo aplica si la cita tiene pack — antes se
+    // mostraba siempre, aunque no hubiera paquete de por medio.
+    if (paqueteIdTarea) {
+      const horaSesion = horaTarea || "23:59";
+      const momentoSesion = new Date(`${fechaTarea}T${horaSesion}:00`);
+      const diffHoras = (momentoSesion.getTime() - Date.now()) / (1000 * 60 * 60);
+      if (diffHoras < ventanaCancelacionHoras) {
+        const confirmado = confirm(
+          `Esta cancelación es con menos de ${ventanaCancelacionHoras} horas de anticipación y se descontará del paquete de todas formas. ¿Confirmas?`
+        );
+        if (!confirmado) return;
+      }
     }
     setGuardandoTarea(true);
     const res = await apiFetch(`/api/tareas/${tareaEditandoId}/cancelar`, { method: "POST" });
@@ -571,6 +576,24 @@ function AgendaContenido() {
     if (!res.ok) {
       const b = await res.json().catch(() => ({}));
       setErrorTarea(b.error ?? "No se pudo cancelar la cita");
+      return;
+    }
+    setFormTareaAbierto(false);
+    cargar();
+  }
+
+  // Confirmar y No asistió (Punto 2 — estados en 3+2) son acciones
+  // instantáneas, igual criterio que Cancelar: no esperan al "Guardar
+  // cambios" del form. No asistió es una aserción manual del humano —
+  // a diferencia de Cancelar, no pasa por la ventana de aviso.
+  async function onCambiarEstadoInstantaneo(nuevo: "confirmada" | "completada" | "no_asistio") {
+    if (!tareaEditandoId) return;
+    setGuardandoTarea(true);
+    const res = await apiFetch(`/api/tareas/${tareaEditandoId}`, { method: "PATCH", body: JSON.stringify({ estado: nuevo }) });
+    setGuardandoTarea(false);
+    if (!res.ok) {
+      const b = await res.json().catch(() => ({}));
+      setErrorTarea(b.error ?? "No se pudo actualizar el estado");
       return;
     }
     setFormTareaAbierto(false);
@@ -883,30 +906,26 @@ function AgendaContenido() {
                 </Select>
               </div>
               {tareaEditandoId && (
-                <div>
-                  <Label>Estado</Label>
-                  <Select value={estadoTarea} onChange={(e) => setEstadoTarea(e.target.value as EstadoTarea)}>
-                    <option value="pendiente">Pendiente</option>
-                    {puedeAgendaPro && <option value="confirmada">Confirmada por el cliente</option>}
-                    {paqueteIdTarea ? (
-                      <>
-                        <option value="completada">Asistió</option>
-                        <option value="no_asistio">No asistió / cancelada tarde</option>
-                        <option value="cancelada_anticipada">Cancelada con anticipación</option>
-                      </>
-                    ) : (
-                      <>
-                        <option value="completada">Completada</option>
-                        <option value="cancelada">Cancelada</option>
-                      </>
-                    )}
-                  </Select>
-                  {paqueteIdTarea && (
-                    <p className="mt-1 text-xs text-muted">
-                      Para cancelar esta cita usa el botón &quot;Cancelar cita&quot; — decide automáticamente si corresponde
-                      descontar la sesión según la anticipación.
-                    </p>
+                <div className="sm:col-span-2 rounded-lg border border-border p-3">
+                  {(estadoTarea === "pendiente" || estadoTarea === "confirmada") && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={guardandoTarea}
+                      onClick={() => onCambiarEstadoInstantaneo("completada")}
+                      className="mb-3"
+                    >
+                      Marcar Asistió
+                    </Button>
                   )}
+                  <EstadoCitaRiel
+                    estado={estadoTarea}
+                    puedeConfirmar={puedeAgendaPro}
+                    guardando={guardandoTarea}
+                    onConfirmar={() => onCambiarEstadoInstantaneo("confirmada")}
+                    onNoAsistio={() => onCambiarEstadoInstantaneo("no_asistio")}
+                    onCancelar={onCancelarTarea}
+                  />
                 </div>
               )}
               <div className="sm:col-span-2">
@@ -922,11 +941,6 @@ function AgendaContenido() {
               <Button type="button" variant="ghost" onClick={() => setFormTareaAbierto(false)}>
                 Cancelar
               </Button>
-              {tareaEditandoId && paqueteIdTarea && (estadoTarea === "pendiente" || estadoTarea === "confirmada") && (
-                <Button type="button" variant="outline" onClick={onCancelarTarea} disabled={guardandoTarea}>
-                  Cancelar cita
-                </Button>
-              )}
               {tareaEditandoId && (
                 <Button type="button" variant="danger" className="ml-auto" onClick={onEliminarTarea}>
                   Eliminar

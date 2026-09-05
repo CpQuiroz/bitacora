@@ -132,7 +132,8 @@ export async function eliminarCita(id: string): Promise<{ ok: boolean; error?: s
 
 const ETIQUETA_ESTADO: Partial<Record<EstadoTarea, string>> = {
   confirmada: "Confirmar cita",
-  completada: "Marcar completada",
+  completada: "Marcar Asistió",
+  no_asistio: "Marcar No asistió",
 };
 
 /** Cambia el estado de una tarea propia (confirmada / completada). */

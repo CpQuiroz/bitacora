@@ -256,20 +256,20 @@ const TONO_DE_ESTADO: Record<string, Tono> = {
   exito: "exito", fallido: "riesgo",
   // paquetes de sesiones (Agenda Pro)
   disponible: "exito", agotado: "riesgo",
-  no_asistio: "riesgo", cancelada_anticipada: "neutro",
+  no_asistio: "riesgo", cancelada_anticipada: "neutro", cancelada: "riesgo",
   // notificaciones al cliente: canal de envío
   correo: "brand", whatsapp: "exito",
   // suscripción B2B (Flow) — estado de facturación
   trial: "brand", pago_pendiente: "alerta", suspendida_por_pago: "riesgo", exitoso: "exito",
 };
 
-export function Badge({ value }: { value: string }) {
+export function Badge({ value, label }: { value: string; label?: string }) {
   const tono = TONO_DE_ESTADO[value] ?? "brand";
   return (
     <span
       className={`inline-block rounded-sm px-2 py-0.5 text-[11px] font-semibold capitalize ${TONO_CLASS[tono]}`}
     >
-      {value.replaceAll("_", " ")}
+      {label ?? value.replaceAll("_", " ")}
     </span>
   );
 }

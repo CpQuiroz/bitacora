@@ -3,6 +3,7 @@ import { supabase } from "../supabase";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
 import { requiereModulo } from "../permisos";
+import { calcularConsumoPorPaquete } from "../agendaPro";
 
 export const paquetesSesionesRouter = Router();
 
@@ -32,22 +33,7 @@ paquetesSesionesRouter.get(
     }
 
     const ids = (paquetes ?? []).map((p) => p.id);
-    const consumoPorPaquete = new Map<string, number>();
-    if (ids.length > 0) {
-      // no_asistio SÍ cuenta (se pierde la sesión) — solo "cancelada"
-      // y "cancelada_anticipada" liberan el cupo.
-      const { data: consumos } = await supabase
-        .from("tareas")
-        .select("paquete_id, sesiones_consumidas")
-        .eq("empresa_id", req.empresaId!)
-        .in("paquete_id", ids)
-        .neq("estado", "cancelada")
-        .neq("estado", "cancelada_anticipada");
-      for (const c of consumos ?? []) {
-        if (!c.paquete_id) continue;
-        consumoPorPaquete.set(c.paquete_id, (consumoPorPaquete.get(c.paquete_id) ?? 0) + c.sesiones_consumidas);
-      }
-    }
+    const consumoPorPaquete = await calcularConsumoPorPaquete(req.empresaId!, ids);
 
     res.json((paquetes ?? []).map((p) => ({ ...p, saldo: p.cantidad_total - (consumoPorPaquete.get(p.id) ?? 0) })));
   })
