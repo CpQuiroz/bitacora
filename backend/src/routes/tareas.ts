@@ -80,7 +80,7 @@ tareasRouter.get(
   ah<RequestConEmpresa>(async (req, res) => {
     let query = supabase
       .from("tareas")
-      .select("*, cliente:clientes(id, nombre, telefono, direccion, lat, lng), responsable:usuarios(nombre)")
+      .select("*, cliente:clientes(id, nombre, correo, telefono, direccion, lat, lng), responsable:usuarios(nombre)")
       .eq("empresa_id", req.empresaId!)
       .eq("id", req.params.id);
     if (req.rol === "colaborador") query = query.eq("responsable_id", req.userId!);

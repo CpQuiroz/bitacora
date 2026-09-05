@@ -19,6 +19,7 @@ import {
 } from "../../services/agenda";
 import type { AgendaStackParamList } from "../../shell/navigation/types";
 import { EstadoCitaRiel } from "./EstadoCitaRiel";
+import { DetalleReservaCosmetologia } from "./DetalleReservaCosmetologia";
 
 function soloDigitos(tel: string): string {
   return tel.replace(/[^\d]/g, "");
@@ -142,6 +143,27 @@ export function TareaDetalleScreen({ route, navigation }: NativeStackScreenProps
         },
       },
     ]);
+  }
+
+  // Tema por rubro: cosmetología tiene su propia pantalla de detalle
+  // ("Vino y eucalipto") — el resto de los rubros sigue con el layout
+  // genérico de acá abajo.
+  if (auth.fase === "listo" && auth.usuario.empresa.rubro === "cosmetologia") {
+    return (
+      <DetalleReservaCosmetologia
+        tarea={{ ...tarea, estado }}
+        esGestion={esGestion}
+        enviando={enviando}
+        eliminando={eliminando}
+        navigation={navigation}
+        onConfirmar={() => cambiar("confirmada")}
+        onAsistio={() => cambiar("completada")}
+        onNoAsistio={noAsistio}
+        onCancelar={cancelar}
+        onEditar={() => navigation.navigate("NuevaCita", { tareaId })}
+        onEliminar={eliminar}
+      />
+    );
   }
 
   return (

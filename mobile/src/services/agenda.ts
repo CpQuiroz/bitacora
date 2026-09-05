@@ -3,7 +3,7 @@ import { apiFetch, apiJson } from "./api";
 import { encolar } from "./sync/queue";
 import { guardarCache, leerCache } from "./sync/cache";
 
-export type ClienteContactoTarea = Pick<Cliente, "id" | "nombre" | "telefono" | "direccion" | "lat" | "lng">;
+export type ClienteContactoTarea = Pick<Cliente, "id" | "nombre" | "correo" | "telefono" | "direccion" | "lat" | "lng">;
 export type TareaConDatos = Tarea & {
   cliente: ClienteContactoTarea | null;
   responsable: { nombre: string } | null;
