@@ -116,6 +116,13 @@ export type Empresa = {
   // Viajes registrados desde la app: en TRUE entran directo como
   // "confirmado" (sin pasar por aprobación del admin). Ver migración 78.
   viajes_aprobacion_automatica: boolean;
+  // Portal del cliente (migración 93): qué secciones ve el cliente final
+  // al entrar a /portal. Default TRUE. El backend del portal filtra por
+  // estas columnas; el dashboard las edita en Clientes → Portal del cliente.
+  portal_muestra_ordenes: boolean;
+  portal_muestra_citas: boolean;
+  portal_muestra_cotizaciones: boolean;
+  portal_muestra_cobros: boolean;
   // Contador aproximado, incrementado por la app en cada subida (ver
   // migración 56 y backend/src/limites.ts) — no un total exacto
   // recalculado, para no tener que escanear los buckets S3 en cada

@@ -7,13 +7,14 @@ import { PortalShell } from "@/components/PortalShell";
 import { Badge, Button, Card, ErrorText, SuccessText, Textarea } from "@/components/ui";
 import { IconCalendar, IconClipboardCheck, IconReceipt, IconWallet } from "@/components/icons";
 import { EstadoCargando } from "@/components/estados";
-import { obtenerTokenPortal, portalFetch } from "@/lib/portalApi";
+import { obtenerConfigPortal, obtenerTokenPortal, portalFetch, type ConfigPortal } from "@/lib/portalApi";
 
 type Visita = { id: string; cliente: string; fecha: string; hora_programada: string | null; descripcion: string | null; estado: string };
 
 export default function PortalHomePage() {
   const router = useRouter();
   const [visitas, setVisitas] = useState<Visita[] | null>(null);
+  const [config, setConfig] = useState<ConfigPortal | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const [correccion, setCorreccion] = useState("");
@@ -52,6 +53,12 @@ export default function PortalHomePage() {
       return;
     }
     (async () => {
+      const cfg = await obtenerConfigPortal();
+      setConfig(cfg);
+      if (!cfg.ordenes) {
+        setVisitas([]);
+        return;
+      }
       const res = await portalFetch("/api/portal/datos/visitas");
       if (res.status === 401) {
         router.replace("/portal/login");
@@ -69,44 +76,59 @@ export default function PortalHomePage() {
   return (
     <PortalShell>
       <h1 className="text-xl font-semibold text-foreground">Hola 👋</h1>
-      <p className="mt-1 text-sm text-muted">Acá puedes ver tus visitas, órdenes de servicio, cotizaciones y cobros.</p>
+      <p className="mt-1 text-sm text-muted">Acá puedes ver tu información con esta empresa.</p>
 
-      <div className="mt-6 grid grid-cols-3 gap-3">
-        <Link href="/portal/ordenes" className="flex flex-col items-center gap-1.5 rounded-xl border border-border bg-surface p-3 text-center">
-          <IconClipboardCheck className="h-5 w-5 text-brand" />
-          <span className="text-xs font-medium text-foreground">Mis OS</span>
-        </Link>
-        <Link href="/portal/cotizaciones" className="flex flex-col items-center gap-1.5 rounded-xl border border-border bg-surface p-3 text-center">
-          <IconReceipt className="h-5 w-5 text-brand" />
-          <span className="text-xs font-medium text-foreground">Cotizaciones</span>
-        </Link>
-        <Link href="/portal/cobros" className="flex flex-col items-center gap-1.5 rounded-xl border border-border bg-surface p-3 text-center">
-          <IconWallet className="h-5 w-5 text-brand" />
-          <span className="text-xs font-medium text-foreground">Cobros</span>
-        </Link>
-      </div>
+      {(() => {
+        const cards = [
+          config?.ordenes !== false && { href: "/portal/ordenes", icon: IconClipboardCheck, label: "Mis OS" },
+          config?.cotizaciones !== false && { href: "/portal/cotizaciones", icon: IconReceipt, label: "Cotizaciones" },
+          config?.cobros !== false && { href: "/portal/cobros", icon: IconWallet, label: "Cobros" },
+          config?.citas !== false && { href: "/portal/citas", icon: IconCalendar, label: "Citas" },
+        ].filter(Boolean) as { href: string; icon: typeof IconClipboardCheck; label: string }[];
+        if (cards.length === 0) return null;
+        return (
+          <div className="mt-6 grid grid-cols-3 gap-3">
+            {cards.map((c) => (
+              <Link
+                key={c.href}
+                href={c.href}
+                className="flex flex-col items-center gap-1.5 rounded-xl border border-border bg-surface p-3 text-center"
+              >
+                <c.icon className="h-5 w-5 text-brand" />
+                <span className="text-xs font-medium text-foreground">{c.label}</span>
+              </Link>
+            ))}
+          </div>
+        );
+      })()}
 
-      <h2 className="mb-3 mt-8 flex items-center gap-2 text-sm font-semibold text-foreground">
-        <IconCalendar className="h-4 w-4 text-brand" />
-        Próximas visitas
-      </h2>
+      {config?.ordenes !== false && (
+        <>
+          <h2 className="mb-3 mt-8 flex items-center gap-2 text-sm font-semibold text-foreground">
+            <IconCalendar className="h-4 w-4 text-brand" />
+            Próximas visitas
+          </h2>
 
-      {error && <ErrorText>{error}</ErrorText>}
-      {visitas === null && !error && <EstadoCargando />}
-      {visitas?.length === 0 && <p className="text-sm text-muted">No tienes visitas programadas por ahora.</p>}
+          {error && <ErrorText>{error}</ErrorText>}
+          {visitas === null && !error && <EstadoCargando />}
+          {visitas?.length === 0 && <p className="text-sm text-muted">No tienes visitas programadas por ahora.</p>}
 
-      <div className="flex flex-col gap-3">
-        {visitas?.map((v) => (
-          <Card key={v.id} className="p-4">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-medium text-foreground">{new Date(v.fecha).toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" })}</p>
-              <Badge value={v.estado} />
-            </div>
-            {v.hora_programada && <p className="mt-1 text-xs text-muted">Hora estimada: {v.hora_programada}</p>}
-            {v.descripcion && <p className="mt-1 text-xs text-muted">{v.descripcion}</p>}
-          </Card>
-        ))}
-      </div>
+          <div className="flex flex-col gap-3">
+            {visitas?.map((v) => (
+              <Card key={v.id} className="p-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium text-foreground">
+                    {new Date(v.fecha).toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" })}
+                  </p>
+                  <Badge value={v.estado} />
+                </div>
+                {v.hora_programada && <p className="mt-1 text-xs text-muted">Hora estimada: {v.hora_programada}</p>}
+                {v.descripcion && <p className="mt-1 text-xs text-muted">{v.descripcion}</p>}
+              </Card>
+            ))}
+          </div>
+        </>
+      )}
 
       <div className="mt-10 border-t border-border pt-6">
         <h2 className="mb-2 text-sm font-semibold text-foreground">Mis datos personales</h2>

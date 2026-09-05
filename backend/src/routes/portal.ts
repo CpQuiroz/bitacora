@@ -23,6 +23,57 @@ import { ah } from "../asyncHandler";
 
 export const portalRouter = Router();
 
+// ---------- Secciones visibles ----------
+// Cada empresa decide qué ve el cliente en el portal (migración 93). El
+// default de las columnas es TRUE, así que una empresa que nunca tocó
+// esto sigue mostrando todo.
+type SeccionPortal = "ordenes" | "citas" | "cotizaciones" | "cobros";
+const COLUMNA_SECCION: Record<SeccionPortal, string> = {
+  ordenes: "portal_muestra_ordenes",
+  citas: "portal_muestra_citas",
+  cotizaciones: "portal_muestra_cotizaciones",
+  cobros: "portal_muestra_cobros",
+};
+
+async function seccionesDeEmpresa(empresaId: string): Promise<Record<SeccionPortal, boolean>> {
+  const { data } = await supabase
+    .from("empresas")
+    .select("portal_muestra_ordenes, portal_muestra_citas, portal_muestra_cotizaciones, portal_muestra_cobros")
+    .eq("id", empresaId)
+    .maybeSingle();
+  return {
+    ordenes: data?.portal_muestra_ordenes ?? true,
+    citas: data?.portal_muestra_citas ?? true,
+    cotizaciones: data?.portal_muestra_cotizaciones ?? true,
+    cobros: data?.portal_muestra_cobros ?? true,
+  };
+}
+
+// Middleware: bloquea la sección si la empresa la tiene apagada.
+function requiereSeccion(seccion: SeccionPortal) {
+  return ah<RequestConPortal>(async (req, res, next) => {
+    const { data } = await supabase
+      .from("empresas")
+      .select(COLUMNA_SECCION[seccion])
+      .eq("id", req.empresaId!)
+      .maybeSingle();
+    const visible = (data as Record<string, boolean> | null)?.[COLUMNA_SECCION[seccion]] ?? true;
+    if (!visible) {
+      res.status(403).json({ error: "Esta sección no está disponible en el portal" });
+      return;
+    }
+    next();
+  });
+}
+
+portalRouter.get(
+  "/config",
+  requierePortal,
+  ah<RequestConPortal>(async (req, res) => {
+    res.json(await seccionesDeEmpresa(req.empresaId!));
+  })
+);
+
 function hashCodigo(codigo: string): string {
   return crypto.createHash("sha256").update(codigo).digest("hex");
 }
@@ -176,6 +227,7 @@ portalRouter.post(
 portalRouter.get(
   "/datos/visitas",
   requierePortal,
+  requiereSeccion("ordenes"),
   ah<RequestConPortal>(async (req, res) => {
     const hoy = new Date().toISOString().slice(0, 10);
     const { data, error } = await supabase
@@ -196,6 +248,7 @@ portalRouter.get(
 portalRouter.get(
   "/datos/ordenes",
   requierePortal,
+  requiereSeccion("ordenes"),
   ah<RequestConPortal>(async (req, res) => {
     const { data, error } = await supabase
       .from("trabajos")
@@ -214,6 +267,7 @@ portalRouter.get(
 portalRouter.get(
   "/datos/ordenes/:id",
   requierePortal,
+  requiereSeccion("ordenes"),
   ah<RequestConPortal>(async (req, res) => {
     const { data, error } = await supabase
       .from("trabajos")
@@ -235,6 +289,7 @@ portalRouter.get(
 portalRouter.get(
   "/datos/ordenes/:id/pdf",
   requierePortal,
+  requiereSeccion("ordenes"),
   ah<RequestConPortal>(async (req, res) => {
     const { data: trabajo } = await supabase.from("trabajos").select("cliente_id").eq("id", req.params.id).maybeSingle();
     if (!trabajo || trabajo.cliente_id !== req.clienteId) {
@@ -256,6 +311,7 @@ portalRouter.get(
 portalRouter.get(
   "/datos/cotizaciones/:id",
   requierePortal,
+  requiereSeccion("cotizaciones"),
   ah<RequestConPortal>(async (req, res) => {
     const { data, error } = await supabase
       .from("presupuestos")
@@ -277,6 +333,7 @@ portalRouter.get(
 portalRouter.get(
   "/datos/cotizaciones",
   requierePortal,
+  requiereSeccion("cotizaciones"),
   ah<RequestConPortal>(async (req, res) => {
     const { data, error } = await supabase
       .from("presupuestos")
@@ -294,6 +351,7 @@ portalRouter.get(
 portalRouter.get(
   "/datos/cotizaciones/:id/pdf",
   requierePortal,
+  requiereSeccion("cotizaciones"),
   ah<RequestConPortal>(async (req, res) => {
     const { data: cotizacion } = await supabase.from("presupuestos").select("cliente_id").eq("id", req.params.id).maybeSingle();
     if (!cotizacion || cotizacion.cliente_id !== req.clienteId) {
@@ -321,6 +379,7 @@ async function resolverCotizacionDelCliente(clienteId: string, cotizacionId: str
 portalRouter.post(
   "/datos/cotizaciones/:id/aprobar",
   requierePortal,
+  requiereSeccion("cotizaciones"),
   ah<RequestConPortal>(async (req, res) => {
     const cotizacion = await resolverCotizacionDelCliente(req.clienteId!, req.params.id);
     if (!cotizacion) {
@@ -344,6 +403,7 @@ portalRouter.post(
 portalRouter.post(
   "/datos/cotizaciones/:id/rechazar",
   requierePortal,
+  requiereSeccion("cotizaciones"),
   ah<RequestConPortal>(async (req, res) => {
     const cotizacion = await resolverCotizacionDelCliente(req.clienteId!, req.params.id);
     if (!cotizacion) {
@@ -370,6 +430,7 @@ async function resolverTareaDelCliente(clienteId: string, tareaId: string) {
 portalRouter.get(
   "/datos/citas",
   requierePortal,
+  requiereSeccion("citas"),
   ah<RequestConPortal>(async (req, res) => {
     const { data, error } = await supabase
       .from("tareas")
@@ -387,6 +448,7 @@ portalRouter.get(
 portalRouter.get(
   "/datos/citas/:id",
   requierePortal,
+  requiereSeccion("citas"),
   ah<RequestConPortal>(async (req, res) => {
     const tarea = await resolverTareaDelCliente(req.clienteId!, req.params.id);
     if (!tarea) {
@@ -412,6 +474,7 @@ portalRouter.get(
 portalRouter.post(
   "/datos/citas/:id/confirmar",
   requierePortal,
+  requiereSeccion("citas"),
   ah<RequestConPortal>(async (req, res) => {
     const tarea = await resolverTareaDelCliente(req.clienteId!, req.params.id);
     if (!tarea) {
@@ -435,6 +498,7 @@ portalRouter.post(
 portalRouter.post(
   "/datos/citas/:id/cancelar",
   requierePortal,
+  requiereSeccion("citas"),
   ah<RequestConPortal>(async (req, res) => {
     const tarea = await resolverTareaDelCliente(req.clienteId!, req.params.id);
     if (!tarea) {
@@ -471,6 +535,7 @@ portalRouter.post(
 portalRouter.get(
   "/datos/cobros",
   requierePortal,
+  requiereSeccion("cobros"),
   ah<RequestConPortal>(async (req, res) => {
     const { data, error } = await supabase
       .from("facturas")

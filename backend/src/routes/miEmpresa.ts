@@ -99,6 +99,10 @@ miEmpresaRouter.patch(
       inventario_permitir_negativo,
       inventario_descontar_una_vez,
       viajes_aprobacion_automatica,
+      portal_muestra_ordenes,
+      portal_muestra_citas,
+      portal_muestra_cotizaciones,
+      portal_muestra_cobros,
     } = req.body ?? {};
     const cambios: Partial<Empresa> = {};
 
@@ -183,6 +187,10 @@ miEmpresaRouter.patch(
     if (inventario_permitir_negativo !== undefined) cambios.inventario_permitir_negativo = Boolean(inventario_permitir_negativo);
     if (inventario_descontar_una_vez !== undefined) cambios.inventario_descontar_una_vez = Boolean(inventario_descontar_una_vez);
     if (viajes_aprobacion_automatica !== undefined) cambios.viajes_aprobacion_automatica = Boolean(viajes_aprobacion_automatica);
+    if (portal_muestra_ordenes !== undefined) cambios.portal_muestra_ordenes = Boolean(portal_muestra_ordenes);
+    if (portal_muestra_citas !== undefined) cambios.portal_muestra_citas = Boolean(portal_muestra_citas);
+    if (portal_muestra_cotizaciones !== undefined) cambios.portal_muestra_cotizaciones = Boolean(portal_muestra_cotizaciones);
+    if (portal_muestra_cobros !== undefined) cambios.portal_muestra_cobros = Boolean(portal_muestra_cobros);
 
     if (color_primario !== undefined) {
       if (color_primario !== null && !/^#[0-9a-fA-F]{6}$/.test(color_primario)) {

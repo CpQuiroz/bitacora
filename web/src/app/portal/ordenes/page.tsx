@@ -35,6 +35,11 @@ export default function PortalOrdenesPage() {
         router.replace("/portal/login");
         return;
       }
+      if (res.status === 403) {
+        // La empresa apagó esta sección en el portal.
+        router.replace("/portal");
+        return;
+      }
       if (!res.ok) {
         setError("No se pudieron cargar tus órdenes de servicio");
         return;

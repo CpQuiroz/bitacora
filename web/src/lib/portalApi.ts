@@ -26,3 +26,23 @@ export async function portalFetch(path: string, options: RequestInit = {}) {
   if (token) headers.set("Authorization", `Bearer ${token}`);
   return fetch(`${API_URL}${path}`, { ...options, headers });
 }
+
+// Qué secciones dejó visibles la empresa (migración 93). Se cachea a
+// nivel de módulo para no re-pedirlo en cada pantalla del portal.
+export type SeccionPortal = "ordenes" | "citas" | "cotizaciones" | "cobros";
+export type ConfigPortal = Record<SeccionPortal, boolean>;
+
+const TODO_VISIBLE: ConfigPortal = { ordenes: true, citas: true, cotizaciones: true, cobros: true };
+let configCache: ConfigPortal | null = null;
+
+export async function obtenerConfigPortal(): Promise<ConfigPortal> {
+  if (configCache) return configCache;
+  try {
+    const res = await portalFetch("/api/portal/config");
+    if (!res.ok) return TODO_VISIBLE;
+    configCache = (await res.json()) as ConfigPortal;
+    return configCache;
+  } catch {
+    return TODO_VISIBLE;
+  }
+}
