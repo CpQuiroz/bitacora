@@ -507,12 +507,37 @@ export type Tarea = {
   // (mismo criterio que el saldo de paquetes_sesiones, nunca guardar lo
   // que se puede derivar).
   duracion_min: number | null;
+  // Servicio elegido (catálogo Agenda Pro) — determina el precio de
+  // lista y precarga la duración sugerida al crear la cita.
+  servicio_id: string | null;
+  // Nota visible para el CLIENTE (va en el correo/portal). Distinta de
+  // `descripcion`, que sigue siendo la nota INTERNA — no se renombró
+  // para no romper nada que ya la lea/escriba.
+  nota_cliente: string | null;
+  // Si esta cita puntual avisa por WhatsApp (además del correo) — el
+  // interruptor real de "manda o no manda" sigue siendo
+  // notificaciones_config.whatsapp_activado a nivel empresa, esto es
+  // el opt-out por cita.
+  avisar_whatsapp: boolean;
   // OS (trabajo) creada desde el flujo "Nueva tarea → Crear Orden de
   // Servicio" en Agenda. Nullable: casi ninguna tarea tiene OS asociada.
   trabajo_id: string | null;
   origen: "manual" | "reserva_publica";
   creado_en: string;
   actualizado_en: string;
+};
+
+// Agenda Pro: catálogo de servicios (nombre, precio de lista, duración
+// sugerida) — se administra en la web y se usa para precargar precio y
+// duración al crear una cita, y para atar un TipoPack a un servicio.
+export type Servicio = {
+  id: string;
+  empresa_id: string;
+  nombre: string;
+  precio: number;
+  duracion_sugerida_min: number;
+  activo: boolean;
+  creado_en: string;
 };
 
 // Agenda Pro: pack de N sesiones comprado por un cliente (ej. 5 o 10).
@@ -530,6 +555,13 @@ export type PaqueteSesiones = {
   cantidad_total: number;
   fecha_compra: string;
   notas: string | null;
+  // Copiados del TipoPack al vender (mismo criterio que nombre/
+  // cantidad_total) — servicio_id null si el pack es "personalizado"
+  // (sin tipo de catálogo, no se puede auto-detectar en Nueva reserva).
+  // vence_el = fecha_compra + tipo_pack.vigencia_meses, o null si el
+  // pack es personalizado y no tiene vigencia definida.
+  servicio_id: string | null;
+  vence_el: string | null;
   creado_en: string;
 };
 
@@ -546,6 +578,12 @@ export type TipoPack = {
   nombre: string;
   cantidad_sesiones: number;
   precio: number | null;
+  // Servicio al que está atado — permite ofrecer el pack automáticamente
+  // al elegir ese servicio en Nueva reserva. Null = no atado a ninguno.
+  servicio_id: string | null;
+  // Meses de vigencia desde la fecha de compra — se copia a
+  // PaqueteSesiones.vence_el al vender, no se recalcula después.
+  vigencia_meses: number;
   activo: boolean;
   creado_en: string;
 };
@@ -1437,6 +1475,7 @@ export type Database = {
       empresa_rol_modulos: Tabla<EmpresaRolModulo>;
       paquetes_sesiones: Tabla<PaqueteSesiones>;
       tipos_pack: Tabla<TipoPack>;
+      servicios: Tabla<Servicio>;
       agenda_pro_config: Tabla<AgendaProConfig>;
       agenda_pro_horarios: Tabla<AgendaProHorario>;
       suscripciones: Tabla<Suscripcion>;

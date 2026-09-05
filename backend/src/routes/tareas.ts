@@ -34,6 +34,11 @@ async function trabajoExiste(empresaId: string, trabajoId: string) {
   return Boolean(data);
 }
 
+async function servicioExiste(empresaId: string, servicioId: string) {
+  const { data } = await supabase.from("servicios").select("id").eq("empresa_id", empresaId).eq("id", servicioId).maybeSingle();
+  return Boolean(data);
+}
+
 tareasRouter.get(
   "/",
   ah<RequestConEmpresa>(async (req, res) => {
@@ -97,8 +102,22 @@ tareasRouter.post(
   "/",
   requiereModulo("agenda"),
   ah<RequestConEmpresa>(async (req, res) => {
-    const { titulo, descripcion, fecha, hora, responsable_id, cliente_id, prioridad, paquete_id, sesiones_consumidas, trabajo_id, duracion_min } =
-      req.body ?? {};
+    const {
+      titulo,
+      descripcion,
+      fecha,
+      hora,
+      responsable_id,
+      cliente_id,
+      prioridad,
+      paquete_id,
+      sesiones_consumidas,
+      trabajo_id,
+      duracion_min,
+      servicio_id,
+      nota_cliente,
+      avisar_whatsapp,
+    } = req.body ?? {};
 
     if (typeof titulo !== "string" || !titulo.trim()) {
       res.status(400).json({ error: "Falta título" });
@@ -135,6 +154,10 @@ tareasRouter.post(
       res.status(400).json({ error: "trabajo_id inválido" });
       return;
     }
+    if (servicio_id && !(await servicioExiste(req.empresaId!, servicio_id))) {
+      res.status(400).json({ error: "servicio_id inválido" });
+      return;
+    }
     if (sesiones_consumidas !== undefined && sesiones_consumidas !== null && (!Number.isInteger(sesiones_consumidas) || sesiones_consumidas <= 0)) {
       res.status(400).json({ error: "sesiones_consumidas debe ser un entero mayor a 0" });
       return;
@@ -150,6 +173,9 @@ tareasRouter.post(
         fecha,
         hora: hora || null,
         duracion_min: duracion_min || null,
+        servicio_id: servicio_id || null,
+        nota_cliente: nota_cliente?.trim() || null,
+        avisar_whatsapp: avisar_whatsapp === undefined ? true : Boolean(avisar_whatsapp),
         responsable_id: responsableFinal || null,
         cliente_id: cliente_id || null,
         prioridad: prioridadFinal,
@@ -274,8 +300,23 @@ tareasRouter.patch(
       }
     }
 
-    const { titulo, descripcion, fecha, hora, responsable_id, cliente_id, prioridad, estado, paquete_id, sesiones_consumidas, trabajo_id, duracion_min } =
-      req.body ?? {};
+    const {
+      titulo,
+      descripcion,
+      fecha,
+      hora,
+      responsable_id,
+      cliente_id,
+      prioridad,
+      estado,
+      paquete_id,
+      sesiones_consumidas,
+      trabajo_id,
+      duracion_min,
+      servicio_id,
+      nota_cliente,
+      avisar_whatsapp,
+    } = req.body ?? {};
     const cambios: Partial<Tarea> = {};
 
     if (titulo !== undefined) {
@@ -307,6 +348,15 @@ tareasRouter.patch(
       }
       cambios.duracion_min = duracion_min;
     }
+    if (servicio_id !== undefined) {
+      if (servicio_id && !(await servicioExiste(req.empresaId!, servicio_id))) {
+        res.status(400).json({ error: "servicio_id inválido" });
+        return;
+      }
+      cambios.servicio_id = servicio_id || null;
+    }
+    if (nota_cliente !== undefined) cambios.nota_cliente = nota_cliente?.trim() || null;
+    if (avisar_whatsapp !== undefined) cambios.avisar_whatsapp = Boolean(avisar_whatsapp);
     if (responsable_id !== undefined) {
       if (responsable_id && !(await usuarioExiste(req.empresaId!, responsable_id))) {
         res.status(400).json({ error: "responsable_id inválido" });

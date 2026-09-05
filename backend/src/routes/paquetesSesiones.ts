@@ -59,16 +59,27 @@ paquetesSesionesRouter.post(
     // tipo_pack_id es solo trazabilidad (de qué plantilla del catálogo
     // salió) — nombre/cantidad_total siempre se copian, así que un tipo
     // inválido o de otra empresa simplemente se ignora en vez de bloquear
-    // la venta.
+    // la venta. servicio_id y vence_el también se copian del tipo acá —
+    // un pack "personalizado" (sin tipo) queda sin servicio ni
+    // vencimiento, no se puede auto-detectar en Nueva reserva.
     let tipoPackId: string | null = null;
+    let servicioId: string | null = null;
+    let venceEl: string | null = null;
+    const fechaCompraFinal = fecha_compra || new Date().toISOString().slice(0, 10);
     if (typeof tipo_pack_id === "string" && tipo_pack_id) {
       const { data: tipo } = await supabase
         .from("tipos_pack")
-        .select("id")
+        .select("id, servicio_id, vigencia_meses")
         .eq("id", tipo_pack_id)
         .eq("empresa_id", req.empresaId!)
         .maybeSingle();
-      if (tipo) tipoPackId = tipo.id;
+      if (tipo) {
+        tipoPackId = tipo.id;
+        servicioId = tipo.servicio_id;
+        const vence = new Date(`${fechaCompraFinal}T00:00:00`);
+        vence.setMonth(vence.getMonth() + tipo.vigencia_meses);
+        venceEl = vence.toISOString().slice(0, 10);
+      }
     }
 
     const { data, error } = await supabase
@@ -77,9 +88,11 @@ paquetesSesionesRouter.post(
         empresa_id: req.empresaId!,
         cliente_id,
         tipo_pack_id: tipoPackId,
+        servicio_id: servicioId,
+        vence_el: venceEl,
         nombre: nombre.trim(),
         cantidad_total,
-        fecha_compra: fecha_compra || new Date().toISOString().slice(0, 10),
+        fecha_compra: fechaCompraFinal,
         notas: notas?.trim() || null,
       })
       .select()

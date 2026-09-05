@@ -1,10 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import type { AgendaProConfig, AgendaProHorario, TipoPack } from "@bitacora/shared";
+import type { AgendaProConfig, AgendaProHorario, Servicio, TipoPack } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
-import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, SuccessText } from "@/components/ui";
-import { IconCalendar, IconCheck, IconLayers, IconPlus } from "@/components/icons";
+import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText } from "@/components/ui";
+import { IconCalendar, IconCheck, IconLayers, IconPlus, IconWrench } from "@/components/icons";
 import { EstadoCargando, EstadoVacio } from "@/components/estados";
 import { useConfiguracion } from "../ConfiguracionContext";
 
@@ -25,10 +25,174 @@ function formatoPrecio(precio: number | null) {
   return precio.toLocaleString("es-CL", { style: "currency", currency: "CLP", maximumFractionDigits: 0 });
 }
 
-// Catálogo reutilizable de "tipos de pack" (ver 84_tipos_pack.sql) — se
-// vende como plantilla al crear un paquete de sesiones a un cliente, tanto
-// desde Paquetes de sesiones (web) como desde Nueva cita (móvil).
-function TiposPackCard() {
+// Catálogo de servicios (ver 88_servicios_y_packs_con_vigencia.sql) —
+// nombre, precio de lista y duración sugerida. Se usa para precargar la
+// Nueva reserva y para atar un Tipo de pack a un servicio puntual.
+function ServiciosCard({ servicios, onCambio }: { servicios: Servicio[] | null; onCambio: () => void }) {
+  const [error, setError] = useState<string | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
+
+  const [editandoId, setEditandoId] = useState<string | null>(null);
+  const [nombre, setNombre] = useState("");
+  const [precio, setPrecio] = useState(0);
+  const [duracion, setDuracion] = useState(45);
+  const [guardando, setGuardando] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  function abrirNuevo() {
+    setEditandoId("nuevo");
+    setNombre("");
+    setPrecio(0);
+    setDuracion(45);
+    setFormError(null);
+  }
+
+  function abrirEdicion(s: Servicio) {
+    setEditandoId(s.id);
+    setNombre(s.nombre);
+    setPrecio(s.precio);
+    setDuracion(s.duracion_sugerida_min);
+    setFormError(null);
+  }
+
+  async function onSubmit(e: FormEvent) {
+    e.preventDefault();
+    setFormError(null);
+    if (!nombre.trim()) {
+      setFormError("Falta nombre");
+      return;
+    }
+    if (!Number.isInteger(duracion) || duracion <= 0) {
+      setFormError("La duración debe ser un entero mayor a 0");
+      return;
+    }
+    if (precio < 0) {
+      setFormError("Precio inválido");
+      return;
+    }
+    setGuardando(true);
+    const cuerpo = { nombre: nombre.trim(), precio, duracion_sugerida_min: duracion };
+    const res =
+      editandoId === "nuevo"
+        ? await apiFetch("/api/servicios", { method: "POST", body: JSON.stringify(cuerpo) })
+        : await apiFetch(`/api/servicios/${editandoId}`, { method: "PATCH", body: JSON.stringify(cuerpo) });
+    setGuardando(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setFormError(body.error ?? "No se pudo guardar");
+      return;
+    }
+    setEditandoId(null);
+    setAviso(editandoId === "nuevo" ? "Servicio creado." : "Servicio actualizado.");
+    onCambio();
+  }
+
+  async function alternarActivo(s: Servicio) {
+    setAviso(null);
+    const res = await apiFetch(`/api/servicios/${s.id}`, { method: "PATCH", body: JSON.stringify({ activo: !s.activo }) });
+    if (!res.ok) {
+      setError("No se pudo actualizar el estado");
+      return;
+    }
+    onCambio();
+  }
+
+  return (
+    <Card>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-sm font-semibold text-foreground">Servicios</h2>
+          <p className="text-sm text-muted">Lo que ofreces — precio de lista y duración sugerida para Nueva reserva.</p>
+        </div>
+        {editandoId === null && (
+          <Button type="button" variant="outline" onClick={abrirNuevo}>
+            <IconPlus className="h-4 w-4" />
+            Nuevo servicio
+          </Button>
+        )}
+      </div>
+
+      {editandoId !== null && (
+        <form onSubmit={onSubmit} className="mb-4 flex flex-col gap-4 rounded-lg border border-border p-3">
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div>
+              <Label>Nombre</Label>
+              <Input type="text" placeholder="Ej: Manicure" value={nombre} onChange={(e) => setNombre(e.target.value)} />
+            </div>
+            <div>
+              <Label>Precio de lista</Label>
+              <Input type="number" min={0} value={precio} onChange={(e) => setPrecio(Number(e.target.value) || 0)} />
+            </div>
+            <div>
+              <Label>Duración sugerida (min)</Label>
+              <Input type="number" min={5} value={duracion} onChange={(e) => setDuracion(Number(e.target.value) || 5)} />
+            </div>
+          </div>
+          {formError && <ErrorText>{formError}</ErrorText>}
+          <div className="flex gap-2">
+            <Button type="submit" disabled={guardando} className="self-start">
+              {guardando ? "Guardando…" : editandoId === "nuevo" ? "Crear" : "Guardar cambios"}
+            </Button>
+            <Button type="button" variant="ghost" onClick={() => setEditandoId(null)}>
+              Cancelar
+            </Button>
+          </div>
+        </form>
+      )}
+
+      {error && <ErrorText>{error}</ErrorText>}
+      {aviso && <SuccessText>{aviso}</SuccessText>}
+      {servicios === null && !error && <EstadoCargando />}
+      {servicios?.length === 0 && (
+        <EstadoVacio icono={IconWrench} titulo="Ningún servicio todavía" mensaje="Crea el primero para poder elegirlo en Nueva reserva." />
+      )}
+
+      {servicios && servicios.length > 0 && (
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
+                <th className="px-3 py-2 font-medium">Nombre</th>
+                <th className="px-3 py-2 font-medium">Precio</th>
+                <th className="px-3 py-2 font-medium">Duración sugerida</th>
+                <th className="px-3 py-2 font-medium">Estado</th>
+                <th className="px-3 py-2 font-medium"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {servicios.map((s) => (
+                <tr key={s.id} className="border-b border-border-soft last:border-0">
+                  <td className="px-3 py-2 font-medium text-foreground">{s.nombre}</td>
+                  <td className="px-3 py-2 text-muted">{formatoPrecio(s.precio)}</td>
+                  <td className="px-3 py-2 text-muted">{s.duracion_sugerida_min} min</td>
+                  <td className="px-3 py-2">
+                    <Badge value={s.activo ? "activo" : "inactivo"} />
+                  </td>
+                  <td className="px-3 py-2">
+                    <div className="flex justify-end gap-2">
+                      <Button type="button" variant="ghost" onClick={() => abrirEdicion(s)}>
+                        Editar
+                      </Button>
+                      <Button type="button" variant="ghost" onClick={() => alternarActivo(s)}>
+                        {s.activo ? "Descontinuar" : "Reactivar"}
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+// Catálogo reutilizable de "tipos de pack" (ver 84_tipos_pack.sql,
+// extendido en 88 con servicio_id/vigencia_meses) — se vende como
+// plantilla al crear un paquete de sesiones a un cliente, tanto desde
+// Paquetes de sesiones (web) como desde Nueva cita (móvil).
+function TiposPackCard({ servicios }: { servicios: Servicio[] | null }) {
   const [tipos, setTipos] = useState<TipoPack[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
@@ -37,6 +201,8 @@ function TiposPackCard() {
   const [nombre, setNombre] = useState("");
   const [cantidadSesiones, setCantidadSesiones] = useState(5);
   const [precio, setPrecio] = useState("");
+  const [servicioId, setServicioId] = useState("");
+  const [vigenciaMeses, setVigenciaMeses] = useState(6);
   const [guardando, setGuardando] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -58,6 +224,8 @@ function TiposPackCard() {
     setNombre("");
     setCantidadSesiones(5);
     setPrecio("");
+    setServicioId("");
+    setVigenciaMeses(6);
     setFormError(null);
   }
 
@@ -66,6 +234,8 @@ function TiposPackCard() {
     setNombre(t.nombre);
     setCantidadSesiones(t.cantidad_sesiones);
     setPrecio(t.precio !== null ? String(t.precio) : "");
+    setServicioId(t.servicio_id ?? "");
+    setVigenciaMeses(t.vigencia_meses);
     setFormError(null);
   }
 
@@ -85,8 +255,18 @@ function TiposPackCard() {
       setFormError("Precio inválido");
       return;
     }
+    if (!Number.isInteger(vigenciaMeses) || vigenciaMeses <= 0) {
+      setFormError("La vigencia debe ser un entero mayor a 0");
+      return;
+    }
     setGuardando(true);
-    const cuerpo = { nombre: nombre.trim(), cantidad_sesiones: cantidadSesiones, precio: precioNumero };
+    const cuerpo = {
+      nombre: nombre.trim(),
+      cantidad_sesiones: cantidadSesiones,
+      precio: precioNumero,
+      servicio_id: servicioId || null,
+      vigencia_meses: vigenciaMeses,
+    };
     const res =
       editandoId === "nuevo"
         ? await apiFetch("/api/tipos-pack", { method: "POST", body: JSON.stringify(cuerpo) })
@@ -111,6 +291,8 @@ function TiposPackCard() {
     }
     cargar();
   }
+
+  const nombreServicio = (id: string | null) => servicios?.find((s) => s.id === id)?.nombre ?? "—";
 
   return (
     <Card>
@@ -144,8 +326,23 @@ function TiposPackCard() {
               />
             </div>
             <div>
-              <Label>Precio (opcional)</Label>
+              <Label>Precio total (recomendado)</Label>
               <Input type="number" min={0} placeholder="45000" value={precio} onChange={(e) => setPrecio(e.target.value)} />
+            </div>
+            <div>
+              <Label>Servicio al que aplica (opcional)</Label>
+              <Select value={servicioId} onChange={(e) => setServicioId(e.target.value)}>
+                <option value="">Cualquier servicio</option>
+                {(servicios ?? []).map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.nombre}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div>
+              <Label>Vigencia (meses)</Label>
+              <Input type="number" min={1} value={vigenciaMeses} onChange={(e) => setVigenciaMeses(Number(e.target.value) || 1)} />
             </div>
           </div>
           {formError && <ErrorText>{formError}</ErrorText>}
@@ -175,6 +372,8 @@ function TiposPackCard() {
                 <th className="px-3 py-2 font-medium">Nombre</th>
                 <th className="px-3 py-2 font-medium">Sesiones</th>
                 <th className="px-3 py-2 font-medium">Precio</th>
+                <th className="px-3 py-2 font-medium">Servicio</th>
+                <th className="px-3 py-2 font-medium">Vigencia</th>
                 <th className="px-3 py-2 font-medium">Estado</th>
                 <th className="px-3 py-2 font-medium"></th>
               </tr>
@@ -185,6 +384,8 @@ function TiposPackCard() {
                   <td className="px-3 py-2 font-medium text-foreground">{t.nombre}</td>
                   <td className="px-3 py-2 text-foreground">{t.cantidad_sesiones}</td>
                   <td className="px-3 py-2 text-muted">{formatoPrecio(t.precio)}</td>
+                  <td className="px-3 py-2 text-muted">{nombreServicio(t.servicio_id)}</td>
+                  <td className="px-3 py-2 text-muted">{t.vigencia_meses} meses</td>
                   <td className="px-3 py-2">
                     <Badge value={t.activo ? "activo" : "inactivo"} />
                   </td>
@@ -212,10 +413,20 @@ export default function AgendaProConfigPage() {
   const { usuario } = useConfiguracion();
   const [config, setConfig] = useState<AgendaProConfig | null>(null);
   const [dias, setDias] = useState<Record<number, DiaEditable>>({});
+  const [servicios, setServicios] = useState<Servicio[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [copiado, setCopiado] = useState(false);
+
+  const cargarServicios = useCallback(async () => {
+    const res = await apiFetch("/api/servicios");
+    if (res.ok) setServicios(await res.json());
+  }, []);
+
+  useEffect(() => {
+    cargarServicios();
+  }, [cargarServicios]);
 
   const cargar = useCallback(async () => {
     setError(null);
@@ -364,7 +575,9 @@ export default function AgendaProConfigPage() {
         </div>
       </Card>
 
-      <TiposPackCard />
+      <ServiciosCard servicios={servicios} onCambio={cargarServicios} />
+
+      <TiposPackCard servicios={servicios} />
 
       <Card>
         <h2 className="mb-4 text-sm font-semibold text-foreground">Reglas de la reserva</h2>

@@ -12,6 +12,11 @@ export const tiposPackRouter = Router();
 
 tiposPackRouter.use(requiereModulo("agenda_pro"));
 
+async function servicioExiste(empresaId: string, servicioId: string) {
+  const { data } = await supabase.from("servicios").select("id").eq("empresa_id", empresaId).eq("id", servicioId).maybeSingle();
+  return Boolean(data);
+}
+
 tiposPackRouter.get(
   "/",
   ah<RequestConEmpresa>(async (req, res) => {
@@ -32,7 +37,7 @@ tiposPackRouter.get(
 tiposPackRouter.post(
   "/",
   ah<RequestConEmpresa>(async (req, res) => {
-    const { nombre, cantidad_sesiones, precio } = req.body ?? {};
+    const { nombre, cantidad_sesiones, precio, servicio_id, vigencia_meses } = req.body ?? {};
 
     if (typeof nombre !== "string" || !nombre.trim()) {
       res.status(400).json({ error: "Falta nombre" });
@@ -46,6 +51,15 @@ tiposPackRouter.post(
       res.status(400).json({ error: "precio inválido" });
       return;
     }
+    if (servicio_id !== null && servicio_id !== undefined && !(await servicioExiste(req.empresaId!, servicio_id))) {
+      res.status(400).json({ error: "servicio_id inválido" });
+      return;
+    }
+    const vigenciaFinal = vigencia_meses !== undefined && vigencia_meses !== null ? vigencia_meses : 6;
+    if (!Number.isInteger(vigenciaFinal) || vigenciaFinal <= 0) {
+      res.status(400).json({ error: "vigencia_meses debe ser un entero mayor a 0" });
+      return;
+    }
 
     const { data, error } = await supabase
       .from("tipos_pack")
@@ -54,6 +68,8 @@ tiposPackRouter.post(
         nombre: nombre.trim(),
         cantidad_sesiones,
         precio: precio ?? null,
+        servicio_id: servicio_id || null,
+        vigencia_meses: vigenciaFinal,
       })
       .select()
       .single();
@@ -69,7 +85,7 @@ tiposPackRouter.post(
 tiposPackRouter.patch(
   "/:id",
   ah<RequestConEmpresa>(async (req, res) => {
-    const { nombre, cantidad_sesiones, precio, activo } = req.body ?? {};
+    const { nombre, cantidad_sesiones, precio, activo, servicio_id, vigencia_meses } = req.body ?? {};
     const cambios: Partial<TipoPack> = {};
 
     if (nombre !== undefined) {
@@ -94,6 +110,20 @@ tiposPackRouter.patch(
       cambios.precio = precio;
     }
     if (activo !== undefined) cambios.activo = Boolean(activo);
+    if (servicio_id !== undefined) {
+      if (servicio_id !== null && !(await servicioExiste(req.empresaId!, servicio_id))) {
+        res.status(400).json({ error: "servicio_id inválido" });
+        return;
+      }
+      cambios.servicio_id = servicio_id || null;
+    }
+    if (vigencia_meses !== undefined) {
+      if (!Number.isInteger(vigencia_meses) || vigencia_meses <= 0) {
+        res.status(400).json({ error: "vigencia_meses debe ser un entero mayor a 0" });
+        return;
+      }
+      cambios.vigencia_meses = vigencia_meses;
+    }
 
     const { data, error } = await supabase
       .from("tipos_pack")
