@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import type { EstadoEmpresa, Plan, Suscripcion, SuscripcionCobro } from "@bitacora/shared";
+import type { EstadoEmpresa, Plan, Rubro, Suscripcion, SuscripcionCobro } from "@bitacora/shared";
 import { SuperAdminShell } from "@/components/SuperAdminShell";
 import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText, Textarea } from "@/components/ui";
 import { IconChevronLeft, IconShield } from "@/components/icons";
@@ -13,9 +13,15 @@ import { ETIQUETA_MODULO } from "@/lib/etiquetasModulo";
 
 const ESTADOS: EstadoEmpresa[] = ["activa", "suspendida", "dada_de_baja"];
 const PLANES: Plan[] = ["trial", "basico", "pro"];
+const RUBROS: { value: Rubro; label: string }[] = [
+  { value: "transporte", label: "Transporte" },
+  { value: "servicio_tecnico", label: "Servicio técnico / mantención" },
+  { value: "cosmetologia", label: "Cosmetología / belleza" },
+  { value: "otro", label: "Otro" },
+];
 
 type Salud = {
-  empresa: { id: string; nombre: string; estado: EstadoEmpresa; plan: Plan; rut: string | null; dada_de_baja_en: string | null };
+  empresa: { id: string; nombre: string; estado: EstadoEmpresa; plan: Plan; rut: string | null; rubro: Rubro; dada_de_baja_en: string | null };
   ultima_actividad: string | null;
   usuarios_activos_mes: number;
   os_creadas_mes: number;
@@ -63,6 +69,7 @@ export default function SuperAdminSaludEmpresaPage() {
   const [editandoIdentidad, setEditandoIdentidad] = useState(false);
   const [nombreEdit, setNombreEdit] = useState("");
   const [rutEdit, setRutEdit] = useState("");
+  const [rubroEdit, setRubroEdit] = useState<Rubro>("otro");
   const [guardandoIdentidad, setGuardandoIdentidad] = useState(false);
   const [errorIdentidad, setErrorIdentidad] = useState<string | null>(null);
 
@@ -156,6 +163,7 @@ export default function SuperAdminSaludEmpresaPage() {
     setPlanSeleccionado(datos.empresa.plan);
     setNombreEdit(datos.empresa.nombre);
     setRutEdit(datos.empresa.rut ?? "");
+    setRubroEdit(datos.empresa.rubro);
   }
 
   async function cargarModulos() {
@@ -534,7 +542,7 @@ export default function SuperAdminSaludEmpresaPage() {
     setGuardandoIdentidad(true);
     const res = await superadminFetch(`/api/superadmin/empresas/${params.id}`, {
       method: "PATCH",
-      body: JSON.stringify({ nombre: nombreEdit, rut: rutEdit.trim() || null }),
+      body: JSON.stringify({ nombre: nombreEdit, rut: rutEdit.trim() || null, rubro: rubroEdit }),
     });
     setGuardandoIdentidad(false);
     if (!res.ok) {
@@ -634,7 +642,7 @@ export default function SuperAdminSaludEmpresaPage() {
                 <Badge value={salud.empresa.estado} />
                 {!editandoIdentidad && (
                   <Button type="button" variant="outline" onClick={() => setEditandoIdentidad(true)}>
-                    Editar nombre/RUT
+                    Editar identidad
                   </Button>
                 )}
               </div>
@@ -643,7 +651,7 @@ export default function SuperAdminSaludEmpresaPage() {
 
           {editandoIdentidad && (
             <Card className="my-6 border-brand/40">
-              <h2 className="mb-3 text-sm font-semibold text-foreground">Editar nombre y RUT</h2>
+              <h2 className="mb-3 text-sm font-semibold text-foreground">Editar identidad</h2>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <Label>Nombre de la empresa</Label>
@@ -652,6 +660,19 @@ export default function SuperAdminSaludEmpresaPage() {
                 <div>
                   <Label>RUT</Label>
                   <Input type="text" placeholder="76.123.456-7" value={rutEdit} onChange={(e) => setRutEdit(e.target.value)} />
+                </div>
+                <div>
+                  <Label>Rubro</Label>
+                  <Select value={rubroEdit} onChange={(e) => setRubroEdit(e.target.value as Rubro)}>
+                    {RUBROS.map((r) => (
+                      <option key={r.value} value={r.value}>
+                        {r.label}
+                      </option>
+                    ))}
+                  </Select>
+                  <p className="mt-1 text-xs text-muted">
+                    Cosmetología activa el tema visual "Vino y eucalipto" en la app móvil (pantallas de reserva).
+                  </p>
                 </div>
               </div>
               {errorIdentidad && (

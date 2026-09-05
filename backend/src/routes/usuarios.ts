@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { Router } from "express";
 import multer from "multer";
 import type { FuncionColaborador, Rol, Usuario } from "@bitacora/shared";
@@ -231,6 +232,56 @@ usuariosRouter.patch(
     }
 
     res.json(data);
+  })
+);
+
+// Gestión y Control: el admin de la empresa restablece la contraseña de
+// un miembro del equipo (para cuando un colaborador la perdió y no puede
+// usar el "olvidé mi contraseña"). Genera una temporal y la devuelve una
+// sola vez — no se guarda ni se manda por correo, el admin se la pasa a
+// mano. Mismo mecanismo que el reset del Super-Admin (superadmin/routes.ts).
+// No se puede sobre uno mismo ni sobre otro admin.
+usuariosRouter.post(
+  "/:id/restablecer-password",
+  requiereModulo("gestion_control"),
+  ah<RequestConEmpresa>(async (req, res) => {
+    if (req.params.id === req.userId) {
+      res.status(400).json({ error: "Para tu propia contraseña usa la opción de recuperación desde el login" });
+      return;
+    }
+
+    const { data: usuario } = await supabase
+      .from("usuarios")
+      .select("id, nombre, rol")
+      .eq("empresa_id", req.empresaId!)
+      .eq("id", req.params.id)
+      .maybeSingle();
+    if (!usuario) {
+      res.status(404).json({ error: "Usuario no encontrado" });
+      return;
+    }
+    if (usuario.rol === "admin") {
+      res.status(403).json({ error: "No puedes restablecer la contraseña de otro administrador" });
+      return;
+    }
+
+    const passwordTemporal = crypto.randomBytes(9).toString("base64url");
+    const { error } = await supabase.auth.admin.updateUserById(usuario.id, { password: passwordTemporal });
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+
+    await supabase.from("auditoria_usuarios").insert({
+      empresa_id: req.empresaId!,
+      usuario_afectado_id: usuario.id,
+      realizado_por_id: req.userId!,
+      campo: "clave",
+      valor_anterior: null,
+      valor_nuevo: "restablecida",
+    });
+
+    res.json({ password: passwordTemporal });
   })
 );
 

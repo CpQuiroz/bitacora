@@ -29,7 +29,7 @@ type AuditoriaFila = AuditoriaUsuario & {
   realizado_por: { nombre: string } | null;
 };
 
-const CAMPO_LABEL: Record<string, string> = { rol: "Rol", activo: "Estado" };
+const CAMPO_LABEL: Record<string, string> = { rol: "Rol", activo: "Estado", clave: "Contraseña" };
 
 function formatCampoValor(campo: string, valor: string | null) {
   if (valor === null) return "—";
@@ -62,6 +62,8 @@ export default function EquipoPage() {
   const [editActivo, setEditActivo] = useState(true);
   const [editError, setEditError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
+  const [reseteandoId, setReseteandoId] = useState<string | null>(null);
+  const [passwordGenerada, setPasswordGenerada] = useState<{ usuarioId: string; nombre: string; password: string } | null>(null);
 
   const [accesos, setAccesos] = useState<
     { id: string; tipo: "correo" | "dominio"; valor: string; rol: string; creado_en: string }[] | null
@@ -177,6 +179,22 @@ export default function EquipoPage() {
     setEditRol(u.rol);
     setEditActivo(u.activo);
     setEditError(null);
+  }
+
+  async function onRestablecerPassword(u: Usuario) {
+    if (!confirm(`¿Generar una contraseña nueva para ${u.nombre}? La actual deja de funcionar de inmediato.`)) return;
+    setReseteandoId(u.id);
+    setEditError(null);
+    const res = await apiFetch(`/api/usuarios/${u.id}/restablecer-password`, { method: "POST" });
+    setReseteandoId(null);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setEditError(body.error ?? "No se pudo restablecer la contraseña");
+      return;
+    }
+    const body = await res.json();
+    setPasswordGenerada({ usuarioId: u.id, nombre: u.nombre, password: body.password });
+    setEditandoId(null);
   }
 
   async function guardarEdicion(u: Usuario) {
@@ -347,6 +365,25 @@ export default function EquipoPage() {
       {usuarios?.length === 0 && (
         <EstadoVacio icono={IconUsers} titulo="Todavía no hay nadie en el equipo" />
       )}
+      {passwordGenerada && (
+        <Card className="mb-4 border-brand/40 bg-brand-soft/20">
+          <h2 className="text-sm font-semibold text-foreground">Contraseña nueva de {passwordGenerada.nombre}</h2>
+          <p className="mt-1 text-xs text-muted">
+            Pásasela a mano — no se guarda ni se envía por correo, y no vas a poder volver a verla. La contraseña anterior ya no
+            funciona.
+          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <code className="rounded-md bg-surface px-3 py-2 font-mono text-sm text-foreground">{passwordGenerada.password}</code>
+            <Button type="button" variant="outline" onClick={() => navigator.clipboard.writeText(passwordGenerada.password)}>
+              Copiar
+            </Button>
+            <Button type="button" variant="ghost" onClick={() => setPasswordGenerada(null)}>
+              Listo
+            </Button>
+          </div>
+        </Card>
+      )}
+
       {usuarios && usuarios.length > 0 && (
         <Card className="overflow-x-auto p-0">
           <table className="w-full text-left text-sm">
@@ -386,13 +423,24 @@ export default function EquipoPage() {
                     </td>
                     <td className="px-5 py-3">
                       <div className="flex flex-col items-end gap-1.5">
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap justify-end gap-2">
                           <Button type="button" onClick={() => guardarEdicion(u)} disabled={guardando} className="px-3 py-1.5 text-xs">
                             {guardando ? "Guardando…" : "Guardar"}
                           </Button>
                           <Button type="button" variant="outline" onClick={() => setEditandoId(null)} className="px-3 py-1.5 text-xs">
                             Cancelar
                           </Button>
+                          {u.rol !== "admin" && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => onRestablecerPassword(u)}
+                              disabled={reseteandoId === u.id}
+                              className="px-3 py-1.5 text-xs"
+                            >
+                              {reseteandoId === u.id ? "Generando…" : "Restablecer contraseña"}
+                            </Button>
+                          )}
                         </div>
                         {editError && <span className="text-xs text-danger">{editError}</span>}
                       </div>

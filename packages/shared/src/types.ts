@@ -373,7 +373,7 @@ export type AuditoriaUsuario = {
   empresa_id: string;
   usuario_afectado_id: string;
   realizado_por_id: string | null;
-  campo: "rol" | "activo";
+  campo: "rol" | "activo" | "clave";
   valor_anterior: string | null;
   valor_nuevo: string | null;
   creado_en: string;

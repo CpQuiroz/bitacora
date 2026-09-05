@@ -387,8 +387,8 @@ superadminRouter.patch(
   "/empresas/:id",
   requiereSuperAdmin,
   ah<RequestConSuperAdmin>(async (req, res) => {
-    const { nombre, rut } = req.body ?? {};
-    const cambios: { nombre?: string; rut?: string | null } = {};
+    const { nombre, rut, rubro } = req.body ?? {};
+    const cambios: { nombre?: string; rut?: string | null; rubro?: Rubro } = {};
 
     if (nombre !== undefined) {
       if (typeof nombre !== "string" || !nombre.trim()) {
@@ -408,18 +408,25 @@ superadminRouter.patch(
         cambios.rut = formatearRut(rut);
       }
     }
+    if (rubro !== undefined) {
+      if (typeof rubro !== "string" || !RUBROS.includes(rubro as Rubro)) {
+        res.status(400).json({ error: `rubro debe ser uno de: ${RUBROS.join(", ")}` });
+        return;
+      }
+      cambios.rubro = rubro as Rubro;
+    }
     if (Object.keys(cambios).length === 0) {
       res.status(400).json({ error: "Nada que actualizar" });
       return;
     }
 
-    const { data: actual } = await supabase.from("empresas").select("nombre, rut").eq("id", req.params.id).maybeSingle();
+    const { data: actual } = await supabase.from("empresas").select("nombre, rut, rubro").eq("id", req.params.id).maybeSingle();
     if (!actual) {
       res.status(404).json({ error: "Empresa no encontrada" });
       return;
     }
 
-    const { data, error } = await supabase.from("empresas").update(cambios).eq("id", req.params.id).select("id, nombre, rut").single();
+    const { data, error } = await supabase.from("empresas").update(cambios).eq("id", req.params.id).select("id, nombre, rut, rubro").single();
     if (error) {
       res.status(500).json({ error: error.message });
       return;
@@ -428,7 +435,7 @@ superadminRouter.patch(
     await registrarAuditoria(req.superAdminId!, "editar_empresa", {
       empresaId: req.params.id,
       ip: req.ip ?? null,
-      detalle: `${actual.nombre} → nombre: ${data.nombre}, rut: ${data.rut ?? "—"}`,
+      detalle: `${actual.nombre} → nombre: ${data.nombre}, rut: ${data.rut ?? "—"}, rubro: ${data.rubro}`,
     });
 
     res.json(data);
@@ -972,7 +979,7 @@ superadminRouter.get(
   requiereSuperAdmin,
   ah<RequestConSuperAdmin>(async (req, res) => {
     const empresaId = req.params.id;
-    const { data: empresa } = await supabase.from("empresas").select("id, nombre, estado, plan, rut, dada_de_baja_en").eq("id", empresaId).maybeSingle();
+    const { data: empresa } = await supabase.from("empresas").select("id, nombre, estado, plan, rut, rubro, dada_de_baja_en").eq("id", empresaId).maybeSingle();
     if (!empresa) {
       res.status(404).json({ error: "Empresa no encontrada" });
       return;
