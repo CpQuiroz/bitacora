@@ -34,6 +34,7 @@ export type ClientesStackParamList = {
 // listas del día viven en "Hoy"; acá se entra al histórico.
 export type MasStackParamList = {
   MasInicio: undefined;
+  Catalogo: undefined;
   CobrosLista: undefined;
   CobroForm: undefined;
   CobroDetalle: { cobroId: string };

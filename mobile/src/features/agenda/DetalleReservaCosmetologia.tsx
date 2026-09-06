@@ -154,6 +154,23 @@ export function DetalleReservaCosmetologia({
           ) : null}
         </View>
 
+        {/* Adicionales */}
+        {tarea.adicionales && tarea.adicionales.length > 0 ? (
+          <View style={{ gap: t.espacio(1.5), borderTopWidth: 1, borderTopColor: t.colores.border, paddingTop: t.espacio(3) }}>
+            <Text variante="etiqueta" tono="muted">
+              Adicionales
+            </Text>
+            {tarea.adicionales.map((a, i) => (
+              <View key={i} style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                <Text variante="cuerpo">{a.concepto}</Text>
+                <Text variante="cuerpo" weight="semibold">
+                  {formatearMoneda(a.monto)}
+                </Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
+
         {/* Atiende */}
         <View style={{ gap: t.espacio(1) }}>
           <Text variante="etiqueta" tono="muted">

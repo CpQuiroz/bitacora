@@ -9,6 +9,7 @@ import { NuevoGastoScreen } from "../../features/gastos/NuevoGastoScreen";
 import { InformesScreen } from "../../features/informes/InformesScreen";
 import { AsistenteScreen } from "../../features/asistente/AsistenteScreen";
 import { PerfilScreen } from "../../features/perfil/PerfilScreen";
+import { CatalogoScreen } from "../../features/agenda/CatalogoScreen";
 import { TrabajosStack } from "./TrabajosStack";
 import { ViajesStack } from "./ViajesStack";
 
@@ -27,6 +28,7 @@ export function MasStack() {
       }}
     >
       <Stack.Screen name="MasInicio" component={MasScreen} options={{ title: "Más" }} />
+      <Stack.Screen name="Catalogo" component={CatalogoScreen} options={{ title: "Servicios y packs" }} />
       <Stack.Screen name="CobrosLista" component={CobrosListaScreen} options={{ title: "Cobros" }} />
       <Stack.Screen name="CobroForm" component={CobroFormScreen} options={{ title: "Nuevo cobro", presentation: "modal" }} />
       <Stack.Screen name="CobroDetalle" component={CobroDetalleScreen} options={{ title: "Cobro" }} />

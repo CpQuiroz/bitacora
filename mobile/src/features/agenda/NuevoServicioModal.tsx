@@ -4,47 +4,58 @@ import { Ionicons } from "@expo/vector-icons";
 import type { Servicio } from "@bitacora/shared";
 import { useTema } from "../../theme";
 import { Button, Input, Text } from "../../components/ui";
-import { crearServicio } from "../../services/servicios";
+import { crearServicio, editarServicio } from "../../services/servicios";
 
 const DURACIONES = [30, 45, 60, 90];
 
 /**
- * Alta rápida de un servicio del catálogo (Agenda Pro) desde "Nueva
- * reserva" — para no tener que ir a la web cuando falta uno. El resto
- * del catálogo (editar, desactivar) sigue viviendo en la web.
+ * Alta y edición de un servicio del catálogo (Agenda Pro). Con `servicio`
+ * abre en modo edición (precio, nombre, duración, activo); sin él, crea
+ * uno nuevo.
  */
 export function NuevoServicioModal({
   visible,
+  servicio,
   nombreInicial = "",
   onCerrar,
-  onCreado,
+  onGuardado,
 }: {
   visible: boolean;
+  servicio?: Servicio | null;
   nombreInicial?: string;
   onCerrar: () => void;
-  onCreado: (s: Servicio) => void;
+  onGuardado: (s: Servicio) => void;
 }) {
   const t = useTema();
-  const [nombre, setNombre] = useState(nombreInicial);
-  const [precio, setPrecio] = useState("");
-  const [duracion, setDuracion] = useState(45);
+  const editando = Boolean(servicio);
+  // El padre monta el modal con key={servicio?.id ?? "nuevo"}, así que
+  // estos valores iniciales se toman de cero cada vez que cambia el
+  // servicio a editar.
+  const [nombre, setNombre] = useState(servicio?.nombre ?? nombreInicial);
+  const [precio, setPrecio] = useState(servicio ? String(servicio.precio) : "");
+  const [duracion, setDuracion] = useState(servicio?.duracion_sugerida_min ?? 45);
+  const [activo, setActivo] = useState(servicio?.activo ?? true);
   const [guardando, setGuardando] = useState(false);
 
-  async function crear() {
+  async function guardar() {
     const nombreLimpio = nombre.trim();
     if (!nombreLimpio) return Alert.alert("Falta el nombre", "Ponle un nombre al servicio.");
     const precioNum = Number(precio.replace(/\D/g, "")) || 0;
     if (!Number.isInteger(duracion) || duracion <= 0) return Alert.alert("Duración inválida", "Elige una duración mayor a 0.");
 
     setGuardando(true);
-    const r = await crearServicio({ nombre: nombreLimpio, precio: precioNum, duracion_sugerida_min: duracion });
+    const r = servicio
+      ? await editarServicio(servicio.id, { nombre: nombreLimpio, precio: precioNum, duracion_sugerida_min: duracion, activo })
+      : await crearServicio({ nombre: nombreLimpio, precio: precioNum, duracion_sugerida_min: duracion });
     setGuardando(false);
-    if (!r.ok) return Alert.alert("No se pudo crear", r.error);
+    if (!r.ok) return Alert.alert("No se pudo guardar", r.error);
 
-    onCreado(r.servicio);
-    setNombre("");
-    setPrecio("");
-    setDuracion(45);
+    onGuardado(r.servicio);
+    if (!editando) {
+      setNombre("");
+      setPrecio("");
+      setDuracion(45);
+    }
   }
 
   return (
@@ -66,12 +77,12 @@ export function NuevoServicioModal({
             <Ionicons name="close" size={24} color={t.colores.foreground} />
           </Pressable>
           <Text variante="subtitulo" style={{ flex: 1 }}>
-            Nuevo servicio
+            {editando ? "Editar servicio" : "Nuevo servicio"}
           </Text>
         </View>
 
         <ScrollView contentContainerStyle={{ padding: t.espacio(5), gap: t.espacio(4) }} keyboardShouldPersistTaps="handled">
-          <Input etiqueta="Nombre" placeholder="Ej: Limpieza facial" value={nombre} onChangeText={setNombre} autoFocus />
+          <Input etiqueta="Nombre" placeholder="Ej: Limpieza facial" value={nombre} onChangeText={setNombre} autoFocus={!editando} />
           <Input
             etiqueta="Precio de lista"
             keyboardType="numeric"
@@ -85,7 +96,7 @@ export function NuevoServicioModal({
             </Text>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: t.espacio(2) }}>
               {DURACIONES.map((min) => {
-                const activo = duracion === min;
+                const on = duracion === min;
                 return (
                   <Pressable
                     key={min}
@@ -95,12 +106,12 @@ export function NuevoServicioModal({
                       justifyContent: "center",
                       paddingHorizontal: t.espacio(3.5),
                       borderRadius: t.radio.md,
-                      backgroundColor: activo ? t.colores.brand : t.colores.surface,
+                      backgroundColor: on ? t.colores.brand : t.colores.surface,
                       borderWidth: 1,
-                      borderColor: activo ? t.colores.brand : t.colores.border,
+                      borderColor: on ? t.colores.brand : t.colores.border,
                     }}
                   >
-                    <Text variante="etiqueta" weight="semibold" tono={activo ? "inverso" : "normal"}>
+                    <Text variante="etiqueta" weight="semibold" tono={on ? "inverso" : "normal"}>
                       {min} min
                     </Text>
                   </Pressable>
@@ -108,10 +119,32 @@ export function NuevoServicioModal({
               })}
             </View>
           </View>
-          <Text variante="caption" tono="muted">
-            Podés ajustar el precio y la duración de esta reserva puntual después. El resto del catálogo se edita desde la web.
-          </Text>
-          <Button titulo="Crear y elegir" tamano="lg" onPress={crear} cargando={guardando} />
+
+          {editando ? (
+            <Pressable
+              onPress={() => setActivo((v) => !v)}
+              style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 44 }}
+            >
+              <View style={{ flex: 1 }}>
+                <Text variante="cuerpo">Activo</Text>
+                <Text variante="caption" tono="muted">
+                  Un servicio inactivo no aparece al crear una reserva.
+                </Text>
+              </View>
+              <Ionicons name={activo ? "toggle" : "toggle-outline"} size={34} color={activo ? t.colores.brand : t.colores.muted} />
+            </Pressable>
+          ) : (
+            <Text variante="caption" tono="muted">
+              Podés ajustar el precio y la duración de esta reserva puntual después.
+            </Text>
+          )}
+
+          <Button
+            titulo={editando ? "Guardar" : "Crear y elegir"}
+            tamano="lg"
+            onPress={guardar}
+            cargando={guardando}
+          />
         </ScrollView>
       </View>
     </Modal>

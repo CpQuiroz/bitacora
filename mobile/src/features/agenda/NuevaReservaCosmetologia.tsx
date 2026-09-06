@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Alert, Pressable, ScrollView, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { Cliente, PaqueteSesionesConSaldo, Servicio, Usuario } from "@bitacora/shared";
 import { useTema } from "../../theme";
@@ -84,6 +85,8 @@ export function NuevaReservaCosmetologia({ navigation, route }: NativeStackScree
   const [avisarWhatsapp, setAvisarWhatsapp] = useState(true);
   const [notaCliente, setNotaCliente] = useState("");
   const [notaInterna, setNotaInterna] = useState("");
+  // "Valor agregado": extras que se suman al precio del servicio.
+  const [adicionales, setAdicionales] = useState<{ concepto: string; monto: string }[]>([]);
 
   useEffect(() => {
     navigation.setOptions({ title: "Nueva reserva" });
@@ -143,6 +146,9 @@ export function NuevaReservaCosmetologia({ navigation, route }: NativeStackScree
     if (!enLinea) return Alert.alert("Sin conexión", "Necesitas conexión para agendar.");
 
     const nombreServicio = servicioElegido?.nombre ?? "Reserva";
+    const adicionalesLimpios = adicionales
+      .map((a) => ({ concepto: a.concepto.trim(), monto: Number(a.monto.replace(/\D/g, "")) || 0 }))
+      .filter((a) => a.concepto && a.monto > 0);
     const borrador: BorradorCita = {
       titulo: nombreServicio,
       fecha,
@@ -158,6 +164,7 @@ export function NuevaReservaCosmetologia({ navigation, route }: NativeStackScree
       nota_cliente: notaCliente,
       avisar_whatsapp: avisarWhatsapp,
       precio,
+      adicionales: adicionalesLimpios,
     };
 
     setGuardando(true);
@@ -180,9 +187,11 @@ export function NuevaReservaCosmetologia({ navigation, route }: NativeStackScree
   const responsableNombre = equipo.find((u) => u.id === responsableId)?.nombre ?? "sin asignar";
   const horaFin = hora ? sumarMinutos(hora, duracionMin) : null;
   const d = new Date(`${fecha}T00:00:00`);
+  const totalAdicionales = adicionales.reduce((s, a) => s + (Number(a.monto.replace(/\D/g, "")) || 0), 0);
+  const totalReserva = (Number(precio.replace(/\D/g, "")) || 0) + totalAdicionales;
   const resumen = `${DIAS_CORTOS[d.getDay()]} ${d.getDate()} · ${hora ? `${hora}–${horaFin}` : "sin hora"} · ${responsableNombre}${
     paqueteDetectado ? ` · descuenta 1 de ${paqueteDetectado.saldo}` : ""
-  }`;
+  }${totalReserva > 0 ? ` · total ${formatearMoneda(totalReserva)}` : ""}`;
 
   return (
     <View style={{ flex: 1, backgroundColor: t.colores.bg }}>
@@ -300,12 +309,64 @@ export function NuevaReservaCosmetologia({ navigation, route }: NativeStackScree
 
         {/* Precio */}
         <Input
-          etiqueta="Precio"
+          etiqueta="Precio del servicio"
           keyboardType="numeric"
           placeholder="0"
           value={precio}
           onChangeText={(v) => setPrecio(v.replace(/\D/g, ""))}
         />
+        <Filete />
+
+        {/* Adicionales — "valor agregado" */}
+        <View style={{ gap: t.espacio(2) }}>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <Text variante="etiqueta" tono="muted">
+              Adicionales
+            </Text>
+            <Pressable onPress={() => setAdicionales((prev) => [...prev, { concepto: "", monto: "" }])} hitSlop={8}>
+              <Text variante="caption" weight="semibold" tono="brand">
+                ＋ Agregar
+              </Text>
+            </Pressable>
+          </View>
+          {adicionales.length === 0 ? (
+            <Text variante="caption" tono="muted">
+              Productos o extras que se cobran encima del servicio.
+            </Text>
+          ) : (
+            adicionales.map((a, i) => (
+              <View key={i} style={{ flexDirection: "row", gap: t.espacio(2), alignItems: "center" }}>
+                <View style={{ flex: 2 }}>
+                  <Input
+                    placeholder="Concepto"
+                    value={a.concepto}
+                    onChangeText={(v) =>
+                      setAdicionales((prev) => prev.map((x, j) => (j === i ? { ...x, concepto: v } : x)))
+                    }
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Input
+                    placeholder="0"
+                    keyboardType="numeric"
+                    value={a.monto}
+                    onChangeText={(v) =>
+                      setAdicionales((prev) => prev.map((x, j) => (j === i ? { ...x, monto: v.replace(/\D/g, "") } : x)))
+                    }
+                  />
+                </View>
+                <Pressable onPress={() => setAdicionales((prev) => prev.filter((_, j) => j !== i))} hitSlop={8}>
+                  <Ionicons name="close-circle" size={22} color={t.colores.muted} />
+                </Pressable>
+              </View>
+            ))
+          )}
+          {totalAdicionales > 0 ? (
+            <Text variante="caption" tono="muted">
+              Total reserva: {formatearMoneda(totalReserva)} (servicio {formatearMoneda(Number(precio.replace(/\D/g, "")) || 0)} + adicionales {formatearMoneda(totalAdicionales)})
+            </Text>
+          ) : null}
+        </View>
         <Filete />
 
         {/* Estado inicial */}
@@ -374,7 +435,7 @@ export function NuevaReservaCosmetologia({ navigation, route }: NativeStackScree
       <NuevoServicioModal
         visible={nuevoServicioAbierto}
         onCerrar={() => setNuevoServicioAbierto(false)}
-        onCreado={(s) => {
+        onGuardado={(s) => {
           setServicios((prev) => [...(prev ?? []), s].sort((a, b) => a.nombre.localeCompare(b.nombre)));
           setServicioId(s.id);
           setDuracionMin(s.duracion_sugerida_min);

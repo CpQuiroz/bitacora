@@ -39,6 +39,22 @@ async function servicioExiste(empresaId: string, servicioId: string) {
   return Boolean(data);
 }
 
+// Adicionales de una reserva (migración 94): lista [{ concepto, monto }].
+// Devuelve la lista saneada, o `null` si el formato es inválido.
+function sanearAdicionales(v: unknown): { concepto: string; monto: number }[] | null {
+  if (v === undefined || v === null) return [];
+  if (!Array.isArray(v) || v.length > 20) return null;
+  const out: { concepto: string; monto: number }[] = [];
+  for (const item of v) {
+    if (!item || typeof item !== "object") return null;
+    const { concepto, monto } = item as { concepto?: unknown; monto?: unknown };
+    if (typeof concepto !== "string" || !concepto.trim()) return null;
+    if (typeof monto !== "number" || !Number.isFinite(monto) || monto < 0) return null;
+    out.push({ concepto: concepto.trim().slice(0, 120), monto });
+  }
+  return out;
+}
+
 tareasRouter.get(
   "/",
   ah<RequestConEmpresa>(async (req, res) => {
@@ -140,6 +156,11 @@ tareasRouter.post(
       res.status(400).json({ error: "precio inválido" });
       return;
     }
+    const adicionales = sanearAdicionales(req.body?.adicionales);
+    if (adicionales === null) {
+      res.status(400).json({ error: "adicionales inválidos" });
+      return;
+    }
     // Un colaborador (típicamente desde la app) solo agenda para sí
     // mismo — no asigna citas a otra gente del equipo.
     const responsableFinal = req.rol === "colaborador" ? req.userId! : responsable_id;
@@ -182,6 +203,7 @@ tareasRouter.post(
         nota_cliente: nota_cliente?.trim() || null,
         avisar_whatsapp: avisar_whatsapp === undefined ? true : Boolean(avisar_whatsapp),
         precio: precio ?? null,
+        adicionales,
         responsable_id: responsableFinal || null,
         cliente_id: cliente_id || null,
         prioridad: prioridadFinal,
@@ -364,6 +386,14 @@ tareasRouter.patch(
     }
     if (nota_cliente !== undefined) cambios.nota_cliente = nota_cliente?.trim() || null;
     if (avisar_whatsapp !== undefined) cambios.avisar_whatsapp = Boolean(avisar_whatsapp);
+    if (req.body?.adicionales !== undefined) {
+      const saneados = sanearAdicionales(req.body.adicionales);
+      if (saneados === null) {
+        res.status(400).json({ error: "adicionales inválidos" });
+        return;
+      }
+      cambios.adicionales = saneados;
+    }
     if (precio !== undefined) {
       if (precio !== null && (typeof precio !== "number" || precio < 0)) {
         res.status(400).json({ error: "precio inválido" });

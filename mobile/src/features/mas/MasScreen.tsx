@@ -42,6 +42,14 @@ export function MasScreen({ navigation }: NativeStackScreenProps<MasStackParamLi
   grupos.push({ titulo: "Terreno", items: trabajo });
 
   const oficina: Item[] = [];
+  if (visibles.includes("agenda_pro")) {
+    oficina.push({
+      titulo: "Servicios y packs",
+      sub: "El catálogo de Agenda Pro: precios, duraciones, packs de sesiones",
+      icono: "pricetags-outline",
+      ir: () => navigation.navigate("Catalogo"),
+    });
+  }
   if (visibles.includes("financiero")) {
     oficina.push({
       titulo: "Cobros",

@@ -19,3 +19,11 @@ export async function crearServicio(
   const res = await apiJson<Servicio>("/api/servicios", { method: "POST", body: JSON.stringify(b) });
   return res.ok ? { ok: true, servicio: res.data } : { ok: false, error: res.error };
 }
+
+export async function editarServicio(
+  id: string,
+  cambios: Partial<BorradorServicio & { activo: boolean }>
+): Promise<{ ok: true; servicio: Servicio } | { ok: false; error: string }> {
+  const res = await apiJson<Servicio>(`/api/servicios/${id}`, { method: "PATCH", body: JSON.stringify(cambios) });
+  return res.ok ? { ok: true, servicio: res.data } : { ok: false, error: res.error };
+}

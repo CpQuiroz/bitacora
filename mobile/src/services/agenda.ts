@@ -71,6 +71,8 @@ export type BorradorCita = {
   nota_cliente?: string;
   avisar_whatsapp?: boolean;
   precio?: string; // "" = usar el precio de lista del servicio
+  // "Valor agregado": extras itemizados que se suman al precio del servicio.
+  adicionales?: { concepto: string; monto: number }[];
 };
 
 /** Crea una cita/tarea. Va directo (no por la cola): necesitamos el id que asigna el servidor. */
@@ -92,6 +94,7 @@ export async function crearCita(b: BorradorCita): Promise<{ ok: true; tarea: Tar
       nota_cliente: b.nota_cliente?.trim() || undefined,
       avisar_whatsapp: b.avisar_whatsapp,
       precio: b.precio ? Number(b.precio) : undefined,
+      adicionales: b.adicionales && b.adicionales.length > 0 ? b.adicionales : undefined,
     }),
   });
   return res.ok ? { ok: true, tarea: res.data } : { ok: false, error: res.error };

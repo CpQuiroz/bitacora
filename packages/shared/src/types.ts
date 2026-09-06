@@ -515,6 +515,8 @@ export type Trabajo = {
 // "cancelada" genérico.
 export type EstadoTarea = "pendiente" | "confirmada" | "completada" | "cancelada" | "no_asistio" | "cancelada_anticipada";
 
+export type AdicionalCita = { concepto: string; monto: number };
+
 export type Tarea = {
   id: string;
   empresa_id: string;
@@ -549,6 +551,9 @@ export type Tarea = {
   // Precio final de la cita — precarga desde servicios.precio pero es
   // editable (descuentos puntuales). Null = usar el de lista del servicio.
   precio: number | null;
+  // "Valor agregado" itemizado de esta reserva (migración 94): productos
+  // o extras que se suman al precio del servicio. total = precio + Σ monto.
+  adicionales: AdicionalCita[];
   // OS (trabajo) creada desde el flujo "Nueva tarea → Crear Orden de
   // Servicio" en Agenda. Nullable: casi ninguna tarea tiene OS asociada.
   trabajo_id: string | null;
