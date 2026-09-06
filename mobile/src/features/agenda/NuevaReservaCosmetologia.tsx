@@ -13,6 +13,7 @@ import { listarServicios } from "../../services/servicios";
 import { listarPaquetesCliente } from "../../services/paquetes";
 import { obtenerAgendaProConfig, type AgendaProConfigCompleta } from "../../services/agendaProConfig";
 import { SelectorHoraCosmetologia } from "./SelectorHoraCosmetologia";
+import { NuevoServicioModal } from "./NuevoServicioModal";
 import type { AgendaStackParamList } from "../../shell/navigation/types";
 
 const DIAS_CORTOS = ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"];
@@ -69,6 +70,7 @@ export function NuevaReservaCosmetologia({ navigation, route }: NativeStackScree
   const [paquetesCliente, setPaquetesCliente] = useState<PaqueteSesionesConSaldo[]>([]);
   const [ocupadas, setOcupadas] = useState<Set<string>>(new Set());
   const [guardando, setGuardando] = useState(false);
+  const [nuevoServicioAbierto, setNuevoServicioAbierto] = useState(false);
 
   const [clienteId, setClienteId] = useState("");
   const [servicioId, setServicioId] = useState("");
@@ -205,19 +207,21 @@ export function NuevaReservaCosmetologia({ navigation, route }: NativeStackScree
               Cargando servicios…
             </Text>
           ) : servicios.length === 0 ? (
-            <View style={{ backgroundColor: t.colores.surfaceAlt, borderRadius: t.radio.md, padding: t.espacio(3), gap: t.espacio(1) }}>
+            <View style={{ backgroundColor: t.colores.surfaceAlt, borderRadius: t.radio.md, padding: t.espacio(3), gap: t.espacio(2) }}>
               <Text variante="etiqueta" weight="semibold">
                 Todavía no hay servicios en el catálogo
               </Text>
               <Text variante="caption" tono="muted">
-                Créalos desde la web, en Configuración → Agenda Pro → Servicios, y vuelve a abrir esta pantalla.
+                Créalos acá o desde la web (Configuración → Agenda Pro → Servicios).
               </Text>
+              <Button titulo="＋ Nuevo servicio" variante="secundario" onPress={() => setNuevoServicioAbierto(true)} />
             </View>
           ) : (
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: t.espacio(2) }}>
               {servicios.map((s) => (
                 <Chip key={s.id} etiqueta={s.nombre} activo={s.id === servicioId} onPress={() => elegirServicio(s.id)} />
               ))}
+              <Chip etiqueta="＋ Nuevo servicio" activo={false} onPress={() => setNuevoServicioAbierto(true)} />
             </View>
           )}
         </View>
@@ -366,6 +370,19 @@ export function NuevaReservaCosmetologia({ navigation, route }: NativeStackScree
           {resumen}
         </Text>
       </View>
+
+      <NuevoServicioModal
+        visible={nuevoServicioAbierto}
+        onCerrar={() => setNuevoServicioAbierto(false)}
+        onCreado={(s) => {
+          setServicios((prev) => [...(prev ?? []), s].sort((a, b) => a.nombre.localeCompare(b.nombre)));
+          setServicioId(s.id);
+          setDuracionMin(s.duracion_sugerida_min);
+          setDuracionLibre(!DURACIONES.includes(s.duracion_sugerida_min));
+          setPrecio(String(s.precio));
+          setNuevoServicioAbierto(false);
+        }}
+      />
     </View>
   );
 }
