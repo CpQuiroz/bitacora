@@ -33,3 +33,21 @@ export async function borrarCache(clave: string): Promise<void> {
     /* noop */
   }
 }
+
+/**
+ * Borra TODA la caché de lecturas (claves "cache:*"). Se llama al cerrar
+ * sesión: sin esto, una caché vieja (ej. el equipo de la empresa cuando
+ * tenía 1 solo usuario) sobrevive al logout/login y, si la API no logra
+ * refrescarla — Render dormido, señal intermitente —, la pantalla sigue
+ * mostrando el dato viejo para siempre (las entradas no tienen TTL).
+ * NO toca la cola de sync ("sync:*"), que debe sobrevivir.
+ */
+export async function limpiarCacheLecturas(): Promise<void> {
+  try {
+    const claves = await AsyncStorage.getAllKeys();
+    const nuestras = claves.filter((k) => k.startsWith(PREFIJO));
+    if (nuestras.length > 0) await AsyncStorage.multiRemove(nuestras);
+  } catch {
+    /* noop */
+  }
+}

@@ -3,7 +3,7 @@ import type { Session } from "@supabase/supabase-js";
 import type { Accion, Empresa, Modulo, Usuario } from "@bitacora/shared";
 import { supabase } from "../../lib/supabase";
 import { apiJson } from "../../services/api";
-import { guardarCache, leerCache } from "../../services/sync/cache";
+import { guardarCache, leerCache, limpiarCacheLecturas } from "../../services/sync/cache";
 
 type UsuarioConEmpresa = Usuario & { empresa: Empresa };
 
@@ -134,6 +134,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const cerrarSesion = useCallback(async () => {
     await supabase.auth.signOut();
+    // Deja la caché de lecturas limpia para el próximo login — si no,
+    // datos viejos (equipo, clientes, catálogos) pueden quedar pegados.
+    await limpiarCacheLecturas();
   }, []);
 
   return (

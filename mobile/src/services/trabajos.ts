@@ -62,9 +62,13 @@ export async function obtenerDetalle(trabajoId: string): Promise<DetalleTrabajo>
 export async function catalogoParaTrabajo(): Promise<{ clientes: Cliente[]; equipo: Usuario[] }> {
   const [c, e] = await Promise.all([apiJson<Cliente[]>("/api/clientes"), apiJson<Usuario[]>("/api/usuarios")]);
   if (c.ok) await guardarCache("trabajos:clientes", c.data);
-  if (e.ok) await guardarCache("trabajos:equipo", e.data);
+  // OJO: la clave NO puede ser "trabajos:equipo" — esa la usa
+  // listarTrabajos() para cachear la lista de TRABAJOS del equipo. Si
+  // colisionan, el selector de responsable termina mostrando trabajos en
+  // vez de personas (o al revés) cuando se lee del cache offline.
+  if (e.ok) await guardarCache("trabajos:usuarios", e.data);
   const clientes = c.ok ? c.data : (await leerCache<Cliente[]>("trabajos:clientes"))?.datos ?? [];
-  const equipo = e.ok ? e.data : (await leerCache<Usuario[]>("trabajos:equipo"))?.datos ?? [];
+  const equipo = e.ok ? e.data : (await leerCache<Usuario[]>("trabajos:usuarios"))?.datos ?? [];
   return { clientes, equipo };
 }
 
