@@ -25,7 +25,13 @@ COPY packages/shared/package.json ./packages/shared/
 COPY backend/package.json ./backend/
 COPY web/package.json ./web/
 COPY mobile/package.json ./mobile/
-RUN npm ci
+# --ignore-scripts: `mobile` tiene un postinstall (`cd .. && npm run
+# build:shared`, para los builds de EAS) que acá se dispararía durante
+# `npm ci` y fallaría — todavía no copiamos packages/shared/tsconfig.json
+# ni src/. El shared se compila explícito más abajo, cuando el código ya
+# está. El backend no tiene dependencias nativas, así que saltear los
+# scripts de install es seguro.
+RUN npm ci --ignore-scripts
 
 # --- código + build ---
 # Solo lo que el backend necesita compilar: shared primero (genera su
