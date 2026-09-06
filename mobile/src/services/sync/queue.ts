@@ -1,5 +1,11 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { apiFetch } from "../api";
+import { borrarFoto, fotoExiste } from "../../lib/fotoCola";
+
+// Una acción con archivo que sube una foto (no crea el recurso). Se
+// procesan al final y, si el archivo ya no está, se marcan fallidas sin
+// reintentar para siempre.
+const ES_SUBIDA_DE_FOTO = (a: { etiqueta: string }) => a.etiqueta === "Foto" || a.etiqueta === "Foto de la guía";
 
 // Cola de acciones pendientes. Toda mutación desde el campo (check-in/out,
 // guardar datos, firma, foto, finalizar, registrar viaje) se encola,
@@ -108,7 +114,7 @@ async function ejecutar(a: AccionPendiente): Promise<Response> {
     }
     // Más margen para las fotos: la petición despierta al backend en
     // Render (cold start ~30–60s) además de subir la imagen.
-    return apiFetch(a.path, { method: a.method, body: fd }, 45000);
+    return apiFetch(a.path, { method: a.method, body: fd }, 60000);
   }
   return apiFetch(a.path, { method: a.method, body: JSON.stringify(a.body ?? {}) }, 30000);
 }
@@ -154,11 +160,19 @@ export async function procesar(): Promise<void> {
     // formulario, firma, finalizar). Se procesan al final, respetando el
     // orden FIFO dentro de cada grupo.
     const ordenadas = [
-      ...cola0.filter((a) => a.etiqueta !== "Foto"),
-      ...cola0.filter((a) => a.etiqueta === "Foto"),
+      ...cola0.filter((a) => !ES_SUBIDA_DE_FOTO(a)),
+      ...cola0.filter((a) => ES_SUBIDA_DE_FOTO(a)),
     ];
     for (const a of ordenadas) {
       if (a.fallida) continue;
+      // La foto ya no está en el teléfono (el SO limpió el archivo antes
+      // de que pudiéramos subirla) — reintentar no la trae de vuelta.
+      if (a.archivo && !fotoExiste(a.archivo.uri)) {
+        a.fallida = true;
+        a.ultimoError = "La foto ya no está en el teléfono — vuelve a sacarla desde el viaje";
+        await persistir();
+        continue;
+      }
       // Escape hatch: una acción trancada más de 24 h se marca fallida
       // (quede como quede la señal) para que deje de aparecer como "sin
       // sincronizar" y el usuario la pueda descartar desde Perfil.
@@ -173,6 +187,7 @@ export async function procesar(): Promise<void> {
         if (res.ok || res.status === 409 || res.status === 404) {
           // 2xx = hecho. 409/404 = el servidor rechazó algo ya resuelto
           // (ej. OS ya finalizada) — no tiene sentido reintentar.
+          borrarFoto(a.archivo?.uri);
           cola = cola.filter((x) => x.id !== a.id);
           reintentoIntento = 0; // algo salió: el backoff vuelve a empezar corto
           await persistir();
@@ -199,12 +214,19 @@ export async function procesar(): Promise<void> {
         // en vez de reintentar para siempre. Un "sin señal" seco no
         // cuenta (el escape hatch de 24 h la cubre igual).
         const esTimeout = e instanceof Error && e.name === "AbortError";
+        const detalle = e instanceof Error ? e.message : String(e);
         if (esTimeout) {
           a.intentos += 1;
           a.ultimoError = "El servidor no respondió a tiempo";
           if (a.intentos >= MAX_INTENTOS) a.fallida = true;
+        } else if (a.archivo && !fotoExiste(a.archivo.uri)) {
+          // El fetch no pudo leer el archivo — ya no está.
+          a.fallida = true;
+          a.ultimoError = "La foto ya no está en el teléfono — vuelve a sacarla desde el viaje";
         } else {
-          a.ultimoError = "Sin conexión";
+          // Guardrail: dejamos el error real (no solo "Sin conexión") —
+          // si esto vuelve a fallar, que se sepa por qué sin adivinar.
+          a.ultimoError = detalle && detalle !== "Network request failed" ? `Sin conexión — ${detalle.slice(0, 100)}` : "Sin conexión";
         }
         await persistir();
         if (a.fallida) continue;
@@ -228,13 +250,19 @@ export async function reintentar(id: string): Promise<void> {
   a.fallida = false;
   a.intentos = 0;
   a.ultimoError = undefined;
+  // El reintento manual reinicia el reloj de 24 h — si no, el escape
+  // hatch la volvía a marcar fallida al instante (creadoEn ya vencido) y
+  // "Reintentar" no hacía nada visible.
+  a.creadoEn = Date.now();
   await persistir();
   void procesar();
 }
 
 export async function descartar(id: string): Promise<void> {
   await asegurarCargada();
-  cola = cola.filter((a) => a.id !== id);
+  const a = cola.find((x) => x.id === id);
+  borrarFoto(a?.archivo?.uri);
+  cola = cola.filter((x) => x.id !== id);
   await persistir();
 }
 
@@ -242,6 +270,7 @@ export async function descartar(id: string): Promise<void> {
  * ya no necesita. */
 export async function descartarTodo(): Promise<void> {
   await asegurarCargada();
+  for (const a of cola) borrarFoto(a.archivo?.uri);
   cola = [];
   cancelarAutoReintento();
   await persistir();

@@ -2,6 +2,7 @@ import type { Cliente, Equipo, Viaje } from "@bitacora/shared";
 import { apiFetch, apiJson } from "./api";
 import { encolar } from "./sync/queue";
 import { guardarCache, leerCache } from "./sync/cache";
+import { borrarFoto } from "../lib/fotoCola";
 
 export type ViajeConDatos = Viaje & {
   cliente_info?: Pick<Cliente, "id" | "nombre"> | null;
@@ -161,7 +162,8 @@ export async function subirFotoGuia(viajeId: string, foto: Foto): Promise<boolea
   const fd = new FormData();
   fd.append("foto", { uri: foto.uri, name: foto.name, type: foto.type } as unknown as Blob);
   try {
-    const res = await apiFetch(`/api/mis-viajes/${viajeId}/foto-guia`, { method: "POST", body: fd }, 45000);
+    const res = await apiFetch(`/api/mis-viajes/${viajeId}/foto-guia`, { method: "POST", body: fd }, 60000);
+    if (res.ok) borrarFoto(foto.uri);
     return res.ok;
   } catch {
     return false;
