@@ -61,7 +61,10 @@ export function NuevaReservaCosmetologia({ navigation, route }: NativeStackScree
 
   const [clientes, setClientes] = useState<Cliente[] | null>(null);
   const [equipo, setEquipo] = useState<Usuario[]>([]);
-  const [servicios, setServicios] = useState<Servicio[]>([]);
+  // null = todavía cargando; [] = catálogo vacío (hay que crear servicios
+  // en la web). Sin esta distinción, un catálogo vacío dejaba la sección
+  // "Servicio" en blanco, sin explicación ni salida.
+  const [servicios, setServicios] = useState<Servicio[] | null>(null);
   const [agendaConfig, setAgendaConfig] = useState<AgendaProConfigCompleta | null>(null);
   const [paquetesCliente, setPaquetesCliente] = useState<PaqueteSesionesConSaldo[]>([]);
   const [ocupadas, setOcupadas] = useState<Set<string>>(new Set());
@@ -112,7 +115,7 @@ export function NuevaReservaCosmetologia({ navigation, route }: NativeStackScree
     };
   }, [fecha]);
 
-  const servicioElegido = servicios.find((s) => s.id === servicioId) ?? null;
+  const servicioElegido = servicios?.find((s) => s.id === servicioId) ?? null;
   const hoy = clave(new Date());
   const paqueteDetectado = useMemo(() => {
     if (!servicioId) return null;
@@ -123,7 +126,7 @@ export function NuevaReservaCosmetologia({ navigation, route }: NativeStackScree
 
   function elegirServicio(id: string) {
     setServicioId(id);
-    const s = servicios.find((x) => x.id === id);
+    const s = servicios?.find((x) => x.id === id);
     if (s) {
       setDuracionMin(s.duracion_sugerida_min);
       setDuracionLibre(!DURACIONES.includes(s.duracion_sugerida_min));
@@ -197,11 +200,26 @@ export function NuevaReservaCosmetologia({ navigation, route }: NativeStackScree
           <Text variante="etiqueta" tono="muted">
             Servicio
           </Text>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: t.espacio(2) }}>
-            {servicios.map((s) => (
-              <Chip key={s.id} etiqueta={s.nombre} activo={s.id === servicioId} onPress={() => elegirServicio(s.id)} />
-            ))}
-          </View>
+          {servicios === null ? (
+            <Text variante="caption" tono="muted">
+              Cargando servicios…
+            </Text>
+          ) : servicios.length === 0 ? (
+            <View style={{ backgroundColor: t.colores.surfaceAlt, borderRadius: t.radio.md, padding: t.espacio(3), gap: t.espacio(1) }}>
+              <Text variante="etiqueta" weight="semibold">
+                Todavía no hay servicios en el catálogo
+              </Text>
+              <Text variante="caption" tono="muted">
+                Créalos desde la web, en Configuración → Agenda Pro → Servicios, y vuelve a abrir esta pantalla.
+              </Text>
+            </View>
+          ) : (
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: t.espacio(2) }}>
+              {servicios.map((s) => (
+                <Chip key={s.id} etiqueta={s.nombre} activo={s.id === servicioId} onPress={() => elegirServicio(s.id)} />
+              ))}
+            </View>
+          )}
         </View>
 
         {paqueteDetectado ? (
