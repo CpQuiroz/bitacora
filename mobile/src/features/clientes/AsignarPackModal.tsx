@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Alert, Modal, Pressable, ScrollView, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import type { TipoPack } from "@bitacora/shared";
 import { useTema } from "../../theme";
@@ -26,6 +27,7 @@ export function AsignarPackModal({
   onAsignado: () => void;
 }) {
   const t = useTema();
+  const insets = useSafeAreaInsets();
   const [tipos, setTipos] = useState<TipoPack[]>([]);
   const [tipoId, setTipoId] = useState("");
   const [precioPagado, setPrecioPagado] = useState(""); // solo dígitos
@@ -85,7 +87,7 @@ export function AsignarPackModal({
           </Text>
         </View>
 
-        <ScrollView contentContainerStyle={{ padding: t.espacio(5), gap: t.espacio(4) }} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={{ padding: t.espacio(5), paddingBottom: t.espacio(5) + insets.bottom, gap: t.espacio(4) }} keyboardShouldPersistTaps="handled">
           {tipos.length === 0 ? (
             <Text variante="cuerpo" tono="muted">
               No hay tipos de pack en el catálogo. Créalos desde la web (Configuración → Agenda Pro).

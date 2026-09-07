@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Alert, Modal, Pressable, ScrollView, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import type { Servicio, TipoPack } from "@bitacora/shared";
 import { useTema } from "../../theme";
@@ -25,6 +26,7 @@ export function TipoPackModal({
   onGuardado: (tp: TipoPack) => void;
 }) {
   const t = useTema();
+  const insets = useSafeAreaInsets();
   const editando = Boolean(tipoPack);
   const [nombre, setNombre] = useState(tipoPack?.nombre ?? "");
   const [sesiones, setSesiones] = useState(tipoPack ? String(tipoPack.cantidad_sesiones) : "5");
@@ -81,7 +83,7 @@ export function TipoPackModal({
           </Text>
         </View>
 
-        <ScrollView contentContainerStyle={{ padding: t.espacio(5), gap: t.espacio(4) }} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={{ padding: t.espacio(5), paddingBottom: t.espacio(5) + insets.bottom, gap: t.espacio(4) }} keyboardShouldPersistTaps="handled">
           <Input etiqueta="Nombre" placeholder="Ej: Pack 10 limpiezas" value={nombre} onChangeText={setNombre} autoFocus={!editando} />
           <Input
             etiqueta="Cantidad de sesiones"

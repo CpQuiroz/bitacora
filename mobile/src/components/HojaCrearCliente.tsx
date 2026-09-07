@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { Cliente } from "@bitacora/shared";
 import { useTema } from "../theme";
 import { Button, Input, Text } from "./ui";
@@ -24,6 +25,7 @@ export function HojaCrearCliente({
   onCreado: (c: Cliente) => void;
 }) {
   const t = useTema();
+  const insets = useSafeAreaInsets();
   const [nombre, setNombre] = useState(nombreInicial);
   const [telefono, setTelefono] = useState("");
   const [rut, setRut] = useState("");
@@ -69,7 +71,7 @@ export function HojaCrearCliente({
               borderTopLeftRadius: 14,
               borderTopRightRadius: 14,
               padding: t.espacio(5),
-              paddingBottom: t.espacio(8),
+              paddingBottom: t.espacio(6) + insets.bottom,
               gap: t.espacio(3),
             }}
           >

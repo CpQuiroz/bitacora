@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { FlatList, Modal, Pressable, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useTema } from "../../theme";
 import { Text } from "./Text";
@@ -40,6 +41,7 @@ export function PickerBuscable({
   etiquetaCrear?: string;
 }) {
   const t = useTema();
+  const insets = useSafeAreaInsets();
   const [abierto, setAbierto] = useState(false);
   const [q, setQ] = useState("");
 
@@ -166,7 +168,10 @@ export function PickerBuscable({
                 alignItems: "center",
                 gap: t.espacio(2),
                 paddingHorizontal: t.espacio(4),
-                paddingVertical: t.espacio(4),
+                paddingTop: t.espacio(4),
+                // + safe-area: sin esto la barra de navegación de Android
+                // tapa el botón de crear.
+                paddingBottom: t.espacio(4) + insets.bottom,
                 borderTopWidth: 1,
                 borderTopColor: t.colores.border,
                 backgroundColor: pressed ? t.colores.surfaceAlt : "transparent",
