@@ -44,6 +44,8 @@ export default function DetalleOrdenServicioPage() {
 
   const [generandoInforme, setGenerandoInforme] = useState(false);
   const [errorInforme, setErrorInforme] = useState<string | null>(null);
+  const [modulosVisibles, setModulosVisibles] = useState<string[]>([]);
+  const [patrones, setPatrones] = useState("");
 
   const [editando, setEditando] = useState(false);
   const [descEdit, setDescEdit] = useState("");
@@ -74,8 +76,10 @@ export default function DetalleOrdenServicioPage() {
     if (resCatalogo.ok) setCatalogo(await resCatalogo.json());
     if (resEquipo.ok) setEquipo(await resEquipo.json());
     if (resMe.ok) {
-      const { usuario: u } = await resMe.json();
+      const cuerpoMe = await resMe.json();
+      const u = cuerpoMe.usuario;
       if (u) setUsuario({ nombre: u.nombre, rol: u.rol, empresaNombre: u.empresa?.nombre ?? "", empresaLogoUrl: u.empresa?.logo_url ?? null, colorPrimario: u.empresa?.color_primario ?? null, colorPrimarioForeground: u.empresa?.color_primario_foreground ?? null, colorSecundario: u.empresa?.color_secundario ?? null, fuente: u.empresa?.fuente ?? null, moneda: u.empresa?.moneda ?? "CLP" });
+      if (Array.isArray(cuerpoMe.modulos_visibles)) setModulosVisibles(cuerpoMe.modulos_visibles);
     }
     if (!resDetalle.ok) {
       setError("No se pudo cargar la orden de servicio");
@@ -98,7 +102,10 @@ export default function DetalleOrdenServicioPage() {
   async function onGenerarInforme() {
     setErrorInforme(null);
     setGenerandoInforme(true);
-    const res = await apiFetch(`/api/trabajos/${params.id}/informe-ia`, { method: "POST" });
+    const res = await apiFetch(`/api/trabajos/${params.id}/informe-ia`, {
+      method: "POST",
+      body: JSON.stringify({ patrones: patrones.trim() }),
+    });
     setGenerandoInforme(false);
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
@@ -497,13 +504,27 @@ export default function DetalleOrdenServicioPage() {
             </Card>
           )}
 
-          {detalle.orden && (
+          {/* Solo Admin, o Supervisor con el módulo informe_ia habilitado
+              (el chequeo real es el backend — esto evita mostrar una
+              acción que devolvería 403). */}
+          {detalle.orden &&
+            (usuario?.rol === "admin" || (usuario?.rol === "supervisor" && modulosVisibles.includes("informe_ia"))) && (
             <Card className="my-6">
               <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-                <h2 className="text-sm font-semibold text-foreground">Informe técnico con IA</h2>
+                <h2 className="text-sm font-semibold text-foreground">Informe con IA (patrones personalizados)</h2>
                 <Button type="button" variant="outline" onClick={onGenerarInforme} disabled={generandoInforme}>
-                  {generandoInforme ? "Generando…" : detalle.orden.informe_ia ? "Regenerar" : "Generar informe"}
+                  {generandoInforme ? "Generando…" : detalle.orden.informe_ia ? "Regenerar" : "Generar informe con IA"}
                 </Button>
+              </div>
+              <div className="mb-4">
+                <Label>Qué revisar en las fotos (opcional)</Label>
+                <Textarea
+                  rows={2}
+                  value={patrones}
+                  onChange={(e) => setPatrones(e.target.value)}
+                  placeholder="Ej.: revisa daños visibles en la carga, verifica que el packaging esté sellado…"
+                  disabled={generandoInforme}
+                />
               </div>
               {errorInforme && <ErrorText>{errorInforme}</ErrorText>}
               {detalle.orden.informe_ia ? (
@@ -514,7 +535,7 @@ export default function DetalleOrdenServicioPage() {
                 !errorInforme && (
                   <p className="text-sm text-muted">
                     Redacta un informe técnico a partir de los datos medidos, el checklist, las observaciones y las
-                    fotos de esta OS.
+                    fotos de esta OS. Si escribís qué revisar, la IA analiza las fotos con ese foco.
                   </p>
                 )
               )}

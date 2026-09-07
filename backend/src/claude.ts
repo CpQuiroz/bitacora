@@ -155,27 +155,48 @@ const PROMPT_INFORME_OS = `Eres un asistente técnico que redacta el informe de 
 servicio en terreno (mantención, instalación, inspección) para pymes chilenas de transporte, \
 tratamiento de agua, sistemas contra incendios y rubros similares. Te paso el tipo de servicio, \
 los datos medidos por el técnico (con su etiqueta, ya no son datos crudos inventados por ti), el \
-checklist realizado, observaciones del técnico, y un resumen de lo que muestran las fotos \
-tomadas en terreno. Redacta un informe técnico breve en español, en texto plano (sin markdown, \
-sin tablas), con esta estructura:
+checklist realizado, observaciones del técnico, y las fotos tomadas en terreno (adjuntas como \
+imágenes cuando las hay). Redacta un informe técnico breve en español, en texto plano (sin \
+markdown, sin tablas), con esta estructura:
 1) Resumen de la visita (qué se hizo, en 1-2 frases)
 2) Estado según los datos medidos — interpreta éstos, no los repitas tal cual (ej. "el pH de 7.2 \
 está dentro del rango normal" en vez de solo "pH: 7.2")
 3) Hallazgos de las fotos (solo si hay algo relevante — daño, incrustación, sedimento, corrosión, \
 buen estado)
 4) Recomendación (1-2 frases, concreta y accionable, o "sin observaciones" si todo está normal)
+Si el responsable indicó patrones o puntos a revisar específicamente en las fotos, describe lo que \
+ves en relación a esos puntos — pero SOLO lo que la imagen efectivamente muestra: si una foto no \
+tiene nada relevante a lo pedido, dilo así ("las fotos no muestran señales de X"), no inventes un \
+hallazgo para completar.
 Nunca inventes un valor que no te haya sido entregado. Si falta un dato relevante para evaluar \
 el estado, simplemente omítelo — no agregues una nota aparte señalando qué faltó ni ninguna \
 sección fuera de las 4 de arriba. Sé conciso — es un informe que un cliente va a leer, no un \
 reporte interno.`;
 
-export async function generarInformeOS(empresaId: string, contexto: string): Promise<string | null> {
+export type ImagenInforme = { media_type: "image/jpeg" | "image/png" | "image/webp"; data: string };
+
+export async function generarInformeOS(
+  empresaId: string,
+  contexto: string,
+  imagenes: ImagenInforme[] = []
+): Promise<string | null> {
   try {
+    // Mismo patrón que el informe libre (routes/informe.ts): las fotos
+    // reales van como bloques de imagen, no como texto pre-resumido.
+    const content: Anthropic.MessageParam["content"] = [
+      ...imagenes.map(
+        (img): Anthropic.ImageBlockParam => ({
+          type: "image",
+          source: { type: "base64", media_type: img.media_type, data: img.data },
+        })
+      ),
+      { type: "text", text: contexto },
+    ];
     const response = await crearMensajeIA(empresaId, "informe_os", {
       model: "claude-sonnet-5",
       max_tokens: 1024,
       system: PROMPT_INFORME_OS,
-      messages: [{ role: "user", content: contexto }],
+      messages: [{ role: "user", content }],
     });
     const textBlock = response.content.find((b): b is Anthropic.TextBlock => b.type === "text");
     return textBlock?.text?.trim() || null;

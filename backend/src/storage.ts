@@ -284,6 +284,15 @@ export async function descargarPdfOS(key: string): Promise<Buffer> {
   return Buffer.from(bytes);
 }
 
+// Baja los bytes de una foto de trabajo (subida con subirFoto → BUCKET).
+// La usa el informe de OS con IA on-demand para adjuntar la imagen real
+// a Claude; el análisis masivo automático es un camino aparte.
+export async function descargarFoto(key: string): Promise<Buffer> {
+  const respuesta = await client.send(new GetObjectCommand({ Bucket: BUCKET, Key: key }));
+  const bytes = await respuesta.Body!.transformToByteArray();
+  return Buffer.from(bytes);
+}
+
 // ------------------------------------------------------------
 // Documento de un colaborador o vehículo (licencia, revisión técnica,
 // seguro, etc. — imagen o PDF). Mismo bucket privado, mismo patrón que

@@ -3,8 +3,9 @@ import multer from "multer";
 import type { EstadoOS, EstadoTrabajo, ItemChecklist, OrdenServicio, Prioridad, TipoCheckin, TipoTrabajo, Trabajo } from "@bitacora/shared";
 import { sustituirVariables } from "@bitacora/shared";
 import { supabase } from "../supabase";
-import { subirFirma, subirFoto, urlFirmada, subirPdfOS, descargarPdfOS } from "../storage";
-import { analizarFoto, generarInformeOS } from "../claude";
+import { subirFirma, subirFoto, urlFirmada, subirPdfOS, descargarPdfOS, descargarFoto } from "../storage";
+import { analizarFoto, generarInformeOS, type ImagenInforme } from "../claude";
+import { rolPuedeVerModulo } from "../roles";
 import { crearOrdenServicio, obtenerOCrearOrden, checklistDeTipoOs } from "../ordenes";
 import { enviarEncuestaSatisfaccion, enviarPdfOS } from "../email";
 import { env } from "../env";
@@ -1347,13 +1348,48 @@ trabajosRouter.post(
   })
 );
 
+// Sniff del tipo real por magic bytes: subirFoto siempre nombra la key
+// ".jpg" sin importar el formato, así que la extensión no sirve para
+// armar el media_type que Claude exige que calce con los bytes.
+function tipoImagen(buf: Buffer): ImagenInforme["media_type"] | null {
+  if (buf.length < 12) return null;
+  if (buf[0] === 0xff && buf[1] === 0xd8) return "image/jpeg";
+  if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) return "image/png";
+  if (buf.toString("ascii", 0, 4) === "RIFF" && buf.toString("ascii", 8, 12) === "WEBP") return "image/webp";
+  return null;
+}
+
 // Informe técnico de esta OS puntual (distinto del "Informe IA" de
 // negocio): redacta a partir de los campos personalizados del tipo de
 // trabajo (ej. pH/cloro/turbidez para mantención de agua), el
-// checklist, las observaciones del técnico y el análisis de las fotos.
+// checklist, las observaciones del técnico y las fotos.
+//
+// Restricción de esta acción puntual (NO es solo requiereModulo):
+//  - Solo `admin`, o `supervisor` SI el Admin le delegó el módulo
+//    `informe_ia` en esa empresa. Contador/colaborador nunca, aunque
+//    tengan el módulo delegado para otros usos (ej. informe libre).
+//
+// El análisis de las fotos ocurre ACÁ, on-demand — es un camino
+// independiente a propósito del análisis masivo automático al subir
+// (analisis_fotos + `ANALISIS_FOTOS_IA_ACTIVO`, hoy apagado por costo).
+// NO reencadenar esta ruta a ese flag: subir la foto siempre la guarda
+// como evidencia; analizarla es solo cuando el Admin pide el informe.
 trabajosRouter.post(
   "/:id/informe-ia",
   ah<RequestConEmpresa>(async (req, res) => {
+    // Guard de rol — antes de tocar ningún dato.
+    const rol = req.rol ?? "colaborador";
+    const puedeGenerar =
+      (rol === "admin" || rol === "supervisor") && (await rolPuedeVerModulo(rol, "informe_ia", req.empresaId!));
+    if (!puedeGenerar) {
+      res.status(403).json({
+        error: "Solo el administrador — o un supervisor con el módulo de Informes IA habilitado — puede generar este informe.",
+      });
+      return;
+    }
+
+    const patrones = typeof req.body?.patrones === "string" ? req.body.patrones.trim().slice(0, 2000) : "";
+
     const { data: trabajo } = await supabase
       .from("trabajos")
       .select("*, tipo_trabajo:tipos_trabajo(*)")
@@ -1373,8 +1409,10 @@ trabajosRouter.post(
 
     const { data: fotos } = await supabase
       .from("analisis_fotos")
-      .select("resumen, alerta, detalle_alerta")
-      .eq("orden_servicio_id", orden.id);
+      .select("foto_url, resumen, alerta, detalle_alerta")
+      .eq("empresa_id", req.empresaId!)
+      .eq("orden_servicio_id", orden.id)
+      .order("creado_en");
 
     const tipoTrabajo = (trabajo as unknown as { tipo_trabajo: TipoTrabajo | null }).tipo_trabajo;
     const datosGuardados = (trabajo.datos ?? {}) as Record<string, unknown>;
@@ -1386,12 +1424,32 @@ trabajosRouter.post(
       .map((i) => `- [${i.hecho ? "x" : " "}] ${i.item}`)
       .join("\n");
 
+    // Si algún día el análisis masivo está encendido, aprovechamos el
+    // resumen ya generado; con el flag apagado esto queda vacío y la
+    // fuente son las imágenes adjuntas más abajo.
     const fotosTexto = (fotos ?? [])
       .filter((f) => f.resumen)
       .map((f, i) => `Foto ${i + 1}: ${f.resumen}${f.alerta ? ` — ALERTA: ${f.detalle_alerta}` : ""}`)
       .join("\n");
 
-    if (!datosPersonalizados && !checklistTexto && !orden.observaciones_cierre && !fotosTexto) {
+    // Descarga on-demand de las fotos reales para adjuntarlas a Claude —
+    // tope alineado con routes/informe.ts (5 imágenes, 5MB c/u).
+    const MAX_FOTOS = 5;
+    const MAX_BYTES = 5 * 1024 * 1024;
+    const imagenes: ImagenInforme[] = [];
+    for (const f of (fotos ?? []).slice(0, MAX_FOTOS)) {
+      if (!f.foto_url) continue;
+      try {
+        const buf = await descargarFoto(f.foto_url);
+        const media = tipoImagen(buf);
+        if (!media || buf.byteLength > MAX_BYTES) continue;
+        imagenes.push({ media_type: media, data: buf.toString("base64") });
+      } catch {
+        // Foto no descargable — se omite, no rompe el informe.
+      }
+    }
+
+    if (!datosPersonalizados && !checklistTexto && !orden.observaciones_cierre && !fotosTexto && imagenes.length === 0) {
       res.status(400).json({
         error: "No hay datos suficientes para generar un informe (faltan datos medidos, checklist, observaciones o fotos)",
       });
@@ -1403,9 +1461,13 @@ trabajosRouter.post(
     if (datosPersonalizados) contexto += `Datos medidos por el técnico:\n${datosPersonalizados}\n\n`;
     if (checklistTexto) contexto += `Checklist realizado:\n${checklistTexto}\n\n`;
     if (orden.observaciones_cierre) contexto += `Observaciones del técnico:\n${orden.observaciones_cierre}\n\n`;
-    if (fotosTexto) contexto += `Fotos tomadas en terreno:\n${fotosTexto}\n\n`;
+    if (fotosTexto) contexto += `Resumen previo de fotos:\n${fotosTexto}\n\n`;
+    if (patrones) contexto += `El responsable pidió revisar específicamente en las fotos: ${patrones}\n\n`;
+    if (imagenes.length > 0) {
+      contexto += `Se adjuntan ${imagenes.length} foto(s) tomada(s) en terreno — analízalas directamente.\n\n`;
+    }
 
-    const informe = await generarInformeOS(req.empresaId!, contexto);
+    const informe = await generarInformeOS(req.empresaId!, contexto, imagenes);
     if (!informe) {
       res.status(502).json({ error: "No se pudo generar el informe con IA, intenta de nuevo" });
       return;
