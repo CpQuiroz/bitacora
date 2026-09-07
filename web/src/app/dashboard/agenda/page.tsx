@@ -369,7 +369,8 @@ function AgendaContenido() {
     setDescripcionTarea("");
     setFechaTarea(fecha);
     setHoraTarea("");
-    setDuracionTarea("");
+    // Duración fija: ya no se pide al usuario, toda cita nueva dura 1 hora.
+    setDuracionTarea("60");
     setClienteIdTarea("");
     setResponsableIdTarea("");
     setPrioridadTarea("media");
@@ -690,16 +691,6 @@ function AgendaContenido() {
               <Label>Hora (opcional)</Label>
               <Input type="time" value={horaTarea} onChange={(e) => setHoraTarea(e.target.value)} />
             </div>
-            <div>
-              <Label>Duración en minutos (opcional)</Label>
-              <Input
-                type="number"
-                min={1}
-                placeholder="Ej: 60"
-                value={duracionTarea}
-                onChange={(e) => setDuracionTarea(e.target.value.replace(/\D/g, ""))}
-              />
-            </div>
           </div>
           <div>
             <Label>Cliente (opcional)</Label>
@@ -801,16 +792,6 @@ function AgendaContenido() {
               <div>
                 <Label>Hora (opcional)</Label>
                 <Input type="time" value={horaTarea} onChange={(e) => setHoraTarea(e.target.value)} />
-              </div>
-              <div>
-                <Label>Duración en minutos (opcional)</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  placeholder="Ej: 60"
-                  value={duracionTarea}
-                  onChange={(e) => setDuracionTarea(e.target.value.replace(/\D/g, ""))}
-                />
               </div>
               <div>
                 <Label>Cliente (opcional)</Label>
