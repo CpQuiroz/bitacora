@@ -1,93 +1,111 @@
-// Tokens base del sistema de diseño — dirección "Faena" (refresco 1a).
-// Reemplaza mobile/src/theme/tokens.ts. Mismas claves y misma forma que
-// el archivo actual: solo cambian los valores, más `accent` / `accentSoft`
-// que antes no existían.
-// v1: solo tema claro (app.json → userInterfaceStyle: "light").
+// Tokens base del sistema de diseño — tema único "Faena".
+// v2: un solo tema para TODOS los rubros (antes había una variante
+// "Vino y eucalipto" por rubro cosmetología, ya retirada). Solo tema
+// claro (app.json → userInterfaceStyle: "light").
+//
+// Los 9 colores con nombre del pedido son el origen de todo lo demás:
+//   papel #EEF0F2 · blanco #FFFFFF · tinta #101720 · navy #14314F
+//   naranja #C2500F · gris #5C6672 · grisSuave #8B939D
+//   borde #D3D8DD · bordeFuerte #C8CED5
 
-// Alineado con web/src/app/globals.css (paleta 1a).
-const MARCA_DEFECTO = "#14314f";
+const papel = "#EEF0F2";
+const blanco = "#FFFFFF";
+const tinta = "#101720";
+const navy = "#14314F";
+const naranja = "#C2500F";
+const gris = "#5C6672";
+const grisSuave = "#8B939D";
+const borde = "#D3D8DD";
+const bordeFuerte = "#C8CED5";
 
 export const paletaBase = {
-  // Superficies: fondo de pantalla gris, tarjetas/inputs blancos —
-  // así las tarjetas tienen jerarquía visual (no blanco sobre blanco).
-  bg: "#e9eaec",
-  surface: "#ffffff",
-  surfaceAlt: "#f3f5f7",
-  border: "#d3d8dd",
-  overlay: "rgba(16,23,32,0.5)",
+  // Superficies
+  bg: papel, // fondo de las listas
+  surface: blanco, // tarjetas y superficies
+  surfaceAlt: "#F5F6F8", // caja de "nota interna" y afines
+  border: borde,
+  borderStrong: bordeFuerte, // bordes de campo de formulario
+  overlay: "rgba(16,23,32,0.42)", // hoja emergente / crear al vuelo (42%)
 
   // Texto
-  foreground: "#101720",
-  muted: "#5c6672", // ~5.8:1 sobre blanco — pasa AA
-  faint: "#8b939d", // solo texto terciario (versión, ayudas), NUNCA info que importe
+  foreground: tinta,
+  muted: gris, // texto secundario
+  faint: grisSuave, // texto terciario y placeholders — NUNCA info que importe
+  onDark: "#C9D3DE", // texto secundario sobre el bloque de foco navy
 
-  // Marca
-  brand: MARCA_DEFECTO,
-  brandForeground: "#ffffff",
-  brandSoft: "#e4eaf1",
+  // Acento primario (navy): acción primaria, encabezados oscuros
+  brand: navy,
+  brandForeground: blanco,
+  brandSoft: "#E4EAF1",
 
-  // Acento (naranja señal): SOLO para la acción de terreno en curso —
-  // botón "Continuar", ítem activo, parada actual de la ruta. El color
-  // de la empresa se escribe acá (ver ThemeProvider), no en `brand`.
-  accent: "#c2500f",
-  accentSoft: "#fdf1e6",
+  // Señal (naranja): en curso, siguiente, alertas, línea de "ahora".
+  // Fijo — no se reemplaza por el color de la empresa.
+  accent: naranja,
+  accentSoft: "#FDF1E6",
 
-  // Estados — más saturados que el web a propósito (legibilidad de
-  // badges en pantalla chica y a la luz del día).
-  success: "#15803d",
-  successSoft: "#e7f2eb",
-  warning: "#b45309",
-  warningSoft: "#fdf1e6",
-  danger: "#b91c1c",
-  dangerSoft: "#fbeaea",
-  info: "#14314f",
-  infoSoft: "#e4eaf1",
+  // Estados (bg / texto) — del pedido
+  success: "#14663C", // firmada
+  successSoft: "#E7F2EB",
+  warning: "#8A4A10", // enProceso
+  warningSoft: "#FDF1E6",
+  danger: "#A02020", // vencida
+  dangerSoft: "#FBEAEA",
+  info: navy, // agendado
+  infoSoft: "#E4EAF1",
 };
 
 export type Paleta = typeof paletaBase;
 
+// Riel de estados con nombre semántico, para las pantallas del refresco.
+export const estado = {
+  agendado: { bg: "#E4EAF1", fg: "#14314F" },
+  enProceso: { bg: "#FDF1E6", fg: "#8A4A10" },
+  firmada: { bg: "#E7F2EB", fg: "#14663C" },
+  vencida: { bg: "#FBEAEA", fg: "#A02020" },
+  neutro: { bg: "#ECEEF1", fg: "#5C6672" },
+} as const;
+
 // Escala de espaciado en múltiplos de 4.
 export const espacio = (n: number) => n * 4;
 
-// 1a es de esquina corta — antes { sm: 8, md: 12, lg: 18, xl: 24 }.
-export const radio = { sm: 6, md: 8, lg: 10, xl: 12, full: 999 };
+// Radio 6-8 en tarjetas y campos; 22 en el contenedor de pantalla.
+export const radio = { sm: 6, md: 7, lg: 8, xl: 8, contenedor: 22, full: 999 };
 
 export const tipografia = {
-  // Familias: se resuelven en el ThemeProvider (empresa.fuente o sistema).
+  // Familias: se resuelven en el ThemeProvider (IBM Plex, local).
   familia: undefined as string | undefined,
   familiaBold: undefined as string | undefined,
-  // Tema por rubro (ver theme/temas/cosmetologia.ts): cuando un tema
-  // carga fuentes locales por peso (no hay "negrita sintética" con
-  // fuentes custom), familiaPorPeso manda sobre familia/familiaBold para
-  // cada peso puntual. familiaDisplay/familiaDisplayBold es la familia
-  // de despliegue (hora, precio, título de pantalla) — undefined en el
-  // tema por defecto, que sigue usando familia/familiaBold para todo.
+  // familiaPorPeso manda sobre familia/familiaBold para cada peso
+  // puntual cuando el tema carga fuentes estáticas por peso (una fuente
+  // custom no responde a fontWeight en RN sin esto).
   familiaPorPeso: undefined as Partial<Record<"regular" | "medium" | "semibold" | "bold", string>> | undefined,
+  // familiaDisplay = IBM Plex Mono: TODO número que se compare o se lea
+  // de un vistazo (horas, montos, km, RUT, folios, odómetro). La usa la
+  // variante "cifra" de <Text> y el prop `mono`.
   familiaDisplay: undefined as string | undefined,
   familiaDisplayBold: undefined as string | undefined,
-  // Subida de escala para terreno: base 15 → 16. `xs` sigue siendo solo
-  // para texto terciario.
-  tamano: { xs: 12, sm: 14, base: 16, md: 18, lg: 21, xl: 26, xxl: 32 },
+  // Cuerpo 15, títulos de pantalla 20, etiquetas de campo 13. Nunca bajo
+  // 12.5 salvo los rótulos mono en mayúsculas (9.5-10px), que se piden a
+  // mano en cada pantalla.
+  tamano: { xs: 12.5, sm: 13, base: 15, md: 17, lg: 20, xl: 24, xxl: 30 },
   peso: { regular: "400", medium: "500", semibold: "600", bold: "700" } as const,
   interlineado: { ajustado: 1.2, normal: 1.4, holgado: 1.6 },
 };
 
-// En 1a separa el borde, no la sombra.
+// Faena separa con filete de 1px, no con sombra.
 export const sombra = {
-  card: {
-    shadowColor: "#0b1a2b",
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 1,
-  },
+  card: { shadowColor: "transparent", shadowOpacity: 0, shadowRadius: 0, shadowOffset: { width: 0, height: 0 }, elevation: 0 },
   flotante: {
-    shadowColor: "#000",
-    shadowOpacity: 0.12,
+    // única excepción: la hoja emergente y el FAB necesitan despegarse.
+    shadowColor: "#0b1a2b",
+    shadowOpacity: 0.14,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 6 },
     elevation: 6,
   },
 };
+
+// Altura mínima de cualquier cosa tocable.
+export const TOQUE_MIN = 46;
 
 export const duracion = { rapido: 120, normal: 200 };

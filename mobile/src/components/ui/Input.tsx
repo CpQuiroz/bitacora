@@ -36,8 +36,9 @@ export function Input({
         style={[
           {
             borderWidth: 1,
-            borderColor: error ? t.colores.danger : enfocado ? t.colores.brand : t.colores.border,
+            borderColor: error ? t.colores.danger : enfocado ? t.colores.brand : t.colores.borderStrong,
             borderRadius: t.radio.md,
+            minHeight: 46,
             paddingHorizontal: t.espacio(3.5),
             paddingVertical: t.espacio(3),
             fontSize: t.tipografia.tamano.base,

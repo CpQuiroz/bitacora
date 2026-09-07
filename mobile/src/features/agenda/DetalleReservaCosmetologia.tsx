@@ -5,7 +5,6 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { EstadoTarea, PaqueteSesionesConSaldo, Servicio, TipoPack } from "@bitacora/shared";
 import { grupoDeEstadoTarea } from "@bitacora/shared";
 import { useTema } from "../../theme";
-import { textoSobreFoco } from "../../theme/temas/cosmetologia";
 import { Button, Text } from "../../components/ui";
 import { formatearMoneda } from "../../lib/plata";
 import { formatearDuracion, formatearFechaCompleta, formatearFechaCorta, formatearFechaLarga, sumarMinutos } from "../../lib/horario";
@@ -130,7 +129,7 @@ export function DetalleReservaCosmetologia({
             ) : null}
           </View>
           {tarea.duracion_min ? (
-            <Text style={{ fontSize: 16, color: textoSobreFoco, marginTop: t.espacio(1) }}>{formatearDuracion(tarea.duracion_min)}</Text>
+            <Text style={{ fontSize: 16, color: t.colores.onDark, marginTop: t.espacio(1) }}>{formatearDuracion(tarea.duracion_min)}</Text>
           ) : null}
 
           {servicio ? (
@@ -141,7 +140,7 @@ export function DetalleReservaCosmetologia({
                 </Text>
                 <View style={{ flexDirection: "row", alignItems: "baseline", gap: t.espacio(1.5) }}>
                   {tienePack && servicio.precio > 0 ? (
-                    <Text style={{ color: textoSobreFoco, textDecorationLine: "line-through", fontSize: 13 }}>
+                    <Text style={{ color: t.colores.onDark, textDecorationLine: "line-through", fontSize: 13 }}>
                       {formatearMoneda(servicio.precio)}
                     </Text>
                   ) : null}

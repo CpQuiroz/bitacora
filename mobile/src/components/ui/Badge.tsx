@@ -59,9 +59,9 @@ export function Badge({ estado, texto }: { estado?: string; texto?: string }) {
     <View
       style={{
         backgroundColor: c.bg,
-        borderRadius: t.radio.full,
-        paddingHorizontal: t.espacio(2.5),
-        paddingVertical: t.espacio(1),
+        borderRadius: t.radio.sm,
+        paddingHorizontal: t.espacio(2),
+        paddingVertical: t.espacio(0.75),
       }}
     >
       <Text variante="caption" weight="semibold" style={{ color: c.fg, textTransform: "capitalize" }}>

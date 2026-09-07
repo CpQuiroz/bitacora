@@ -1,5 +1,6 @@
 import { ActivityIndicator, Pressable, View, type ViewStyle } from "react-native";
 import { useTema } from "../../theme";
+import { TOQUE_MIN } from "../../theme/tokens";
 import { Text } from "./Text";
 
 type Variante = "primario" | "secundario" | "ghost" | "peligro" | "acento";
@@ -50,7 +51,8 @@ export function Button({
           borderColor: borde,
           borderWidth: variante === "secundario" ? 1 : 0,
           borderRadius: t.radio.md,
-          paddingVertical: tamano === "lg" ? t.espacio(4) : t.espacio(3.25),
+          minHeight: TOQUE_MIN,
+          paddingVertical: tamano === "lg" ? 17 : 15,
           paddingHorizontal: t.espacio(4),
           alignItems: "center",
           justifyContent: "center",
@@ -67,7 +69,12 @@ export function Button({
       ) : (
         <>
           {icono ? <View>{icono}</View> : null}
-          <Text variante="etiqueta" tono={textoTono} weight="semibold" style={{ fontSize: tamano === "lg" ? 16 : 15 }}>
+          <Text
+            variante="etiqueta"
+            tono={textoTono}
+            weight={solido ? "bold" : "semibold"}
+            style={{ fontSize: tamano === "lg" ? 16 : 15 }}
+          >
             {titulo}
           </Text>
         </>

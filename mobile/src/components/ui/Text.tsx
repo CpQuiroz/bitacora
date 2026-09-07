@@ -1,10 +1,10 @@
 import { Text as RNText, type TextProps, type TextStyle } from "react-native";
 import { useTema } from "../../theme";
 
-// "cifra" es solo para despliegue tipo Bodoni (hora, precio) — mismo
-// criterio que "titulo": ambas usan familiaDisplay cuando el tema la
-// define (tema por rubro cosmetología), el tamaño real casi siempre lo
-// pisa el consumidor vía `style` (hora 46px, precio 22px son puntuales).
+// "cifra" (y el prop `mono`) usan IBM Plex Mono: TODO número que se
+// compare o se lea de un vistazo — horas, montos, km, RUT, folios,
+// odómetro. "titulo" usa IBM Plex Sans como el resto del texto. El
+// tamaño real de "cifra" casi siempre lo pisa el consumidor vía `style`.
 type Variante = "titulo" | "subtitulo" | "cuerpo" | "etiqueta" | "caption" | "cifra";
 type Tono = "normal" | "muted" | "faint" | "brand" | "danger" | "success" | "inverso";
 
@@ -19,9 +19,10 @@ export function Text({
   variante = "cuerpo",
   tono = "normal",
   weight,
+  mono = false,
   style,
   ...props
-}: TextProps & { variante?: Variante; tono?: Tono; weight?: "regular" | "medium" | "semibold" | "bold" }) {
+}: TextProps & { variante?: Variante; tono?: Tono; weight?: "regular" | "medium" | "semibold" | "bold"; mono?: boolean }) {
   const t = useTema();
 
   const porVariante: Record<Variante, { fontSize: number; fontWeight: "400" | "500" | "600" | "700" }> = {
@@ -46,18 +47,19 @@ export function Text({
   const base = porVariante[variante];
   const fontWeight = weight ? t.tipografia.peso[weight] : base.fontWeight;
 
-  // Resolución de familia: "titulo"/"cifra" usan la familia de despliegue
-  // (Bodoni Moda en el tema cosmetología) si existe; el resto usa la
-  // familia normal, mapeada por peso cuando el tema carga fuentes
-  // estáticas por peso (Karla) — una fuente custom no responde a
-  // `fontWeight` sin esto, así que en ese caso se omite el fontWeight de
-  // React Native (el archivo ya es ese peso) para no arriesgar una
-  // negrita sintética en Android.
-  const esDisplay = variante === "titulo" || variante === "cifra";
+  // Resolución de familia: "cifra" y el prop `mono` usan IBM Plex Mono;
+  // el resto usa IBM Plex Sans, mapeada por peso (una fuente custom no
+  // responde a `fontWeight` en RN sin esto — el archivo ya es ese peso,
+  // así que se omite el fontWeight de React Native para no arriesgar una
+  // negrita sintética en Android).
+  const esMono = mono || variante === "cifra";
   let fontFamily = t.tipografia.familia;
   let fontWeightFinal: TextStyle["fontWeight"] = fontWeight;
-  if (esDisplay && t.tipografia.familiaDisplay) {
-    fontFamily = fontWeight === "700" ? t.tipografia.familiaDisplayBold ?? t.tipografia.familiaDisplay : t.tipografia.familiaDisplay;
+  if (esMono && t.tipografia.familiaDisplay) {
+    fontFamily =
+      fontWeight === "700" || fontWeight === "600"
+        ? t.tipografia.familiaDisplayBold ?? t.tipografia.familiaDisplay
+        : t.tipografia.familiaDisplay;
     fontWeightFinal = undefined;
   } else if (t.tipografia.familiaPorPeso) {
     const pesoKey = PESO_DE_FONTWEIGHT[fontWeight] ?? "regular";
