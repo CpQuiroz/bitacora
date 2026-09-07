@@ -59,18 +59,52 @@ export async function datosPersonalesDeCliente(clienteId: string): Promise<Recor
   const correo = (cliente as { correo?: string | null } | undefined)?.correo ?? null;
   const telefono = (cliente as { telefono?: string | null } | undefined)?.telefono ?? null;
 
-  // Log de avisos: se guarda el destinatario como texto (correo o
-  // teléfono), no el cliente_id — hay que buscar por esos valores.
+  const [trabajos, cotizaciones, facturas, citas] = await Promise.all([
+    filas("trabajos", "cliente_id", clienteId),
+    // La tabla es `presupuestos` (no existe `cotizaciones`) — el nombre
+    // de cara al cliente sí es "cotización".
+    filas("presupuestos", "cliente_id", clienteId),
+    filas("facturas", "cliente_id", clienteId),
+    filas("tareas", "cliente_id", clienteId),
+  ]);
+
+  // Log de avisos: `notificaciones_cliente_log` no tiene cliente_id.
+  // Guarda `destinatario` como texto (correo/teléfono) y `entidad_id`
+  // de la entidad avisada. Juntamos ambos caminos: por destinatario y
+  // por cualquier entidad que sea de este cliente.
+  const idFila = (f: unknown) => (f as { id?: string }).id;
+  const entidadIds = [
+    clienteId,
+    ...trabajos.map(idFila),
+    ...cotizaciones.map(idFila),
+    ...facturas.map(idFila),
+    ...citas.map(idFila),
+  ].filter(Boolean) as string[];
   const destinatarios = [correo, telefono].filter(Boolean) as string[];
-  let avisos: unknown[] = [];
+
+  const avisosMap = new Map<string, unknown>();
+  const registrarAvisos = (rows: { id?: string }[] | null | undefined) => {
+    for (const a of rows ?? []) if (a.id) avisosMap.set(a.id, a);
+  };
   if (destinatarios.length) {
     const { data } = await supabase
       .from("notificaciones_cliente_log")
-      .select("tipo, destinatario, entidad_tipo, exito, creado_en")
+      .select("id, tipo, destinatario, entidad_tipo, entidad_id, exito, creado_en")
       .in("destinatario", destinatarios)
       .order("creado_en", { ascending: false });
-    avisos = data ?? [];
+    registrarAvisos(data);
   }
+  if (entidadIds.length) {
+    const { data } = await supabase
+      .from("notificaciones_cliente_log")
+      .select("id, tipo, destinatario, entidad_tipo, entidad_id, exito, creado_en")
+      .in("entidad_id", entidadIds)
+      .order("creado_en", { ascending: false });
+    registrarAvisos(data);
+  }
+  const avisos = [...avisosMap.values()].sort((a, b) =>
+    String((b as { creado_en?: string }).creado_en ?? "").localeCompare(String((a as { creado_en?: string }).creado_en ?? ""))
+  );
 
   return {
     generado_en: new Date().toISOString(),
@@ -78,10 +112,10 @@ export async function datosPersonalesDeCliente(clienteId: string): Promise<Recor
     ficha: cliente ?? null,
     consentimientos: await filas("consentimientos", "cliente_id", clienteId),
     accesos_al_portal: await filas("portal_accesos", "cliente_id", clienteId),
-    trabajos: await filas("trabajos", "cliente_id", clienteId),
-    cotizaciones: await filas("cotizaciones", "cliente_id", clienteId),
-    facturas: await filas("facturas", "cliente_id", clienteId),
-    citas: await filas("tareas", "cliente_id", clienteId),
+    trabajos,
+    cotizaciones,
+    facturas,
+    citas,
     avisos_recibidos: avisos,
   };
 }

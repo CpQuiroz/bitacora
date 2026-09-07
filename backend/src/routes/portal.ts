@@ -20,6 +20,7 @@ import { generarPdfOS } from "../generarPdfOS";
 import { armarDatosPdfCotizacion } from "./cotizaciones";
 import { generarPdfCotizacion } from "../generarPdfCotizacion";
 import { ah } from "../asyncHandler";
+import { limitarPortalAcceso } from "../rateLimiters";
 
 export const portalRouter = Router();
 
@@ -92,8 +93,13 @@ async function buscarClientesPorRut(rut: string, empresaId?: string) {
 
 // ---------- Acceso ----------
 
+// El id del link de acceso es un UUID. La restricción de patrón evita
+// que esta ruta de un solo segmento se coma a `/mis-datos` (y a
+// cualquier GET de un solo segmento que se agregue después), que de
+// otro modo entraría acá con id="mis-datos" y devolvería 404.
 portalRouter.get(
-  "/:id",
+  "/:id([0-9a-fA-F-]{36})",
+  limitarPortalAcceso,
   ah(async (req, res) => {
     const { data: acceso } = await supabase.from("portal_accesos").select("*").eq("id", req.params.id).maybeSingle();
     if (!acceso || new Date(acceso.expira_en) < new Date()) {
@@ -107,6 +113,7 @@ portalRouter.get(
 
 portalRouter.post(
   "/solicitar-codigo",
+  limitarPortalAcceso,
   ah(async (req, res) => {
     const { rut, empresa_id } = req.body ?? {};
     if (typeof rut !== "string" || !validarRut(rut)) {
@@ -156,6 +163,7 @@ portalRouter.post(
 
 portalRouter.post(
   "/verificar-codigo",
+  limitarPortalAcceso,
   ah(async (req, res) => {
     const { rut, codigo, empresa_id } = req.body ?? {};
     if (typeof rut !== "string" || !validarRut(rut) || typeof codigo !== "string") {
@@ -273,12 +281,13 @@ portalRouter.get(
       .from("trabajos")
       .select("id, cliente, fecha, descripcion, estado, cliente_id, orden:ordenes_servicio(folio, estado_os, observaciones_cierre, finalizada_en)")
       .eq("id", req.params.id)
+      .eq("cliente_id", req.clienteId!)
       .maybeSingle();
     if (error) {
       res.status(500).json({ error: error.message });
       return;
     }
-    if (!data || data.cliente_id !== req.clienteId) {
+    if (!data) {
       res.status(404).json({ error: "No encontrada" });
       return;
     }
@@ -291,8 +300,13 @@ portalRouter.get(
   requierePortal,
   requiereSeccion("ordenes"),
   ah<RequestConPortal>(async (req, res) => {
-    const { data: trabajo } = await supabase.from("trabajos").select("cliente_id").eq("id", req.params.id).maybeSingle();
-    if (!trabajo || trabajo.cliente_id !== req.clienteId) {
+    const { data: trabajo } = await supabase
+      .from("trabajos")
+      .select("cliente_id")
+      .eq("id", req.params.id)
+      .eq("cliente_id", req.clienteId!)
+      .maybeSingle();
+    if (!trabajo) {
       res.status(404).json({ error: "No encontrado" });
       return;
     }
@@ -315,14 +329,17 @@ portalRouter.get(
   ah<RequestConPortal>(async (req, res) => {
     const { data, error } = await supabase
       .from("presupuestos")
-      .select("*, items:presupuesto_items(*)")
+      .select(
+        "id, numero, descripcion, monto, subtotal, iva, fecha, fecha_vencimiento, estado, items:presupuesto_items(descripcion, cantidad, precio_unitario)"
+      )
       .eq("id", req.params.id)
+      .eq("cliente_id", req.clienteId!)
       .maybeSingle();
     if (error) {
       res.status(500).json({ error: error.message });
       return;
     }
-    if (!data || data.cliente_id !== req.clienteId) {
+    if (!data) {
       res.status(404).json({ error: "No encontrada" });
       return;
     }
@@ -353,8 +370,13 @@ portalRouter.get(
   requierePortal,
   requiereSeccion("cotizaciones"),
   ah<RequestConPortal>(async (req, res) => {
-    const { data: cotizacion } = await supabase.from("presupuestos").select("cliente_id").eq("id", req.params.id).maybeSingle();
-    if (!cotizacion || cotizacion.cliente_id !== req.clienteId) {
+    const { data: cotizacion } = await supabase
+      .from("presupuestos")
+      .select("cliente_id")
+      .eq("id", req.params.id)
+      .eq("cliente_id", req.clienteId!)
+      .maybeSingle();
+    if (!cotizacion) {
       res.status(404).json({ error: "No encontrada" });
       return;
     }
@@ -371,7 +393,12 @@ portalRouter.get(
 );
 
 async function resolverCotizacionDelCliente(clienteId: string, cotizacionId: string) {
-  const { data } = await supabase.from("presupuestos").select("*").eq("id", cotizacionId).maybeSingle();
+  const { data } = await supabase
+    .from("presupuestos")
+    .select("*")
+    .eq("id", cotizacionId)
+    .eq("cliente_id", clienteId)
+    .maybeSingle();
   if (!data || data.cliente_id !== clienteId) return null;
   return data;
 }
@@ -422,7 +449,12 @@ portalRouter.post(
 // ---------- Citas (Agenda Pro) ----------
 
 async function resolverTareaDelCliente(clienteId: string, tareaId: string) {
-  const { data } = await supabase.from("tareas").select("*").eq("id", tareaId).maybeSingle();
+  const { data } = await supabase
+    .from("tareas")
+    .select("*")
+    .eq("id", tareaId)
+    .eq("cliente_id", clienteId)
+    .maybeSingle();
   if (!data || data.cliente_id !== clienteId) return null;
   return data;
 }
@@ -467,7 +499,21 @@ portalRouter.get(
         descuenta_si_cancela_ahora: calcularEstadoCancelacion(tarea, config.ventana_cancelacion_horas) === "no_asistio",
       };
     }
-    res.json({ ...tarea, advertencia_cancelacion: advertenciaCancelacion });
+    // Whitelist explícita: `resolverTareaDelCliente` trae la fila
+    // completa porque `calcularEstadoCancelacion` la necesita, pero al
+    // cliente solo le devolvemos lo suyo. Nunca `descripcion` (nota
+    // interna), `precio`, `adicionales`, `responsable_id`, `paquete_id`,
+    // `sesiones_consumidas`, `origen`, `trabajo_id`, `servicio_id`.
+    res.json({
+      id: tarea.id,
+      titulo: tarea.titulo,
+      fecha: tarea.fecha,
+      hora: tarea.hora,
+      estado: tarea.estado,
+      duracion_min: tarea.duracion_min,
+      nota_cliente: tarea.nota_cliente,
+      advertencia_cancelacion: advertenciaCancelacion,
+    });
   })
 );
 

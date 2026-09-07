@@ -38,3 +38,17 @@ export const limitarEncuestaPublica = rateLimit({
   legacyHeaders: false,
   message: { error: "Demasiados intentos — espera unos minutos y vuelve a intentar." },
 });
+
+// Portal de Cliente — acceso sin cuenta de Bitácora (RUT + código de 6
+// dígitos, o link de acceso). Sin esto, `/verificar-codigo` es fuerza
+// bruta contra el código, `/solicitar-codigo` es spam de correos +
+// enumeración RUT→empresa, y el id del link de acceso queda sin freno.
+// 20 por IP cada 15 min: holgado para un cliente legítimo que pide el
+// código un par de veces, corto para un ataque automatizado.
+export const limitarPortalAcceso = rateLimit({
+  windowMs: VENTANA_15_MIN,
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Demasiados intentos — espera unos minutos y vuelve a intentar." },
+});
