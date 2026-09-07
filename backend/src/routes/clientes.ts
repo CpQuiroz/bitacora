@@ -129,16 +129,18 @@ clientesRouter.post(
       res.status(400).json({ error: "Falta nombre" });
       return;
     }
-    if (typeof direccion !== "string" || !direccion.trim()) {
-      res.status(400).json({ error: "Falta dirección" });
-      return;
-    }
+    // La dirección es opcional: el "crear cliente al vuelo" del móvil
+    // solo pide nombre/teléfono/RUT/correo y la ficha se completa después
+    // desde la web. La columna es NOT NULL, así que sin dirección se
+    // guarda "" y no se geocodifica (el cliente no sale en el mapa hasta
+    // que se complete).
+    const dir = typeof direccion === "string" ? direccion.trim() : "";
     if (rut && !validarRut(rut)) {
       res.status(400).json({ error: "RUT inválido (verifica el dígito verificador)" });
       return;
     }
 
-    const coords = await geocodificarDireccion(direccion.trim());
+    const coords = dir ? await geocodificarDireccion(dir) : null;
 
     const { data, error } = await supabase
       .from("clientes")
@@ -146,7 +148,7 @@ clientesRouter.post(
         empresa_id: req.empresaId!,
         nombre: nombre.trim(),
         rut: rut ? formatearRut(rut) : null,
-        direccion: direccion.trim(),
+        direccion: dir,
         comuna: comuna?.trim() || null,
         lat: coords?.lat ?? null,
         lng: coords?.lng ?? null,
