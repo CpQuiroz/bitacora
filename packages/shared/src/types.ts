@@ -464,6 +464,12 @@ export type Anexo = {
   nombre: string;
   key: string;
   tamano_bytes: number;
+  // Trazabilidad de "quién agregó qué y cuándo" — usado por los anexos
+  // que se suben DESPUÉS de firmar la OS (POST /api/trabajos/:id/anexos).
+  // Opcionales: los anexos de otros flujos (rutas planificadas) no los
+  // traen y no se rompen.
+  subido_por?: string | null;
+  creado_en?: string;
 };
 
 export type Trabajo = {

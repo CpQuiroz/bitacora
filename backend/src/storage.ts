@@ -13,6 +13,7 @@ import {
   S3Client,
   PutObjectCommand,
   GetObjectCommand,
+  DeleteObjectCommand,
   ListObjectsV2Command,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
@@ -291,6 +292,12 @@ export async function descargarFoto(key: string): Promise<Buffer> {
   const respuesta = await client.send(new GetObjectCommand({ Bucket: BUCKET, Key: key }));
   const bytes = await respuesta.Body!.transformToByteArray();
   return Buffer.from(bytes);
+}
+
+// Borra el objeto de una foto de trabajo del bucket. Solo se llama
+// mientras la OS NO está firmada (DELETE /api/trabajos/:id/fotos/:fotoId).
+export async function borrarFoto(key: string): Promise<void> {
+  await client.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: key }));
 }
 
 // ------------------------------------------------------------

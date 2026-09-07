@@ -1,9 +1,9 @@
 import { Router } from "express";
 import multer from "multer";
-import type { EstadoOS, EstadoTrabajo, ItemChecklist, OrdenServicio, Prioridad, TipoCheckin, TipoTrabajo, Trabajo } from "@bitacora/shared";
+import type { Anexo, EstadoOS, EstadoTrabajo, ItemChecklist, OrdenServicio, Prioridad, TipoCheckin, TipoTrabajo, Trabajo } from "@bitacora/shared";
 import { sustituirVariables } from "@bitacora/shared";
 import { supabase } from "../supabase";
-import { subirFirma, subirFoto, urlFirmada, subirPdfOS, descargarPdfOS, descargarFoto } from "../storage";
+import { subirFirma, subirFoto, urlFirmada, subirPdfOS, descargarPdfOS, descargarFoto, borrarFoto, subirAnexo, urlFirmadaAnexo } from "../storage";
 import { analizarFoto, generarInformeOS, type ImagenInforme } from "../claude";
 import { rolPuedeVerModulo } from "../roles";
 import { crearOrdenServicio, obtenerOCrearOrden, checklistDeTipoOs } from "../ordenes";
@@ -1052,6 +1052,130 @@ trabajosRouter.get(
       (fotos ?? []).map(async (f) => ({ ...f, url: await urlFirmada(f.foto_url, 15) }))
     );
     res.json(conUrl);
+  })
+);
+
+// Borra una foto de la OS. Solo mientras la OS NO está firmada
+// (trabajoBloqueado). Una vez firmada, las fotos originales son
+// inmutables — para sumar evidencia después está POST /:id/anexos.
+// Autorización: la misma de POST /:id/fotos (acceso al trabajo), sin
+// restricción de rol nueva.
+trabajosRouter.delete(
+  "/:id/fotos/:fotoId",
+  ah<RequestConEmpresa>(async (req, res) => {
+    if (!(await trabajoExiste(req.empresaId!, req.params.id))) {
+      res.status(404).json({ error: "Trabajo no encontrado" });
+      return;
+    }
+    if (await trabajoBloqueado(req.empresaId!, req.params.id)) {
+      res.status(403).json({ error: "La orden de servicio ya fue firmada, las fotos originales no se pueden modificar" });
+      return;
+    }
+
+    const orden = await ordenDeTrabajo(req.empresaId!, req.params.id);
+    if (!orden) {
+      res.status(404).json({ error: "Foto no encontrada" });
+      return;
+    }
+
+    const { data: foto } = await supabase
+      .from("analisis_fotos")
+      .select("id, foto_url")
+      .eq("empresa_id", req.empresaId!)
+      .eq("orden_servicio_id", orden.id)
+      .eq("id", req.params.fotoId)
+      .maybeSingle();
+    if (!foto) {
+      res.status(404).json({ error: "Foto no encontrada" });
+      return;
+    }
+
+    await supabase.from("analisis_fotos").delete().eq("empresa_id", req.empresaId!).eq("id", foto.id);
+    await supabase
+      .from("ordenes_servicio")
+      .update({ fotos: (orden.fotos ?? []).filter((k: string) => k !== foto.foto_url) })
+      .eq("empresa_id", req.empresaId!)
+      .eq("id", orden.id);
+    // El objeto de storage se borra al final: si falla, la fila ya no
+    // está y el archivo huérfano no molesta (lo barre el conteo de uso).
+    await borrarFoto(foto.foto_url).catch((e) => console.error("borrarFoto:", e));
+
+    res.status(204).end();
+  })
+);
+
+// Anexos del trabajo: evidencia que se agrega DESPUÉS, sin tocar el
+// registro original de la OS. A diferencia de las fotos, NO lleva el
+// guard trabajoBloqueado — el sentido de esto es sumar material cuando
+// la OS ya está firmada (también sirve con la OS abierta).
+const uploadAnexos = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024, files: 5 } });
+
+trabajosRouter.get(
+  "/:id/anexos",
+  ah<RequestConEmpresa>(async (req, res) => {
+    const { data: trabajo } = await supabase
+      .from("trabajos")
+      .select("anexos")
+      .eq("empresa_id", req.empresaId!)
+      .eq("id", req.params.id)
+      .maybeSingle();
+    if (!trabajo) {
+      res.status(404).json({ error: "Trabajo no encontrado" });
+      return;
+    }
+    const anexos = ((trabajo.anexos ?? []) as Anexo[]).map((a) => ({ ...a }));
+    const conUrl = await Promise.all(anexos.map(async (a) => ({ ...a, url: await urlFirmadaAnexo(a.key, 15) })));
+    res.json(conUrl);
+  })
+);
+
+trabajosRouter.post(
+  "/:id/anexos",
+  uploadAnexos.array("anexos", 5),
+  ah<RequestConEmpresa>(async (req, res) => {
+    const { data: trabajo } = await supabase
+      .from("trabajos")
+      .select("anexos")
+      .eq("empresa_id", req.empresaId!)
+      .eq("id", req.params.id)
+      .maybeSingle();
+    if (!trabajo) {
+      res.status(404).json({ error: "Trabajo no encontrado" });
+      return;
+    }
+
+    const archivos = (req.files as Express.Multer.File[] | undefined) ?? [];
+    if (archivos.length === 0) {
+      res.status(400).json({ error: "Falta el archivo (campo 'anexos')" });
+      return;
+    }
+
+    const ahora = new Date().toISOString();
+    const nuevos: Anexo[] = [];
+    for (const archivo of archivos) {
+      const key = await subirAnexo(req.empresaId!, req.params.id, archivo.originalname, archivo.buffer, archivo.mimetype);
+      nuevos.push({
+        nombre: archivo.originalname,
+        key,
+        tamano_bytes: archivo.size,
+        subido_por: req.userId ?? null,
+        creado_en: ahora,
+      });
+    }
+
+    const anexos = [...((trabajo.anexos ?? []) as Anexo[]), ...nuevos];
+    const { error } = await supabase
+      .from("trabajos")
+      .update({ anexos })
+      .eq("empresa_id", req.empresaId!)
+      .eq("id", req.params.id);
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+
+    const conUrl = await Promise.all(nuevos.map(async (a) => ({ ...a, url: await urlFirmadaAnexo(a.key, 15) })));
+    res.status(201).json(conUrl);
   })
 );
 
