@@ -1,16 +1,17 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, Linking, Pressable, ScrollView, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
-import type { Cliente, PaqueteSesionesConSaldo } from "@bitacora/shared";
+import type { PaqueteSesionesConSaldo, VentaConLineas } from "@bitacora/shared";
 import { useTema } from "../../theme";
-import { Badge, Button, Card, ErrorState, LoadingScreen, Text } from "../../components/ui";
+import { Badge, Button, ErrorState, LoadingScreen, Text } from "../../components/ui";
 import { useRed } from "../../services/sync/NetworkProvider";
 import { useAuth } from "../auth/AuthContext";
-import { editarCliente, obtenerCliente } from "../../services/clientes";
+import { editarCliente, obtenerClienteDetalle, saldoDeFacturas, type ClienteDetalle } from "../../services/clientes";
 import { listarPaquetesCliente } from "../../services/paquetes";
-import { formatearMoneda } from "../../lib/plata";
+import { ventasDeCliente } from "../../services/ventas";
+import { pesos } from "../../lib/plata";
 import { AsignarPackModal } from "./AsignarPackModal";
 import type { ClientesStackParamList } from "../../shell/navigation/types";
 
@@ -22,39 +23,32 @@ export function ClienteDetalleScreen({ route, navigation }: NativeStackScreenPro
   const { enLinea } = useRed();
   const auth = useAuth();
   const tieneAgendaPro = auth.fase === "listo" && auth.modulosVisibles.includes("agenda_pro");
-  // Un rol de terreno (colaborador) ve la ficha para contactar al
-  // cliente, pero no edita datos comerciales.
   const esGestion = auth.fase === "listo" && auth.usuario.rol !== "colaborador";
-  const [cliente, setCliente] = useState<Cliente | null>(null);
+
+  const [cliente, setCliente] = useState<ClienteDetalle | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const [paquetes, setPaquetes] = useState<PaqueteSesionesConSaldo[]>([]);
+  const [ventas, setVentas] = useState<VentaConLineas[]>([]);
   const [asignando, setAsignando] = useState(false);
 
   const cargar = useCallback(async () => {
     setError(null);
     try {
-      setCliente(await obtenerCliente(clienteId));
+      setCliente(await obtenerClienteDetalle(clienteId));
+      void ventasDeCliente(clienteId).then(setVentas);
+      if (tieneAgendaPro) void listarPaquetesCliente(clienteId).then(setPaquetes);
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo cargar el cliente");
     }
-  }, [clienteId]);
-
-  const cargarPaquetes = useCallback(async () => {
-    if (!tieneAgendaPro) return;
-    setPaquetes(await listarPaquetesCliente(clienteId));
   }, [clienteId, tieneAgendaPro]);
 
   useEffect(() => {
     cargar();
-    cargarPaquetes();
-  }, [cargar, cargarPaquetes]);
-  useFocusEffect(
-    useCallback(() => {
-      void cargar();
-      void cargarPaquetes();
-    }, [cargar, cargarPaquetes])
-  );
+  }, [cargar]);
+  useFocusEffect(useCallback(() => void cargar(), [cargar]));
+
+  const saldo = useMemo(() => saldoDeFacturas(cliente?.facturas ?? []), [cliente]);
 
   async function alternarActivo() {
     if (!cliente) return;
@@ -79,119 +73,180 @@ export function ClienteDetalleScreen({ route, navigation }: NativeStackScreenPro
   if (error && !cliente) return <ErrorState mensaje={error} onReintentar={cargar} />;
   if (!cliente) return null;
 
+  const ultimoTrabajo = cliente.trabajos[0];
+
+  function registrarVenta() {
+    if (!ultimoTrabajo) return Alert.alert("Sin OS", "Una venta nace de una cita o de una OS. Este cliente todavía no tiene ninguna.");
+    navigation.navigate("RegistrarVenta", {
+      origenTipo: "os",
+      origenId: ultimoTrabajo.id,
+      clienteId,
+      clienteNombre: cliente!.nombre,
+      clienteRut: cliente!.rut,
+      folio: ultimoTrabajo.orden?.folio ?? null,
+    });
+  }
+
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: t.colores.bg }} contentContainerStyle={{ padding: t.espacio(5), gap: t.espacio(4), paddingBottom: t.espacio(16) }}>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: t.espacio(3) }}>
-        <Text variante="titulo" style={{ flex: 1 }}>
-          {cliente.nombre}
-        </Text>
-        {!cliente.activo ? <Badge texto="inactivo" estado="cancelado" /> : null}
-      </View>
-
-      <Card plano style={{ gap: t.espacio(2) }}>
-        {cliente.rut ? <Fila etiqueta="RUT" valor={cliente.rut} /> : null}
-        <Fila etiqueta="Dirección" valor={cliente.direccion} />
-        {cliente.comuna ? <Fila etiqueta="Comuna" valor={cliente.comuna} /> : null}
-        {cliente.telefono ? <Fila etiqueta="Teléfono" valor={cliente.telefono} /> : null}
-        {cliente.correo ? <Fila etiqueta="Correo" valor={cliente.correo} /> : null}
-      </Card>
-
-      {cliente.notas ? (
-        <Card plano style={{ gap: t.espacio(1.5) }}>
-          <Text variante="etiqueta" tono="muted" weight="semibold" style={{ textTransform: "uppercase" }}>
-            Notas
+    <View style={{ flex: 1, backgroundColor: t.colores.bg }}>
+      <ScrollView contentContainerStyle={{ padding: t.espacio(5), gap: t.espacio(4), paddingBottom: t.espacio(20) }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: t.espacio(3) }}>
+          <Text variante="titulo" style={{ flex: 1 }}>
+            {cliente.nombre}
           </Text>
-          <Text variante="cuerpo">{cliente.notas}</Text>
-        </Card>
-      ) : null}
+          {!cliente.activo ? <Badge texto="inactivo" estado="cancelado" /> : null}
+        </View>
 
-      {cliente.telefono || cliente.correo ? (
-        <View style={{ flexDirection: "row", gap: t.espacio(2.5), flexWrap: "wrap" }}>
+        {/* Bloque de foco navy — SALDO POR COBRAR */}
+        <View style={{ backgroundColor: t.colores.brand, borderRadius: t.radio.lg, padding: t.espacio(5), gap: t.espacio(3) }}>
+          <Text variante="caption" style={{ color: t.colores.brandSoft, letterSpacing: 1.2 }}>
+            SALDO POR COBRAR
+          </Text>
+          <Text variante="cifra" tono="inverso" style={{ fontSize: 30 }}>
+            {pesos(saldo.porCobrar)}
+          </Text>
+          <View style={{ borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.15)", paddingTop: t.espacio(3) }}>
+            <Text mono variante="caption" style={{ color: t.colores.brandSoft }}>
+              {saldo.vencido > 0 ? `${pesos(saldo.vencido)} vencido` : "Nada vencido"}
+              {"  ·  "}
+              {saldo.documentos} {saldo.documentos === 1 ? "documento" : "documentos"}
+            </Text>
+          </View>
+        </View>
+
+        {/* Contacto */}
+        <View style={{ flexDirection: "row", gap: t.espacio(2) }}>
           {cliente.telefono ? (
-            <Button
-              titulo="Llamar"
-              variante="secundario"
-              icono={<Ionicons name="call-outline" size={16} color={t.colores.foreground} />}
-              onPress={() => Linking.openURL(`tel:${cliente.telefono}`)}
-            />
+            <Button titulo="Llamar" variante="secundario" style={{ flex: 1 }} icono={<Ionicons name="call-outline" size={16} color={t.colores.foreground} />} onPress={() => Linking.openURL(`tel:${cliente.telefono}`)} />
+          ) : null}
+          {cliente.correo ? (
+            <Button titulo="Correo" variante="secundario" style={{ flex: 1 }} icono={<Ionicons name="mail-outline" size={16} color={t.colores.foreground} />} onPress={() => Linking.openURL(`mailto:${cliente.correo}`)} />
           ) : null}
           {cliente.telefono ? (
             <Button
               titulo="WhatsApp"
               variante="secundario"
-              icono={<Ionicons name="logo-whatsapp" size={16} color={t.colores.foreground} />}
+              style={{ flex: 1 }}
+              icono={<Ionicons name="logo-whatsapp" size={16} color={t.colores.success} />}
               onPress={() => Linking.openURL(`https://wa.me/${soloDigitos(cliente.telefono!)}`)}
             />
           ) : null}
-          {cliente.correo ? (
-            <Button
-              titulo="Correo"
-              variante="secundario"
-              icono={<Ionicons name="mail-outline" size={16} color={t.colores.foreground} />}
-              onPress={() => Linking.openURL(`mailto:${cliente.correo}`)}
-            />
-          ) : null}
         </View>
-      ) : null}
 
-      {tieneAgendaPro ? (
-        <Card plano style={{ gap: t.espacio(2.5) }}>
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-            <Text variante="etiqueta" tono="muted" weight="semibold" style={{ textTransform: "uppercase" }}>
-              Packs de sesiones
-            </Text>
-            {esGestion ? (
-              <Pressable onPress={() => setAsignando(true)} hitSlop={8}>
-                <Text variante="caption" weight="semibold" tono="brand">
-                  ＋ Asignar pack
-                </Text>
-              </Pressable>
-            ) : null}
-          </View>
-          {paquetes.length === 0 ? (
-            <Text variante="caption" tono="muted">
-              Este cliente no tiene packs.
-            </Text>
-          ) : (
-            paquetes.map((p) => (
-              <View key={p.id} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: t.espacio(3) }}>
-                <View style={{ flex: 1 }}>
-                  <Text variante="etiqueta" weight="medium">
+        {/* Packs activos */}
+        {tieneAgendaPro && paquetes.length > 0
+          ? paquetes.map((p) => (
+              <View key={p.id} style={{ backgroundColor: t.colores.successSoft, borderRadius: t.radio.md, padding: t.espacio(4), gap: t.espacio(2) }}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                  <Text weight="semibold" style={{ color: t.colores.success }}>
                     {p.nombre}
                   </Text>
-                  <Text variante="caption" tono="muted">
-                    {p.saldo}/{p.cantidad_total} sesiones
-                    {p.precio_pagado != null
-                      ? ` · cobrado ${formatearMoneda(p.precio_pagado)}`
-                      : p.precio != null
-                        ? ` · lista ${formatearMoneda(p.precio)}`
-                        : ""}
-                    {p.vence_el ? ` · vence ${p.vence_el}` : " · no vence"}
+                  <Text mono weight="semibold" style={{ color: t.colores.success }}>
+                    quedan {p.saldo} de {p.cantidad_total}
                   </Text>
                 </View>
-                <Badge texto={p.saldo <= 0 ? "agotado" : "disponible"} estado={p.saldo <= 0 ? "cancelado" : "confirmado"} />
+                <View style={{ flexDirection: "row", gap: 3 }}>
+                  {Array.from({ length: p.cantidad_total }).map((_, i) => (
+                    <View key={i} style={{ flex: 1, height: 5, borderRadius: 2, backgroundColor: i < p.saldo ? t.colores.success : "rgba(20,102,60,0.25)" }} />
+                  ))}
+                </View>
               </View>
             ))
-          )}
-        </Card>
-      ) : null}
+          : null}
+        {tieneAgendaPro && esGestion ? (
+          <Pressable onPress={() => setAsignando(true)}>
+            <Text variante="caption" weight="semibold" tono="brand">
+              ＋ Asignar pack
+            </Text>
+          </Pressable>
+        ) : null}
 
-      {esGestion ? (
-        <View style={{ gap: t.espacio(2.5), marginTop: t.espacio(1), borderTopWidth: 1, borderTopColor: t.colores.border, paddingTop: t.espacio(4) }}>
-          <Button
-            titulo="Editar"
-            variante="secundario"
-            icono={<Ionicons name="create-outline" size={16} color={t.colores.foreground} />}
-            onPress={() => navigation.navigate("ClienteForm", { clienteId })}
-          />
-          <Button
-            titulo={cliente.activo ? "Marcar como inactivo" : "Reactivar cliente"}
-            variante={cliente.activo ? "peligro" : "primario"}
-            onPress={alternarActivo}
-            cargando={ocupado}
-          />
-        </View>
-      ) : null}
+        {/* Historial de OS */}
+        {cliente.trabajos.length > 0 ? (
+          <View style={{ gap: t.espacio(2) }}>
+            <Text variante="etiqueta" tono="muted" weight="semibold" style={{ textTransform: "uppercase" }}>
+              Órdenes de servicio
+            </Text>
+            {cliente.trabajos.slice(0, 8).map((tr) => (
+              <Pressable
+                key={tr.id}
+                onPress={() =>
+                  (navigation.getParent() as unknown as { navigate: (t: string, p: unknown) => void } | undefined)?.navigate("Hoy", {
+                    screen: "Trabajos",
+                    params: { screen: "TrabajoDetalle", params: { trabajoId: tr.id } },
+                  })
+                }
+                style={{ flexDirection: "row", alignItems: "center", gap: t.espacio(3), paddingVertical: t.espacio(2.5), borderBottomWidth: 1, borderBottomColor: t.colores.border }}
+              >
+                <Text mono variante="caption" tono="muted" style={{ width: 74 }}>
+                  {tr.fecha}
+                </Text>
+                <Text style={{ flex: 1 }} numberOfLines={1}>
+                  {tr.orden?.folio != null ? `OS N° ${tr.orden.folio}` : tr.descripcion ?? "Trabajo"}
+                </Text>
+                {tr.orden?.estado_os ? <Badge estado={tr.orden.estado_os} /> : null}
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
+
+        {/* Historial de cobros: facturas + ventas pagadas */}
+        {cliente.facturas.length > 0 || ventas.length > 0 ? (
+          <View style={{ gap: t.espacio(2) }}>
+            <Text variante="etiqueta" tono="muted" weight="semibold" style={{ textTransform: "uppercase" }}>
+              Cobros
+            </Text>
+            {cliente.facturas.slice(0, 8).map((f) => (
+              <View key={f.id} style={{ flexDirection: "row", alignItems: "center", gap: t.espacio(3), paddingVertical: t.espacio(2.5), borderBottomWidth: 1, borderBottomColor: t.colores.border }}>
+                <Text mono variante="caption" tono="muted" style={{ width: 74 }}>
+                  {f.fecha_emision}
+                </Text>
+                <Text mono style={{ flex: 1 }}>
+                  {pesos(f.monto)}
+                </Text>
+                <Badge estado={f.estado} />
+              </View>
+            ))}
+            {ventas.map((v) => (
+              <View key={v.id} style={{ flexDirection: "row", alignItems: "center", gap: t.espacio(3), paddingVertical: t.espacio(2.5), borderBottomWidth: 1, borderBottomColor: t.colores.border }}>
+                <Text mono variante="caption" tono="muted" style={{ width: 74 }}>
+                  {v.pagada_en.slice(0, 10)}
+                </Text>
+                <Text mono style={{ flex: 1 }}>
+                  {pesos(v.total)}
+                </Text>
+                <Badge estado="pagada" texto="venta" />
+              </View>
+            ))}
+          </View>
+        ) : null}
+
+        {cliente.notas ? (
+          <View style={{ backgroundColor: t.colores.surfaceAlt, borderRadius: t.radio.md, padding: t.espacio(4), gap: t.espacio(1) }}>
+            <Text variante="caption" tono="muted" weight="semibold" style={{ textTransform: "uppercase" }}>
+              Notas
+            </Text>
+            <Text>{cliente.notas}</Text>
+          </View>
+        ) : null}
+
+        {esGestion ? (
+          <View style={{ gap: t.espacio(2), borderTopWidth: 1, borderTopColor: t.colores.border, paddingTop: t.espacio(4) }}>
+            <Button titulo="Editar ficha" variante="secundario" onPress={() => navigation.navigate("ClienteForm", { clienteId })} />
+            <Button
+              titulo={cliente.activo ? "Marcar como inactivo" : "Reactivar cliente"}
+              variante={cliente.activo ? "peligro" : "primario"}
+              onPress={alternarActivo}
+              cargando={ocupado}
+            />
+          </View>
+        ) : null}
+      </ScrollView>
+
+      {/* Pie */}
+      <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, backgroundColor: t.colores.surface, borderTopWidth: 1, borderTopColor: t.colores.border, padding: t.espacio(4) }}>
+        <Button titulo="Registrar venta" onPress={registrarVenta} />
+      </View>
 
       <AsignarPackModal
         visible={asignando}
@@ -199,23 +254,9 @@ export function ClienteDetalleScreen({ route, navigation }: NativeStackScreenPro
         onCerrar={() => setAsignando(false)}
         onAsignado={() => {
           setAsignando(false);
-          cargarPaquetes();
+          cargar();
         }}
       />
-    </ScrollView>
-  );
-}
-
-function Fila({ etiqueta, valor }: { etiqueta: string; valor: string }) {
-  const t = useTema();
-  return (
-    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: t.espacio(3) }}>
-      <Text variante="etiqueta" tono="muted">
-        {etiqueta}
-      </Text>
-      <Text variante="etiqueta" weight="medium" style={{ flexShrink: 1, textAlign: "right" }}>
-        {valor}
-      </Text>
     </View>
   );
 }

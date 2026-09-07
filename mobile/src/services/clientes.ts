@@ -1,4 +1,4 @@
-import type { Cliente } from "@bitacora/shared";
+import type { Cliente, Factura, Presupuesto, Trabajo } from "@bitacora/shared";
 import { apiJson } from "./api";
 import { guardarCache, leerCache } from "./sync/cache";
 
@@ -6,6 +6,16 @@ export type ClienteConActividad = Cliente & {
   cantidad_os?: number;
   cantidad_cotizaciones?: number;
   ultima_actividad?: string | null;
+  total_por_cobrar?: number;
+  total_vencido?: number;
+  tiene_pack?: boolean;
+};
+
+export type ClienteDetalle = Cliente & {
+  trabajos: (Trabajo & { orden: { folio: number | null; estado_os: string } | null })[];
+  presupuestos: Presupuesto[];
+  facturas: Factura[];
+  equipos: { id: string; nombre: string }[];
 };
 
 export async function listarClientes(): Promise<{ clientes: ClienteConActividad[]; desdeCache: boolean; guardadoEn?: number }> {
@@ -23,6 +33,28 @@ export async function obtenerCliente(id: string): Promise<Cliente> {
   const res = await apiJson<Cliente>(`/api/clientes/${id}`);
   if (!res.ok) throw new Error(res.error);
   return res.data;
+}
+
+export async function obtenerClienteDetalle(id: string): Promise<ClienteDetalle> {
+  const res = await apiJson<ClienteDetalle>(`/api/clientes/${id}`);
+  if (!res.ok) throw new Error(res.error);
+  return res.data;
+}
+
+// Saldo por cobrar del cliente, derivado de sus facturas.
+export function saldoDeFacturas(facturas: Factura[]): { porCobrar: number; vencido: number; documentos: number } {
+  const hoy = new Date().toISOString().slice(0, 10);
+  let porCobrar = 0;
+  let vencido = 0;
+  let documentos = 0;
+  for (const f of facturas) {
+    if (f.estado === "pagada") continue;
+    const monto = Number(f.monto) || 0;
+    porCobrar += monto;
+    documentos += 1;
+    if (f.fecha_vencimiento && f.fecha_vencimiento < hoy) vencido += monto;
+  }
+  return { porCobrar, vencido, documentos };
 }
 
 export type BorradorCliente = {

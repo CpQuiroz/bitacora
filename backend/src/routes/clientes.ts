@@ -11,16 +11,32 @@ export const clientesRouter = Router();
 clientesRouter.get(
   "/",
   ah<RequestConEmpresa>(async (req, res) => {
-    const [{ data: clientes, error }, { data: trabajos }, { data: presupuestos }] = await Promise.all([
+    const [{ data: clientes, error }, { data: trabajos }, { data: presupuestos }, { data: facturas }, { data: packs }] = await Promise.all([
       supabase.from("clientes").select("*").eq("empresa_id", req.empresaId!).order("nombre"),
       supabase.from("trabajos").select("cliente_id, fecha").eq("empresa_id", req.empresaId!),
       supabase.from("presupuestos").select("cliente_id").eq("empresa_id", req.empresaId!),
+      supabase.from("facturas").select("cliente_id, monto, estado, fecha_vencimiento").eq("empresa_id", req.empresaId!),
+      supabase.from("paquetes_sesiones").select("cliente_id").eq("empresa_id", req.empresaId!),
     ]);
 
     if (error) {
       res.status(500).json({ error: error.message });
       return;
     }
+
+    // Saldo por cobrar del cliente = facturas ni pagadas ni anuladas.
+    const hoyStr = new Date().toISOString().slice(0, 10);
+    const porCobrarPorCliente = new Map<string, number>();
+    const vencidoPorCliente = new Map<string, number>();
+    for (const f of facturas ?? []) {
+      if (!f.cliente_id || f.estado === "pagada") continue;
+      const monto = Number(f.monto) || 0;
+      porCobrarPorCliente.set(f.cliente_id, (porCobrarPorCliente.get(f.cliente_id) ?? 0) + monto);
+      if (f.fecha_vencimiento && f.fecha_vencimiento < hoyStr) {
+        vencidoPorCliente.set(f.cliente_id, (vencidoPorCliente.get(f.cliente_id) ?? 0) + monto);
+      }
+    }
+    const conPack = new Set((packs ?? []).map((p) => p.cliente_id).filter(Boolean));
 
     const osPorCliente = new Map<string, number>();
     const ultimaActividadPorCliente = new Map<string, string>();
@@ -42,6 +58,9 @@ clientesRouter.get(
         cantidad_os: osPorCliente.get(c.id) ?? 0,
         cantidad_cotizaciones: cotizacionesPorCliente.get(c.id) ?? 0,
         ultima_actividad: ultimaActividadPorCliente.get(c.id) ?? null,
+        total_por_cobrar: porCobrarPorCliente.get(c.id) ?? 0,
+        total_vencido: vencidoPorCliente.get(c.id) ?? 0,
+        tiene_pack: conPack.has(c.id),
       }))
     );
   })
