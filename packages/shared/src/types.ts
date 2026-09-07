@@ -1447,6 +1447,60 @@ export type AnalisisFoto = {
   creado_en: string;
 };
 
+// ---------- Ventas (migración 95) ----------
+// Una venta nace SIEMPRE de una cita o de una OS (hereda cliente y
+// servicio); no hay venta libre. Queda pagada al instante — no genera
+// cobro pendiente. El historial de dinero del cliente = facturas +
+// ventas pagadas.
+export type MedioPagoVenta = "efectivo" | "transferencia" | "tarjeta";
+export type TipoLineaVenta = "servicio" | "producto" | "pack";
+
+export type Venta = {
+  id: string;
+  empresa_id: string;
+  cliente_id: string;
+  origen_tipo: "cita" | "os";
+  origen_id: string;
+  neto: number;
+  iva: number;
+  total: number;
+  medio_pago: MedioPagoVenta;
+  estado: "pagada" | "anulada";
+  pagada_en: string;
+  registrada_por: string | null;
+  creado_en: string;
+};
+
+export type VentaLinea = {
+  id: string;
+  empresa_id: string;
+  venta_id: string;
+  tipo: TipoLineaVenta;
+  // servicios.id | catalogo_items.id | tipos_pack.id según `tipo`.
+  referencia_id: string;
+  nombre: string;
+  cantidad: number;
+  precio_unitario: number;
+  subtotal: number;
+  heredada: boolean;
+  paquete_sesiones_id: string | null;
+  creado_en: string;
+};
+
+export type VentaConLineas = Venta & { lineas: VentaLinea[] };
+
+// Foto adjunta a un viaje (migración 95) — sube por la misma cola
+// offline que la firma y el gasto. El admin las ve en el detalle del
+// viaje (web + móvil).
+export type ViajeFoto = {
+  id: string;
+  empresa_id: string;
+  viaje_id: string;
+  foto_url: string;
+  subida_por: string | null;
+  creado_en: string;
+};
+
 // Forma mínima de la base de datos para tipar al cliente de Supabase.
 // Sustituir por el tipo generado con `supabase gen types typescript`
 // cuando el CLI pueda correr contra este proyecto (requiere Docker).
@@ -1539,6 +1593,9 @@ export type Database = {
       asignacion_familiar_tramos: Tabla<AsignacionFamiliarTramo>;
       datos_laborales: Tabla<DatosLaborales>;
       liquidaciones: Tabla<Liquidacion>;
+      ventas: Tabla<Venta>;
+      venta_lineas: Tabla<VentaLinea>;
+      viaje_fotos: Tabla<ViajeFoto>;
     };
     Views: Record<string, never>;
     Functions: {

@@ -5,10 +5,22 @@ export type RootStackParamList = {
   Verify2fa: { ticket: string; metodo: "totp" | "email" };
 };
 
+// Una venta nace de una cita o de una OS (hereda cliente y servicio).
+export type RegistrarVentaParams = {
+  origenTipo: "cita" | "os";
+  origenId: string;
+  clienteId: string;
+  clienteNombre: string;
+  clienteRut?: string | null;
+  folio?: number | null;
+  heredado?: { referencia_id: string; nombre: string; precio: number } | null;
+};
+
 export type TrabajosStackParamList = {
   TrabajosLista: undefined;
   TrabajoDetalle: { trabajoId: string; titulo?: string };
   TrabajoForm: { trabajoId?: string } | undefined;
+  RegistrarVenta: RegistrarVentaParams;
 };
 
 export type ViajesStackParamList = {
@@ -27,6 +39,7 @@ export type ClientesStackParamList = {
   ClientesLista: undefined;
   ClienteForm: { clienteId?: string } | undefined;
   ClienteDetalle: { clienteId: string };
+  RegistrarVenta: RegistrarVentaParams;
 };
 
 // "Más" absorbe la vieja pestaña Gestión (Cobros, Gasto, Informes,

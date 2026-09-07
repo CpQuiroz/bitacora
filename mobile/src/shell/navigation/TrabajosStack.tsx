@@ -4,6 +4,7 @@ import type { TrabajosStackParamList } from "./types";
 import { TrabajosScreen } from "../../features/trabajos/TrabajosScreen";
 import { TrabajoDetalleScreen } from "../../features/trabajos/TrabajoDetalleScreen";
 import { TrabajoFormScreen } from "../../features/trabajos/TrabajoFormScreen";
+import { RegistrarVentaScreen } from "../../features/ventas/RegistrarVentaScreen";
 
 const Stack = createNativeStackNavigator<TrabajosStackParamList>();
 
@@ -26,6 +27,7 @@ export function TrabajosStack() {
         options={({ route }) => ({ title: route.params.titulo ?? "Trabajo" })}
       />
       <Stack.Screen name="TrabajoForm" component={TrabajoFormScreen} options={{ title: "Nuevo trabajo", presentation: "modal" }} />
+      <Stack.Screen name="RegistrarVenta" component={RegistrarVentaScreen} options={{ title: "Registrar venta" }} />
     </Stack.Navigator>
   );
 }

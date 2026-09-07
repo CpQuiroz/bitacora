@@ -331,11 +331,21 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
             {checkIn?.hecho && !checkOut?.hecho ? (
               <Button titulo="Registrar salida y firmar" tamano="lg" cargando={marcando === "Check-out"} onPress={() => marcar("Check-out")} />
             ) : null}
-            <Button
-              titulo="Registrar venta"
-              variante="secundario"
-              onPress={() => Alert.alert("Registrar venta", "Disponible en la próxima actualización.")}
-            />
+            {trabajo.cliente_id ? (
+              <Button
+                titulo="Registrar venta"
+                variante="secundario"
+                onPress={() =>
+                  navigation.navigate("RegistrarVenta", {
+                    origenTipo: "os",
+                    origenId: trabajoId,
+                    clienteId: trabajo.cliente_id!,
+                    clienteNombre: cli?.nombre ?? trabajo.cliente,
+                    folio: orden?.folio ?? null,
+                  })
+                }
+              />
+            ) : null}
           </View>
         )}
       </ScrollView>
