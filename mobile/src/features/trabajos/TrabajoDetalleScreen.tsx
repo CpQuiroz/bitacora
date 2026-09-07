@@ -135,7 +135,6 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
   const checklist: ItemChecklist[] = orden?.checklist ?? [];
   const checkIn = checklist.find((c) => c.item === "Check-in");
   const checkOut = checklist.find((c) => c.item === "Check-out");
-  const puedeFinalizar = Boolean(orden?.firma_url_firmada) && Boolean(checkOut?.hecho) && !finalizada;
   const estadoOsEfectivo = orden?.estado_os ?? estadoOsDeTrabajo(trabajo.estado as EstadoTrabajo);
   const estadoMostrar = ETIQUETA_OS[estadoOsEfectivo] ?? estadoOsEfectivo;
   const direccion = cli?.direccion || trabajo.ubicacion;
@@ -316,25 +315,22 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
           onQuitarPendiente={descartar}
         />
 
-        <CierreFirma orden={orden} editable={!finalizada} onFirmar={(p) => encolarFirma(trabajoId, p)} />
+        <CierreFirma
+          orden={orden}
+          editable={!finalizada}
+          onFirmar={(p) => encolarFirma(trabajoId, p)}
+          onCerrar={finalizar}
+          onGuardarSinFirmar={() =>
+            Alert.alert("Guardado sin firmar", "La OS sigue abierta hasta que el cliente firme. Tus notas quedaron en pantalla.")
+          }
+        />
 
         {/* Pie de acciones */}
         {!finalizada && (
           <View style={{ gap: t.espacio(2), marginTop: t.espacio(2) }}>
             {checkIn?.hecho && !checkOut?.hecho ? (
-              <Button
-                titulo="Registrar salida y firmar"
-                tamano="lg"
-                cargando={marcando === "Check-out"}
-                onPress={() => marcar("Check-out")}
-              />
-            ) : puedeFinalizar ? (
-              <Button titulo="Finalizar trabajo" tamano="lg" onPress={finalizar} cargando={finalizando} />
-            ) : (
-              <Text variante="caption" tono="muted" style={{ textAlign: "center" }}>
-                {checkIn?.hecho ? "Falta la firma del cliente para cerrar." : "Marca el check-in para empezar."}
-              </Text>
-            )}
+              <Button titulo="Registrar salida y firmar" tamano="lg" cargando={marcando === "Check-out"} onPress={() => marcar("Check-out")} />
+            ) : null}
             <Button
               titulo="Registrar venta"
               variante="secundario"
