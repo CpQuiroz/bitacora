@@ -5,6 +5,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { Cliente, PaqueteSesionesConSaldo, Servicio, Usuario } from "@bitacora/shared";
 import { useTema } from "../../theme";
 import { Button, Input, Text } from "../../components/ui";
+import { InputMonto } from "../../components/InputMonto";
 import { SelectorCliente } from "../../components/SelectorCliente";
 import { useRed } from "../../services/sync/NetworkProvider";
 import { formatearMoneda } from "../../lib/plata";
@@ -308,13 +309,7 @@ export function NuevaReservaCosmetologia({ navigation, route }: NativeStackScree
         <Filete />
 
         {/* Precio */}
-        <Input
-          etiqueta="Precio del servicio"
-          keyboardType="numeric"
-          placeholder="0"
-          value={precio}
-          onChangeText={(v) => setPrecio(v.replace(/\D/g, ""))}
-        />
+        <InputMonto etiqueta="Precio del servicio" valor={precio} onChangeText={setPrecio} />
         <Filete />
 
         {/* Adicionales — "valor agregado" */}
@@ -335,10 +330,11 @@ export function NuevaReservaCosmetologia({ navigation, route }: NativeStackScree
             </Text>
           ) : (
             adicionales.map((a, i) => (
-              <View key={i} style={{ flexDirection: "row", gap: t.espacio(2), alignItems: "center" }}>
+              <View key={i} style={{ flexDirection: "row", gap: t.espacio(2), alignItems: "flex-end" }}>
                 <View style={{ flex: 2 }}>
                   <Input
-                    placeholder="Concepto"
+                    etiqueta="Concepto"
+                    placeholder="Producto o extra"
                     value={a.concepto}
                     onChangeText={(v) =>
                       setAdicionales((prev) => prev.map((x, j) => (j === i ? { ...x, concepto: v } : x)))
@@ -346,16 +342,17 @@ export function NuevaReservaCosmetologia({ navigation, route }: NativeStackScree
                   />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Input
-                    placeholder="0"
-                    keyboardType="numeric"
-                    value={a.monto}
-                    onChangeText={(v) =>
-                      setAdicionales((prev) => prev.map((x, j) => (j === i ? { ...x, monto: v.replace(/\D/g, "") } : x)))
-                    }
+                  <InputMonto
+                    etiqueta="Monto"
+                    valor={a.monto}
+                    onChangeText={(d) => setAdicionales((prev) => prev.map((x, j) => (j === i ? { ...x, monto: d } : x)))}
                   />
                 </View>
-                <Pressable onPress={() => setAdicionales((prev) => prev.filter((_, j) => j !== i))} hitSlop={8}>
+                <Pressable
+                  onPress={() => setAdicionales((prev) => prev.filter((_, j) => j !== i))}
+                  hitSlop={8}
+                  style={{ marginBottom: t.espacio(2.5) }}
+                >
                   <Ionicons name="close-circle" size={22} color={t.colores.muted} />
                 </Pressable>
               </View>
