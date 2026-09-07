@@ -8,6 +8,7 @@ import { useAuth } from "../auth/AuthContext";
 import { useRed } from "../../services/sync/NetworkProvider";
 import { apiFetch, apiJson } from "../../services/api";
 import { biometriaActivada, biometriaDisponible, nombreBiometria, pedirBiometria, setBiometriaActivada } from "../../lib/biometria";
+import { preferencias, setPreferencia, suscribirPreferencias, type Preferencias } from "../../lib/preferencias";
 
 const WEB_URL = "https://app.transportesitineris.cl";
 
@@ -29,6 +30,9 @@ export function PerfilScreen() {
   const t = useTema();
   const auth = useAuth();
   const { enLinea, pendientes, fallidas, sincronizarAhora, reintentar, descartar, descartarTodo } = useRed();
+
+  const [prefs, setPrefs] = useState<Preferencias>(preferencias());
+  useEffect(() => suscribirPreferencias(setPrefs), []);
 
   const [bioDisponible, setBioDisponible] = useState(false);
   const [bioNombre, setBioNombre] = useState("biometría");
@@ -85,49 +89,63 @@ export function PerfilScreen() {
   if (auth.fase !== "listo" && auth.fase !== "mfa-requerido") return null;
   const u = auth.usuario;
   const tituloBio = bioNombre === "Face ID" ? "Bloquear con Face ID" : "Bloquear con huella";
+  const iniciales = u.nombre.split(" ").slice(0, 2).map((s) => s[0]).join("").toUpperCase();
 
   return (
     <Screen scroll style={{ gap: t.espacio(4) }}>
-      <View style={{ gap: t.espacio(1) }}>
-        <Text variante="titulo">{u.nombre}</Text>
-        <Text variante="etiqueta" tono="muted">
-          {u.empresa.nombre}
-        </Text>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: t.espacio(3) }}>
+        <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: t.colores.brandSoft, alignItems: "center", justifyContent: "center" }}>
+          <Text weight="bold" tono="brand">
+            {iniciales}
+          </Text>
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text variante="titulo">{u.nombre}</Text>
+          <Text variante="etiqueta" tono="muted">
+            {ETIQUETA_ROL[u.rol] ?? u.rol} · {u.empresa.nombre}
+          </Text>
+        </View>
       </View>
 
       <Card>
-        <Fila etiqueta="Rol" valor={ETIQUETA_ROL[u.rol] ?? u.rol} />
         {u.funcion ? <Fila etiqueta="Función" valor={ETIQUETA_FUNCION[u.funcion] ?? u.funcion} /> : null}
         {u.telefono ? <Fila etiqueta="Teléfono" valor={u.telefono} /> : null}
         {u.zona ? <Fila etiqueta="Zona" valor={u.zona} /> : null}
+        <Fila etiqueta="Conexión" valor={enLinea ? "En línea" : "Sin conexión"} />
       </Card>
 
-      <Card style={pendientes.length > 0 ? { borderLeftWidth: 3, borderLeftColor: t.colores.accent } : undefined}>
-        <Fila etiqueta="Conexión" valor={enLinea ? "En línea" : "Sin conexión"} />
-        <Fila
-          etiqueta="Sin sincronizar"
-          valor={pendientes.length === 0 ? "Nada pendiente" : `${pendientes.length} acción(es)`}
-        />
-        {pendientes.length > 0 && (
-          <View style={{ marginTop: t.espacio(3), gap: t.espacio(2) }}>
-            <Button titulo="Sincronizar ahora" variante="secundario" onPress={sincronizarAhora} />
+      {/* Cola de sincronización detallada */}
+      {pendientes.length > 0 && (
+        <View style={{ backgroundColor: t.colores.accentSoft, borderRadius: t.radio.md, padding: t.espacio(4), gap: t.espacio(2) }}>
+          <Text variante="etiqueta" weight="semibold" style={{ color: t.colores.warning, textTransform: "uppercase" }}>
+            {pendientes.length} sin enviar
+          </Text>
+          {pendientes.map((a) => (
+            <View key={a.id} style={{ borderTopWidth: 1, borderTopColor: "rgba(138,74,16,0.15)", paddingTop: t.espacio(2) }}>
+              <Text variante="etiqueta" weight="medium">
+                {a.etiqueta}
+              </Text>
+              <Text mono variante="caption" tono="muted">
+                {a.creadoEn ? new Date(a.creadoEn).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : ""}
+                {a.archivo ? " · con foto adjunta" : ""}
+              </Text>
+            </View>
+          ))}
+          <View style={{ flexDirection: "row", gap: t.espacio(2), marginTop: t.espacio(2) }}>
+            <Button titulo="Reintentar ahora" variante="secundario" onPress={sincronizarAhora} style={{ flex: 1 }} />
             <Button
-              titulo="Descartar lo pendiente"
+              titulo="Descartar"
               variante="ghost"
               onPress={() =>
-                Alert.alert(
-                  "Descartar lo pendiente",
-                  `Se borran ${pendientes.length} acción(es) que no se pudieron enviar. Úsalo solo si quedó algo trancado que ya no necesitas.`,
-                  [
-                    { text: "No", style: "cancel" },
-                    { text: "Sí, descartar", style: "destructive", onPress: descartarTodo },
-                  ]
-                )
+                Alert.alert("Descartar lo pendiente", `Se borran ${pendientes.length} acción(es). Úsalo solo si quedó algo trancado que ya no necesitas.`, [
+                  { text: "No", style: "cancel" },
+                  { text: "Sí, descartar", style: "destructive", onPress: descartarTodo },
+                ])
               }
             />
           </View>
-        )}
-      </Card>
+        </View>
+      )}
 
       {fallidas.length > 0 && (
         <Card style={{ borderColor: t.colores.danger, backgroundColor: t.colores.dangerSoft }} plano>
@@ -231,12 +249,48 @@ export function PerfilScreen() {
         </Pressable>
       </Card>
 
-      <Text variante="caption" tono="muted" style={{ textAlign: "center" }}>
+      <Card style={{ gap: t.espacio(1) }}>
+        <Interruptor
+          titulo="Descargar el día al abrir"
+          sub="Precarga lo de hoy apenas abres la app."
+          valor={prefs.descargarDiaAlAbrir}
+          onCambiar={(v) => setPreferencia("descargarDiaAlAbrir", v)}
+        />
+        <Interruptor
+          titulo="Subir fotos solo con WiFi"
+          sub="En datos móviles las fotos esperan en la cola."
+          valor={prefs.fotosSoloWifi}
+          onCambiar={(v) => setPreferencia("fotosSoloWifi", v)}
+        />
+      </Card>
+
+      <Text mono variante="caption" tono="faint" style={{ textAlign: "center" }}>
         Bitácora {Constants.expoConfig?.version ?? ""}
       </Text>
 
       <Button titulo="Cerrar sesión" variante="peligro" onPress={auth.cerrarSesion} />
     </Screen>
+  );
+}
+
+function Interruptor({ titulo, sub, valor, onCambiar }: { titulo: string; sub: string; valor: boolean; onCambiar: (v: boolean) => void }) {
+  const t = useTema();
+  return (
+    <Pressable
+      onPress={() => onCambiar(!valor)}
+      hitSlop={8}
+      style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: t.espacio(3), minHeight: 46, opacity: pressed ? 0.7 : 1 })}
+    >
+      <View style={{ flex: 1, gap: 2 }}>
+        <Text variante="etiqueta" weight="medium">
+          {titulo}
+        </Text>
+        <Text variante="caption" tono="muted">
+          {sub}
+        </Text>
+      </View>
+      <Ionicons name={valor ? "toggle" : "toggle-outline"} size={34} color={valor ? t.colores.brand : t.colores.muted} />
+    </Pressable>
   );
 }
 

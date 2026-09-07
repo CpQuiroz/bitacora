@@ -1,122 +1,151 @@
-import { View } from "react-native";
+import { useCallback, useEffect, useState } from "react";
+import { Pressable, ScrollView, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useTema } from "../../theme";
-import { Card, Screen, Text } from "../../components/ui";
+import { Text } from "../../components/ui";
+import { pesos } from "../../lib/plata";
 import { useAuth } from "../auth/AuthContext";
+import { useRed } from "../../services/sync/NetworkProvider";
+import { estaVencido, listarCobros } from "../../services/cobros";
 import type { MasStackParamList } from "../../shell/navigation/types";
 
-// "Más": todo lo que no cabe en las 3 primeras pestañas. Las listas
-// completas de trabajos/viajes (histórico), la gestión de oficina
-// (cobros, gastos, informes, asistente) y el perfil con la cola de
-// sincronización. Ya no puede quedar vacía → sin EmptyState.
+// "Más" = la vieja pantalla de Gestión. Menú agrupado en Dinero /
+// Análisis / Dispositivo (+ Terreno para el histórico). Cada ítem lleva
+// un icono en cuadrado de 34px y una línea de contexto real.
 
-type Item = { titulo: string; sub: string; icono: keyof typeof Ionicons.glyphMap; ir: () => void };
+type Item = {
+  titulo: string;
+  contexto: string;
+  icono: keyof typeof Ionicons.glyphMap;
+  badge?: number;
+  ir: () => void;
+};
 
 export function MasScreen({ navigation }: NativeStackScreenProps<MasStackParamList, "MasInicio">) {
   const t = useTema();
   const auth = useAuth();
+  const { pendientes } = useRed();
   const listo = auth.fase === "listo";
   const visibles = listo ? auth.modulosVisibles : [];
   const acciones = listo ? auth.acciones : [];
   const deshabilitados = listo ? auth.modulosDeshabilitados : [];
 
+  const [cobros, setCobros] = useState<{ vencidos: number; monto: number } | null>(null);
+
+  const cargarCobros = useCallback(async () => {
+    if (!visibles.includes("financiero")) return;
+    try {
+      const r = await listarCobros();
+      const venc = r.cobros.filter((c) => estaVencido(c));
+      setCobros({ vencidos: venc.length, monto: venc.reduce((s, c) => s + (Number(c.monto) || 0), 0) });
+    } catch {
+      // sin conexión — la línea de contexto queda genérica
+    }
+  }, [visibles]);
+
+  useEffect(() => {
+    void cargarCobros();
+  }, [cargarCobros]);
+  useFocusEffect(useCallback(() => void cargarCobros(), [cargarCobros]));
+
   const grupos: { titulo: string; items: Item[] }[] = [];
 
-  const trabajo: Item[] = [
-    {
-      titulo: "Todos los trabajos",
-      sub: "El historial completo, no solo lo de hoy",
-      icono: "clipboard-outline",
-      ir: () => navigation.navigate("Trabajos"),
-    },
+  // --- Terreno (histórico) ---
+  const terreno: Item[] = [
+    { titulo: "Todos los trabajos", contexto: "El historial completo, no solo lo de hoy", icono: "clipboard-outline", ir: () => navigation.navigate("Trabajos") },
   ];
   if (!deshabilitados.includes("viajes")) {
-    trabajo.push({
-      titulo: "Todos los viajes",
-      sub: "El historial completo de viajes",
-      icono: "car-outline",
-      ir: () => navigation.navigate("Viajes"),
-    });
+    terreno.push({ titulo: "Todos los viajes", contexto: "El historial completo de viajes", icono: "car-outline", ir: () => navigation.navigate("Viajes") });
   }
-  grupos.push({ titulo: "Terreno", items: trabajo });
+  grupos.push({ titulo: "Terreno", items: terreno });
 
-  const oficina: Item[] = [];
-  if (visibles.includes("agenda_pro")) {
-    oficina.push({
-      titulo: "Servicios y packs",
-      sub: "El catálogo de Agenda Pro: precios, duraciones, packs de sesiones",
-      icono: "pricetags-outline",
-      ir: () => navigation.navigate("Catalogo"),
-    });
-  }
+  // --- Dinero ---
+  const dinero: Item[] = [];
   if (visibles.includes("financiero")) {
-    oficina.push({
+    dinero.push({
       titulo: "Cobros",
-      sub: "Facturas y pagos de los clientes",
+      contexto: cobros ? `${cobros.vencidos} vencido${cobros.vencidos === 1 ? "" : "s"} · ${pesos(cobros.monto)}` : "Facturas y pagos de los clientes",
       icono: "cash-outline",
       ir: () => navigation.navigate("CobrosLista"),
     });
-    oficina.push({
-      titulo: "Nuevo gasto",
-      sub: "Registra un gasto con categoría, centro de costo y comprobante",
-      icono: "wallet-outline",
-      ir: () => navigation.navigate("GastoForm"),
-    });
+    dinero.push({ titulo: "Nuevo gasto", contexto: "Monto, categoría, proveedor y comprobante", icono: "wallet-outline", ir: () => navigation.navigate("GastoForm") });
   }
+  if (visibles.includes("agenda_pro")) {
+    dinero.push({ titulo: "Servicios y packs", contexto: "Precios, duraciones y packs de sesiones", icono: "pricetags-outline", ir: () => navigation.navigate("Catalogo") });
+  }
+  if (dinero.length) grupos.push({ titulo: "Dinero", items: dinero });
+
+  // --- Análisis ---
+  const analisis: Item[] = [];
   if (acciones.includes("ver_dashboard") && visibles.includes("informes")) {
-    oficina.push({
-      titulo: "Informes",
-      sub: "Visión general, financiero, ventas, operaciones, servicios, clientes y gastos",
-      icono: "bar-chart-outline",
-      ir: () => navigation.navigate("Informes"),
-    });
+    analisis.push({ titulo: "Informes", contexto: "Visión general, financiero, ventas, operaciones", icono: "bar-chart-outline", ir: () => navigation.navigate("Informes") });
   }
   if (visibles.includes("asistente")) {
-    oficina.push({
-      titulo: "Asistente IA",
-      sub: "Pregunta sobre trabajos, viajes, clientes y cobros",
-      icono: "sparkles-outline",
-      ir: () => navigation.navigate("Asistente"),
-    });
+    analisis.push({ titulo: "Asistente IA", contexto: "Pregunta sobre trabajos, viajes, clientes y cobros", icono: "sparkles-outline", ir: () => navigation.navigate("Asistente") });
   }
-  if (oficina.length > 0) grupos.push({ titulo: "Oficina", items: oficina });
+  if (analisis.length) grupos.push({ titulo: "Análisis", items: analisis });
 
+  // --- Dispositivo ---
   grupos.push({
-    titulo: "Tu cuenta",
+    titulo: "Dispositivo",
     items: [
       {
-        titulo: "Perfil y sincronización",
-        sub: "Tus datos, el bloqueo con huella y la cola de acciones sin enviar",
-        icono: "person-circle-outline",
+        titulo: "Cola de sincronización",
+        contexto: pendientes.length ? `${pendientes.length} acción${pendientes.length === 1 ? "" : "es"} sin enviar` : "Todo sincronizado",
+        icono: "sync-outline",
+        badge: pendientes.length || undefined,
         ir: () => navigation.navigate("Perfil"),
       },
+      { titulo: "Perfil y sesión", contexto: "Tus datos, el bloqueo con huella y la versión", icono: "person-circle-outline", ir: () => navigation.navigate("Perfil") },
     ],
   });
 
   return (
-    <Screen scroll style={{ gap: t.espacio(4) }}>
+    <ScrollView style={{ flex: 1, backgroundColor: t.colores.bg }} contentContainerStyle={{ padding: t.espacio(4), gap: t.espacio(5) }}>
       {grupos.map((g) => (
         <View key={g.titulo} style={{ gap: t.espacio(2) }}>
-          <Text variante="caption" tono="muted" weight="semibold" style={{ textTransform: "uppercase" }}>
+          <Text mono variante="caption" tono="faint" weight="semibold" style={{ letterSpacing: 1.5, textTransform: "uppercase" }}>
             {g.titulo}
           </Text>
-          {g.items.map((it) => (
-            <Card key={it.titulo} onPress={it.ir}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: t.espacio(3) }}>
-                <Ionicons name={it.icono} size={24} color={t.colores.brand} />
-                <View style={{ flex: 1, gap: 2 }}>
-                  <Text variante="subtitulo">{it.titulo}</Text>
-                  <Text variante="caption" tono="muted">
-                    {it.sub}
+          <View style={{ borderTopWidth: 1, borderTopColor: t.colores.border }}>
+            {g.items.map((it) => (
+              <Pressable
+                key={it.titulo}
+                onPress={it.ir}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: t.espacio(3),
+                  paddingVertical: t.espacio(3),
+                  borderBottomWidth: 1,
+                  borderBottomColor: t.colores.border,
+                }}
+              >
+                <View style={{ width: 34, height: 34, borderRadius: t.radio.sm, backgroundColor: t.colores.brandSoft, alignItems: "center", justifyContent: "center" }}>
+                  <Ionicons name={it.icono} size={18} color={t.colores.brand} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text weight="semibold">{it.titulo}</Text>
+                  <Text variante="caption" tono="muted" numberOfLines={1}>
+                    {it.contexto}
                   </Text>
                 </View>
-                <Ionicons name="chevron-forward" size={18} color={t.colores.faint} />
-              </View>
-            </Card>
-          ))}
+                {it.badge ? (
+                  <View style={{ minWidth: 22, height: 22, borderRadius: 11, paddingHorizontal: 6, backgroundColor: t.colores.accent, alignItems: "center", justifyContent: "center" }}>
+                    <Text mono variante="caption" weight="bold" tono="inverso">
+                      {it.badge}
+                    </Text>
+                  </View>
+                ) : (
+                  <Ionicons name="chevron-forward" size={18} color={t.colores.faint} />
+                )}
+              </Pressable>
+            ))}
+          </View>
         </View>
       ))}
-    </Screen>
+    </ScrollView>
   );
 }

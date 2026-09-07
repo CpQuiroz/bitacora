@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { Alert, Pressable, ScrollView, View } from "react-native";
+import { Alert, Image, Pressable, ScrollView, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { CategoriaGasto, CentroCosto, EstadoGasto, Proveedor, Trabajo } from "@bitacora/shared";
 import { useTema } from "../../theme";
-import { Button, Card, Input, LoadingScreen, PickerBuscable, Text } from "../../components/ui";
+import { Button, Input, LoadingScreen, PickerBuscable, Text } from "../../components/ui";
 import { InputMonto } from "../../components/InputMonto";
 import { useRed } from "../../services/sync/NetworkProvider";
 import { comprimirImagen } from "../../lib/imagen";
@@ -172,6 +172,33 @@ export function NuevoGastoScreen({ navigation }: NativeStackScreenProps<MasStack
         contentContainerStyle={{ padding: t.espacio(5), gap: t.espacio(4), paddingBottom: t.espacio(8) }}
         keyboardShouldPersistTaps="handled"
       >
+        {/* La foto de la boleta arriba, grande */}
+        {foto ? (
+          <View style={{ gap: t.espacio(2) }}>
+            <Image source={{ uri: foto.uri }} style={{ width: "100%", height: 220, borderRadius: t.radio.md, backgroundColor: t.colores.surfaceAlt }} resizeMode="cover" />
+            <Button titulo="Volver a tomar" variante="secundario" onPress={adjuntarFoto} />
+          </View>
+        ) : (
+          <Pressable
+            onPress={adjuntarFoto}
+            style={{
+              height: 160,
+              borderRadius: t.radio.md,
+              borderWidth: 1.5,
+              borderStyle: "dashed",
+              borderColor: t.colores.borderStrong,
+              alignItems: "center",
+              justifyContent: "center",
+              gap: t.espacio(2),
+            }}
+          >
+            <Ionicons name="camera-outline" size={28} color={t.colores.muted} />
+            <Text variante="etiqueta" tono="muted" weight="semibold">
+              Foto de la boleta
+            </Text>
+          </Pressable>
+        )}
+
         <InputMonto valor={b.monto} onChangeText={(v) => set("monto", v)} />
 
         <PickerBuscable
@@ -269,16 +296,6 @@ export function NuevoGastoScreen({ navigation }: NativeStackScreenProps<MasStack
           </View>
         ) : null}
 
-        <Card plano style={{ gap: t.espacio(2) }}>
-          <Text variante="etiqueta" tono="muted">
-            Comprobante (opcional)
-          </Text>
-          <Button
-            titulo={foto ? "Cambiar foto ✓" : "Tomar foto del comprobante"}
-            variante={foto ? "secundario" : "primario"}
-            onPress={adjuntarFoto}
-          />
-        </Card>
       </ScrollView>
 
       <View

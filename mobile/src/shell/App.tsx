@@ -4,7 +4,9 @@ import { NavigationContainer } from "@react-navigation/native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AuthProvider, useAuth } from "../features/auth/AuthContext";
 import { NetworkProvider } from "../services/sync/NetworkProvider";
+import { useEffect } from "react";
 import { ThemeProvider, fuentesFaena } from "../theme";
+import { cargarPreferencias } from "../lib/preferencias";
 import { RootNavigator } from "./navigation/RootNavigator";
 import { BloqueoBiometrico } from "./BloqueoBiometrico";
 
@@ -36,6 +38,11 @@ export default function App() {
   // nada (mismo criterio que el splash nativo de Expo, sin agregar
   // expo-splash-screen).
   const [fuentesListas, errorFuentes] = useFonts(fuentesFaena);
+
+  useEffect(() => {
+    void cargarPreferencias();
+  }, []);
+
   if (!fuentesListas && !errorFuentes) return null;
 
   return (

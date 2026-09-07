@@ -1,6 +1,8 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import NetInfo from "@react-native-community/netinfo";
 import { apiFetch } from "../api";
 import { borrarFoto, fotoExiste } from "../../lib/fotoCola";
+import { preferencias } from "../../lib/preferencias";
 
 // Una acción con archivo que sube una foto (no crea el recurso). Se
 // procesan al final y, si el archivo ya no está, se marcan fallidas sin
@@ -155,13 +157,24 @@ export async function procesar(): Promise<void> {
   }
   procesando = true;
   try {
+    // "Subir fotos solo con WiFi": en datos móviles se saltan las
+    // subidas de foto (quedan en la cola para el próximo pase con WiFi).
+    let subirFotos = true;
+    if (preferencias().fotosSoloWifi) {
+      try {
+        subirFotos = (await NetInfo.fetch()).type === "wifi";
+      } catch {
+        subirFotos = true;
+      }
+    }
+
     // Las fotos (subida + análisis con IA) son lo más lento y lo menos
     // crítico: NUNCA deben bloquear el guardado del avance (check-in/out,
     // formulario, firma, finalizar). Se procesan al final, respetando el
     // orden FIFO dentro de cada grupo.
     const ordenadas = [
       ...cola0.filter((a) => !ES_SUBIDA_DE_FOTO(a)),
-      ...cola0.filter((a) => ES_SUBIDA_DE_FOTO(a)),
+      ...(subirFotos ? cola0.filter((a) => ES_SUBIDA_DE_FOTO(a)) : []),
     ];
     for (const a of ordenadas) {
       if (a.fallida) continue;
