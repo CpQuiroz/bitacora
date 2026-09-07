@@ -1019,13 +1019,13 @@ function AgendaContenido() {
                   <button
                     key={i}
                     type="button"
-                    onClick={() => {
-                      setDiaSeleccionado(seleccionado ? null : clave);
-                      if (puedeGestionarAgenda) {
-                        if (seleccionado) cerrarTareaRapida();
-                        else abrirTareaRapida(clave);
-                      }
+                    // 1 clic: ver las citas del día. Doble clic: agendar
+                    // una cita nueva ese día (solo quien gestiona agenda).
+                    onClick={() => setDiaSeleccionado(clave)}
+                    onDoubleClick={() => {
+                      if (puedeGestionarAgenda) abrirTareaRapida(clave);
                     }}
+                    title={puedeGestionarAgenda ? "Clic: ver citas · Doble clic: agendar" : "Clic: ver citas del día"}
                     className={`flex min-h-[6.5rem] flex-col items-stretch gap-1 border-b border-r border-border p-1.5 text-left transition-colors last:border-r-0 hover:bg-surface-sunken ${
                       seleccionado ? "bg-brand-soft/60" : ""
                     }`}
@@ -1072,13 +1072,36 @@ function AgendaContenido() {
           <Card>
             {diaSeleccionado ? (
               <>
-                <h3 className="mb-3 text-sm font-semibold capitalize text-foreground">
-                  {fechaDesdeString(diaSeleccionado).toLocaleDateString("es-CL", {
-                    weekday: "long",
-                    day: "numeric",
-                    month: "long",
-                  })}
-                </h3>
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <h3 className="text-sm font-semibold capitalize text-foreground">
+                    {fechaDesdeString(diaSeleccionado).toLocaleDateString("es-CL", {
+                      weekday: "long",
+                      day: "numeric",
+                      month: "long",
+                    })}
+                  </h3>
+                  <div className="flex items-center gap-3">
+                    {puedeGestionarAgenda && (
+                      <button
+                        type="button"
+                        onClick={() => abrirTareaRapida(diaSeleccionado)}
+                        className="text-xs font-medium text-brand hover:underline"
+                      >
+                        Agendar cita
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDiaSeleccionado(null);
+                        cerrarTareaRapida();
+                      }}
+                      className="text-xs font-medium text-muted hover:text-foreground"
+                    >
+                      Cerrar
+                    </button>
+                  </div>
+                </div>
                 {eventosDiaSeleccionado.length === 0 ? (
                   <p className="text-sm text-muted">Sin eventos agendados este día.</p>
                 ) : (
@@ -1110,7 +1133,9 @@ function AgendaContenido() {
                 )}
               </>
             ) : (
-              <p className="text-sm text-muted">Haz clic en un día para crear una tarea rápida o ver su detalle.</p>
+              <p className="text-sm text-muted">
+                Haz clic en un día para ver sus citas. Doble clic para agendar una cita nueva.
+              </p>
             )}
           </Card>
           </div>
