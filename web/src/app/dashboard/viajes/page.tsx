@@ -8,6 +8,7 @@ import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText } from "@/components/ui";
+import { Modal } from "@/components/Modal";
 import { ComboboxCliente } from "@/components/ComboboxCliente";
 import { ComboboxResponsable } from "@/components/ComboboxResponsable";
 import { IconPlus, IconTruck } from "@/components/icons";
@@ -65,6 +66,7 @@ export default function ViajesPage() {
   const [aplicaIva, setAplicaIva] = useState(true);
   const [comentarios, setComentarios] = useState("");
 
+  const [fotosViaje, setFotosViaje] = useState<{ id: string; urls: string[]; cargando: boolean } | null>(null);
   const [editId, setEditId] = useState<string | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
   const [confirmando, setConfirmando] = useState(false);
@@ -228,11 +230,14 @@ export default function ViajesPage() {
     setEditAplicaIva(v.aplica_iva);
   }
 
-  async function verFoto(id: string) {
-    const res = await apiFetch(`/api/viajes/${id}/foto`);
-    if (!res.ok) return;
-    const { url } = await res.json();
-    window.open(url, "_blank", "noopener,noreferrer");
+  async function verFotos(id: string) {
+    setFotosViaje({ id, urls: [], cargando: true });
+    const urls: string[] = [];
+    const guia = await apiFetch(`/api/viajes/${id}/foto`);
+    if (guia.ok) urls.push((await guia.json()).url);
+    const extra = await apiFetch(`/api/viajes/${id}/fotos`);
+    if (extra.ok) for (const f of (await extra.json()) as { url: string }[]) urls.push(f.url);
+    setFotosViaje({ id, urls, cargando: false });
   }
 
   async function guardarEdicion(id: string, confirmar: boolean) {
@@ -589,11 +594,9 @@ export default function ViajesPage() {
                               Revisar y confirmar
                             </button>
                           )}
-                          {v.foto_guia_url && (
-                            <button type="button" onClick={() => verFoto(v.id)} className="text-xs font-medium text-muted hover:text-brand">
-                              Ver foto
-                            </button>
-                          )}
+                          <button type="button" onClick={() => verFotos(v.id)} className="text-xs font-medium text-muted hover:text-brand">
+                            Fotos
+                          </button>
                           {v.estado !== "facturado" && (
                             <button type="button" onClick={() => eliminar(v.id)} className="text-xs font-medium text-danger hover:underline">
                               Eliminar
@@ -673,6 +676,23 @@ export default function ViajesPage() {
           </table>
         </Card>
       )}
+
+      <Modal open={fotosViaje != null} onClose={() => setFotosViaje(null)} title="Fotos del viaje" wide>
+        {fotosViaje?.cargando ? (
+          <p className="text-sm text-muted">Cargando…</p>
+        ) : fotosViaje && fotosViaje.urls.length > 0 ? (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {fotosViaje.urls.map((u) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <a key={u} href={u} target="_blank" rel="noopener noreferrer">
+                <img src={u} alt="Foto del viaje" className="aspect-square w-full rounded-lg border border-border object-cover" />
+              </a>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-muted">Este viaje no tiene fotos.</p>
+        )}
+      </Modal>
     </DashboardShell>
   );
 }

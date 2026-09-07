@@ -102,6 +102,23 @@ viajesRouter.get(
   })
 );
 
+// Fotos adicionales del viaje (subidas por el chofer desde la app).
+viajesRouter.get(
+  "/:id/fotos",
+  ah<RequestConEmpresa>(async (req, res) => {
+    const { data } = await supabase
+      .from("viaje_fotos")
+      .select("id, foto_url, creado_en")
+      .eq("empresa_id", req.empresaId!)
+      .eq("viaje_id", req.params.id)
+      .order("creado_en");
+    const fotos = await Promise.all(
+      (data ?? []).map(async (f) => ({ id: f.id, creado_en: f.creado_en, url: await urlFirmadaFotoGuia(f.foto_url, 15) }))
+    );
+    res.json(fotos);
+  })
+);
+
 async function resolverCliente(empresaId: string, clienteId: unknown) {
   if (typeof clienteId !== "string" || !clienteId.trim()) return { error: "Selecciona un cliente" as const };
   const { data: cliente } = await supabase

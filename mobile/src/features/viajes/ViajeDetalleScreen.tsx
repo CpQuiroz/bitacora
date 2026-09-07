@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { Alert, Image, Linking, ScrollView, View } from "react-native";
+import { Alert, Image, Linking, Pressable, ScrollView, View } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
@@ -10,7 +11,8 @@ import { Badge, Button, Card, ErrorState, LoadingScreen, Text } from "../../comp
 import { OfflineBanner } from "../../components/OfflineBanner";
 import { useRed } from "../../services/sync/NetworkProvider";
 import { useAuth } from "../auth/AuthContext";
-import { aprobarViaje, obtenerViaje, rechazarViaje, type ViajeDetalle } from "../../services/viajes";
+import { comprimirImagen } from "../../lib/imagen";
+import { aprobarViaje, encolarFotoViaje, obtenerViaje, rechazarViaje, type ViajeDetalle } from "../../services/viajes";
 import type { ViajesStackParamList } from "../../shell/navigation/types";
 
 const NOTA_ESTADO: Record<EstadoViaje, string> = {
@@ -33,8 +35,10 @@ function abrirEnMapa(app: "google" | "waze", origen: string, destino: string) {
 export function ViajeDetalleScreen({ route, navigation }: NativeStackScreenProps<ViajesStackParamList, "ViajeDetalle">) {
   const t = useTema();
   const { viajeId } = route.params;
-  const { enLinea } = useRed();
+  const { enLinea, pendientes } = useRed();
   const auth = useAuth();
+
+  const fotosEnCola = pendientes.filter((a) => a.recurso === `viaje:${viajeId}` && a.etiqueta === "Foto de viaje");
   const esGestion = auth.fase === "listo" && auth.usuario.rol !== "colaborador";
 
   const [viaje, setViaje] = useState<ViajeDetalle | null>(null);
@@ -57,6 +61,21 @@ export function ViajeDetalleScreen({ route, navigation }: NativeStackScreenProps
     cargar();
   }, [cargar]);
   useFocusEffect(useCallback(() => void cargar(), [cargar]));
+
+  // Cuando una foto sale de la cola, refrescamos para traer la del servidor.
+  useEffect(() => {
+    void cargar();
+  }, [fotosEnCola.length, cargar]);
+
+  async function agregarFoto() {
+    const permiso = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permiso.granted) return Alert.alert("Permiso necesario", "Necesitamos la cámara para la foto del viaje.");
+    const r = await ImagePicker.launchCameraAsync({ quality: 0.8 });
+    if (r.canceled) return;
+    const a = r.assets[0];
+    const uri = await comprimirImagen(a.uri, a.width);
+    await encolarFotoViaje(viajeId, { uri, name: a.fileName ?? `viaje-${Date.now()}.jpg`, type: a.mimeType ?? "image/jpeg" });
+  }
 
   async function aprobar() {
     if (!enLinea) return Alert.alert("Sin conexión", "Necesitas conexión para aprobar un viaje.");
@@ -96,7 +115,12 @@ export function ViajeDetalleScreen({ route, navigation }: NativeStackScreenProps
     <View style={{ flex: 1, backgroundColor: t.colores.bg }}>
       <OfflineBanner guardadoEn={guardadoEn} />
       <ScrollView contentContainerStyle={{ padding: t.espacio(5), gap: t.espacio(4), paddingBottom: t.espacio(16) }}>
-        <View style={{ gap: t.espacio(1.5) }}>
+        <View
+          style={{
+            gap: t.espacio(1.5),
+            ...(viaje.estado === "borrador" ? { borderLeftWidth: 4, borderLeftColor: t.colores.accent, paddingLeft: t.espacio(3) } : {}),
+          }}
+        >
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: t.espacio(3) }}>
             <Text variante="titulo" style={{ flex: 1 }}>
               {viaje.cliente_info?.nombre ?? viaje.cliente}
@@ -159,18 +183,52 @@ export function ViajeDetalleScreen({ route, navigation }: NativeStackScreenProps
           </Card>
         ) : null}
 
-        {viaje.foto_guia_url_firmada ? (
-          <Card plano style={{ gap: t.espacio(2) }}>
-            <Text variante="etiqueta" tono="muted" weight="semibold" style={{ textTransform: "uppercase" }}>
-              Foto de la guía
-            </Text>
-            <Image
-              source={{ uri: viaje.foto_guia_url_firmada }}
-              style={{ width: "100%", height: 260, borderRadius: t.radio.sm }}
-              resizeMode="cover"
-            />
-          </Card>
-        ) : null}
+        {/* Fotos del viaje (guía + adicionales del chofer) */}
+        {(() => {
+          const subidas = [
+            ...(viaje.foto_guia_url_firmada ? [{ id: "guia", url: viaje.foto_guia_url_firmada }] : []),
+            ...(viaje.fotos ?? []),
+          ];
+          const total = subidas.length + fotosEnCola.length;
+          return (
+            <Card plano style={{ gap: t.espacio(2.5) }}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                <Text variante="etiqueta" tono="muted" weight="semibold" style={{ textTransform: "uppercase" }}>
+                  Fotos del viaje
+                </Text>
+                {total > 0 ? (
+                  <Text mono variante="caption" tono="faint">
+                    {subidas.length} subida{subidas.length === 1 ? "" : "s"}
+                    {fotosEnCola.length ? ` · ${fotosEnCola.length} en cola` : ""}
+                  </Text>
+                ) : null}
+              </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: t.espacio(2) }}>
+                {subidas.map((f) => (
+                  <Image key={f.id} source={{ uri: f.url }} style={{ width: 78, height: 78, borderRadius: t.radio.sm, borderWidth: 1, borderColor: t.colores.border }} />
+                ))}
+                {fotosEnCola.map((a) => (
+                  <View key={a.id} style={{ width: 78, height: 78, borderRadius: t.radio.sm, backgroundColor: t.colores.surfaceAlt, borderWidth: 1, borderColor: t.colores.border, alignItems: "center", justifyContent: "center" }}>
+                    <Ionicons name="sync" size={16} color={t.colores.accent} />
+                  </View>
+                ))}
+                {viaje.estado !== "facturado" ? (
+                  <Pressable
+                    onPress={agregarFoto}
+                    style={{ width: 78, height: 78, borderRadius: t.radio.sm, borderWidth: 1.5, borderStyle: "dashed", borderColor: t.colores.borderStrong, alignItems: "center", justifyContent: "center" }}
+                  >
+                    <Ionicons name="camera-outline" size={22} color={t.colores.muted} />
+                  </Pressable>
+                ) : null}
+              </ScrollView>
+              {total === 0 ? (
+                <Text variante="caption" tono="muted">
+                  Sin fotos todavía.
+                </Text>
+              ) : null}
+            </Card>
+          );
+        })()}
 
         {viaje.estado !== "facturado" ? (
           <View style={{ gap: t.espacio(2.5), marginTop: t.espacio(1), borderTopWidth: 1, borderTopColor: t.colores.border, paddingTop: t.espacio(4) }}>

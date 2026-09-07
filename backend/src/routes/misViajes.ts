@@ -75,7 +75,59 @@ misViajesRouter.get(
       return;
     }
     const foto_guia_url_firmada = data.foto_guia_url ? await urlFirmadaFotoGuia(data.foto_guia_url, 15) : null;
-    res.json({ ...data, foto_guia_url_firmada });
+    const { data: fotosRaw } = await supabase
+      .from("viaje_fotos")
+      .select("id, foto_url, creado_en")
+      .eq("empresa_id", req.empresaId!)
+      .eq("viaje_id", req.params.id)
+      .order("creado_en");
+    const fotos = await Promise.all(
+      (fotosRaw ?? []).map(async (f) => ({ id: f.id, creado_en: f.creado_en, url: await urlFirmadaFotoGuia(f.foto_url, 15) }))
+    );
+    res.json({ ...data, foto_guia_url_firmada, fotos });
+  })
+);
+
+// Fotos adicionales de un viaje — suben por la misma cola offline que la
+// firma y el gasto (etiqueta "Foto de viaje" en la app).
+misViajesRouter.post(
+  "/:id/fotos",
+  upload.single("foto"),
+  ah<RequestConEmpresa>(async (req, res) => {
+    if (!req.file) {
+      res.status(400).json({ error: "Falta la foto" });
+      return;
+    }
+    const { data: viaje } = await supabase
+      .from("viajes")
+      .select("id, numero_guia, chofer_id, estado")
+      .eq("empresa_id", req.empresaId!)
+      .eq("id", req.params.id)
+      .maybeSingle();
+    if (!viaje) {
+      res.status(404).json({ error: "Viaje no encontrado" });
+      return;
+    }
+    if (req.rol === "colaborador" && viaje.chofer_id !== req.userId) {
+      res.status(403).json({ error: "Solo puedes editar tus propios viajes" });
+      return;
+    }
+    if (viaje.estado === "facturado") {
+      res.status(400).json({ error: "Este viaje ya fue facturado" });
+      return;
+    }
+    const fotoKey = await subirFotoGuiaConNombre(req.empresaId!, viaje.numero_guia, req.file.buffer, req.file.mimetype);
+    const { error } = await supabase.from("viaje_fotos").insert({
+      empresa_id: req.empresaId!,
+      viaje_id: req.params.id,
+      foto_url: fotoKey,
+      subida_por: req.userId ?? null,
+    });
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    res.status(201).json({ ok: true });
   })
 );
 

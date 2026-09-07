@@ -218,11 +218,14 @@ export function ViajesScreen({ navigation }: NativeStackScreenProps<ViajesStackP
           />
         }
         renderItem={({ item }) => (
-          <Card onPress={() => navigation.navigate("ViajeDetalle", { viajeId: item.id })}>
+          <Card
+            onPress={() => navigation.navigate("ViajeDetalle", { viajeId: item.id })}
+            style={item.estado === "borrador" ? { borderLeftWidth: 4, borderLeftColor: t.colores.accent } : undefined}
+          >
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: t.espacio(3) }}>
               <View style={{ flex: 1, gap: 2 }}>
                 <Text variante="subtitulo">{item.cliente_info?.nombre ?? item.cliente}</Text>
-                <Text variante="etiqueta" tono="muted">
+                <Text mono variante="etiqueta" tono="muted">
                   {item.fecha} · Guía {item.numero_guia}
                 </Text>
                 <Text variante="caption" tono="muted">

@@ -12,6 +12,7 @@ export type ViajeConDatos = Viaje & {
 export type ViajeDetalle = ViajeConDatos & {
   equipo_info?: { nombre: string; patente: string | null } | null;
   foto_guia_url_firmada: string | null;
+  fotos?: { id: string; url: string; creado_en: string }[];
 };
 
 export async function obtenerViaje(id: string): Promise<{ viaje: ViajeDetalle; desdeCache: boolean; guardadoEn?: number }> {
@@ -175,6 +176,30 @@ export function encolarFotoGuia(viajeId: string, foto: Foto) {
     etiqueta: "Foto de la guía",
     recurso: "viajes",
     path: `/api/mis-viajes/${viajeId}/foto-guia`,
+    method: "POST",
+    body: {},
+    archivo: { ...foto, campo: "foto" },
+  });
+}
+
+/** Sube una foto extra del viaje. `true` si quedó guardada. */
+export async function subirFotoViaje(viajeId: string, foto: Foto): Promise<boolean> {
+  const fd = new FormData();
+  fd.append("foto", { uri: foto.uri, name: foto.name, type: foto.type } as unknown as Blob);
+  try {
+    const res = await apiFetch(`/api/mis-viajes/${viajeId}/fotos`, { method: "POST", body: fd }, 60000);
+    if (res.ok) borrarFoto(foto.uri);
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+export function encolarFotoViaje(viajeId: string, foto: Foto) {
+  return encolar({
+    etiqueta: "Foto de viaje",
+    recurso: `viaje:${viajeId}`,
+    path: `/api/mis-viajes/${viajeId}/fotos`,
     method: "POST",
     body: {},
     archivo: { ...foto, campo: "foto" },
