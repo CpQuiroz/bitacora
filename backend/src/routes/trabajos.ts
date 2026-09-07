@@ -356,7 +356,8 @@ trabajosRouter.patch(
 
     const orden = await ordenDeTrabajo(req.empresaId!, req.params.id);
     if (orden?.firma_url && tocaContractual) {
-      res.status(403).json({
+      // 409: conflicto de estado (OS firmada), no falta de permiso.
+      res.status(409).json({
         error: "Esta orden de servicio ya tiene firma de conformidad — no se pueden editar ítems, monto ni descripción. Las notas internas siguen editables.",
       });
       return;
@@ -373,7 +374,8 @@ trabajosRouter.patch(
       // no colado junto a una edición de ítems/monto/descripción.
       const soloCancelar = cambios.estado === "cancelado" && Object.keys(cambios).length === 1;
       if (!soloNotas && !soloCancelar) {
-        res.status(403).json({ error: "La orden de servicio ya fue finalizada — solo las notas internas siguen editables." });
+        // 409: conflicto de estado (OS finalizada), no falta de permiso.
+        res.status(409).json({ error: "La orden de servicio ya fue finalizada — solo las notas internas siguen editables." });
         return;
       }
     }
@@ -444,7 +446,7 @@ trabajosRouter.delete(
   "/:id",
   ah<RequestConEmpresa>(async (req, res) => {
     if (await trabajoBloqueado(req.empresaId!, req.params.id)) {
-      res.status(403).json({ error: "La orden de servicio ya fue finalizada y no se puede eliminar" });
+      res.status(409).json({ error: "La orden de servicio ya fue finalizada y no se puede eliminar" });
       return;
     }
     const { error, count } = await supabase
@@ -664,7 +666,10 @@ trabajosRouter.post(
       return;
     }
     if (await trabajoBloqueado(req.empresaId!, req.params.id)) {
-      res.status(403).json({ error: "La orden de servicio ya fue finalizada y no se puede editar" });
+      // 409: la OS está en un estado terminal (finalizada). No es falta
+      // de permiso — la acción encolada quedó obsoleta y la cola offline
+      // (mobile/src/services/sync/queue.ts) deja de reintentarla.
+      res.status(409).json({ error: "La orden de servicio ya fue finalizada y no se puede editar" });
       return;
     }
 
@@ -832,7 +837,10 @@ trabajosRouter.post(
       return;
     }
     if (await trabajoBloqueado(req.empresaId!, req.params.id)) {
-      res.status(403).json({ error: "La orden de servicio ya fue finalizada y no se puede editar" });
+      // 409: la OS está en un estado terminal (finalizada). No es falta
+      // de permiso — la acción encolada quedó obsoleta y la cola offline
+      // (mobile/src/services/sync/queue.ts) deja de reintentarla.
+      res.status(409).json({ error: "La orden de servicio ya fue finalizada y no se puede editar" });
       return;
     }
 
@@ -924,7 +932,10 @@ trabajosRouter.post(
       return;
     }
     if (await trabajoBloqueado(req.empresaId!, req.params.id)) {
-      res.status(403).json({ error: "La orden de servicio ya fue finalizada y no se puede editar" });
+      // 409: la OS está en un estado terminal (finalizada). No es falta
+      // de permiso — la acción encolada quedó obsoleta y la cola offline
+      // (mobile/src/services/sync/queue.ts) deja de reintentarla.
+      res.status(409).json({ error: "La orden de servicio ya fue finalizada y no se puede editar" });
       return;
     }
 
@@ -1054,7 +1065,9 @@ trabajosRouter.post(
       return;
     }
     if (orden.finalizada_en) {
-      res.status(403).json({ error: "La orden de servicio ya estaba finalizada" });
+      // 409: ya está finalizada — el "Finalizar OS" encolado ya está
+      // resuelto, la cola offline no lo reintenta.
+      res.status(409).json({ error: "La orden de servicio ya estaba finalizada" });
       return;
     }
     if (!orden.firma_url) {

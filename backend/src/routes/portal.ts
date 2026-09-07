@@ -414,7 +414,8 @@ portalRouter.post(
       return;
     }
     if (cotizacion.estado !== "enviado") {
-      res.status(400).json({ error: "Esta cotización ya no está pendiente de aprobación" });
+      // 409: conflicto de estado permanente, no error de input.
+      res.status(409).json({ error: "Esta cotización ya no está pendiente de aprobación" });
       return;
     }
     await supabase.from("presupuestos").update({ estado: "aprobado" }).eq("id", req.params.id);
@@ -438,7 +439,8 @@ portalRouter.post(
       return;
     }
     if (cotizacion.estado !== "enviado") {
-      res.status(400).json({ error: "Esta cotización ya no está pendiente de aprobación" });
+      // 409: conflicto de estado permanente, no error de input.
+      res.status(409).json({ error: "Esta cotización ya no está pendiente de aprobación" });
       return;
     }
     await supabase.from("presupuestos").update({ estado: "rechazado" }).eq("id", req.params.id);
@@ -528,7 +530,8 @@ portalRouter.post(
       return;
     }
     if (tarea.estado !== "pendiente") {
-      res.status(400).json({ error: "Esta cita ya no está pendiente de confirmación" });
+      // 409: conflicto de estado permanente, no error de input.
+      res.status(409).json({ error: "Esta cita ya no está pendiente de confirmación" });
       return;
     }
     await supabase.from("tareas").update({ estado: "confirmada", actualizado_en: new Date().toISOString() }).eq("id", req.params.id);
@@ -552,7 +555,8 @@ portalRouter.post(
       return;
     }
     if (tarea.estado !== "pendiente" && tarea.estado !== "confirmada") {
-      res.status(400).json({ error: "Esta cita ya no se puede cancelar" });
+      // 409: conflicto de estado permanente, no error de input.
+      res.status(409).json({ error: "Esta cita ya no se puede cancelar" });
       return;
     }
 

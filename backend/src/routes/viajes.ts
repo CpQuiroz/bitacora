@@ -225,7 +225,7 @@ viajesRouter.patch(
       return;
     }
     if (existente.estado === "facturado") {
-      res.status(400).json({ error: "Este viaje ya fue facturado y no se puede editar" });
+      res.status(409).json({ error: "Este viaje ya fue facturado y no se puede editar" });
       return;
     }
 
@@ -319,7 +319,7 @@ viajesRouter.delete(
       return;
     }
     if (existente.estado === "facturado") {
-      res.status(400).json({ error: "Este viaje ya fue facturado y no se puede eliminar" });
+      res.status(409).json({ error: "Este viaje ya fue facturado y no se puede eliminar" });
       return;
     }
     const { error } = await supabase.from("viajes").delete().eq("empresa_id", req.empresaId!).eq("id", req.params.id);
@@ -357,7 +357,7 @@ viajesRouter.post(
       return;
     }
     if (viajes.some((v) => v.estado === "facturado")) {
-      res.status(400).json({ error: "Alguno de los viajes ya fue facturado" });
+      res.status(409).json({ error: "Alguno de los viajes ya fue facturado" });
       return;
     }
     const clienteIds = new Set(viajes.map((v) => v.cliente_id));

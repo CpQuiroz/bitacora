@@ -271,7 +271,10 @@ tareasRouter.post(
       return;
     }
     if (tarea.estado !== "pendiente" && tarea.estado !== "confirmada") {
-      res.status(400).json({ error: "Esta cita ya no se puede cancelar" });
+      // 409, no 400: es un conflicto de estado permanente (la cita ya se
+      // resolvió). La cola offline (mobile/src/services/sync/queue.ts) lo
+      // trata como "el servidor ya lo resolvió" y deja de reintentar.
+      res.status(409).json({ error: "Esta cita ya no se puede cancelar" });
       return;
     }
 

@@ -113,7 +113,7 @@ misViajesRouter.post(
       return;
     }
     if (viaje.estado === "facturado") {
-      res.status(400).json({ error: "Este viaje ya fue facturado" });
+      res.status(409).json({ error: "Este viaje ya fue facturado" });
       return;
     }
     const fotoKey = await subirFotoGuiaConNombre(req.empresaId!, viaje.numero_guia, req.file.buffer, req.file.mimetype);
@@ -253,7 +253,7 @@ misViajesRouter.post(
       return;
     }
     if (viaje.estado === "facturado") {
-      res.status(400).json({ error: "Este viaje ya fue facturado" });
+      res.status(409).json({ error: "Este viaje ya fue facturado" });
       return;
     }
     const fotoKey = await subirFotoGuiaConNombre(req.empresaId!, viaje.numero_guia, req.file.buffer, req.file.mimetype);
@@ -297,7 +297,7 @@ misViajesRouter.patch(
       return;
     }
     if (existente.estado === "facturado") {
-      res.status(400).json({ error: "Este viaje ya fue facturado y no se puede editar" });
+      res.status(409).json({ error: "Este viaje ya fue facturado y no se puede editar" });
       return;
     }
 
@@ -400,7 +400,7 @@ misViajesRouter.delete(
       return;
     }
     if (existente.estado === "facturado") {
-      res.status(400).json({ error: "Este viaje ya fue facturado y no se puede eliminar" });
+      res.status(409).json({ error: "Este viaje ya fue facturado y no se puede eliminar" });
       return;
     }
     const { error } = await supabase.from("viajes").delete().eq("empresa_id", req.empresaId!).eq("id", req.params.id);
