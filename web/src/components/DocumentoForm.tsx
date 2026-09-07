@@ -1,13 +1,26 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import type { Documento, EntidadDocumento, EstadoDocumento, TipoDocumento } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
-import { Badge, Button, Card, ErrorText, Input, Label, Select } from "@/components/ui";
+import { Badge, Button, Card, ErrorText, Input, Select } from "@/components/ui";
 import { IconPaperclip, IconPlus } from "@/components/icons";
 
 type DocumentoConTipo = Documento & { tipo: { nombre: string } | null; estado: EstadoDocumento | null };
+
+// Campo con label asociado (htmlFor/id) — mismo estilo que <Label> del
+// design system, pero enlazado al control para accesibilidad.
+function Campo({ label, htmlFor, children }: { label: string; htmlFor: string; children: ReactNode }) {
+  return (
+    <div>
+      <label htmlFor={htmlFor} className="mb-1.5 block text-[13px] font-semibold text-foreground">
+        {label}
+      </label>
+      {children}
+    </div>
+  );
+}
 
 // Editor + listado de documentos de UN colaborador o vehículo — mismo
 // componente para ambas entidades (no hay dos implementaciones
@@ -20,6 +33,8 @@ export function DocumentoForm({ entidadTipo, entidadId }: { entidadTipo: Entidad
   const [error, setError] = useState<string | null>(null);
 
   const [formAbierto, setFormAbierto] = useState(false);
+  // null = el formulario crea; un id = edita ese documento.
+  const [editandoId, setEditandoId] = useState<string | null>(null);
   const [tipoId, setTipoId] = useState("");
   const [numero, setNumero] = useState("");
   const [fechaEmision, setFechaEmision] = useState("");
@@ -50,14 +65,39 @@ export function DocumentoForm({ entidadTipo, entidadId }: { entidadTipo: Entidad
     cargar();
   }, [cargar]);
 
-  function limpiarForm() {
-    setFormAbierto(false);
+  function resetCampos() {
+    setEditandoId(null);
     setTipoId("");
     setNumero("");
     setFechaEmision("");
     setFechaVencimiento("");
     setArchivo(null);
     setErrorForm(null);
+  }
+
+  function limpiarForm() {
+    setFormAbierto(false);
+    resetCampos();
+  }
+
+  function toggleForm() {
+    if (formAbierto) {
+      limpiarForm();
+    } else {
+      resetCampos();
+      setFormAbierto(true);
+    }
+  }
+
+  function abrirEdicion(d: DocumentoConTipo) {
+    setEditandoId(d.id);
+    setTipoId(d.tipo_documento_id);
+    setNumero(d.numero ?? "");
+    setFechaEmision(d.fecha_emision ?? "");
+    setFechaVencimiento(d.fecha_vencimiento ?? "");
+    setArchivo(null);
+    setErrorForm(null);
+    setFormAbierto(true);
   }
 
   async function onGuardar() {
@@ -67,16 +107,25 @@ export function DocumentoForm({ entidadTipo, entidadId }: { entidadTipo: Entidad
       return;
     }
     setGuardando(true);
+
     const form = new FormData();
-    form.append("entidad_tipo", entidadTipo);
-    form.append("entidad_id", entidadId);
     form.append("tipo_documento_id", tipoId);
     form.append("numero", numero);
     form.append("fecha_emision", fechaEmision);
     form.append("fecha_vencimiento", fechaVencimiento);
+    // Solo se manda el archivo si el usuario eligió uno nuevo; en edición
+    // sin archivo, el backend conserva el actual.
     if (archivo) form.append("archivo", archivo);
 
-    const res = await apiFetch("/api/documentos", { method: "POST", body: form });
+    let res: Response;
+    if (editandoId) {
+      res = await apiFetch(`/api/documentos/${editandoId}`, { method: "PATCH", body: form });
+    } else {
+      form.append("entidad_tipo", entidadTipo);
+      form.append("entidad_id", entidadId);
+      res = await apiFetch("/api/documentos", { method: "POST", body: form });
+    }
+
     setGuardando(false);
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
@@ -99,6 +148,9 @@ export function DocumentoForm({ entidadTipo, entidadId }: { entidadTipo: Entidad
     window.open(url, "_blank");
   }
 
+  const editando = editandoId !== null;
+  const accionCls = "inline-flex min-h-[44px] items-center px-2 hover:underline";
+
   return (
     <Card>
       <div className="mb-4 flex items-center justify-between">
@@ -106,7 +158,7 @@ export function DocumentoForm({ entidadTipo, entidadId }: { entidadTipo: Entidad
           <IconPaperclip className="h-4 w-4 text-brand" />
           Documentos
         </h2>
-        <Button type="button" variant="outline" onClick={() => setFormAbierto((v) => !v)}>
+        <Button type="button" variant="outline" onClick={toggleForm}>
           <IconPlus className="h-4 w-4" />
           {formAbierto ? "Cancelar" : "Agregar documento"}
         </Button>
@@ -129,10 +181,12 @@ export function DocumentoForm({ entidadTipo, entidadId }: { entidadTipo: Entidad
 
       {formAbierto && tipos.length > 0 && (
         <div className="mb-4 rounded-xl border border-border p-4">
+          <h3 className="mb-3 text-[13px] font-semibold text-foreground">
+            {editando ? "Editar documento" : "Nuevo documento"}
+          </h3>
           <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <Label>Tipo de documento</Label>
-              <Select value={tipoId} onChange={(e) => setTipoId(e.target.value)}>
+            <Campo label="Tipo de documento" htmlFor="doc-tipo">
+              <Select id="doc-tipo" value={tipoId} onChange={(e) => setTipoId(e.target.value)}>
                 <option value="">Selecciona…</option>
                 {tipos.map((t) => (
                   <option key={t.id} value={t.id}>
@@ -140,27 +194,35 @@ export function DocumentoForm({ entidadTipo, entidadId }: { entidadTipo: Entidad
                   </option>
                 ))}
               </Select>
-            </div>
-            <div>
-              <Label>Número (opcional)</Label>
-              <Input type="text" value={numero} onChange={(e) => setNumero(e.target.value)} />
-            </div>
-            <div>
-              <Label>Fecha de emisión</Label>
-              <Input type="date" value={fechaEmision} onChange={(e) => setFechaEmision(e.target.value)} />
-            </div>
-            <div>
-              <Label>Fecha de vencimiento</Label>
-              <Input type="date" value={fechaVencimiento} onChange={(e) => setFechaVencimiento(e.target.value)} />
-            </div>
+            </Campo>
+            <Campo label="Número (opcional)" htmlFor="doc-numero">
+              <Input id="doc-numero" type="text" value={numero} onChange={(e) => setNumero(e.target.value)} />
+            </Campo>
+            <Campo label="Fecha de emisión" htmlFor="doc-emision">
+              <Input id="doc-emision" type="date" value={fechaEmision} onChange={(e) => setFechaEmision(e.target.value)} />
+            </Campo>
+            <Campo label="Fecha de vencimiento" htmlFor="doc-vencimiento">
+              <Input
+                id="doc-vencimiento"
+                type="date"
+                value={fechaVencimiento}
+                onChange={(e) => setFechaVencimiento(e.target.value)}
+              />
+            </Campo>
             <div className="sm:col-span-2">
-              <Label>Archivo (imagen o PDF, opcional)</Label>
+              <label htmlFor="doc-archivo" className="mb-1.5 block text-[13px] font-semibold text-foreground">
+                {editando ? "Reemplazar archivo (imagen o PDF, opcional)" : "Archivo (imagen o PDF, opcional)"}
+              </label>
               <input
+                id="doc-archivo"
                 type="file"
                 accept="image/jpeg,image/png,image/webp,application/pdf"
                 onChange={(e) => setArchivo(e.target.files?.[0] ?? null)}
                 className="block w-full text-sm text-muted file:mr-3 file:rounded-lg file:border-0 file:bg-brand-soft file:px-3 file:py-2 file:text-sm file:font-medium file:text-brand"
               />
+              {editando && (
+                <p className="mt-1 text-xs text-muted">Si no subís uno nuevo, se mantiene el archivo actual.</p>
+              )}
             </div>
           </div>
           {errorForm && (
@@ -168,8 +230,8 @@ export function DocumentoForm({ entidadTipo, entidadId }: { entidadTipo: Entidad
               <ErrorText>{errorForm}</ErrorText>
             </div>
           )}
-          <Button type="button" onClick={onGuardar} disabled={guardando} className="mt-4">
-            {guardando ? "Guardando…" : "Guardar documento"}
+          <Button type="button" onClick={onGuardar} disabled={guardando} className="mt-4 min-h-[44px]">
+            {guardando ? "Guardando…" : editando ? "Guardar cambios" : "Guardar documento"}
           </Button>
         </div>
       )}
@@ -197,13 +259,16 @@ export function DocumentoForm({ entidadTipo, entidadId }: { entidadTipo: Entidad
                 <td className="py-2.5 text-muted">{d.fecha_vencimiento ?? "—"}</td>
                 <td className="py-2.5">{d.estado ? <Badge value={d.estado} /> : "—"}</td>
                 <td className="py-2.5">
-                  <div className="flex justify-end gap-3 text-xs font-medium">
+                  <div className="flex justify-end gap-1 text-xs font-medium">
                     {d.archivo_key && (
-                      <button type="button" onClick={() => onVerArchivo(d.id)} className="text-brand hover:underline">
+                      <button type="button" onClick={() => onVerArchivo(d.id)} className={`${accionCls} text-brand`}>
                         Ver archivo
                       </button>
                     )}
-                    <button type="button" onClick={() => onEliminar(d.id)} className="text-danger hover:underline">
+                    <button type="button" onClick={() => abrirEdicion(d)} className={`${accionCls} text-brand`}>
+                      Editar
+                    </button>
+                    <button type="button" onClick={() => onEliminar(d.id)} className={`${accionCls} text-danger`}>
                       Eliminar
                     </button>
                   </div>
