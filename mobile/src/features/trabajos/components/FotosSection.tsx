@@ -1,12 +1,16 @@
 import { useState } from "react";
-import { ActivityIndicator, Alert, Image, View } from "react-native";
+import { ActivityIndicator, Alert, Image, Modal, Pressable, ScrollView, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useTema } from "../../../theme";
-import { Button, Card, Text } from "../../../components/ui";
+import { Text } from "../../../components/ui";
 import { comprimirImagen } from "../../../lib/imagen";
 import type { FotoConUrl } from "../../../services/trabajos";
 
 export type FotoPendiente = { id: string; uri: string; fallida: boolean; error?: string };
+
+const MAX = 6;
+const LADO = 76;
 
 export function FotosSection({
   fotos,
@@ -23,6 +27,7 @@ export function FotosSection({
 }) {
   const t = useTema();
   const [ocupado, setOcupado] = useState(false);
+  const [abierta, setAbierta] = useState<FotoConUrl | null>(null);
 
   async function procesar(assets: ImagePicker.ImagePickerAsset[]) {
     setOcupado(true);
@@ -50,77 +55,111 @@ export function FotosSection({
     if (!r.canceled) await procesar(r.assets);
   }
 
+  function agregar() {
+    Alert.alert("Agregar foto", undefined, [
+      { text: "Tomar foto", onPress: () => void camara() },
+      { text: "Elegir de galería", onPress: () => void galeria() },
+      { text: "Cancelar", style: "cancel" },
+    ]);
+  }
+
+  const total = fotos.length + pendientes.length;
+  const alertas = fotos.filter((f) => f.alerta && f.detalle_alerta);
+
+  const cuadro = { width: LADO, height: LADO, borderRadius: t.radio.sm, backgroundColor: t.colores.surfaceAlt } as const;
+
   return (
-    <View style={{ gap: t.espacio(3) }}>
-      <Text variante="etiqueta" tono="muted" weight="semibold" style={{ textTransform: "uppercase" }}>
-        Fotos
-      </Text>
-      {editable && (
-        <View style={{ flexDirection: "row", gap: t.espacio(2.5) }}>
-          <Button titulo="Tomar foto" onPress={camara} cargando={ocupado} />
-          <Button titulo="Galería" variante="secundario" onPress={galeria} cargando={ocupado} />
-        </View>
-      )}
+    <View style={{ gap: t.espacio(2.5) }}>
+      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+        <Text variante="etiqueta" tono="muted" weight="semibold" style={{ textTransform: "uppercase" }}>
+          Fotos
+        </Text>
+        <Text mono variante="caption" tono="faint">
+          {total} de {MAX}
+        </Text>
+      </View>
 
-      {pendientes.map((p) => (
-        <Card key={p.id} plano>
-          {p.uri ? (
-            <Image source={{ uri: p.uri }} style={{ width: "100%", height: 200, borderRadius: t.radio.sm }} />
-          ) : null}
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: t.espacio(2), marginTop: t.espacio(2) }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: t.espacio(2), flex: 1 }}>
-              {p.fallida ? (
-                <Text variante="caption" tono="danger">
-                  No se pudo subir{p.error ? `: ${p.error}` : ""}
-                </Text>
-              ) : (
-                <>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: t.espacio(2) }}>
+        {pendientes.map((p) => (
+          <Pressable key={p.id} onLongPress={() => onQuitarPendiente?.(p.id)}>
+            <View style={[cuadro, { overflow: "hidden", borderWidth: 1, borderColor: t.colores.border }]}>
+              {p.uri ? <Image source={{ uri: p.uri }} style={{ width: "100%", height: "100%", opacity: 0.6 }} /> : null}
+              <View style={{ position: "absolute", right: 3, top: 3 }}>
+                {p.fallida ? (
+                  <Ionicons name="alert-circle" size={16} color={t.colores.danger} />
+                ) : (
+                  <Ionicons name="sync" size={15} color={t.colores.accent} />
+                )}
+              </View>
+            </View>
+          </Pressable>
+        ))}
+        {fotos.map((f) => (
+          <Pressable key={f.id} onPress={() => setAbierta(f)}>
+            <View style={[cuadro, { overflow: "hidden", borderWidth: 1, borderColor: t.colores.border }]}>
+              <Image source={{ uri: f.url }} style={{ width: "100%", height: "100%" }} />
+              {f.estado === "procesando" ? (
+                <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.4)" }}>
                   <ActivityIndicator size="small" color={t.colores.muted} />
-                  <Text variante="caption" tono="muted">
-                    Subiendo… (se reintenta solo)
-                  </Text>
-                </>
-              )}
+                </View>
+              ) : null}
+              {f.alerta ? (
+                <View style={{ position: "absolute", right: 3, top: 3 }}>
+                  <Ionicons name="warning" size={15} color={t.colores.danger} />
+                </View>
+              ) : null}
             </View>
-            {onQuitarPendiente ? (
-              <Button titulo="Quitar" variante="ghost" onPress={() => onQuitarPendiente(p.id)} />
-            ) : null}
-          </View>
-        </Card>
-      ))}
-
-      {fotos.map((f) => (
-        <Card key={f.id} plano>
-          <Image source={{ uri: f.url }} style={{ width: "100%", height: 200, borderRadius: t.radio.sm, marginBottom: t.espacio(2) }} />
-          {f.alerta && f.detalle_alerta ? (
-            <Text variante="etiqueta" tono="danger" weight="semibold">
-              ⚠ {f.detalle_alerta}
-            </Text>
-          ) : null}
-          {f.estado === "procesando" ? (
-            <View style={{ flexDirection: "row", alignItems: "center", gap: t.espacio(2) }}>
-              <ActivityIndicator size="small" color={t.colores.muted} />
-              <Text variante="cuerpo" tono="muted">
-                Analizando la foto…
-              </Text>
+          </Pressable>
+        ))}
+        {editable && total < MAX ? (
+          <Pressable onPress={agregar} disabled={ocupado}>
+            <View
+              style={[
+                cuadro,
+                {
+                  borderWidth: 1.5,
+                  borderStyle: "dashed",
+                  borderColor: t.colores.borderStrong,
+                  alignItems: "center",
+                  justifyContent: "center",
+                },
+              ]}
+            >
+              {ocupado ? <ActivityIndicator size="small" color={t.colores.muted} /> : <Ionicons name="camera-outline" size={22} color={t.colores.muted} />}
             </View>
-          ) : f.estado === "error" ? (
-            <Text variante="cuerpo" tono="muted">
-              No se pudo analizar automáticamente.
-            </Text>
-          ) : f.resumen ? (
-            <Text variante="cuerpo" tono="muted">
-              {f.resumen}
-            </Text>
-          ) : null}
-        </Card>
-      ))}
+          </Pressable>
+        ) : null}
+      </ScrollView>
 
-      {fotos.length === 0 && pendientes.length === 0 ? (
+      {total === 0 ? (
         <Text variante="caption" tono="muted">
           Sin fotos todavía.
         </Text>
       ) : null}
+
+      {alertas.map((f) => (
+        <Text key={f.id} variante="caption" tono="danger" weight="semibold">
+          ⚠ {f.detalle_alerta}
+        </Text>
+      ))}
+
+      <Modal visible={abierta != null} transparent animationType="fade" onRequestClose={() => setAbierta(null)}>
+        <Pressable
+          onPress={() => setAbierta(null)}
+          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.85)", alignItems: "center", justifyContent: "center", padding: 16 }}
+        >
+          {abierta ? (
+            <>
+              <Image source={{ uri: abierta.url }} resizeMode="contain" style={{ width: "100%", height: "70%" }} />
+              {abierta.resumen ? (
+                <Text tono="inverso" style={{ marginTop: 12, textAlign: "center" }}>
+                  {abierta.resumen}
+                </Text>
+              ) : null}
+            </>
+          ) : null}
+        </Pressable>
+      </Modal>
     </View>
   );
 }
