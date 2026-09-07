@@ -8,7 +8,6 @@ import { Badge, Card, EmptyState, ErrorState, LoadingScreen, Text } from "../../
 import { OfflineBanner } from "../../components/OfflineBanner";
 import { useAuth } from "../auth/AuthContext";
 import { cargarHoy, type ItemHoy } from "../../services/hoy";
-import { RutaScreen } from "../ruta/RutaScreen";
 import type { HoyStackParamList } from "../../shell/navigation/types";
 
 const ICONO: Record<ItemHoy["tipo"], keyof typeof Ionicons.glyphMap> = {
@@ -38,7 +37,6 @@ export function HoyScreen({ navigation }: NativeStackScreenProps<HoyStackParamLi
   const esGestion = auth.fase === "listo" && auth.usuario.rol !== "colaborador";
   const incluirViajes = auth.fase === "listo" && !auth.modulosDeshabilitados.includes("viajes");
 
-  const [vista, setVista] = useState<"lista" | "ruta">("lista");
   const [equipo, setEquipo] = useState(false);
   const [items, setItems] = useState<ItemHoy[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -73,8 +71,8 @@ export function HoyScreen({ navigation }: NativeStackScreenProps<HoyStackParamLi
 
   useFocusEffect(
     useCallback(() => {
-      if (vista === "lista") void cargar();
-    }, [vista, cargar])
+      void cargar();
+    }, [cargar])
   );
 
   async function onRefresh() {
@@ -93,71 +91,12 @@ export function HoyScreen({ navigation }: NativeStackScreenProps<HoyStackParamLi
     }
   }
 
-  const toggleVista = (
-    <View style={{ flexDirection: "row", gap: t.espacio(2), padding: t.espacio(4), paddingBottom: t.espacio(2) }}>
-      {(["lista", "ruta"] as const).map((v) => {
-        const activo = vista === v;
-        return (
-          <Pressable
-            key={v}
-            onPress={() => setVista(v)}
-            style={{
-              flex: 1,
-              minHeight: 44,
-              alignItems: "center",
-              justifyContent: "center",
-              flexDirection: "row",
-              gap: t.espacio(2),
-              borderRadius: t.radio.md,
-              backgroundColor: activo ? t.colores.brand : t.colores.surface,
-              borderWidth: 1,
-              borderColor: activo ? t.colores.brand : t.colores.border,
-            }}
-          >
-            <Ionicons
-              name={v === "lista" ? "list-outline" : "navigate-outline"}
-              size={16}
-              color={activo ? t.colores.brandForeground : t.colores.muted}
-            />
-            <Text variante="etiqueta" weight="semibold" tono={activo ? "inverso" : "muted"}>
-              {v === "lista" ? "Lista" : "Ruta"}
-            </Text>
-          </Pressable>
-        );
-      })}
-    </View>
-  );
-
-  if (vista === "ruta") {
-    return (
-      <View style={{ flex: 1, backgroundColor: t.colores.bg }}>
-        {toggleVista}
-        <RutaScreen />
-      </View>
-    );
-  }
-
-  if (items === null && !error) {
-    return (
-      <View style={{ flex: 1, backgroundColor: t.colores.bg }}>
-        {toggleVista}
-        <LoadingScreen />
-      </View>
-    );
-  }
-  if (error && !items) {
-    return (
-      <View style={{ flex: 1, backgroundColor: t.colores.bg }}>
-        {toggleVista}
-        <ErrorState mensaje={error} onReintentar={cargar} />
-      </View>
-    );
-  }
+  if (items === null && !error) return <LoadingScreen />;
+  if (error && !items) return <ErrorState mensaje={error} onReintentar={cargar} />;
 
   return (
     <View style={{ flex: 1, backgroundColor: t.colores.bg }}>
       <OfflineBanner guardadoEn={guardadoEn} />
-      {toggleVista}
       {esGestion && (
         <View
           style={{

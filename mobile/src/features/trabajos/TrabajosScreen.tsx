@@ -10,6 +10,7 @@ import { Badge, Button, Card, EmptyState, ErrorState, LoadingScreen, Text } from
 import { OfflineBanner } from "../../components/OfflineBanner";
 import { useAuth } from "../auth/AuthContext";
 import { listarTrabajos, type TrabajoLista } from "../../services/trabajos";
+import { TrabajosMapa } from "./TrabajosMapa";
 
 // El estado visible sale SIEMPRE de la orden (PASO 1); si aún no llega,
 // se deriva del estado del trabajo.
@@ -28,6 +29,7 @@ export function TrabajosScreen({ navigation }: NativeStackScreenProps<TrabajosSt
   const auth = useAuth();
   const esGestion = auth.fase === "listo" && auth.usuario.rol !== "colaborador";
 
+  const [vista, setVista] = useState<"lista" | "mapa">("lista");
   const [equipo, setEquipo] = useState(false);
   const [trabajos, setTrabajos] = useState<TrabajoLista[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -58,12 +60,69 @@ export function TrabajosScreen({ navigation }: NativeStackScreenProps<TrabajosSt
     setRefrescando(false);
   }
 
-  if (trabajos === null && !error) return <LoadingScreen />;
-  if (error && !trabajos) return <ErrorState mensaje={error} onReintentar={cargar} />;
+  const toggleVista = (
+    <View style={{ flexDirection: "row", gap: t.espacio(2), padding: t.espacio(4), paddingBottom: t.espacio(2) }}>
+      {(["lista", "mapa"] as const).map((v) => {
+        const activo = vista === v;
+        return (
+          <Pressable
+            key={v}
+            onPress={() => setVista(v)}
+            style={{
+              flex: 1,
+              minHeight: 44,
+              alignItems: "center",
+              justifyContent: "center",
+              flexDirection: "row",
+              gap: t.espacio(2),
+              borderRadius: t.radio.md,
+              backgroundColor: activo ? t.colores.brand : t.colores.surface,
+              borderWidth: 1,
+              borderColor: activo ? t.colores.brand : t.colores.border,
+            }}
+          >
+            <Ionicons
+              name={v === "lista" ? "list-outline" : "map-outline"}
+              size={16}
+              color={activo ? t.colores.brandForeground : t.colores.muted}
+            />
+            <Text variante="etiqueta" weight="semibold" tono={activo ? "inverso" : "muted"}>
+              {v === "lista" ? "Lista" : "Mapa"}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+
+  if (vista === "mapa") {
+    return (
+      <View style={{ flex: 1, backgroundColor: t.colores.bg }}>
+        {toggleVista}
+        <TrabajosMapa onVerOS={(trabajoId) => navigation.navigate("TrabajoDetalle", { trabajoId })} />
+      </View>
+    );
+  }
+
+  if (trabajos === null && !error)
+    return (
+      <View style={{ flex: 1, backgroundColor: t.colores.bg }}>
+        {toggleVista}
+        <LoadingScreen />
+      </View>
+    );
+  if (error && !trabajos)
+    return (
+      <View style={{ flex: 1, backgroundColor: t.colores.bg }}>
+        {toggleVista}
+        <ErrorState mensaje={error} onReintentar={cargar} />
+      </View>
+    );
 
   return (
     <View style={{ flex: 1, backgroundColor: t.colores.bg }}>
       <OfflineBanner guardadoEn={guardadoEn} />
+      {toggleVista}
       {esGestion && (
         <View style={{ padding: t.espacio(4), paddingBottom: t.espacio(2) }}>
           <Button titulo="Nuevo trabajo" onPress={() => navigation.navigate("TrabajoForm")} />
