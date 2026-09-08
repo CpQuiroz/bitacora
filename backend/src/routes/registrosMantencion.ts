@@ -123,6 +123,44 @@ async function nombreRealizadoPor(
   return null;
 }
 
+// Plantilla por defecto — si la empresa borró la de checklist_templates
+// (o todavía no corrió el seed), igual se puede registrar.
+const PLANTILLA_POR_DEFECTO = {
+  nombre: "Mantención de flota",
+  secciones: [
+    { nombre: "Motor y filtros", preguntas: ["Aceite de motor", "Filtro de aceite del motor", "Filtro de combustible", "Filtro de aire", "Filtro decantador de agua", "Correa de accesorios"] },
+    { nombre: "Niveles y fluidos", preguntas: ["Refrigerante de motor", "Aceite de dirección", "Aceite de diferenciales", "Aceite de mazas ejes direccional", "Aceite de mazas ejes traseros", "Aceite de transmisión", "Líquido limpiaparabrisas"] },
+    { nombre: "Embrague y transmisión", preguntas: ["Ajuste de embrague", "Engrasado de embrague", "Rodamiento de embrague", "Collarín del embrague"] },
+    { nombre: "Dirección y suspensión", preguntas: ["Terminal de dirección", "Rótulas de brazo viajero", "Rótulas de barra estabilizadora", "Pernos de muelle", "Cruceta flecha de dirección", "Crucetas de flecha intereje", "Flechas deslizables"] },
+    { nombre: "Frenos", preguntas: ["Ajustadores de freno delantero", "Ajustadores de frenos traseros", "Sistema de frenos de aire / válvulas"] },
+    { nombre: "Neumáticos y eléctrico", preguntas: ["Presión de neumáticos", "Profundidad banda de rodado", "Estado llanta de repuesto", "Batería y terminales", "Luces y señalización"] },
+    { nombre: "Seguridad y documentación", preguntas: ["Extintor vigente", "Botiquín / kit de emergencia", "Triángulos y conos de seguridad"] },
+  ].map((s) => ({ nombre: s.nombre, preguntas: s.preguntas.map((texto) => ({ texto, obligatorio: true })) })),
+};
+
+// ------------------------------------------------------------
+// GET /registros-mantencion/plantilla — el checklist_template
+// "Mantención de flota" de la empresa (o el default). Sin requiereModulo:
+// lo necesitan tanto el web (admin/supervisor, que no siempre ven
+// Configuración) como el móvil del chofer. Debe ir ANTES de las rutas
+// con :id para que Express no lo tome como un id.
+// ------------------------------------------------------------
+registrosMantencionRouter.get(
+  "/registros-mantencion/plantilla",
+  ah<RequestConEmpresa>(async (req, res) => {
+    const { data } = await supabase
+      .from("checklist_templates")
+      .select("id, nombre, secciones")
+      .eq("empresa_id", req.empresaId!)
+      .eq("nombre", "Mantención de flota")
+      .eq("activo", true)
+      .order("version", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    res.json(data ?? PLANTILLA_POR_DEFECTO);
+  })
+);
+
 // ------------------------------------------------------------
 // POST /:equipoId/registros-mantencion — crea un registro.
 // ------------------------------------------------------------

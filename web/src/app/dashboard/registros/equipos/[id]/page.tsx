@@ -10,6 +10,7 @@ import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, SuccessText, Textarea } from "@/components/ui";
 import { IconChevronLeft, IconClipboardCheck, IconPlus, IconWrench } from "@/components/icons";
+import { RegistrosMantencion } from "./RegistrosMantencion";
 
 type TrabajoConOrden = Trabajo & { orden: Pick<OrdenServicio, "folio" | "estado_os"> | null };
 type EquipoDetalle = Equipo & {
@@ -22,6 +23,7 @@ export default function EquipoDetallePage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const [usuario, setUsuario] = useState<UsuarioShell | null>(null);
+  const [modulosVisibles, setModulosVisibles] = useState<string[]>([]);
   const [equipo, setEquipo] = useState<EquipoDetalle | null>(null);
   const [planes, setPlanes] = useState<PlanMantencion[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -46,7 +48,9 @@ export default function EquipoDetallePage() {
       apiFetch(`/api/planes-mantencion?equipo_id=${params.id}`),
     ]);
     if (resMe.ok) {
-      const { usuario: u } = await resMe.json();
+      const cuerpoMe = await resMe.json();
+      const u = cuerpoMe.usuario;
+      if (Array.isArray(cuerpoMe.modulos_visibles)) setModulosVisibles(cuerpoMe.modulos_visibles);
       if (u)
         setUsuario({
           nombre: u.nombre,
@@ -243,6 +247,10 @@ export default function EquipoDetallePage() {
           </div>
         )}
       </Card>
+
+      {equipo.categoria === "Vehículo" && (
+        <RegistrosMantencion equipo={equipo} puedeGestionar={modulosVisibles.includes("flota")} />
+      )}
 
       <Card className="my-6">
         <h2 className="mb-4 text-sm font-semibold text-foreground">Histórico de Mantenciones</h2>

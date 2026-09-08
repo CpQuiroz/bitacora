@@ -40,3 +40,12 @@ export async function abrirPdfInforme(informeId: string): Promise<boolean> {
   window.open(url, "_blank");
   return true;
 }
+
+export async function abrirPdfRegistroMantencion(equipoId: string, registroId: string): Promise<boolean> {
+  const res = await apiFetch(`/api/equipos/${equipoId}/registros-mantencion/${registroId}/pdf`);
+  if (!res.ok) return false;
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  window.open(url, "_blank");
+  return true;
+}
