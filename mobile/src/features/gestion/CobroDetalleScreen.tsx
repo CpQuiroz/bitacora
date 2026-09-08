@@ -7,6 +7,7 @@ import type { MedioPago } from "@bitacora/shared";
 import { useTema } from "../../theme";
 import { pesos } from "../../lib/plata";
 import { Badge, Button, Card, ErrorState, Input, LoadingScreen, Text } from "../../components/ui";
+import { InputMonto } from "../../components/InputMonto";
 import { useRed } from "../../services/sync/NetworkProvider";
 import { estaVencido, marcarPagado, obtenerCobro, reabrirCobro, type CobroConCliente } from "../../services/cobros";
 import type { MasStackParamList } from "../../shell/navigation/types";
@@ -146,7 +147,7 @@ export function CobroDetalleScreen({ route }: NativeStackScreenProps<MasStackPar
                 );
               })}
             </View>
-            <Input etiqueta="Valor recibido (opcional)" keyboardType="numeric" value={valorRecibido} onChangeText={setValorRecibido} />
+            <InputMonto etiqueta="Valor recibido (opcional)" valor={valorRecibido} onChangeText={setValorRecibido} />
             <Input etiqueta="Observaciones (opcional)" multiline value={obs} onChangeText={setObs} />
             <View style={{ flexDirection: "row", gap: t.espacio(2.5) }}>
               <Button titulo="Confirmar pago" onPress={confirmarPago} cargando={ocupado} />

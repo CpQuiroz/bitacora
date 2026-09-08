@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import type { Cliente, TipoPack } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
 import { Button, ErrorText, Input, Label, Select, Textarea } from "@/components/ui";
+import { InputMonto } from "@/components/InputMonto";
 import { ComboboxCliente } from "@/components/ComboboxCliente";
 import { formatMoneda } from "@/lib/formatMoneda";
 
@@ -152,12 +153,11 @@ export function AsignarPackForm({
         )}
         <div>
           <Label>Precio pagado (opcional)</Label>
-          <Input
-            type="number"
-            min={0}
+          <InputMonto
             placeholder={tipoElegido?.precio != null ? String(tipoElegido.precio) : "0"}
             value={precioPagado}
-            onChange={(e) => setPrecioPagado(e.target.value)}
+            onChange={setPrecioPagado}
+            moneda={moneda}
           />
           <p className="mt-1 text-xs text-muted">Lo realmente cobrado. Vacío = el precio de lista.</p>
         </div>

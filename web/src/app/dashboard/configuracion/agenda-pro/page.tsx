@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import type { AgendaProConfig, AgendaProHorario, Servicio, TipoPack } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
 import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText } from "@/components/ui";
+import { InputMonto } from "@/components/InputMonto";
 import { IconCalendar, IconCheck, IconLayers, IconPlus, IconWrench } from "@/components/icons";
 import { EstadoCargando, EstadoVacio } from "@/components/estados";
 import { useConfiguracion } from "../ConfiguracionContext";
@@ -29,12 +30,13 @@ function formatoPrecio(precio: number | null) {
 // nombre, precio de lista y duración sugerida. Se usa para precargar la
 // Nueva reserva y para atar un Tipo de pack a un servicio puntual.
 function ServiciosCard({ servicios, onCambio }: { servicios: Servicio[] | null; onCambio: () => void }) {
+  const { usuario } = useConfiguracion();
   const [error, setError] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
 
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [nombre, setNombre] = useState("");
-  const [precio, setPrecio] = useState(0);
+  const [precio, setPrecio] = useState("");
   const [duracion, setDuracion] = useState(45);
   const [guardando, setGuardando] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -42,7 +44,7 @@ function ServiciosCard({ servicios, onCambio }: { servicios: Servicio[] | null; 
   function abrirNuevo() {
     setEditandoId("nuevo");
     setNombre("");
-    setPrecio(0);
+    setPrecio("");
     setDuracion(45);
     setFormError(null);
   }
@@ -50,7 +52,7 @@ function ServiciosCard({ servicios, onCambio }: { servicios: Servicio[] | null; 
   function abrirEdicion(s: Servicio) {
     setEditandoId(s.id);
     setNombre(s.nombre);
-    setPrecio(s.precio);
+    setPrecio(s.precio != null ? String(s.precio) : "");
     setDuracion(s.duracion_sugerida_min);
     setFormError(null);
   }
@@ -66,12 +68,12 @@ function ServiciosCard({ servicios, onCambio }: { servicios: Servicio[] | null; 
       setFormError("La duración debe ser un entero mayor a 0");
       return;
     }
-    if (precio < 0) {
+    if (Number(precio) < 0) {
       setFormError("Precio inválido");
       return;
     }
     setGuardando(true);
-    const cuerpo = { nombre: nombre.trim(), precio, duracion_sugerida_min: duracion };
+    const cuerpo = { nombre: nombre.trim(), precio: Number(precio) || 0, duracion_sugerida_min: duracion };
     const res =
       editandoId === "nuevo"
         ? await apiFetch("/api/servicios", { method: "POST", body: JSON.stringify(cuerpo) })
@@ -121,7 +123,7 @@ function ServiciosCard({ servicios, onCambio }: { servicios: Servicio[] | null; 
             </div>
             <div>
               <Label>Precio de lista</Label>
-              <Input type="number" min={0} value={precio} onChange={(e) => setPrecio(Number(e.target.value) || 0)} />
+              <InputMonto value={precio} onChange={setPrecio} moneda={usuario.empresa.moneda} />
             </div>
             <div>
               <Label>Duración sugerida (min)</Label>
@@ -192,6 +194,7 @@ function ServiciosCard({ servicios, onCambio }: { servicios: Servicio[] | null; 
 // el negocio define una vez. No tiene saldo: vender un pack crea una
 // instancia aparte en paquetes_sesiones con un snapshot de estos valores.
 function TiposPackCard({ servicios }: { servicios: Servicio[] | null }) {
+  const { usuario } = useConfiguracion();
   const [tipos, setTipos] = useState<TipoPack[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
@@ -327,7 +330,7 @@ function TiposPackCard({ servicios }: { servicios: Servicio[] | null }) {
             </div>
             <div>
               <Label>Precio total (recomendado)</Label>
-              <Input type="number" min={0} placeholder="45000" value={precio} onChange={(e) => setPrecio(e.target.value)} />
+              <InputMonto placeholder="45000" value={precio} onChange={setPrecio} moneda={usuario.empresa.moneda} />
             </div>
             <div>
               <Label>Servicio al que aplica (opcional)</Label>

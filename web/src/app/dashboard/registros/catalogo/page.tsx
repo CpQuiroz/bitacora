@@ -11,6 +11,7 @@ import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { SelectCrear } from "@/components/SelectCrear";
 import { Combobox } from "@/components/Combobox";
 import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText } from "@/components/ui";
+import { InputMonto } from "@/components/InputMonto";
 import { IconHelp, IconLayers, IconPlus } from "@/components/icons";
 import { ICONO_TIPO } from "@/components/CatalogoSelectorModal";
 import { EstadoCargando, EstadoVacio } from "@/components/estados";
@@ -322,7 +323,7 @@ export default function CatalogoPage() {
               </div>
               <div>
                 <Label>Precio base (CLP)</Label>
-                <Input type="number" min="0" step="1" required value={precioBase} onChange={(e) => setPrecioBase(e.target.value)} />
+                <InputMonto required value={precioBase} onChange={setPrecioBase} moneda={usuario.moneda} />
               </div>
               {tipo === "producto" && !editandoId && (
                 <div>

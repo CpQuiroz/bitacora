@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import type { Servicio, TipoPack } from "@bitacora/shared";
 import { useTema } from "../../theme";
 import { Button, Input, PickerBuscable, Text } from "../../components/ui";
+import { InputMonto } from "../../components/InputMonto";
 import { crearTipoPack, editarTipoPack } from "../../services/tiposPack";
 
 /**
@@ -91,13 +92,7 @@ export function TipoPackModal({
             value={sesiones}
             onChangeText={(v) => setSesiones(v.replace(/\D/g, ""))}
           />
-          <Input
-            etiqueta="Precio del pack"
-            keyboardType="numeric"
-            placeholder="0"
-            value={precio}
-            onChangeText={(v) => setPrecio(v.replace(/\D/g, ""))}
-          />
+          <InputMonto etiqueta="Precio del pack" valor={precio} onChangeText={setPrecio} />
           {servicios.length > 0 ? (
             <PickerBuscable
               etiqueta="Servicio asociado (opcional)"

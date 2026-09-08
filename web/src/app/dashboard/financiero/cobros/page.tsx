@@ -9,6 +9,7 @@ import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Badge, Button, Card, Cifra, ErrorText, Input, Label, PageHeader, Select, SuccessText } from "@/components/ui";
+import { InputMonto } from "@/components/InputMonto";
 import { IconPlus, IconReceipt } from "@/components/icons";
 import { EstadoCargando, EstadoError, EstadoVacio } from "@/components/estados";
 import { ComboboxCliente } from "@/components/ComboboxCliente";
@@ -269,7 +270,7 @@ function CobrosContenido() {
                 </div>
                 <div>
                   <Label>Monto</Label>
-                  <Input type="number" min="0" step="1" required value={monto} onChange={(e) => setMonto(e.target.value)} />
+                  <InputMonto required value={monto} onChange={setMonto} moneda={usuario.moneda} />
                 </div>
                 <div>
                   <Label>Fecha de emisión</Label>

@@ -17,6 +17,7 @@ import {
   SuccessText,
   Textarea,
 } from "@/components/ui";
+import { InputMonto } from "@/components/InputMonto";
 import { IconClipboardCheck, IconPlus } from "@/components/icons";
 import dynamic from "next/dynamic";
 import type { Parada } from "@/components/MapaRutas";
@@ -429,13 +430,7 @@ function NuevaOrdenServicioContenido() {
                   </div>
                   <div>
                     {i === 0 && <Label>P. unitario</Label>}
-                    <Input
-                      type="number"
-                      min="0"
-                      step="1"
-                      value={it.precio_unitario}
-                      onChange={(e) => actualizarItem(i, "precio_unitario", e.target.value)}
-                    />
+                    <InputMonto value={it.precio_unitario} onChange={(v) => actualizarItem(i, "precio_unitario", v)} moneda={usuario.moneda} />
                   </div>
                   <Button
                     type="button"

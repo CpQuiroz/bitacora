@@ -10,6 +10,7 @@ import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { SelectCrear } from "@/components/SelectCrear";
 import { Badge, Button, Card, Cifra, ErrorText, Input, Label, PageHeader, Select, SuccessText } from "@/components/ui";
+import { InputMonto } from "@/components/InputMonto";
 import { IconPaperclip, IconPlus, IconWallet } from "@/components/icons";
 import { EstadoCargando, EstadoVacio } from "@/components/estados";
 
@@ -244,7 +245,7 @@ export default function GastosPage() {
               </div>
               <div>
                 <Label>Monto</Label>
-                <Input type="number" min="0" step="1" required value={monto} onChange={(e) => setMonto(e.target.value)} />
+                <InputMonto required value={monto} onChange={setMonto} moneda={usuario.moneda} />
               </div>
               <div>
                 <Label>Categoría</Label>

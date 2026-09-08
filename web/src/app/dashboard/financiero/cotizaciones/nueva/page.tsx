@@ -8,6 +8,7 @@ import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Button, Card, ErrorText, Input, Label, PageHeader } from "@/components/ui";
+import { InputMonto } from "@/components/InputMonto";
 import { IconChevronLeft, IconPlus } from "@/components/icons";
 import { CatalogoSelectorModal, type ItemSeleccionadoCatalogo } from "@/components/CatalogoSelectorModal";
 import { ComboboxCliente } from "@/components/ComboboxCliente";
@@ -178,7 +179,7 @@ function NuevaCotizacionContenido() {
                 </div>
                 <div>
                   <Label>Precio unitario</Label>
-                  <Input type="number" min="0" step="1" required value={l.precio_unitario} onChange={(e) => cambiarLinea(idx, { precio_unitario: e.target.value })} />
+                  <InputMonto required value={l.precio_unitario} onChange={(v) => cambiarLinea(idx, { precio_unitario: v })} moneda={usuario.moneda} />
                 </div>
                 <Button type="button" variant="ghost" onClick={() => quitarLinea(idx)}>
                   Quitar

@@ -8,6 +8,7 @@ import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText } from "@/components/ui";
+import { InputMonto } from "@/components/InputMonto";
 import { Modal } from "@/components/Modal";
 import { ComboboxCliente } from "@/components/ComboboxCliente";
 import { ComboboxResponsable } from "@/components/ComboboxResponsable";
@@ -443,7 +444,7 @@ export default function ViajesPage() {
               </div>
               <div>
                 <Label>Monto del viaje</Label>
-                <Input type="number" min="0" step="1" required value={subtotal} onChange={(e) => setSubtotal(e.target.value)} />
+                <InputMonto required value={subtotal} onChange={setSubtotal} moneda={usuario.moneda} />
               </div>
               <div className="flex items-end pb-2.5">
                 <label className="flex items-center gap-2 text-sm text-foreground">
@@ -643,7 +644,7 @@ export default function ViajesPage() {
                             </div>
                             <div className="w-36">
                               <Label>Monto del viaje</Label>
-                              <Input type="number" min="0" step="1" value={editSubtotal} onChange={(e) => setEditSubtotal(e.target.value)} />
+                              <InputMonto value={editSubtotal} onChange={setEditSubtotal} moneda={usuario.moneda} />
                             </div>
                             <label className="flex items-center gap-2 pb-2.5 text-sm text-foreground">
                               <input type="checkbox" checked={editAplicaIva} onChange={(e) => setEditAplicaIva(e.target.checked)} />

@@ -6,18 +6,19 @@ import { useParams } from "next/navigation";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell } from "@/components/DashboardShell";
 import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, SuccessText } from "@/components/ui";
+import { InputMonto } from "@/components/InputMonto";
 import { IconChevronLeft } from "@/components/icons";
 import { EstadoCargando } from "@/components/estados";
 import { useUsuarioShell } from "@/lib/useUsuarioShell";
 import { nombrePeriodo, remuneraciones, type LiquidacionConNombre } from "@/lib/remuneracionesApi";
 
 const VARIABLES = [
-  { clave: "dias_trabajados", label: "Días trabajados" },
-  { clave: "horas_extra", label: "Horas extra ($)" },
-  { clave: "otros_imponibles", label: "Bonos / comisiones ($)" },
-  { clave: "otros_no_imponibles", label: "Otros no imponibles ($)" },
-  { clave: "asignacion_familiar", label: "Asignación familiar ($)" },
-  { clave: "otros_descuentos", label: "Otros descuentos ($)" },
+  { clave: "dias_trabajados", label: "Días trabajados", dinero: false },
+  { clave: "horas_extra", label: "Horas extra", dinero: true },
+  { clave: "otros_imponibles", label: "Bonos / comisiones", dinero: true },
+  { clave: "otros_no_imponibles", label: "Otros no imponibles", dinero: true },
+  { clave: "asignacion_familiar", label: "Asignación familiar", dinero: true },
+  { clave: "otros_descuentos", label: "Otros descuentos", dinero: true },
 ] as const;
 
 export default function LiquidacionDetallePage() {
@@ -175,11 +176,19 @@ export default function LiquidacionDetallePage() {
                   {VARIABLES.map((v) => (
                     <div key={v.clave}>
                       <Label>{v.label}</Label>
-                      <Input
-                        type="number"
-                        value={form[v.clave] ?? ""}
-                        onChange={(e) => setForm((f) => ({ ...f, [v.clave]: e.target.value }))}
-                      />
+                      {v.dinero ? (
+                        <InputMonto
+                          value={form[v.clave] ?? ""}
+                          onChange={(val) => setForm((f) => ({ ...f, [v.clave]: val }))}
+                          moneda={m}
+                        />
+                      ) : (
+                        <Input
+                          type="number"
+                          value={form[v.clave] ?? ""}
+                          onChange={(e) => setForm((f) => ({ ...f, [v.clave]: e.target.value }))}
+                        />
+                      )}
                     </div>
                   ))}
                   <label className="flex items-center gap-2 text-sm text-foreground">

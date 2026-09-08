@@ -9,6 +9,7 @@ import { apiFetch } from "@/lib/api";
 import { abrirPdfOS } from "@/lib/descargarPdf";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, SuccessText, Textarea } from "@/components/ui";
+import { InputMonto } from "@/components/InputMonto";
 import { IconCamera, IconChevronLeft, IconClipboardCheck, IconMail, IconPlus } from "@/components/icons";
 import { CatalogoSelectorModal, type ItemSeleccionadoCatalogo } from "@/components/CatalogoSelectorModal";
 import { ComboboxResponsable } from "@/components/ComboboxResponsable";
@@ -345,14 +346,7 @@ export default function DetalleOrdenServicioPage() {
                         disabled={tieneFirma}
                         onChange={(e) => actualizarItemEdit(i, "cantidad", e.target.value)}
                       />
-                      <Input
-                        type="number"
-                        min="0"
-                        step="1"
-                        value={it.precio_unitario}
-                        disabled={tieneFirma}
-                        onChange={(e) => actualizarItemEdit(i, "precio_unitario", e.target.value)}
-                      />
+                      <InputMonto value={it.precio_unitario} disabled={tieneFirma} onChange={(v) => actualizarItemEdit(i, "precio_unitario", v)} moneda={usuario.moneda} />
                       {!tieneFirma && (
                         <Button type="button" variant="ghost" onClick={() => quitarItemEdit(i)}>
                           Quitar

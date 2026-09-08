@@ -4,6 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import type { Servicio } from "@bitacora/shared";
 import { useTema } from "../../theme";
 import { Button, Input, Text } from "../../components/ui";
+import { InputMonto } from "../../components/InputMonto";
 import { crearServicio, editarServicio } from "../../services/servicios";
 
 const DURACIONES = [30, 45, 60, 90];
@@ -83,13 +84,7 @@ export function NuevoServicioModal({
 
         <ScrollView contentContainerStyle={{ padding: t.espacio(5), gap: t.espacio(4) }} keyboardShouldPersistTaps="handled">
           <Input etiqueta="Nombre" placeholder="Ej: Limpieza facial" value={nombre} onChangeText={setNombre} autoFocus={!editando} />
-          <Input
-            etiqueta="Precio de lista"
-            keyboardType="numeric"
-            placeholder="0"
-            value={precio}
-            onChangeText={(v) => setPrecio(v.replace(/\D/g, ""))}
-          />
+          <InputMonto etiqueta="Precio de lista" valor={precio} onChangeText={setPrecio} />
           <View style={{ gap: t.espacio(2) }}>
             <Text variante="etiqueta" tono="muted">
               Duración sugerida

@@ -9,6 +9,7 @@ import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText, Textarea } from "@/components/ui";
+import { InputMonto } from "@/components/InputMonto";
 import { Modal } from "@/components/Modal";
 import { PanelAcciones } from "@/components/PanelAcciones";
 import { IconChevronLeft, IconSettings } from "@/components/icons";
@@ -283,7 +284,7 @@ export default function CobroDetallePage() {
           </div>
           <div>
             <Label>Valor recibido</Label>
-            <Input type="number" min="0" step="1" required value={valorRecibido} onChange={(e) => setValorRecibido(e.target.value)} />
+            <InputMonto required value={valorRecibido} onChange={setValorRecibido} moneda={usuario.moneda} />
           </div>
           <div>
             <Label>Forma de pago</Label>

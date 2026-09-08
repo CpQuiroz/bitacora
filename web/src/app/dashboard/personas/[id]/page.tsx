@@ -12,6 +12,7 @@ import { FUNCIONES } from "@/lib/funciones";
 import { remuneraciones } from "@/lib/remuneracionesApi";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText } from "@/components/ui";
+import { InputMonto } from "@/components/InputMonto";
 import { DocumentoForm } from "@/components/DocumentoForm";
 import { IconCalendar, IconChevronLeft } from "@/components/icons";
 import { EstadoCargando } from "@/components/estados";
@@ -553,19 +554,15 @@ export default function PersonaFichaPage() {
             </div>
             <div>
               <Label>Sueldo base ($)</Label>
-              <Input type="number" value={String(formLaboral.sueldo_base)} onChange={(e) => setL("sueldo_base", e.target.value)} />
+              <InputMonto value={String(formLaboral.sueldo_base)} onChange={(v) => setL("sueldo_base", v)} moneda={usuario?.moneda} />
             </div>
             <div>
               <Label>Colación mensual ($)</Label>
-              <Input type="number" value={String(formLaboral.colacion_mensual)} onChange={(e) => setL("colacion_mensual", e.target.value)} />
+              <InputMonto value={String(formLaboral.colacion_mensual)} onChange={(v) => setL("colacion_mensual", v)} moneda={usuario?.moneda} />
             </div>
             <div>
               <Label>Movilización mensual ($)</Label>
-              <Input
-                type="number"
-                value={String(formLaboral.movilizacion_mensual)}
-                onChange={(e) => setL("movilizacion_mensual", e.target.value)}
-              />
+              <InputMonto value={String(formLaboral.movilizacion_mensual)} onChange={(v) => setL("movilizacion_mensual", v)} moneda={usuario?.moneda} />
             </div>
             <div>
               <Label>AFP</Label>
