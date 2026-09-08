@@ -10,14 +10,16 @@ import { parentPort, workerData } from "worker_threads";
 import { generarPdfOS } from "../generarPdfOS";
 import { generarPdfCotizacion } from "../generarPdfCotizacion";
 import { generarPdfInforme } from "../generarPdfInforme";
+import { generarPdfRegistroMantencion } from "../generarPdfRegistroMantencion";
 
-type TipoPdf = "os" | "cotizacion" | "informe";
+type TipoPdf = "os" | "cotizacion" | "informe" | "mantencion";
 
 async function main() {
   const { tipo, datos } = workerData as { tipo: TipoPdf; datos: unknown };
   let pdf: Buffer;
   if (tipo === "os") pdf = await generarPdfOS(datos as Parameters<typeof generarPdfOS>[0]);
   else if (tipo === "cotizacion") pdf = await generarPdfCotizacion(datos as Parameters<typeof generarPdfCotizacion>[0]);
+  else if (tipo === "mantencion") pdf = await generarPdfRegistroMantencion(datos as Parameters<typeof generarPdfRegistroMantencion>[0]);
   else pdf = await generarPdfInforme(datos as Parameters<typeof generarPdfInforme>[0]);
   parentPort!.postMessage({ ok: true, pdf });
 }

@@ -41,6 +41,7 @@ import { notificacionesRouter } from "./routes/notificaciones";
 import { encuestaPublicaRouter } from "./routes/encuestaPublica";
 import { equiposRouter } from "./routes/equipos";
 import { planesMantencionRouter } from "./routes/planesMantencion";
+import { registrosMantencionRouter } from "./routes/registrosMantencion";
 import { sugerenciasRubroRouter } from "./routes/sugerenciasRubro";
 import { catalogoRouter } from "./routes/catalogo";
 import { inventarioRouter } from "./routes/inventario";
@@ -341,6 +342,10 @@ app.use("/api/categorias-gasto", requiereAuth, requiereEmpresa, categoriasGastoR
 app.use("/api/centros-costo", requiereAuth, requiereEmpresa, centrosCostoRouter);
 app.use("/api/notificaciones", requiereAuth, requiereEmpresa, notificacionesRouter);
 app.use("/api/equipos", requiereAuth, requiereEmpresa, equiposRouter);
+// Registros de mantención de flota — mismo prefijo /api/equipos, sin
+// requiereModulo (igual que equipos): la autorización es por handler
+// (gestionar flota vs. chofer del vehículo). Ver routes/registrosMantencion.ts.
+app.use("/api/equipos", requiereAuth, requiereEmpresa, registrosMantencionRouter);
 app.use("/api/planes-mantencion", requiereAuth, requiereEmpresa, planesMantencionRouter);
 app.use("/api/sugerencias-rubro", requiereAuth, requiereEmpresa, sugerenciasRubroRouter);
 app.use("/api/catalogo", requiereAuth, requiereEmpresa, catalogoRouter);

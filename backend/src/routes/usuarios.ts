@@ -381,6 +381,43 @@ usuariosRouter.get(
   })
 );
 
+// Últimas mantenciones del vehículo asignado al usuario — vista acotada
+// para el chofer (el historial completo con filtros vive en Flota, solo
+// admin/supervisor). Sin el módulo "flota", igual que /me/vehiculo.
+usuariosRouter.get(
+  "/me/vehiculo/registros-mantencion",
+  ah<RequestConEmpresa>(async (req, res) => {
+    const vehiculo = await equipoAsignadoAColaborador(req.empresaId!, req.userId!);
+    if (!vehiculo) {
+      res.json({ vehiculo: null, registros: [] });
+      return;
+    }
+    const limite = Math.min(Number(req.query.limite) || 10, 50);
+    const { data, error } = await supabase
+      .from("registros_mantencion_equipo")
+      .select("id, tipo, origen, checklist, kilometraje, horas_motor, creado_en")
+      .eq("empresa_id", req.empresaId!)
+      .eq("equipo_id", vehiculo.id)
+      .order("creado_en", { ascending: false })
+      .limit(limite);
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    // "con_novedades" derivado: algún ítem del checklist quedó en "no".
+    const registros = (data ?? []).map((r) => ({
+      id: r.id,
+      tipo: r.tipo,
+      origen: r.origen,
+      kilometraje: r.kilometraje,
+      horas_motor: r.horas_motor,
+      creado_en: r.creado_en,
+      con_novedades: Array.isArray(r.checklist) && r.checklist.some((i: { respuesta?: string }) => i?.respuesta === "no"),
+    }));
+    res.json({ vehiculo, registros });
+  })
+);
+
 const IDIOMAS = ["es", "en", "pt"];
 
 // Perfil del propio usuario logueado — a diferencia del resto de este

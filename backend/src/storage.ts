@@ -285,6 +285,46 @@ export async function descargarPdfOS(key: string): Promise<Buffer> {
   return Buffer.from(bytes);
 }
 
+// ------------------------------------------------------------
+// Mantención de flota (migración 96). Fotos y firma van al BUCKET
+// privado de fotos (se ven con urlFirmada); el PDF al bucket de anexos,
+// igual que el de las OS. Registros inmutables → el PDF nunca cambia.
+// ------------------------------------------------------------
+export async function subirFotoRegistroMantencion(
+  empresaId: string,
+  registroId: string,
+  archivo: Buffer | Uint8Array,
+  contentType: string
+): Promise<string> {
+  await verificarLimiteStorage(empresaId, archivo.byteLength);
+  const key = `${empresaId}/mantencion/${registroId}/${Date.now()}.jpg`;
+  await client.send(new PutObjectCommand({ Bucket: BUCKET, Key: key, Body: archivo, ContentType: contentType }));
+  incrementarStorageUsado(empresaId, archivo.byteLength);
+  return key; // se guarda en registro_mantencion_fotos.foto_url
+}
+
+export async function subirFirmaRegistroMantencion(
+  empresaId: string,
+  registroId: string,
+  archivo: Buffer | Uint8Array
+): Promise<string> {
+  const key = `${empresaId}/mantencion/${registroId}/firma-${Date.now()}.png`;
+  await client.send(new PutObjectCommand({ Bucket: BUCKET, Key: key, Body: archivo, ContentType: "image/png" }));
+  return key; // se guarda en registros_mantencion_equipo.firma_url
+}
+
+export async function subirPdfRegistroMantencion(empresaId: string, registroId: string, pdf: Buffer): Promise<string> {
+  const key = `${empresaId}/mantencion/${registroId}/registro-${Date.now()}.pdf`;
+  await client.send(new PutObjectCommand({ Bucket: BUCKET_ANEXOS, Key: key, Body: pdf, ContentType: "application/pdf" }));
+  return key; // se guarda en registros_mantencion_equipo.pdf_url
+}
+
+export async function descargarPdfRegistroMantencion(key: string): Promise<Buffer> {
+  const respuesta = await client.send(new GetObjectCommand({ Bucket: BUCKET_ANEXOS, Key: key }));
+  const bytes = await respuesta.Body!.transformToByteArray();
+  return Buffer.from(bytes);
+}
+
 // Baja los bytes de una foto de trabajo (subida con subirFoto → BUCKET).
 // La usa el informe de OS con IA on-demand para adjuntar la imagen real
 // a Claude; el análisis masivo automático es un camino aparte.
