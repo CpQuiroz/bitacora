@@ -963,6 +963,49 @@ export type PlanMantencion = {
   creado_en: string;
 };
 
+// Registros de mantención de flota (migración 96). Tabla propia, NO una
+// OS: no requiere cliente ni dispara facturación. Inmutable una vez
+// creado. `equipo_id` apunta a un equipo categoría "Vehículo".
+export type TipoRegistroMantencion = "diario" | "programa";
+export type OrigenRegistroMantencion = "interno" | "externo";
+export type RespuestaChecklistMantencion = "si" | "no" | "na";
+
+export type ItemChecklistMantencion = {
+  seccion: string;
+  item: string;
+  respuesta: RespuestaChecklistMantencion;
+};
+
+export type RegistroMantencionEquipo = {
+  id: string;
+  empresa_id: string;
+  equipo_id: string;
+  tipo: TipoRegistroMantencion;
+  // Derivado del tipo en la UI (diario ⇒ interno, programa ⇒ externo);
+  // se guarda explícito. externo ⇒ proveedor_id; interno ⇒ sin proveedor.
+  origen: OrigenRegistroMantencion;
+  proveedor_id: string | null;
+  realizado_por: string | null;
+  checklist: ItemChecklistMantencion[];
+  kilometraje: number | null;
+  horas_motor: number | null;
+  observaciones: string | null;
+  firma_url: string | null;
+  pdf_url: string | null;
+  creado_por: string | null;
+  creado_en: string;
+};
+
+// Molde: ViajeFoto. Varias fotos por registro, misma cola offline.
+export type RegistroMantencionFoto = {
+  id: string;
+  empresa_id: string;
+  registro_id: string;
+  foto_url: string;
+  subida_por: string | null;
+  creado_en: string;
+};
+
 export type TipoCatalogoItem = "producto" | "servicio" | "kit";
 
 export type CatalogoItem = {
@@ -1561,6 +1604,8 @@ export type Database = {
       notificaciones_preferencias: Tabla<NotificacionPreferencia>;
       equipos: Tabla<Equipo>;
       planes_mantencion: Tabla<PlanMantencion>;
+      registros_mantencion_equipo: Tabla<RegistroMantencionEquipo>;
+      registro_mantencion_fotos: Tabla<RegistroMantencionFoto>;
       sugerencias_rubro: Tabla<SugerenciaRubro>;
       catalogo_items: Tabla<CatalogoItem>;
       catalogo_kit_items: Tabla<CatalogoKitItem>;
