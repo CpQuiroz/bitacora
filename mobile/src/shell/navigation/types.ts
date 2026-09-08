@@ -48,6 +48,8 @@ export type ClientesStackParamList = {
 export type MasStackParamList = {
   MasInicio: undefined;
   Catalogo: undefined;
+  MantencionVehiculo: undefined;
+  ChecklistMantencion: { equipoId: string; tipo: "diario" | "programa"; patente: string | null };
   CobrosLista: undefined;
   CobroForm: undefined;
   CobroDetalle: { cobroId: string };

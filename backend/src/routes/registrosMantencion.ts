@@ -178,7 +178,7 @@ registrosMantencionRouter.post(
       return;
     }
 
-    const { tipo, checklist, kilometraje, horas_motor, observaciones, proveedor_id, realizado_por, firma_base64 } = req.body ?? {};
+    const { tipo, checklist, kilometraje, horas_motor, observaciones, proveedor_id, realizado_por, firma_base64, fotos_base64 } = req.body ?? {};
 
     if (tipo !== "diario" && tipo !== "programa") {
       res.status(400).json({ error: "tipo debe ser 'diario' o 'programa'" });
@@ -270,7 +270,7 @@ registrosMantencionRouter.post(
       return;
     }
 
-    // Firma (solo 'programa') — opcional, puede llegar después vía sync.
+    // Firma (solo 'programa') — opcional.
     if (tipo === "programa" && typeof firma_base64 === "string" && firma_base64) {
       try {
         const buffer = Buffer.from(firma_base64, "base64");
@@ -279,6 +279,23 @@ registrosMantencionRouter.post(
         creado.firma_url = key;
       } catch (err) {
         console.error("subir firma registro mantención:", err);
+      }
+    }
+
+    // Fotos en base64 (móvil: así el registro entero es UNA acción de la
+    // cola offline, sin depender del id). El web sube por multipart aparte.
+    if (Array.isArray(fotos_base64) && fotos_base64.length > 0) {
+      for (const b64 of fotos_base64.slice(0, 5)) {
+        if (typeof b64 !== "string" || !b64) continue;
+        try {
+          const buffer = Buffer.from(b64, "base64");
+          const key = await subirFotoRegistroMantencion(req.empresaId!, creado.id, buffer, "image/jpeg");
+          await supabase
+            .from("registro_mantencion_fotos")
+            .insert({ empresa_id: req.empresaId!, registro_id: creado.id, foto_url: key, subida_por: req.userId! });
+        } catch (err) {
+          console.error("subir foto registro mantención:", err);
+        }
       }
     }
 

@@ -59,6 +59,12 @@ export function MasScreen({ navigation }: NativeStackScreenProps<MasStackParamLi
   if (!deshabilitados.includes("viajes")) {
     terreno.push({ titulo: "Todos los viajes", contexto: "El historial completo de viajes", icono: "car-outline", ir: () => navigation.navigate("Viajes") });
   }
+  terreno.push({
+    titulo: "Mantención de vehículo",
+    contexto: "Chequeo diario y programa de mantención de tu camión",
+    icono: "construct-outline",
+    ir: () => navigation.navigate("MantencionVehiculo"),
+  });
   grupos.push({ titulo: "Terreno", items: terreno });
 
   // --- Dinero ---
