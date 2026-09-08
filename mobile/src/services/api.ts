@@ -36,9 +36,32 @@ export async function apiFetch(
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
 
+  const esMultipart = options.body instanceof FormData;
+
   const headers = new Headers(options.headers);
-  if (!(options.body instanceof FormData)) headers.set("Content-Type", "application/json");
+  // FormData: el fetch de RN calcula solo el Content-Type con el boundary
+  // del multipart. Si lo forzamos a "application/json" la subida llega sin
+  // boundary y el backend no la puede parsear.
+  if (!esMultipart) headers.set("Content-Type", "application/json");
   if (token) headers.set("Authorization", `Bearer ${token}`);
+
+  // En React Native, adjuntar el signal de un AbortController a un fetch
+  // con body FormData NO interrumpe la subida si se traba: la promesa
+  // nunca resuelve ni rechaza y el upload "se cuelga sin error". Para
+  // multipart NO pasamos signal y corremos la petición contra un timeout
+  // manual que rechaza, así el caller igual recibe un error. Para JSON el
+  // AbortController sí corta la petición de verdad, se mantiene.
+  if (esMultipart) {
+    const req = fetch(`${API_URL}${path}`, { ...options, headers });
+    const timeout = new Promise<never>((_, reject) => {
+      setTimeout(() => {
+        const err = new Error("La subida tardó demasiado");
+        err.name = "AbortError";
+        reject(err);
+      }, timeoutMs);
+    });
+    return Promise.race([req, timeout]);
+  }
 
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);

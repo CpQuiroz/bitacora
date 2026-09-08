@@ -28,6 +28,16 @@ const client = new S3Client({
     secretAccessKey: env.STORAGE_SECRET_KEY,
   },
   forcePathStyle: true, // requerido para compatibilidad con GCS/R2
+  // Sin esto el AWS SDK v3 no tiene timeout de socket: si el endpoint S3
+  // se traba, client.send() queda esperando para siempre y la subida del
+  // cliente (web/móvil) se cuelga sin error. throwOnRequestTimeout es
+  // obligatorio para que el requestTimeout aborte en vez de solo avisar.
+  requestHandler: {
+    connectionTimeout: 15_000,
+    requestTimeout: 60_000,
+    throwOnRequestTimeout: true,
+  },
+  maxAttempts: 3,
 });
 
 const BUCKET = env.STORAGE_BUCKET;
