@@ -70,6 +70,9 @@ export default function CatalogoPage() {
   // Solo para "Nuevo ítem" tipo Producto. Editar el stock después va por
   // el flujo de ajuste de Inventario (para no romper la trazabilidad).
   const [stockInicial, setStockInicial] = useState("0");
+  // Umbral de "stock bajo" de ESTE producto. "" = usa el default de la
+  // empresa. Editable en alta y edición.
+  const [stockMinimo, setStockMinimo] = useState("");
   const [kitItems, setKitItems] = useState<{ item_id: string; cantidad: string }[]>([]);
   const [tiposEquipo, setTiposEquipo] = useState<string[]>([]);
   // Bloque E: sugerencias según el rubro de la empresa.
@@ -131,6 +134,7 @@ export default function CatalogoPage() {
     setUnidad("");
     setPrecioBase("");
     setStockInicial("0");
+    setStockMinimo("");
     setKitItems([]);
     setTiposEquipo([]);
     setFormError(null);
@@ -145,6 +149,7 @@ export default function CatalogoPage() {
     setCategoria(i.categoria ?? "");
     setUnidad(i.unidad);
     setPrecioBase(String(i.precio_base));
+    setStockMinimo(i.stock_minimo != null ? String(i.stock_minimo) : "");
     setKitItems((i.items ?? []).map((k) => ({ item_id: k.item_id, cantidad: String(k.cantidad) })));
     setTiposEquipo(i.tipos_equipo ?? []);
     setFormError(null);
@@ -180,6 +185,7 @@ export default function CatalogoPage() {
       payload.tipo = tipo;
       if (tipo === "producto") payload.stock_inicial = Number(stockInicial) || 0;
     }
+    if (tipo === "producto") payload.stock_minimo = stockMinimo.trim() === "" ? null : Number(stockMinimo);
     if (tipo === "kit") {
       payload.items = kitItems
         .filter((k) => k.item_id)
@@ -327,6 +333,24 @@ export default function CatalogoPage() {
                     </span>
                   </Label>
                   <Input type="number" min="0" step="1" value={stockInicial} onChange={(e) => setStockInicial(e.target.value)} />
+                </div>
+              )}
+              {tipo === "producto" && (
+                <div>
+                  <Label className="flex items-center gap-1.5">
+                    Stock mínimo (opcional)
+                    <span title="Cuando el stock baja de este número, el producto se marca como 'Stock bajo'. Vacío = usa el mínimo por defecto de la empresa (Configuración → Inventario).">
+                      <IconHelp className="h-3.5 w-3.5 text-muted" />
+                    </span>
+                  </Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="1"
+                    placeholder={`Por defecto: ${stockMinimoDefault}`}
+                    value={stockMinimo}
+                    onChange={(e) => setStockMinimo(e.target.value)}
+                  />
                 </div>
               )}
             </div>

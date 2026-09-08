@@ -104,10 +104,18 @@ catalogoRouter.get(
   })
 );
 
+// Umbral de "stock bajo" por producto. "" / null / undefined → null
+// (usa el default de la empresa). undefined de retorno = valor inválido.
+function parseStockMinimo(v: unknown): number | null | undefined {
+  if (v === null || v === undefined || v === "") return null;
+  const n = Number(v);
+  return Number.isInteger(n) && n >= 0 ? n : undefined;
+}
+
 catalogoRouter.post(
   "/",
   ah<RequestConEmpresa>(async (req, res) => {
-    const { tipo, nombre, sku, categoria, unidad, precio_base, items, tipos_equipo, stock_inicial } = req.body ?? {};
+    const { tipo, nombre, sku, categoria, unidad, precio_base, items, tipos_equipo, stock_inicial, stock_minimo } = req.body ?? {};
 
     if (typeof tipo !== "string" || !TIPOS.includes(tipo as TipoCatalogoItem)) {
       res.status(400).json({ error: `tipo debe ser uno de: ${TIPOS.join(", ")}` });
@@ -131,6 +139,12 @@ catalogoRouter.post(
       return;
     }
 
+    const stockMinimo = tipo === "producto" ? parseStockMinimo(stock_minimo) : null;
+    if (stockMinimo === undefined) {
+      res.status(400).json({ error: "El stock mínimo debe ser un entero mayor o igual a 0" });
+      return;
+    }
+
     const { data, error } = await supabase
       .from("catalogo_items")
       .insert({
@@ -144,7 +158,7 @@ catalogoRouter.post(
         stock_actual: tipo === "producto" ? stockInicial : null,
         // null = "sin definir", distinto de "definido en 0" — cae al
         // umbral por defecto de la empresa (Configuración > Inventario).
-        stock_minimo: null,
+        stock_minimo: stockMinimo,
       })
       .select()
       .single();
@@ -189,7 +203,7 @@ catalogoRouter.post(
 catalogoRouter.patch(
   "/:id",
   ah<RequestConEmpresa>(async (req, res) => {
-    const { nombre, sku, categoria, unidad, precio_base, activo, items, tipos_equipo } = req.body ?? {};
+    const { nombre, sku, categoria, unidad, precio_base, activo, items, tipos_equipo, stock_minimo } = req.body ?? {};
     const cambios: Partial<CatalogoItem> = {};
 
     if (nombre !== undefined) {
@@ -211,6 +225,14 @@ catalogoRouter.patch(
       cambios.precio_base = precio;
     }
     if (activo !== undefined) cambios.activo = Boolean(activo);
+    if (stock_minimo !== undefined) {
+      const sm = parseStockMinimo(stock_minimo);
+      if (sm === undefined) {
+        res.status(400).json({ error: "El stock mínimo debe ser un entero mayor o igual a 0" });
+        return;
+      }
+      cambios.stock_minimo = sm;
+    }
 
     if (Object.keys(cambios).length === 0 && items === undefined && tipos_equipo === undefined) {
       res.status(400).json({ error: "Nada que actualizar" });
