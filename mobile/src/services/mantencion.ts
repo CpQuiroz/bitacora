@@ -15,11 +15,14 @@ export type PlantillaMantencion = {
 
 export type MantencionResumen = {
   id: string;
+  folio: number | null;
+  fecha: string;
   tipo: TipoRegistroMantencion;
   origen: "interno" | "externo";
   kilometraje: number | null;
   horas_motor: number | null;
   creado_en: string;
+  realizado_por_nombre?: string | null;
   con_novedades: boolean;
 };
 
@@ -50,8 +53,10 @@ export async function obtenerPlantillaMantencion(): Promise<PlantillaMantencion>
   return (await leerCache<PlantillaMantencion>("mantencion:plantilla"))?.datos ?? PLANTILLA_FALLBACK;
 }
 
-export async function obtenerMantencionInicio(): Promise<{ datos: MantencionInicio; desdeCache: boolean }> {
-  const res = await apiJson<MantencionInicio>("/api/usuarios/me/vehiculo/registros-mantencion");
+export async function obtenerMantencionInicio(
+  limite = 4
+): Promise<{ datos: MantencionInicio; desdeCache: boolean }> {
+  const res = await apiJson<MantencionInicio>(`/api/usuarios/me/vehiculo/registros-mantencion?limite=${limite}`);
   if (res.ok) {
     await guardarCache("mantencion:inicio", res.data);
     return { datos: res.data, desdeCache: false };
@@ -60,28 +65,64 @@ export async function obtenerMantencionInicio(): Promise<{ datos: MantencionInic
   return { datos: cache?.datos ?? { vehiculo: null, registros: [] }, desdeCache: true };
 }
 
+// Historial completo de un vehículo — para "Ver todas" y para cuando un
+// admin/supervisor cambia de camión (el endpoint /me/... solo trae el
+// asignado). Requiere gestionar Flota.
+export async function obtenerHistorialEquipo(
+  equipoId: string
+): Promise<{ registros: MantencionResumen[]; error: string | null }> {
+  const res = await apiJson<
+    (MantencionResumen & { checklist?: { respuesta?: string }[]; proveedor?: { nombre: string } | null; responsable?: { nombre: string } | null })[]
+  >(`/api/equipos/${equipoId}/registros-mantencion`);
+  if (!res.ok) return { registros: [], error: res.error ?? "No se pudo cargar el historial" };
+  const registros = res.data.map((r) => ({
+    id: r.id,
+    folio: r.folio ?? null,
+    fecha: r.fecha,
+    tipo: r.tipo,
+    origen: r.origen,
+    kilometraje: r.kilometraje,
+    horas_motor: r.horas_motor,
+    creado_en: r.creado_en,
+    realizado_por_nombre: r.origen === "externo" ? (r.proveedor?.nombre ?? null) : (r.responsable?.nombre ?? null),
+    con_novedades: Array.isArray(r.checklist) && r.checklist.some((i) => i?.respuesta === "no"),
+  }));
+  return { registros, error: null };
+}
+
+export async function listarVehiculos(): Promise<Equipo[]> {
+  const res = await apiJson<Equipo[]>("/api/equipos");
+  const lista = res.ok ? res.data : ((await leerCache<Equipo[]>("mantencion:vehiculos"))?.datos ?? []);
+  if (res.ok) await guardarCache("mantencion:vehiculos", res.data);
+  return lista.filter((e) => e.categoria === "Vehículo" && e.activo);
+}
+
+export type FotoMantencion = { item: string | null; base64: string };
+
 export type BorradorMantencion = {
   equipoId: string;
   tipo: TipoRegistroMantencion;
+  fecha: string; // YYYY-MM-DD
   checklist: ItemChecklistMantencion[];
   kilometraje: string; // solo dígitos
   horas_motor: string;
   observaciones: string;
   proveedor_id?: string;
   firma_base64?: string | null;
-  fotos_base64?: string[];
+  fotos?: FotoMantencion[];
 };
 
 function cuerpo(b: BorradorMantencion) {
   return {
     tipo: b.tipo,
+    fecha: b.fecha,
     checklist: b.checklist,
     kilometraje: b.kilometraje.trim() === "" ? null : Number(b.kilometraje),
     horas_motor: b.horas_motor.trim() === "" ? null : Number(b.horas_motor),
     observaciones: b.observaciones.trim() || null,
     proveedor_id: b.tipo === "programa" ? b.proveedor_id : undefined,
-    firma_base64: b.tipo === "programa" ? b.firma_base64 ?? undefined : undefined,
-    fotos_base64: b.fotos_base64 && b.fotos_base64.length ? b.fotos_base64 : undefined,
+    firma_base64: b.tipo === "programa" ? (b.firma_base64 ?? undefined) : undefined,
+    fotos: b.fotos && b.fotos.length ? b.fotos.map((f) => ({ item: f.item, base64: f.base64, media_type: "image/jpeg" })) : undefined,
   };
 }
 

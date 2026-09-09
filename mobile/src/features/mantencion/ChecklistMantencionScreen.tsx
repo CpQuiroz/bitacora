@@ -5,8 +5,9 @@ import * as ImagePicker from "expo-image-picker";
 import { File } from "expo-file-system";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { Proveedor, RespuestaChecklistMantencion } from "@bitacora/shared";
+import { MANTENCION_EXIGE_FOTO_EN_NO } from "@bitacora/shared";
 import { useTema } from "../../theme";
-import { Button, Card, Input, LoadingScreen, PickerBuscable, Text } from "../../components/ui";
+import { Button, Input, LoadingScreen, PickerBuscable, Text } from "../../components/ui";
 import { LienzoFirma, type LienzoFirmaHandle } from "../../components/LienzoFirma";
 import { useRed } from "../../services/sync/NetworkProvider";
 import { comprimirImagen } from "../../lib/imagen";
@@ -25,8 +26,21 @@ const OPCIONES: { valor: RespuestaChecklistMantencion; texto: string }[] = [
   { valor: "no", texto: "No" },
   { valor: "na", texto: "N/A" },
 ];
-const MAX_FOTOS = 3;
+const MAX_FOTOS = 8;
 const clave = (s: string, i: string) => `${s}||${i}`;
+
+const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+function isoMenos(dias: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - dias);
+  return d.toISOString().slice(0, 10);
+}
+function etiquetaFecha(iso: string): string {
+  const [, m, d] = iso.split("-").map(Number);
+  return `${d} ${MESES[m - 1]}`;
+}
+
+type FotoLocal = { uri: string; item: string | null };
 
 export function ChecklistMantencionScreen({ route, navigation }: NativeStackScreenProps<MasStackParamList, "ChecklistMantencion">) {
   const t = useTema();
@@ -36,11 +50,12 @@ export function ChecklistMantencionScreen({ route, navigation }: NativeStackScre
   const [plantilla, setPlantilla] = useState<PlantillaMantencion | null>(null);
   const [proveedores, setProveedores] = useState<Proveedor[]>([]);
   const [respuestas, setRespuestas] = useState<Record<string, RespuestaChecklistMantencion>>({});
+  const [fecha, setFecha] = useState(isoMenos(0));
   const [km, setKm] = useState("");
   const [horas, setHoras] = useState("");
   const [observaciones, setObservaciones] = useState("");
   const [proveedorId, setProveedorId] = useState("");
-  const [fotos, setFotos] = useState<string[]>([]); // uris comprimidas
+  const [fotos, setFotos] = useState<FotoLocal[]>([]);
   const [abierta, setAbierta] = useState(0);
   const [guardando, setGuardando] = useState(false);
   const lienzo = useRef<LienzoFirmaHandle>(null);
@@ -63,7 +78,17 @@ export function ChecklistMantencionScreen({ route, navigation }: NativeStackScre
   const responder = (s: string, i: string, v: RespuestaChecklistMantencion) =>
     setRespuestas((r) => ({ ...r, [clave(s, i)]: v }));
 
-  async function agregarFoto() {
+  // Ítems en NO sin foto asociada (regla MANTENCION_EXIGE_FOTO_EN_NO).
+  const itemsNoSinFoto = useMemo(() => {
+    if (!plantilla || !MANTENCION_EXIGE_FOTO_EN_NO) return [];
+    const conFoto = new Set(fotos.map((f) => f.item).filter((x): x is string => Boolean(x)));
+    return plantilla.secciones
+      .flatMap((s) => s.preguntas.map((p) => ({ item: p.texto, k: clave(s.nombre, p.texto) })))
+      .filter(({ item, k }) => respuestas[k] === "no" && !conFoto.has(item))
+      .map(({ item }) => item);
+  }, [plantilla, respuestas, fotos]);
+
+  async function tomarFoto(item: string | null) {
     if (fotos.length >= MAX_FOTOS) return Alert.alert("Máximo de fotos", `Puedes adjuntar hasta ${MAX_FOTOS}.`);
     const permiso = await ImagePicker.requestCameraPermissionsAsync();
     if (!permiso.granted) return Alert.alert("Permiso necesario", "Necesitamos la cámara para la foto.");
@@ -71,21 +96,30 @@ export function ChecklistMantencionScreen({ route, navigation }: NativeStackScre
     if (r.canceled) return;
     const a = r.assets[0];
     const uri = await comprimirImagen(a.uri, a.width);
-    setFotos((prev) => [...prev, uri]);
+    setFotos((prev) => [...prev, { uri, item }]);
   }
 
+  const sinResponder = respondidos === 0;
+  const faltaProveedor = tipo === "programa" && !proveedorId;
+  const bloqueado = sinResponder || faltaProveedor || itemsNoSinFoto.length > 0;
+  const ayuda = faltaProveedor
+    ? "Elige el taller o lubricentro para guardar."
+    : sinResponder
+      ? "Responde al menos la primera sección para guardar."
+      : itemsNoSinFoto.length > 0
+        ? `Falta una foto en: ${itemsNoSinFoto.join(", ")}.`
+        : totalItems - respondidos > 0
+          ? `${totalItems - respondidos} ítems sin responder quedarán como N/A.`
+          : "Listo para guardar.";
+
   async function guardar() {
-    if (!plantilla) return;
+    if (!plantilla || bloqueado) return;
     const checklist = plantilla.secciones.flatMap((sec) =>
-      sec.preguntas
-        .map((p) => {
-          const resp = respuestas[clave(sec.nombre, p.texto)];
-          return resp ? { seccion: sec.nombre, item: p.texto, respuesta: resp } : null;
-        })
-        .filter((x): x is { seccion: string; item: string; respuesta: RespuestaChecklistMantencion } => x !== null)
+      sec.preguntas.flatMap((p) => {
+        const resp = respuestas[clave(sec.nombre, p.texto)];
+        return resp ? [{ seccion: sec.nombre, item: p.texto, respuesta: resp }] : [];
+      })
     );
-    if (checklist.length === 0) return Alert.alert("Falta el checklist", "Responde al menos un ítem.");
-    if (tipo === "programa" && !proveedorId) return Alert.alert("Falta el taller", "Elige el taller o lubricentro.");
 
     setGuardando(true);
 
@@ -94,27 +128,27 @@ export function ChecklistMantencionScreen({ route, navigation }: NativeStackScre
       firma_base64 = await lienzo.current.capturar();
     }
 
-    let fotos_base64: string[] = [];
+    let fotosPayload: { item: string | null; base64: string }[] = [];
     try {
-      fotos_base64 = await Promise.all(fotos.map((uri) => new File(uri).base64()));
+      fotosPayload = await Promise.all(fotos.map(async (f) => ({ item: f.item, base64: await new File(f.uri).base64() })));
     } catch {
-      fotos_base64 = [];
+      fotosPayload = [];
     }
 
     const borrador: BorradorMantencion = {
       equipoId,
       tipo,
+      fecha,
       checklist,
       kilometraje: km,
       horas_motor: horas,
       observaciones,
       proveedor_id: tipo === "programa" ? proveedorId : undefined,
       firma_base64,
-      fotos_base64,
+      fotos: fotosPayload,
     };
 
-    const volver = () =>
-      navigation.navigate("MantencionVehiculo");
+    const volver = () => navigation.navigate("MantencionVehiculo");
 
     if (enLinea) {
       const r = await crearRegistroMantencion(borrador);
@@ -132,22 +166,54 @@ export function ChecklistMantencionScreen({ route, navigation }: NativeStackScre
     setGuardando(false);
     Alert.alert(
       enLinea ? "Se reintentará solo" : "Guardado sin conexión",
-      "El registro quedó en la cola y se envía a la oficina cuando haya señal.",
+      "El chequeo en curso quedó guardado en el teléfono y se envía a la oficina cuando haya señal.",
       [{ text: "Listo", onPress: volver }]
     );
   }
 
   if (!plantilla) return <LoadingScreen />;
 
+  const progreso = totalItems > 0 ? respondidos / totalItems : 0;
+  const chips = [
+    { iso: isoMenos(0), label: `Hoy · ${etiquetaFecha(isoMenos(0))}` },
+    { iso: isoMenos(1), label: `Ayer · ${etiquetaFecha(isoMenos(1))}` },
+    { iso: isoMenos(2), label: etiquetaFecha(isoMenos(2)) },
+  ];
+
   return (
     <View style={{ flex: 1, backgroundColor: t.colores.bg }}>
-      <ScrollView contentContainerStyle={{ padding: t.espacio(4), gap: t.espacio(3), paddingBottom: t.espacio(8) }} keyboardShouldPersistTaps="handled">
-        <Card plano>
-          <Text variante="caption" tono="muted">
-            {tipo === "diario" ? "Chequeo diario" : "Programa de mantención"} · {patente ?? "vehículo asignado"}
+      {/* Header fijo: contexto + progreso + chips de fecha */}
+      <View style={{ backgroundColor: t.colores.surface, borderBottomWidth: 1, borderBottomColor: t.colores.border, paddingHorizontal: t.espacio(4), paddingTop: t.espacio(2), paddingBottom: t.espacio(3), gap: t.espacio(2) }}>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+          <Text variante="caption" tono="muted" numberOfLines={1} style={{ flex: 1 }}>
+            {patente ?? "Vehículo asignado"}
           </Text>
-        </Card>
+          <Text mono variante="caption" tono="muted">
+            {respondidos}/{totalItems}
+          </Text>
+        </View>
+        <View style={{ height: 3, borderRadius: 3, backgroundColor: t.colores.border, overflow: "hidden" }}>
+          <View style={{ width: `${Math.round(progreso * 100)}%`, height: 3, backgroundColor: t.colores.brand }} />
+        </View>
+        <View style={{ flexDirection: "row", gap: t.espacio(2) }}>
+          {chips.map((c) => {
+            const sel = fecha === c.iso;
+            return (
+              <Pressable
+                key={c.iso}
+                onPress={() => setFecha(c.iso)}
+                style={{ minHeight: 46, flex: 1, borderRadius: t.radio.md, borderWidth: 1, borderColor: sel ? t.colores.brand : t.colores.border, backgroundColor: sel ? t.colores.brandSoft : t.colores.surface, alignItems: "center", justifyContent: "center", paddingHorizontal: t.espacio(1) }}
+              >
+                <Text variante="caption" weight={sel ? "bold" : "medium"} style={{ color: sel ? t.colores.brand : t.colores.muted }} numberOfLines={1}>
+                  {c.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
 
+      <ScrollView contentContainerStyle={{ padding: t.espacio(4), gap: t.espacio(3), paddingBottom: t.espacio(8) }} keyboardShouldPersistTaps="handled">
         {tipo === "programa" && (
           <PickerBuscable
             etiqueta="Taller / lubricentro"
@@ -167,26 +233,22 @@ export function ChecklistMantencionScreen({ route, navigation }: NativeStackScre
           </View>
         </View>
 
-        <Text variante="etiqueta" tono="muted" weight="semibold" style={{ textTransform: "uppercase" }}>
-          Checklist · {respondidos}/{totalItems}
-        </Text>
-
         {plantilla.secciones.map((sec, idx) => {
           const open = abierta === idx;
           const enSeccion = sec.preguntas.filter((p) => respuestas[clave(sec.nombre, p.texto)]).length;
-          const conNov = sec.preguntas.some((p) => respuestas[clave(sec.nombre, p.texto)] === "no");
+          const completa = enSeccion === sec.preguntas.length;
           return (
             <View key={sec.nombre} style={{ borderWidth: 1, borderColor: t.colores.border, borderRadius: t.radio.md, overflow: "hidden", backgroundColor: t.colores.surface }}>
               <Pressable
                 onPress={() => setAbierta(open ? -1 : idx)}
-                style={{ flexDirection: "row", alignItems: "center", gap: t.espacio(2.5), padding: t.espacio(3), minHeight: 48 }}
+                style={{ flexDirection: "row", alignItems: "center", gap: t.espacio(2.5), padding: t.espacio(3), minHeight: 56 }}
               >
-                <View style={{ width: 22, height: 22, borderRadius: t.radio.sm, backgroundColor: t.colores.brand, alignItems: "center", justifyContent: "center" }}>
-                  <Text mono variante="caption" weight="bold" tono="inverso">{idx + 1}</Text>
+                <View style={{ width: 22, height: 22, borderRadius: t.radio.sm, backgroundColor: completa ? t.colores.successSoft : t.colores.brand, alignItems: "center", justifyContent: "center" }}>
+                  <Text mono variante="caption" weight="bold" style={{ color: completa ? t.colores.success : "#fff" }}>{idx + 1}</Text>
                 </View>
                 <Text weight="semibold" style={{ flex: 1 }}>{sec.nombre}</Text>
-                <View style={{ paddingHorizontal: t.espacio(2), paddingVertical: 2, borderRadius: 999, backgroundColor: conNov ? t.colores.dangerSoft : enSeccion === sec.preguntas.length ? t.colores.successSoft : t.colores.surfaceAlt }}>
-                  <Text variante="caption" weight="bold" style={{ color: conNov ? t.colores.danger : enSeccion === sec.preguntas.length ? t.colores.success : t.colores.muted }}>
+                <View style={{ paddingHorizontal: t.espacio(2), paddingVertical: 2, borderRadius: 999, backgroundColor: completa ? t.colores.successSoft : t.colores.surfaceAlt }}>
+                  <Text variante="caption" weight="bold" style={{ color: completa ? t.colores.success : t.colores.muted }}>
                     {enSeccion}/{sec.preguntas.length}
                   </Text>
                 </View>
@@ -197,9 +259,24 @@ export function ChecklistMantencionScreen({ route, navigation }: NativeStackScre
                 <View style={{ paddingHorizontal: t.espacio(3), paddingBottom: t.espacio(2) }}>
                   {sec.preguntas.map((p) => {
                     const actual = respuestas[clave(sec.nombre, p.texto)];
+                    const nFotos = fotos.filter((f) => f.item === p.texto).length;
+                    const necesitaFoto = MANTENCION_EXIGE_FOTO_EN_NO && actual === "no" && nFotos === 0;
                     return (
                       <View key={p.texto} style={{ paddingVertical: t.espacio(2.5), borderTopWidth: 1, borderTopColor: t.colores.border }}>
-                        <Text variante="cuerpo" style={{ marginBottom: t.espacio(2) }}>{p.texto}</Text>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: t.espacio(2), marginBottom: t.espacio(2) }}>
+                          <Text variante="cuerpo" style={{ flex: 1 }}>{p.texto}</Text>
+                          {actual === "no" && (
+                            <Pressable
+                              onPress={() => tomarFoto(p.texto)}
+                              hitSlop={8}
+                              style={{ minHeight: 32, paddingHorizontal: t.espacio(2), borderRadius: t.radio.sm, borderWidth: 1, borderColor: necesitaFoto ? t.colores.danger : t.colores.border, alignItems: "center", justifyContent: "center" }}
+                            >
+                              <Text variante="caption" weight="bold" style={{ color: necesitaFoto ? t.colores.danger : t.colores.brand }}>
+                                {nFotos ? `Foto (${nFotos})` : "+ Foto"}
+                              </Text>
+                            </Pressable>
+                          )}
+                        </View>
                         <View style={{ flexDirection: "row", gap: t.espacio(2) }}>
                           {OPCIONES.map((op) => {
                             const sel = actual === op.valor;
@@ -244,20 +321,22 @@ export function ChecklistMantencionScreen({ route, navigation }: NativeStackScre
 
         <View style={{ gap: t.espacio(2) }}>
           <Button
-            titulo={fotos.length ? `Foto agregada (${fotos.length}/${MAX_FOTOS})` : "Adjuntar foto"}
+            titulo={fotos.length ? `Fotos adjuntas (${fotos.length})` : "Adjuntar foto general"}
             variante="secundario"
             icono={<Ionicons name="camera-outline" size={18} color={t.colores.brand} />}
-            onPress={agregarFoto}
+            onPress={() => tomarFoto(null)}
           />
           {fotos.length > 0 && (
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: t.espacio(2) }}>
-              {fotos.map((uri, i) => (
+              {fotos.map((f, i) => (
                 <Pressable
-                  key={uri}
+                  key={`${f.uri}-${i}`}
                   onPress={() => setFotos((prev) => prev.filter((_, j) => j !== i))}
                   style={{ paddingHorizontal: t.espacio(2), paddingVertical: t.espacio(1), borderRadius: t.radio.sm, backgroundColor: t.colores.surfaceAlt, flexDirection: "row", alignItems: "center", gap: 4 }}
                 >
-                  <Text variante="caption" tono="muted">Foto {i + 1}</Text>
+                  <Text variante="caption" tono="muted" numberOfLines={1} style={{ maxWidth: 140 }}>
+                    {f.item ?? `Foto ${i + 1}`}
+                  </Text>
                   <Ionicons name="close" size={14} color={t.colores.muted} />
                 </Pressable>
               ))}
@@ -271,14 +350,15 @@ export function ChecklistMantencionScreen({ route, navigation }: NativeStackScre
           <View style={{ flexDirection: "row", alignItems: "center", gap: t.espacio(2), backgroundColor: t.colores.accentSoft, borderRadius: t.radio.md, padding: t.espacio(3) }}>
             <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: t.colores.accent }} />
             <Text variante="caption" style={{ color: t.colores.warning, flex: 1 }}>
-              Sin conexión — se guarda en la cola y se envía al recuperar señal.
+              Sin conexión — el chequeo se guarda en el teléfono y se envía al recuperar señal.
             </Text>
           </View>
         )}
       </ScrollView>
 
-      <View style={{ padding: t.espacio(4), paddingBottom: t.espacio(6), borderTopWidth: 1, borderTopColor: t.colores.border, backgroundColor: t.colores.surface }}>
-        <Button titulo="Guardar registro" tamano="lg" onPress={guardar} cargando={guardando} />
+      <View style={{ paddingHorizontal: t.espacio(4), paddingTop: t.espacio(2), paddingBottom: t.espacio(6), borderTopWidth: 1, borderTopColor: t.colores.border, backgroundColor: t.colores.surface, gap: t.espacio(2) }}>
+        <Text variante="caption" tono="muted">{ayuda}</Text>
+        <Button titulo="Guardar chequeo" tamano="lg" onPress={guardar} cargando={guardando} disabled={bloqueado} />
       </View>
     </View>
   );
