@@ -395,9 +395,10 @@ usuariosRouter.get(
     const limite = Math.min(Number(req.query.limite) || 10, 100);
     const { data, error } = await supabase
       .from("registros_mantencion_equipo")
-      .select("id, folio, tipo, origen, checklist, kilometraje, horas_motor, creado_en, responsable:usuarios!registros_mantencion_equipo_realizado_por_fkey(nombre), proveedor:proveedores(nombre)")
+      .select("id, folio, fecha, tipo, origen, checklist, kilometraje, horas_motor, creado_en, responsable:usuarios!registros_mantencion_equipo_realizado_por_fkey(nombre), proveedor:proveedores(nombre)")
       .eq("empresa_id", req.empresaId!)
       .eq("equipo_id", vehiculo.id)
+      .order("fecha", { ascending: false })
       .order("creado_en", { ascending: false })
       .limit(limite);
     if (error) {
@@ -410,6 +411,7 @@ usuariosRouter.get(
       return {
         id: r.id,
         folio: r.folio,
+        fecha: r.fecha,
         tipo: r.tipo,
         origen: r.origen,
         kilometraje: r.kilometraje,

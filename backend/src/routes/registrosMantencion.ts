@@ -222,6 +222,13 @@ registrosMantencionRouter.post(
       return;
     }
 
+    // Fecha del chequeo: hoy por defecto; no se permite a futuro.
+    const hoy = new Date().toISOString().slice(0, 10);
+    let fecha = hoy;
+    if (typeof body.fecha === "string" && /^\d{4}-\d{2}-\d{2}$/.test(body.fecha)) {
+      fecha = body.fecha > hoy ? hoy : body.fecha;
+    }
+
     const items = normalizarChecklist(checklist ?? []);
     if (!items) {
       res.status(400).json({ error: "checklist inválido — se espera [{seccion, item, respuesta}]" });
@@ -310,6 +317,7 @@ registrosMantencionRouter.post(
         empresa_id: req.empresaId!,
         equipo_id: equipoId,
         folio,
+        fecha,
         tipo,
         origen,
         proveedor_id: proveedorFinal,
@@ -386,18 +394,18 @@ registrosMantencionRouter.get(
       .select("*, proveedor:proveedores(nombre), responsable:usuarios!registros_mantencion_equipo_realizado_por_fkey(nombre)")
       .eq("empresa_id", req.empresaId!)
       .eq("equipo_id", equipoId)
+      .order("fecha", { ascending: false })
       .order("creado_en", { ascending: false });
 
     const tipo = req.query.tipo;
     if (tipo === "diario" || tipo === "programa") query = query.eq("tipo", tipo);
 
-    // Rango de fechas (YYYY-MM-DD) sobre creado_en. `hasta` es inclusivo:
-    // se filtra hasta el final de ese día.
+    // Rango de fechas (YYYY-MM-DD) sobre la fecha del chequeo, inclusivo.
     const iso = (v: unknown) => (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
     const desde = iso(req.query.desde);
     const hasta = iso(req.query.hasta);
-    if (desde) query = query.gte("creado_en", `${desde}T00:00:00`);
-    if (hasta) query = query.lte("creado_en", `${hasta}T23:59:59.999`);
+    if (desde) query = query.gte("fecha", desde);
+    if (hasta) query = query.lte("fecha", hasta);
 
     const { data, error } = await query;
     if (error) {
@@ -524,7 +532,8 @@ registrosMantencionRouter.get(
     }
 
     const folioTxt = reg.folio != null ? String(reg.folio).padStart(4, "0") : (reg.id as string).slice(0, 8);
-    const nombreArchivo = `mantencion-${folioTxt}-${(reg.creado_en as string).slice(0, 10)}.pdf`;
+    const fechaReg = (reg.fecha as string) ?? (reg.creado_en as string).slice(0, 10);
+    const nombreArchivo = `mantencion-${folioTxt}-${fechaReg}.pdf`;
 
     if (reg.pdf_url) {
       try {
@@ -576,7 +585,7 @@ registrosMantencionRouter.get(
       folio: folioTxt,
       tipo: reg.tipo,
       origen: reg.origen,
-      fecha: (reg.creado_en as string).slice(0, 10),
+      fecha: fechaReg,
       generadoEn: new Date().toISOString(),
       vehiculoPatente: equipo?.patente ?? null,
       vehiculoNombre: equipo?.nombre ?? "—",

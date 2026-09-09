@@ -983,6 +983,8 @@ export type RegistroMantencionEquipo = {
   // Correlativo por empresa (migración 97). Puede venir null en registros
   // creados antes de esa migración.
   folio: number | null;
+  // Fecha del chequeo (migración 97) — puede diferir de creado_en.
+  fecha: string;
   tipo: TipoRegistroMantencion;
   // Derivado del tipo en la UI (diario ⇒ interno, programa ⇒ externo);
   // se guarda explícito. externo ⇒ proveedor_id; interno ⇒ sin proveedor.

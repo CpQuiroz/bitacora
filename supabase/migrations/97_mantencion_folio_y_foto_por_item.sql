@@ -23,6 +23,13 @@ $$ language plpgsql;
 alter table registros_mantencion_equipo add column folio int;
 create index on registros_mantencion_equipo (empresa_id, folio);
 
+-- ---------- Fecha del chequeo (puede diferir del creado_en) ----------
+-- El chequeo pudo hacerse ayer y registrarse hoy. Los registros ya
+-- existentes toman la fecha en que se crearon.
+alter table registros_mantencion_equipo add column fecha date not null default current_date;
+update registros_mantencion_equipo set fecha = creado_en::date where fecha = current_date and creado_en::date <> current_date;
+create index on registros_mantencion_equipo (empresa_id, equipo_id, fecha desc);
+
 -- ---------- 2. Foto por ítem ----------
 -- item = null → foto general del registro. item = "<texto del ítem>" →
 -- foto que respalda ese punto del checklist.
