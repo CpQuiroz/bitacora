@@ -31,7 +31,8 @@ const OPCIONES: { valor: RespuestaChecklistMantencion; texto: string }[] = [
 ];
 
 const clave = (s: string, i: string) => `${s}||${i}`;
-const fechaCL = (iso: string) => {
+const fechaCL = (iso: string | null | undefined) => {
+  if (!iso) return "—";
   const [y, m, d] = iso.slice(0, 10).split("-");
   return d && m && y ? `${d}-${m}-${y}` : iso;
 };
