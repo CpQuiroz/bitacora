@@ -451,6 +451,29 @@ export type CampoTipoTrabajo = {
   tipo: "texto" | "numero" | "fecha" | "booleano";
 };
 
+// Cruza los campos definidos por el tipo de trabajo contra los valores
+// guardados en `trabajo.datos` y devuelve pares etiqueta/valor listos
+// para mostrar. Único punto de verdad del formateo (Sí/No para booleano,
+// "—" para ausente) — lo usan el informe con IA y el PDF de la OS.
+export function mapearCamposPersonalizados(
+  campos: CampoTipoTrabajo[] | null | undefined,
+  datos: Record<string, unknown> | null | undefined
+): { etiqueta: string; valor: string }[] {
+  const d = datos ?? {};
+  return (campos ?? []).map((c) => {
+    const bruto = d[c.clave];
+    let valor: string;
+    if (bruto === undefined || bruto === null || bruto === "") {
+      valor = "—";
+    } else if (c.tipo === "booleano") {
+      valor = bruto === true || bruto === "true" || bruto === 1 ? "Sí" : "No";
+    } else {
+      valor = String(bruto);
+    }
+    return { etiqueta: c.etiqueta, valor };
+  });
+}
+
 export type TipoTrabajo = {
   id: string;
   empresa_id: string;
