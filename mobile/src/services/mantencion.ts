@@ -126,9 +126,23 @@ function cuerpo(b: BorradorMantencion) {
   };
 }
 
-// Registro completo en UNA acción de la cola offline (checklist + firma +
-// fotos van en el body JSON, así no dependemos del id del servidor). El
-// backend igual acepta fotos por multipart aparte, que usa el web.
+// PASO 0 — hallazgo del bug 413 "request entity too large" al guardar
+// "Chequeo diario" CON foto:
+//   · Pantalla: mobile/src/features/mantencion/ChecklistMantencionScreen.tsx
+//     — hoy lee cada foto a base64 y la mete en `fotos:[{item,base64}]`.
+//   · Este servicio: `cuerpo()` arma ese JSON; crearRegistroMantencion lo
+//     manda con apiJson (Content-Type: application/json).
+//   · Endpoint: POST /api/equipos/:equipoId/registros-mantencion
+//     (backend/src/routes/registrosMantencion.ts) — handler JSON puro.
+//   · Tabla: registros_mantencion_equipo + registro_mantencion_fotos
+//     (migración 96/97). `registro_mantencion_fotos.foto_url` guarda la
+//     KEY de Storage — la foto NO debe ir en la fila ni en el JSON.
+//   · Causa: server.ts monta `express.json()` sin `limit` → default 100 kb.
+//     Una foto (aunque comprimida) en base64 supera eso → 413 antes de
+//     llegar al handler. Sin foto (< 100 kb) guarda bien.
+//   · Puede haber varias fotos por chequeo (una por ítem en "no" + generales).
+// Fix: la foto viaja por multipart/form-data como archivo (patrón de
+// trabajos.ts), NO en el JSON. Ver crearRegistroMantencion abajo.
 export async function crearRegistroMantencion(
   b: BorradorMantencion
 ): Promise<{ ok: true } | { ok: false; error: string; reintentable: boolean }> {
