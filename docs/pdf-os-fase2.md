@@ -1,14 +1,15 @@
-# PDF de OS — Fase 2 (propuesta, NO implementar todavía)
+# PDF de OS — Fase 2 (IMPLEMENTADA)
 
-La Fase 1 (helpers de `pdfEstilo.ts`, bloques en caja, campos personalizados,
+Fase 1: helpers de `pdfEstilo.ts`, bloques en caja, campos personalizados,
 checklist y horas de check-in/out en el PDF de OS + rediseño visual del Informe
-IA de negocio) ya está aplicada, sin migración.
+IA de negocio.
 
-Estos dos puntos quedan documentados para no perder el análisis. **Bloqueador:**
-ninguno se puede probar de punta a punta hasta que la subida de fotos multipart
-desde la app móvil esté confirmada en un dispositivo real (el bug del 413 ya se
-corrigió — commits `fb1de1b`..`5a27004`, APK 1.9.3 — pero falta la confirmación
-en terreno). No armar migración ni código de Fase 2 antes de eso.
+Fase 2: **implementada** — migración `98_pdf_os_fase2.sql` + commits
+`ded5bd9`..`f06317f`. Falta la confirmación en un dispositivo real de que la
+subida multipart de fotos anda (el bug del 413 se corrigió en `fb1de1b`..
+`5a27004`, APK ≥ 1.9.3).
+
+El detalle de abajo queda como referencia de lo que se hizo.
 
 ---
 
