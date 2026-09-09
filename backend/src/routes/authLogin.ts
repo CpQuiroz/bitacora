@@ -55,6 +55,10 @@ authLoginRouter.post(
     // Mismas validaciones que requiereEmpresa (usuario activo, empresa
     // no suspendida/dada de baja) — para no entregar una sesión que de
     // todas formas rebotaría en el primer request real.
+    // tenant-ok: es la fila del usuario recién autenticado por Supabase Auth,
+    // buscada por su propio auth id (usuarios.id == sesion.user.id). Este
+    // request justamente resuelve a qué empresa pertenece; no hay empresa
+    // previa contra la cual filtrar.
     const { data: usuario, error: errorUsuario } = await supabase
       .from("usuarios")
       .select("rol, activo, mfa_activado, mfa_metodo, empresa:empresas(estado)")

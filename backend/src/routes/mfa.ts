@@ -26,6 +26,11 @@ export function hashCodigo(codigo: string): string {
   return crypto.createHash("sha256").update(codigo).digest("hex");
 }
 
+// tenant-ok (todo el router): cada handler opera SOLO sobre la fila del
+// usuario autenticado, con .eq("id" | "usuario_id", req.userId!) — req.userId
+// sale del JWT verificado. El MFA es estado por-usuario, no por-empresa; un
+// usuario nunca puede leer ni mutar el MFA de otro. No aplica filtro por
+// empresa_id.
 mfaRouter.get(
   "/",
   ah<RequestConEmpresa>(async (req, res) => {
@@ -78,6 +83,7 @@ mfaRouter.post(
       return;
     }
 
+    // tenant-ok: fila propia del usuario autenticado (req.userId del JWT).
     await supabase.from("usuarios").update({ mfa_activado: true, mfa_metodo: "totp" }).eq("id", req.userId!);
     res.json({ activado: true, metodo: "totp" });
   })
@@ -143,6 +149,8 @@ mfaRouter.post(
       return;
     }
 
+    // tenant-ok: fila propia del usuario autenticado (req.userId del JWT);
+    // aplica también a /desactivar más abajo.
     await supabase.from("mfa_codigo_pendiente").delete().eq("usuario_id", req.userId!);
     await supabase.from("usuarios").update({ mfa_activado: true, mfa_metodo: "email" }).eq("id", req.userId!);
     res.json({ activado: true, metodo: "email" });

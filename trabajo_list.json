@@ -82,6 +82,19 @@
         "Números de migración y versiones al día"
       ],
       "status": "pending"
+    },
+    {
+      "id": 7,
+      "name": "tenant_baseline_cero",
+      "title": "Revisar y marcar los 6 hallazgos baseline de audit:tenant",
+      "description": "audit:tenant reporta 6 .from(<tabla-empresa>) sin empresa_id en ±25 líneas: authLogin.ts:59, mfa.ts:32/81/147/155, trabajos.ts:1057. Revisar cada uno a mano y, si es legítimo, marcar con // tenant-ok: <razón>. Bajar BASELINE_TENANT a 0 en verificar.sh.",
+      "acceptance": [
+        "Cada uno de los 6 sitios revisado: se confirma que el id ya viene acotado por el usuario autenticado (req.userId) o por un guard de empresa previo",
+        "Los legítimos llevan // tenant-ok: con la razón concreta",
+        "npm run audit:tenant -w backend termina con 'Sin hallazgos.' y exit 0",
+        "verificar.sh: BASELINE_TENANT = 0 y el paso 7 queda en [OK]"
+      ],
+      "status": "done"
     }
   ]
 }

@@ -23,10 +23,11 @@ EXIT_CODE=0
 RAPIDO=0
 [ "${1:-}" = "--rapido" ] && RAPIDO=1
 
-# audit:tenant tiene 6 hallazgos heurísticos preexistentes (authLogin.ts:59,
-# mfa.ts x4, trabajos.ts ordenes_servicio). Sube este número solo si de
-# verdad revisaste los nuevos y son legítimos (poné `// tenant-ok:`).
-BASELINE_TENANT=6
+# audit:tenant: baseline 0 desde 2026-09-09 (tarea #7 — los 6 hallazgos
+# preexistentes se revisaron y marcaron con `// tenant-ok:`). Si aparece un
+# hallazgo nuevo, revisá el .from(<tabla-empresa>): o le falta el filtro por
+# empresa_id, o es legítimo y lleva `// tenant-ok: <razón>` a ±25 líneas.
+BASELINE_TENANT=0
 
 echo "── 1. Entorno ─────────────────────────────────────────"
 if ! command -v node >/dev/null 2>&1; then fail "node no instalado"; exit 1; fi

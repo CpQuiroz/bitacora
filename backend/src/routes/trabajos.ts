@@ -1053,6 +1053,9 @@ trabajosRouter.post(
       return;
     }
 
+    // tenant-ok: orden viene de obtenerOCrearOrden(req.empresaId!, ...) y el
+    // handler ya pasó trabajoExiste/trabajoBloqueado(req.empresaId!) arriba;
+    // orden.id pertenece a la empresa del request.
     await supabase
       .from("ordenes_servicio")
       .update({ fotos: [...(orden.fotos ?? []), key] })
