@@ -834,6 +834,11 @@ export type OrdenServicio = {
   estado_os: EstadoOS;
   firmante_nombre: string | null;
   firmante_documento: string | null;
+  // Firma del técnico (migración 98) — bloque aparte del de la firma del
+  // cliente. null en OS previas a la migración.
+  firma_tecnico_url: string | null;
+  tecnico_firmante_nombre: string | null;
+  tecnico_firmante_documento: string | null;
   observaciones_cierre: string | null;
   informe_ia: string | null;
   finalizada_en: string | null;
@@ -1517,11 +1522,23 @@ export type MensajePersonalizado = {
   actualizado_en: string;
 };
 
+// Categoría de una foto de la OS (migración 98) — para agrupar la
+// galería del PDF. null = foto general.
+export const CATEGORIAS_FOTO_OS = ["equipo", "antes", "durante", "despues"] as const;
+export type CategoriaFotoOS = (typeof CATEGORIAS_FOTO_OS)[number];
+export const ETIQUETA_CATEGORIA_FOTO_OS: Record<CategoriaFotoOS, string> = {
+  equipo: "Equipo a intervenir",
+  antes: "Antes",
+  durante: "Durante",
+  despues: "Después",
+};
+
 export type AnalisisFoto = {
   id: string;
   empresa_id: string;
   orden_servicio_id: string | null;
   foto_url: string;
+  categoria: string | null;
   subida_por: string | null;
   estado: EstadoAnalisisFoto;
   resumen: string | null;
