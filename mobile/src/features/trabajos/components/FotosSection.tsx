@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ActivityIndicator, Alert, Image, Modal, Pressable, ScrollView, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import { CATEGORIAS_FOTO_OS, ETIQUETA_CATEGORIA_FOTO_OS, type CategoriaFotoOS } from "@bitacora/shared";
 import { useTema } from "../../../theme";
 import { Text } from "../../../components/ui";
 import { comprimirImagen } from "../../../lib/imagen";
@@ -11,6 +12,12 @@ export type FotoPendiente = { id: string; uri: string; fallida: boolean; error?:
 
 const MAX = 6;
 const LADO = 76;
+
+// La categoría activa se aplica a cada foto nueva hasta que se cambie.
+const OPCIONES_CAT: { valor: CategoriaFotoOS | null; texto: string }[] = [
+  { valor: null, texto: "General" },
+  ...CATEGORIAS_FOTO_OS.map((c) => ({ valor: c, texto: ETIQUETA_CATEGORIA_FOTO_OS[c] })),
+];
 
 export function FotosSection({
   fotos,
@@ -22,19 +29,20 @@ export function FotosSection({
   fotos: FotoConUrl[];
   pendientes?: FotoPendiente[];
   editable: boolean;
-  onAgregar: (archivo: { uri: string; name: string; type: string }) => void;
+  onAgregar: (archivo: { uri: string; name: string; type: string }, categoria: CategoriaFotoOS | null) => void;
   onQuitarPendiente?: (id: string) => void;
 }) {
   const t = useTema();
   const [ocupado, setOcupado] = useState(false);
   const [abierta, setAbierta] = useState<FotoConUrl | null>(null);
+  const [categoria, setCategoria] = useState<CategoriaFotoOS | null>(null);
 
   async function procesar(assets: ImagePicker.ImagePickerAsset[]) {
     setOcupado(true);
     try {
       for (const a of assets) {
         const uri = await comprimirImagen(a.uri, a.width);
-        onAgregar({ uri, name: a.fileName ?? `foto-${Date.now()}.jpg`, type: a.mimeType ?? "image/jpeg" });
+        onAgregar({ uri, name: a.fileName ?? `foto-${Date.now()}.jpg`, type: a.mimeType ?? "image/jpeg" }, categoria);
       }
     } finally {
       setOcupado(false);
@@ -78,6 +86,34 @@ export function FotosSection({
           {total} de {MAX}
         </Text>
       </View>
+
+      {editable && total < MAX ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: t.espacio(1.5) }}>
+          {OPCIONES_CAT.map((o) => {
+            const sel = categoria === o.valor;
+            return (
+              <Pressable
+                key={o.texto}
+                onPress={() => setCategoria(o.valor)}
+                style={{
+                  minHeight: 32,
+                  paddingHorizontal: t.espacio(2.5),
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  borderColor: sel ? t.colores.brand : t.colores.border,
+                  backgroundColor: sel ? t.colores.brandSoft : t.colores.surface,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Text variante="caption" weight={sel ? "bold" : "medium"} style={{ color: sel ? t.colores.brand : t.colores.muted }}>
+                  {o.texto}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      ) : null}
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: t.espacio(2) }}>
         {pendientes.map((p) => (

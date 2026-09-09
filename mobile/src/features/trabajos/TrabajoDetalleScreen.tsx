@@ -16,6 +16,7 @@ import {
   encolarDatos,
   encolarFinalizar,
   encolarFirma,
+  encolarFirmaTecnico,
   encolarFoto,
   obtenerDetalle,
   type DetalleTrabajo,
@@ -311,7 +312,7 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
           fotos={fotos}
           pendientes={fotosPendientes}
           editable={!finalizada}
-          onAgregar={(archivo) => void encolarFoto(trabajoId, archivo)}
+          onAgregar={(archivo, categoria) => void encolarFoto(trabajoId, archivo, categoria)}
           onQuitarPendiente={descartar}
         />
 
@@ -319,6 +320,7 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
           orden={orden}
           editable={!finalizada}
           onFirmar={(p) => encolarFirma(trabajoId, p)}
+          onFirmarTecnico={(p) => encolarFirmaTecnico(trabajoId, p)}
           onCerrar={finalizar}
           onGuardarSinFirmar={() =>
             Alert.alert("Guardado sin firmar", "La OS sigue abierta hasta que el cliente firme. Tus notas quedaron en pantalla.")

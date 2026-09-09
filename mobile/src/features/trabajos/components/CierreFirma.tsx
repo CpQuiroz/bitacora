@@ -20,12 +20,14 @@ export function CierreFirma({
   orden,
   editable,
   onFirmar,
+  onFirmarTecnico,
   onCerrar,
   onGuardarSinFirmar,
 }: {
   orden: OrdenConFirma | null;
   editable: boolean;
   onFirmar: (p: { firma_base64: string; firmante_nombre: string; firmante_documento: string; observaciones_cierre: string }) => void | Promise<void>;
+  onFirmarTecnico?: (p: { firma_base64: string; tecnico_nombre: string; tecnico_documento: string }) => void | Promise<void>;
   onCerrar?: () => void;
   onGuardarSinFirmar?: (observaciones: string) => void;
 }) {
@@ -35,6 +37,26 @@ export function CierreFirma({
   const [observaciones, setObservaciones] = useState("");
   const [cerrando, setCerrando] = useState(false);
   const lienzo = useRef<LienzoFirmaHandle>(null);
+
+  // Firma del técnico (opcional, va en el PDF).
+  const [tecNombre, setTecNombre] = useState("");
+  const [tecDoc, setTecDoc] = useState("");
+  const [guardandoTec, setGuardandoTec] = useState(false);
+  const lienzoTec = useRef<LienzoFirmaHandle>(null);
+  const tecFirmado = Boolean(orden?.firma_tecnico_url || orden?.firma_tecnico_url_firmada);
+
+  async function guardarFirmaTecnico() {
+    if (!onFirmarTecnico) return;
+    if (!tecNombre.trim()) return Alert.alert("Falta un dato", "Escribe el nombre del técnico.");
+    const base64 = await lienzoTec.current?.capturar();
+    if (!base64) return Alert.alert("Falta la firma", "Firma en el recuadro.");
+    setGuardandoTec(true);
+    try {
+      await onFirmarTecnico({ firma_base64: base64, tecnico_nombre: tecNombre.trim(), tecnico_documento: tecDoc.trim() });
+    } finally {
+      setGuardandoTec(false);
+    }
+  }
 
   const salidaHecha = Boolean(orden?.check_out_at);
 
@@ -64,6 +86,39 @@ export function CierreFirma({
 
   return (
     <View style={{ gap: t.espacio(3) }}>
+      {/* Firma del técnico — opcional, queda en el PDF */}
+      {onFirmarTecnico ? (
+        <View style={{ gap: t.espacio(2) }}>
+          <Text variante="etiqueta" tono="muted" weight="semibold" style={{ textTransform: "uppercase" }}>
+            Firma del técnico
+          </Text>
+          {tecFirmado ? (
+            <Card plano>
+              {orden?.firma_tecnico_url_firmada ? (
+                <Image source={{ uri: orden.firma_tecnico_url_firmada }} resizeMode="contain" style={{ width: "100%", height: 90, marginBottom: t.espacio(2) }} />
+              ) : null}
+              <Text variante="cuerpo">
+                Firma del técnico registrada ✓{orden?.tecnico_firmante_nombre ? ` — ${orden.tecnico_firmante_nombre}` : ""}
+              </Text>
+            </Card>
+          ) : editable ? (
+            <>
+              <LienzoFirma ref={lienzoTec} />
+              <Input etiqueta="Nombre del técnico" value={tecNombre} onChangeText={setTecNombre} />
+              <Input etiqueta="RUT del técnico (opcional)" value={tecDoc} onChangeText={setTecDoc} />
+              <Button titulo="Guardar firma del técnico" variante="secundario" onPress={guardarFirmaTecnico} cargando={guardandoTec} />
+              <Text variante="caption" tono="muted">
+                Opcional. Va en el PDF junto a la firma del cliente.
+              </Text>
+            </>
+          ) : (
+            <Text variante="cuerpo" tono="muted">
+              Sin firma del técnico.
+            </Text>
+          )}
+        </View>
+      ) : null}
+
       <Text variante="etiqueta" tono="muted" weight="semibold" style={{ textTransform: "uppercase" }}>
         Cierre y firma del cliente
       </Text>

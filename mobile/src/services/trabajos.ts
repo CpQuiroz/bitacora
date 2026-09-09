@@ -8,7 +8,10 @@ import type { Ubicacion } from "../lib/geo";
 export type ClienteContacto = Pick<Cliente, "id" | "nombre" | "telefono" | "direccion" | "lat" | "lng">;
 export type TrabajoConTipo = Trabajo & { tipo_trabajo: TipoTrabajo | null; cliente_info: ClienteContacto | null };
 export type FotoConUrl = AnalisisFoto & { url: string };
-export type OrdenConFirma = OrdenServicio & { firma_url_firmada: string | null };
+export type OrdenConFirma = OrdenServicio & {
+  firma_url_firmada: string | null;
+  firma_tecnico_url_firmada: string | null;
+};
 
 // El estado visible sale SIEMPRE de la orden (PASO 1) — el backend la
 // adjunta a cada trabajo en la lista.
@@ -150,7 +153,11 @@ export function encolarDatos(trabajoId: string, datos: Record<string, string>) {
   });
 }
 
-export function encolarFoto(trabajoId: string, archivo: { uri: string; name: string; type: string }) {
+export function encolarFoto(
+  trabajoId: string,
+  archivo: { uri: string; name: string; type: string },
+  categoria?: string | null
+) {
   return encolar({
     etiqueta: "Foto",
     recurso: `trabajo:${trabajoId}`,
@@ -158,8 +165,21 @@ export function encolarFoto(trabajoId: string, archivo: { uri: string; name: str
     method: "POST",
     // foto_id estable: si un reintento tras timeout vuelve a subir la
     // misma foto, el backend devuelve la que ya existe (nunca duplica).
-    body: { foto_id: Crypto.randomUUID() },
+    body: { foto_id: Crypto.randomUUID(), ...(categoria ? { categoria } : {}) },
     archivo: { ...archivo, campo: "foto" },
+  });
+}
+
+export function encolarFirmaTecnico(
+  trabajoId: string,
+  payload: { firma_base64: string; tecnico_nombre: string; tecnico_documento: string }
+) {
+  return encolar({
+    etiqueta: "Firma del técnico",
+    recurso: `trabajo:${trabajoId}`,
+    path: `/api/trabajos/${trabajoId}/firma-tecnico`,
+    method: "POST",
+    body: payload,
   });
 }
 
