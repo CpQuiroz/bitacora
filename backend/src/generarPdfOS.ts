@@ -4,9 +4,14 @@
 // pdfkit puro (sin Chromium/Puppeteer): genera el documento en
 // memoria y lo devuelve como Buffer, listo para servir por HTTP
 // o adjuntar a un correo (email.ts → enviarPdfOS).
+//
+// Nivel de detalle de informe de campo profesional: bloques en caja
+// para datos del cliente / de la tarea / campos del tipo de trabajo,
+// checklist con estado y hora, galería de fotos y bloque de firma.
+// Todo el layout sale de helpers genéricos de pdfEstilo.ts.
 // ============================================================
 import PDFDocument from "pdfkit";
-import { PDF, regla, tituloSeccion } from "./pdfEstilo";
+import { ANCHO, M_IZQ, PDF, abrirCaja, cajaGrilla, cajaLista, cerrarCaja, regla, tituloBarra, tituloSeccion } from "./pdfEstilo";
 
 export type ItemOSPdf = {
   descripcion: string;
@@ -24,9 +29,18 @@ export type DatosOSPdf = {
   fecha: string;
   horaProgramada: string | null;
   clienteNombre: string;
-  direccion: string | null;
+  clienteRut: string | null;
+  clienteTelefono: string | null;
+  clienteCorreo: string | null;
+  clienteDireccion: string | null;
+  direccion: string | null; // ubicación del trabajo (fallback de dirección)
   colaboradorNombre: string;
+  tipoTrabajoNombre: string | null;
   descripcion: string | null;
+  camposPersonalizados: { etiqueta: string; valor: string }[];
+  checklist: { item: string; hecho: boolean; hora: string | null }[];
+  checkInAt: string | null;
+  checkOutAt: string | null;
   observacionesCierre: string | null;
   informeIA: string | null;
   items: ItemOSPdf[];
@@ -37,6 +51,27 @@ export type DatosOSPdf = {
 };
 
 const monto = (n: number) => `$${Math.round(n).toLocaleString("es-CL")}`;
+
+// timestamptz → "DD-MM-AAAA HH:MM" en hora de Chile (el backend corre en
+// UTC en Render; los usuarios son chilenos).
+function fechaHora(iso: string | null): string | null {
+  if (!iso) return null;
+  const dt = new Date(iso);
+  if (Number.isNaN(dt.getTime())) return null;
+  try {
+    return dt.toLocaleString("es-CL", {
+      timeZone: "America/Santiago",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+  } catch {
+    return iso.slice(0, 16).replace("T", " ");
+  }
+}
 
 async function descargar(url: string): Promise<Buffer | null> {
   try {
@@ -71,11 +106,7 @@ export async function generarPdfOS(datos: DatosOSPdf): Promise<Buffer> {
       // logo corrupto o formato no soportado por pdfkit — se omite, no bloquea el PDF
     }
   }
-  doc
-    .fontSize(16)
-    .font("Helvetica-Bold")
-    .fillColor(colorMarca)
-    .text(datos.empresaNombre, logoBuffer ? 120 : 50, 50);
+  doc.fontSize(16).font("Helvetica-Bold").fillColor(colorMarca).text(datos.empresaNombre, logoBuffer ? 120 : 50, 50);
   doc
     .fontSize(20)
     .font("Helvetica-Bold")
@@ -85,41 +116,66 @@ export async function generarPdfOS(datos: DatosOSPdf): Promise<Buffer> {
   doc.y = 120;
 
   if (datos.textoEncabezado) {
-    doc.font("Helvetica").fontSize(9).fillColor(PDF.muted).text(datos.textoEncabezado, { width: 495 });
+    doc.font("Helvetica").fontSize(9).fillColor(PDF.muted).text(datos.textoEncabezado, M_IZQ, doc.y, { width: ANCHO });
     doc.fillColor(PDF.tinta);
     doc.moveDown(0.8);
   }
 
-  // --- Datos de la OS ---
-  doc.fontSize(10).font("Helvetica");
-  const filaDatos = (etiqueta: string, valor: string) => {
-    doc.font("Helvetica-Bold").text(etiqueta, 50, doc.y, { continued: true, width: 150 });
-    doc.font("Helvetica").text(` ${valor}`);
-  };
-  filaDatos("Fecha:", datos.fecha + (datos.horaProgramada ? ` ${datos.horaProgramada}` : ""));
-  filaDatos("Cliente:", datos.clienteNombre);
-  if (datos.direccion) filaDatos("Dirección:", datos.direccion);
-  filaDatos("Colaborador:", datos.colaboradorNombre);
-  doc.moveDown(1);
+  // --- Informaciones del cliente ---
+  cajaGrilla(
+    doc,
+    "Informaciones del cliente",
+    [
+      { etiqueta: "Cliente", valor: datos.clienteNombre },
+      { etiqueta: "RUT", valor: datos.clienteRut },
+      { etiqueta: "Teléfono", valor: datos.clienteTelefono },
+      { etiqueta: "Correo", valor: datos.clienteCorreo },
+      { etiqueta: "Dirección", valor: datos.clienteDireccion ?? datos.direccion },
+    ],
+    colorMarca
+  );
+
+  // --- Datos de la tarea ---
+  cajaGrilla(
+    doc,
+    `Tarea${datos.folio != null ? ` N° ${datos.folio}` : ""}`,
+    [
+      { etiqueta: "Fecha", valor: datos.fecha },
+      { etiqueta: "Hora programada", valor: datos.horaProgramada },
+      { etiqueta: "Tipo de trabajo", valor: datos.tipoTrabajoNombre },
+      { etiqueta: "Realizado por", valor: datos.colaboradorNombre },
+      { etiqueta: "Ubicación", valor: datos.direccion },
+      { etiqueta: "Check-in", valor: fechaHora(datos.checkInAt) },
+      { etiqueta: "Check-out", valor: fechaHora(datos.checkOutAt) },
+    ],
+    colorMarca
+  );
 
   if (datos.descripcion) {
-    tituloSeccion(doc, "Descripción del servicio", colorMarca, 50);
-    doc.font("Helvetica").text(datos.descripcion, { width: 495 });
+    tituloSeccion(doc, "Descripción del servicio", colorMarca, M_IZQ);
+    doc.font("Helvetica").fontSize(10).fillColor(PDF.tinta).text(datos.descripcion, M_IZQ, doc.y, { width: ANCHO });
     doc.moveDown(1);
   }
+
+  // --- Campos del tipo de trabajo (numerados, en grilla) ---
+  if (datos.camposPersonalizados.length > 0) {
+    cajaGrilla(doc, "Campos del tipo de trabajo", datos.camposPersonalizados, colorMarca, { numerada: true });
+  }
+
   if (datos.observacionesCierre) {
-    tituloSeccion(doc, "Observaciones de cierre", colorMarca, 50);
-    doc.font("Helvetica").text(datos.observacionesCierre, { width: 495 });
+    tituloSeccion(doc, "Observaciones de cierre", colorMarca, M_IZQ);
+    doc.font("Helvetica").fontSize(10).fillColor(PDF.tinta).text(datos.observacionesCierre, M_IZQ, doc.y, { width: ANCHO });
     doc.moveDown(1);
   }
   if (datos.informeIA) {
-    tituloSeccion(doc, "Informe técnico", colorMarca, 50);
-    doc.text(datos.informeIA, { width: 495 });
+    tituloSeccion(doc, "Informe técnico", colorMarca, M_IZQ);
+    doc.font("Helvetica").fontSize(10).fillColor(PDF.tinta).text(datos.informeIA, M_IZQ, doc.y, { width: ANCHO });
     doc.moveDown(1);
   }
 
   // --- Tabla de ítems ---
   if (datos.items.length > 0) {
+    if (doc.y > 680) doc.addPage();
     doc.moveDown(0.5);
     const top = doc.y;
     doc.font("Helvetica-Bold").fontSize(8.5).fillColor(colorMarca);
@@ -149,10 +205,25 @@ export async function generarPdfOS(datos: DatosOSPdf): Promise<Buffer> {
     doc.moveDown(1);
   }
 
+  // --- Checklist ---
+  if (datos.checklist.length > 0) {
+    cajaLista(
+      doc,
+      "Checklist de la visita",
+      datos.checklist.map((c) => ({
+        texto: c.item,
+        estado: c.hecho ? "ok" : "pendiente",
+        nota: c.hora ? fechaHora(c.hora) ?? c.hora : null,
+      })),
+      colorMarca
+    );
+  }
+
   // --- Fotos ---
   const fotosValidas = fotoBuffers.filter((f): f is Buffer => f !== null);
   if (fotosValidas.length > 0) {
-    tituloSeccion(doc, "Fotos", colorMarca, 50);
+    if (doc.y > 620) doc.addPage();
+    tituloBarra(doc, `Fotos (${fotosValidas.length})`, colorMarca);
     let x = 50;
     const anchoFoto = 155;
     for (const foto of fotosValidas) {
@@ -172,27 +243,52 @@ export async function generarPdfOS(datos: DatosOSPdf): Promise<Buffer> {
     doc.moveDown(1);
   }
 
-  // --- Firma ---
-  if (doc.y > 650) doc.addPage();
-  tituloSeccion(doc, "Firma de conformidad", colorMarca, 50);
-  if (firmaBuffer) {
-    try {
-      doc.image(firmaBuffer, 50, doc.y, { width: 180, height: 80, fit: [180, 80] });
-      doc.y += 85;
-    } catch {
-      doc.y += 10;
-    }
-  }
-  doc.font("Helvetica").fontSize(9);
-  if (datos.firmanteNombre) doc.text(`Nombre: ${datos.firmanteNombre}`);
-  if (datos.firmanteDocumento) doc.text(`RUT/Documento: ${datos.firmanteDocumento}`);
+  // --- Firma del cliente ---
+  bloqueFirma(doc, colorMarca, {
+    titulo: "Firma de conformidad del cliente",
+    imagen: firmaBuffer,
+    nombre: datos.firmanteNombre,
+    documento: datos.firmanteDocumento,
+  });
+  // Fase 2 (ver docs/pdf-os-fase2.md): acá va el segundo bloque, "Firma
+  // del técnico", cuando ordenes_servicio tenga firma_tecnico_url.
 
   if (datos.textoPie) {
-    doc.moveDown(1.5);
-    doc.font("Helvetica").fontSize(8).fillColor(PDF.faint).text(datos.textoPie, { width: 495 });
+    doc.moveDown(1);
+    doc.font("Helvetica").fontSize(8).fillColor(PDF.faint).text(datos.textoPie, M_IZQ, doc.y, { width: ANCHO });
     doc.fillColor(PDF.tinta);
   }
 
   doc.end();
   return listo;
+}
+
+// Bloque de firma en caja: título + imagen (o línea) + nombre + documento.
+// Genérico — un bloque por firmante.
+function bloqueFirma(
+  doc: PDFKit.PDFDocument,
+  colorMarca: string,
+  f: { titulo: string; imagen: Buffer | null; nombre: string | null; documento: string | null }
+): void {
+  const ALTO_CONTENIDO = 96;
+  const caja = abrirCaja(doc, f.titulo, colorMarca, ALTO_CONTENIDO);
+  const y0 = doc.y;
+  if (f.imagen) {
+    try {
+      doc.image(f.imagen, caja.x, y0, { width: 170, height: 60, fit: [170, 60] });
+    } catch {
+      /* firma corrupta — se omite */
+    }
+  }
+  doc
+    .moveTo(caja.x, y0 + 66)
+    .lineTo(caja.x + 210, y0 + 66)
+    .strokeColor(PDF.regla)
+    .lineWidth(1)
+    .stroke();
+  doc.strokeColor(PDF.tinta);
+  doc.font("Helvetica").fontSize(8.5).fillColor(PDF.tinta);
+  doc.text(`Nombre: ${f.nombre || "—"}`, caja.x, y0 + 72, { width: caja.ancho });
+  doc.text(`RUT / Documento: ${f.documento || "—"}`, caja.x, y0 + 83, { width: caja.ancho });
+  cerrarCaja(doc, caja.yFin);
 }

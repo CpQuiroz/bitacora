@@ -1,7 +1,7 @@
 import { Router } from "express";
 import multer from "multer";
-import type { Anexo, EstadoOS, EstadoTrabajo, ItemChecklist, OrdenServicio, Prioridad, TipoCheckin, TipoTrabajo, Trabajo } from "@bitacora/shared";
-import { sustituirVariables } from "@bitacora/shared";
+import type { Anexo, CampoTipoTrabajo, EstadoOS, EstadoTrabajo, ItemChecklist, OrdenServicio, Prioridad, TipoCheckin, TipoTrabajo, Trabajo } from "@bitacora/shared";
+import { mapearCamposPersonalizados, sustituirVariables } from "@bitacora/shared";
 import { supabase } from "../supabase";
 import { subirFirma, subirFoto, urlFirmada, subirPdfOS, descargarPdfOS, descargarFoto, borrarFoto, subirAnexo, urlFirmadaAnexo } from "../storage";
 import { analizarFoto, generarInformeOS, type ImagenInforme } from "../claude";
@@ -1325,7 +1325,7 @@ trabajosRouter.post(
 export async function armarDatosPdf(empresaId: string, trabajoId: string) {
   const { data: trabajo } = await supabase
     .from("trabajos")
-    .select("*, responsable:usuarios(nombre)")
+    .select("*, responsable:usuarios(nombre), tipo_trabajo:tipos_trabajo(nombre, campos)")
     .eq("empresa_id", empresaId)
     .eq("id", trabajoId)
     .maybeSingle();
@@ -1339,6 +1339,16 @@ export async function armarDatosPdf(empresaId: string, trabajoId: string) {
     .select("nombre, logo_url, color_primario")
     .eq("id", empresaId)
     .single();
+
+  // Ficha del cliente — para el bloque "Informaciones del cliente".
+  const { data: clienteFicha } = trabajo.cliente_id
+    ? await supabase
+        .from("clientes")
+        .select("nombre, rut, direccion, comuna, telefono, correo")
+        .eq("empresa_id", empresaId)
+        .eq("id", trabajo.cliente_id)
+        .maybeSingle()
+    : { data: null };
 
   const { data: plantilla } = await supabase
     .from("plantillas_documento")
@@ -1364,6 +1374,13 @@ export async function armarDatosPdf(empresaId: string, trabajoId: string) {
   const firmaUrl = orden.firma_url ? await urlFirmada(orden.firma_url, 15) : null;
 
   const colaboradorNombre = (trabajo as unknown as { responsable: { nombre: string } | null }).responsable?.nombre ?? "—";
+  const tipoTrabajo = (trabajo as unknown as { tipo_trabajo: { nombre: string; campos: CampoTipoTrabajo[] } | null }).tipo_trabajo;
+  const camposPersonalizados = mapearCamposPersonalizados(tipoTrabajo?.campos, trabajo.datos as Record<string, unknown>);
+  const checklist = ((orden.checklist ?? []) as ItemChecklist[]).map((c) => ({
+    item: c.item,
+    hecho: Boolean(c.hecho),
+    hora: c.hora ?? null,
+  }));
   const montoTotal = (items ?? []).reduce((acc, it) => acc + it.cantidad * it.precio_unitario, 0);
   const variables = {
     cliente: trabajo.cliente,
@@ -1385,10 +1402,19 @@ export async function armarDatosPdf(empresaId: string, trabajoId: string) {
     folio: orden.folio,
     fecha: trabajo.fecha,
     horaProgramada: trabajo.hora_programada,
-    clienteNombre: trabajo.cliente,
+    clienteNombre: clienteFicha?.nombre ?? trabajo.cliente,
+    clienteRut: clienteFicha?.rut ?? null,
+    clienteTelefono: clienteFicha?.telefono ?? null,
+    clienteCorreo: clienteFicha?.correo ?? null,
+    clienteDireccion: [clienteFicha?.direccion, clienteFicha?.comuna].filter(Boolean).join(", ") || null,
     direccion: trabajo.ubicacion,
     colaboradorNombre,
+    tipoTrabajoNombre: tipoTrabajo?.nombre ?? null,
     descripcion: trabajo.descripcion,
+    camposPersonalizados,
+    checklist,
+    checkInAt: orden.check_in_at ?? null,
+    checkOutAt: orden.check_out_at ?? null,
     observacionesCierre: orden.observaciones_cierre,
     informeIA: orden.informe_ia,
     items: (items ?? []).map((it) => ({
@@ -1540,8 +1566,8 @@ trabajosRouter.post(
 
     const tipoTrabajo = (trabajo as unknown as { tipo_trabajo: TipoTrabajo | null }).tipo_trabajo;
     const datosGuardados = (trabajo.datos ?? {}) as Record<string, unknown>;
-    const datosPersonalizados = (tipoTrabajo?.campos ?? [])
-      .map((c) => `${c.etiqueta}: ${datosGuardados[c.clave] ?? "sin dato"}`)
+    const datosPersonalizados = mapearCamposPersonalizados(tipoTrabajo?.campos, datosGuardados)
+      .map((c) => `${c.etiqueta}: ${c.valor}`)
       .join("\n");
 
     const checklistTexto = ((orden.checklist ?? []) as ItemChecklist[])
