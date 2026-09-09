@@ -39,16 +39,6 @@ const fechaCL = (iso: string | null | undefined) => {
 const tieneNovedad = (checklist: RegistroMantencionEquipo["checklist"]) =>
   Array.isArray(checklist) && checklist.some((c) => c.respuesta === "no");
 
-async function fileABase64(file: File): Promise<string> {
-  const buf = await file.arrayBuffer();
-  let binario = "";
-  const bytes = new Uint8Array(buf);
-  for (let i = 0; i < bytes.length; i += 0x8000) {
-    binario += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
-  }
-  return btoa(binario);
-}
-
 // ============================================================
 // Pestaña "Mantención"
 // ============================================================
@@ -330,29 +320,23 @@ function ModalNuevoRegistro({ equipo, onListo }: { equipo: Equipo; onListo: () =
       })
     );
 
-    let fotosPayload: { item: string | null; base64: string; media_type: string }[] = [];
-    try {
-      fotosPayload = await Promise.all(
-        fotos.map(async (f) => ({ item: f.item, base64: await fileABase64(f.file), media_type: f.file.type || "image/jpeg" }))
-      );
-    } catch {
-      setGuardando(false);
-      setError("No se pudieron procesar las fotos. Intenta con imágenes más livianas.");
-      return;
-    }
+    // Las fotos van como archivos en un multipart/form-data (patrón de
+    // trabajos.ts), NUNCA en el JSON — eso choca con el límite de
+    // express.json (100 kb) y devuelve 413.
+    const fd = new FormData();
+    fd.append("tipo", tipo);
+    fd.append("fecha", fecha);
+    fd.append("checklist", JSON.stringify(checklist));
+    fd.append("kilometraje", kilometraje);
+    fd.append("horas_motor", horasMotor);
+    if (observaciones.trim()) fd.append("observaciones", observaciones.trim());
+    if (tipo === "programa" && proveedorId) fd.append("proveedor_id", proveedorId);
+    fd.append("fotos_items", JSON.stringify(fotos.map((f) => f.item)));
+    for (const f of fotos) fd.append("fotos", f.file);
 
     const res = await apiFetch(`/api/equipos/${equipo.id}/registros-mantencion`, {
       method: "POST",
-      body: JSON.stringify({
-        tipo,
-        fecha,
-        checklist,
-        kilometraje: Number(kilometraje),
-        horas_motor: Number(horasMotor),
-        observaciones: observaciones.trim() || null,
-        proveedor_id: tipo === "programa" ? proveedorId : undefined,
-        fotos: fotosPayload,
-      }),
+      body: fd,
     });
     setGuardando(false);
     if (!res.ok) {
