@@ -1,7 +1,7 @@
 import { Router } from "express";
 import multer from "multer";
-import type { Anexo, CampoTipoTrabajo, EstadoOS, EstadoTrabajo, ItemChecklist, OrdenServicio, Prioridad, TipoCheckin, TipoTrabajo, Trabajo } from "@bitacora/shared";
-import { mapearCamposPersonalizados, sustituirVariables } from "@bitacora/shared";
+import type { Anexo, CampoTipoTrabajo, CategoriaFotoOS, EstadoOS, EstadoTrabajo, ItemChecklist, OrdenServicio, Prioridad, TipoCheckin, TipoTrabajo, Trabajo } from "@bitacora/shared";
+import { CATEGORIAS_FOTO_OS, mapearCamposPersonalizados, sustituirVariables } from "@bitacora/shared";
 import { supabase } from "../supabase";
 import { subirFirma, subirFoto, urlFirmada, subirPdfOS, descargarPdfOS, descargarFoto, borrarFoto, subirAnexo, urlFirmadaAnexo } from "../storage";
 import { analizarFoto, generarInformeOS, type ImagenInforme } from "../claude";
@@ -819,7 +819,8 @@ trabajosRouter.get(
       return;
     }
     const firmaUrl = data.firma_url ? await urlFirmada(data.firma_url, 15) : null;
-    res.json({ ...data, firma_url_firmada: firmaUrl });
+    const firmaTecnicoUrl = data.firma_tecnico_url ? await urlFirmada(data.firma_tecnico_url, 15) : null;
+    res.json({ ...data, firma_url_firmada: firmaUrl, firma_tecnico_url_firmada: firmaTecnicoUrl });
   })
 );
 
@@ -869,6 +870,53 @@ trabajosRouter.post(
     }
     const firmaUrl = await urlFirmada(key, 15);
     res.json({ ...data, firma_url_firmada: firmaUrl });
+  })
+);
+
+// Firma del técnico que realizó el trabajo (migración 98) — bloque
+// aparte de la firma de conformidad del cliente. Mismo transporte (PNG
+// base64, la firma pesa poco) y mismo guard: no se puede tocar una OS
+// finalizada.
+trabajosRouter.post(
+  "/:id/firma-tecnico",
+  ah<RequestConEmpresa>(async (req, res) => {
+    const { firma_base64, tecnico_nombre, tecnico_documento } = req.body ?? {};
+    if (typeof firma_base64 !== "string" || !firma_base64) {
+      res.status(400).json({ error: "Falta firma_base64" });
+      return;
+    }
+    if (!(await trabajoExiste(req.empresaId!, req.params.id))) {
+      res.status(404).json({ error: "Trabajo no encontrado" });
+      return;
+    }
+    if (await trabajoBloqueado(req.empresaId!, req.params.id)) {
+      res.status(409).json({ error: "La orden de servicio ya fue finalizada y no se puede editar" });
+      return;
+    }
+
+    const orden = await obtenerOCrearOrden(req.empresaId!, req.params.id);
+    const buffer = Buffer.from(firma_base64, "base64");
+    const key = await subirFirma(req.empresaId!, req.params.id, buffer);
+
+    // tenant-ok: trabajoExiste() arriba validó empresa_id; orden sale de
+    // obtenerOCrearOrden() sobre ese mismo trabajo (igual que /:id/firma).
+    const { data, error } = await supabase
+      .from("ordenes_servicio")
+      .update({
+        firma_tecnico_url: key,
+        tecnico_firmante_nombre: tecnico_nombre?.trim() || null,
+        tecnico_firmante_documento: tecnico_documento?.trim() || null,
+      })
+      .eq("id", orden.id)
+      .select()
+      .single();
+
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    const firmaTecnicoUrl = await urlFirmada(key, 15);
+    res.json({ ...data, firma_tecnico_url_firmada: firmaTecnicoUrl });
   })
 );
 
@@ -965,6 +1013,12 @@ trabajosRouter.post(
     const key = await subirFoto(req.empresaId!, req.params.id, req.file.buffer, req.file.mimetype);
     const mediaType = req.file.mimetype as "image/jpeg" | "image/png" | "image/webp";
 
+    // Categoría de la foto (migración 98) — para agrupar la galería del
+    // PDF. Solo valores del set conocido; cualquier otra cosa → general.
+    const categoria = CATEGORIAS_FOTO_OS.includes(req.body?.categoria as CategoriaFotoOS)
+      ? (req.body.categoria as CategoriaFotoOS)
+      : null;
+
     // Con la IA apagada la foto queda "listo" al toque, sin resumen.
     const estadoInicial = env.ANALISIS_FOTOS_IA_ACTIVO ? "procesando" : "listo";
 
@@ -975,6 +1029,7 @@ trabajosRouter.post(
         empresa_id: req.empresaId!,
         orden_servicio_id: orden.id,
         foto_url: key,
+        categoria,
         subida_por: req.userId!,
         estado: estadoInicial,
       })
@@ -1366,12 +1421,18 @@ export async function armarDatosPdf(empresaId: string, trabajoId: string) {
 
   const { data: fotos } = await supabase
     .from("analisis_fotos")
-    .select("foto_url")
+    .select("foto_url, categoria")
     .eq("orden_servicio_id", orden.id)
-    .order("creado_en", { ascending: false });
+    .order("creado_en", { ascending: true });
 
-  const fotoUrls = await Promise.all((fotos ?? []).map((f) => urlFirmada(f.foto_url, 15)));
+  const fotosPdf = await Promise.all(
+    (fotos ?? []).map(async (f) => ({
+      url: await urlFirmada(f.foto_url, 15),
+      categoria: (f.categoria as CategoriaFotoOS | null) ?? null,
+    }))
+  );
   const firmaUrl = orden.firma_url ? await urlFirmada(orden.firma_url, 15) : null;
+  const firmaTecnicoUrl = orden.firma_tecnico_url ? await urlFirmada(orden.firma_tecnico_url, 15) : null;
 
   const colaboradorNombre = (trabajo as unknown as { responsable: { nombre: string } | null }).responsable?.nombre ?? "—";
   const tipoTrabajo = (trabajo as unknown as { tipo_trabajo: { nombre: string; campos: CampoTipoTrabajo[] } | null }).tipo_trabajo;
@@ -1417,12 +1478,15 @@ export async function armarDatosPdf(empresaId: string, trabajoId: string) {
     checkOutAt: orden.check_out_at ?? null,
     observacionesCierre: orden.observaciones_cierre,
     informeIA: orden.informe_ia,
+    firmaTecnicoUrl,
+    tecnicoFirmanteNombre: orden.tecnico_firmante_nombre ?? null,
+    tecnicoFirmanteDocumento: orden.tecnico_firmante_documento ?? null,
     items: (items ?? []).map((it) => ({
       descripcion: it.descripcion,
       cantidad: it.cantidad,
       precio_unitario: it.precio_unitario,
     })),
-    fotoUrls,
+    fotos: fotosPdf,
     firmaUrl,
     firmanteNombre: orden.firmante_nombre,
     firmanteDocumento: orden.firmante_documento,

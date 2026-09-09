@@ -11,6 +11,8 @@
 // Todo el layout sale de helpers genéricos de pdfEstilo.ts.
 // ============================================================
 import PDFDocument from "pdfkit";
+import type { CategoriaFotoOS } from "@bitacora/shared";
+import { ETIQUETA_CATEGORIA_FOTO_OS } from "@bitacora/shared";
 import { ANCHO, M_DER, M_IZQ, PDF, abrirCaja, cajaGrilla, cajaLista, cerrarCaja, regla, tituloBarra, tituloSeccion } from "./pdfEstilo";
 
 export type ItemOSPdf = {
@@ -44,10 +46,13 @@ export type DatosOSPdf = {
   observacionesCierre: string | null;
   informeIA: string | null;
   items: ItemOSPdf[];
-  fotoUrls: string[];
+  fotos: { url: string; categoria: CategoriaFotoOS | null }[];
   firmaUrl: string | null;
   firmanteNombre: string | null;
   firmanteDocumento: string | null;
+  firmaTecnicoUrl: string | null;
+  tecnicoFirmanteNombre: string | null;
+  tecnicoFirmanteDocumento: string | null;
 };
 
 const monto = (n: number) => `$${Math.round(n).toLocaleString("es-CL")}`;
@@ -84,12 +89,20 @@ async function descargar(url: string): Promise<Buffer | null> {
 }
 
 export async function generarPdfOS(datos: DatosOSPdf): Promise<Buffer> {
-  const [logoBuffer, firmaBuffer, ...fotoBuffers] = await Promise.all([
+  const [logoBuffer, firmaBuffer, firmaTecnicoBuffer, ...fotoBuffers] = await Promise.all([
     datos.empresaLogoUrl ? descargar(datos.empresaLogoUrl) : Promise.resolve(null),
     datos.firmaUrl ? descargar(datos.firmaUrl) : Promise.resolve(null),
-    ...datos.fotoUrls.map(descargar),
+    datos.firmaTecnicoUrl ? descargar(datos.firmaTecnicoUrl) : Promise.resolve(null),
+    ...datos.fotos.map((f) => descargar(f.url)),
   ]);
   const colorMarca = datos.colorPrimario ?? PDF.marca;
+
+  // Fotos agrupadas por categoría, en el orden equipo → antes → durante
+  // → después → generales.
+  const ORDEN_CAT: (CategoriaFotoOS | null)[] = ["equipo", "antes", "durante", "despues", null];
+  const fotosPorCategoria = fotoBuffers
+    .map((buf, i) => ({ buf, categoria: datos.fotos[i]?.categoria ?? null }))
+    .filter((f): f is { buf: Buffer; categoria: CategoriaFotoOS | null } => f.buf !== null);
 
   const doc = new PDFDocument({ size: "A4", margin: 50 });
   const chunks: Buffer[] = [];
@@ -219,39 +232,62 @@ export async function generarPdfOS(datos: DatosOSPdf): Promise<Buffer> {
     );
   }
 
-  // --- Fotos ---
-  const fotosValidas = fotoBuffers.filter((f): f is Buffer => f !== null);
-  if (fotosValidas.length > 0) {
-    if (doc.y > 620) doc.addPage();
-    tituloBarra(doc, `Fotos (${fotosValidas.length})`, colorMarca);
-    let x = 50;
-    const anchoFoto = 155;
-    for (const foto of fotosValidas) {
-      if (x + anchoFoto > 545) {
-        x = 50;
-        doc.moveDown(0.5);
+  // --- Fotos, agrupadas por categoría ---
+  if (fotosPorCategoria.length > 0) {
+    if (doc.y > 600) doc.addPage();
+    tituloBarra(doc, `Fotos (${fotosPorCategoria.length})`, colorMarca);
+    doc.moveDown(0.3);
+    for (const cat of ORDEN_CAT) {
+      const delGrupo = fotosPorCategoria.filter((f) => f.categoria === cat);
+      if (delGrupo.length === 0) continue;
+      if (doc.y > 660) doc.addPage();
+      doc
+        .font("Helvetica-Bold")
+        .fontSize(7.5)
+        .fillColor(PDF.muted)
+        .text((cat ? ETIQUETA_CATEGORIA_FOTO_OS[cat] : "Otras fotos").toUpperCase(), M_IZQ, doc.y, { characterSpacing: 0.6, width: ANCHO });
+      doc.moveDown(0.3);
+      let x = 50;
+      let filaY = doc.y;
+      const anchoFoto = 155;
+      for (const { buf } of delGrupo) {
+        if (x + anchoFoto > 545) {
+          x = 50;
+          filaY += 120;
+        }
+        if (filaY > 640) {
+          doc.addPage();
+          filaY = doc.y;
+          x = 50;
+        }
+        try {
+          doc.image(buf, x, filaY, { width: anchoFoto, height: 110, fit: [anchoFoto, 110] });
+        } catch {
+          // foto corrupta o formato no soportado — se omite
+        }
+        x += anchoFoto + 15;
       }
-      if (doc.y > 680) doc.addPage();
-      try {
-        doc.image(foto, x, doc.y, { width: anchoFoto, height: 110, fit: [anchoFoto, 110] });
-      } catch {
-        // foto corrupta o formato no soportado — se omite
-      }
-      x += anchoFoto + 15;
+      doc.y = filaY + 120;
+      doc.moveDown(0.4);
     }
-    doc.y += 120;
-    doc.moveDown(1);
+    doc.moveDown(0.5);
   }
 
-  // --- Firma del cliente ---
+  // --- Firmas: técnico (si hay) y cliente ---
+  if (datos.firmaTecnicoUrl || datos.tecnicoFirmanteNombre) {
+    bloqueFirma(doc, colorMarca, {
+      titulo: "Firma del técnico responsable",
+      imagen: firmaTecnicoBuffer,
+      nombre: datos.tecnicoFirmanteNombre ?? datos.colaboradorNombre,
+      documento: datos.tecnicoFirmanteDocumento,
+    });
+  }
   bloqueFirma(doc, colorMarca, {
     titulo: "Firma de conformidad del cliente",
     imagen: firmaBuffer,
     nombre: datos.firmanteNombre,
     documento: datos.firmanteDocumento,
   });
-  // Fase 2 (ver docs/pdf-os-fase2.md): acá va el segundo bloque, "Firma
-  // del técnico", cuando ordenes_servicio tenga firma_tecnico_url.
 
   if (datos.textoPie) {
     doc.moveDown(1);
