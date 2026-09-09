@@ -98,12 +98,40 @@ function numeroOpcional(valor: unknown): number | null | undefined {
   return Number.isFinite(n) && n >= 0 ? n : undefined;
 }
 
-type FotoEntrante = { item: string | null; base64: string; mediaType: string };
+type FotoEntrante = { item: string | null; buffer: Buffer; mediaType: string };
+type ArchivosMulter = Partial<Record<string, Express.Multer.File[]>>;
 
-// Acepta el formato nuevo `fotos: [{item?, base64, media_type?}]` y el
-// viejo `fotos_base64: string[]` (móvil 1.9.1) como fotos generales.
-function normalizarFotos(body: Record<string, unknown>): FotoEntrante[] {
+function jsonOpcional(valor: unknown): unknown {
+  if (typeof valor !== "string") return valor;
+  try {
+    return JSON.parse(valor);
+  } catch {
+    return undefined;
+  }
+}
+
+// Fotos del request, sin importar el transporte:
+//  - multipart/form-data: archivos reales en req.files.fotos (el ítem que
+//    respalda cada uno viene en el campo de texto `fotos_items`, un JSON
+//    array alineado por índice). Es el camino normal — la foto NUNCA va
+//    en el body JSON (rompía express.json, 100 kb → 413).
+//  - JSON con base64 (`fotos: [{item, base64}]` / `fotos_base64: []`): solo
+//    para compatibilidad con acciones ya encoladas por apps 1.9.x.
+function fotosDeRequest(req: RequestConEmpresa): FotoEntrante[] {
+  const body = (req.body ?? {}) as Record<string, unknown>;
+  const files = (req.files ?? {}) as ArchivosMulter;
   const salida: FotoEntrante[] = [];
+
+  const multipart = Array.isArray(files.fotos) ? files.fotos : [];
+  if (multipart.length > 0) {
+    const items = Array.isArray(jsonOpcional(body.fotos_items)) ? (jsonOpcional(body.fotos_items) as unknown[]) : [];
+    multipart.slice(0, 10).forEach((f, i) => {
+      const item = typeof items[i] === "string" && items[i] ? (items[i] as string) : null;
+      salida.push({ item, buffer: f.buffer, mediaType: f.mimetype || "image/jpeg" });
+    });
+  }
+
+  // Legacy base64.
   if (Array.isArray(body.fotos)) {
     for (const f of body.fotos.slice(0, 10)) {
       if (!f || typeof f !== "object") continue;
@@ -111,14 +139,14 @@ function normalizarFotos(body: Record<string, unknown>): FotoEntrante[] {
       if (typeof o.base64 !== "string" || !o.base64) continue;
       salida.push({
         item: typeof o.item === "string" && o.item ? o.item : null,
-        base64: o.base64,
+        buffer: Buffer.from(o.base64, "base64"),
         mediaType: typeof o.media_type === "string" ? o.media_type : "image/jpeg",
       });
     }
   }
   if (Array.isArray(body.fotos_base64)) {
     for (const b64 of body.fotos_base64.slice(0, 10)) {
-      if (typeof b64 === "string" && b64) salida.push({ item: null, base64: b64, mediaType: "image/jpeg" });
+      if (typeof b64 === "string" && b64) salida.push({ item: null, buffer: Buffer.from(b64, "base64"), mediaType: "image/jpeg" });
     }
   }
   return salida;
@@ -199,9 +227,20 @@ registrosMantencionRouter.get(
 
 // ------------------------------------------------------------
 // POST /:equipoId/registros-mantencion — crea un registro.
+//
+// Acepta multipart/form-data (patrón de trabajos.ts): las fotos van como
+// archivos (`fotos`, hasta 10) y la firma como archivo (`firma`), NO en
+// el body JSON — así no chocan con el límite de express.json (100 kb).
+// El resto (tipo, fecha, checklist como JSON string, km, horas motor,
+// proveedor_id) viaja como campos de texto del mismo request. Un request
+// application/json sin fotos también funciona (multer es no-op ahí).
 // ------------------------------------------------------------
 registrosMantencionRouter.post(
   "/:equipoId/registros-mantencion",
+  upload.fields([
+    { name: "fotos", maxCount: 10 },
+    { name: "firma", maxCount: 1 },
+  ]),
   ah<RequestConEmpresa>(async (req, res) => {
     const { equipoId } = req.params;
     const equipo = await buscarEquipo(req.empresaId!, equipoId);
@@ -215,7 +254,10 @@ registrosMantencionRouter.post(
     }
 
     const body = (req.body ?? {}) as Record<string, unknown>;
-    const { tipo, checklist, kilometraje, horas_motor, observaciones, proveedor_id, realizado_por, firma_base64 } = body;
+    const { tipo, kilometraje, horas_motor, observaciones, proveedor_id, realizado_por, firma_base64 } = body;
+    // En multipart el checklist llega como string JSON; en JSON como array.
+    const checklist = jsonOpcional(body.checklist);
+    const archivoFirma = ((req.files ?? {}) as ArchivosMulter).firma?.[0] ?? null;
 
     if (tipo !== "diario" && tipo !== "programa") {
       res.status(400).json({ error: "tipo debe ser 'diario' o 'programa'" });
@@ -246,7 +288,7 @@ registrosMantencionRouter.post(
       return;
     }
 
-    const fotosEntrantes = normalizarFotos(body);
+    const fotosEntrantes = fotosDeRequest(req);
     const faltantes = itemsEnNoSinFoto(items, fotosEntrantes);
     if (faltantes.length > 0) {
       res.status(422).json({
@@ -336,11 +378,16 @@ registrosMantencionRouter.post(
       return;
     }
 
-    // Firma (solo 'programa') — opcional.
-    if (tipo === "programa" && typeof firma_base64 === "string" && firma_base64) {
+    // Firma (solo 'programa') — archivo `firma` (multipart) o firma_base64
+    // (legacy JSON). Opcional.
+    const firmaBuffer = archivoFirma
+      ? archivoFirma.buffer
+      : typeof firma_base64 === "string" && firma_base64
+        ? Buffer.from(firma_base64, "base64")
+        : null;
+    if (tipo === "programa" && firmaBuffer) {
       try {
-        const buffer = Buffer.from(firma_base64, "base64");
-        const key = await subirFirmaRegistroMantencion(req.empresaId!, creado.id, buffer);
+        const key = await subirFirmaRegistroMantencion(req.empresaId!, creado.id, firmaBuffer);
         await supabase.from("registros_mantencion_equipo").update({ firma_url: key }).eq("id", creado.id);
         creado.firma_url = key;
       } catch (err) {
@@ -348,13 +395,11 @@ registrosMantencionRouter.post(
       }
     }
 
-    // Fotos en base64 en el mismo request (móvil: el registro entero es
-    // UNA acción de la cola offline; web: sube todo junto). `item` liga la
-    // foto al punto del checklist que respalda.
+    // Fotos — mismo request. `item` liga cada foto al punto del checklist
+    // que respalda (null = foto general).
     for (const foto of fotosEntrantes) {
       try {
-        const buffer = Buffer.from(foto.base64, "base64");
-        const key = await subirFotoRegistroMantencion(req.empresaId!, creado.id, buffer, foto.mediaType);
+        const key = await subirFotoRegistroMantencion(req.empresaId!, creado.id, foto.buffer, foto.mediaType);
         await supabase.from("registro_mantencion_fotos").insert({
           empresa_id: req.empresaId!,
           registro_id: creado.id,
