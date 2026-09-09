@@ -10,6 +10,10 @@ export const PDF = {
   faint: "#8b939d", // texto terciario / pies
   regla: "#d3d8dd", // líneas
   reglaSuave: "#eceef1",
+  ok: "#14663c", // estado "sin novedades" / respuesta SÍ
+  okSoft: "#e7f2eb",
+  danger: "#a02020", // estado "con novedades" / respuesta NO
+  dangerSoft: "#fbeaea",
 };
 
 type Doc = PDFKit.PDFDocument;

@@ -19,6 +19,7 @@ import type {
   RegistroMantencionEquipo,
   RespuestaChecklistMantencion,
 } from "@bitacora/shared";
+import { MANTENCION_EXIGE_FOTO_EN_NO } from "@bitacora/shared";
 import { supabase } from "../supabase";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
@@ -95,6 +96,41 @@ function numeroOpcional(valor: unknown): number | null | undefined {
   if (valor === null || valor === "") return null;
   const n = Number(valor);
   return Number.isFinite(n) && n >= 0 ? n : undefined;
+}
+
+type FotoEntrante = { item: string | null; base64: string; mediaType: string };
+
+// Acepta el formato nuevo `fotos: [{item?, base64, media_type?}]` y el
+// viejo `fotos_base64: string[]` (móvil 1.9.1) como fotos generales.
+function normalizarFotos(body: Record<string, unknown>): FotoEntrante[] {
+  const salida: FotoEntrante[] = [];
+  if (Array.isArray(body.fotos)) {
+    for (const f of body.fotos.slice(0, 10)) {
+      if (!f || typeof f !== "object") continue;
+      const o = f as Record<string, unknown>;
+      if (typeof o.base64 !== "string" || !o.base64) continue;
+      salida.push({
+        item: typeof o.item === "string" && o.item ? o.item : null,
+        base64: o.base64,
+        mediaType: typeof o.media_type === "string" ? o.media_type : "image/jpeg",
+      });
+    }
+  }
+  if (Array.isArray(body.fotos_base64)) {
+    for (const b64 of body.fotos_base64.slice(0, 10)) {
+      if (typeof b64 === "string" && b64) salida.push({ item: null, base64: b64, mediaType: "image/jpeg" });
+    }
+  }
+  return salida;
+}
+
+// Regla de negocio (detrás de MANTENCION_EXIGE_FOTO_EN_NO): todo ítem en
+// "no" necesita al menos una foto que lo respalde. Devuelve la lista de
+// ítems sin foto (vacía = ok).
+function itemsEnNoSinFoto(items: ItemChecklistMantencion[], fotos: { item: string | null }[]): string[] {
+  if (!MANTENCION_EXIGE_FOTO_EN_NO) return [];
+  const conFoto = new Set(fotos.map((f) => f.item).filter((x): x is string => Boolean(x)));
+  return items.filter((it) => it.respuesta === "no" && !conFoto.has(it.item)).map((it) => it.item);
 }
 
 // Nombre a mostrar en "Realizado por" — persona (interno) o taller (externo).
@@ -178,7 +214,8 @@ registrosMantencionRouter.post(
       return;
     }
 
-    const { tipo, checklist, kilometraje, horas_motor, observaciones, proveedor_id, realizado_por, firma_base64, fotos_base64 } = req.body ?? {};
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const { tipo, checklist, kilometraje, horas_motor, observaciones, proveedor_id, realizado_por, firma_base64 } = body;
 
     if (tipo !== "diario" && tipo !== "programa") {
       res.status(400).json({ error: "tipo debe ser 'diario' o 'programa'" });
@@ -199,6 +236,16 @@ registrosMantencionRouter.post(
     const horas = numeroOpcional(horas_motor);
     if (km === undefined || horas === undefined) {
       res.status(400).json({ error: "kilometraje / horas_motor inválidos" });
+      return;
+    }
+
+    const fotosEntrantes = normalizarFotos(body);
+    const faltantes = itemsEnNoSinFoto(items, fotosEntrantes);
+    if (faltantes.length > 0) {
+      res.status(422).json({
+        error: `Falta una foto de respaldo en: ${faltantes.join(", ")}`,
+        items_sin_foto: faltantes,
+      });
       return;
     }
 
@@ -247,11 +294,22 @@ registrosMantencionRouter.post(
       }
     }
 
+    // Folio correlativo por empresa (migración 97). Si el RPC falla el
+    // registro igual se crea sin folio — el PDF cae a un id corto.
+    let folio: number | null = null;
+    try {
+      const { data: f } = await supabase.rpc("siguiente_folio_mantencion", { p_empresa_id: req.empresaId! });
+      if (typeof f === "number") folio = f;
+    } catch (err) {
+      console.error("siguiente_folio_mantencion:", err);
+    }
+
     const { data: creado, error } = await supabase
       .from("registros_mantencion_equipo")
       .insert({
         empresa_id: req.empresaId!,
         equipo_id: equipoId,
+        folio,
         tipo,
         origen,
         proveedor_id: proveedorFinal,
@@ -282,20 +340,22 @@ registrosMantencionRouter.post(
       }
     }
 
-    // Fotos en base64 (móvil: así el registro entero es UNA acción de la
-    // cola offline, sin depender del id). El web sube por multipart aparte.
-    if (Array.isArray(fotos_base64) && fotos_base64.length > 0) {
-      for (const b64 of fotos_base64.slice(0, 5)) {
-        if (typeof b64 !== "string" || !b64) continue;
-        try {
-          const buffer = Buffer.from(b64, "base64");
-          const key = await subirFotoRegistroMantencion(req.empresaId!, creado.id, buffer, "image/jpeg");
-          await supabase
-            .from("registro_mantencion_fotos")
-            .insert({ empresa_id: req.empresaId!, registro_id: creado.id, foto_url: key, subida_por: req.userId! });
-        } catch (err) {
-          console.error("subir foto registro mantención:", err);
-        }
+    // Fotos en base64 en el mismo request (móvil: el registro entero es
+    // UNA acción de la cola offline; web: sube todo junto). `item` liga la
+    // foto al punto del checklist que respalda.
+    for (const foto of fotosEntrantes) {
+      try {
+        const buffer = Buffer.from(foto.base64, "base64");
+        const key = await subirFotoRegistroMantencion(req.empresaId!, creado.id, buffer, foto.mediaType);
+        await supabase.from("registro_mantencion_fotos").insert({
+          empresa_id: req.empresaId!,
+          registro_id: creado.id,
+          foto_url: key,
+          item: foto.item,
+          subida_por: req.userId!,
+        });
+      } catch (err) {
+        console.error("subir foto registro mantención:", err);
       }
     }
 
@@ -330,6 +390,14 @@ registrosMantencionRouter.get(
 
     const tipo = req.query.tipo;
     if (tipo === "diario" || tipo === "programa") query = query.eq("tipo", tipo);
+
+    // Rango de fechas (YYYY-MM-DD) sobre creado_en. `hasta` es inclusivo:
+    // se filtra hasta el final de ese día.
+    const iso = (v: unknown) => (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
+    const desde = iso(req.query.desde);
+    const hasta = iso(req.query.hasta);
+    if (desde) query = query.gte("creado_en", `${desde}T00:00:00`);
+    if (hasta) query = query.lte("creado_en", `${hasta}T23:59:59.999`);
 
     const { data, error } = await query;
     if (error) {
@@ -370,7 +438,7 @@ registrosMantencionRouter.get(
 
     const { data: fotos } = await supabase
       .from("registro_mantencion_fotos")
-      .select("id, foto_url, subida_por, creado_en")
+      .select("id, foto_url, item, subida_por, creado_en")
       .eq("registro_id", id)
       .order("creado_en", { ascending: true });
 
@@ -413,11 +481,12 @@ registrosMantencionRouter.post(
       return;
     }
 
+    const itemFoto = typeof req.body?.item === "string" && req.body.item ? req.body.item : null;
     const key = await subirFotoRegistroMantencion(req.empresaId!, id, req.file.buffer, req.file.mimetype);
     const { data: foto, error } = await supabase
       .from("registro_mantencion_fotos")
-      .insert({ empresa_id: req.empresaId!, registro_id: id, foto_url: key, subida_por: req.userId! })
-      .select("id, foto_url, subida_por, creado_en")
+      .insert({ empresa_id: req.empresaId!, registro_id: id, foto_url: key, item: itemFoto, subida_por: req.userId! })
+      .select("id, foto_url, item, subida_por, creado_en")
       .single();
     if (error || !foto) {
       res.status(500).json({ error: error?.message ?? "No se pudo guardar la foto" });
@@ -454,7 +523,8 @@ registrosMantencionRouter.get(
       return;
     }
 
-    const nombreArchivo = `mantencion-${reg.tipo}-${(reg.creado_en as string).slice(0, 10)}.pdf`;
+    const folioTxt = reg.folio != null ? String(reg.folio).padStart(4, "0") : (reg.id as string).slice(0, 8);
+    const nombreArchivo = `mantencion-${folioTxt}-${(reg.creado_en as string).slice(0, 10)}.pdf`;
 
     if (reg.pdf_url) {
       try {
@@ -476,11 +546,13 @@ registrosMantencionRouter.get(
       .single();
     const { data: fotos } = await supabase
       .from("registro_mantencion_fotos")
-      .select("foto_url")
+      .select("foto_url, item")
       .eq("registro_id", id)
       .order("creado_en", { ascending: true });
 
-    const fotoUrls = await Promise.all((fotos ?? []).map((f) => urlFirmada(f.foto_url, 15)));
+    const fotosPdf = await Promise.all(
+      (fotos ?? []).slice(0, 6).map(async (f) => ({ url: await urlFirmada(f.foto_url, 15), item: f.item ?? null }))
+    );
     const firmaUrl = reg.firma_url ? await urlFirmada(reg.firma_url, 15) : null;
     const realizadoPor = await nombreRealizadoPor(req.empresaId!, reg);
 
@@ -501,18 +573,21 @@ registrosMantencionRouter.get(
       empresaLogoUrl: empresa?.logo_url ?? null,
       colorPrimario: empresa?.color_primario ?? null,
       textoPie: null,
+      folio: folioTxt,
       tipo: reg.tipo,
       origen: reg.origen,
       fecha: (reg.creado_en as string).slice(0, 10),
+      generadoEn: new Date().toISOString(),
       vehiculoPatente: equipo?.patente ?? null,
       vehiculoNombre: equipo?.nombre ?? "—",
+      vehiculoTipo: equipo?.tipo_vehiculo ?? null,
       vehiculoDescripcion: [equipo?.marca, equipo?.modelo, equipo?.anio].filter(Boolean).join(" · ") || null,
       realizadoPor,
       kilometraje: reg.kilometraje === null ? null : Number(reg.kilometraje),
       horasMotor: reg.horas_motor === null ? null : Number(reg.horas_motor),
       observaciones: reg.observaciones,
       secciones: ordenSecciones.map((nombre) => ({ nombre, items: porSeccion.get(nombre)! })),
-      fotoUrls,
+      fotos: fotosPdf,
       firmaUrl,
     };
 

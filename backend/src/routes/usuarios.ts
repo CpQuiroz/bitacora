@@ -392,10 +392,10 @@ usuariosRouter.get(
       res.json({ vehiculo: null, registros: [] });
       return;
     }
-    const limite = Math.min(Number(req.query.limite) || 10, 50);
+    const limite = Math.min(Number(req.query.limite) || 10, 100);
     const { data, error } = await supabase
       .from("registros_mantencion_equipo")
-      .select("id, tipo, origen, checklist, kilometraje, horas_motor, creado_en")
+      .select("id, folio, tipo, origen, checklist, kilometraje, horas_motor, creado_en, responsable:usuarios!registros_mantencion_equipo_realizado_por_fkey(nombre), proveedor:proveedores(nombre)")
       .eq("empresa_id", req.empresaId!)
       .eq("equipo_id", vehiculo.id)
       .order("creado_en", { ascending: false })
@@ -405,15 +405,20 @@ usuariosRouter.get(
       return;
     }
     // "con_novedades" derivado: algún ítem del checklist quedó en "no".
-    const registros = (data ?? []).map((r) => ({
-      id: r.id,
-      tipo: r.tipo,
-      origen: r.origen,
-      kilometraje: r.kilometraje,
-      horas_motor: r.horas_motor,
-      creado_en: r.creado_en,
-      con_novedades: Array.isArray(r.checklist) && r.checklist.some((i: { respuesta?: string }) => i?.respuesta === "no"),
-    }));
+    const registros = (data ?? []).map((r) => {
+      const rel = r as typeof r & { responsable: { nombre: string } | null; proveedor: { nombre: string } | null };
+      return {
+        id: r.id,
+        folio: r.folio,
+        tipo: r.tipo,
+        origen: r.origen,
+        kilometraje: r.kilometraje,
+        horas_motor: r.horas_motor,
+        creado_en: r.creado_en,
+        realizado_por_nombre: r.origen === "externo" ? rel.proveedor?.nombre ?? null : rel.responsable?.nombre ?? null,
+        con_novedades: Array.isArray(r.checklist) && r.checklist.some((i: { respuesta?: string }) => i?.respuesta === "no"),
+      };
+    });
     res.json({ vehiculo, registros });
   })
 );

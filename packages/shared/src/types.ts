@@ -980,6 +980,9 @@ export type RegistroMantencionEquipo = {
   id: string;
   empresa_id: string;
   equipo_id: string;
+  // Correlativo por empresa (migración 97). Puede venir null en registros
+  // creados antes de esa migración.
+  folio: number | null;
   tipo: TipoRegistroMantencion;
   // Derivado del tipo en la UI (diario ⇒ interno, programa ⇒ externo);
   // se guarda explícito. externo ⇒ proveedor_id; interno ⇒ sin proveedor.
@@ -997,14 +1000,20 @@ export type RegistroMantencionEquipo = {
 };
 
 // Molde: ViajeFoto. Varias fotos por registro, misma cola offline.
+// item: null = foto general; "<texto>" = respalda ese ítem del checklist.
 export type RegistroMantencionFoto = {
   id: string;
   empresa_id: string;
   registro_id: string;
   foto_url: string;
+  item: string | null;
   subida_por: string | null;
   creado_en: string;
 };
+
+// Cuando un ítem del checklist queda en "no", exigir al menos una foto
+// que lo respalde. Flag para poder apagarlo por completo.
+export const MANTENCION_EXIGE_FOTO_EN_NO = true;
 
 export type TipoCatalogoItem = "producto" | "servicio" | "kit";
 
@@ -1661,6 +1670,10 @@ export type Database = {
         Returns: string; // uuid de la factura creada
       };
       siguiente_folio_os: {
+        Args: { p_empresa_id: string };
+        Returns: number;
+      };
+      siguiente_folio_mantencion: {
         Args: { p_empresa_id: string };
         Returns: number;
       };
