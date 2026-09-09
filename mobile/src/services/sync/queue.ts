@@ -28,19 +28,27 @@ const MAX_INTENTOS = 6;
 // "sin sincronizar" para siempre y el usuario la puede descartar.
 const VENCE_MS = 24 * 60 * 60 * 1000;
 
+export type ArchivoCola = { uri: string; name: string; type: string; campo: string };
+
 export type AccionPendiente = {
   id: string;
   etiqueta: string; // texto para la UI: "Check-in", "Firma del cliente"…
   recurso: string; // clave para agrupar en la UI, ej. "trabajo:<id>" o "viajes"
   path: string;
   method: "POST" | "PATCH";
-  body?: unknown; // cuerpo JSON (si no hay archivo)
-  archivo?: { uri: string; name: string; type: string; campo: string }; // multipart
+  body?: unknown; // campos de texto; si no hay archivo(s) se manda como JSON
+  archivo?: ArchivoCola; // multipart, un archivo (sube una foto suelta)
+  archivos?: ArchivoCola[]; // multipart, varios archivos (ej. registro de mantención)
   creadoEn: number;
   intentos: number;
   ultimoError?: string;
   fallida?: boolean; // agotó los reintentos — necesita acción del usuario
 };
+
+// Todos los archivos de una acción (unifica archivo + archivos).
+function archivosDe(a: AccionPendiente): ArchivoCola[] {
+  return a.archivos && a.archivos.length ? a.archivos : a.archivo ? [a.archivo] : [];
+}
 
 type Listener = (cola: AccionPendiente[]) => void;
 
@@ -109,11 +117,17 @@ export function fallidas(c: AccionPendiente[]): AccionPendiente[] {
 }
 
 async function ejecutar(a: AccionPendiente): Promise<Response> {
-  if (a.archivo) {
+  const archivos = archivosDe(a);
+  if (archivos.length > 0) {
     const fd = new FormData();
-    fd.append(a.archivo.campo, { uri: a.archivo.uri, name: a.archivo.name, type: a.archivo.type } as unknown as Blob);
+    for (const f of archivos) {
+      fd.append(f.campo, { uri: f.uri, name: f.name, type: f.type } as unknown as Blob);
+    }
     if (a.body && typeof a.body === "object") {
-      for (const [k, v] of Object.entries(a.body as Record<string, unknown>)) fd.append(k, String(v));
+      for (const [k, v] of Object.entries(a.body as Record<string, unknown>)) {
+        if (v === undefined || v === null) continue;
+        fd.append(k, typeof v === "object" ? JSON.stringify(v) : String(v));
+      }
     }
     // Más margen para las fotos: la petición despierta al backend en
     // Render (cold start ~30–60s) además de subir la imagen.
@@ -181,9 +195,9 @@ export async function procesar(): Promise<void> {
       if (a.fallida) continue;
       // La foto ya no está en el teléfono (el SO limpió el archivo antes
       // de que pudiéramos subirla) — reintentar no la trae de vuelta.
-      if (a.archivo && !fotoExiste(a.archivo.uri)) {
+      if (archivosDe(a).some((f) => !fotoExiste(f.uri))) {
         a.fallida = true;
-        a.ultimoError = "La foto ya no está en el teléfono — vuelve a sacarla desde el viaje";
+        a.ultimoError = "Una foto ya no está en el teléfono — vuelve a sacarla y a guardar";
         await persistir();
         continue;
       }
@@ -201,7 +215,7 @@ export async function procesar(): Promise<void> {
         if (res.ok || res.status === 409 || res.status === 404) {
           // 2xx = hecho. 409/404 = el servidor rechazó algo ya resuelto
           // (ej. OS ya finalizada) — no tiene sentido reintentar.
-          borrarFoto(a.archivo?.uri);
+          for (const f of archivosDe(a)) borrarFoto(f.uri);
           cola = cola.filter((x) => x.id !== a.id);
           reintentoIntento = 0; // algo salió: el backoff vuelve a empezar corto
           await persistir();
@@ -233,10 +247,10 @@ export async function procesar(): Promise<void> {
           a.intentos += 1;
           a.ultimoError = "El servidor no respondió a tiempo";
           if (a.intentos >= MAX_INTENTOS) a.fallida = true;
-        } else if (a.archivo && !fotoExiste(a.archivo.uri)) {
+        } else if (archivosDe(a).some((f) => !fotoExiste(f.uri))) {
           // El fetch no pudo leer el archivo — ya no está.
           a.fallida = true;
-          a.ultimoError = "La foto ya no está en el teléfono — vuelve a sacarla desde el viaje";
+          a.ultimoError = "Una foto ya no está en el teléfono — vuelve a sacarla y a guardar";
         } else {
           // Guardrail: dejamos el error real (no solo "Sin conexión") —
           // si esto vuelve a fallar, que se sepa por qué sin adivinar.
@@ -275,7 +289,7 @@ export async function reintentar(id: string): Promise<void> {
 export async function descartar(id: string): Promise<void> {
   await asegurarCargada();
   const a = cola.find((x) => x.id === id);
-  borrarFoto(a?.archivo?.uri);
+  if (a) for (const f of archivosDe(a)) borrarFoto(f.uri);
   cola = cola.filter((x) => x.id !== id);
   await persistir();
 }
@@ -284,7 +298,7 @@ export async function descartar(id: string): Promise<void> {
  * ya no necesita. */
 export async function descartarTodo(): Promise<void> {
   await asegurarCargada();
-  for (const a of cola) borrarFoto(a.archivo?.uri);
+  for (const a of cola) for (const f of archivosDe(a)) borrarFoto(f.uri);
   cola = [];
   cancelarAutoReintento();
   await persistir();

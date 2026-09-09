@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Pressable, ScrollView, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
-import { File } from "expo-file-system";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { Proveedor, RespuestaChecklistMantencion } from "@bitacora/shared";
 import { MANTENCION_EXIGE_FOTO_EN_NO } from "@bitacora/shared";
@@ -128,13 +127,8 @@ export function ChecklistMantencionScreen({ route, navigation }: NativeStackScre
       firma_base64 = await lienzo.current.capturar();
     }
 
-    let fotosPayload: { item: string | null; base64: string }[] = [];
-    try {
-      fotosPayload = await Promise.all(fotos.map(async (f) => ({ item: f.item, base64: await new File(f.uri).base64() })));
-    } catch {
-      fotosPayload = [];
-    }
-
+    // Las fotos van como archivos (uri), NO en base64 dentro del JSON —
+    // eso rompía express.json (100 kb) con un 413.
     const borrador: BorradorMantencion = {
       equipoId,
       tipo,
@@ -145,7 +139,7 @@ export function ChecklistMantencionScreen({ route, navigation }: NativeStackScre
       observaciones,
       proveedor_id: tipo === "programa" ? proveedorId : undefined,
       firma_base64,
-      fotos: fotosPayload,
+      fotos: fotos.map((f, i) => ({ item: f.item, uri: f.uri, name: `mantencion-${i}.jpg`, type: "image/jpeg" })),
     };
 
     const volver = () => navigation.navigate("MantencionVehiculo");
