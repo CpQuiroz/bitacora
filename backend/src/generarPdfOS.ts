@@ -11,7 +11,7 @@
 // Todo el layout sale de helpers genéricos de pdfEstilo.ts.
 // ============================================================
 import PDFDocument from "pdfkit";
-import { ANCHO, M_IZQ, PDF, abrirCaja, cajaGrilla, cajaLista, cerrarCaja, regla, tituloBarra, tituloSeccion } from "./pdfEstilo";
+import { ANCHO, M_DER, M_IZQ, PDF, abrirCaja, cajaGrilla, cajaLista, cerrarCaja, regla, tituloBarra, tituloSeccion } from "./pdfEstilo";
 
 export type ItemOSPdf = {
   descripcion: string;
@@ -106,12 +106,12 @@ export async function generarPdfOS(datos: DatosOSPdf): Promise<Buffer> {
       // logo corrupto o formato no soportado por pdfkit — se omite, no bloquea el PDF
     }
   }
-  doc.fontSize(16).font("Helvetica-Bold").fillColor(colorMarca).text(datos.empresaNombre, logoBuffer ? 120 : 50, 50);
+  doc.fontSize(15).font("Helvetica-Bold").fillColor(colorMarca).text(datos.empresaNombre, logoBuffer ? 120 : 50, 52, { width: 250 });
   doc
-    .fontSize(20)
+    .fontSize(17)
     .font("Helvetica-Bold")
     .fillColor(PDF.tinta)
-    .text(`Orden de Servicio N° ${datos.folio ?? "—"}`, 300, 50, { align: "right" });
+    .text(`Orden de Servicio N° ${datos.folio ?? "—"}`, 250, 54, { width: M_DER - 250, align: "right", lineBreak: false });
   regla(doc, 108, colorMarca, 2);
   doc.y = 120;
 
