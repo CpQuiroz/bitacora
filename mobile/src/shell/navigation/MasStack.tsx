@@ -12,6 +12,7 @@ import { PerfilScreen } from "../../features/perfil/PerfilScreen";
 import { CatalogoScreen } from "../../features/agenda/CatalogoScreen";
 import { MantencionVehiculoScreen } from "../../features/mantencion/MantencionVehiculoScreen";
 import { ChecklistMantencionScreen } from "../../features/mantencion/ChecklistMantencionScreen";
+import { MantencionHistorialScreen } from "../../features/mantencion/MantencionHistorialScreen";
 import { TrabajosStack } from "./TrabajosStack";
 import { ViajesStack } from "./ViajesStack";
 
@@ -33,6 +34,7 @@ export function MasStack() {
       <Stack.Screen name="Catalogo" component={CatalogoScreen} options={{ title: "Servicios y packs" }} />
       <Stack.Screen name="MantencionVehiculo" component={MantencionVehiculoScreen} options={{ title: "Mantención" }} />
       <Stack.Screen name="ChecklistMantencion" component={ChecklistMantencionScreen} options={{ title: "Mantención" }} />
+      <Stack.Screen name="MantencionHistorial" component={MantencionHistorialScreen} options={{ title: "Historial" }} />
       <Stack.Screen name="CobrosLista" component={CobrosListaScreen} options={{ title: "Cobros" }} />
       <Stack.Screen name="CobroForm" component={CobroFormScreen} options={{ title: "Nuevo cobro", presentation: "modal" }} />
       <Stack.Screen name="CobroDetalle" component={CobroDetalleScreen} options={{ title: "Cobro" }} />

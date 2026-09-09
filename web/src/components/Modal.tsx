@@ -14,12 +14,15 @@ export function Modal({
   title,
   children,
   wide,
+  xl,
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
   children: ReactNode;
   wide?: boolean;
+  // xl: para formularios largos (checklist de mantención). max-w-3xl.
+  xl?: boolean;
 }) {
   useEffect(() => {
     if (!open) return;
@@ -40,7 +43,7 @@ export function Modal({
         aria-modal="true"
         aria-label={title}
         className={`relative flex max-h-[85vh] w-full flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-lg ${
-          wide ? "max-w-2xl" : "max-w-lg"
+          xl ? "max-w-3xl" : wide ? "max-w-2xl" : "max-w-lg"
         }`}
       >
         <div className="flex shrink-0 items-center justify-between border-b border-border px-6 py-4">

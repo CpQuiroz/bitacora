@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import type { Equipo, OrdenServicio, PlanMantencion, Trabajo } from "@bitacora/shared";
@@ -9,6 +9,7 @@ import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, SuccessText, Textarea } from "@/components/ui";
+import { EstadoVacio } from "@/components/estados";
 import { IconChevronLeft, IconClipboardCheck, IconPlus, IconWrench } from "@/components/icons";
 import { RegistrosMantencion } from "./RegistrosMantencion";
 
@@ -19,15 +20,18 @@ type EquipoDetalle = Equipo & {
   historico_mantenciones: TrabajoConOrden[];
 };
 
+type Tab = "datos" | "plan" | "historico_os" | "mantencion";
+
 export default function EquipoDetallePage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const [usuario, setUsuario] = useState<UsuarioShell | null>(null);
-  const [modulosVisibles, setModulosVisibles] = useState<string[]>([]);
+  const [rol, setRol] = useState<string | null>(null);
   const [equipo, setEquipo] = useState<EquipoDetalle | null>(null);
   const [planes, setPlanes] = useState<PlanMantencion[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
+  const [tab, setTab] = useState<Tab>("datos");
 
   const [formPlanAbierto, setFormPlanAbierto] = useState(false);
   const [frecuenciaDias, setFrecuenciaDias] = useState("90");
@@ -50,8 +54,8 @@ export default function EquipoDetallePage() {
     if (resMe.ok) {
       const cuerpoMe = await resMe.json();
       const u = cuerpoMe.usuario;
-      if (Array.isArray(cuerpoMe.modulos_visibles)) setModulosVisibles(cuerpoMe.modulos_visibles);
-      if (u)
+      if (u) {
+        setRol(u.rol);
         setUsuario({
           nombre: u.nombre,
           rol: u.rol,
@@ -63,6 +67,7 @@ export default function EquipoDetallePage() {
           fuente: u.empresa?.fuente ?? null,
           moneda: u.empresa?.moneda ?? "CLP",
         });
+      }
     }
     if (!resEquipo.ok) {
       setError("No se pudo cargar el equipo");
@@ -75,6 +80,19 @@ export default function EquipoDetallePage() {
   useEffect(() => {
     cargar();
   }, [cargar]);
+
+  const esVehiculo = equipo?.categoria === "Vehículo";
+  const puedeGestionar = rol === "admin" || rol === "supervisor";
+
+  const tabs = useMemo<{ id: Tab; label: string }[]>(
+    () => [
+      { id: "datos", label: "Datos básicos" },
+      { id: "plan", label: "Plan de mantención" },
+      { id: "historico_os", label: "Histórico de OS" },
+      ...(esVehiculo ? ([{ id: "mantencion" as Tab, label: "Mantención" }]) : []),
+    ],
+    [esVehiculo]
+  );
 
   function abrirFormPlan() {
     setFrecuenciaDias("90");
@@ -137,152 +155,170 @@ export default function EquipoDetallePage() {
         action={<Badge value={equipo.activo ? "activo" : "inactivo"} />}
       />
 
-      <Card className="my-6">
-        <h2 className="mb-4 text-sm font-semibold text-foreground">Datos del equipo</h2>
-        <div className="grid gap-4 text-sm sm:grid-cols-3">
-          <div>
-            <p className="text-xs text-muted">Cliente</p>
-            <p className="text-foreground">{equipo.cliente?.nombre ?? "Propio de la empresa"}</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted">Categoría</p>
-            <p className="text-foreground">{equipo.categoria ?? "—"}</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted">N° de serie</p>
-            <p className="text-foreground">{equipo.numero_serie ?? "—"}</p>
-          </div>
-          {equipo.categoria === "Vehículo" && (
-            <>
-              <div>
-                <p className="text-xs text-muted">Patente</p>
-                <p className="text-foreground">{equipo.patente ?? "—"}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted">Asignado a</p>
-                <p className="text-foreground">{equipo.asignacion_vigente?.colaborador_nombre ?? "Sin asignar"}</p>
-              </div>
-            </>
-          )}
-          <div>
-            <p className="text-xs text-muted">Vencimiento de garantía</p>
-            <p className="text-foreground">{equipo.garantia_vencimiento ?? "—"}</p>
-          </div>
-        </div>
-        <p className="mt-4 text-xs text-muted">
-          Para editar estos datos, hacelo desde el{" "}
-          <Link href="/dashboard/registros/equipos" className="font-medium text-brand hover:underline">
-            listado de Equipos
-          </Link>
-          .
-        </p>
-      </Card>
-
       {aviso && (
-        <div className="mb-6">
+        <div className="mt-6">
           <SuccessText>{aviso}</SuccessText>
         </div>
       )}
 
-      <Card className="my-6">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-foreground">Plan de Mantención Preventiva</h2>
-          <Button type="button" variant="outline" onClick={() => (formPlanAbierto ? setFormPlanAbierto(false) : abrirFormPlan())}>
-            <IconPlus className="h-4 w-4" />
-            Nuevo plan
-          </Button>
-        </div>
+      <nav className="mt-6 flex gap-1 overflow-x-auto border-b border-border" aria-label="Secciones del equipo">
+        {tabs.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => setTab(t.id)}
+            aria-current={tab === t.id ? "page" : undefined}
+            className={`-mb-px whitespace-nowrap border-b-2 px-3.5 py-2.5 text-sm font-semibold transition-colors ${
+              tab === t.id
+                ? "border-brand text-brand"
+                : "border-transparent text-muted hover:text-foreground"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </nav>
 
-        {/* TODO: decisión pendiente — generar automáticamente una OS
-            cuando proxima_fecha se cumple. Hoy es solo CRUD del plan;
-            requiere definir con qué datos se arma esa OS (responsable,
-            tipo de servicio, etc.) antes de automatizarlo. */}
-
-        {formPlanAbierto && (
-          <form onSubmit={onCrearPlan} className="mb-4 flex flex-col gap-3 rounded-lg border border-border p-3">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div>
-                <Label>Frecuencia (días)</Label>
-                <Input type="number" min="1" required value={frecuenciaDias} onChange={(e) => setFrecuenciaDias(e.target.value)} />
-              </div>
-              <div>
-                <Label>Próxima fecha</Label>
-                <Input type="date" required value={proximaFecha} onChange={(e) => setProximaFecha(e.target.value)} />
-              </div>
+      {tab === "datos" && (
+        <Card className="mt-6">
+          <h2 className="mb-4 text-sm font-semibold text-foreground">Datos del equipo</h2>
+          <div className="grid gap-4 text-sm sm:grid-cols-3">
+            <div>
+              <p className="text-xs text-muted">Cliente</p>
+              <p className="text-foreground">{equipo.cliente?.nombre ?? "Propio de la empresa"}</p>
             </div>
             <div>
-              <Label>Notas (opcional)</Label>
-              <Textarea rows={2} value={notasPlan} onChange={(e) => setNotasPlan(e.target.value)} />
+              <p className="text-xs text-muted">Categoría</p>
+              <p className="text-foreground">{equipo.categoria ?? "—"}</p>
             </div>
-            {errorPlan && <ErrorText>{errorPlan}</ErrorText>}
-            <Button type="submit" disabled={guardandoPlan} className="self-start">
-              {guardandoPlan ? "Guardando…" : "Crear plan"}
-            </Button>
-          </form>
-        )}
-
-        {planes.length === 0 ? (
-          <p className="text-sm text-muted">Sin plan de mantención registrado.</p>
-        ) : (
-          <div className="flex flex-col divide-y divide-border">
-            {planes.map((p) => (
-              <div key={p.id} className="flex items-center justify-between py-2.5 text-sm">
+            <div>
+              <p className="text-xs text-muted">N° de serie</p>
+              <p className="text-foreground">{equipo.numero_serie ?? "—"}</p>
+            </div>
+            {esVehiculo && (
+              <>
                 <div>
-                  <p className="font-medium text-foreground">
-                    Cada {p.frecuencia_dias} días — próxima: {p.proxima_fecha}
-                  </p>
-                  {p.notas && <p className="text-xs text-muted">{p.notas}</p>}
+                  <p className="text-xs text-muted">Patente</p>
+                  <p className="font-mono text-foreground">{equipo.patente ?? "—"}</p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Badge value={p.activo ? "activo" : "inactivo"} />
-                  <Button type="button" variant="ghost" onClick={() => onAlternarPlan(p)}>
-                    {p.activo ? "Desactivar" : "Activar"}
-                  </Button>
-                  <Button type="button" variant="ghost" onClick={() => onEliminarPlan(p)}>
-                    Eliminar
-                  </Button>
+                <div>
+                  <p className="text-xs text-muted">Asignado a</p>
+                  <p className="text-foreground">{equipo.asignacion_vigente?.colaborador_nombre ?? "Sin asignar"}</p>
                 </div>
-              </div>
-            ))}
+              </>
+            )}
+            <div>
+              <p className="text-xs text-muted">Vencimiento de garantía</p>
+              <p className="font-mono text-foreground">{equipo.garantia_vencimiento ?? "—"}</p>
+            </div>
           </div>
-        )}
-      </Card>
-
-      {equipo.categoria === "Vehículo" && (
-        <RegistrosMantencion equipo={equipo} puedeGestionar={modulosVisibles.includes("flota")} />
+          <p className="mt-4 text-xs text-muted">
+            Para editar estos datos, hacelo desde el{" "}
+            <Link href="/dashboard/registros/equipos" className="font-medium text-brand hover:underline">
+              listado de Equipos
+            </Link>
+            .
+          </p>
+        </Card>
       )}
 
-      <Card className="my-6">
-        <h2 className="mb-4 text-sm font-semibold text-foreground">Histórico de Mantenciones</h2>
-        {equipo.historico_mantenciones.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 py-8 text-center">
-            <IconWrench className="h-6 w-6 text-muted" />
-            <p className="text-sm text-muted">Sin órdenes de servicio asociadas a este equipo todavía.</p>
+      {tab === "plan" && (
+        <Card className="mt-6">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-foreground">Plan de Mantención Preventiva</h2>
+            <Button type="button" variant="outline" onClick={() => (formPlanAbierto ? setFormPlanAbierto(false) : abrirFormPlan())}>
+              <IconPlus className="h-4 w-4" />
+              Nuevo plan
+            </Button>
           </div>
-        ) : (
-          <div className="flex flex-col divide-y divide-border">
-            {equipo.historico_mantenciones.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => router.push(`/dashboard/ordenes/${t.id}`)}
-                className="flex items-center justify-between py-2.5 text-left text-sm hover:text-brand"
-              >
-                <div className="flex items-center gap-2">
-                  <IconClipboardCheck className="h-3.5 w-3.5 shrink-0 text-muted" />
+
+          {formPlanAbierto && (
+            <form onSubmit={onCrearPlan} className="mb-4 flex flex-col gap-3 rounded-lg border border-border p-3">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <Label>Frecuencia (días)</Label>
+                  <Input type="number" min="1" required value={frecuenciaDias} onChange={(e) => setFrecuenciaDias(e.target.value)} />
+                </div>
+                <div>
+                  <Label>Próxima fecha</Label>
+                  <Input type="date" required value={proximaFecha} onChange={(e) => setProximaFecha(e.target.value)} />
+                </div>
+              </div>
+              <div>
+                <Label>Notas (opcional)</Label>
+                <Textarea rows={2} value={notasPlan} onChange={(e) => setNotasPlan(e.target.value)} />
+              </div>
+              {errorPlan && <ErrorText>{errorPlan}</ErrorText>}
+              <Button type="submit" disabled={guardandoPlan} className="self-start">
+                {guardandoPlan ? "Guardando…" : "Crear plan"}
+              </Button>
+            </form>
+          )}
+
+          {planes.length === 0 ? (
+            <p className="text-sm text-muted">Sin plan de mantención registrado.</p>
+          ) : (
+            <div className="flex flex-col divide-y divide-border">
+              {planes.map((p) => (
+                <div key={p.id} className="flex items-center justify-between py-2.5 text-sm">
                   <div>
                     <p className="font-medium text-foreground">
-                      {t.orden?.folio != null ? `OS N° ${t.orden.folio}` : t.descripcion || "Sin folio"}
+                      Cada {p.frecuencia_dias} días — próxima: <span className="font-mono">{p.proxima_fecha}</span>
                     </p>
-                    <p className="text-xs text-muted">{t.fecha}</p>
+                    {p.notas && <p className="text-xs text-muted">{p.notas}</p>}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge value={p.activo ? "activo" : "inactivo"} />
+                    <Button type="button" variant="ghost" onClick={() => onAlternarPlan(p)}>
+                      {p.activo ? "Desactivar" : "Activar"}
+                    </Button>
+                    <Button type="button" variant="ghost" onClick={() => onEliminarPlan(p)}>
+                      Eliminar
+                    </Button>
                   </div>
                 </div>
-                <Badge value={t.orden?.estado_os ?? estadoOsDeTrabajo(t.estado)} />
-              </button>
-            ))}
-          </div>
-        )}
-      </Card>
+              ))}
+            </div>
+          )}
+        </Card>
+      )}
+
+      {tab === "historico_os" && (
+        <Card className="mt-6">
+          <h2 className="mb-4 text-sm font-semibold text-foreground">Histórico de OS</h2>
+          {equipo.historico_mantenciones.length === 0 ? (
+            <EstadoVacio icono={IconWrench} titulo="Sin órdenes de servicio asociadas a este equipo todavía" />
+          ) : (
+            <div className="flex flex-col divide-y divide-border">
+              {equipo.historico_mantenciones.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => router.push(`/dashboard/ordenes/${t.id}`)}
+                  className="flex items-center justify-between py-2.5 text-left text-sm hover:text-brand"
+                >
+                  <div className="flex items-center gap-2">
+                    <IconClipboardCheck className="h-3.5 w-3.5 shrink-0 text-muted" />
+                    <div>
+                      <p className="font-medium text-foreground">
+                        {t.orden?.folio != null ? `OS N° ${t.orden.folio}` : t.descripcion || "Sin folio"}
+                      </p>
+                      <p className="font-mono text-xs text-muted">{t.fecha}</p>
+                    </div>
+                  </div>
+                  <Badge value={t.orden?.estado_os ?? estadoOsDeTrabajo(t.estado)} />
+                </button>
+              ))}
+            </div>
+          )}
+        </Card>
+      )}
+
+      {tab === "mantencion" && esVehiculo && (
+        <div className="mt-6">
+          <RegistrosMantencion equipo={equipo} puedeGestionar={puedeGestionar} />
+        </div>
+      )}
     </DashboardShell>
   );
 }
