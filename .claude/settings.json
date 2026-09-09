@@ -1,0 +1,16 @@
+{
+  "_comment": "Config compartida del arnés (committeada). Preferencias personales (allowlist de permisos, etc.) en .claude/settings.local.json (gitignored).",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh -c 'git diff --quiet HEAD -- backend web packages mobile supabase/migrations 2>/dev/null && exit 0; ./verificar.sh > /tmp/harness_verificar.log 2>&1 && echo \"[harness] verificar.sh OK\" || { echo \"[harness] verificar.sh FALLO -- revisa /tmp/harness_verificar.log antes de cerrar\"; tail -25 /tmp/harness_verificar.log; }'",
+            "description": "Al cerrar la sesion, si hay cambios de codigo vs HEAD, corre verificar.sh."
+          }
+        ]
+      }
+    ]
+  }
+}

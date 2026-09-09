@@ -1,0 +1,60 @@
+# Instrucciones para Claude — bitacora
+
+> Se carga automáticamente al inicio de cada sesión desde la raíz.
+
+Primero: leé **`AGENTS.md`** (mapa del repo). Este archivo solo define *cómo*
+trabajás; `AGENTS.md` define *qué* hay y *dónde*.
+
+---
+
+## Modelo de operación: HÍBRIDO
+
+### Disciplina — siempre activa, sin excepción
+
+1. Al empezar una tarea de código: leé `progress/current.md` y
+   `trabajo_list.json`. Corré `./verificar.sh`.
+2. **Una tarea a la vez.** Marcala `in_progress` en `trabajo_list.json`
+   antes de tocar código.
+3. Actualizá `progress/current.md` **mientras** trabajás — plan, decisiones,
+   bloqueos. No al final.
+4. Antes de declarar algo terminado: `./verificar.sh` en **verde**.
+5. Commit de respaldo por cada cambio grande verificado, sin pedir permiso
+   para esos commits de backup (nada de force-push / reset --hard / amend
+   sin confirmación). Detalle en `docs/harness/convenciones.md`.
+6. Al cerrar: resumen a `progress/history.md`, vaciá `progress/current.md`.
+
+### Orquestación — bajo demanda
+
+Lanzá los subagentes `lider / implementador / revisor` de `.claude/agents/`
+**solo** cuando:
+- el humano lo pida ("orquestá esto", "usá subagentes", "modo líder"), o
+- la tarea sea grande y multi-archivo (feature de punta a punta, refactor)
+  y convenga aislar contexto y tener un revisor independiente.
+
+Para preguntas, exploración del repo, o cambios en `docs/` / `progress/` /
+config: respondé y editá vos directamente, sin subagentes.
+
+Cuando SÍ orquestes, aplicá la **regla anti-teléfono-descompuesto**: los
+subagentes escriben en `progress/{explore,impl,review}_<tema>.md` y te
+devuelven solo la referencia (`done -> progress/impl_<tarea>.md`), nunca el
+código por chat.
+
+---
+
+## Reglas duras del proyecto
+
+Las canónicas están en `AGENTS.md` §3. Recordatorio de las que más se pisan:
+
+- **Multi-tenant:** filtrá por `empresa_id`; `enable row level security` en
+  toda tabla nueva.
+- **Prod DB:** solo lecturas; las migraciones a prod las corre el humano.
+- **web/ y mobile/** tienen su propio `AGENTS.md` con avisos de framework
+  (Next 16, Expo 57) — leelos antes de tocar esas carpetas.
+- **EAS builds** solo a pedido; bump de versión en `mobile/app.json`.
+- **Deploy** = push a `main` (Vercel + Render auto).
+
+## Memoria
+
+Hay memoria persistente del proyecto (`~/.claude/projects/.../memory/`). Si
+una memoria contradice a `AGENTS.md` o `docs/harness/`, ganan estos últimos
+(están versionados y son la fuente de verdad); avisá de la discrepancia.

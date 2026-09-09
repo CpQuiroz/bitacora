@@ -1,0 +1,87 @@
+{
+  "proyecto": "bitacora",
+  "descripcion": "SaaS multi-tenant de terreno para PYMEs de transporte/mantención (Chile). Monorepo: web (Next 16), backend (Express/tsx/Supabase), packages/shared, mobile (Expo SDK 57).",
+  "reglas": {
+    "una_tarea_a_la_vez": true,
+    "verificacion_para_cerrar": true,
+    "comando_verificar": "./verificar.sh",
+    "estados_validos": ["pending", "in_progress", "done", "blocked"]
+  },
+  "tareas": [
+    {
+      "id": 1,
+      "name": "eslint_web_next16",
+      "title": "Arreglar eslint en web (Next 16)",
+      "description": "`npm run lint -w web` falla: Cannot find module 'next/dist/compiled/babel/eslint-parser'. eslint-config-next no resuelve bien en el monorepo con Next 16. verificar.sh lo marca WARN hoy.",
+      "acceptance": [
+        "`npm run lint -w web` termina con exit 0",
+        "verificar.sh paso 6 pasa a [OK] sin el WARN especial",
+        "No se bajó la severidad de reglas para 'lograrlo' — o se documenta por qué"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": 2,
+      "name": "ci_verificar",
+      "title": "Workflow de CI que corre verificar.sh en cada push/PR",
+      "description": "Hoy CI solo tiene keep-warm y check-migraciones-prod. Falta un workflow que corra ./verificar.sh (tsc de los 4 paquetes + tests de shared + audit:tenant) en push a main y en PRs.",
+      "acceptance": [
+        "Existe .github/workflows/verificar.yml",
+        "Corre en push a main y en pull_request",
+        "Usa la misma lógica que ./verificar.sh (idealmente lo invoca directo)",
+        "Pasa en verde sobre el estado actual de main"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": 3,
+      "name": "rotar_deploy_hook_render",
+      "title": "Rotar la key del deploy hook de Render expuesta",
+      "description": "La key del deploy hook de Render (srv-daatkjf10e5c73cnrb30) quedó en historial/notas. Regenerar en Render → Settings → Deploy Hook y actualizar donde se use.",
+      "acceptance": [
+        "Key vieja revocada (deja de funcionar)",
+        "Key nueva guardada donde corresponde (no en el repo)",
+        "Documentado en docs/PUESTA_EN_PRODUCCION.md que la key se pide al humano"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": 4,
+      "name": "smoke_backend",
+      "title": "Smoke test de arranque del backend + 2-3 endpoints críticos",
+      "description": "El backend no tiene tests. Un smoke con node:test/tsx: levanta el server (o importa el app de express), y prueba /health, un endpoint autenticado con 401, y uno feliz con token de dev.",
+      "acceptance": [
+        "backend/package.json tiene script `test`",
+        "El smoke arranca el app real, no mockea express",
+        "Cubre: /health 200, ruta protegida sin token 401, una ruta feliz",
+        "verificar.sh paso 5 corre también el runner de backend"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": 5,
+      "name": "e2e_mantencion_pdf_prod",
+      "title": "E2E en prod: Mantención de flota + rediseño de PDF de OS",
+      "description": "Verificar en producción (Transportes Itineris) el módulo Mantención de flota y los PDFs rediseñados (OS Fase 1+2, Informe IA). Cerrar OS nueva con fotos por categoría y firma del técnico.",
+      "acceptance": [
+        "Registro de mantención creado en prod con foto, PDF generado OK",
+        "OS nueva cerrada en prod: fotos agrupadas por categoría + 2 bloques de firma en el PDF",
+        "Informe IA de negocio genera PDF con el formato nuevo",
+        "Hallazgos anotados en progress/history.md"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": 6,
+      "name": "regenerar_contexto_proyecto",
+      "title": "Regenerar CONTEXTO_PROYECTO.md",
+      "description": "CONTEXTO_PROYECTO.md alimenta el Project de claude.ai (sin acceso a código). Está desactualizado respecto de la nav nueva, Mantención de flota, Fase 2 PDF, etc.",
+      "acceptance": [
+        "Refleja la navegación actual (7 grupos web / 4 pestañas móvil)",
+        "Incluye Mantención de flota y el estado de los PDFs",
+        "Números de migración y versiones al día"
+      ],
+      "status": "pending"
+    }
+  ]
+}
