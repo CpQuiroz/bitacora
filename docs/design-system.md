@@ -64,9 +64,23 @@ fuera del paquete de tokens. Baseline actual **19** (literales de pantallas
 Faena que se van con la migración). Exentos con motivo en
 `scripts/colores-permitidos.json` (paletas de datos, previews de PDF, SVG).
 
-## Tipografía (Paso 3 — pendiente)
+## Tipografía (Paso 3 — hecho)
 
-Headings + CTA grandes: **Caprasimo** 400. Resto de la UI: **Figtree** 15px.
+- **Caprasimo** 400 — voz display: SOLO titulares y botones grandes (`size lg`),
+  nunca párrafos. `line-height 1.12`, `letter-spacing -0.015em`.
+- **Figtree** — toda la UI. 15px base, `line-height 1.55`. Pesos 400/500/600/700.
+- **Web:** `next/font/google` self-hosted, `display: swap`, en `layout.tsx`
+  como `--font-caprasimo` / `--font-figtree`. `tokens.css` los referencia en
+  `--font-ds-heading` / `--font-ds-body` (con el literal de fallback).
+  Utilidades: `font-ds-heading` / `font-ds-body`, más `ds-heading` (familia +
+  peso + leading + tracking) y `ds-body` (familia + 15px + leading), a
+  combinar con `text-ds-h1…h5`. IBM Plex (Faena) sigue cargado hasta que
+  migren todas las pantallas.
+- **Mobile:** `@expo-google-fonts/caprasimo` + `.../figtree`, precargadas en
+  `App.tsx` con `useFonts({ ...fuentesFaena, ...fuentesDS })` — nada se pinta
+  hasta que están listas, sin salto de fuente. `useTema().ds.font` =
+  `{ heading, body, bodyMedium, bodySemiBold, bodyBold }` (nombres RN).
+  `ds.headingLeading` (1.12) y `ds.headingTracking` (-0.015).
 
 ## Estado de la migración
 
@@ -75,7 +89,7 @@ Headings + CTA grandes: **Caprasimo** 400. Resto de la UI: **Figtree** 15px.
 | 0 — Auditoría | ✅ `docs/design-audit.md` |
 | 1 — `packages/design-tokens` | ✅ paquete + generadores + consumo web/mobile (namespace `ds-`) |
 | 2 — Marca por tenant | ✅ `--ds-brand` en shell web + `tema.ds.marca` en mobile + derivación OKLCH + check anti-hex |
-| 3 — Tipografía | ⬜ |
+| 3 — Tipografía | ✅ Caprasimo + Figtree self-hosted (next/font + expo-font), `ds-heading`/`ds-body`, precarga sin salto |
 | 4 — `packages/ui` (primitivas) | ⬜ |
 | 5 — Reglas transversales | ⬜ |
 | 6 — Migración pantalla por pantalla | ⬜ |

@@ -34,8 +34,10 @@ export type Tokens = {
 
 const AVISO = "/* GENERADO por packages/design-tokens/src/build.ts — no editar a mano */";
 
-const stackHeading = `"${tokens.font.heading}", "Figtree", ui-sans-serif, system-ui, sans-serif`;
-const stackBody = `"${tokens.font.body}", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`;
+// Web: la familia real la carga next/font y la publica en --font-caprasimo /
+// --font-figtree (ver web/src/app/layout.tsx). El literal queda de fallback.
+const stackHeading = `var(--font-caprasimo), "${tokens.font.heading}", ui-sans-serif, system-ui, sans-serif`;
+const stackBody = `var(--font-figtree), "${tokens.font.body}", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`;
 
 // ── tokens.css (web / Tailwind v4) ─────────────────────────────────
 function rampCss(prefijo: string, ramp: Ramp): string {
@@ -108,6 +110,22 @@ ${rampCss("accent2", tokens.color.accent2Ramp)}
 
   --font-ds-heading-weight: ${tokens.font.headingWeight};
 }
+
+/* Voz display (Caprasimo): SOLO titulares y botones grandes, nunca
+   párrafos. Combinar con text-ds-h1…h5 para el tamaño. */
+@utility ds-heading {
+  font-family: var(--font-ds-heading);
+  font-weight: ${tokens.font.headingWeight};
+  line-height: 1.12;
+  letter-spacing: -0.015em;
+}
+
+/* Base de cuerpo (Figtree). */
+@utility ds-body {
+  font-family: var(--font-ds-body);
+  font-size: ${tokens.size.body}px;
+  line-height: 1.55;
+}
 `;
 
 writeFileSync(join(RAIZ, "tokens.css"), css);
@@ -120,8 +138,12 @@ export const tokens = ${JSON.stringify(tokens, null, 2)} as const;
 
 export type Tokens = typeof tokens;
 
-/** Familia con fallback, lista para \`fontFamily\` de RN o CSS. */
-export const fontStack = {
+/**
+ * Stack de fuentes para CSS (web). Usa var(--font-caprasimo) /
+ * var(--font-figtree) que publica next/font. En RN NO sirve (fontFamily
+ * necesita un solo nombre) — mobile usa mobile/src/theme/fuentes.ts.
+ */
+export const fontStackCss = {
   heading: ${JSON.stringify(stackHeading)},
   body: ${JSON.stringify(stackBody)},
 } as const;

@@ -1,8 +1,8 @@
 import { createContext, useContext, useMemo, type ReactNode } from "react";
 import type { Empresa } from "@bitacora/shared";
-import { tokens as dsTokens, fontStack } from "@bitacora/design-tokens";
+import { tokens as dsTokens } from "@bitacora/design-tokens";
 import { duracion, espacio, estado, paletaBase, radio, sombra, tipografia, type Paleta } from "./tokens";
-import { NOMBRE_FUENTE } from "./fuentes";
+import { FUENTE_DS, NOMBRE_FUENTE } from "./fuentes";
 import { contraste, esHexValido, oscurecerOklch } from "./color";
 
 /** Marca del tenant, ya resuelta (base + estados derivados en OKLCH). */
@@ -25,7 +25,11 @@ export type SistemaDiseno = {
   space: typeof dsTokens.space;
   radius: typeof dsTokens.radius;
   shadow: typeof dsTokens.shadow;
-  font: typeof fontStack;
+  /** Nombres de familia RN (registradas en fuentes.ts). */
+  font: typeof FUENTE_DS;
+  /** line-height y tracking de titulares (Caprasimo). */
+  headingLeading: number;
+  headingTracking: number;
 };
 
 export type Tema = {
@@ -85,7 +89,11 @@ function construirTema(marca: MarcaEmpresa): Tema {
       space: dsTokens.space,
       radius: dsTokens.radius,
       shadow: dsTokens.shadow,
-      font: fontStack,
+      font: FUENTE_DS,
+      // Prompt: headings line-height 1.12, letter-spacing -0.015em.
+      // En RN el tracking es absoluto (px), no em → ~ -0.015 * cuerpo.
+      headingLeading: 1.12,
+      headingTracking: -0.015,
     },
   };
 }

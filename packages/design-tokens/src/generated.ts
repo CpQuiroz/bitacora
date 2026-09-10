@@ -82,8 +82,12 @@ export const tokens = {
 
 export type Tokens = typeof tokens;
 
-/** Familia con fallback, lista para `fontFamily` de RN o CSS. */
-export const fontStack = {
-  heading: "\"Caprasimo\", \"Figtree\", ui-sans-serif, system-ui, sans-serif",
-  body: "\"Figtree\", ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+/**
+ * Stack de fuentes para CSS (web). Usa var(--font-caprasimo) /
+ * var(--font-figtree) que publica next/font. En RN NO sirve (fontFamily
+ * necesita un solo nombre) — mobile usa mobile/src/theme/fuentes.ts.
+ */
+export const fontStackCss = {
+  heading: "var(--font-caprasimo), \"Caprasimo\", ui-sans-serif, system-ui, sans-serif",
+  body: "var(--font-figtree), \"Figtree\", ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
 } as const;

@@ -7,5 +7,5 @@
  * Los valores viven en tokens.json; `src/generated.ts` y `tokens.css`
  * se regeneran con `npm run gen -w packages/design-tokens`.
  */
-export { tokens, fontStack, type Tokens } from "./generated";
+export { tokens, fontStackCss, type Tokens } from "./generated";
 export { oscurecerOklch } from "./oklch";

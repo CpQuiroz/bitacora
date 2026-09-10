@@ -46,8 +46,8 @@
   --color-ds-brand-pressed: var(--ds-brand-pressed);
   --color-ds-brand-foreground: var(--ds-brand-foreground);
 
-  --font-ds-heading: "Caprasimo", "Figtree", ui-sans-serif, system-ui, sans-serif;
-  --font-ds-body: "Figtree", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-ds-heading: var(--font-caprasimo), "Caprasimo", ui-sans-serif, system-ui, sans-serif;
+  --font-ds-body: var(--font-figtree), "Figtree", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 
   --text-ds-h1: 42px;
   --text-ds-h2: 32px;
@@ -87,4 +87,20 @@
   --ds-brand-foreground: #ffffff;
 
   --font-ds-heading-weight: 400;
+}
+
+/* Voz display (Caprasimo): SOLO titulares y botones grandes, nunca
+   párrafos. Combinar con text-ds-h1…h5 para el tamaño. */
+@utility ds-heading {
+  font-family: var(--font-ds-heading);
+  font-weight: 400;
+  line-height: 1.12;
+  letter-spacing: -0.015em;
+}
+
+/* Base de cuerpo (Figtree). */
+@utility ds-body {
+  font-family: var(--font-ds-body);
+  font-size: 15px;
+  line-height: 1.55;
 }

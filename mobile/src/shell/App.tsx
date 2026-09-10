@@ -5,7 +5,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AuthProvider, useAuth } from "../features/auth/AuthContext";
 import { NetworkProvider } from "../services/sync/NetworkProvider";
 import { useEffect } from "react";
-import { ThemeProvider, fuentesFaena } from "../theme";
+import { ThemeProvider, fuentesFaena, fuentesDS } from "../theme";
 import { cargarPreferencias } from "../lib/preferencias";
 import { RootNavigator } from "./navigation/RootNavigator";
 import { BloqueoBiometrico } from "./BloqueoBiometrico";
@@ -34,10 +34,10 @@ function ConTema({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  // IBM Plex Sans + Mono (tema "Faena"). Mientras cargan no se pinta
-  // nada (mismo criterio que el splash nativo de Expo, sin agregar
-  // expo-splash-screen).
-  const [fuentesListas, errorFuentes] = useFonts(fuentesFaena);
+  // Faena (IBM Plex) + sistema nuevo (Caprasimo/Figtree). Mientras cargan
+  // no se pinta nada (mismo criterio que el splash nativo de Expo, sin
+  // agregar expo-splash-screen) → sin salto de fuente.
+  const [fuentesListas, errorFuentes] = useFonts({ ...fuentesFaena, ...fuentesDS });
 
   useEffect(() => {
     void cargarPreferencias();

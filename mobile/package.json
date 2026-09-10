@@ -5,6 +5,8 @@
   "dependencies": {
     "@bitacora/design-tokens": "*",
     "@bitacora/shared": "*",
+    "@expo-google-fonts/caprasimo": "^0.4.0",
+    "@expo-google-fonts/figtree": "^0.4.1",
     "@expo-google-fonts/ibm-plex-mono": "^0.4.1",
     "@expo-google-fonts/ibm-plex-sans": "^0.4.1",
     "@expo/vector-icons": "^15.0.0",
