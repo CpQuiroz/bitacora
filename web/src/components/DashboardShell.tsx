@@ -305,10 +305,20 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
     // solo sobreescribir la variable no alcanza porque <body> ya resolvió
     // la suya con el valor de :root, más arriba en el árbol.
     fontFamily: "var(--font-sans)",
-    // Refresco 1a — el color de la empresa pasa a --accent: la identidad
-    // Bitácora (--brand) ya no se reemplaza por tenant. El logo sí se
-    // mantiene. Ver GUIA-REFRESCO-1a paso 6.
-    ...(usuario.colorPrimario ? { "--accent": usuario.colorPrimario } : {}),
+    // Color de la empresa:
+    // · --accent  → sistema viejo "Faena" (en migración, se retira con él).
+    // · --ds-brand → sistema nuevo. Pisa el fallback de tokens.css; los
+    //   derivados --ds-brand-hover/pressed se recalculan solos en OKLCH
+    //   dentro de este scope porque referencian var(--ds-brand).
+    ...(usuario.colorPrimario
+      ? {
+          "--accent": usuario.colorPrimario,
+          "--ds-brand": usuario.colorPrimario,
+          ...(usuario.colorPrimarioForeground
+            ? { "--ds-brand-foreground": usuario.colorPrimarioForeground }
+            : {}),
+        }
+      : {}),
     ...(usuario.fuente && usuario.fuente !== "sistema" ? { "--font-sans": fuenteInfo.pila } : {}),
   } as CSSProperties;
 

@@ -47,3 +47,7 @@ export function contraste(fondo: string): string {
 export function esHexValido(valor: string | null | undefined): valor is string {
   return typeof valor === "string" && /^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(valor.trim());
 }
+
+// La derivación de marca en OKLab vive en el paquete de tokens (JS puro,
+// probada allí). Se re-exporta para no duplicar las matrices.
+export { oscurecerOklch } from "@bitacora/design-tokens";

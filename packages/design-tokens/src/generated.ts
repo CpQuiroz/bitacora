@@ -1,4 +1,4 @@
-// GENERADO por packages/design-tokens/src/build.ts — no editar a mano 
+// GENERADO por packages/design-tokens/src/build.ts — no editar a mano
 // Fuente de verdad: packages/design-tokens/tokens.json
 
 export const tokens = {

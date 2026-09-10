@@ -1,10 +1,17 @@
 /**
  * Generador de artefactos de tokens. Fuente de verdad: ../tokens.json.
  * Corre con `npm run gen` (tsx). Emite:
- *   - ../tokens.css        → custom properties + @theme para Tailwind v4 (web)
+ *   - ../tokens.css        → @theme (Tailwind v4) con namespace `ds-` + :root
  *   - ./generated.ts       → objeto tipado `as const` (Expo / RN / TS)
  *
  * NO editar tokens.css ni generated.ts a mano: se pisan en cada build.
+ *
+ * ── Por qué el namespace `ds-` ──────────────────────────────────────
+ * Durante la migración (Paso 6) el sistema viejo "Faena" y este conviven
+ * en el mismo `@theme` de Tailwind. Faena ya ocupa --color-surface,
+ * --color-accent y --radius-sm/md/lg con otros valores. Para no pisarlos,
+ * los tokens nuevos salen como bg-ds-bg / rounded-ds-lg / text-ds-h1 /
+ * font-ds-heading. Cuando Faena se retire, un sweep quita el prefijo.
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -12,7 +19,6 @@ import { join } from "node:path";
 const RAIZ = join(__dirname, "..");
 const tokens = JSON.parse(readFileSync(join(RAIZ, "tokens.json"), "utf8")) as Tokens;
 
-// ── Tipos (deben reflejar tokens.json) ──────────────────────────────
 type Ramp = Record<"100" | "200" | "300" | "400" | "500" | "600" | "700" | "800" | "900", string>;
 export type Tokens = {
   color: {
@@ -28,23 +34,23 @@ export type Tokens = {
 
 const AVISO = "/* GENERADO por packages/design-tokens/src/build.ts — no editar a mano */";
 
-// ── tokens.css (web / Tailwind v4) ─────────────────────────────────
-function rampCss(prefijo: string, ramp: Ramp): string {
-  return (Object.keys(ramp) as (keyof Ramp)[]).map((k) => `  --color-${prefijo}-${k}: ${ramp[k]};`).join("\n");
-}
-
 const stackHeading = `"${tokens.font.heading}", "Figtree", ui-sans-serif, system-ui, sans-serif`;
 const stackBody = `"${tokens.font.body}", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`;
+
+// ── tokens.css (web / Tailwind v4) ─────────────────────────────────
+function rampCss(prefijo: string, ramp: Ramp): string {
+  return (Object.keys(ramp) as (keyof Ramp)[]).map((k) => `  --color-ds-${prefijo}-${k}: ${ramp[k]};`).join("\n");
+}
 
 const css = `${AVISO}
 
 @theme {
-  --color-bg: ${tokens.color.bg};
-  --color-surface: ${tokens.color.surface};
-  --color-text: ${tokens.color.text};
-  --color-accent: ${tokens.color.accent};
-  --color-accent2: ${tokens.color.accent2};
-  --color-divider: ${tokens.color.divider};
+  --color-ds-bg: ${tokens.color.bg};
+  --color-ds-surface: ${tokens.color.surface};
+  --color-ds-text: ${tokens.color.text};
+  --color-ds-accent: ${tokens.color.accent};
+  --color-ds-accent2: ${tokens.color.accent2};
+  --color-ds-divider: ${tokens.color.divider};
 
 ${rampCss("neutral", tokens.color.neutral)}
 
@@ -52,46 +58,62 @@ ${rampCss("accent", tokens.color.accentRamp)}
 
 ${rampCss("accent2", tokens.color.accent2Ramp)}
 
-  --font-heading: ${stackHeading};
-  --font-body: ${stackBody};
+  /* Marca del tenant. --ds-brand se define abajo en :root (fallback) y lo
+     pisan los shells por empresa. hover/pressed se derivan solos en OKLCH
+     porque referencian var(--ds-brand) en el punto de uso. */
+  --color-ds-brand: var(--ds-brand);
+  --color-ds-brand-hover: var(--ds-brand-hover);
+  --color-ds-brand-pressed: var(--ds-brand-pressed);
+  --color-ds-brand-foreground: var(--ds-brand-foreground);
 
-  --text-h1: ${tokens.size.h1}px;
-  --text-h2: ${tokens.size.h2}px;
-  --text-h3: ${tokens.size.h3}px;
-  --text-h4: ${tokens.size.h4}px;
-  --text-h5: ${tokens.size.h5}px;
-  --text-body: ${tokens.size.body}px;
-  --text-small: ${tokens.size.small}px;
-  --text-caption: ${tokens.size.caption}px;
-  --text-micro: ${tokens.size.micro}px;
+  --font-ds-heading: ${stackHeading};
+  --font-ds-body: ${stackBody};
 
-  --spacing-1: ${tokens.space["1"]}px;
-  --spacing-2: ${tokens.space["2"]}px;
-  --spacing-3: ${tokens.space["3"]}px;
-  --spacing-4: ${tokens.space["4"]}px;
-  --spacing-6: ${tokens.space["6"]}px;
-  --spacing-8: ${tokens.space["8"]}px;
+  --text-ds-h1: ${tokens.size.h1}px;
+  --text-ds-h2: ${tokens.size.h2}px;
+  --text-ds-h3: ${tokens.size.h3}px;
+  --text-ds-h4: ${tokens.size.h4}px;
+  --text-ds-h5: ${tokens.size.h5}px;
+  --text-ds-body: ${tokens.size.body}px;
+  --text-ds-small: ${tokens.size.small}px;
+  --text-ds-caption: ${tokens.size.caption}px;
+  --text-ds-micro: ${tokens.size.micro}px;
 
-  --radius-sm: ${tokens.radius.sm}px;
-  --radius-md: ${tokens.radius.md}px;
-  --radius-lg: ${tokens.radius.lg}px;
-  --radius-pill: ${tokens.radius.pill}px;
+  --spacing-ds-1: ${tokens.space["1"]}px;
+  --spacing-ds-2: ${tokens.space["2"]}px;
+  --spacing-ds-3: ${tokens.space["3"]}px;
+  --spacing-ds-4: ${tokens.space["4"]}px;
+  --spacing-ds-6: ${tokens.space["6"]}px;
+  --spacing-ds-8: ${tokens.space["8"]}px;
 
-  --shadow-sm: ${tokens.shadow.sm};
-  --shadow-md: ${tokens.shadow.md};
-  --shadow-lg: ${tokens.shadow.lg};
+  --radius-ds-sm: ${tokens.radius.sm}px;
+  --radius-ds-md: ${tokens.radius.md}px;
+  --radius-ds-lg: ${tokens.radius.lg}px;
+  --radius-ds-pill: ${tokens.radius.pill}px;
+
+  --shadow-ds-sm: ${tokens.shadow.sm};
+  --shadow-ds-md: ${tokens.shadow.md};
+  --shadow-ds-lg: ${tokens.shadow.lg};
 }
 
-/* La marca por tenant (--brand / --brand-hover / --brand-pressed) y las
-   reglas globales (html background, color-scheme) las define el layout
-   del servidor en el Paso 2 — NO acá, para no cambiar el look de las
-   pantallas todavía sin migrar. */
+:root {
+  /* Fallback de marca = acento. Los shells (DashboardShell / PortalShell /
+     SuperAdminShell) pisan --ds-brand y --ds-brand-foreground con
+     empresas.color_primario. hover/pressed: una y dos "paradas" más
+     oscuras en OKLCH, derivadas en el punto de uso. */
+  --ds-brand: ${tokens.color.accent};
+  --ds-brand-hover: oklch(from var(--ds-brand) calc(l - 0.05) c h);
+  --ds-brand-pressed: oklch(from var(--ds-brand) calc(l - 0.11) c h);
+  --ds-brand-foreground: #ffffff;
+
+  --font-ds-heading-weight: ${tokens.font.headingWeight};
+}
 `;
 
 writeFileSync(join(RAIZ, "tokens.css"), css);
 
 // ── generated.ts (Expo / RN / TS) ─────────────────────────────────
-const ts = `${AVISO.replace("/*", "//").replace("*/", "")}
+const ts = `// GENERADO por packages/design-tokens/src/build.ts — no editar a mano
 // Fuente de verdad: packages/design-tokens/tokens.json
 
 export const tokens = ${JSON.stringify(tokens, null, 2)} as const;

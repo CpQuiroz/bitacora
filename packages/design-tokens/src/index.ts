@@ -8,3 +8,4 @@
  * se regeneran con `npm run gen -w packages/design-tokens`.
  */
 export { tokens, fontStack, type Tokens } from "./generated";
+export { oscurecerOklch } from "./oklch";

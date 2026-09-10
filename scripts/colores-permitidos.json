@@ -1,0 +1,15 @@
+{
+  "_comment": "Archivos exentos del chequeo de colores literales (scripts/check-colores.mjs), con el motivo. Un color de MARCA o de UI que aparezca fuera de acá y fuera de packages/design-tokens hace fallar verificar.sh. Al migrar una pantalla (Paso 6) se le quitan sus literales y, si estaba acá solo por eso, se saca de la lista.",
+  "archivos_exentos": {
+    "web/src/app/login/page.tsx": "Colores de marca del logo de Google (SVG oficial) — deben ser exactos, no son colores de la UI de Bitácora",
+    "web/src/app/dashboard/configuracion/categorias-gastos/page.tsx": "Paleta de datos: colores que el usuario asigna a cada categoría de gasto (dato, no estilo)",
+    "web/src/app/dashboard/configuracion/tipos-os/page.tsx": "Paleta de datos: colores por tipo de OS (dato, no estilo)",
+    "web/src/app/dashboard/configuracion/empresa/page.tsx": "Defaults del branding del PDF de la empresa + función de contraste (no es la UI)",
+    "web/src/app/dashboard/configuracion/plantillas/page.tsx": "Preview del PDF de plantillas: replica el look del documento generado, no la UI de la app",
+    "web/src/app/dashboard/configuracion/tipos-documento/page.tsx": "Default de color de branding",
+    "web/src/app/agendar/[empresaId]/page.tsx": "Default de color primario para la reserva pública",
+    "web/src/components/MapaRutas.tsx": "Marcadores y trazos del mapa (SVG de datos geográficos)",
+    "mobile/src/features/trabajos/MapaLienzo.tsx": "Pines y trazos del mapa dibujado a mano (SVG)",
+    "mobile/src/components/LienzoFirma.tsx": "Tinta negra del trazo de firma y papel blanco del lienzo (no es tematizable)"
+  }
+}

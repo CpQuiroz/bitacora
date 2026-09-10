@@ -85,14 +85,19 @@ echo "── 5. Tests ───────────────────�
 if [ $RAPIDO -eq 1 ]; then
   warn "tests salteados (--rapido)"
 else
-  if npm run test -w packages/shared --silent >/tmp/harness_tests.log 2>&1; then
-    PASS="$(grep -Eo '# pass [0-9]+' /tmp/harness_tests.log | grep -Eo '[0-9]+' | tail -1)"
-    ok "packages/shared — ${PASS:-?} tests verdes"
-  else
-    fail "packages/shared tests — ver /tmp/harness_tests.log"
-    tail -15 /tmp/harness_tests.log
-    EXIT_CODE=1
-  fi
+  test_ws() {
+    local ws="$1"
+    if npm run test -w "$ws" --silent >/tmp/harness_tests_$(basename "$ws").log 2>&1; then
+      PASS="$(grep -Eo '# pass [0-9]+' /tmp/harness_tests_$(basename "$ws").log | grep -Eo '[0-9]+' | tail -1)"
+      ok "$ws — ${PASS:-?} tests verdes"
+    else
+      fail "$ws tests — ver /tmp/harness_tests_$(basename "$ws").log"
+      tail -15 /tmp/harness_tests_$(basename "$ws").log
+      EXIT_CODE=1
+    fi
+  }
+  test_ws packages/shared
+  test_ws packages/design-tokens
   # A medida que backend/web/mobile ganen suite, agregá acá sus runners.
 fi
 
@@ -126,12 +131,23 @@ else
 fi
 
 echo ""
-echo "── 8. Tokens de diseño en sync ───────────────────────"
+echo "── 8. Sistema de diseño ──────────────────────────────"
+# Idempotencia: si regenerar cambia los artefactos, tokens.json se tocó
+# sin correr gen. (Comparar contra HEAD daría falso positivo cuando hay
+# cambios de tokens legítimamente sin commitear.)
+ANTES="$(cat packages/design-tokens/tokens.css packages/design-tokens/src/generated.ts | shasum)"
 npm run gen:tokens --silent >/dev/null 2>&1
-if git diff --quiet -- packages/design-tokens/tokens.css packages/design-tokens/src/generated.ts 2>/dev/null; then
+DESPUES="$(cat packages/design-tokens/tokens.css packages/design-tokens/src/generated.ts | shasum)"
+if [ "$ANTES" = "$DESPUES" ]; then
   ok "tokens.css y generated.ts al día con tokens.json"
 else
   fail "tokens.css / generated.ts desactualizados — corré 'npm run gen:tokens' y commiteá"
+  EXIT_CODE=1
+fi
+if node scripts/check-colores.mjs; then
+  :
+else
+  fail "colores literales nuevos — ver arriba"
   EXIT_CODE=1
 fi
 

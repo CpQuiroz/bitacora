@@ -1,74 +1,90 @@
 /* GENERADO por packages/design-tokens/src/build.ts — no editar a mano */
 
 @theme {
-  --color-bg: #f5ead8;
-  --color-surface: #ebddc5;
-  --color-text: #201e1d;
-  --color-accent: #c67139;
-  --color-accent2: #7a8a5e;
-  --color-divider: rgba(32, 30, 29, 0.16);
+  --color-ds-bg: #f5ead8;
+  --color-ds-surface: #ebddc5;
+  --color-ds-text: #201e1d;
+  --color-ds-accent: #c67139;
+  --color-ds-accent2: #7a8a5e;
+  --color-ds-divider: rgba(32, 30, 29, 0.16);
 
-  --color-neutral-100: #f9f4ed;
-  --color-neutral-200: #eee7db;
-  --color-neutral-300: #dcd3c4;
-  --color-neutral-400: #c0b6a5;
-  --color-neutral-500: #a19786;
-  --color-neutral-600: #82796a;
-  --color-neutral-700: #645c50;
-  --color-neutral-800: #474238;
-  --color-neutral-900: #2e2b25;
+  --color-ds-neutral-100: #f9f4ed;
+  --color-ds-neutral-200: #eee7db;
+  --color-ds-neutral-300: #dcd3c4;
+  --color-ds-neutral-400: #c0b6a5;
+  --color-ds-neutral-500: #a19786;
+  --color-ds-neutral-600: #82796a;
+  --color-ds-neutral-700: #645c50;
+  --color-ds-neutral-800: #474238;
+  --color-ds-neutral-900: #2e2b25;
 
-  --color-accent-100: #fff2eb;
-  --color-accent-200: #ffe1d0;
-  --color-accent-300: #ffc6a5;
-  --color-accent-400: #f6a06b;
-  --color-accent-500: #d67f48;
-  --color-accent-600: #b2622d;
-  --color-accent-700: #8c491a;
-  --color-accent-800: #643312;
-  --color-accent-900: #402310;
+  --color-ds-accent-100: #fff2eb;
+  --color-ds-accent-200: #ffe1d0;
+  --color-ds-accent-300: #ffc6a5;
+  --color-ds-accent-400: #f6a06b;
+  --color-ds-accent-500: #d67f48;
+  --color-ds-accent-600: #b2622d;
+  --color-ds-accent-700: #8c491a;
+  --color-ds-accent-800: #643312;
+  --color-ds-accent-900: #402310;
 
-  --color-accent2-100: #f0fae1;
-  --color-accent2-200: #e1eecc;
-  --color-accent2-300: #ccdbb2;
-  --color-accent2-400: #aebf92;
-  --color-accent2-500: #8fa073;
-  --color-accent2-600: #728157;
-  --color-accent2-700: #56633f;
-  --color-accent2-800: #3d472b;
-  --color-accent2-900: #272e1b;
+  --color-ds-accent2-100: #f0fae1;
+  --color-ds-accent2-200: #e1eecc;
+  --color-ds-accent2-300: #ccdbb2;
+  --color-ds-accent2-400: #aebf92;
+  --color-ds-accent2-500: #8fa073;
+  --color-ds-accent2-600: #728157;
+  --color-ds-accent2-700: #56633f;
+  --color-ds-accent2-800: #3d472b;
+  --color-ds-accent2-900: #272e1b;
 
-  --font-heading: "Caprasimo", "Figtree", ui-sans-serif, system-ui, sans-serif;
-  --font-body: "Figtree", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  /* Marca del tenant. --ds-brand se define abajo en :root (fallback) y lo
+     pisan los shells por empresa. hover/pressed se derivan solos en OKLCH
+     porque referencian var(--ds-brand) en el punto de uso. */
+  --color-ds-brand: var(--ds-brand);
+  --color-ds-brand-hover: var(--ds-brand-hover);
+  --color-ds-brand-pressed: var(--ds-brand-pressed);
+  --color-ds-brand-foreground: var(--ds-brand-foreground);
 
-  --text-h1: 42px;
-  --text-h2: 32px;
-  --text-h3: 25px;
-  --text-h4: 20px;
-  --text-h5: 16px;
-  --text-body: 15px;
-  --text-small: 13px;
-  --text-caption: 12px;
-  --text-micro: 11px;
+  --font-ds-heading: "Caprasimo", "Figtree", ui-sans-serif, system-ui, sans-serif;
+  --font-ds-body: "Figtree", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 
-  --spacing-1: 4.4px;
-  --spacing-2: 8.8px;
-  --spacing-3: 13.2px;
-  --spacing-4: 17.6px;
-  --spacing-6: 26.4px;
-  --spacing-8: 35.2px;
+  --text-ds-h1: 42px;
+  --text-ds-h2: 32px;
+  --text-ds-h3: 25px;
+  --text-ds-h4: 20px;
+  --text-ds-h5: 16px;
+  --text-ds-body: 15px;
+  --text-ds-small: 13px;
+  --text-ds-caption: 12px;
+  --text-ds-micro: 11px;
 
-  --radius-sm: 8px;
-  --radius-md: 16px;
-  --radius-lg: 28px;
-  --radius-pill: 999px;
+  --spacing-ds-1: 4.4px;
+  --spacing-ds-2: 8.8px;
+  --spacing-ds-3: 13.2px;
+  --spacing-ds-4: 17.6px;
+  --spacing-ds-6: 26.4px;
+  --spacing-ds-8: 35.2px;
 
-  --shadow-sm: 0 1px 2px rgba(46, 43, 37, 0.14);
-  --shadow-md: 0 3px 10px rgba(46, 43, 37, 0.16);
-  --shadow-lg: 0 12px 32px rgba(46, 43, 37, 0.22);
+  --radius-ds-sm: 8px;
+  --radius-ds-md: 16px;
+  --radius-ds-lg: 28px;
+  --radius-ds-pill: 999px;
+
+  --shadow-ds-sm: 0 1px 2px rgba(46, 43, 37, 0.14);
+  --shadow-ds-md: 0 3px 10px rgba(46, 43, 37, 0.16);
+  --shadow-ds-lg: 0 12px 32px rgba(46, 43, 37, 0.22);
 }
 
-/* La marca por tenant (--brand / --brand-hover / --brand-pressed) y las
-   reglas globales (html background, color-scheme) las define el layout
-   del servidor en el Paso 2 — NO acá, para no cambiar el look de las
-   pantallas todavía sin migrar. */
+:root {
+  /* Fallback de marca = acento. Los shells (DashboardShell / PortalShell /
+     SuperAdminShell) pisan --ds-brand y --ds-brand-foreground con
+     empresas.color_primario. hover/pressed: una y dos "paradas" más
+     oscuras en OKLCH, derivadas en el punto de uso. */
+  --ds-brand: #c67139;
+  --ds-brand-hover: oklch(from var(--ds-brand) calc(l - 0.05) c h);
+  --ds-brand-pressed: oklch(from var(--ds-brand) calc(l - 0.11) c h);
+  --ds-brand-foreground: #ffffff;
+
+  --font-ds-heading-weight: 400;
+}
