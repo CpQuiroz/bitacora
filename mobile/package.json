@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "index.ts",
   "dependencies": {
+    "@bitacora/design-tokens": "*",
     "@bitacora/shared": "*",
     "@expo-google-fonts/ibm-plex-mono": "^0.4.1",
     "@expo-google-fonts/ibm-plex-sans": "^0.4.1",
@@ -42,7 +43,7 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "postinstall": "cd .. && npm run build:shared"
+    "postinstall": "cd .. && npm run build:packages"
   },
   "private": true
 }

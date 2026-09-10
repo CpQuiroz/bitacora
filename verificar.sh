@@ -70,6 +70,7 @@ tsc_check() {
     EXIT_CODE=1
   fi
 }
+tsc_check tokens   packages/design-tokens/tsconfig.json
 tsc_check backend  backend/tsconfig.json
 tsc_check shared   packages/shared/tsconfig.json
 tsc_check web      web/tsconfig.json
@@ -125,7 +126,17 @@ else
 fi
 
 echo ""
-echo "── 8. Migraciones ────────────────────────────────────"
+echo "── 8. Tokens de diseño en sync ───────────────────────"
+npm run gen:tokens --silent >/dev/null 2>&1
+if git diff --quiet -- packages/design-tokens/tokens.css packages/design-tokens/src/generated.ts 2>/dev/null; then
+  ok "tokens.css y generated.ts al día con tokens.json"
+else
+  fail "tokens.css / generated.ts desactualizados — corré 'npm run gen:tokens' y commiteá"
+  EXIT_CODE=1
+fi
+
+echo ""
+echo "── 9. Migraciones ────────────────────────────────────"
 node -e '
   const fs = require("fs");
   const files = fs.readdirSync("supabase/migrations").filter(f => f.endsWith(".sql"));

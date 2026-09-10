@@ -1,0 +1,26 @@
+{
+  "name": "@bitacora/design-tokens",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./tokens.json": "./tokens.json",
+    "./tokens.css": "./tokens.css"
+  },
+  "files": ["dist", "tokens.json", "tokens.css"],
+  "scripts": {
+    "gen": "tsx src/build.ts",
+    "build": "npm run gen && tsc -p tsconfig.json",
+    "dev": "tsc -w -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.5.0"
+  }
+}

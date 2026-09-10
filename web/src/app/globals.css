@@ -1,7 +1,16 @@
 @import "tailwindcss";
 
+/* Sistema de diseño nuevo — tokens generados desde
+   packages/design-tokens/tokens.json. Habilita utilidades
+   bg-bg / bg-surface / text-text / bg-accent-200 / rounded-pill /
+   font-heading / text-h1 / etc. Convive con el bloque "Faena" de
+   abajo durante la migración pantalla-por-pantalla (Paso 6). */
+@import "@bitacora/design-tokens/tokens.css";
+
 /* ─────────────────────────────────────────────────────────────
-   Bitácora — dirección "Faena" (refresco 1a)
+   Bitácora — dirección "Faena" (refresco 1a) — EN MIGRACIÓN
+   Ver docs/design-audit.md. Este bloque se retira cuando todas
+   las pantallas usen los tokens nuevos.
    Azul tinta + naranja señal. Tipografía IBM Plex Sans, cifras
    en IBM Plex Mono. Forma: esquinas cortas, borde firme, sin
    sombras difusas.

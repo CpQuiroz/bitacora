@@ -12,8 +12,11 @@
     "dev:web": "npm run dev -w web",
     "dev:backend": "npm run dev -w backend",
     "dev:mobile": "npm run start -w mobile",
+    "build:tokens": "npm run build -w packages/design-tokens",
     "build:shared": "npm run build -w packages/shared",
+    "build:packages": "npm run build:tokens && npm run build:shared",
     "build:backend": "npm run build -w backend",
-    "build:web": "npm run build -w web"
+    "build:web": "npm run build -w web",
+    "gen:tokens": "npm run gen -w packages/design-tokens"
   }
 }

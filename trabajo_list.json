@@ -95,6 +95,24 @@
         "verificar.sh: BASELINE_TENANT = 0 y el paso 7 queda en [OK]"
       ],
       "status": "done"
+    },
+    {
+      "id": 8,
+      "name": "sistema_diseno",
+      "title": "Sistema de diseño unificado (tokens + packages/ui) y re-migración",
+      "description": "Reemplazar la dirección visual 'Faena' (azul tinta / IBM Plex / esquina corta) por la nueva (crema / Caprasimo+Figtree / pill), con packages/design-tokens + packages/ui compartidos web+mobile, marca por tenant reactivada, y migración pantalla por pantalla. Prompt completo en el mensaje del 2026-09-09; auditoría en docs/design-audit.md.",
+      "acceptance": [
+        "Paso 0: docs/design-audit.md con el inventario — HECHO, esperando confirmación de la usuaria",
+        "Paso 1: packages/design-tokens (tokens.json + generadores CSS/JS)",
+        "Paso 2: --brand por tenant (layout server web + ThemeProvider mobile) + derivados OKLCH + test anti-hex",
+        "Paso 3: Caprasimo + Figtree self-hosted (next/font + expo-font con precarga en splash)",
+        "Paso 4: packages/ui con API única web/mobile (Button, Input, Card, Tag, StatusBadge, Table, Dialog/Sheet, EmptyState/LoadingState/ErrorState, Toast)",
+        "Paso 5: reglas transversales (forma pill, aire por escala, focus-visible, contraste, touch 44, tabular-nums, helper CLP único)",
+        "Paso 6: migración por pantalla (login, hoy, OS, clientes, catálogo, config, resto) — 1 commit c/u, sub-tareas aparte",
+        "Paso 7: regla ESLint anti-hex/px, Storybook, check de CI, docs/design-system.md enlazado desde CLAUDE.md",
+        "./verificar.sh verde en cada paso"
+      ],
+      "status": "in_progress"
     }
   ]
 }
