@@ -3,12 +3,11 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { ChevronLeft } from "lucide-react";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell } from "@/components/DashboardShell";
-import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, SuccessText } from "@/components/ui";
+import { Button, Card, Input, LoadingState, StatusBadge, type TonoEstado } from "@bitacora/ui/web";
 import { InputMonto } from "@/components/InputMonto";
-import { IconChevronLeft } from "@/components/icons";
-import { EstadoCargando } from "@/components/estados";
 import { useUsuarioShell } from "@/lib/useUsuarioShell";
 import { nombrePeriodo, remuneraciones, type LiquidacionConNombre } from "@/lib/remuneracionesApi";
 
@@ -21,6 +20,10 @@ const VARIABLES = [
   { clave: "otros_descuentos", label: "Otros descuentos", dinero: true },
 ] as const;
 
+// "borrador"/"emitida" no están en MAPA_ESTADO_TONO (ambiguos a propósito).
+const TONO_FORZADO: Record<string, TonoEstado> = { borrador: "en_progreso", emitida: "completado" };
+
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export default function LiquidacionDetallePage() {
   const params = useParams<{ id: string }>();
   const { usuario } = useUsuarioShell();
@@ -92,48 +95,50 @@ export default function LiquidacionDetallePage() {
 
   return (
     <DashboardShell usuario={usuario}>
-      <Link href="/dashboard/remuneraciones" className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-brand hover:underline">
-        <IconChevronLeft className="h-4 w-4" />
+      <Link href="/dashboard/remuneraciones" className="mb-ds-4 inline-flex items-center gap-ds-1 font-ds-body text-ds-small font-medium text-ds-brand hover:underline">
+        <ChevronLeft size={16} strokeWidth={2.75} />
         Liquidaciones
       </Link>
 
-      {error && <ErrorText>{error}</ErrorText>}
-      {!liq && !error && <EstadoCargando />}
+      {error ? <p className="font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
+      {!liq && !error ? <LoadingState /> : null}
 
       {liq && (
         <>
-          <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-            <PageHeader title={liq.colaborador?.nombre ?? "Liquidación"} subtitle={nombrePeriodo(liq.periodo)} action={<Badge value={liq.estado} />} />
-            <div className="flex gap-2">
+          <div className="mb-ds-6 flex flex-wrap items-center justify-between gap-ds-3">
+            <div>
+              <div className="flex items-center gap-ds-2">
+                <p className="ds-heading text-ds-h2 text-ds-text">{liq.colaborador?.nombre ?? "Liquidación"}</p>
+                <StatusBadge estado={liq.estado} tonoForzado={TONO_FORZADO[liq.estado]} />
+              </div>
+              <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">{nombrePeriodo(liq.periodo)}</p>
+            </div>
+            <div className="flex gap-ds-2">
               {liq.estado === "emitida" && (
-                <Button type="button" variant="outline" onClick={() => remuneraciones.abrirPdf(liq.id)}>
+                <Button variante="secundario" onPress={() => remuneraciones.abrirPdf(liq.id)}>
                   Descargar PDF
                 </Button>
               )}
               {liq.estado === "borrador" && (
-                <Button type="button" onClick={emitir} disabled={emitiendo}>
-                  {emitiendo ? "Emitiendo…" : "Emitir"}
+                <Button onPress={emitir} cargando={emitiendo}>
+                  Emitir
                 </Button>
               )}
             </div>
           </div>
 
-          {aviso && (
-            <div className="mb-4">
-              <SuccessText>{aviso}</SuccessText>
-            </div>
-          )}
+          {aviso ? <p className="mb-ds-4 font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}
 
           {liq.tuvo_licencia && (
-            <div className="mb-4 rounded-lg bg-warning-soft px-4 py-3 text-sm text-warning">
+            <p className="mb-ds-4 rounded-ds-md bg-ds-accent-100 px-ds-4 py-ds-3 font-ds-body text-ds-small text-ds-accent-800">
               <strong>Licencia médica en el período.</strong> El cálculo automático no descuenta días de licencia ni
               trata el subsidio — ajustá los días trabajados y los haberes a mano antes de emitir.
-            </div>
+            </p>
           )}
 
-          <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
+          <div className="grid gap-ds-6 lg:grid-cols-[1fr_20rem]">
             <Card>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-ds-4 sm:grid-cols-2">
                 <Seccion titulo="Haberes">
                   <Fila et="Sueldo base" v={liq.sueldo_base} m={m} />
                   <Fila et="Gratificación (Art. 50)" v={liq.gratificacion} m={m} />
@@ -156,11 +161,11 @@ export default function LiquidacionDetallePage() {
                   <Fila et="Total descuentos" v={liq.total_descuentos} m={m} fuerte />
                 </Seccion>
               </div>
-              <div className="mt-5 flex items-center justify-between rounded-lg bg-brand-soft px-4 py-3">
-                <span className="text-sm font-semibold text-brand">Líquido a pagar</span>
-                <span className="text-lg font-bold tabular-nums text-brand">{formatMoneda(liq.liquido_pagar, m)}</span>
+              <div className="mt-ds-5 flex items-center justify-between rounded-ds-md bg-ds-brand/[0.08] px-ds-4 py-ds-3">
+                <span className="font-ds-body text-ds-small font-semibold text-ds-brand">Líquido a pagar</span>
+                <span className="font-ds-body text-ds-h5 font-bold tabular-nums text-ds-brand">{formatMoneda(liq.liquido_pagar, m)}</span>
               </div>
-              <p className="mt-3 text-xs text-muted">
+              <p className="mt-ds-3 font-ds-body text-ds-caption text-ds-text/60">
                 Base imponible {formatMoneda(liq.base_imponible, m)} · Base tributable {formatMoneda(liq.base_tributable, m)} · Costo empresa
                 (AFC {formatMoneda(liq.aporte_afc_empleador, m)} + SIS {formatMoneda(liq.aporte_sis, m)} + Mutual{" "}
                 {formatMoneda(liq.aporte_mutual, m)})
@@ -168,41 +173,30 @@ export default function LiquidacionDetallePage() {
             </Card>
 
             <Card>
-              <h2 className="mb-4 text-sm font-semibold text-foreground">Ajustes del mes</h2>
+              <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Ajustes del mes</p>
               {liq.estado === "emitida" ? (
-                <p className="text-sm text-muted">La liquidación ya fue emitida. Para corregirla, generá de nuevo el mes (se crea un borrador nuevo).</p>
+                <p className="font-ds-body text-ds-small text-ds-text/70">La liquidación ya fue emitida. Para corregirla, generá de nuevo el mes (se crea un borrador nuevo).</p>
               ) : (
-                <div className="flex flex-col gap-3">
-                  {VARIABLES.map((v) => (
-                    <div key={v.clave}>
-                      <Label>{v.label}</Label>
-                      {v.dinero ? (
-                        <InputMonto
-                          value={form[v.clave] ?? ""}
-                          onChange={(val) => setForm((f) => ({ ...f, [v.clave]: val }))}
-                          moneda={m}
-                        />
-                      ) : (
-                        <Input
-                          type="number"
-                          value={form[v.clave] ?? ""}
-                          onChange={(e) => setForm((f) => ({ ...f, [v.clave]: e.target.value }))}
-                        />
-                      )}
-                    </div>
-                  ))}
-                  <label className="flex items-center gap-2 text-sm text-foreground">
-                    <input
-                      type="checkbox"
-                      className="accent-brand"
-                      checked={tuvoLicencia}
-                      onChange={(e) => setTuvoLicencia(e.target.checked)}
-                    />
+                <div className="flex flex-col gap-ds-3">
+                  {VARIABLES.map((v) =>
+                    v.dinero ? (
+                      <div key={v.clave} className="flex flex-col gap-ds-1">
+                        <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">{v.label}</label>
+                        <InputMonto value={form[v.clave] ?? ""} onChange={(val) => setForm((f) => ({ ...f, [v.clave]: val }))} moneda={m} />
+                      </div>
+                    ) : (
+                      <Input key={v.clave} etiqueta={v.label} tipo="numero" valor={form[v.clave] ?? ""} onCambio={(val) => setForm((f) => ({ ...f, [v.clave]: val }))} />
+                    )
+                  )}
+                  <label className="flex items-center gap-ds-2 font-ds-body text-ds-small text-ds-text">
+                    <input type="checkbox" className="accent-[var(--ds-brand)]" checked={tuvoLicencia} onChange={(e) => setTuvoLicencia(e.target.checked)} />
                     Tuvo licencia médica este mes
                   </label>
-                  <Button type="button" onClick={guardar} disabled={guardando} className="mt-1">
-                    {guardando ? "Recalculando…" : "Recalcular"}
-                  </Button>
+                  <div className="mt-ds-1">
+                    <Button onPress={guardar} cargando={guardando}>
+                      Recalcular
+                    </Button>
+                  </div>
                 </div>
               )}
             </Card>
@@ -216,8 +210,8 @@ export default function LiquidacionDetallePage() {
 function Seccion({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
     <div>
-      <h3 className="mb-2 text-xs font-semibold uppercase text-muted">{titulo}</h3>
-      <div className="flex flex-col gap-1.5 text-sm">{children}</div>
+      <p className="mb-ds-2 font-ds-body text-ds-caption font-semibold uppercase text-ds-text/60">{titulo}</p>
+      <div className="flex flex-col gap-1.5 font-ds-body text-ds-small">{children}</div>
     </div>
   );
 }
@@ -225,7 +219,7 @@ function Seccion({ titulo, children }: { titulo: string; children: React.ReactNo
 function Fila({ et, v, m, fuerte }: { et: string; v: number; m: string; fuerte?: boolean }) {
   if (!v && !fuerte) return null;
   return (
-    <div className={`flex items-center justify-between ${fuerte ? "mt-1 border-t border-border pt-2 font-semibold text-foreground" : "text-muted"}`}>
+    <div className={`flex items-center justify-between ${fuerte ? "mt-ds-1 border-t border-ds-divider pt-ds-2 font-semibold text-ds-text" : "text-ds-text/70"}`}>
       <span>{et}</span>
       <span className="tabular-nums">{formatMoneda(v, m)}</span>
     </div>

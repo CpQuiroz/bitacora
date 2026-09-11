@@ -2,10 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { ChevronLeft } from "lucide-react";
 import { DashboardShell } from "@/components/DashboardShell";
-import { Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText } from "@/components/ui";
-import { IconChevronLeft } from "@/components/icons";
-import { EstadoCargando } from "@/components/estados";
+import { Button, Card, Input, LoadingState, Select } from "@bitacora/ui/web";
 import { useUsuarioShell } from "@/lib/useUsuarioShell";
 import { nombrePeriodo, periodoRelativo, remuneraciones, type AfpParametro } from "@/lib/remuneracionesApi";
 import type { ParametroPrevisional } from "@bitacora/shared";
@@ -14,15 +13,16 @@ const PERIODOS = Array.from({ length: 12 }, (_, i) => periodoRelativo(-i));
 
 // `editable: false` = parámetro legal nacional, solo lectura desde acá
 // (lo mantiene el equipo de Bitácora). Ver AUDITORIA_REMUNERACIONES.md #2.
-const CAMPOS: { clave: keyof ParametroPrevisional; label: string; step?: string; editable: boolean }[] = [
+const CAMPOS: { clave: keyof ParametroPrevisional; label: string; editable: boolean }[] = [
   { clave: "uf", label: "UF", editable: true },
   { clave: "utm", label: "UTM", editable: true },
   { clave: "tope_gratificacion_mensual", label: "Tope gratificación mensual", editable: true },
   { clave: "ingreso_minimo", label: "Ingreso mínimo mensual", editable: false },
-  { clave: "tope_imponible_uf", label: "Tope imponible (UF)", step: "0.01", editable: false },
-  { clave: "tope_afc_uf", label: "Tope AFC (UF)", step: "0.01", editable: false },
+  { clave: "tope_imponible_uf", label: "Tope imponible (UF)", editable: false },
+  { clave: "tope_afc_uf", label: "Tope AFC (UF)", editable: false },
 ];
 
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export default function ParametrosPage() {
   const { usuario } = useUsuarioShell();
   const [periodo, setPeriodo] = useState(periodoRelativo(0));
@@ -76,70 +76,58 @@ export default function ParametrosPage() {
 
   return (
     <DashboardShell usuario={usuario}>
-      <Link href="/dashboard/remuneraciones" className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-brand hover:underline">
-        <IconChevronLeft className="h-4 w-4" />
+      <Link href="/dashboard/remuneraciones" className="mb-ds-4 inline-flex items-center gap-ds-1 font-ds-body text-ds-small font-medium text-ds-brand hover:underline">
+        <ChevronLeft size={16} strokeWidth={2.75} />
         Liquidaciones
       </Link>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <PageHeader title="Parámetros previsionales" subtitle={nombrePeriodo(periodo)} />
-        <Select value={periodo} onChange={(e) => setPeriodo(e.target.value)} className="w-44">
-          {PERIODOS.map((p) => (
-            <option key={p} value={p}>
-              {nombrePeriodo(p)}
-            </option>
-          ))}
-        </Select>
+      <div className="mb-ds-6 flex flex-wrap items-center justify-between gap-ds-3">
+        <div>
+          <p className="ds-heading text-ds-h2 text-ds-text">Parámetros previsionales</p>
+          <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">{nombrePeriodo(periodo)}</p>
+        </div>
+        <Select valor={periodo} onCambio={setPeriodo} opciones={PERIODOS.map((p) => ({ valor: p, etiqueta: nombrePeriodo(p) }))} />
       </div>
 
-      {error && <ErrorText>{error}</ErrorText>}
-      {!params && !error && <EstadoCargando />}
+      {error ? <p className="font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
+      {!params && !error ? <LoadingState /> : null}
 
       {params && (
         <>
-          <p className="mb-4 text-sm text-muted">
+          <p className="mb-ds-4 font-ds-body text-ds-small text-ds-text/70">
             UF y UTM se traen automáticamente de mindicador.cl para el mes del período (
             {params.fuente === "mindicador" ? "auto" : "editado a mano"}). Podés corregir UF, UTM, el tope de
             gratificación y las comisiones AFP si hiciera falta. El ingreso mínimo y los topes imponibles son ley
             nacional — los mantiene el equipo de Bitácora y acá se muestran de solo lectura.
           </p>
 
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid gap-ds-6 lg:grid-cols-2">
             <Card>
-              <h2 className="mb-4 text-sm font-semibold text-foreground">Indicadores</h2>
-              <div className="grid gap-3 sm:grid-cols-2">
+              <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Indicadores</p>
+              <div className="grid gap-ds-3 sm:grid-cols-2">
                 {CAMPOS.map((c) => (
-                  <div key={c.clave}>
-                    <Label>
-                      {c.label}
-                      {!c.editable && <span className="ml-1 text-xs font-normal text-muted">(solo lectura)</span>}
-                    </Label>
-                    <Input
-                      type="number"
-                      step={c.step}
-                      disabled={!c.editable}
-                      value={form[c.clave] ?? ""}
-                      onChange={(e) => setForm((f) => ({ ...f, [c.clave]: e.target.value }))}
-                    />
-                  </div>
+                  <Input
+                    key={c.clave}
+                    etiqueta={c.editable ? c.label : `${c.label} (solo lectura)`}
+                    tipo="numero"
+                    deshabilitado={!c.editable}
+                    valor={form[c.clave] ?? ""}
+                    onCambio={(v) => setForm((f) => ({ ...f, [c.clave]: v }))}
+                  />
                 ))}
               </div>
             </Card>
 
             <Card>
-              <h2 className="mb-4 text-sm font-semibold text-foreground">Comisión por AFP</h2>
-              <div className="flex flex-col gap-3">
+              <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Comisión por AFP</p>
+              <div className="flex flex-col gap-ds-3">
                 {afp.map((a) => (
-                  <div key={a.afp} className="flex items-center justify-between gap-3">
-                    <span className="text-sm text-foreground">{a.nombre}</span>
+                  <div key={a.afp} className="flex items-center justify-between gap-ds-3">
+                    <span className="font-ds-body text-ds-small text-ds-text">{a.nombre}</span>
                     <div className="flex items-center gap-1">
-                      <Input
-                        type="number"
-                        step="0.0001"
-                        className="w-28"
-                        value={afpForm[a.afp] ?? ""}
-                        onChange={(e) => setAfpForm((f) => ({ ...f, [a.afp]: e.target.value }))}
-                      />
-                      <span className="text-xs text-muted">= {((Number(afpForm[a.afp]) || 0) * 100).toFixed(2)}%</span>
+                      <div className="w-28">
+                        <Input tipo="numero" valor={afpForm[a.afp] ?? ""} onCambio={(v) => setAfpForm((f) => ({ ...f, [a.afp]: v }))} />
+                      </div>
+                      <span className="font-ds-body text-ds-caption text-ds-text/60">= {((Number(afpForm[a.afp]) || 0) * 100).toFixed(2)}%</span>
                     </div>
                   </div>
                 ))}
@@ -147,14 +135,12 @@ export default function ParametrosPage() {
             </Card>
           </div>
 
-          {aviso && (
-            <div className="mt-4">
-              <SuccessText>{aviso}</SuccessText>
-            </div>
-          )}
-          <Button type="button" onClick={guardar} disabled={guardando} className="mt-4">
-            {guardando ? "Guardando…" : "Guardar parámetros"}
-          </Button>
+          {aviso ? <p className="mt-ds-4 font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}
+          <div className="mt-ds-4">
+            <Button onPress={guardar} cargando={guardando}>
+              Guardar parámetros
+            </Button>
+          </div>
         </>
       )}
     </DashboardShell>

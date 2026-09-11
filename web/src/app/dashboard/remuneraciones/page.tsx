@@ -4,13 +4,17 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell } from "@/components/DashboardShell";
-import { Badge, Button, Card, Cifra, ErrorText, PageHeader, Select, Stat, SuccessText } from "@/components/ui";
-import { EstadoCargando } from "@/components/estados";
+import { Button, Card, Cifra, LoadingState, Select, StatusBadge, type TonoEstado } from "@bitacora/ui/web";
+import { Stat } from "@/components/Stat";
 import { useUsuarioShell } from "@/lib/useUsuarioShell";
 import { nombrePeriodo, periodoRelativo, remuneraciones, type FormatoExport, type LiquidacionConNombre } from "@/lib/remuneracionesApi";
 
 const PERIODOS = Array.from({ length: 12 }, (_, i) => periodoRelativo(-i));
 
+// "borrador"/"emitida" no están en MAPA_ESTADO_TONO (ambiguos a propósito).
+const TONO_FORZADO: Record<string, TonoEstado> = { borrador: "en_progreso", emitida: "completado" };
+
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export default function RemuneracionesPage() {
   const { usuario } = useUsuarioShell();
   const [periodo, setPeriodo] = useState(periodoRelativo(0));
@@ -94,31 +98,24 @@ export default function RemuneracionesPage() {
 
   return (
     <DashboardShell usuario={usuario}>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <PageHeader title="Liquidaciones de sueldo" subtitle={nombrePeriodo(periodo)} />
-        <div className="flex items-end gap-2">
-          <Select value={periodo} onChange={(e) => setPeriodo(e.target.value)} className="w-44">
-            {PERIODOS.map((p) => (
-              <option key={p} value={p}>
-                {nombrePeriodo(p)}
-              </option>
-            ))}
-          </Select>
-          <Button type="button" onClick={generar} disabled={generando}>
-            {generando ? "Generando…" : "Generar mes"}
+      <div className="mb-ds-6 flex flex-wrap items-center justify-between gap-ds-3">
+        <div>
+          <p className="ds-heading text-ds-h2 text-ds-text">Liquidaciones de sueldo</p>
+          <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">{nombrePeriodo(periodo)}</p>
+        </div>
+        <div className="flex items-end gap-ds-2">
+          <Select valor={periodo} onCambio={setPeriodo} opciones={PERIODOS.map((p) => ({ valor: p, etiqueta: nombrePeriodo(p) }))} />
+          <Button onPress={generar} cargando={generando}>
+            Generar mes
           </Button>
         </div>
       </div>
 
-      {error && <ErrorText>{error}</ErrorText>}
-      {aviso && (
-        <div className="mb-4">
-          <SuccessText>{aviso}</SuccessText>
-        </div>
-      )}
+      {error ? <p className="font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
+      {aviso ? <p className="mb-ds-4 font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}
 
       {filas && filas.length > 0 && (
-        <div className="mb-4 grid gap-3 sm:grid-cols-3">
+        <div className="mb-ds-4 grid gap-ds-3 sm:grid-cols-3">
           <Stat etiqueta="Total líquido" valor={formatMoneda(totales.liquido, moneda)} />
           <Stat etiqueta="Costo empresa (aprox.)" valor={formatMoneda(totales.costoEmpresa, moneda)} />
           <Stat etiqueta="Emitidas" valor={`${totales.emitidas} / ${filas.length}`} />
@@ -126,36 +123,38 @@ export default function RemuneracionesPage() {
       )}
 
       {filas && totales.emitidas > 0 && (
-        <Card className="mb-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="text-sm font-medium text-foreground">Exportar {nombrePeriodo(periodo)}:</span>
-            <Button type="button" variant="outline" onClick={() => exportar("resumen")}>
-              Resumen previsional (CSV)
-            </Button>
-            <Button type="button" variant="outline" onClick={() => exportar("previred")}>
-              Archivo Previred
-            </Button>
-            <Button type="button" variant="outline" onClick={() => exportar("lre")}>
-              Libro de Remuneraciones (DT)
-            </Button>
-          </div>
-          <p className="mt-2 text-xs text-muted">
-            Solo las liquidaciones <strong>emitidas</strong>. Descargá → subí a previred.cl / la DT → revisá el total → pagá ahí. Los
-            archivos Previred y DT son un <strong>borrador</strong>: validalos con tu contador contra el validador oficial antes del primer
-            envío real.
-          </p>
-        </Card>
+        <div className="mb-ds-4">
+          <Card>
+            <div className="flex flex-wrap items-center gap-ds-3">
+              <span className="font-ds-body text-ds-small font-medium text-ds-text">Exportar {nombrePeriodo(periodo)}:</span>
+              <Button variante="secundario" onPress={() => exportar("resumen")}>
+                Resumen previsional (CSV)
+              </Button>
+              <Button variante="secundario" onPress={() => exportar("previred")}>
+                Archivo Previred
+              </Button>
+              <Button variante="secundario" onPress={() => exportar("lre")}>
+                Libro de Remuneraciones (DT)
+              </Button>
+            </div>
+            <p className="mt-ds-2 font-ds-body text-ds-caption text-ds-text/60">
+              Solo las liquidaciones <strong>emitidas</strong>. Descargá → subí a previred.cl / la DT → revisá el total → pagá ahí. Los
+              archivos Previred y DT son un <strong>borrador</strong>: validalos con tu contador contra el validador oficial antes del primer
+              envío real.
+            </p>
+          </Card>
+        </div>
       )}
 
-      {filas === null && !error && <EstadoCargando />}
+      {filas === null && !error ? <LoadingState /> : null}
 
       {filas && filas.length === 0 && (
         <Card>
-          <div className="py-12 text-center">
-            <p className="font-medium text-foreground">Sin liquidaciones para {nombrePeriodo(periodo)}</p>
-            <p className="mt-1 text-sm text-muted">
+          <div className="py-ds-8 text-center">
+            <p className="font-ds-body text-ds-small font-medium text-ds-text">Sin liquidaciones para {nombrePeriodo(periodo)}</p>
+            <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">
               Cargá los datos del equipo en{" "}
-              <Link href="/dashboard/personas" className="font-medium text-brand hover:underline">
+              <Link href="/dashboard/personas" className="font-medium text-ds-brand hover:underline">
                 Personas
               </Link>{" "}
               (pestaña «Datos laborales» de cada persona) y usá “Generar mes”.
@@ -165,59 +164,57 @@ export default function RemuneracionesPage() {
       )}
 
       {filas && filas.length > 0 && (
-        <Card className="overflow-x-auto p-0">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
-                <th className="px-5 py-3 font-medium">Colaborador</th>
-                <th className="px-5 py-3 text-right font-medium">Días</th>
-                <th className="px-5 py-3 text-right font-medium">Imponible</th>
-                <th className="px-5 py-3 text-right font-medium">Descuentos</th>
-                <th className="px-5 py-3 text-right font-medium">Líquido</th>
-                <th className="px-5 py-3 font-medium">Estado</th>
-                <th className="px-5 py-3 font-medium"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {filas.map((l) => (
-                <tr key={l.id} className="border-b border-border-soft last:border-0 even:bg-[#fafbfc]">
-                  <td className="px-5 py-3 font-medium text-foreground">{l.colaborador?.nombre ?? "—"}</td>
-                  <td className="px-5 py-3 text-right"><Cifra className="text-muted">{l.dias_trabajados}</Cifra></td>
-                  <td className="px-5 py-3 text-right"><Cifra className="text-muted">{formatMoneda(l.base_imponible, moneda)}</Cifra></td>
-                  <td className="px-5 py-3 text-right"><Cifra className="text-muted">{formatMoneda(l.total_descuentos, moneda)}</Cifra></td>
-                  <td className="px-5 py-3 text-right font-medium text-foreground"><Cifra>{formatMoneda(l.liquido_pagar, moneda)}</Cifra></td>
-                  <td className="px-5 py-3">
-                    <Badge value={l.estado} />
-                  </td>
-                  <td className="px-5 py-3">
-                    <div className="flex items-center gap-3">
-                      <Link href={`/dashboard/remuneraciones/${l.id}`} className="text-xs font-medium text-brand hover:underline">
-                        {l.estado === "borrador" ? "Revisar" : "Ver"}
-                      </Link>
-                      {l.estado === "borrador" ? (
-                        <button
-                          type="button"
-                          onClick={() => emitir(l.id)}
-                          disabled={emitiendo === l.id}
-                          className="text-xs font-medium text-brand hover:underline disabled:opacity-50"
-                        >
-                          {emitiendo === l.id ? "Emitiendo…" : "Emitir"}
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => remuneraciones.abrirPdf(l.id)}
-                          className="text-xs font-medium text-muted hover:text-brand"
-                        >
-                          PDF
-                        </button>
-                      )}
-                    </div>
-                  </td>
+        <Card sinRelleno elevacion="sm">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-ds-body">
+              <thead>
+                <tr className="border-b border-ds-divider text-[11px] font-medium uppercase tracking-[0.08em] text-ds-text/60">
+                  <th className="px-ds-4 py-ds-3">Colaborador</th>
+                  <th className="px-ds-4 py-ds-3 text-right">Días</th>
+                  <th className="px-ds-4 py-ds-3 text-right">Imponible</th>
+                  <th className="px-ds-4 py-ds-3 text-right">Descuentos</th>
+                  <th className="px-ds-4 py-ds-3 text-right">Líquido</th>
+                  <th className="px-ds-4 py-ds-3">Estado</th>
+                  <th className="px-ds-4 py-ds-3"></th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filas.map((l) => (
+                  <tr key={l.id} className="border-b border-ds-text/[0.08] last:border-0 even:bg-ds-text/[0.02]">
+                    <td className="px-ds-4 py-ds-3 font-medium text-ds-text">{l.colaborador?.nombre ?? "—"}</td>
+                    <td className="px-ds-4 py-ds-3 text-right text-ds-text/70"><Cifra>{l.dias_trabajados}</Cifra></td>
+                    <td className="px-ds-4 py-ds-3 text-right text-ds-text/70"><Cifra>{formatMoneda(l.base_imponible, moneda)}</Cifra></td>
+                    <td className="px-ds-4 py-ds-3 text-right text-ds-text/70"><Cifra>{formatMoneda(l.total_descuentos, moneda)}</Cifra></td>
+                    <td className="px-ds-4 py-ds-3 text-right font-medium text-ds-text"><Cifra>{formatMoneda(l.liquido_pagar, moneda)}</Cifra></td>
+                    <td className="px-ds-4 py-ds-3">
+                      <StatusBadge estado={l.estado} tonoForzado={TONO_FORZADO[l.estado]} />
+                    </td>
+                    <td className="px-ds-4 py-ds-3">
+                      <div className="flex items-center gap-ds-3">
+                        <Link href={`/dashboard/remuneraciones/${l.id}`} className="font-ds-body text-ds-caption font-medium text-ds-brand hover:underline">
+                          {l.estado === "borrador" ? "Revisar" : "Ver"}
+                        </Link>
+                        {l.estado === "borrador" ? (
+                          <button
+                            type="button"
+                            onClick={() => emitir(l.id)}
+                            disabled={emitiendo === l.id}
+                            className="font-ds-body text-ds-caption font-medium text-ds-brand hover:underline disabled:opacity-50"
+                          >
+                            {emitiendo === l.id ? "Emitiendo…" : "Emitir"}
+                          </button>
+                        ) : (
+                          <button type="button" onClick={() => remuneraciones.abrirPdf(l.id)} className="font-ds-body text-ds-caption font-medium text-ds-text/60 hover:text-ds-brand">
+                            PDF
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </Card>
       )}
     </DashboardShell>
