@@ -20,11 +20,15 @@ export type PuntoBase = {
 // Ícono propio (círculo numerado) — evita el problema clásico de
 // Leaflet con los íconos por defecto, cuyas rutas de imagen no
 // resuelven bien con bundlers como Turbopack/Webpack.
+// Pines vía var(--ds-brand)/var(--ds-text) (no literales): son HTML
+// insertado directo al DOM por Leaflet, las custom properties del tema
+// (marca del tenant incluida) resuelven igual que en cualquier otro
+// nodo — así el pin numerado usa el color de marca real, no un azul fijo.
 function iconoParada(L: typeof import("leaflet"), numero: number) {
   return L.divIcon({
     className: "",
     html: `<div style="
-      background:#4338ca;color:#fff;width:28px;height:28px;border-radius:9999px;
+      background:var(--ds-brand);color:var(--ds-brand-foreground);width:28px;height:28px;border-radius:9999px;
       display:flex;align-items:center;justify-content:center;font:600 13px system-ui;
       box-shadow:0 1px 4px rgba(0,0,0,.35);border:2px solid #fff;
     ">${numero}</div>`,
@@ -37,7 +41,7 @@ function iconoPuntoBase(L: typeof import("leaflet")) {
   return L.divIcon({
     className: "",
     html: `<div style="
-      background:#16161f;color:#fff;width:30px;height:30px;border-radius:9999px;
+      background:var(--ds-text);color:#fff;width:30px;height:30px;border-radius:9999px;
       display:flex;align-items:center;justify-content:center;font:600 15px system-ui;
       box-shadow:0 1px 4px rgba(0,0,0,.35);border:2px solid #fff;
     ">🏠</div>`,
@@ -98,7 +102,12 @@ export function MapaRutas({
       });
 
       if (mostrarLinea && puntos.length > 1) {
-        L.polyline(puntos, { color: "#4338ca", weight: 3, opacity: 0.6, dashArray: "6 6" }).addTo(mapa);
+        // Leaflet puede usar canvas para las líneas — el contexto 2D no
+        // resuelve var(), así que esta sí necesita un color ya resuelto
+        // (se lee de la custom property en vez de fijarlo, para no perder
+        // la marca del tenant; el literal es solo el fallback SSR-safe).
+        const colorMarca = getComputedStyle(contenedorRef.current!).getPropertyValue("--ds-brand").trim() || "#c67139";
+        L.polyline(puntos, { color: colorMarca, weight: 3, opacity: 0.6, dashArray: "6 6" }).addTo(mapa);
       }
 
       if (puntos.length === 0) return;
@@ -124,7 +133,7 @@ export function MapaRutas({
   return (
     <div
       ref={contenedorRef}
-      className="h-80 w-full rounded-xl border border-border sm:h-96"
+      className="h-80 w-full rounded-ds-md border border-ds-divider sm:h-96"
     />
   );
 }

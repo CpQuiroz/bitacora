@@ -2,18 +2,17 @@
 
 import { Fragment, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { Plus, Truck } from "lucide-react";
 import type { Cliente, EstadoViaje, Usuario, Viaje } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText } from "@/components/ui";
+import { Button, Card, EmptyState, ErrorState, Input, LoadingState, Select, StatusBadge } from "@bitacora/ui/web";
 import { InputMonto } from "@/components/InputMonto";
 import { Modal } from "@/components/Modal";
 import { ComboboxCliente } from "@/components/ComboboxCliente";
 import { ComboboxResponsable } from "@/components/ComboboxResponsable";
-import { IconPlus, IconTruck } from "@/components/icons";
-import { EstadoCargando, EstadoError, EstadoVacio } from "@/components/estados";
 
 type ViajeConDatos = Viaje & {
   cliente_info: Pick<Cliente, "id" | "nombre"> | null;
@@ -36,6 +35,11 @@ function km(v: Viaje) {
   return Math.max(0, v.km_final - v.km_inicial);
 }
 
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
+// La tabla de viajes tiene una fila de edición inline expandible (2do
+// <tr> con un form completo, ver editId) — el primitivo <Table> no
+// soporta filas expandibles, así que sigue siendo un <table> a mano,
+// con las mismas clases que usa <Table> internamente.
 export default function ViajesPage() {
   const router = useRouter();
   const [usuario, setUsuario] = useState<UsuarioShell | null>(null);
@@ -331,192 +335,177 @@ export default function ViajesPage() {
 
   return (
     <DashboardShell usuario={usuario}>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <PageHeader title="Viajes" subtitle="Guías de despacho, kilometraje y facturación" />
-        <Button type="button" onClick={() => (formAbierto ? setFormAbierto(false) : abrirNuevo())}>
-          <IconPlus className="h-4 w-4" />
+      <div className="mb-ds-6 flex flex-wrap items-center justify-between gap-ds-3">
+        <div>
+          <p className="ds-heading flex items-center gap-ds-2 text-ds-h2 text-ds-text">
+            <Truck size={24} strokeWidth={2.75} className="text-ds-brand" />
+            Viajes
+          </p>
+          <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">Guías de despacho, kilometraje y facturación</p>
+        </div>
+        <Button iconoIzq={<Plus size={16} strokeWidth={2.75} />} onPress={() => (formAbierto ? setFormAbierto(false) : abrirNuevo())}>
           Nuevo Viaje
         </Button>
       </div>
 
-      <Card className="mb-6 overflow-x-auto p-0">
-        <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-3">
-          <h2 className="text-sm font-semibold text-foreground">Resumen</h2>
-          <div className="flex gap-1">
-            <button
-              type="button"
-              onClick={() => setAgrupacion("semana")}
-              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                agrupacion === "semana" ? "bg-brand-soft text-brand" : "text-muted"
-              }`}
-            >
-              Semanal
-            </button>
-            <button
-              type="button"
-              onClick={() => setAgrupacion("mes")}
-              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                agrupacion === "mes" ? "bg-brand-soft text-brand" : "text-muted"
-              }`}
-            >
-              Mensual
-            </button>
+      <div className="mb-ds-6">
+        <Card sinRelleno elevacion="sm">
+          <div className="flex items-center justify-between gap-ds-3 border-b border-ds-divider px-ds-4 py-ds-3">
+            <p className="font-ds-body text-ds-small font-semibold text-ds-text">Resumen</p>
+            <div className="flex gap-ds-1">
+              <button
+                type="button"
+                onClick={() => setAgrupacion("semana")}
+                className={`rounded-ds-pill px-ds-3 py-1 font-ds-body text-ds-caption font-medium transition-colors ${
+                  agrupacion === "semana" ? "bg-ds-brand/[0.08] text-ds-brand" : "text-ds-text/60"
+                }`}
+              >
+                Semanal
+              </button>
+              <button
+                type="button"
+                onClick={() => setAgrupacion("mes")}
+                className={`rounded-ds-pill px-ds-3 py-1 font-ds-body text-ds-caption font-medium transition-colors ${
+                  agrupacion === "mes" ? "bg-ds-brand/[0.08] text-ds-brand" : "text-ds-text/60"
+                }`}
+              >
+                Mensual
+              </button>
+            </div>
           </div>
-        </div>
-        {resumen && resumen.length > 0 ? (
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
-                <th className="px-5 py-2.5 font-medium">{agrupacion === "semana" ? "Semana de" : "Mes"}</th>
-                <th className="px-5 py-2.5 font-medium">Guías</th>
-                <th className="px-5 py-2.5 font-medium">Km recorridos</th>
-                <th className="px-5 py-2.5 font-medium">Subtotal</th>
-                <th className="px-5 py-2.5 font-medium">IVA</th>
-                <th className="px-5 py-2.5 font-medium">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {resumen.map((r) => (
-                <tr key={r.clave} className="border-b border-border text-sm last:border-0">
-                  <td className="px-5 py-2.5 font-medium text-foreground">{r.clave}</td>
-                  <td className="px-5 py-2.5">{r.cantidad_viajes}</td>
-                  <td className="px-5 py-2.5 tabular-nums">{r.km_total.toLocaleString("es-CL")} km</td>
-                  <td className="px-5 py-2.5">{formatMoneda(r.subtotal, usuario.moneda)}</td>
-                  <td className="px-5 py-2.5">{formatMoneda(r.iva, usuario.moneda)}</td>
-                  <td className="px-5 py-2.5 font-medium text-foreground">{formatMoneda(r.total, usuario.moneda)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : (
-          <p className="px-5 py-6 text-sm text-muted">Sin viajes registrados todavía.</p>
-        )}
-      </Card>
+          {resumen && resumen.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-ds-body">
+                <thead>
+                  <tr className="border-b border-ds-divider text-[11px] font-medium uppercase tracking-[0.08em] text-ds-text/60">
+                    <th className="px-ds-4 py-ds-3">{agrupacion === "semana" ? "Semana de" : "Mes"}</th>
+                    <th className="px-ds-4 py-ds-3">Guías</th>
+                    <th className="px-ds-4 py-ds-3">Km recorridos</th>
+                    <th className="px-ds-4 py-ds-3">Subtotal</th>
+                    <th className="px-ds-4 py-ds-3">IVA</th>
+                    <th className="px-ds-4 py-ds-3">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {resumen.map((r) => (
+                    <tr key={r.clave} className="border-b border-ds-text/[0.08] last:border-0">
+                      <td className="px-ds-4 py-ds-3 font-medium text-ds-text">{r.clave}</td>
+                      <td className="px-ds-4 py-ds-3 text-ds-text">{r.cantidad_viajes}</td>
+                      <td className="px-ds-4 py-ds-3 tabular-nums text-ds-text">{r.km_total.toLocaleString("es-CL")} km</td>
+                      <td className="px-ds-4 py-ds-3 text-ds-text">{formatMoneda(r.subtotal, usuario.moneda)}</td>
+                      <td className="px-ds-4 py-ds-3 text-ds-text">{formatMoneda(r.iva, usuario.moneda)}</td>
+                      <td className="px-ds-4 py-ds-3 font-medium text-ds-text">{formatMoneda(r.total, usuario.moneda)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="px-ds-4 py-ds-6 font-ds-body text-ds-small text-ds-text/70">Sin viajes registrados todavía.</p>
+          )}
+        </Card>
+      </div>
 
       {formAbierto && (
-        <Card className="mb-6">
-          <h2 className="mb-4 text-sm font-semibold text-foreground">Nuevo viaje</h2>
-          <form onSubmit={onSubmit} className="flex flex-col gap-4">
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <div>
-                <Label>Fecha</Label>
-                <Input type="date" required value={fecha} onChange={(e) => setFecha(e.target.value)} />
+        <div className="mb-ds-6">
+          <Card>
+            <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Nuevo viaje</p>
+            <form onSubmit={onSubmit} className="flex flex-col gap-ds-4">
+              <div className="grid gap-ds-4 sm:grid-cols-2 lg:grid-cols-3">
+                <FechaCampo etiqueta="Fecha" valor={fecha} onCambio={setFecha} />
+                <Input etiqueta="Número de guía" requerido valor={numeroGuia} onCambio={setNumeroGuia} />
+                <div className="flex flex-col gap-ds-1">
+                  <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Cliente</label>
+                  <ComboboxCliente
+                    value={clienteId}
+                    onChange={setClienteId}
+                    clientes={clientes}
+                    onClienteCreado={(c) => setClientes((prev) => [...prev, c])}
+                    placeholder="Selecciona un cliente…"
+                  />
+                </div>
+                <div className="flex flex-col gap-ds-1">
+                  <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Chofer (opcional)</label>
+                  <ComboboxResponsable value={choferId} onChange={setChoferId} equipo={choferes} opcionVacia="Sin asignar" placeholder="Sin asignar" />
+                </div>
+                <Input etiqueta="Origen" requerido valor={origen} onCambio={setOrigen} />
+                <Input etiqueta="Destino" requerido valor={destino} onCambio={setDestino} />
+                <Input etiqueta="Km inicial (opcional)" tipo="numero" valor={kmInicial} onCambio={setKmInicial} />
+                <Input etiqueta="Km final (opcional)" tipo="numero" valor={kmFinal} onCambio={setKmFinal} />
+                <div className="flex flex-col gap-ds-1">
+                  <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Monto del viaje</label>
+                  <InputMonto required value={subtotal} onChange={setSubtotal} moneda={usuario.moneda} />
+                </div>
+                <div className="flex items-end pb-2.5">
+                  <label className="flex items-center gap-ds-2 font-ds-body text-ds-small text-ds-text">
+                    <input type="checkbox" checked={aplicaIva} onChange={(e) => setAplicaIva(e.target.checked)} className="accent-[var(--ds-brand)]" />
+                    Aplicar IVA (19%)
+                  </label>
+                </div>
+                <div className="sm:col-span-2 lg:col-span-3">
+                  <Input etiqueta="Comentarios (opcional)" valor={comentarios} onCambio={setComentarios} />
+                </div>
               </div>
-              <div>
-                <Label>Número de guía</Label>
-                <Input type="text" required value={numeroGuia} onChange={(e) => setNumeroGuia(e.target.value)} />
+              {formError ? <p className="font-ds-body text-ds-small text-ds-accent-700">{formError}</p> : null}
+              <div className="flex gap-ds-2">
+                <Button tipo="submit" cargando={guardando}>
+                  Agregar viaje
+                </Button>
+                <Button variante="ghost" onPress={() => setFormAbierto(false)}>
+                  Cancelar
+                </Button>
               </div>
-              <div>
-                <Label>Cliente</Label>
-                <ComboboxCliente
-                  value={clienteId}
-                  onChange={setClienteId}
-                  clientes={clientes}
-                  onClienteCreado={(c) => setClientes((prev) => [...prev, c])}
-                  placeholder="Selecciona un cliente…"
-                />
-              </div>
-              <div>
-                <Label>Chofer (opcional)</Label>
-                <ComboboxResponsable
-                  value={choferId}
-                  onChange={setChoferId}
-                  equipo={choferes}
-                  opcionVacia="Sin asignar"
-                  placeholder="Sin asignar"
-                />
-              </div>
-              <div>
-                <Label>Origen</Label>
-                <Input type="text" required value={origen} onChange={(e) => setOrigen(e.target.value)} />
-              </div>
-              <div>
-                <Label>Destino</Label>
-                <Input type="text" required value={destino} onChange={(e) => setDestino(e.target.value)} />
-              </div>
-              <div>
-                <Label>Km inicial (opcional)</Label>
-                <Input type="number" min="0" step="0.1" value={kmInicial} onChange={(e) => setKmInicial(e.target.value)} />
-              </div>
-              <div>
-                <Label>Km final (opcional)</Label>
-                <Input type="number" min="0" step="0.1" value={kmFinal} onChange={(e) => setKmFinal(e.target.value)} />
-              </div>
-              <div>
-                <Label>Monto del viaje</Label>
-                <InputMonto required value={subtotal} onChange={setSubtotal} moneda={usuario.moneda} />
-              </div>
-              <div className="flex items-end pb-2.5">
-                <label className="flex items-center gap-2 text-sm text-foreground">
-                  <input type="checkbox" checked={aplicaIva} onChange={(e) => setAplicaIva(e.target.checked)} />
-                  Aplicar IVA (19%)
-                </label>
-              </div>
-              <div className="sm:col-span-2 lg:col-span-3">
-                <Label>Comentarios (opcional)</Label>
-                <Input type="text" value={comentarios} onChange={(e) => setComentarios(e.target.value)} />
-              </div>
-            </div>
-            {formError && <ErrorText>{formError}</ErrorText>}
-            <div className="flex gap-2">
-              <Button type="submit" disabled={guardando} className="self-start">
-                {guardando ? "Guardando…" : "Agregar viaje"}
-              </Button>
-              <Button type="button" variant="ghost" onClick={() => setFormAbierto(false)}>
-                Cancelar
-              </Button>
-            </div>
-          </form>
-        </Card>
-      )}
-      {aviso && (
-        <div className="mb-6">
-          <SuccessText>{aviso}</SuccessText>
+            </form>
+          </Card>
         </div>
       )}
+      {aviso ? <p className="mb-ds-6 font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}
 
       {usuario.rol === "admin" && (
-        <label className="mb-4 flex items-center gap-2 text-sm text-foreground">
-          <input type="checkbox" checked={aprobAuto} onChange={(e) => cambiarAprobAuto(e.target.checked)} />
+        <label className="mb-ds-4 flex items-center gap-ds-2 font-ds-body text-ds-small text-ds-text">
+          <input type="checkbox" checked={aprobAuto} onChange={(e) => cambiarAprobAuto(e.target.checked)} className="accent-[var(--ds-brand)]" />
           Aprobar automáticamente los viajes que registran los choferes desde la app
         </label>
       )}
 
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <Select value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value as typeof filtroEstado)} className="w-48">
-          <option value="todos">Todos los estados</option>
-          <option value="borrador">Borrador</option>
-          <option value="confirmado">Confirmado</option>
-          <option value="facturado">Facturado</option>
-        </Select>
+      <div className="mb-ds-4 flex flex-wrap items-center gap-ds-3">
+        <Select
+          valor={filtroEstado}
+          onCambio={(v) => setFiltroEstado(v as typeof filtroEstado)}
+          opciones={[
+            { valor: "todos", etiqueta: "Todos los estados" },
+            { valor: "borrador", etiqueta: "Borrador" },
+            { valor: "confirmado", etiqueta: "Confirmado" },
+            { valor: "facturado", etiqueta: "Facturado" },
+          ]}
+        />
         {seleccionados.size > 0 && (
-          <div className="ml-auto flex items-center gap-3">
-            <span className="text-sm text-muted">
+          <div className="ml-auto flex items-center gap-ds-3">
+            <span className="font-ds-body text-ds-small text-ds-text/70">
               {seleccionados.size} seleccionado{seleccionados.size > 1 ? "s" : ""} · {formatMoneda(totalSeleccionado, usuario.moneda)}
             </span>
-            <Button type="button" onClick={facturarSeleccionados} disabled={!puedeFacturar}>
+            <Button onPress={facturarSeleccionados} deshabilitado={!puedeFacturar}>
               Facturar seleccionados
             </Button>
           </div>
         )}
       </div>
       {seleccionados.size > 0 && !puedeFacturar && (
-        <p className="-mt-2 mb-4 text-xs text-muted">
-          Para facturar, todos los viajes seleccionados deben ser del mismo cliente y estar en estado "confirmado".
+        <p className="-mt-ds-2 mb-ds-4 font-ds-body text-ds-caption text-ds-text/60">
+          Para facturar, todos los viajes seleccionados deben ser del mismo cliente y estar en estado &quot;confirmado&quot;.
         </p>
       )}
 
-      {error && <EstadoError mensaje={error} onReintentar={cargar} />}
-      {viajes === null && !error && <EstadoCargando />}
+      {error ? <ErrorState mensaje={error} onReintentar={cargar} /> : null}
+      {viajes === null && !error ? <LoadingState /> : null}
 
       {viajes?.length === 0 && (
-        <EstadoVacio
-          icono={IconTruck}
+        <EmptyState
+          icono={<Truck size={28} strokeWidth={2.75} />}
           titulo="Ningún viaje registrado"
           mensaje="Registra tu primer viaje para comenzar."
           accion={
-            <Button type="button" onClick={abrirNuevo}>
-              <IconPlus className="h-4 w-4" />
+            <Button iconoIzq={<Plus size={16} strokeWidth={2.75} />} onPress={abrirNuevo}>
               Nuevo Viaje
             </Button>
           }
@@ -524,176 +513,184 @@ export default function ViajesPage() {
       )}
 
       {lista.length > 0 && (
-        <Card className="overflow-x-auto p-0">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
-                <th className="px-5 py-3 font-medium"></th>
-                <th className="px-5 py-3 font-medium">Fecha</th>
-                <th className="px-5 py-3 font-medium">Guía</th>
-                <th className="px-5 py-3 font-medium">Cliente</th>
-                <th className="px-5 py-3 font-medium">Chofer</th>
-                <th className="px-5 py-3 font-medium">Ruta</th>
-                <th className="px-5 py-3 font-medium">Km</th>
-                <th className="px-5 py-3 font-medium">Total</th>
-                <th className="px-5 py-3 font-medium">Estado</th>
-                <th className="px-5 py-3 font-medium">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {lista.map((v) => {
-                const kilometros = km(v);
-                const esBorrador = v.estado === "borrador";
-                return (
-                  <Fragment key={v.id}>
-                    <tr
-                      className={`border-b border-border-soft last:border-0 hover:bg-surface-sunken ${esBorrador ? "bg-warning-soft/40" : ""}`}
-                    >
-                      <td className="px-5 py-3">
-                        <input
-                          type="checkbox"
-                          checked={seleccionados.has(v.id)}
-                          disabled={v.estado === "facturado"}
-                          onChange={() => alternarSeleccion(v.id)}
-                        />
-                      </td>
-                      <td className="px-5 py-3 text-muted">{v.fecha}</td>
-                      <td className="px-5 py-3 font-medium text-foreground">{v.numero_guia}</td>
-                      <td className="px-5 py-3">{v.cliente_info?.nombre ?? v.cliente}</td>
-                      <td className="px-5 py-3 text-muted">{v.chofer?.nombre ?? "—"}</td>
-                      <td className="px-5 py-3 text-muted">
-                        {v.origen} → {v.destino}
-                        {v.origen && v.destino && (
-                          <a
-                            href={`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(v.origen)}&destination=${encodeURIComponent(v.destino)}&travelmode=driving`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="ml-2 text-xs font-medium text-brand hover:underline"
-                            title="Ver la ruta en Google Maps"
-                          >
-                            ruta
-                          </a>
-                        )}
-                      </td>
-                      <td className="px-5 py-3 tabular-nums text-muted">{kilometros != null ? `${kilometros.toLocaleString("es-CL")} km` : "—"}</td>
-                      <td className="px-5 py-3">
-                        {formatMoneda(v.total, usuario.moneda)}
-                        {v.aplica_iva && <span className="ml-1 text-xs text-muted">+IVA</span>}
-                      </td>
-                      <td className="px-5 py-3">
-                        <Badge value={v.estado} />
-                        {v.origen_captura === "whatsapp" && (
-                          <span className="ml-1.5 text-xs text-muted" title="Capturado por WhatsApp">
-                            📱
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-5 py-3">
-                        <div className="flex items-center gap-3">
-                          {esBorrador && (
-                            <button type="button" onClick={() => abrirEdicion(v)} className="text-xs font-medium text-brand hover:underline">
-                              Revisar y confirmar
-                            </button>
-                          )}
-                          <button type="button" onClick={() => verFotos(v.id)} className="text-xs font-medium text-muted hover:text-brand">
-                            Fotos
-                          </button>
-                          {v.estado !== "facturado" && (
-                            <button type="button" onClick={() => eliminar(v.id)} className="text-xs font-medium text-danger hover:underline">
-                              Eliminar
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                    {editId === v.id && (
-                      <tr className="border-b border-border bg-brand-soft/30">
-                        <td colSpan={10} className="px-5 py-4">
-                          <div className="mb-3 flex flex-wrap items-end gap-3">
-                            <div className="w-32">
-                              <Label>Número de guía</Label>
-                              <Input type="text" value={editNumeroGuia} onChange={(e) => setEditNumeroGuia(e.target.value)} />
-                            </div>
-                            <div className="min-w-[180px] flex-1">
-                              <Label>Origen</Label>
-                              <Input type="text" value={editOrigen} onChange={(e) => setEditOrigen(e.target.value)} />
-                            </div>
-                            <div className="min-w-[180px] flex-1">
-                              <Label>Destino</Label>
-                              <Input type="text" value={editDestino} onChange={(e) => setEditDestino(e.target.value)} />
-                            </div>
-                          </div>
-                          <div className="flex flex-wrap items-end gap-3">
-                            <div className="min-w-[220px]">
-                              <Label>Cliente</Label>
-                              <ComboboxCliente
-                                value={editClienteId}
-                                onChange={setEditClienteId}
-                                clientes={clientes}
-                                onClienteCreado={(c) => setClientes((prev) => [...prev, c])}
-                                placeholder="Selecciona un cliente…"
-                              />
-                            </div>
-                            <div className="w-32">
-                              <Label>Km inicial</Label>
-                              <Input type="number" min="0" step="0.1" value={editKmInicial} onChange={(e) => setEditKmInicial(e.target.value)} />
-                            </div>
-                            <div className="w-32">
-                              <Label>Km final</Label>
-                              <Input type="number" min="0" step="0.1" value={editKmFinal} onChange={(e) => setEditKmFinal(e.target.value)} />
-                            </div>
-                            <div className="w-36">
-                              <Label>Monto del viaje</Label>
-                              <InputMonto value={editSubtotal} onChange={setEditSubtotal} moneda={usuario.moneda} />
-                            </div>
-                            <label className="flex items-center gap-2 pb-2.5 text-sm text-foreground">
-                              <input type="checkbox" checked={editAplicaIva} onChange={(e) => setEditAplicaIva(e.target.checked)} />
-                              Aplicar IVA
-                            </label>
-                            <div className="flex gap-2 pb-0.5">
-                              <Button type="button" onClick={() => guardarEdicion(v.id, true)} disabled={confirmando}>
-                                {confirmando ? "Guardando…" : "Confirmar viaje"}
-                              </Button>
-                              <Button type="button" variant="outline" onClick={() => guardarEdicion(v.id, false)} disabled={confirmando}>
-                                Guardar sin confirmar
-                              </Button>
-                              <Button type="button" variant="ghost" onClick={() => setEditId(null)}>
-                                Cancelar
-                              </Button>
-                            </div>
-                          </div>
-                          {editError && (
-                            <div className="mt-2">
-                              <ErrorText>{editError}</ErrorText>
-                            </div>
+        <Card sinRelleno elevacion="sm">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-ds-body">
+              <thead>
+                <tr className="border-b border-ds-divider text-[11px] font-medium uppercase tracking-[0.08em] text-ds-text/60">
+                  <th className="px-ds-4 py-ds-3"></th>
+                  <th className="px-ds-4 py-ds-3">Fecha</th>
+                  <th className="px-ds-4 py-ds-3">Guía</th>
+                  <th className="px-ds-4 py-ds-3">Cliente</th>
+                  <th className="px-ds-4 py-ds-3">Chofer</th>
+                  <th className="px-ds-4 py-ds-3">Ruta</th>
+                  <th className="px-ds-4 py-ds-3">Km</th>
+                  <th className="px-ds-4 py-ds-3">Total</th>
+                  <th className="px-ds-4 py-ds-3">Estado</th>
+                  <th className="px-ds-4 py-ds-3">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {lista.map((v) => {
+                  const kilometros = km(v);
+                  const esBorrador = v.estado === "borrador";
+                  return (
+                    <Fragment key={v.id}>
+                      <tr className={`border-b border-ds-text/[0.08] last:border-0 hover:bg-ds-text/[0.04] ${esBorrador ? "bg-ds-accent-100/60" : ""}`}>
+                        <td className="px-ds-4 py-ds-3">
+                          <input
+                            type="checkbox"
+                            checked={seleccionados.has(v.id)}
+                            disabled={v.estado === "facturado"}
+                            onChange={() => alternarSeleccion(v.id)}
+                            className="accent-[var(--ds-brand)]"
+                          />
+                        </td>
+                        <td className="px-ds-4 py-ds-3 text-ds-text/70">{v.fecha}</td>
+                        <td className="px-ds-4 py-ds-3 font-medium text-ds-text">{v.numero_guia}</td>
+                        <td className="px-ds-4 py-ds-3 text-ds-text">{v.cliente_info?.nombre ?? v.cliente}</td>
+                        <td className="px-ds-4 py-ds-3 text-ds-text/70">{v.chofer?.nombre ?? "—"}</td>
+                        <td className="px-ds-4 py-ds-3 text-ds-text/70">
+                          {v.origen} → {v.destino}
+                          {v.origen && v.destino && (
+                            <a
+                              href={`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(v.origen)}&destination=${encodeURIComponent(v.destino)}&travelmode=driving`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="ml-ds-2 font-ds-body text-ds-caption font-medium text-ds-brand hover:underline"
+                              title="Ver la ruta en Google Maps"
+                            >
+                              ruta
+                            </a>
                           )}
                         </td>
+                        <td className="px-ds-4 py-ds-3 tabular-nums text-ds-text/70">{kilometros != null ? `${kilometros.toLocaleString("es-CL")} km` : "—"}</td>
+                        <td className="px-ds-4 py-ds-3 text-ds-text">
+                          {formatMoneda(v.total, usuario.moneda)}
+                          {v.aplica_iva && <span className="ml-ds-1 font-ds-body text-ds-caption text-ds-text/60">+IVA</span>}
+                        </td>
+                        <td className="px-ds-4 py-ds-3">
+                          <StatusBadge estado={v.estado} tonoForzado={v.estado === "confirmado" || v.estado === "facturado" ? "completado" : "en_progreso"} />
+                          {v.origen_captura === "whatsapp" && (
+                            <span className="ml-1.5 font-ds-body text-ds-caption text-ds-text/60" title="Capturado por WhatsApp">
+                              📱
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-ds-4 py-ds-3">
+                          <div className="flex items-center gap-ds-3">
+                            {esBorrador && (
+                              <button type="button" onClick={() => abrirEdicion(v)} className="font-ds-body text-ds-caption font-medium text-ds-brand hover:underline">
+                                Revisar y confirmar
+                              </button>
+                            )}
+                            <button type="button" onClick={() => verFotos(v.id)} className="font-ds-body text-ds-caption font-medium text-ds-text/60 hover:text-ds-brand">
+                              Fotos
+                            </button>
+                            {v.estado !== "facturado" && (
+                              <button type="button" onClick={() => eliminar(v.id)} className="font-ds-body text-ds-caption font-medium text-ds-accent-700 hover:underline">
+                                Eliminar
+                              </button>
+                            )}
+                          </div>
+                        </td>
                       </tr>
-                    )}
-                  </Fragment>
-                );
-              })}
-            </tbody>
-          </table>
+                      {editId === v.id && (
+                        <tr className="border-b border-ds-divider bg-ds-brand/[0.06]">
+                          <td colSpan={10} className="px-ds-4 py-ds-4">
+                            <div className="mb-ds-3 flex flex-wrap items-end gap-ds-3">
+                              <div className="w-32">
+                                <Input etiqueta="Número de guía" valor={editNumeroGuia} onCambio={setEditNumeroGuia} />
+                              </div>
+                              <div className="min-w-[180px] flex-1">
+                                <Input etiqueta="Origen" valor={editOrigen} onCambio={setEditOrigen} />
+                              </div>
+                              <div className="min-w-[180px] flex-1">
+                                <Input etiqueta="Destino" valor={editDestino} onCambio={setEditDestino} />
+                              </div>
+                            </div>
+                            <div className="flex flex-wrap items-end gap-ds-3">
+                              <div className="min-w-[220px]">
+                                <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Cliente</label>
+                                <ComboboxCliente
+                                  value={editClienteId}
+                                  onChange={setEditClienteId}
+                                  clientes={clientes}
+                                  onClienteCreado={(c) => setClientes((prev) => [...prev, c])}
+                                  placeholder="Selecciona un cliente…"
+                                />
+                              </div>
+                              <div className="w-32">
+                                <Input etiqueta="Km inicial" tipo="numero" valor={editKmInicial} onCambio={setEditKmInicial} />
+                              </div>
+                              <div className="w-32">
+                                <Input etiqueta="Km final" tipo="numero" valor={editKmFinal} onCambio={setEditKmFinal} />
+                              </div>
+                              <div className="w-36">
+                                <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Monto del viaje</label>
+                                <InputMonto value={editSubtotal} onChange={setEditSubtotal} moneda={usuario.moneda} />
+                              </div>
+                              <label className="flex items-center gap-ds-2 pb-2.5 font-ds-body text-ds-small text-ds-text">
+                                <input type="checkbox" checked={editAplicaIva} onChange={(e) => setEditAplicaIva(e.target.checked)} className="accent-[var(--ds-brand)]" />
+                                Aplicar IVA
+                              </label>
+                              <div className="flex gap-ds-2 pb-0.5">
+                                <Button onPress={() => guardarEdicion(v.id, true)} cargando={confirmando}>
+                                  Confirmar viaje
+                                </Button>
+                                <Button variante="secundario" onPress={() => guardarEdicion(v.id, false)} deshabilitado={confirmando}>
+                                  Guardar sin confirmar
+                                </Button>
+                                <Button variante="ghost" onPress={() => setEditId(null)}>
+                                  Cancelar
+                                </Button>
+                              </div>
+                            </div>
+                            {editError ? <p className="mt-ds-2 font-ds-body text-ds-small text-ds-accent-700">{editError}</p> : null}
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </Card>
       )}
 
       <Modal open={fotosViaje != null} onClose={() => setFotosViaje(null)} title="Fotos del viaje" wide>
         {fotosViaje?.cargando ? (
-          <p className="text-sm text-muted">Cargando…</p>
+          <p className="font-ds-body text-ds-small text-ds-text/70">Cargando…</p>
         ) : fotosViaje && fotosViaje.urls.length > 0 ? (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-2 gap-ds-3 sm:grid-cols-3">
             {fotosViaje.urls.map((u) => (
               // eslint-disable-next-line @next/next/no-img-element
               <a key={u} href={u} target="_blank" rel="noopener noreferrer">
-                <img src={u} alt="Foto del viaje" className="aspect-square w-full rounded-lg border border-border object-cover" />
+                <img src={u} alt="Foto del viaje" className="aspect-square w-full rounded-ds-md border border-ds-divider object-cover" />
               </a>
             ))}
           </div>
         ) : (
-          <p className="text-sm text-muted">Este viaje no tiene fotos.</p>
+          <p className="font-ds-body text-ds-small text-ds-text/70">Este viaje no tiene fotos.</p>
         )}
       </Modal>
     </DashboardShell>
+  );
+}
+
+// Input nativo type="date" — ver el mismo helper en rutas/nueva/page.tsx.
+function FechaCampo({ etiqueta, valor, onCambio }: { etiqueta: string; valor: string; onCambio: (v: string) => void }) {
+  return (
+    <div className="flex flex-col gap-ds-1">
+      <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">{etiqueta}</label>
+      <input
+        type="date"
+        required
+        value={valor}
+        onChange={(e) => onCambio(e.target.value)}
+        className="h-11 w-full rounded-ds-md border border-ds-divider bg-ds-surface px-ds-3 font-ds-body text-ds-body text-ds-text transition-colors hover:border-ds-text/30 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ds-brand)]"
+      />
+    </div>
   );
 }

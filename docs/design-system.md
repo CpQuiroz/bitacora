@@ -352,6 +352,50 @@ API nueva (española: `variante`, `onPress`, `onCambio`, `valor`),
 igual que se hizo en los buckets 1-3. Se sigue con el resto en el mismo
 ritmo de un bucket a la vez, comiteando y verificando en cada uno.
 
+### "Homologar todo" — Operación (resto) ✅
+
+Cierra el grupo de nav "Operación" (Agenda queda para su propio bucket
+más adelante — usa `DataTable`/`EstadoCitaRiel`, todavía sin migrar):
+`rutas/page.tsx`, `rutas/nueva/page.tsx`, `rutas/[id]/page.tsx`,
+`viajes/page.tsx`.
+
+Gaps de primitivos reales encontrados (documentados, no inventados
+por archivo):
+- `Input` (ds-) no tiene `tipo="fecha"` — se usa un `<input type="date">`
+  nativo con las mismas clases visuales (helper `FechaCampo`/
+  `DatePickerCampo` en cada archivo) en vez de forzar `DatePicker`
+  (que trabaja con `Date`, no con el string `YYYY-MM-DD` que ya viaja
+  tal cual al backend en estos forms).
+- `Textarea` (ds-) no tiene `requerido` (`Input` sí) — se sacó el
+  atributo nativo en el único call-site que lo pedía; la validación
+  real ya vive en el handler del submit.
+- Tabla de `viajes` tiene una fila de edición inline expandible (2do
+  `<tr>` con un form completo) — `<Table>` no soporta filas
+  expandibles, sigue siendo un `<table>` a mano con las mismas clases
+  que usa `<Table>` internamente (mismo criterio que ya se documentó
+  para casos así).
+
+Componentes compartidos (fuera de `packages/ui`) migrados de paso,
+por su alcance (no son parte de un bucket de páginas, dan leverage):
+- `InputMonto.tsx`: ya estaba migrado (se encontró retokenizado a ds-
+  de una sesión anterior).
+- `Modal.tsx`: migrado ahora. No se reemplazó por `<Dialog>` (packages/ui)
+  porque tiene tamaños `wide`/`xl` que `Dialog` no soporta (siempre
+  `max-w-lg`) — mismo motivo que `InputMonto` no usa `<Input>`. 7
+  archivos dependen de él, todos se benefician sin tocarlos.
+- `MapaRutas.tsx`: los pines (Leaflet `divIcon`, HTML insertado al
+  DOM) pasaron de colores fijos a `var(--ds-brand)`/`var(--ds-text)`
+  — ahora respetan la marca del tenant. La polilínea (Leaflet puede
+  usar canvas, que no resuelve `var()`) lee `--ds-brand` con
+  `getComputedStyle` en vez de un literal fijo. Ya estaba exento del
+  chequeo de literales (`scripts/colores-permitidos.json`) — sigue
+  exento, ahora con menos literales igual.
+
 ### Resto del orden del prompt
 
 4) Clientes · 5) Catálogo y stock · 6) Configuración · 7) resto — pendientes.
+Además, el pedido de la usuaria de homologar TODO suma: Agenda,
+Financiero (cotizaciones/cobros/gastos/remuneraciones), Recursos
+(equipos/inventario/catálogo/proveedores), Equipo (personas/documentos),
+Informes (9 páginas + charts) y las ~14 subpáginas de Configuración —
+ver "Alcance real descubierto" más arriba.

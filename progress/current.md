@@ -63,8 +63,12 @@ aparte — la usuaria habló de "la shell" en el contexto web.
 
 ## Próximo paso
 
-Seguir con el resto de "Operación" (rutas, viajes) y luego el resto
-de los grupos de nav en orden.
+"Operación" (rutas x3, viajes) ✅ migrado — commit pendiente de hacer
+en este turno. `Modal.tsx` migrado de paso (7 archivos dependen).
+`InputMonto.tsx` ya estaba migrado de antes. Sigue "Clientes"
+(registros/clientes, agenda/paquetes, portal-cliente) y de ahí el
+resto de los grupos de nav en orden. Agenda queda para más adelante
+(usa `DataTable`/`EstadoCitaRiel`, sin migrar todavía).
 
 ## Pendiente / notas generales
 

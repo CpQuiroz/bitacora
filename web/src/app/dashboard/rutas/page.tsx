@@ -3,19 +3,18 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { MapPin, Route as RouteIcon } from "lucide-react";
 import type { RutaPlanificada, Usuario } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Badge, Card, ErrorText, Label, Select, buttonClass } from "@/components/ui";
-import { IconMapPin, IconRoute } from "@/components/icons";
-import { EstadoCargando, EstadoError, EstadoVacio } from "@/components/estados";
+import { Button, Card, DatePicker, ErrorState, LoadingState, EmptyState, Select, StatusBadge, Table } from "@bitacora/ui/web";
 import dynamic from "next/dynamic";
 import type { Parada } from "@/components/MapaRutas";
 // Leaflet ~148 KB — carga aparte (AUDITORIA_PERFORMANCE_COSTOS.md #7).
 const MapaRutas = dynamic(() => import("@/components/MapaRutas").then((m) => m.MapaRutas), {
   ssr: false,
-  loading: () => <div className="h-64 animate-pulse rounded-lg bg-surface" />,
+  loading: () => <div className="h-64 animate-pulse rounded-ds-md bg-ds-surface" />,
 });
 
 function wazeUrl(lat: number, lng: number) {
@@ -28,6 +27,20 @@ function googleMapsRutaCompleta(paradas: Parada[]) {
   return `https://www.google.com/maps/dir/${ruta}`;
 }
 
+function aFecha(texto: string): Date | null {
+  if (!texto) return null;
+  const [y, m, d] = texto.split("-").map(Number);
+  return new Date(y, (m || 1) - 1, d || 1);
+}
+function aTexto(fecha: Date | null): string {
+  if (!fecha) return "";
+  const y = fecha.getFullYear();
+  const m = String(fecha.getMonth() + 1).padStart(2, "0");
+  const d = String(fecha.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export default function RutasPage() {
   const router = useRouter();
   const [usuario, setUsuario] = useState<UsuarioShell | null>(null);
@@ -90,101 +103,83 @@ export default function RutasPage() {
 
   return (
     <DashboardShell usuario={usuario}>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight text-foreground">
-          <IconRoute className="h-6 w-6 text-brand" />
+      <div className="mb-ds-6 flex flex-wrap items-center justify-between gap-ds-3">
+        <p className="ds-heading flex items-center gap-ds-2 text-ds-h2 text-ds-text">
+          <RouteIcon size={24} strokeWidth={2.75} className="text-ds-brand" />
           Rutas
-        </h1>
-        <Link href="/dashboard/rutas/nueva" className={buttonClass("primary")}>
-          Nueva ruta
+        </p>
+        <Link href="/dashboard/rutas/nueva">
+          <Button>Nueva ruta</Button>
         </Link>
       </div>
 
       {rutasGuardadas.length > 0 && (
-        <Card className="mb-6 overflow-x-auto p-0">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
-                <th className="px-5 py-3 font-medium">Ruta</th>
-                <th className="px-5 py-3 font-medium">Fecha</th>
-                <th className="px-5 py-3 font-medium">Estado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rutasGuardadas.map((r) => (
-                <tr key={r.id} className="border-b border-border-soft last:border-0 hover:bg-surface-sunken">
-                  <td className="px-5 py-3">
-                    <Link href={`/dashboard/rutas/${r.id}`} className="font-medium text-brand hover:underline">
-                      {r.nombre || equipo.find((u) => u.id === r.responsable_id)?.nombre || "Ruta"}
-                    </Link>
-                  </td>
-                  <td className="px-5 py-3 text-muted">{r.fecha_inicio}</td>
-                  <td className="px-5 py-3">
-                    <Badge value={r.estado} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
+        <div className="mb-ds-6">
+          <Table<RutaPlanificada>
+            filas={rutasGuardadas}
+            claveFila={(r) => r.id}
+            vacio={{ titulo: "Sin rutas guardadas" }}
+            columnas={[
+              {
+                encabezado: "Ruta",
+                celda: (r) => (
+                  <Link href={`/dashboard/rutas/${r.id}`} className="font-medium text-ds-brand hover:underline">
+                    {r.nombre || equipo.find((u) => u.id === r.responsable_id)?.nombre || "Ruta"}
+                  </Link>
+                ),
+              },
+              { encabezado: "Fecha", celda: (r) => r.fecha_inicio },
+              {
+                encabezado: "Estado",
+                celda: (r) => <StatusBadge estado={r.estado} tonoForzado={r.estado === "finalizada" ? "completado" : "en_progreso"} />,
+              },
+            ]}
+          />
+        </div>
       )}
 
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <div className="mb-ds-6 flex flex-col gap-ds-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 className="text-sm font-semibold text-foreground">Vista rápida del día</h2>
-          <p className="mt-1 text-sm text-muted">
+          <p className="font-ds-body text-ds-small font-semibold text-ds-text">Vista rápida del día</p>
+          <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">
             Trabajos del día de un responsable, en el orden que quedaron registrados.
           </p>
         </div>
-        <div className="flex gap-3">
-          <div>
-            <Label>Responsable</Label>
-            <Select value={responsableId} onChange={(e) => setResponsableId(e.target.value)}>
-              {equipo.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.nombre}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <div>
-            <Label>Fecha</Label>
-            <input
-              type="date"
-              value={fecha}
-              onChange={(e) => setFecha(e.target.value)}
-              className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground transition-colors hover:border-muted-soft focus:outline-none focus-visible:ring-[3px] focus-visible:ring-brand/25 focus-visible:border-brand"
-            />
-          </div>
+        <div className="flex gap-ds-3">
+          <Select
+            etiqueta="Responsable"
+            valor={responsableId}
+            onCambio={setResponsableId}
+            opciones={equipo.map((u) => ({ valor: u.id, etiqueta: u.nombre }))}
+          />
+          <DatePicker etiqueta="Fecha" valor={aFecha(fecha)} onCambio={(f) => setFecha(aTexto(f))} />
         </div>
       </div>
 
-      {error && <EstadoError mensaje={error} />}
-      {cargando && <EstadoCargando />}
+      {error ? <ErrorState mensaje={error} /> : null}
+      {cargando ? <LoadingState /> : null}
 
-      {paradas && paradas.length === 0 && (
-        <EstadoVacio icono={IconMapPin} titulo="No hay trabajos para esta fecha" />
-      )}
+      {paradas && paradas.length === 0 && <EmptyState titulo="No hay trabajos para esta fecha" icono={<MapPin size={28} strokeWidth={2.75} />} />}
 
       {paradas && paradas.length > 0 && (
-        <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
+        <div className="grid gap-ds-6 lg:grid-cols-[1fr_20rem]">
           <MapaRutas paradas={paradas} />
 
-          <Card className="p-0">
-            <div className="flex flex-col divide-y divide-border">
+          <Card sinRelleno>
+            <div className="flex flex-col divide-y divide-ds-divider">
               {conCoords.map((p, i) => (
-                <div key={p.trabajo_id} className="flex items-start gap-3 p-4">
-                  <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand text-xs font-semibold text-brand-foreground">
+                <div key={p.trabajo_id} className="flex items-start gap-ds-3 p-ds-4">
+                  <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-ds-pill bg-ds-brand text-xs font-semibold text-ds-brand-foreground">
                     {i + 1}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium text-foreground">{p.cliente_nombre}</p>
-                    <p className="truncate text-xs text-muted">{p.direccion}</p>
+                    <p className="truncate font-ds-body font-medium text-ds-text">{p.cliente_nombre}</p>
+                    <p className="truncate font-ds-body text-ds-caption text-ds-text/60">{p.direccion}</p>
                     <a
                       href={wazeUrl(p.lat!, p.lng!)}
                       target="_blank"
                       rel="noreferrer"
-                      className="mt-1 inline-block text-xs font-medium text-brand hover:underline"
+                      className="mt-ds-1 inline-block font-ds-body text-ds-caption font-medium text-ds-brand hover:underline"
                     >
                       Abrir en Waze →
                     </a>
@@ -192,23 +187,20 @@ export default function RutasPage() {
                 </div>
               ))}
               {sinCoords.map((p) => (
-                <div key={p.trabajo_id} className="p-4">
-                  <p className="font-medium text-foreground">{p.cliente_nombre}</p>
-                  <p className="text-xs text-muted">
+                <div key={p.trabajo_id} className="p-ds-4">
+                  <p className="font-ds-body font-medium text-ds-text">{p.cliente_nombre}</p>
+                  <p className="font-ds-body text-ds-caption text-ds-text/60">
                     {p.direccion || "Sin dirección"} — sin coordenadas, no aparece en el mapa
                   </p>
                 </div>
               ))}
             </div>
             {conCoords.length > 1 && (
-              <div className="border-t border-border p-4">
-                <a
-                  href={googleMapsRutaCompleta(conCoords)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className={buttonClass("outline", "w-full")}
-                >
-                  Ver ruta completa en Google Maps
+              <div className="border-t border-ds-divider p-ds-4">
+                <a href={googleMapsRutaCompleta(conCoords)} target="_blank" rel="noreferrer" className="block">
+                  <Button variante="secundario" bloque>
+                    Ver ruta completa en Google Maps
+                  </Button>
                 </a>
               </div>
             )}

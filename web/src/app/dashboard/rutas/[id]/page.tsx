@@ -3,23 +3,30 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import type { Cliente, RutaPlanificada, Trabajo, Usuario } from "@bitacora/shared";
+import { ChevronLeft, Route as RouteIcon } from "lucide-react";
+import type { Cliente, Prioridad, RutaPlanificada, Trabajo, Usuario } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Badge, Button, Card, ErrorText } from "@/components/ui";
-import { IconChevronLeft, IconRoute } from "@/components/icons";
+import { Button, Card, StatusBadge, Tag } from "@bitacora/ui/web";
 import dynamic from "next/dynamic";
 import type { Parada } from "@/components/MapaRutas";
 // Leaflet ~148 KB — carga aparte (AUDITORIA_PERFORMANCE_COSTOS.md #7).
 const MapaRutas = dynamic(() => import("@/components/MapaRutas").then((m) => m.MapaRutas), {
   ssr: false,
-  loading: () => <div className="h-64 animate-pulse rounded-lg bg-surface" />,
+  loading: () => <div className="h-64 animate-pulse rounded-ds-md bg-ds-surface" />,
 });
 
 type TareaConCliente = Trabajo & { cliente_info: Cliente | null };
 type RutaConTareas = RutaPlanificada & { tareas: TareaConCliente[] };
 
+const TONO_PRIORIDAD: Record<Prioridad, "accent" | "neutral" | "outline"> = {
+  alta: "accent",
+  media: "neutral",
+  baja: "outline",
+};
+
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export default function VerRutaPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -73,36 +80,36 @@ export default function VerRutaPage() {
 
   return (
     <DashboardShell usuario={usuario}>
-      <Link href="/dashboard/rutas" className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-brand hover:underline">
-        <IconChevronLeft className="h-4 w-4" />
+      <Link href="/dashboard/rutas" className="mb-ds-4 inline-flex items-center gap-ds-1 font-ds-body text-ds-small font-medium text-ds-brand hover:underline">
+        <ChevronLeft size={16} strokeWidth={2.75} />
         Rutas
       </Link>
 
-      {error && <ErrorText>{error}</ErrorText>}
+      {error ? <p className="font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
 
       {ruta && (
         <>
-          <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+          <div className="mb-ds-6 flex flex-wrap items-center justify-between gap-ds-3">
             <div>
-              <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight text-foreground">
-                <IconRoute className="h-6 w-6 text-brand" />
+              <p className="ds-heading flex items-center gap-ds-2 text-ds-h2 text-ds-text">
+                <RouteIcon size={24} strokeWidth={2.75} className="text-ds-brand" />
                 {ruta.nombre || `Ruta de ${equipo.find((u) => u.id === ruta.responsable_id)?.nombre ?? "—"}`}
-              </h1>
-              <p className="mt-1 text-sm text-muted">
+              </p>
+              <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">
                 {ruta.fecha_inicio} · {ruta.hora_inicio}–{ruta.hora_fin} · desde {ruta.punto_base_direccion}
               </p>
             </div>
-            <div className="flex items-center gap-3">
-              <Badge value={ruta.estado} />
+            <div className="flex items-center gap-ds-3">
+              <StatusBadge estado={ruta.estado} tonoForzado={ruta.estado === "finalizada" ? "completado" : "en_progreso"} />
               {ruta.estado === "borrador" && (
-                <Button onClick={onOptimizar} disabled={optimizando || ruta.tareas.length === 0}>
-                  {optimizando ? "Calculando…" : "Finalizar ruterización"}
+                <Button onPress={onOptimizar} deshabilitado={optimizando || ruta.tareas.length === 0} cargando={optimizando}>
+                  Finalizar ruterización
                 </Button>
               )}
             </div>
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
+          <div className="grid gap-ds-6 lg:grid-cols-[1fr_20rem]">
             <MapaRutas
               paradas={ruta.tareas.map((t) => ({
                 trabajo_id: t.id,
@@ -115,31 +122,31 @@ export default function VerRutaPage() {
               mostrarLinea={ruta.estado === "finalizada"}
             />
 
-            <Card className="p-0">
-              <div className="flex flex-col divide-y divide-border">
+            <Card sinRelleno>
+              <div className="flex flex-col divide-y divide-ds-divider">
                 {ruta.tareas.length === 0 && (
-                  <p className="p-4 text-sm text-muted">Esta ruta no tiene tareas.</p>
+                  <p className="p-ds-4 font-ds-body text-ds-small text-ds-text/70">Esta ruta no tiene tareas.</p>
                 )}
                 {ruta.tareas.map((t, i) => (
-                  <div key={t.id} className="flex items-start gap-3 p-4">
-                    <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand text-xs font-semibold text-brand-foreground">
+                  <div key={t.id} className="flex items-start gap-ds-3 p-ds-4">
+                    <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-ds-pill bg-ds-brand text-xs font-semibold text-ds-brand-foreground">
                       {t.orden_en_ruta != null ? t.orden_en_ruta + 1 : i + 1}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="truncate font-medium text-foreground">{t.cliente}</p>
-                        <Badge value={t.prioridad} />
+                      <div className="flex items-center gap-ds-2">
+                        <p className="truncate font-ds-body font-medium text-ds-text">{t.cliente}</p>
+                        <Tag tono={TONO_PRIORIDAD[t.prioridad]}>{t.prioridad}</Tag>
                       </div>
-                      <p className="truncate text-xs text-muted">{t.ubicacion}</p>
+                      <p className="truncate font-ds-body text-ds-caption text-ds-text/60">{t.ubicacion}</p>
                       {t.hora_estimada_llegada && (
-                        <p className="text-xs text-muted">Llegada estimada: {t.hora_estimada_llegada}</p>
+                        <p className="font-ds-body text-ds-caption text-ds-text/60">Llegada estimada: {t.hora_estimada_llegada}</p>
                       )}
                     </div>
                   </div>
                 ))}
               </div>
               {ruta.estado === "finalizada" && (
-                <div className="border-t border-border p-4 text-xs text-muted">
+                <div className="border-t border-ds-divider p-ds-4 font-ds-body text-ds-caption text-ds-text/60">
                   Distancia total: {ruta.distancia_total_km ?? "—"} km · Duración total:{" "}
                   {ruta.duracion_total_min ?? "—"} min
                 </div>
