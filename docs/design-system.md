@@ -503,11 +503,63 @@ una paleta de 5 tonos de reserva (cuando el caller no pasa
 `GraficoBarras.tsx` generaba un color por mes con ángulo dorado (HSL
 calculado, no literal) — se dejó igual, es paleta de datos, no de UI.
 
-### Resto del orden del prompt
+### "Homologar todo" — grupo de nav "Configuración" ✅ (cierra el pedido)
 
-7) Configuración — pendiente (~14-16 subpáginas + `layout.tsx`).
-Además, el pedido de la usuaria de homologar TODO suma: Agenda (usa
-`DataTable`/`EstadoCitaRiel`, sin migrar). `/superadmin` (roles/
-resumen/cuenta/empresas[id]) queda como seam adicional, fuera del
-alcance original del pedido (no es parte de la nav de
-`DashboardShell`).
+`layout.tsx` (shell/sidebar compartido, 19 secciones) + las 16
+subpáginas: `perfiles`, `centros-costo`, `tipos-documento`,
+`categorias-gastos`, `integraciones`, `tipos-os`, `checklists`,
+`tipos-trabajo`, `inventario`, `plantillas`, `cuenta`, `seguridad`,
+`plan`, `notificaciones`, `empresa`, `agenda-pro`. `page.tsx`
+(redirect) y `ConfiguracionContext.tsx` (React context puro) sin
+cambios.
+
+- **Dos vistas previas quedan deliberadamente sin migrar**:
+  `plantillas/page.tsx` (simula la hoja PDF impresa: fondo blanco,
+  grises fijos — un documento impreso no cambia con el tema de la
+  app) y `empresa/page.tsx` (maqueta de sidebar/dashboard que usa las
+  variables CSS de marca `--brand`/`--accent`/`--font-sans`,
+  definidas globalmente para retrocompatibilidad — no representa el
+  chrome real de la app, que ya usa tokens ds- fijos). Mismo
+  principio en ambos casos: la vista previa demuestra un contrato
+  visual fijo, ajeno al tema de la app en ejecución.
+- `tipos-trabajo`, `seguridad` (historial de accesos) y las dos
+  tablas de `agenda-pro` (servicios, tipos de pack) tenían `<table>`
+  nativa en Faena — se reemplazaron por el primitivo `Table` de
+  `@bitacora/ui/web` en vez de duplicar el patrón a mano.
+- `plan/page.tsx`: los estados de suscripción (`trial`/`activa`/
+  `pago_pendiente`/`suspendida_por_pago`/`cancelada`) y de cobro
+  (`exitoso`/`fallido`/`pendiente`) no están en `MAPA_ESTADO_TONO` —
+  se agregó un `TONO_SUSCRIPCION` local, mismo patrón que
+  `TONO_FORZADO` en Dinero/Recursos. Gap real documentado:
+  `StatusBadge` solo expone 4 tonos (`en_progreso`/`completado`/
+  `cerrado`/`cancelado`) — no hay un tono "peligro" propio, así que
+  "suspendida"/"fallido" caen en el gris de "cancelado" (lo más
+  parecido disponible, no un rojo de alerta).
+- Banners de estado (trial/activa/suspendida en `plan`, "Tu período
+  de prueba terminó", zona de peligro en `seguridad`) no podían usar
+  `<Card className=...>` (el primitivo no acepta `className`) — se
+  reemplazaron por `<div>` con `border`/`bg` de los tokens accent-700/
+  accent-100 o accent2-700/accent2-100, mismo patrón ya establecido
+  en `PanelAcciones.tsx` para "Zona de peligro".
+- Colores hex literales en `categorias-gastos`/`tipos-os` (paletas de
+  sugeridos) son dato elegible por la usuaria, no chrome de UI —
+  quedan igual que los de Recursos/Dinero.
+
+Con este bucket se cierra el pedido "migrá la shell y homologá todo"
+para las 7 secciones de la nav de `DashboardShell` (Operación,
+Clientes, Dinero, Recursos, Equipo, Informes, Configuración) —
+alrededor de 30 commits desde que empezó. `scripts/check-colores.mjs`
+se mantuvo en 12 durante todo este grupo (ningún literal nuevo).
+
+### Seams que quedan fuera de este pedido
+
+- **Agenda** (`dashboard/agenda/*`, salvo `agenda/paquetes` ya
+  migrado en el bucket de Clientes): usa `DataTable`/`EstadoCitaRiel`
+  propios, sin migrar. No es parte de los 7 grupos de nav de
+  `DashboardShell` en el sentido de "página con su propio ícono en
+  el sidebar" — queda para un pedido aparte.
+- **`/superadmin`** (`roles`, `resumen`, `cuenta`, `empresas/[id]` —
+  este último solo, 1447 líneas): shell aparte (`SuperAdminShell`,
+  ya migrado por efecto colateral en el bucket de Equipo), pero su
+  contenido sigue en Faena. No es parte de la nav de `DashboardShell`
+  — fuera del alcance original del pedido.

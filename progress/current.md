@@ -61,19 +61,30 @@ Informes → Configuración), comiteando y verificando en cada uno, sin
 esperar "sigue" (ya está autorizado). Mobile buckets 4-7 quedan
 aparte — la usuaria habló de "la shell" en el contexto web.
 
+## 2026-09-11: "Configuración" cierra el pedido "homologá todo"
+
+Los 7 grupos de nav de `DashboardShell` (Operación, Clientes, Dinero,
+Recursos, Equipo, Informes, Configuración) están migrados y
+comiteados — ~22 commits desde que empezó "homologar todo".
+**Configuración** (última pieza, 16 subpáginas + `layout.tsx`) cerró
+en 5 commits: layout+perfiles+5 páginas, tipos-trabajo+inventario+
+plantillas, cuenta+seguridad, plan+notificaciones, empresa+agenda-pro.
+Detalle de gaps/decisiones en `docs/design-system.md` §"Homologar
+todo — grupo de nav Configuración".
+
+`./verificar.sh` verde (tsc x6, 12 literales baseline).
+
 ## Próximo paso
 
-"Operación" ✅, "Clientes" ✅, "Dinero" ✅, "Recursos" ✅, "Equipo" ✅
-e "Informes" ✅ (9 páginas + 7 charts de Recharts) migrados y
-comiteados (17 commits desde que empezó "homologar todo"). Hallazgo
-clave de Informes: los charts Recharts son SVG — resuelven
-`var(--custom-property)` igual que CSS normal, así que se
-retokenizaron sin tocar la librería. Efecto colateral ya resuelto:
-`/superadmin` (shell aparte) — se migró `SuperAdminShell.tsx` +
-`superadmin/page.tsx`; sus otras 4 páginas quedan como seam. Sigue
-**Configuración** (última pieza grande del pedido — ~14-16
-subpáginas + `layout.tsx`). Agenda queda para más adelante (usa
-`DataTable`/`EstadoCitaRiel`, sin migrar todavía).
+El pedido explícito de la usuaria ("migrá la shell y homologá todo")
+está cerrado. Quedan 2 seams fuera de ese alcance, documentados en
+`docs/design-system.md` §"Seams que quedan fuera de este pedido":
+**Agenda** (`dashboard/agenda/*`, usa `DataTable`/`EstadoCitaRiel`
+propios) y **`/superadmin`** (`roles`, `resumen`, `cuenta`,
+`empresas/[id]` — shell ya migrado, contenido sigue en Faena).
+Ninguno se toca sin que la usuaria lo pida explícitamente. Mobile
+buckets 4-7 (fuera de "la shell" en el sentido que usó la usuaria)
+también quedan aparte.
 
 ## Pendiente / notas generales
 
