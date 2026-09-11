@@ -3,14 +3,13 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { ChevronLeft, ClipboardCheck, Plus, Wrench } from "lucide-react";
 import type { Equipo, OrdenServicio, PlanMantencion, Trabajo } from "@bitacora/shared";
 import { estadoOsDeTrabajo } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, SuccessText, Textarea } from "@/components/ui";
-import { EstadoVacio } from "@/components/estados";
-import { IconChevronLeft, IconClipboardCheck, IconPlus, IconWrench } from "@/components/icons";
+import { Button, Card, EmptyState, Input, StatusBadge, Textarea } from "@bitacora/ui/web";
 import { RegistrosMantencion } from "./RegistrosMantencion";
 
 type TrabajoConOrden = Trabajo & { orden: Pick<OrdenServicio, "folio" | "estado_os"> | null };
@@ -22,6 +21,7 @@ type EquipoDetalle = Equipo & {
 
 type Tab = "datos" | "plan" | "historico_os" | "mantencion";
 
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export default function EquipoDetallePage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -136,7 +136,7 @@ export default function EquipoDetallePage() {
   if (error) {
     return (
       <DashboardShell usuario={usuario}>
-        <ErrorText>{error}</ErrorText>
+        <p className="font-ds-body text-ds-small text-ds-accent-700">{error}</p>
       </DashboardShell>
     );
   }
@@ -144,34 +144,30 @@ export default function EquipoDetallePage() {
 
   return (
     <DashboardShell usuario={usuario}>
-      <Link href="/dashboard/registros/equipos" className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-brand hover:underline">
-        <IconChevronLeft className="h-4 w-4" />
+      <Link href="/dashboard/registros/equipos" className="mb-ds-4 inline-flex items-center gap-ds-1 font-ds-body text-ds-small font-medium text-ds-brand hover:underline">
+        <ChevronLeft size={16} strokeWidth={2.75} />
         Equipos
       </Link>
 
-      <PageHeader
-        title={equipo.nombre}
-        subtitle={[equipo.marca, equipo.modelo].filter(Boolean).join(" ") || equipo.categoria || "—"}
-        action={<Badge value={equipo.activo ? "activo" : "inactivo"} />}
-      />
-
-      {aviso && (
-        <div className="mt-6">
-          <SuccessText>{aviso}</SuccessText>
+      <div className="flex flex-wrap items-center justify-between gap-ds-3">
+        <div>
+          <p className="ds-heading text-ds-h2 text-ds-text">{equipo.nombre}</p>
+          <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">{[equipo.marca, equipo.modelo].filter(Boolean).join(" ") || equipo.categoria || "—"}</p>
         </div>
-      )}
+        <StatusBadge estado={equipo.activo ? "activo" : "inactivo"} />
+      </div>
 
-      <nav className="mt-6 flex gap-1 overflow-x-auto border-b border-border" aria-label="Secciones del equipo">
+      {aviso ? <p className="mt-ds-6 font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}
+
+      <nav className="mt-ds-6 flex gap-ds-1 overflow-x-auto border-b border-ds-divider" aria-label="Secciones del equipo">
         {tabs.map((t) => (
           <button
             key={t.id}
             type="button"
             onClick={() => setTab(t.id)}
             aria-current={tab === t.id ? "page" : undefined}
-            className={`-mb-px whitespace-nowrap border-b-2 px-3.5 py-2.5 text-sm font-semibold transition-colors ${
-              tab === t.id
-                ? "border-brand text-brand"
-                : "border-transparent text-muted hover:text-foreground"
+            className={`-mb-px whitespace-nowrap border-b-2 px-ds-3 py-2.5 font-ds-body text-ds-small font-semibold transition-colors ${
+              tab === t.id ? "border-ds-brand text-ds-brand" : "border-transparent text-ds-text/60 hover:text-ds-text"
             }`}
           >
             {t.label}
@@ -180,145 +176,157 @@ export default function EquipoDetallePage() {
       </nav>
 
       {tab === "datos" && (
-        <Card className="mt-6">
-          <h2 className="mb-4 text-sm font-semibold text-foreground">Datos del equipo</h2>
-          <div className="grid gap-4 text-sm sm:grid-cols-3">
-            <div>
-              <p className="text-xs text-muted">Cliente</p>
-              <p className="text-foreground">{equipo.cliente?.nombre ?? "Propio de la empresa"}</p>
+        <div className="mt-ds-6">
+          <Card>
+            <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Datos del equipo</p>
+            <div className="grid gap-ds-4 font-ds-body text-ds-small sm:grid-cols-3">
+              <div>
+                <p className="text-ds-caption text-ds-text/60">Cliente</p>
+                <p className="text-ds-text">{equipo.cliente?.nombre ?? "Propio de la empresa"}</p>
+              </div>
+              <div>
+                <p className="text-ds-caption text-ds-text/60">Categoría</p>
+                <p className="text-ds-text">{equipo.categoria ?? "—"}</p>
+              </div>
+              <div>
+                <p className="text-ds-caption text-ds-text/60">N° de serie</p>
+                <p className="text-ds-text">{equipo.numero_serie ?? "—"}</p>
+              </div>
+              {esVehiculo && (
+                <>
+                  <div>
+                    <p className="text-ds-caption text-ds-text/60">Patente</p>
+                    <p className="font-mono text-ds-text">{equipo.patente ?? "—"}</p>
+                  </div>
+                  <div>
+                    <p className="text-ds-caption text-ds-text/60">Asignado a</p>
+                    <p className="text-ds-text">{equipo.asignacion_vigente?.colaborador_nombre ?? "Sin asignar"}</p>
+                  </div>
+                </>
+              )}
+              <div>
+                <p className="text-ds-caption text-ds-text/60">Vencimiento de garantía</p>
+                <p className="font-mono text-ds-text">{equipo.garantia_vencimiento ?? "—"}</p>
+              </div>
             </div>
-            <div>
-              <p className="text-xs text-muted">Categoría</p>
-              <p className="text-foreground">{equipo.categoria ?? "—"}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted">N° de serie</p>
-              <p className="text-foreground">{equipo.numero_serie ?? "—"}</p>
-            </div>
-            {esVehiculo && (
-              <>
-                <div>
-                  <p className="text-xs text-muted">Patente</p>
-                  <p className="font-mono text-foreground">{equipo.patente ?? "—"}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted">Asignado a</p>
-                  <p className="text-foreground">{equipo.asignacion_vigente?.colaborador_nombre ?? "Sin asignar"}</p>
-                </div>
-              </>
-            )}
-            <div>
-              <p className="text-xs text-muted">Vencimiento de garantía</p>
-              <p className="font-mono text-foreground">{equipo.garantia_vencimiento ?? "—"}</p>
-            </div>
-          </div>
-          <p className="mt-4 text-xs text-muted">
-            Para editar estos datos, hacelo desde el{" "}
-            <Link href="/dashboard/registros/equipos" className="font-medium text-brand hover:underline">
-              listado de Equipos
-            </Link>
-            .
-          </p>
-        </Card>
+            <p className="mt-ds-4 font-ds-body text-ds-caption text-ds-text/60">
+              Para editar estos datos, hacelo desde el{" "}
+              <Link href="/dashboard/registros/equipos" className="font-medium text-ds-brand hover:underline">
+                listado de Equipos
+              </Link>
+              .
+            </p>
+          </Card>
+        </div>
       )}
 
       {tab === "plan" && (
-        <Card className="mt-6">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-foreground">Plan de Mantención Preventiva</h2>
-            <Button type="button" variant="outline" onClick={() => (formPlanAbierto ? setFormPlanAbierto(false) : abrirFormPlan())}>
-              <IconPlus className="h-4 w-4" />
-              Nuevo plan
-            </Button>
-          </div>
-
-          {formPlanAbierto && (
-            <form onSubmit={onCrearPlan} className="mb-4 flex flex-col gap-3 rounded-lg border border-border p-3">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div>
-                  <Label>Frecuencia (días)</Label>
-                  <Input type="number" min="1" required value={frecuenciaDias} onChange={(e) => setFrecuenciaDias(e.target.value)} />
-                </div>
-                <div>
-                  <Label>Próxima fecha</Label>
-                  <Input type="date" required value={proximaFecha} onChange={(e) => setProximaFecha(e.target.value)} />
-                </div>
-              </div>
-              <div>
-                <Label>Notas (opcional)</Label>
-                <Textarea rows={2} value={notasPlan} onChange={(e) => setNotasPlan(e.target.value)} />
-              </div>
-              {errorPlan && <ErrorText>{errorPlan}</ErrorText>}
-              <Button type="submit" disabled={guardandoPlan} className="self-start">
-                {guardandoPlan ? "Guardando…" : "Crear plan"}
+        <div className="mt-ds-6">
+          <Card>
+            <div className="mb-ds-4 flex items-center justify-between">
+              <p className="font-ds-body text-ds-small font-semibold text-ds-text">Plan de Mantención Preventiva</p>
+              <Button variante="secundario" iconoIzq={<Plus size={16} strokeWidth={2.75} />} onPress={() => (formPlanAbierto ? setFormPlanAbierto(false) : abrirFormPlan())}>
+                Nuevo plan
               </Button>
-            </form>
-          )}
-
-          {planes.length === 0 ? (
-            <p className="text-sm text-muted">Sin plan de mantención registrado.</p>
-          ) : (
-            <div className="flex flex-col divide-y divide-border">
-              {planes.map((p) => (
-                <div key={p.id} className="flex items-center justify-between py-2.5 text-sm">
-                  <div>
-                    <p className="font-medium text-foreground">
-                      Cada {p.frecuencia_dias} días — próxima: <span className="font-mono">{p.proxima_fecha}</span>
-                    </p>
-                    {p.notas && <p className="text-xs text-muted">{p.notas}</p>}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge value={p.activo ? "activo" : "inactivo"} />
-                    <Button type="button" variant="ghost" onClick={() => onAlternarPlan(p)}>
-                      {p.activo ? "Desactivar" : "Activar"}
-                    </Button>
-                    <Button type="button" variant="ghost" onClick={() => onEliminarPlan(p)}>
-                      Eliminar
-                    </Button>
-                  </div>
-                </div>
-              ))}
             </div>
-          )}
-        </Card>
+
+            {formPlanAbierto && (
+              <form onSubmit={onCrearPlan} className="mb-ds-4 flex flex-col gap-ds-3 rounded-ds-md border border-ds-divider p-ds-3">
+                <div className="grid gap-ds-3 sm:grid-cols-2">
+                  <Input etiqueta="Frecuencia (días)" tipo="numero" requerido valor={frecuenciaDias} onCambio={setFrecuenciaDias} />
+                  <FechaCampo etiqueta="Próxima fecha" requerido valor={proximaFecha} onCambio={setProximaFecha} />
+                </div>
+                <Textarea etiqueta="Notas (opcional)" filas={2} valor={notasPlan} onCambio={setNotasPlan} />
+                {errorPlan ? <p className="font-ds-body text-ds-small text-ds-accent-700">{errorPlan}</p> : null}
+                <div>
+                  <Button tipo="submit" cargando={guardandoPlan}>
+                    Crear plan
+                  </Button>
+                </div>
+              </form>
+            )}
+
+            {planes.length === 0 ? (
+              <p className="font-ds-body text-ds-small text-ds-text/70">Sin plan de mantención registrado.</p>
+            ) : (
+              <div className="flex flex-col divide-y divide-ds-divider">
+                {planes.map((p) => (
+                  <div key={p.id} className="flex items-center justify-between py-2.5 font-ds-body text-ds-small">
+                    <div>
+                      <p className="font-medium text-ds-text">
+                        Cada {p.frecuencia_dias} días — próxima: <span className="font-mono">{p.proxima_fecha}</span>
+                      </p>
+                      {p.notas && <p className="font-ds-body text-ds-caption text-ds-text/60">{p.notas}</p>}
+                    </div>
+                    <div className="flex items-center gap-ds-2">
+                      <StatusBadge estado={p.activo ? "activo" : "inactivo"} />
+                      <Button variante="ghost" onPress={() => onAlternarPlan(p)}>
+                        {p.activo ? "Desactivar" : "Activar"}
+                      </Button>
+                      <Button variante="ghost" onPress={() => onEliminarPlan(p)}>
+                        Eliminar
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        </div>
       )}
 
       {tab === "historico_os" && (
-        <Card className="mt-6">
-          <h2 className="mb-4 text-sm font-semibold text-foreground">Histórico de OS</h2>
-          {equipo.historico_mantenciones.length === 0 ? (
-            <EstadoVacio icono={IconWrench} titulo="Sin órdenes de servicio asociadas a este equipo todavía" />
-          ) : (
-            <div className="flex flex-col divide-y divide-border">
-              {equipo.historico_mantenciones.map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => router.push(`/dashboard/ordenes/${t.id}`)}
-                  className="flex items-center justify-between py-2.5 text-left text-sm hover:text-brand"
-                >
-                  <div className="flex items-center gap-2">
-                    <IconClipboardCheck className="h-3.5 w-3.5 shrink-0 text-muted" />
-                    <div>
-                      <p className="font-medium text-foreground">
-                        {t.orden?.folio != null ? `OS N° ${t.orden.folio}` : t.descripcion || "Sin folio"}
-                      </p>
-                      <p className="font-mono text-xs text-muted">{t.fecha}</p>
+        <div className="mt-ds-6">
+          <Card>
+            <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Histórico de OS</p>
+            {equipo.historico_mantenciones.length === 0 ? (
+              <EmptyState icono={<Wrench size={28} strokeWidth={2.75} />} titulo="Sin órdenes de servicio asociadas a este equipo todavía" />
+            ) : (
+              <div className="flex flex-col divide-y divide-ds-divider">
+                {equipo.historico_mantenciones.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => router.push(`/dashboard/ordenes/${t.id}`)}
+                    className="flex items-center justify-between py-2.5 text-left font-ds-body text-ds-small hover:text-ds-brand"
+                  >
+                    <div className="flex items-center gap-ds-2">
+                      <ClipboardCheck size={14} strokeWidth={2.75} className="shrink-0 text-ds-text/60" />
+                      <div>
+                        <p className="font-medium text-ds-text">{t.orden?.folio != null ? `OS N° ${t.orden.folio}` : t.descripcion || "Sin folio"}</p>
+                        <p className="font-mono text-ds-caption text-ds-text/60">{t.fecha}</p>
+                      </div>
                     </div>
-                  </div>
-                  <Badge value={t.orden?.estado_os ?? estadoOsDeTrabajo(t.estado)} />
-                </button>
-              ))}
-            </div>
-          )}
-        </Card>
+                    <StatusBadge estado={t.orden?.estado_os ?? estadoOsDeTrabajo(t.estado)} />
+                  </button>
+                ))}
+              </div>
+            )}
+          </Card>
+        </div>
       )}
 
       {tab === "mantencion" && esVehiculo && (
-        <div className="mt-6">
+        <div className="mt-ds-6">
           <RegistrosMantencion equipo={equipo} puedeGestionar={puedeGestionar} />
         </div>
       )}
     </DashboardShell>
+  );
+}
+
+// Input nativo type="date" — ver el mismo helper en rutas/nueva/page.tsx.
+function FechaCampo({ etiqueta, valor, onCambio, requerido }: { etiqueta: string; valor: string; onCambio: (v: string) => void; requerido?: boolean }) {
+  return (
+    <div className="flex flex-col gap-ds-1">
+      <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">{etiqueta}</label>
+      <input
+        type="date"
+        required={requerido}
+        value={valor}
+        onChange={(e) => onCambio(e.target.value)}
+        className="h-11 w-full rounded-ds-md border border-ds-divider bg-ds-surface px-ds-3 font-ds-body text-ds-body text-ds-text transition-colors hover:border-ds-text/30 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ds-brand)]"
+      />
+    </div>
   );
 }

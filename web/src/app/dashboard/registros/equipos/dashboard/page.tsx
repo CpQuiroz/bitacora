@@ -3,12 +3,12 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ChevronLeft, ClipboardCheck, Clock } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Card, ErrorText, PageHeader, Stat } from "@/components/ui";
-import { IconChevronLeft, IconClipboardCheck, IconClock } from "@/components/icons";
-import { EstadoCargando } from "@/components/estados";
+import { Card, LoadingState } from "@bitacora/ui/web";
+import { Stat } from "@/components/Stat";
 
 type DashboardEquipos = {
   total_equipos: number;
@@ -35,6 +35,7 @@ function diasRestantes(fecha: string): number {
   return Math.round((venc.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
 }
 
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export default function EquiposDashboardPage() {
   const router = useRouter();
   const [usuario, setUsuario] = useState<UsuarioShell | null>(null);
@@ -77,22 +78,19 @@ export default function EquiposDashboardPage() {
 
   return (
     <DashboardShell usuario={usuario}>
-      <Link href="/dashboard/registros/equipos" className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-brand hover:underline">
-        <IconChevronLeft className="h-4 w-4" />
+      <Link href="/dashboard/registros/equipos" className="mb-ds-4 inline-flex items-center gap-ds-1 font-ds-body text-ds-small font-medium text-ds-brand hover:underline">
+        <ChevronLeft size={16} strokeWidth={2.75} />
         Equipos
       </Link>
-      <PageHeader title="Dashboard de Equipos" subtitle="Vista general de tus activos, mantenciones y garantías" />
+      <p className="ds-heading text-ds-h2 text-ds-text">Dashboard de Equipos</p>
+      <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">Vista general de tus activos, mantenciones y garantías</p>
 
-      {error && (
-        <div className="mt-6">
-          <ErrorText>{error}</ErrorText>
-        </div>
-      )}
-      {!datos && !error && <EstadoCargando />}
+      {error ? <p className="mt-ds-6 font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
+      {!datos && !error ? <LoadingState /> : null}
 
       {datos && (
-        <div className="mt-6 flex flex-col gap-6">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-ds-6 flex flex-col gap-ds-6">
+          <div className="grid gap-ds-4 sm:grid-cols-2 lg:grid-cols-4">
             <Stat etiqueta="Total de equipos" valor={datos.total_equipos} />
             <Stat etiqueta="Equipos activos" valor={datos.equipos_activos} />
             <Stat etiqueta="Planes de mantención activos" valor={datos.planes_mantencion_activos} />
@@ -104,19 +102,19 @@ export default function EquiposDashboardPage() {
             />
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid gap-ds-6 lg:grid-cols-2">
             <Card>
-              <h2 className="mb-4 text-sm font-semibold text-foreground">Equipos por categoría</h2>
+              <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Equipos por categoría</p>
               {datos.equipos_por_categoria.length === 0 ? (
-                <p className="text-sm text-muted">Sin equipos registrados.</p>
+                <p className="font-ds-body text-ds-small text-ds-text/70">Sin equipos registrados.</p>
               ) : (
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-ds-2">
                   {datos.equipos_por_categoria
                     .sort((a, b) => b.cantidad - a.cantidad)
                     .map((c) => (
-                      <div key={c.categoria} className="flex items-center justify-between text-sm">
-                        <span className="text-foreground">{c.categoria}</span>
-                        <span className="text-muted">{c.cantidad}</span>
+                      <div key={c.categoria} className="flex items-center justify-between font-ds-body text-ds-small">
+                        <span className="text-ds-text">{c.categoria}</span>
+                        <span className="text-ds-text/60">{c.cantidad}</span>
                       </div>
                     ))}
                 </div>
@@ -124,20 +122,20 @@ export default function EquiposDashboardPage() {
             </Card>
 
             <Card>
-              <h2 className="mb-4 text-sm font-semibold text-foreground">Equipos con más órdenes de servicio</h2>
+              <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Equipos con más órdenes de servicio</p>
               {datos.equipos_con_mas_os.length === 0 ? (
-                <p className="text-sm text-muted">Ninguna OS vinculada a un equipo todavía.</p>
+                <p className="font-ds-body text-ds-small text-ds-text/70">Ninguna OS vinculada a un equipo todavía.</p>
               ) : (
-                <div className="flex flex-col divide-y divide-border">
+                <div className="flex flex-col divide-y divide-ds-divider">
                   {datos.equipos_con_mas_os.map((e) => (
                     <button
                       key={e.equipo_id}
                       type="button"
                       onClick={() => router.push(`/dashboard/registros/equipos/${e.equipo_id}`)}
-                      className="flex items-center justify-between py-2 text-left text-sm hover:text-brand"
+                      className="flex items-center justify-between py-2 text-left font-ds-body text-ds-small hover:text-ds-brand"
                     >
-                      <span className="text-foreground">{e.nombre}</span>
-                      <span className="text-muted">{e.cantidad_os} OS</span>
+                      <span className="text-ds-text">{e.nombre}</span>
+                      <span className="text-ds-text/60">{e.cantidad_os} OS</span>
                     </button>
                   ))}
                 </div>
@@ -146,18 +144,18 @@ export default function EquiposDashboardPage() {
           </div>
 
           <Card>
-            <h2 className="mb-4 text-sm font-semibold text-foreground">Próximas mantenciones (30 días)</h2>
+            <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Próximas mantenciones (30 días)</p>
             {datos.proximas_mantenciones.length === 0 ? (
-              <div className="flex flex-col items-center gap-2 py-6 text-center">
-                <IconClipboardCheck className="h-6 w-6 text-muted" />
-                <p className="text-sm text-muted">Nada programado en los próximos 30 días.</p>
+              <div className="flex flex-col items-center gap-ds-2 py-ds-6 text-center">
+                <ClipboardCheck size={22} strokeWidth={2.75} className="text-ds-text/60" />
+                <p className="font-ds-body text-ds-small text-ds-text/70">Nada programado en los próximos 30 días.</p>
               </div>
             ) : (
-              <div className="flex flex-col divide-y divide-border">
+              <div className="flex flex-col divide-y divide-ds-divider">
                 {datos.proximas_mantenciones.map((p) => (
-                  <div key={p.id} className="flex items-center justify-between py-2 text-sm">
-                    <span className="text-foreground">{p.equipo_nombre}</span>
-                    <span className="text-muted">{p.proxima_fecha}</span>
+                  <div key={p.id} className="flex items-center justify-between py-2 font-ds-body text-ds-small">
+                    <span className="text-ds-text">{p.equipo_nombre}</span>
+                    <span className="text-ds-text/60">{p.proxima_fecha}</span>
                   </div>
                 ))}
               </div>
@@ -165,26 +163,26 @@ export default function EquiposDashboardPage() {
           </Card>
 
           <Card>
-            <h2 className="mb-4 text-sm font-semibold text-foreground">Documentos de equipos por vencer</h2>
+            <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Documentos de equipos por vencer</p>
             {datos.documentos_por_vencer.length === 0 ? (
-              <div className="flex flex-col items-center gap-2 py-6 text-center">
-                <IconClock className="h-6 w-6 text-muted" />
-                <p className="text-sm text-muted">Nada por vencer en los próximos 30 días.</p>
+              <div className="flex flex-col items-center gap-ds-2 py-ds-6 text-center">
+                <Clock size={22} strokeWidth={2.75} className="text-ds-text/60" />
+                <p className="font-ds-body text-ds-small text-ds-text/70">Nada por vencer en los próximos 30 días.</p>
               </div>
             ) : (
-              <div className="flex flex-col divide-y divide-border">
+              <div className="flex flex-col divide-y divide-ds-divider">
                 {datos.documentos_por_vencer.map((d) => {
                   const dias = diasRestantes(d.fecha_vencimiento);
                   const vencido = dias < 0;
                   return (
-                    <div key={d.id} className="flex items-center justify-between gap-3 py-2 text-sm">
+                    <div key={d.id} className="flex items-center justify-between gap-ds-3 py-2 font-ds-body text-ds-small">
                       <div className="min-w-0">
-                        <span className="text-foreground">{d.equipo_nombre}</span>
-                        <span className="text-muted"> · {d.tipo_nombre}</span>
+                        <span className="text-ds-text">{d.equipo_nombre}</span>
+                        <span className="text-ds-text/60"> · {d.tipo_nombre}</span>
                       </div>
-                      <div className="flex shrink-0 items-center gap-3">
-                        <span className="text-muted">{d.fecha_vencimiento}</span>
-                        <span className={`font-medium ${vencido ? "text-danger" : dias <= 7 ? "text-warning" : "text-muted"}`}>
+                      <div className="flex shrink-0 items-center gap-ds-3">
+                        <span className="text-ds-text/60">{d.fecha_vencimiento}</span>
+                        <span className={`font-medium ${vencido ? "text-ds-accent-800" : dias <= 7 ? "text-ds-accent-700" : "text-ds-text/60"}`}>
                           {vencido ? "Vencido" : dias === 0 ? "Vence hoy" : `${dias} día${dias === 1 ? "" : "s"}`}
                         </span>
                       </div>

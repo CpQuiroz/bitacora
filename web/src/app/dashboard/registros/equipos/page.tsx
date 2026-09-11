@@ -1,18 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { BarChart3, Plus, Wrench } from "lucide-react";
 import type { Cliente, Equipo, Usuario } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Modal } from "@/components/Modal";
 import { DocumentoForm } from "@/components/DocumentoForm";
-import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText } from "@/components/ui";
+import { Button, Card, EmptyState, ErrorState, Input, LoadingState, Select, StatusBadge, Table } from "@bitacora/ui/web";
 import { ComboboxCliente } from "@/components/ComboboxCliente";
 import { ComboboxResponsable } from "@/components/ComboboxResponsable";
-import { IconChartBar, IconPlus, IconWrench } from "@/components/icons";
-import { EstadoCargando, EstadoVacio } from "@/components/estados";
 
 type EquipoConCliente = Equipo & {
   cliente: Pick<Cliente, "id" | "nombre"> | null;
@@ -28,6 +27,7 @@ type Asignacion = { id: string; colaborador_id: string; desde: string; hasta: st
 const CATEGORIAS = ["Vehículo", "Maquinaria", "Herramienta", "Otro"];
 const SIN_CLIENTE = "";
 
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export default function EquiposPage() {
   const router = useRouter();
   const [usuario, setUsuario] = useState<UsuarioShell | null>(null);
@@ -255,134 +255,93 @@ export default function EquiposPage() {
 
   return (
     <DashboardShell usuario={usuario}>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <PageHeader title={`Equipos (${lista.length})`} subtitle="Activos propios de la empresa (ej. vehículos) y de tus clientes" />
-        <div className="flex gap-2">
-          <Button type="button" variant="outline" onClick={() => router.push("/dashboard/registros/equipos/dashboard")}>
-            <IconChartBar className="h-4 w-4" />
+      <div className="mb-ds-6 flex flex-wrap items-center justify-between gap-ds-3">
+        <div>
+          <p className="ds-heading text-ds-h2 text-ds-text">Equipos ({lista.length})</p>
+          <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">Activos propios de la empresa (ej. vehículos) y de tus clientes</p>
+        </div>
+        <div className="flex gap-ds-2">
+          <Button variante="secundario" iconoIzq={<BarChart3 size={16} strokeWidth={2.75} />} onPress={() => router.push("/dashboard/registros/equipos/dashboard")}>
             Dashboard
           </Button>
-          <Button type="button" variant="outline" onClick={() => alert("Importar equipos desde CSV — próximamente.")}>
+          <Button variante="secundario" onPress={() => alert("Importar equipos desde CSV — próximamente.")}>
             Importar Equipos
           </Button>
-          <Button type="button" onClick={() => (formAbierto ? setFormAbierto(false) : abrirNuevo())}>
-            <IconPlus className="h-4 w-4" />
+          <Button iconoIzq={<Plus size={16} strokeWidth={2.75} />} onPress={() => (formAbierto ? setFormAbierto(false) : abrirNuevo())}>
             Nuevo Equipo
           </Button>
         </div>
       </div>
 
       {formAbierto && (
-        <Card className="mb-6">
-          <h2 className="mb-4 text-sm font-semibold text-foreground">{editandoId ? "Editar equipo" : "Nuevo equipo"}</h2>
-          <form onSubmit={onSubmit} className="flex flex-col gap-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <Label>Cliente (opcional)</Label>
-                <ComboboxCliente
-                  value={clienteId}
-                  onChange={setClienteId}
-                  clientes={clientes}
-                  onClienteCreado={(c) => setClientes((prev) => [...prev, c])}
-                  opcionVacia="Sin cliente — activo propio de la empresa"
+        <div className="mb-ds-6">
+          <Card>
+            <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">{editandoId ? "Editar equipo" : "Nuevo equipo"}</p>
+            <form onSubmit={onSubmit} className="flex flex-col gap-ds-4">
+              <div className="grid gap-ds-4 sm:grid-cols-2">
+                <div className="flex flex-col gap-ds-1">
+                  <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Cliente (opcional)</label>
+                  <ComboboxCliente value={clienteId} onChange={setClienteId} clientes={clientes} onClienteCreado={(c) => setClientes((prev) => [...prev, c])} opcionVacia="Sin cliente — activo propio de la empresa" />
+                </div>
+                <Input etiqueta="Nombre del equipo" requerido valor={nombre} onCambio={setNombre} />
+                <Select
+                  etiqueta="Categoría"
+                  valor={categoria}
+                  onCambio={setCategoria}
+                  opciones={[
+                    { valor: "", etiqueta: "Sin categoría" },
+                    ...CATEGORIAS.map((c) => ({ valor: c, etiqueta: c })),
+                    ...(categoria && !CATEGORIAS.includes(categoria) ? [{ valor: categoria, etiqueta: categoria }] : []),
+                  ]}
                 />
+                <Input etiqueta="Marca" valor={marca} onCambio={setMarca} />
+                <Input etiqueta="Modelo" valor={modelo} onCambio={setModelo} />
+                <Input etiqueta="N° de serie" valor={numeroSerie} onCambio={setNumeroSerie} />
+                <FechaCampo etiqueta="Vencimiento de garantía (opcional)" valor={garantiaVencimiento} onCambio={setGarantiaVencimiento} />
               </div>
-              <div>
-                <Label>Nombre del equipo</Label>
-                <Input type="text" required value={nombre} onChange={(e) => setNombre(e.target.value)} />
-              </div>
-              <div>
-                <Label>Categoría</Label>
-                <Select value={categoria} onChange={(e) => setCategoria(e.target.value)}>
-                  <option value="">Sin categoría</option>
-                  {CATEGORIAS.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                  {categoria && !CATEGORIAS.includes(categoria) && <option value={categoria}>{categoria}</option>}
-                </Select>
-              </div>
-              <div>
-                <Label>Marca</Label>
-                <Input type="text" value={marca} onChange={(e) => setMarca(e.target.value)} />
-              </div>
-              <div>
-                <Label>Modelo</Label>
-                <Input type="text" value={modelo} onChange={(e) => setModelo(e.target.value)} />
-              </div>
-              <div>
-                <Label>N° de serie</Label>
-                <Input type="text" value={numeroSerie} onChange={(e) => setNumeroSerie(e.target.value)} />
-              </div>
-              <div>
-                <Label>Vencimiento de garantía (opcional)</Label>
-                <Input type="date" value={garantiaVencimiento} onChange={(e) => setGarantiaVencimiento(e.target.value)} />
-              </div>
-            </div>
 
-            {categoria === "Vehículo" && (
-              <div className="rounded-lg border border-border p-3">
-                <p className="mb-3 text-xs font-semibold text-foreground">Datos del vehículo</p>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <Label>Patente</Label>
-                    <Input type="text" value={patente} onChange={(e) => setPatente(e.target.value)} />
-                  </div>
-                  <div>
-                    <Label>Tipo</Label>
-                    <Input type="text" placeholder="Camión, camioneta…" value={tipoVehiculo} onChange={(e) => setTipoVehiculo(e.target.value)} />
-                  </div>
-                  <div>
-                    <Label>Capacidad de carga</Label>
-                    <Input type="text" placeholder="ej. 5.000 kg" value={capacidadCarga} onChange={(e) => setCapacidadCarga(e.target.value)} />
-                  </div>
-                  <div>
-                    <Label>Año</Label>
-                    <Input type="number" value={anio} onChange={(e) => setAnio(e.target.value)} />
+              {categoria === "Vehículo" && (
+                <div className="rounded-ds-md border border-ds-divider p-ds-3">
+                  <p className="mb-ds-3 font-ds-body text-[11px] font-semibold text-ds-text">Datos del vehículo</p>
+                  <div className="grid gap-ds-4 sm:grid-cols-2">
+                    <Input etiqueta="Patente" valor={patente} onCambio={setPatente} />
+                    <Input etiqueta="Tipo" placeholder="Camión, camioneta…" valor={tipoVehiculo} onCambio={setTipoVehiculo} />
+                    <Input etiqueta="Capacidad de carga" placeholder="ej. 5.000 kg" valor={capacidadCarga} onCambio={setCapacidadCarga} />
+                    <Input etiqueta="Año" tipo="numero" valor={anio} onCambio={setAnio} />
                   </div>
                 </div>
+              )}
+
+              {formError ? <p className="font-ds-body text-ds-small text-ds-accent-700">{formError}</p> : null}
+              <div className="flex gap-ds-2">
+                <Button tipo="submit" cargando={guardando}>
+                  {editandoId ? "Guardar cambios" : "Agregar equipo"}
+                </Button>
+                <Button variante="ghost" onPress={() => setFormAbierto(false)}>
+                  Cancelar
+                </Button>
               </div>
-            )}
-
-            {formError && <ErrorText>{formError}</ErrorText>}
-            <div className="flex gap-2">
-              <Button type="submit" disabled={guardando} className="self-start">
-                {guardando ? "Guardando…" : editandoId ? "Guardar cambios" : "Agregar equipo"}
-              </Button>
-              <Button type="button" variant="ghost" onClick={() => setFormAbierto(false)}>
-                Cancelar
-              </Button>
-            </div>
-          </form>
-        </Card>
-      )}
-      {aviso && (
-        <div className="mb-6">
-          <SuccessText>{aviso}</SuccessText>
+            </form>
+          </Card>
         </div>
       )}
+      {aviso ? <p className="mb-ds-6 font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}
 
-      <div className="mb-4 flex flex-col gap-3">
-        <div className="flex flex-wrap gap-3">
-          <Input type="text" placeholder="Buscar equipos..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} className="max-w-sm" />
-          <Select value={filtroCategoria} onChange={(e) => setFiltroCategoria(e.target.value)} className="max-w-[12rem]">
-            <option value="">Todas las categorías</option>
-            {categoriasPresentes.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </Select>
+      <div className="mb-ds-4 flex flex-col gap-ds-3">
+        <div className="flex flex-wrap gap-ds-3">
+          <div className="max-w-sm">
+            <Input placeholder="Buscar equipos..." valor={busqueda} onCambio={setBusqueda} />
+          </div>
+          <Select valor={filtroCategoria} onCambio={setFiltroCategoria} opciones={[{ valor: "", etiqueta: "Todas las categorías" }, ...categoriasPresentes.map((c) => ({ valor: c, etiqueta: c }))]} />
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-ds-2">
           {CHIPS.map((c) => (
             <button
               key={c.valor}
               type="button"
               onClick={() => setFiltro(c.valor)}
-              className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                filtro === c.valor ? "border-brand bg-brand-soft text-brand" : "border-border text-muted hover:border-muted-soft"
+              className={`rounded-ds-pill border px-ds-3 py-1 font-ds-body text-ds-caption font-medium transition-colors ${
+                filtro === c.valor ? "border-ds-brand bg-ds-brand/[0.08] text-ds-brand" : "border-ds-divider text-ds-text/70 hover:border-ds-text/30"
               }`}
             >
               {c.etiqueta} ({contadores[c.valor]})
@@ -391,125 +350,103 @@ export default function EquiposPage() {
         </div>
       </div>
 
-      {error && <ErrorText>{error}</ErrorText>}
-      {equipos === null && !error && <EstadoCargando />}
+      {error ? <ErrorState mensaje={error} /> : null}
+      {equipos === null && !error ? <LoadingState /> : null}
 
       {equipos?.length === 0 && (
-        <EstadoVacio
-          icono={IconWrench}
+        <EmptyState
+          icono={<Wrench size={28} strokeWidth={2.75} />}
           titulo="Ningún equipo registrado"
           mensaje="Registra el primer equipo — de un cliente, o propio de la empresa (ej. un vehículo)"
-          accion={<Button type="button" onClick={abrirNuevo}>
-              <IconPlus className="h-4 w-4" />
+          accion={
+            <Button iconoIzq={<Plus size={16} strokeWidth={2.75} />} onPress={abrirNuevo}>
               Nuevo Equipo
-            </Button>}
+            </Button>
+          }
         />
       )}
 
       {equipos && equipos.length > 0 && filtrados.length === 0 && (
-        <EstadoVacio icono={IconWrench} titulo="Ningún equipo coincide con la búsqueda o el filtro" />
+        <EmptyState icono={<Wrench size={28} strokeWidth={2.75} />} titulo="Ningún equipo coincide con la búsqueda o el filtro" />
       )}
 
       {filtrados.length > 0 && (
-        <Card className="overflow-x-auto p-0">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
-                <th className="px-5 py-3 font-medium">Nombre</th>
-                <th className="px-5 py-3 font-medium">Cliente</th>
-                <th className="px-5 py-3 font-medium">Marca / Modelo</th>
-                <th className="px-5 py-3 font-medium">Categoría</th>
-                <th className="px-5 py-3 font-medium">Patente</th>
-                <th className="px-5 py-3 font-medium">Asignado a</th>
-                <th className="px-5 py-3 font-medium">Estado</th>
-                <th className="px-5 py-3 font-medium">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtrados.map((e) => (
-                <tr key={e.id} className="border-b border-border-soft last:border-0 hover:bg-surface-sunken">
-                  <td className="px-5 py-3 font-medium text-foreground">{e.nombre}</td>
-                  <td className="px-5 py-3 text-muted">{e.cliente?.nombre ?? "Propio de la empresa"}</td>
-                  <td className="px-5 py-3 text-muted">
-                    {e.marca || e.modelo ? [e.marca, e.modelo].filter(Boolean).join(" / ") : "—"}
-                  </td>
-                  <td className="px-5 py-3 text-muted">{e.categoria ?? "—"}</td>
-                  <td className="px-5 py-3 text-muted">{e.patente ?? "—"}</td>
-                  <td className="px-5 py-3 text-muted">
-                    {e.categoria === "Vehículo" ? e.asignacion_vigente?.colaborador_nombre ?? "Sin asignar" : "—"}
-                  </td>
-                  <td className="px-5 py-3">
-                    <Badge value={e.activo ? "activo" : "inactivo"} />
-                  </td>
-                  <td className="px-5 py-3">
-                    <div className="flex flex-wrap gap-2">
-                      <Button type="button" variant="outline" onClick={() => router.push(`/dashboard/registros/equipos/${e.id}`)}>
-                        Ver ficha
+        <Table<EquipoConCliente>
+          filas={filtrados}
+          claveFila={(e) => e.id}
+          vacio={{ titulo: "Ningún equipo coincide con la búsqueda o el filtro" }}
+          columnas={[
+            { encabezado: "Nombre", celda: (e) => e.nombre },
+            { encabezado: "Cliente", celda: (e) => e.cliente?.nombre ?? "Propio de la empresa" },
+            { encabezado: "Marca / Modelo", celda: (e) => (e.marca || e.modelo ? [e.marca, e.modelo].filter(Boolean).join(" / ") : "—") },
+            { encabezado: "Categoría", celda: (e) => e.categoria ?? "—" },
+            { encabezado: "Patente", celda: (e) => e.patente ?? "—" },
+            { encabezado: "Asignado a", celda: (e) => (e.categoria === "Vehículo" ? e.asignacion_vigente?.colaborador_nombre ?? "Sin asignar" : "—") },
+            { encabezado: "Estado", celda: (e) => <StatusBadge estado={e.activo ? "activo" : "inactivo"} /> },
+            {
+              encabezado: "Acciones",
+              celda: (e) => (
+                <div className="flex flex-wrap gap-ds-2">
+                  <Button variante="secundario" onPress={() => router.push(`/dashboard/registros/equipos/${e.id}`)}>
+                    Ver ficha
+                  </Button>
+                  <Button variante="secundario" onPress={() => abrirEdicion(e)}>
+                    Editar
+                  </Button>
+                  {e.categoria === "Vehículo" && (
+                    <>
+                      <Button variante="secundario" onPress={() => abrirAsignacion(e)}>
+                        Asignación
                       </Button>
-                      <Button type="button" variant="outline" onClick={() => abrirEdicion(e)}>
-                        Editar
+                      <Button variante="secundario" onPress={() => setEquipoDocumentos(e)}>
+                        Documentos
                       </Button>
-                      {e.categoria === "Vehículo" && (
-                        <>
-                          <Button type="button" variant="outline" onClick={() => abrirAsignacion(e)}>
-                            Asignación
-                          </Button>
-                          <Button type="button" variant="outline" onClick={() => setEquipoDocumentos(e)}>
-                            Documentos
-                          </Button>
-                        </>
-                      )}
-                      <Button type="button" variant="ghost" onClick={() => onAlternarActivo(e)}>
-                        {e.activo ? "Desactivar" : "Activar"}
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
+                    </>
+                  )}
+                  <Button variante="ghost" onPress={() => onAlternarActivo(e)}>
+                    {e.activo ? "Desactivar" : "Activar"}
+                  </Button>
+                </div>
+              ),
+            },
+          ]}
+        />
       )}
 
       <Modal open={equipoAsignando !== null} onClose={() => setEquipoAsignando(null)} title={`Asignación — ${equipoAsignando?.nombre ?? ""}`}>
         {equipoAsignando && (
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-ds-4">
             <div>
-              <p className="mb-1 text-xs font-semibold text-foreground">Colaborador asignado</p>
+              <p className="mb-ds-1 font-ds-body text-[11px] font-semibold text-ds-text">Colaborador asignado</p>
               {equipoAsignando.asignacion_vigente ? (
                 <div className="flex items-center justify-between">
-                  <p className="text-sm text-foreground">{equipoAsignando.asignacion_vigente.colaborador_nombre}</p>
-                  <Button type="button" variant="outline" onClick={onDesasignar}>
+                  <p className="font-ds-body text-ds-small text-ds-text">{equipoAsignando.asignacion_vigente.colaborador_nombre}</p>
+                  <Button variante="secundario" onPress={onDesasignar}>
                     Desasignar
                   </Button>
                 </div>
               ) : (
-                <p className="text-sm text-muted">Sin asignar por ahora.</p>
+                <p className="font-ds-body text-ds-small text-ds-text/70">Sin asignar por ahora.</p>
               )}
             </div>
-            <div className="flex items-start gap-2 border-t border-border pt-4">
+            <div className="flex items-start gap-ds-2 border-t border-ds-divider pt-ds-4">
               <div className="flex-1">
-                <ComboboxResponsable
-                  value={colaboradorAsignar}
-                  onChange={setColaboradorAsignar}
-                  equipo={colaboradores}
-                  placeholder={equipoAsignando.asignacion_vigente ? "Reasignar a…" : "Asignar a…"}
-                />
+                <ComboboxResponsable value={colaboradorAsignar} onChange={setColaboradorAsignar} equipo={colaboradores} placeholder={equipoAsignando.asignacion_vigente ? "Reasignar a…" : "Asignar a…"} />
               </div>
-              <Button type="button" onClick={onAsignar} disabled={asignando || !colaboradorAsignar}>
-                {asignando ? "…" : "Asignar"}
+              <Button onPress={onAsignar} deshabilitado={asignando || !colaboradorAsignar} cargando={asignando}>
+                Asignar
               </Button>
             </div>
-            <div className="border-t border-border pt-4">
-              <p className="mb-2 text-xs font-semibold text-foreground">Historial</p>
+            <div className="border-t border-ds-divider pt-ds-4">
+              <p className="mb-ds-2 font-ds-body text-[11px] font-semibold text-ds-text">Historial</p>
               {asignaciones.length === 0 ? (
-                <p className="text-sm text-muted">Sin historial todavía.</p>
+                <p className="font-ds-body text-ds-small text-ds-text/70">Sin historial todavía.</p>
               ) : (
-                <div className="flex flex-col gap-2 text-sm">
+                <div className="flex flex-col gap-ds-2 font-ds-body text-ds-small">
                   {asignaciones.map((a) => (
-                    <div key={a.id} className="flex items-center justify-between border-b border-border pb-2 last:border-0">
-                      <span className="text-foreground">{a.colaborador?.nombre ?? "—"}</span>
-                      <span className="text-xs text-muted">
+                    <div key={a.id} className="flex items-center justify-between border-b border-ds-divider pb-ds-2 last:border-0">
+                      <span className="text-ds-text">{a.colaborador?.nombre ?? "—"}</span>
+                      <span className="font-ds-body text-ds-caption text-ds-text/60">
                         {a.desde} → {a.hasta ?? "hoy"}
                       </span>
                     </div>
@@ -525,5 +462,20 @@ export default function EquiposPage() {
         {equipoDocumentos && <DocumentoForm entidadTipo="vehiculo" entidadId={equipoDocumentos.id} />}
       </Modal>
     </DashboardShell>
+  );
+}
+
+// Input nativo type="date" — ver el mismo helper en rutas/nueva/page.tsx.
+function FechaCampo({ etiqueta, valor, onCambio }: { etiqueta: string; valor: string; onCambio: (v: string) => void }) {
+  return (
+    <div className="flex flex-col gap-ds-1">
+      <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">{etiqueta}</label>
+      <input
+        type="date"
+        value={valor}
+        onChange={(e) => onCambio(e.target.value)}
+        className="h-11 w-full rounded-ds-md border border-ds-divider bg-ds-surface px-ds-3 font-ds-body text-ds-body text-ds-text transition-colors hover:border-ds-text/30 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ds-brand)]"
+      />
+    </div>
   );
 }

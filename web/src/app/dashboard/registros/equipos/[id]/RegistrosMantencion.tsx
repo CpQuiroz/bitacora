@@ -1,16 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ChevronDown, Camera, Plus, Receipt, Truck, X } from "lucide-react";
 import type { Equipo, Proveedor, RegistroMantencionEquipo, RespuestaChecklistMantencion } from "@bitacora/shared";
 import { MANTENCION_EXIGE_FOTO_EN_NO } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
 import { comprimirImagen } from "@/lib/comprimirImagen";
 import { abrirPdfRegistroMantencion } from "@/lib/descargarPdf";
-import { Button, Cifra, Label, Select, Textarea } from "@/components/ui";
-import { EstadoCargando, EstadoError, EstadoVacio } from "@/components/estados";
+import { Button, Cifra, EmptyState, ErrorState, LoadingState, Select, Textarea } from "@bitacora/ui/web";
 import { Modal } from "@/components/Modal";
 import { SelectCrear } from "@/components/SelectCrear";
-import { IconCamera, IconChevronDown, IconPlus, IconReceipt, IconTruck, IconX } from "@/components/icons";
 
 type PlantillaSeccion = { nombre: string; preguntas: { texto: string; obligatorio: boolean }[] };
 type Plantilla = { nombre: string; secciones: PlantillaSeccion[] };
@@ -39,6 +38,7 @@ const fechaCL = (iso: string | null | undefined) => {
 const tieneNovedad = (checklist: RegistroMantencionEquipo["checklist"]) =>
   Array.isArray(checklist) && checklist.some((c) => c.respuesta === "no");
 
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 // ============================================================
 // Pestaña "Mantención"
 // ============================================================
@@ -77,7 +77,7 @@ export function RegistrosMantencion({ equipo, puedeGestionar }: { equipo: Equipo
 
   if (!puedeGestionar) {
     return (
-      <div className="rounded-2xl border border-border bg-surface p-5 text-sm text-muted">
+      <div className="rounded-[32px] border border-ds-divider bg-ds-surface p-ds-5 font-ds-body text-ds-small text-ds-text/70">
         El historial de mantención lo ven Administración y Supervisión. Desde la app, el chofer registra el
         chequeo diario de su vehículo.
       </div>
@@ -85,74 +85,67 @@ export function RegistrosMantencion({ equipo, puedeGestionar }: { equipo: Equipo
   }
 
   return (
-    <div className="rounded-2xl border border-border bg-surface">
+    <div className="rounded-[32px] border border-ds-divider bg-ds-surface">
       {/* Barra de filtros */}
-      <div className="flex flex-wrap items-end gap-3 border-b border-border p-5">
+      <div className="flex flex-wrap items-end gap-ds-3 border-b border-ds-divider p-ds-5">
         <div className="w-40">
-          <Label>Tipo</Label>
-          <Select value={tipo} onChange={(e) => setTipo(e.target.value as FiltroTipo)}>
-            <option value="">Todos</option>
-            <option value="diario">Diario</option>
-            <option value="programa">Programa</option>
-          </Select>
+          <Select etiqueta="Tipo" valor={tipo} onCambio={(v) => setTipo(v as FiltroTipo)} opciones={[{ valor: "", etiqueta: "Todos" }, { valor: "diario", etiqueta: "Diario" }, { valor: "programa", etiqueta: "Programa" }]} />
         </div>
-        <div>
-          <Label>Desde</Label>
+        <div className="flex flex-col gap-ds-1">
+          <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Desde</label>
           <input
             type="date"
             value={desde}
             onChange={(e) => setDesde(e.target.value)}
-            className="h-10 rounded-lg border border-border bg-surface px-3 font-mono text-sm text-foreground focus:outline-none focus-visible:border-brand focus-visible:ring-[3px] focus-visible:ring-brand/25"
+            className="h-10 rounded-ds-md border border-ds-divider bg-ds-surface px-ds-3 font-ds-body text-ds-small text-ds-text focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ds-brand)]"
           />
         </div>
-        <div>
-          <Label>Hasta</Label>
+        <div className="flex flex-col gap-ds-1">
+          <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Hasta</label>
           <input
             type="date"
             value={hasta}
             onChange={(e) => setHasta(e.target.value)}
-            className="h-10 rounded-lg border border-border bg-surface px-3 font-mono text-sm text-foreground focus:outline-none focus-visible:border-brand focus-visible:ring-[3px] focus-visible:ring-brand/25"
+            className="h-10 rounded-ds-md border border-ds-divider bg-ds-surface px-ds-3 font-ds-body text-ds-small text-ds-text focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ds-brand)]"
           />
         </div>
-        <span className="ml-auto self-center font-mono text-[11px] uppercase tracking-[0.1em] text-muted">
+        <span className="ml-auto self-center font-ds-body text-[11px] uppercase tracking-[0.1em] text-ds-text/60">
           {registros ? `${registros.length} registro${registros.length === 1 ? "" : "s"}` : "…"}
         </span>
-        <Button type="button" onClick={() => setModalAbierto(true)}>
-          <IconPlus className="h-4 w-4" />
+        <Button iconoIzq={<Plus size={16} strokeWidth={2.75} />} onPress={() => setModalAbierto(true)}>
           Nuevo registro
         </Button>
       </div>
 
       {/* Tabla / estados */}
-      <div className="p-5">
+      <div className="p-ds-5">
         {registros === null && !error ? (
-          <EstadoCargando mensaje="Cargando registros" />
+          <LoadingState />
         ) : error ? (
-          <EstadoError mensaje={error} onReintentar={cargar} />
+          <ErrorState mensaje={error} onReintentar={cargar} />
         ) : registros && registros.length === 0 ? (
-          <EstadoVacio
-            icono={IconTruck}
+          <EmptyState
+            icono={<Truck size={28} strokeWidth={2.75} />}
             titulo="Todavía no hay registros de mantención para este vehículo"
             mensaje="Registra el chequeo diario o el Programa de Mantención para empezar el historial."
             accion={
-              <Button type="button" onClick={() => setModalAbierto(true)}>
-                <IconPlus className="h-4 w-4" />
+              <Button iconoIzq={<Plus size={16} strokeWidth={2.75} />} onPress={() => setModalAbierto(true)}>
                 Nuevo registro
               </Button>
             }
           />
         ) : (
-          <div className="overflow-x-auto rounded-lg border border-border">
-            <table className="w-full text-left text-sm">
+          <div className="overflow-x-auto rounded-ds-md border border-ds-divider">
+            <table className="w-full text-left text-ds-body">
               <thead>
-                <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
-                  <th className="px-5 py-3 font-medium">Fecha</th>
-                  <th className="px-5 py-3 font-medium">Tipo</th>
-                  <th className="px-5 py-3 font-medium">Origen</th>
-                  <th className="px-5 py-3 font-medium">Realizado por</th>
-                  <th className="px-5 py-3 font-medium">Km / Horas</th>
-                  <th className="px-5 py-3 font-medium">Estado</th>
-                  <th className="px-5 py-3 font-medium">PDF</th>
+                <tr className="border-b border-ds-divider text-[11px] font-medium uppercase tracking-[0.08em] text-ds-text/60">
+                  <th className="px-ds-4 py-ds-3">Fecha</th>
+                  <th className="px-ds-4 py-ds-3">Tipo</th>
+                  <th className="px-ds-4 py-ds-3">Origen</th>
+                  <th className="px-ds-4 py-ds-3">Realizado por</th>
+                  <th className="px-ds-4 py-ds-3">Km / Horas</th>
+                  <th className="px-ds-4 py-ds-3">Estado</th>
+                  <th className="px-ds-4 py-ds-3">PDF</th>
                 </tr>
               </thead>
               <tbody>
@@ -161,47 +154,36 @@ export function RegistrosMantencion({ equipo, puedeGestionar }: { equipo: Equipo
                   const quien =
                     r.origen === "externo" ? (r.proveedor?.nombre ?? "Taller externo") : (r.responsable?.nombre ?? "—");
                   return (
-                    <tr
-                      key={r.id}
-                      className="border-b border-border-soft last:border-0 even:bg-[#fafbfc] hover:bg-surface-sunken"
-                    >
-                      <td className="px-5 py-3">
+                    <tr key={r.id} className="border-b border-ds-text/[0.08] last:border-0 even:bg-ds-text/[0.02] hover:bg-ds-text/[0.04]">
+                      <td className="px-ds-4 py-ds-3">
                         <Cifra>{fechaCL(r.fecha)}</Cifra>
                       </td>
-                      <td className="px-5 py-3">
-                        <span
-                          className={`inline-block rounded-sm px-2 py-0.5 text-[11px] font-semibold ${
-                            r.tipo === "programa" ? "bg-brand-soft text-brand" : "bg-surface-sunken text-muted"
-                          }`}
-                        >
+                      <td className="px-ds-4 py-ds-3">
+                        <span className={`inline-block rounded-ds-sm px-2 py-0.5 text-[11px] font-semibold ${r.tipo === "programa" ? "bg-ds-brand/[0.08] text-ds-brand" : "bg-ds-text/[0.05] text-ds-text/60"}`}>
                           {r.tipo === "programa" ? "Programa" : "Diario"}
                         </span>
                       </td>
-                      <td className="px-5 py-3 text-muted">{r.origen === "externo" ? "Taller externo" : "Interno"}</td>
-                      <td className="px-5 py-3">{quien}</td>
-                      <td className="px-5 py-3">
+                      <td className="px-ds-4 py-ds-3 text-ds-text/70">{r.origen === "externo" ? "Taller externo" : "Interno"}</td>
+                      <td className="px-ds-4 py-ds-3 text-ds-text">{quien}</td>
+                      <td className="px-ds-4 py-ds-3">
                         <Cifra>
                           {r.kilometraje != null ? `${Number(r.kilometraje).toLocaleString("es-CL")} km` : "—"}
                           {r.horas_motor != null ? ` · ${Number(r.horas_motor).toLocaleString("es-CL")} h` : ""}
                         </Cifra>
                       </td>
-                      <td className="px-5 py-3">
-                        <span
-                          className={`inline-block rounded-sm px-2 py-0.5 text-[11px] font-semibold ${
-                            nov ? "bg-warning-soft text-warning" : "bg-success-soft text-success"
-                          }`}
-                        >
+                      <td className="px-ds-4 py-ds-3">
+                        <span className={`inline-block rounded-ds-sm px-2 py-0.5 text-[11px] font-semibold ${nov ? "bg-ds-accent-100 text-ds-accent-800" : "bg-ds-accent2-100 text-ds-accent2-800"}`}>
                           {nov ? "Con novedades" : "Sin novedades"}
                         </span>
                       </td>
-                      <td className="px-5 py-3">
+                      <td className="px-ds-4 py-ds-3">
                         <button
                           type="button"
                           onClick={() => abrirPdfRegistroMantencion(equipo.id, r.id)}
                           aria-label="Ver PDF del registro"
-                          className="flex h-7 w-7 items-center justify-center rounded-sm border border-border text-muted transition-colors hover:border-brand hover:text-brand"
+                          className="flex h-7 w-7 items-center justify-center rounded-ds-sm border border-ds-divider text-ds-text/60 transition-colors hover:border-ds-brand hover:text-ds-brand"
                         >
-                          <IconReceipt className="h-4 w-4" />
+                          <Receipt size={16} strokeWidth={2.75} />
                         </button>
                       </td>
                     </tr>
@@ -347,13 +329,13 @@ function ModalNuevoRegistro({ equipo, onListo }: { equipo: Equipo; onListo: () =
     onListo();
   }
 
-  if (cargando) return <EstadoCargando mensaje="Cargando formulario" />;
-  if (errorCarga || !plantilla) return <EstadoError mensaje={errorCarga ?? "No se pudo cargar el formulario."} />;
+  if (cargando) return <LoadingState />;
+  if (errorCarga || !plantilla) return <ErrorState mensaje={errorCarga ?? "No se pudo cargar el formulario."} />;
 
   const todasAbiertas = abiertas.size === plantilla.secciones.length;
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-ds-5">
       <input ref={fileGeneral} type="file" accept="image/*" multiple className="hidden" onChange={(e) => agregarFotos(e.target.files, null)} />
       <input
         ref={fileItem}
@@ -367,23 +349,23 @@ function ModalNuevoRegistro({ equipo, onListo }: { equipo: Equipo; onListo: () =
       />
 
       {/* 1. Vehículo (solo lectura) */}
-      <div className="grid gap-3 rounded-lg border border-border-soft bg-surface-sunken p-4 sm:grid-cols-3">
+      <div className="grid gap-ds-3 rounded-ds-md border border-ds-divider bg-ds-text/[0.03] p-ds-4 sm:grid-cols-3">
         {[
           ["Patente", equipo.patente ?? "—"],
           ["Marca / modelo", [equipo.marca, equipo.modelo].filter(Boolean).join(" ") || equipo.nombre],
           ["Tipo de vehículo", equipo.tipo_vehiculo ?? equipo.categoria ?? "—"],
         ].map(([k, v]) => (
           <div key={k}>
-            <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted">{k}</p>
-            <p className="mt-0.5 font-mono text-sm font-semibold text-foreground">{v}</p>
+            <p className="font-ds-body text-[10px] uppercase tracking-[0.12em] text-ds-text/60">{k}</p>
+            <p className="mt-0.5 font-ds-body text-ds-small font-semibold text-ds-text">{v}</p>
           </div>
         ))}
       </div>
 
       {/* 2. Tipo */}
       <fieldset>
-        <legend className="mb-1.5 text-[13px] font-semibold text-foreground">Tipo de registro</legend>
-        <div className="flex flex-wrap gap-2">
+        <legend className="mb-ds-1 font-ds-body text-[13px] font-semibold text-ds-text">Tipo de registro</legend>
+        <div className="flex flex-wrap gap-ds-2">
           {([
             { v: "diario", t: "Chequeo diario" },
             { v: "programa", t: "Programa de mantención" },
@@ -393,15 +375,15 @@ function ModalNuevoRegistro({ equipo, onListo }: { equipo: Equipo; onListo: () =
               type="button"
               aria-pressed={tipo === o.v}
               onClick={() => setTipo(o.v)}
-              className={`h-11 rounded-lg border px-4 text-sm font-medium transition-colors ${
-                tipo === o.v ? "border-[1.5px] border-brand bg-brand-soft text-brand" : "border-border bg-surface text-foreground hover:border-muted-soft"
+              className={`h-11 rounded-ds-md border px-ds-4 font-ds-body text-ds-small font-medium transition-colors ${
+                tipo === o.v ? "border-[1.5px] border-ds-brand bg-ds-brand/[0.08] text-ds-brand" : "border-ds-divider bg-ds-surface text-ds-text hover:border-ds-text/30"
               }`}
             >
               {o.t}
             </button>
           ))}
         </div>
-        <p className="mt-1.5 text-[13px] text-muted">
+        <p className="mt-ds-1 font-ds-body text-[13px] text-ds-text/60">
           {tipo === "diario"
             ? "Lo hace el chofer antes de salir a ruta. Queda como interno."
             : "Cada 250 h o 6 meses, en un taller o lubricentro autorizado."}
@@ -409,9 +391,9 @@ function ModalNuevoRegistro({ equipo, onListo }: { equipo: Equipo; onListo: () =
       </fieldset>
 
       {/* 3. Km / Horas / Fecha */}
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-ds-3 sm:grid-cols-3">
         <div>
-          <label htmlFor="rm-km" className="mb-1.5 block text-[13px] font-semibold text-foreground">
+          <label htmlFor="rm-km" className="mb-ds-1 block font-ds-body text-[13px] font-semibold text-ds-text">
             Kilometraje
           </label>
           <input
@@ -419,12 +401,12 @@ function ModalNuevoRegistro({ equipo, onListo }: { equipo: Equipo; onListo: () =
             inputMode="numeric"
             value={kilometraje}
             onChange={(e) => setKilometraje(e.target.value.replace(/[^\d]/g, ""))}
-            className="h-10 w-full rounded-lg border border-border bg-surface px-3 font-mono text-sm tabular-nums text-foreground focus:outline-none focus-visible:border-brand focus-visible:ring-[3px] focus-visible:ring-brand/25"
+            className="h-10 w-full rounded-ds-md border border-ds-divider bg-ds-surface px-ds-3 font-ds-body text-ds-small tabular-nums text-ds-text focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ds-brand)]"
             placeholder="412860"
           />
         </div>
         <div>
-          <label htmlFor="rm-horas" className="mb-1.5 block text-[13px] font-semibold text-foreground">
+          <label htmlFor="rm-horas" className="mb-ds-1 block font-ds-body text-[13px] font-semibold text-ds-text">
             Horas motor
           </label>
           <input
@@ -432,12 +414,12 @@ function ModalNuevoRegistro({ equipo, onListo }: { equipo: Equipo; onListo: () =
             inputMode="numeric"
             value={horasMotor}
             onChange={(e) => setHorasMotor(e.target.value.replace(/[^\d]/g, ""))}
-            className="h-10 w-full rounded-lg border border-border bg-surface px-3 font-mono text-sm tabular-nums text-foreground focus:outline-none focus-visible:border-brand focus-visible:ring-[3px] focus-visible:ring-brand/25"
+            className="h-10 w-full rounded-ds-md border border-ds-divider bg-ds-surface px-ds-3 font-ds-body text-ds-small tabular-nums text-ds-text focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ds-brand)]"
             placeholder="6120"
           />
         </div>
         <div>
-          <label htmlFor="rm-fecha" className="mb-1.5 block text-[13px] font-semibold text-foreground">
+          <label htmlFor="rm-fecha" className="mb-ds-1 block font-ds-body text-[13px] font-semibold text-ds-text">
             Fecha
           </label>
           <input
@@ -446,15 +428,15 @@ function ModalNuevoRegistro({ equipo, onListo }: { equipo: Equipo; onListo: () =
             max={new Date().toISOString().slice(0, 10)}
             value={fecha}
             onChange={(e) => setFecha(e.target.value)}
-            className="h-10 w-full rounded-lg border border-border bg-surface px-3 font-mono text-sm text-foreground focus:outline-none focus-visible:border-brand focus-visible:ring-[3px] focus-visible:ring-brand/25"
+            className="h-10 w-full rounded-ds-md border border-ds-divider bg-ds-surface px-ds-3 font-ds-body text-ds-small text-ds-text focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ds-brand)]"
           />
         </div>
       </div>
 
       {/* 4. Taller (solo Programa) */}
       {tipo === "programa" && (
-        <div>
-          <Label>Taller / lubricentro</Label>
+        <div className="flex flex-col gap-ds-1">
+          <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Taller / lubricentro</label>
           <SelectCrear<Proveedor>
             value={proveedorId}
             onChange={setProveedorId}
@@ -471,28 +453,28 @@ function ModalNuevoRegistro({ equipo, onListo }: { equipo: Equipo; onListo: () =
 
       {/* 5. Checklist */}
       <div>
-        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <p className="text-[13px] font-semibold text-foreground">
-            Checklist — <Cifra className="text-muted">{respondidos} de {totalItems}</Cifra> ítems respondidos
+        <div className="mb-ds-2 flex flex-wrap items-center justify-between gap-ds-2">
+          <p className="font-ds-body text-[13px] font-semibold text-ds-text">
+            Checklist — <Cifra>{respondidos} de {totalItems}</Cifra> ítems respondidos
           </p>
           <button
             type="button"
             onClick={() =>
               setAbiertas(todasAbiertas ? new Set() : new Set(plantilla.secciones.map((_, i) => i)))
             }
-            className="text-xs font-medium text-brand hover:underline"
+            className="font-ds-body text-ds-caption font-medium text-ds-brand hover:underline"
           >
             {todasAbiertas ? "Colapsar todo" : "Expandir todo"}
           </button>
         </div>
 
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-ds-2">
           {plantilla.secciones.map((sec, idx) => {
             const abierta = abiertas.has(idx);
             const enSeccion = sec.preguntas.filter((p) => respuestas[clave(sec.nombre, p.texto)]).length;
             const completa = enSeccion === sec.preguntas.length;
             return (
-              <div key={sec.nombre} className="overflow-hidden rounded-lg border border-border">
+              <div key={sec.nombre} className="overflow-hidden rounded-ds-md border border-ds-divider">
                 <button
                   type="button"
                   aria-expanded={abierta}
@@ -504,27 +486,27 @@ function ModalNuevoRegistro({ equipo, onListo }: { equipo: Equipo; onListo: () =
                       return n;
                     })
                   }
-                  className="flex min-h-[46px] w-full items-center gap-3 bg-surface-sunken px-3 text-left text-sm font-semibold text-foreground"
+                  className="flex min-h-[46px] w-full items-center gap-ds-3 bg-ds-text/[0.03] px-ds-3 text-left font-ds-body text-ds-small font-semibold text-ds-text"
                 >
                   <span
-                    className={`grid h-[22px] w-[22px] shrink-0 place-items-center rounded-sm text-xs font-bold ${
-                      completa ? "bg-success-soft text-success" : "bg-brand text-white"
+                    className={`grid h-[22px] w-[22px] shrink-0 place-items-center rounded-ds-sm text-xs font-bold ${
+                      completa ? "bg-ds-accent2-100 text-ds-accent2-800" : "bg-ds-brand text-ds-brand-foreground"
                     }`}
                   >
                     {idx + 1}
                   </span>
                   <span className="flex-1">{sec.nombre}</span>
-                  <Cifra
-                    className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                      completa ? "bg-success-soft text-success" : "bg-surface text-muted"
+                  <span
+                    className={`rounded-ds-pill px-2 py-0.5 text-[11px] font-semibold tabular-nums ${
+                      completa ? "bg-ds-accent2-100 text-ds-accent2-800" : "bg-ds-surface text-ds-text/60"
                     }`}
                   >
                     {enSeccion}/{sec.preguntas.length}
-                  </Cifra>
-                  <IconChevronDown className={`h-4 w-4 text-muted transition-transform ${abierta ? "rotate-180" : ""}`} />
+                  </span>
+                  <ChevronDown size={16} strokeWidth={2.75} className={`text-ds-text/60 transition-transform ${abierta ? "rotate-180" : ""}`} />
                 </button>
                 {abierta && (
-                  <div className="flex flex-col divide-y divide-border-soft px-3">
+                  <div className="flex flex-col divide-y divide-ds-divider px-ds-3">
                     {sec.preguntas.map((p) => {
                       const actual = respuestas[clave(sec.nombre, p.texto)];
                       const necesitaFoto =
@@ -532,10 +514,10 @@ function ModalNuevoRegistro({ equipo, onListo }: { equipo: Equipo; onListo: () =
                         actual === "no" &&
                         !fotos.some((f) => f.item === p.texto);
                       return (
-                        <div key={p.texto} className="flex flex-wrap items-center gap-x-3 gap-y-2 py-2.5">
-                          <span className="min-w-[10rem] flex-1 text-sm">{p.texto}</span>
+                        <div key={p.texto} className="flex flex-wrap items-center gap-x-ds-3 gap-y-2 py-2.5">
+                          <span className="min-w-[10rem] flex-1 font-ds-body text-ds-small text-ds-text">{p.texto}</span>
                           {necesitaFoto && (
-                            <span className="rounded-sm bg-warning-soft px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-warning">
+                            <span className="rounded-ds-sm bg-ds-accent-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ds-accent-800">
                               Foto requerida
                             </span>
                           )}
@@ -546,16 +528,12 @@ function ModalNuevoRegistro({ equipo, onListo }: { equipo: Equipo; onListo: () =
                                 itemPendiente.current = p.texto;
                                 fileItem.current?.click();
                               }}
-                              className="text-xs font-medium text-brand hover:underline"
+                              className="font-ds-body text-ds-caption font-medium text-ds-brand hover:underline"
                             >
                               + Foto{fotos.filter((f) => f.item === p.texto).length ? ` (${fotos.filter((f) => f.item === p.texto).length})` : ""}
                             </button>
                           )}
-                          <span
-                            role="group"
-                            aria-label={p.texto}
-                            className="inline-flex overflow-hidden rounded-lg border border-border bg-surface-sunken p-0.5"
-                          >
+                          <span role="group" aria-label={p.texto} className="inline-flex overflow-hidden rounded-ds-md border border-ds-divider bg-ds-text/[0.03] p-0.5">
                             {OPCIONES.map((op) => {
                               const sel = actual === op.valor;
                               return (
@@ -564,14 +542,14 @@ function ModalNuevoRegistro({ equipo, onListo }: { equipo: Equipo; onListo: () =
                                   type="button"
                                   aria-pressed={sel}
                                   onClick={() => responder(sec.nombre, p.texto, op.valor)}
-                                  className={`min-h-[34px] rounded-md px-3 text-xs font-semibold transition-colors ${
+                                  className={`min-h-[34px] rounded-ds-sm px-ds-3 text-xs font-semibold transition-colors ${
                                     sel
                                       ? op.valor === "si"
-                                        ? "bg-success-soft text-success"
+                                        ? "bg-ds-accent2-100 text-ds-accent2-800"
                                         : op.valor === "no"
-                                          ? "bg-danger-soft text-danger"
-                                          : "bg-surface text-muted"
-                                      : "text-muted hover:text-foreground"
+                                          ? "bg-ds-accent-100 text-ds-accent-800"
+                                          : "bg-ds-surface text-ds-text/60"
+                                      : "text-ds-text/60 hover:text-ds-text"
                                   }`}
                                 >
                                   {op.texto}
@@ -592,32 +570,33 @@ function ModalNuevoRegistro({ equipo, onListo }: { equipo: Equipo; onListo: () =
 
       {/* 6. Fotos */}
       <div>
-        <Label>Fotos de respaldo</Label>
-        <div className="rounded-lg border border-dashed border-border bg-surface-sunken p-4 text-center">
-          <p className="text-[13px] text-muted">Arrastra fotos aquí o</p>
-          <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => fileGeneral.current?.click()}>
-            <IconCamera className="h-4 w-4" />
-            Seleccionar
-          </Button>
+        <p className="mb-ds-1 font-ds-body text-ds-caption font-medium text-ds-text/70">Fotos de respaldo</p>
+        <div className="rounded-ds-md border border-dashed border-ds-divider bg-ds-text/[0.03] p-ds-4 text-center">
+          <p className="font-ds-body text-[13px] text-ds-text/60">Arrastra fotos aquí o</p>
+          <div className="mt-ds-2">
+            <Button variante="secundario" tamano="sm" iconoIzq={<Camera size={16} strokeWidth={2.75} />} onPress={() => fileGeneral.current?.click()}>
+              Seleccionar
+            </Button>
+          </div>
         </div>
         {fotos.length > 0 && (
-          <ul className="mt-3 flex flex-wrap gap-2">
+          <ul className="mt-ds-3 flex flex-wrap gap-ds-2">
             {fotos.map((f, i) => (
               <li key={i} className="relative">
-                <div className="flex h-[66px] w-[88px] items-center justify-center overflow-hidden rounded-sm border border-border bg-surface">
+                <div className="flex h-[66px] w-[88px] items-center justify-center overflow-hidden rounded-ds-sm border border-ds-divider bg-ds-surface">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={URL.createObjectURL(f.file)} alt={f.item ?? "Foto general"} className="h-full w-full object-cover" />
                 </div>
                 {f.item && (
-                  <span className="absolute inset-x-0 bottom-0 truncate bg-black/55 px-1 text-[9px] text-white">{f.item}</span>
+                  <span className="absolute inset-x-0 bottom-0 truncate bg-ds-text/[0.7] px-1 text-[9px] text-white">{f.item}</span>
                 )}
                 <button
                   type="button"
                   aria-label="Quitar foto"
                   onClick={() => setFotos((prev) => prev.filter((_, j) => j !== i))}
-                  className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-danger text-white"
+                  className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-ds-pill bg-ds-accent-700 text-white"
                 >
-                  <IconX className="h-2.5 w-2.5" />
+                  <X size={10} strokeWidth={2.75} />
                 </button>
               </li>
             ))}
@@ -626,26 +605,23 @@ function ModalNuevoRegistro({ equipo, onListo }: { equipo: Equipo; onListo: () =
       </div>
 
       {/* 7. Observaciones */}
-      <div>
-        <Label>Observaciones</Label>
-        <Textarea rows={6} value={observaciones} onChange={(e) => setObservaciones(e.target.value)} />
-      </div>
+      <Textarea etiqueta="Observaciones" filas={6} valor={observaciones} onCambio={setObservaciones} />
 
-      {error && (
-        <p role="alert" className="rounded-lg border-l-[3px] border-danger bg-danger-soft px-3 py-2 text-sm font-medium text-danger">
+      {error ? (
+        <p role="alert" className="rounded-ds-md border-l-[3px] border-ds-accent-700 bg-ds-accent-100 px-ds-3 py-ds-2 font-ds-body text-ds-small font-medium text-ds-accent-800">
           {error}
         </p>
-      )}
+      ) : null}
 
       {/* 8. Pie */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
-        <p className="text-[13px] text-muted">{ayudaBloqueo}</p>
-        <div className="flex gap-2">
-          <Button type="button" variant="outline" onClick={onListo}>
+      <div className="flex flex-wrap items-center justify-between gap-ds-3 border-t border-ds-divider pt-ds-4">
+        <p className="font-ds-body text-[13px] text-ds-text/60">{ayudaBloqueo}</p>
+        <div className="flex gap-ds-2">
+          <Button variante="secundario" onPress={onListo}>
             Cancelar
           </Button>
-          <Button type="button" onClick={onSubmit} disabled={bloqueado || guardando}>
-            {guardando ? "Guardando…" : "Guardar registro"}
+          <Button onPress={onSubmit} deshabilitado={bloqueado || guardando} cargando={guardando}>
+            Guardar registro
           </Button>
         </div>
       </div>
