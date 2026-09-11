@@ -1,8 +1,9 @@
 # Sesión actual
 
-- **Tarea en curso:** 12 — fix_sync_reintentar_bloqueado (ver detalle abajo)
 - **Cerradas esta sesión:** 9 — edicion_viajes_y_fotos_os, 10 — fotos_mantencion_equipo,
-  11 — fix_sync_cola_apilamiento (insuficiente, ver tarea 12)
+  11 — fix_sync_cola_apilamiento (insuficiente, ver tarea 12), 12 — fix_sync_reintentar_bloqueado
+- **Sin tarea in_progress** — todo lo abierto de esta sesión quedó cerrado; ver
+  "Pendiente / notas generales" para el backlog general (#1-#6, #8).
 - **Pausada:** 8 — sistema_diseno (pending, no abandonada — retomar cuando la
   usuaria lo pida; ver `docs/design-system.md` §"Seams que quedan fuera de
   este pedido" para el estado exacto donde quedó)
@@ -277,4 +278,17 @@ persiste, la cola ahora al menos puede reintentarse de verdad al
 tocar "Reintentar ahora" en vez de parecer congelada.
 
 `./verificar.sh` verde: tsc x6, 27 tests, 12 literales, 99 migraciones.
-APK 1.9.7 (versionCode 24) en build local para reintentar.
+
+**Build local**: el toolchain (JDK17 + SDK de Android vía brew,
+`docs`/memoria `build-android-local.md`) no estaba en el PATH de esta
+sesión — 2 fallos de entorno encontrados y corregidos sobre la marcha:
+`JAVA_HOME` sin exportar, y `local.properties` apuntando a una ruta de
+SDK equivocada (`~/Library/Android/sdk`, que no existe en esta Mac) en
+vez de la real, `/opt/homebrew/share/android-commandlinetools` (cask
+de brew, como ya documentaba la memoria). Corregido, build verde en
+9m 9s. APK 1.9.7 (versionCode 24) verificado con `strings` — contiene
+`bitacora-cgt7.onrender.com` y `yjbskbskyadxjooxngjv` (prod), sin
+rastro de `localhost`/dev. Copiado a
+`~/Desktop/bitacora-builds/bitacora-1.9.7.apk`. `.env` restaurado a
+dev y `mobile/package.json` revertido (prebuild le cambia los scripts
+`android`/`ios` — reversión ya conocida, ver memoria).
