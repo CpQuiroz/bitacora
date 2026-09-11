@@ -1,12 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { Calendar, Check, Layers, Plus, Wrench } from "lucide-react";
 import type { AgendaProConfig, AgendaProHorario, Servicio, TipoPack } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
-import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText } from "@/components/ui";
+import { Button, Card, Input, LoadingState, Select, StatusBadge, Table } from "@bitacora/ui/web";
 import { InputMonto } from "@/components/InputMonto";
-import { IconCalendar, IconCheck, IconLayers, IconPlus, IconWrench } from "@/components/icons";
-import { EstadoCargando, EstadoVacio } from "@/components/estados";
 import { useConfiguracion } from "../ConfiguracionContext";
 
 const DIAS = [
@@ -101,90 +100,67 @@ function ServiciosCard({ servicios, onCambio }: { servicios: Servicio[] | null; 
 
   return (
     <Card>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <div className="mb-ds-4 flex flex-wrap items-center justify-between gap-ds-3">
         <div>
-          <h2 className="text-sm font-semibold text-foreground">Servicios</h2>
-          <p className="text-sm text-muted">Lo que ofreces — precio de lista y duración sugerida para Nueva reserva.</p>
+          <p className="font-ds-body text-ds-small font-semibold text-ds-text">Servicios</p>
+          <p className="font-ds-body text-ds-small text-ds-text/70">Lo que ofreces — precio de lista y duración sugerida para Nueva reserva.</p>
         </div>
         {editandoId === null && (
-          <Button type="button" variant="outline" onClick={abrirNuevo}>
-            <IconPlus className="h-4 w-4" />
+          <Button variante="secundario" onPress={abrirNuevo} iconoIzq={<Plus size={16} strokeWidth={2.75} />}>
             Nuevo servicio
           </Button>
         )}
       </div>
 
       {editandoId !== null && (
-        <form onSubmit={onSubmit} className="mb-4 flex flex-col gap-4 rounded-lg border border-border p-3">
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div>
-              <Label>Nombre</Label>
-              <Input type="text" placeholder="Ej: Manicure" value={nombre} onChange={(e) => setNombre(e.target.value)} />
-            </div>
-            <div>
-              <Label>Precio de lista</Label>
+        <form onSubmit={onSubmit} className="mb-ds-4 flex flex-col gap-ds-4 rounded-ds-lg border border-ds-divider p-ds-3">
+          <div className="grid gap-ds-4 sm:grid-cols-3">
+            <Input etiqueta="Nombre" placeholder="Ej: Manicure" valor={nombre} onCambio={setNombre} />
+            <div className="flex flex-col gap-ds-1">
+              <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Precio de lista</label>
               <InputMonto value={precio} onChange={setPrecio} moneda={usuario.empresa.moneda} />
             </div>
-            <div>
-              <Label>Duración sugerida (min)</Label>
-              <Input type="number" min={5} value={duracion} onChange={(e) => setDuracion(Number(e.target.value) || 5)} />
-            </div>
+            <Input
+              etiqueta="Duración sugerida (min)"
+              tipo="numero"
+              valor={String(duracion)}
+              onCambio={(v) => setDuracion(Number(v) || 5)}
+            />
           </div>
-          {formError && <ErrorText>{formError}</ErrorText>}
-          <div className="flex gap-2">
-            <Button type="submit" disabled={guardando} className="self-start">
-              {guardando ? "Guardando…" : editandoId === "nuevo" ? "Crear" : "Guardar cambios"}
-            </Button>
-            <Button type="button" variant="ghost" onClick={() => setEditandoId(null)}>
+          {formError ? <p className="font-ds-body text-ds-small text-ds-accent-700">{formError}</p> : null}
+          <div className="flex gap-ds-2">
+            <div className="self-start">
+              <Button tipo="submit" cargando={guardando}>
+                {editandoId === "nuevo" ? "Crear" : "Guardar cambios"}
+              </Button>
+            </div>
+            <Button variante="ghost" onPress={() => setEditandoId(null)}>
               Cancelar
             </Button>
           </div>
         </form>
       )}
 
-      {error && <ErrorText>{error}</ErrorText>}
-      {aviso && <SuccessText>{aviso}</SuccessText>}
-      {servicios === null && !error && <EstadoCargando />}
-      {servicios?.length === 0 && (
-        <EstadoVacio icono={IconWrench} titulo="Ningún servicio todavía" mensaje="Crea el primero para poder elegirlo en Nueva reserva." />
-      )}
+      {error ? <p className="font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
+      {aviso ? <p className="font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}
+      {servicios === null && !error && <LoadingState />}
 
-      {servicios && servicios.length > 0 && (
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
-                <th className="px-3 py-2 font-medium">Nombre</th>
-                <th className="px-3 py-2 font-medium">Precio</th>
-                <th className="px-3 py-2 font-medium">Duración sugerida</th>
-                <th className="px-3 py-2 font-medium">Estado</th>
-                <th className="px-3 py-2 font-medium"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {servicios.map((s) => (
-                <tr key={s.id} className="border-b border-border-soft last:border-0">
-                  <td className="px-3 py-2 font-medium text-foreground">{s.nombre}</td>
-                  <td className="px-3 py-2 text-muted">{formatoPrecio(s.precio)}</td>
-                  <td className="px-3 py-2 text-muted">{s.duracion_sugerida_min} min</td>
-                  <td className="px-3 py-2">
-                    <Badge value={s.activo ? "activo" : "inactivo"} />
-                  </td>
-                  <td className="px-3 py-2">
-                    <div className="flex justify-end gap-2">
-                      <Button type="button" variant="ghost" onClick={() => abrirEdicion(s)}>
-                        Editar
-                      </Button>
-                      <Button type="button" variant="ghost" onClick={() => alternarActivo(s)}>
-                        {s.activo ? "Descontinuar" : "Reactivar"}
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      {servicios && (
+        <Table
+          filas={servicios}
+          claveFila={(s) => s.id}
+          columnas={[
+            { encabezado: "Nombre", celda: (s) => <span className="font-medium text-ds-text">{s.nombre}</span> },
+            { encabezado: "Precio", celda: (s) => <span className="text-ds-text/60">{formatoPrecio(s.precio)}</span> },
+            { encabezado: "Duración sugerida", celda: (s) => <span className="text-ds-text/60">{s.duracion_sugerida_min} min</span> },
+            { encabezado: "Estado", celda: (s) => <StatusBadge estado={s.activo ? "activo" : "inactivo"} /> },
+          ]}
+          acciones={[
+            { etiqueta: "Editar", onPress: abrirEdicion, tono: "brand" },
+            { etiqueta: (s) => (s.activo ? "Descontinuar" : "Reactivar"), onPress: alternarActivo, tono: "muted" },
+          ]}
+          vacio={{ icono: <Wrench size={28} strokeWidth={2.75} />, titulo: "Ningún servicio todavía", mensaje: "Crea el primero para poder elegirlo en Nueva reserva." }}
+        />
       )}
     </Card>
   );
@@ -299,125 +275,89 @@ function TiposPackCard({ servicios }: { servicios: Servicio[] | null }) {
 
   return (
     <Card>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <div className="mb-ds-4 flex flex-wrap items-center justify-between gap-ds-3">
         <div>
-          <h2 className="text-sm font-semibold text-foreground">Tipos de pack</h2>
-          <p className="text-sm text-muted">Plantillas de packs que vendes — evita tipear nombre y cantidad cada vez.</p>
+          <p className="font-ds-body text-ds-small font-semibold text-ds-text">Tipos de pack</p>
+          <p className="font-ds-body text-ds-small text-ds-text/70">Plantillas de packs que vendes — evita tipear nombre y cantidad cada vez.</p>
         </div>
         {editandoId === null && (
-          <Button type="button" variant="outline" onClick={abrirNuevo}>
-            <IconPlus className="h-4 w-4" />
+          <Button variante="secundario" onPress={abrirNuevo} iconoIzq={<Plus size={16} strokeWidth={2.75} />}>
             Nuevo tipo de pack
           </Button>
         )}
       </div>
 
       {editandoId !== null && (
-        <form onSubmit={onSubmit} className="mb-4 flex flex-col gap-4 rounded-lg border border-border p-3">
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div>
-              <Label>Nombre</Label>
-              <Input type="text" placeholder="Ej: Pack 5 sesiones" value={nombre} onChange={(e) => setNombre(e.target.value)} />
-            </div>
-            <div>
-              <Label>Cantidad de sesiones</Label>
-              <Input
-                type="number"
-                min={1}
-                value={cantidadSesiones}
-                onChange={(e) => setCantidadSesiones(Number(e.target.value) || 1)}
-              />
-            </div>
-            <div>
-              <Label>Precio total (recomendado)</Label>
+        <form onSubmit={onSubmit} className="mb-ds-4 flex flex-col gap-ds-4 rounded-ds-lg border border-ds-divider p-ds-3">
+          <div className="grid gap-ds-4 sm:grid-cols-3">
+            <Input etiqueta="Nombre" placeholder="Ej: Pack 5 sesiones" valor={nombre} onCambio={setNombre} />
+            <Input
+              etiqueta="Cantidad de sesiones"
+              tipo="numero"
+              valor={String(cantidadSesiones)}
+              onCambio={(v) => setCantidadSesiones(Number(v) || 1)}
+            />
+            <div className="flex flex-col gap-ds-1">
+              <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Precio total (recomendado)</label>
               <InputMonto placeholder="45000" value={precio} onChange={setPrecio} moneda={usuario.empresa.moneda} />
             </div>
-            <div>
-              <Label>Servicio al que aplica (opcional)</Label>
-              <Select value={servicioId} onChange={(e) => setServicioId(e.target.value)}>
-                <option value="">Cualquier servicio</option>
-                {(servicios ?? []).map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.nombre}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <div>
-              <Label>Vigencia en días (opcional)</Label>
-              <Input
-                type="number"
-                min={1}
-                placeholder="Vacío = no vence"
-                value={vigenciaDias}
-                onChange={(e) => setVigenciaDias(e.target.value)}
-              />
-            </div>
+            <Select
+              etiqueta="Servicio al que aplica (opcional)"
+              valor={servicioId}
+              onCambio={setServicioId}
+              placeholder="Cualquier servicio"
+              opciones={(servicios ?? []).map((s) => ({ valor: s.id, etiqueta: s.nombre }))}
+            />
+            <Input
+              etiqueta="Vigencia en días (opcional)"
+              tipo="numero"
+              placeholder="Vacío = no vence"
+              valor={vigenciaDias}
+              onCambio={setVigenciaDias}
+            />
           </div>
-          {formError && <ErrorText>{formError}</ErrorText>}
-          <div className="flex gap-2">
-            <Button type="submit" disabled={guardando} className="self-start">
-              {guardando ? "Guardando…" : editandoId === "nuevo" ? "Crear" : "Guardar cambios"}
-            </Button>
-            <Button type="button" variant="ghost" onClick={() => setEditandoId(null)}>
+          {formError ? <p className="font-ds-body text-ds-small text-ds-accent-700">{formError}</p> : null}
+          <div className="flex gap-ds-2">
+            <div className="self-start">
+              <Button tipo="submit" cargando={guardando}>
+                {editandoId === "nuevo" ? "Crear" : "Guardar cambios"}
+              </Button>
+            </div>
+            <Button variante="ghost" onPress={() => setEditandoId(null)}>
               Cancelar
             </Button>
           </div>
         </form>
       )}
 
-      {error && <ErrorText>{error}</ErrorText>}
-      {aviso && <SuccessText>{aviso}</SuccessText>}
-      {tipos === null && !error && <EstadoCargando />}
-      {tipos?.length === 0 && (
-        <EstadoVacio icono={IconLayers} titulo="Ningún tipo de pack todavía" mensaje="Crea el primero para reutilizarlo al vender paquetes." />
-      )}
+      {error ? <p className="font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
+      {aviso ? <p className="font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}
+      {tipos === null && !error && <LoadingState />}
 
-      {tipos && tipos.length > 0 && (
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
-                <th className="px-3 py-2 font-medium">Nombre</th>
-                <th className="px-3 py-2 font-medium">Sesiones</th>
-                <th className="px-3 py-2 font-medium">Precio</th>
-                <th className="px-3 py-2 font-medium">Servicio</th>
-                <th className="px-3 py-2 font-medium">Vigencia</th>
-                <th className="px-3 py-2 font-medium">Estado</th>
-                <th className="px-3 py-2 font-medium"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {tipos.map((t) => (
-                <tr key={t.id} className="border-b border-border-soft last:border-0">
-                  <td className="px-3 py-2 font-medium text-foreground">{t.nombre}</td>
-                  <td className="px-3 py-2 text-foreground">{t.cantidad_sesiones}</td>
-                  <td className="px-3 py-2 text-muted">{formatoPrecio(t.precio)}</td>
-                  <td className="px-3 py-2 text-muted">{nombreServicio(t.servicio_id)}</td>
-                  <td className="px-3 py-2 text-muted">{t.vigencia_dias !== null ? `${t.vigencia_dias} días` : "No vence"}</td>
-                  <td className="px-3 py-2">
-                    <Badge value={t.activo ? "activo" : "inactivo"} />
-                  </td>
-                  <td className="px-3 py-2">
-                    <div className="flex justify-end gap-2">
-                      <Button type="button" variant="ghost" onClick={() => abrirEdicion(t)}>
-                        Editar
-                      </Button>
-                      <Button type="button" variant="ghost" onClick={() => alternarActivo(t)}>
-                        {t.activo ? "Descontinuar" : "Reactivar"}
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      {tipos && (
+        <Table
+          filas={tipos}
+          claveFila={(t) => t.id}
+          columnas={[
+            { encabezado: "Nombre", celda: (t) => <span className="font-medium text-ds-text">{t.nombre}</span> },
+            { encabezado: "Sesiones", celda: (t) => <span className="text-ds-text">{t.cantidad_sesiones}</span> },
+            { encabezado: "Precio", celda: (t) => <span className="text-ds-text/60">{formatoPrecio(t.precio)}</span> },
+            { encabezado: "Servicio", celda: (t) => <span className="text-ds-text/60">{nombreServicio(t.servicio_id)}</span> },
+            { encabezado: "Vigencia", celda: (t) => <span className="text-ds-text/60">{t.vigencia_dias !== null ? `${t.vigencia_dias} días` : "No vence"}</span> },
+            { encabezado: "Estado", celda: (t) => <StatusBadge estado={t.activo ? "activo" : "inactivo"} /> },
+          ]}
+          acciones={[
+            { etiqueta: "Editar", onPress: abrirEdicion, tono: "brand" },
+            { etiqueta: (t) => (t.activo ? "Descontinuar" : "Reactivar"), onPress: alternarActivo, tono: "muted" },
+          ]}
+          vacio={{ icono: <Layers size={28} strokeWidth={2.75} />, titulo: "Ningún tipo de pack todavía", mensaje: "Crea el primero para reutilizarlo al vender paquetes." }}
+        />
       )}
     </Card>
   );
 }
 
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export default function AgendaProConfigPage() {
   const { usuario } = useConfiguracion();
   const [config, setConfig] = useState<AgendaProConfig | null>(null);
@@ -513,69 +453,65 @@ export default function AgendaProConfigPage() {
 
   if (!config) {
     return (
-      <div className="flex flex-col gap-6">
-        <PageHeader title="Reserva online" subtitle="Horario de atención para que tus clientes agenden solos" />
-        {error ? <ErrorText>{error}</ErrorText> : <EstadoCargando />}
+      <div className="flex flex-col gap-ds-6">
+        <div>
+          <p className="ds-heading text-ds-h3 text-ds-text">Reserva online</p>
+          <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">Horario de atención para que tus clientes agenden solos</p>
+        </div>
+        {error ? <p className="font-ds-body text-ds-small text-ds-accent-700">{error}</p> : <LoadingState />}
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader title="Reserva online" subtitle="Horario de atención para que tus clientes agenden solos — Agenda Pro" />
+    <div className="flex flex-col gap-ds-6">
+      <div>
+        <p className="ds-heading text-ds-h3 text-ds-text">Reserva online</p>
+        <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">Horario de atención para que tus clientes agenden solos — Agenda Pro</p>
+      </div>
 
       <Card>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-ds-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="font-medium text-foreground">Tu link de reserva</p>
-            <p className="text-sm text-muted">Compártelo por WhatsApp, redes o en tu sitio.</p>
+            <p className="font-medium text-ds-text">Tu link de reserva</p>
+            <p className="font-ds-body text-ds-small text-ds-text/70">Compártelo por WhatsApp, redes o en tu sitio.</p>
           </div>
-          <Button type="button" variant="outline" onClick={copiarLink}>
-            {copiado ? (
-              <>
-                <IconCheck className="h-4 w-4" /> Copiado
-              </>
-            ) : (
-              <>
-                <IconCalendar className="h-4 w-4" /> Copiar mi link de reserva
-              </>
-            )}
+          <Button
+            variante="secundario"
+            onPress={copiarLink}
+            iconoIzq={copiado ? <Check size={16} strokeWidth={2.75} /> : <Calendar size={16} strokeWidth={2.75} />}
+          >
+            {copiado ? "Copiado" : "Copiar mi link de reserva"}
           </Button>
         </div>
       </Card>
 
       <Card>
-        <h2 className="mb-4 text-sm font-semibold text-foreground">Horario de atención</h2>
-        <div className="flex flex-col gap-2">
+        <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Horario de atención</p>
+        <div className="flex flex-col gap-ds-2">
           {DIAS.map((d) => {
             const info = dias[d.valor];
             if (!info) return null;
             return (
-              <div key={d.valor} className="flex flex-wrap items-center gap-3 rounded-lg border border-border px-3 py-2">
-                <label className="flex w-32 items-center gap-2 text-sm font-medium text-foreground">
+              <div key={d.valor} className="flex flex-wrap items-center gap-ds-3 rounded-ds-lg border border-ds-divider px-ds-3 py-2">
+                <label className="flex w-32 items-center gap-2 font-ds-body text-ds-small font-medium text-ds-text">
                   <input
                     type="checkbox"
                     checked={info.abierto}
                     onChange={(e) => actualizarDia(d.valor, { abierto: e.target.checked })}
-                    className="accent-brand"
+                    className="accent-[var(--ds-brand)]"
                   />
                   {d.etiqueta}
                 </label>
                 {info.abierto && (
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="time"
-                      value={info.hora_inicio}
-                      onChange={(e) => actualizarDia(d.valor, { hora_inicio: e.target.value })}
-                      className="w-32"
-                    />
-                    <span className="text-sm text-muted">a</span>
-                    <Input
-                      type="time"
-                      value={info.hora_fin}
-                      onChange={(e) => actualizarDia(d.valor, { hora_fin: e.target.value })}
-                      className="w-32"
-                    />
+                  <div className="flex items-center gap-ds-2">
+                    <div className="w-32">
+                      <Input tipo="hora" valor={info.hora_inicio} onCambio={(v) => actualizarDia(d.valor, { hora_inicio: v })} />
+                    </div>
+                    <span className="font-ds-body text-ds-small text-ds-text/70">a</span>
+                    <div className="w-32">
+                      <Input tipo="hora" valor={info.hora_fin} onCambio={(v) => actualizarDia(d.valor, { hora_fin: v })} />
+                    </div>
                   </div>
                 )}
               </div>
@@ -589,62 +525,50 @@ export default function AgendaProConfigPage() {
       <TiposPackCard servicios={servicios} />
 
       <Card>
-        <h2 className="mb-4 text-sm font-semibold text-foreground">Reglas de la reserva</h2>
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div>
-            <Label>Duración de cada cita (min)</Label>
-            <Input
-              type="number"
-              min={5}
-              value={config.duracion_slot_min}
-              onChange={(e) => setConfig((prev) => (prev ? { ...prev, duracion_slot_min: Number(e.target.value) || 5 } : prev))}
-            />
-          </div>
-          <div>
-            <Label>Anticipación mínima (horas)</Label>
-            <Input
-              type="number"
-              min={0}
-              value={config.anticipacion_min_horas}
-              onChange={(e) => setConfig((prev) => (prev ? { ...prev, anticipacion_min_horas: Number(e.target.value) || 0 } : prev))}
-            />
-          </div>
-          <div>
-            <Label>Días máximos de anticipación</Label>
-            <Input
-              type="number"
-              min={1}
-              value={config.dias_max_adelante}
-              onChange={(e) => setConfig((prev) => (prev ? { ...prev, dias_max_adelante: Number(e.target.value) || 1 } : prev))}
-            />
-          </div>
+        <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Reglas de la reserva</p>
+        <div className="grid gap-ds-4 sm:grid-cols-3">
+          <Input
+            etiqueta="Duración de cada cita (min)"
+            tipo="numero"
+            valor={String(config.duracion_slot_min)}
+            onCambio={(v) => setConfig((prev) => (prev ? { ...prev, duracion_slot_min: Number(v) || 5 } : prev))}
+          />
+          <Input
+            etiqueta="Anticipación mínima (horas)"
+            tipo="numero"
+            valor={String(config.anticipacion_min_horas)}
+            onCambio={(v) => setConfig((prev) => (prev ? { ...prev, anticipacion_min_horas: Number(v) || 0 } : prev))}
+          />
+          <Input
+            etiqueta="Días máximos de anticipación"
+            tipo="numero"
+            valor={String(config.dias_max_adelante)}
+            onCambio={(v) => setConfig((prev) => (prev ? { ...prev, dias_max_adelante: Number(v) || 1 } : prev))}
+          />
         </div>
       </Card>
 
       <Card>
-        <h2 className="mb-1 text-sm font-semibold text-foreground">Cancelación de sesiones de paquetes</h2>
-        <p className="mb-4 text-sm text-muted">Aplica solo a citas asociadas a un paquete de sesiones.</p>
+        <p className="mb-ds-1 font-ds-body text-ds-small font-semibold text-ds-text">Cancelación de sesiones de paquetes</p>
+        <p className="mb-ds-4 font-ds-body text-ds-small text-ds-text/70">Aplica solo a citas asociadas a un paquete de sesiones.</p>
         <div className="max-w-xs">
-          <Label>Horas de anticipación para cancelar sin costo</Label>
           <Input
-            type="number"
-            min={0}
-            value={config.ventana_cancelacion_horas}
-            onChange={(e) =>
-              setConfig((prev) => (prev ? { ...prev, ventana_cancelacion_horas: Number(e.target.value) || 0 } : prev))
-            }
+            etiqueta="Horas de anticipación para cancelar sin costo"
+            tipo="numero"
+            valor={String(config.ventana_cancelacion_horas)}
+            onCambio={(v) => setConfig((prev) => (prev ? { ...prev, ventana_cancelacion_horas: Number(v) || 0 } : prev))}
+            ayuda="Si la clienta cancela con menos anticipación que este valor, la sesión se descuenta igual del paquete."
           />
-          <p className="mt-1 text-xs text-muted">
-            Si la clienta cancela con menos anticipación que este valor, la sesión se descuenta igual del paquete.
-          </p>
         </div>
       </Card>
 
-      {error && <ErrorText>{error}</ErrorText>}
-      {aviso && <SuccessText>{aviso}</SuccessText>}
-      <Button type="button" onClick={onGuardar} disabled={guardando} className="self-start">
-        {guardando ? "Guardando…" : "Guardar cambios"}
-      </Button>
+      {error ? <p className="font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
+      {aviso ? <p className="font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}
+      <div className="self-start">
+        <Button onPress={onGuardar} cargando={guardando}>
+          Guardar cambios
+        </Button>
+      </div>
     </div>
   );
 }

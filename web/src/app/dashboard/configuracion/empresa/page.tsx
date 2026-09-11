@@ -1,12 +1,12 @@
 "use client";
 
 import { useRef, useState, type CSSProperties, type DragEvent } from "react";
+import { Briefcase, ClipboardCheck, Home, MapPin, Sparkle, Wallet } from "lucide-react";
 import type { TipoCuenta } from "@bitacora/shared";
 import { comunasDeRegion, formatearRut, REGIONES, validarRut } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
 import { FUENTES, fuenteDe } from "@/lib/fuentes";
-import { Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText } from "@/components/ui";
-import { IconBriefcase, IconClipboardCheck, IconHome, IconMapPin, IconSparkle, IconWallet } from "@/components/icons";
+import { Button, Card, Input, Select } from "@bitacora/ui/web";
 import { useConfiguracion } from "../ConfiguracionContext";
 
 const MONEDAS = [
@@ -43,6 +43,13 @@ function contrasteTexto(hex: string): string {
   return brillo > 150 ? "#16161f" : "#ffffff";
 }
 
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
+// La "vista previa en vivo" de marca es una maqueta autocontenida que
+// simula el sidebar/dashboard con las variables CSS de marca
+// (--brand/--accent/--font-sans, definidas globalmente para retro-
+// compatibilidad) — no representa el chrome real de la app (que ya
+// usa tokens ds- fijos), así que queda tal cual, igual que la vista
+// previa de PDF en plantillas/page.tsx.
 export default function EmpresaPage() {
   const { usuario, recargar } = useConfiguracion();
   const inputLogoRef = useRef<HTMLInputElement>(null);
@@ -140,7 +147,7 @@ export default function EmpresaPage() {
         nombre,
         razon_social: razonSocial,
         giro,
-        rut: rut.trim() || null,
+        rut: rut.trim() ? formatearRut(rut) : null,
         correo_empresa: correoEmpresa,
         telefono_empresa: telefonoEmpresa,
         whatsapp,
@@ -218,181 +225,122 @@ export default function EmpresaPage() {
   } as CSSProperties;
 
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader title="Empresa" subtitle="Datos fiscales, dirección, medio de pago y marca" />
+    <div className="flex flex-col gap-ds-6">
+      <div>
+        <p className="ds-heading text-ds-h3 text-ds-text">Empresa</p>
+        <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">Datos fiscales, dirección, medio de pago y marca</p>
+      </div>
 
       <Card>
-        <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-foreground">
-          <IconBriefcase className="h-4 w-4 text-brand" />
+        <p className="mb-ds-4 flex items-center gap-2 font-ds-body text-ds-small font-semibold text-ds-text">
+          <Briefcase size={16} strokeWidth={2.75} className="text-ds-brand" />
           Datos de la empresa
-        </h2>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <Label>Nombre de fantasía *</Label>
-            <Input type="text" required value={nombre} onChange={(e) => setNombre(e.target.value)} />
-          </div>
-          <div>
-            <Label>Razón social</Label>
-            <Input type="text" value={razonSocial} onChange={(e) => setRazonSocial(e.target.value)} />
-          </div>
-          <div>
-            <Label>Giro</Label>
-            <Input type="text" placeholder="Transporte de carga por carretera" value={giro} onChange={(e) => setGiro(e.target.value)} />
-          </div>
-          <div>
-            <Label>RUT</Label>
-            <Input
-              type="text"
-              placeholder="76.086.428-5"
-              value={rut}
-              onChange={(e) => setRut(e.target.value)}
-              onBlur={() => rut.trim() && validarRut(rut) && setRut(formatearRut(rut))}
-              className={!rutValido ? "border-danger" : undefined}
-            />
-            {!rutValido && <p className="mt-1 text-xs text-danger">RUT inválido — revisa el dígito verificador</p>}
-          </div>
-          <div>
-            <Label>Correo</Label>
-            <Input type="email" value={correoEmpresa} onChange={(e) => setCorreoEmpresa(e.target.value)} />
-          </div>
-          <div>
-            <Label>Teléfono</Label>
-            <Input type="tel" placeholder="+56 2 2345 6789" value={telefonoEmpresa} onChange={(e) => setTelefonoEmpresa(e.target.value)} />
-          </div>
-          <div>
-            <Label>WhatsApp</Label>
-            <Input type="tel" placeholder="+56 9 1234 5678" value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} />
-          </div>
+        </p>
+        <div className="grid gap-ds-4 sm:grid-cols-2">
+          <Input etiqueta="Nombre de fantasía *" requerido valor={nombre} onCambio={setNombre} />
+          <Input etiqueta="Razón social" valor={razonSocial} onCambio={setRazonSocial} />
+          <Input etiqueta="Giro" placeholder="Transporte de carga por carretera" valor={giro} onCambio={setGiro} />
+          <Input
+            etiqueta="RUT"
+            placeholder="76.086.428-5"
+            valor={rut}
+            onCambio={setRut}
+            error={!rutValido ? "RUT inválido — revisa el dígito verificador" : undefined}
+          />
+          <Input etiqueta="Correo" tipo="email" valor={correoEmpresa} onCambio={setCorreoEmpresa} />
+          <Input etiqueta="Teléfono" tipo="tel" placeholder="+56 2 2345 6789" valor={telefonoEmpresa} onCambio={setTelefonoEmpresa} />
+          <Input etiqueta="WhatsApp" tipo="tel" placeholder="+56 9 1234 5678" valor={whatsapp} onCambio={setWhatsapp} />
         </div>
       </Card>
 
       <Card>
-        <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-foreground">
-          <IconMapPin className="h-4 w-4 text-brand" />
+        <p className="mb-ds-4 flex items-center gap-2 font-ds-body text-ds-small font-semibold text-ds-text">
+          <MapPin size={16} strokeWidth={2.75} className="text-ds-brand" />
           Dirección
-        </h2>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <Label>Región</Label>
-            <Select value={region} onChange={(e) => onCambiarRegion(e.target.value)}>
-              <option value="">Selecciona una región</option>
-              {REGIONES.map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <div>
-            <Label>Comuna</Label>
-            <Select value={comuna} onChange={(e) => setComuna(e.target.value)} disabled={!region}>
-              <option value="">{region ? "Selecciona una comuna" : "Elige una región primero"}</option>
-              {comunasDisponibles.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <div>
-            <Label>Calle</Label>
-            <Input type="text" value={calle} onChange={(e) => setCalle(e.target.value)} />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label>Número</Label>
-              <Input type="text" value={numero} onChange={(e) => setNumero(e.target.value)} />
-            </div>
-            <div>
-              <Label>Depto/Oficina</Label>
-              <Input type="text" value={depto} onChange={(e) => setDepto(e.target.value)} />
-            </div>
+        </p>
+        <div className="grid gap-ds-4 sm:grid-cols-2">
+          <Select
+            etiqueta="Región"
+            valor={region}
+            onCambio={onCambiarRegion}
+            placeholder="Selecciona una región"
+            opciones={REGIONES.map((r) => ({ valor: r, etiqueta: r }))}
+          />
+          <Select
+            etiqueta="Comuna"
+            valor={comuna}
+            onCambio={setComuna}
+            deshabilitado={!region}
+            placeholder={region ? "Selecciona una comuna" : "Elige una región primero"}
+            opciones={comunasDisponibles.map((c) => ({ valor: c, etiqueta: c }))}
+          />
+          <Input etiqueta="Calle" valor={calle} onCambio={setCalle} />
+          <div className="grid grid-cols-2 gap-ds-4">
+            <Input etiqueta="Número" valor={numero} onCambio={setNumero} />
+            <Input etiqueta="Depto/Oficina" valor={depto} onCambio={setDepto} />
           </div>
         </div>
       </Card>
 
       <Card>
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-            <IconWallet className="h-4 w-4 text-brand" />
+        <div className="mb-ds-4 flex items-center justify-between">
+          <p className="flex items-center gap-2 font-ds-body text-ds-small font-semibold text-ds-text">
+            <Wallet size={16} strokeWidth={2.75} className="text-ds-brand" />
             Datos de pago
-          </h2>
+          </p>
           <button
             type="button"
             role="switch"
             aria-checked={pagoActivado}
             onClick={() => setPagoActivado((v) => !v)}
-            className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${pagoActivado ? "bg-brand" : "bg-border"}`}
+            className={`relative h-6 w-11 shrink-0 rounded-ds-pill transition-colors ${pagoActivado ? "bg-ds-brand" : "bg-ds-divider"}`}
           >
             <span
-              className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+              className={`absolute top-0.5 h-5 w-5 rounded-ds-pill bg-white shadow transition-transform ${
                 pagoActivado ? "translate-x-5" : "translate-x-0.5"
               }`}
             />
           </button>
         </div>
-        <p className="mb-4 text-xs text-muted">
+        <p className="mb-ds-4 font-ds-body text-ds-caption text-ds-text/60">
           Datos de la cuenta bancaria donde tu empresa recibe pagos por transferencia — se muestran
           en las cotizaciones/cobranzas cuando está activado.
         </p>
         {pagoActivado && (
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <Label>Banco</Label>
-              <Select value={banco} onChange={(e) => setBanco(e.target.value)}>
-                <option value="">Selecciona un banco</option>
-                {BANCOS.map((b) => (
-                  <option key={b} value={b}>
-                    {b}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <div>
-              <Label>Tipo de cuenta</Label>
-              <Select value={tipoCuenta} onChange={(e) => setTipoCuenta(e.target.value as TipoCuenta)}>
-                {TIPOS_CUENTA.map((t) => (
-                  <option key={t.valor} value={t.valor}>
-                    {t.etiqueta}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <div>
-              <Label>Número de cuenta</Label>
-              <Input type="text" value={numeroCuenta} onChange={(e) => setNumeroCuenta(e.target.value)} />
-            </div>
-            <div>
-              <Label>Titular</Label>
-              <Input type="text" value={titular} onChange={(e) => setTitular(e.target.value)} />
-            </div>
+          <div className="grid gap-ds-4 sm:grid-cols-2">
+            <Select etiqueta="Banco" valor={banco} onCambio={setBanco} placeholder="Selecciona un banco" opciones={BANCOS.map((b) => ({ valor: b, etiqueta: b }))} />
+            <Select etiqueta="Tipo de cuenta" valor={tipoCuenta} onCambio={(v) => setTipoCuenta(v as TipoCuenta)} opciones={TIPOS_CUENTA} />
+            <Input etiqueta="Número de cuenta" valor={numeroCuenta} onCambio={setNumeroCuenta} />
+            <Input etiqueta="Titular" valor={titular} onCambio={setTitular} />
           </div>
         )}
       </Card>
 
-      {errorDatos && <ErrorText>{errorDatos}</ErrorText>}
-      {avisoDatos && <SuccessText>{avisoDatos}</SuccessText>}
-      <Button type="button" onClick={onGuardarDatos} disabled={guardandoDatos} className="self-start">
-        {guardandoDatos ? "Guardando…" : "Guardar datos de la empresa"}
-      </Button>
+      {errorDatos ? <p className="font-ds-body text-ds-small text-ds-accent-700">{errorDatos}</p> : null}
+      {avisoDatos ? <p className="font-ds-body text-ds-small font-medium text-ds-accent2-800">{avisoDatos}</p> : null}
+      <div className="self-start">
+        <Button onPress={onGuardarDatos} cargando={guardandoDatos}>
+          Guardar datos de la empresa
+        </Button>
+      </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
-        <div className="flex flex-col gap-6">
+      <div className="grid gap-ds-6 lg:grid-cols-[1fr_20rem]">
+        <div className="flex flex-col gap-ds-6">
           <Card>
-            <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-foreground">
-              <IconBriefcase className="h-4 w-4 text-brand" />
+            <p className="mb-ds-4 flex items-center gap-2 font-ds-body text-ds-small font-semibold text-ds-text">
+              <Briefcase size={16} strokeWidth={2.75} className="text-ds-brand" />
               Logo
-            </h2>
-            <div className="flex items-center gap-4">
+            </p>
+            <div className="flex items-center gap-ds-4">
               {usuario.empresa.logo_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={usuario.empresa.logo_url}
                   alt={`Logo de ${usuario.empresa.nombre}`}
-                  className="h-16 w-16 rounded-xl border border-border object-cover"
+                  className="h-16 w-16 rounded-ds-lg border border-ds-divider object-cover"
                 />
               ) : (
-                <div className="flex h-16 w-16 items-center justify-center rounded-xl border border-dashed border-border text-xs text-muted">
+                <div className="flex h-16 w-16 items-center justify-center rounded-ds-lg border border-dashed border-ds-divider font-ds-body text-ds-caption text-ds-text/60">
                   Sin logo
                 </div>
               )}
@@ -412,85 +360,63 @@ export default function EmpresaPage() {
                 onDragLeave={() => setArrastrando(false)}
                 onDrop={onSoltarLogo}
                 onClick={() => inputLogoRef.current?.click()}
-                className={`flex flex-1 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-4 py-5 text-center transition-colors ${
-                  arrastrando ? "border-brand bg-brand-soft" : "border-border hover:border-brand hover:bg-surface-sunken"
+                className={`flex flex-1 cursor-pointer flex-col items-center justify-center rounded-ds-lg border-2 border-dashed px-ds-4 py-5 text-center transition-colors ${
+                  arrastrando ? "border-ds-brand bg-ds-brand/[0.08]" : "border-ds-divider hover:border-ds-brand hover:bg-ds-text/[0.04]"
                 }`}
               >
-                <p className="text-sm font-medium text-foreground">
+                <p className="font-ds-body text-ds-small font-medium text-ds-text">
                   {subiendoLogo ? "Subiendo…" : "Arrastra una imagen o haz clic para elegir"}
                 </p>
-                <p className="mt-1 text-xs text-muted">Cuadrado, mín. 200×200px · PNG, JPG o WEBP · máx. 2MB</p>
+                <p className="mt-ds-1 font-ds-body text-ds-caption text-ds-text/60">Cuadrado, mín. 200×200px · PNG, JPG o WEBP · máx. 2MB</p>
               </div>
             </div>
-            {errorLogo && (
-              <div className="mt-2">
-                <ErrorText>{errorLogo}</ErrorText>
-              </div>
-            )}
+            {errorLogo ? <p className="mt-ds-2 font-ds-body text-ds-small text-ds-accent-700">{errorLogo}</p> : null}
           </Card>
 
           <Card>
-            <h2 className="mb-1 text-sm font-semibold text-foreground">Color de acento</h2>
-            <p className="mb-4 text-xs text-muted">
+            <p className="mb-ds-1 font-ds-body text-ds-small font-semibold text-ds-text">Color de acento</p>
+            <p className="mb-ds-4 font-ds-body text-ds-caption text-ds-text/60">
               Se usa para resaltar acciones y estados en la app. El resto de la interfaz mantiene la identidad de Bitácora. Tu logo se muestra igual.
             </p>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-ds-4 sm:grid-cols-2">
               <div>
-                <Label>Color de acento</Label>
-                <div className="flex items-center gap-3">
+                <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Color de acento</label>
+                <div className="mt-ds-1 flex items-center gap-ds-3">
                   <input
                     type="color"
                     value={color}
                     onChange={(e) => setColor(e.target.value)}
-                    className="h-10 w-14 cursor-pointer rounded-lg border border-border bg-surface p-1"
+                    className="h-10 w-14 cursor-pointer rounded-ds-md border border-ds-divider bg-ds-surface p-1"
                   />
-                  <span className="text-sm text-muted">{color}</span>
+                  <span className="font-ds-body text-ds-small text-ds-text/70">{color}</span>
                 </div>
               </div>
             </div>
           </Card>
 
           <Card>
-            <h2 className="mb-4 text-sm font-semibold text-foreground">Tipografía y moneda</h2>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <Label>Tipografía</Label>
-                <Select value={fuente} onChange={(e) => setFuente(e.target.value)}>
-                  {FUENTES.map((f) => (
-                    <option key={f.valor} value={f.valor}>
-                      {f.etiqueta}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-              <div>
-                <Label>Moneda</Label>
-                <Select value={moneda} onChange={(e) => setMoneda(e.target.value)}>
-                  {MONEDAS.map((m) => (
-                    <option key={m.valor} value={m.valor}>
-                      {m.etiqueta}
-                    </option>
-                  ))}
-                </Select>
-              </div>
+            <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Tipografía y moneda</p>
+            <div className="grid gap-ds-4 sm:grid-cols-2">
+              <Select etiqueta="Tipografía" valor={fuente} onCambio={setFuente} opciones={FUENTES} />
+              <Select etiqueta="Moneda" valor={moneda} onCambio={setMoneda} opciones={MONEDAS} />
             </div>
           </Card>
 
-          {errorMarca && <ErrorText>{errorMarca}</ErrorText>}
-          {avisoMarca && <SuccessText>{avisoMarca}</SuccessText>}
-          <div className="flex gap-3">
-            <Button type="button" onClick={onGuardarMarca} disabled={guardandoMarca}>
-              {guardandoMarca ? "Guardando…" : "Guardar marca"}
+          {errorMarca ? <p className="font-ds-body text-ds-small text-ds-accent-700">{errorMarca}</p> : null}
+          {avisoMarca ? <p className="font-ds-body text-ds-small font-medium text-ds-accent2-800">{avisoMarca}</p> : null}
+          <div className="flex gap-ds-3">
+            <Button onPress={onGuardarMarca} cargando={guardandoMarca}>
+              Guardar marca
             </Button>
-            <Button type="button" variant="outline" onClick={onRestablecerMarca} disabled={restableciendo}>
-              {restableciendo ? "Restableciendo…" : "Restablecer valores por defecto"}
+            <Button variante="secundario" onPress={onRestablecerMarca} cargando={restableciendo}>
+              Restablecer valores por defecto
             </Button>
           </div>
         </div>
 
         <div>
-          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted">Vista previa en vivo</p>
-          <div className="overflow-hidden rounded-2xl border border-border" style={previewStyle}>
+          <p className="mb-ds-2 font-ds-body text-ds-caption font-medium uppercase tracking-wide text-ds-text/60">Vista previa en vivo</p>
+          <div className="overflow-hidden rounded-2xl border border-ds-divider" style={previewStyle}>
             <div className="flex">
               <div className="flex w-36 flex-col gap-1 border-r border-border bg-surface p-2">
                 <div className="mb-2 flex items-center gap-1.5 px-1">
@@ -503,15 +429,15 @@ export default function EmpresaPage() {
                   <span className="truncate text-[11px] font-semibold text-foreground">{nombre || usuario.empresa.nombre}</span>
                 </div>
                 <div className="flex items-center gap-1.5 rounded-md bg-brand-soft px-2 py-1.5 text-brand">
-                  <IconHome className="h-3 w-3" />
+                  <Home size={12} strokeWidth={2.75} />
                   <span className="text-[10px] font-medium">Dashboard</span>
                 </div>
                 <div className="flex items-center gap-1.5 px-2 py-1.5 text-muted">
-                  <IconClipboardCheck className="h-3 w-3" />
+                  <ClipboardCheck size={12} strokeWidth={2.75} />
                   <span className="text-[10px] font-medium">Órdenes</span>
                 </div>
                 <div className="flex items-center gap-1.5 px-2 py-1.5 text-muted">
-                  <IconSparkle className="h-3 w-3" />
+                  <Sparkle size={12} strokeWidth={2.75} />
                   <span className="text-[10px] font-medium">Informes</span>
                 </div>
               </div>
@@ -530,7 +456,7 @@ export default function EmpresaPage() {
               </div>
             </div>
           </div>
-          <p className="mt-2 text-xs text-muted">Así se ve con los cambios sin guardar todavía.</p>
+          <p className="mt-ds-2 font-ds-body text-ds-caption text-ds-text/60">Así se ve con los cambios sin guardar todavía.</p>
         </div>
       </div>
     </div>
