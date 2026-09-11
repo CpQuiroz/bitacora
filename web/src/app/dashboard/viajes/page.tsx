@@ -71,7 +71,14 @@ export default function ViajesPage() {
   const [aplicaIva, setAplicaIva] = useState(true);
   const [comentarios, setComentarios] = useState("");
 
-  const [fotosViaje, setFotosViaje] = useState<{ id: string; urls: string[]; cargando: boolean } | null>(null);
+  const [fotosViaje, setFotosViaje] = useState<{
+    id: string;
+    guiaUrl: string | null;
+    fotos: { id: string; url: string }[];
+    cargando: boolean;
+    subiendo: boolean;
+    error: string | null;
+  } | null>(null);
   const [editId, setEditId] = useState<string | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
   const [confirmando, setConfirmando] = useState(false);
@@ -79,10 +86,12 @@ export default function ViajesPage() {
   const [editOrigen, setEditOrigen] = useState("");
   const [editDestino, setEditDestino] = useState("");
   const [editClienteId, setEditClienteId] = useState("");
+  const [editChoferId, setEditChoferId] = useState("");
   const [editKmInicial, setEditKmInicial] = useState("");
   const [editKmFinal, setEditKmFinal] = useState("");
   const [editSubtotal, setEditSubtotal] = useState("");
   const [editAplicaIva, setEditAplicaIva] = useState(true);
+  const [editComentarios, setEditComentarios] = useState("");
 
   async function cargarViajes() {
     const res = await apiFetch(`/api/viajes${filtroEstado !== "todos" ? `?estado=${filtroEstado}` : ""}`);
@@ -229,23 +238,54 @@ export default function ViajesPage() {
     setEditOrigen(v.origen);
     setEditDestino(v.destino);
     setEditClienteId(v.cliente_id ?? "");
+    setEditChoferId(v.chofer_id ?? "");
     setEditKmInicial(v.km_inicial != null ? String(v.km_inicial) : "");
     setEditKmFinal(v.km_final != null ? String(v.km_final) : "");
     setEditSubtotal(v.subtotal ? String(v.subtotal) : "");
     setEditAplicaIva(v.aplica_iva);
+    setEditComentarios(v.comentarios ?? "");
   }
 
   async function verFotos(id: string) {
-    setFotosViaje({ id, urls: [], cargando: true });
-    const urls: string[] = [];
+    setFotosViaje({ id, guiaUrl: null, fotos: [], cargando: true, subiendo: false, error: null });
     const guia = await apiFetch(`/api/viajes/${id}/foto`);
-    if (guia.ok) urls.push((await guia.json()).url);
+    const guiaUrl = guia.ok ? ((await guia.json()) as { url: string }).url : null;
     const extra = await apiFetch(`/api/viajes/${id}/fotos`);
-    if (extra.ok) for (const f of (await extra.json()) as { url: string }[]) urls.push(f.url);
-    setFotosViaje({ id, urls, cargando: false });
+    const fotos = extra.ok ? ((await extra.json()) as { id: string; url: string }[]) : [];
+    setFotosViaje({ id, guiaUrl, fotos, cargando: false, subiendo: false, error: null });
   }
 
-  async function guardarEdicion(id: string, confirmar: boolean) {
+  async function subirFotoViaje(archivo: File) {
+    if (!fotosViaje) return;
+    setFotosViaje({ ...fotosViaje, subiendo: true, error: null });
+    const formData = new FormData();
+    formData.append("foto", archivo);
+    const res = await apiFetch(`/api/viajes/${fotosViaje.id}/fotos`, { method: "POST", body: formData });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setFotosViaje({ ...fotosViaje, subiendo: false, error: body.error ?? "No se pudo subir la foto" });
+      return;
+    }
+    const nueva = (await res.json()) as { id: string; url: string };
+    setFotosViaje({ ...fotosViaje, subiendo: false, fotos: [...fotosViaje.fotos, nueva] });
+  }
+
+  async function eliminarFotoViaje(fotoId: string) {
+    if (!fotosViaje) return;
+    if (!window.confirm("¿Eliminar esta foto?")) return;
+    const res = await apiFetch(`/api/viajes/${fotosViaje.id}/fotos/${fotoId}`, { method: "DELETE" });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setFotosViaje({ ...fotosViaje, error: body.error ?? "No se pudo eliminar la foto" });
+      return;
+    }
+    setFotosViaje({ ...fotosViaje, fotos: fotosViaje.fotos.filter((f) => f.id !== fotoId) });
+  }
+
+  // confirmar: solo tiene sentido viniendo de "borrador" (los dos botones
+  // de esa fila). Editar un viaje ya "confirmado" no manda `estado` — así
+  // nunca lo hace retroceder ni lo vuelve a "confirmar" sin necesidad.
+  async function guardarEdicion(id: string, confirmar?: boolean) {
     setEditError(null);
     if (!editNumeroGuia.trim() || !editOrigen.trim() || !editDestino.trim()) {
       setEditError("Completa número de guía, origen y destino");
@@ -268,11 +308,13 @@ export default function ViajesPage() {
         origen: editOrigen.trim(),
         destino: editDestino.trim(),
         cliente_id: editClienteId,
+        chofer_id: editChoferId || null,
         km_inicial: editKmInicial || undefined,
         km_final: editKmFinal || undefined,
         subtotal: subtotalNum,
         aplica_iva: editAplicaIva,
-        estado: confirmar ? "confirmado" : "borrador",
+        comentarios: editComentarios,
+        ...(confirmar !== undefined ? { estado: confirmar ? "confirmado" : "borrador" } : {}),
       }),
     });
     setConfirmando(false);
@@ -282,7 +324,7 @@ export default function ViajesPage() {
       return;
     }
     setEditId(null);
-    setAviso(confirmar ? "Viaje confirmado." : "Cambios guardados.");
+    setAviso(confirmar === true ? "Viaje confirmado." : confirmar === false ? "Cambios guardados." : "Cambios guardados.");
     cargar();
   }
 
@@ -579,9 +621,9 @@ export default function ViajesPage() {
                         </td>
                         <td className="px-ds-4 py-ds-3">
                           <div className="flex items-center gap-ds-3">
-                            {esBorrador && (
+                            {v.estado !== "facturado" && (
                               <button type="button" onClick={() => abrirEdicion(v)} className="font-ds-body text-ds-caption font-medium text-ds-brand hover:underline">
-                                Revisar y confirmar
+                                {esBorrador ? "Revisar y confirmar" : "Editar"}
                               </button>
                             )}
                             <button type="button" onClick={() => verFotos(v.id)} className="font-ds-body text-ds-caption font-medium text-ds-text/60 hover:text-ds-brand">
@@ -620,6 +662,10 @@ export default function ViajesPage() {
                                   placeholder="Selecciona un cliente…"
                                 />
                               </div>
+                              <div className="min-w-[180px]">
+                                <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Chofer</label>
+                                <ComboboxResponsable value={editChoferId} onChange={setEditChoferId} equipo={choferes} opcionVacia="Sin asignar" placeholder="Sin asignar" />
+                              </div>
                               <div className="w-32">
                                 <Input etiqueta="Km inicial" tipo="numero" valor={editKmInicial} onCambio={setEditKmInicial} />
                               </div>
@@ -634,17 +680,31 @@ export default function ViajesPage() {
                                 <input type="checkbox" checked={editAplicaIva} onChange={(e) => setEditAplicaIva(e.target.checked)} className="accent-[var(--ds-brand)]" />
                                 Aplicar IVA
                               </label>
-                              <div className="flex gap-ds-2 pb-0.5">
-                                <Button onPress={() => guardarEdicion(v.id, true)} cargando={confirmando}>
-                                  Confirmar viaje
+                            </div>
+                            <div className="mt-ds-3">
+                              <Input etiqueta="Comentarios / incidentes (opcional)" valor={editComentarios} onCambio={setEditComentarios} />
+                            </div>
+                            <div className="mt-ds-3 flex flex-wrap items-center gap-ds-3">
+                              {esBorrador ? (
+                                <>
+                                  <Button onPress={() => guardarEdicion(v.id, true)} cargando={confirmando}>
+                                    Confirmar viaje
+                                  </Button>
+                                  <Button variante="secundario" onPress={() => guardarEdicion(v.id, false)} deshabilitado={confirmando}>
+                                    Guardar sin confirmar
+                                  </Button>
+                                </>
+                              ) : (
+                                <Button onPress={() => guardarEdicion(v.id)} cargando={confirmando}>
+                                  Guardar cambios
                                 </Button>
-                                <Button variante="secundario" onPress={() => guardarEdicion(v.id, false)} deshabilitado={confirmando}>
-                                  Guardar sin confirmar
-                                </Button>
-                                <Button variante="ghost" onPress={() => setEditId(null)}>
-                                  Cancelar
-                                </Button>
-                              </div>
+                              )}
+                              <button type="button" onClick={() => verFotos(v.id)} className="font-ds-body text-ds-caption font-medium text-ds-text/60 hover:text-ds-brand">
+                                Ver / subir fotos
+                              </button>
+                              <Button variante="ghost" onPress={() => setEditId(null)}>
+                                Cancelar
+                              </Button>
                             </div>
                             {editError ? <p className="mt-ds-2 font-ds-body text-ds-small text-ds-accent-700">{editError}</p> : null}
                           </td>
@@ -662,18 +722,63 @@ export default function ViajesPage() {
       <Modal open={fotosViaje != null} onClose={() => setFotosViaje(null)} title="Fotos del viaje" wide>
         {fotosViaje?.cargando ? (
           <p className="font-ds-body text-ds-small text-ds-text/70">Cargando…</p>
-        ) : fotosViaje && fotosViaje.urls.length > 0 ? (
-          <div className="grid grid-cols-2 gap-ds-3 sm:grid-cols-3">
-            {fotosViaje.urls.map((u) => (
-              // eslint-disable-next-line @next/next/no-img-element
-              <a key={u} href={u} target="_blank" rel="noopener noreferrer">
-                <img src={u} alt="Foto del viaje" className="aspect-square w-full rounded-ds-md border border-ds-divider object-cover" />
-              </a>
-            ))}
+        ) : fotosViaje ? (
+          <div className="flex flex-col gap-ds-4">
+            {fotosViaje.guiaUrl && (
+              <div>
+                <p className="mb-ds-2 font-ds-body text-ds-caption font-medium text-ds-text/70">Foto de la guía</p>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <a href={fotosViaje.guiaUrl} target="_blank" rel="noopener noreferrer">
+                  <img src={fotosViaje.guiaUrl} alt="Foto de la guía" className="aspect-square w-40 rounded-ds-md border border-ds-divider object-cover" />
+                </a>
+              </div>
+            )}
+            <div>
+              <p className="mb-ds-2 font-ds-body text-ds-caption font-medium text-ds-text/70">Otras fotos</p>
+              {fotosViaje.fotos.length > 0 ? (
+                <div className="grid grid-cols-2 gap-ds-3 sm:grid-cols-3">
+                  {fotosViaje.fotos.map((f) => (
+                    <div key={f.id} className="group relative">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <a href={f.url} target="_blank" rel="noopener noreferrer">
+                        <img src={f.url} alt="Foto del viaje" className="aspect-square w-full rounded-ds-md border border-ds-divider object-cover" />
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => eliminarFotoViaje(f.id)}
+                        className="absolute right-1.5 top-1.5 rounded-ds-pill bg-ds-accent-700 px-2 py-0.5 font-ds-body text-[11px] font-medium text-white opacity-0 transition-opacity group-hover:opacity-100"
+                      >
+                        Eliminar
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="font-ds-body text-ds-small text-ds-text/70">Todavía no hay fotos adicionales.</p>
+              )}
+            </div>
+            <div>
+              <label className="inline-block cursor-pointer">
+                <div className="pointer-events-none">
+                  <Button variante="secundario" cargando={fotosViaje.subiendo}>
+                    Subir foto
+                  </Button>
+                </div>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={(e) => {
+                    const archivo = e.target.files?.[0];
+                    if (archivo) subirFotoViaje(archivo);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+              {fotosViaje.error ? <p className="mt-ds-2 font-ds-body text-ds-small text-ds-accent-700">{fotosViaje.error}</p> : null}
+            </div>
           </div>
-        ) : (
-          <p className="font-ds-body text-ds-small text-ds-text/70">Este viaje no tiene fotos.</p>
-        )}
+        ) : null}
       </Modal>
     </DashboardShell>
   );

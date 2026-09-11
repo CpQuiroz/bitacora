@@ -112,7 +112,23 @@
         "Paso 7: regla ESLint anti-hex/px, Storybook, check de CI, docs/design-system.md enlazado desde CLAUDE.md",
         "./verificar.sh verde en cada paso"
       ],
-      "status": "in_progress"
+      "status": "pending"
+    },
+    {
+      "id": 9,
+      "name": "edicion_viajes_y_fotos_os",
+      "title": "Edición de Viajes (Admin/Supervisor) + fotos inicio/término en OS",
+      "description": "Paso 0 (auditoría) reveló que la mayor parte ya existía: PATCH /api/viajes/:id ya permite reasignar chofer y editar viajes confirmados; comentarios ya existe como campo libre; analisis_fotos.categoria (antes/durante/despues/equipo) y su agrupación en el PDF ya estaban implementados desde la migración 98 (Fase 2 PDF OS) — solo se relabeleó antes/despues a Inicio/Término a pedido de la usuaria. Lo real a construir: POST y DELETE de /api/viajes/:id/fotos (solo existían en mis-viajes.ts, mobile), y la UI web para editar viajes confirmados (hoy el botón de edición solo aparece para borrador) con chofer + comentarios/incidentes + fotos.",
+      "acceptance": [
+        "POST /api/viajes/:id/fotos (viajesRouter, admin/web) — sube a S3 vía subirFotoGuiaConNombre, igual patrón que mis-viajes.ts",
+        "DELETE /api/viajes/:id/fotos/:fotoId — borrado real, bloqueado solo si el viaje está facturado",
+        "web/viajes/page.tsx: edición habilitada también para viajes confirmados (no solo borrador), con reasignar chofer, comentarios/incidentes, subir/eliminar foto",
+        "Ningún cambio a la regla de inmutabilidad de OS ni al módulo de mantención",
+        "ETIQUETA_CATEGORIA_FOTO_OS: antes/despues → 'Inicio'/'Término' (sin migración, solo label)",
+        "EXPLAIN ANALYZE confirmando Index Scan en viajes.chofer_id y viaje_fotos.viaje_id (índices ya existían, migraciones 82 y 95)",
+        "./verificar.sh verde"
+      ],
+      "status": "done"
     }
   ]
 }

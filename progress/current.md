@@ -1,8 +1,52 @@
 # Sesión actual
 
-- **Tarea en curso:** 8 — sistema_diseno (Paso 6: bucket 3 COMPLETO, bucket 4 siguiente)
-- **Inicio:** 2026-09-09
+- **Tarea en curso:** 9 — edicion_viajes_y_fotos_os (ver detalle abajo)
+- **Pausada:** 8 — sistema_diseno (pending, no abandonada — retomar cuando la
+  usuaria lo pida; ver `docs/design-system.md` §"Seams que quedan fuera de
+  este pedido" para el estado exacto donde quedó)
+- **Inicio tarea 9:** 2026-09-11
 - **Agente:** Claude Sonnet 5 (directo)
+
+## 2026-09-11: tarea 9 — Edición de Viajes (Admin/Supervisor) + fotos inicio/término OS
+
+Paso 0 (auditoría) encontró que la mayor parte del pedido ya existía:
+- `PATCH /api/viajes/:id` ya permitía reasignar chofer y editar viajes
+  `confirmado` (solo bloqueaba `facturado`) — el gap real era la UI web,
+  que solo mostraba "editar" para `borrador`.
+- `comentarios` ya existía como campo libre — se reutilizó tal cual para
+  incidentes (sin tabla nueva, decisión delegada por la usuaria).
+- `analisis_fotos.categoria` (antes/durante/despues/equipo) y su
+  agrupación en `generarPdfOS.ts` **ya estaban implementados** desde la
+  migración 98 (Fase 2 PDF OS, docs/pdf-os-fase2.md) — incluido el
+  selector de categoría en mobile (`FotosSection.tsx`) y el guard de
+  inmutabilidad (`trabajoBloqueado`) ya cubriendo upload+delete de forma
+  uniforme. Solo se relabeleó "antes"/"despues" → "Inicio"/"Término"
+  (`ETIQUETA_CATEGORIA_FOTO_OS`, sin migración ni backfill — el valor en
+  DB no cambia).
+- Roles: confirmado en `server.ts`/`permisos.ts` que Admin y Supervisor
+  ya tienen el mismo acceso a "viajes" — sin split fino por acción hoy.
+
+**Construido de verdad** (lo que no existía):
+- `POST /api/viajes/:id/fotos` y `DELETE /api/viajes/:id/fotos/:fotoId`
+  en `viajesRouter` (antes solo existían en `mis-viajes.ts`, mobile) —
+  mismo patrón (`subirFotoGuiaConNombre`), bloqueado solo si `facturado`.
+- `web/viajes/page.tsx`: edición habilitada para `confirmado` (no solo
+  `borrador`), con reasignar chofer, comentarios/incidentes, y galería
+  de fotos con subir/eliminar (antes era de solo lectura).
+
+**Verificado en vivo** (Chrome MCP contra dev, `pruwvpnlvrvgtmpetlsr`,
+sesión real de Transportes Itineris): edité un viaje `confirmado` sin que
+bajara de estado, el comentario de incidente quedó guardado, subí una
+foto de prueba y la eliminé — los 3 pasos funcionaron de punta a punta.
+`EXPLAIN ANALYZE` confirmó Index Scan en `viajes.chofer_id`
+(`viajes_chofer_id_idx`) y `viaje_fotos.viaje_id`
+(`viaje_fotos_viaje_id_idx`) — ambos índices ya existían (migraciones 82
+y 95), no hizo falta ninguno nuevo.
+
+`./verificar.sh` verde: tsc x6, 27 tests, 12 literales, 99 migraciones.
+
+Queda una nota de prueba en dev en el viaje G-4821 (Comercial Andes SpA)
+— dato de test, no de producción, no se limpió porque no afecta nada.
 
 ## Decisiones confirmadas por la usuaria
 

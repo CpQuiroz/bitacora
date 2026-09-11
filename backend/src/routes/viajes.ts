@@ -1,7 +1,8 @@
 import { Router } from "express";
+import multer from "multer";
 import type { EstadoViaje, Factura, Viaje } from "@bitacora/shared";
 import { supabase } from "../supabase";
-import { urlFirmadaFotoGuia } from "../storage";
+import { subirFotoGuiaConNombre, urlFirmadaFotoGuia } from "../storage";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
 import { requiereAccion } from "../permisos";
@@ -10,6 +11,19 @@ import { calcularMontos } from "../viajesMontos";
 export const viajesRouter = Router();
 
 const ESTADOS: EstadoViaje[] = ["borrador", "confirmado", "facturado"];
+
+// Este router entero ya está montado detrás de requiereModulo("viajes")
+// (server.ts) — solo admin/supervisor tienen ese módulo (packages/shared/
+// src/permisos.ts), nunca colaborador. Por eso las rutas de fotos de abajo
+// no necesitan un guard de rol propio: el chofer llega por /api/mis-viajes,
+// no por acá.
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    cb(null, ["image/jpeg", "image/png", "image/webp"].includes(file.mimetype));
+  },
+});
 
 viajesRouter.get(
   "/",
@@ -102,7 +116,8 @@ viajesRouter.get(
   })
 );
 
-// Fotos adicionales del viaje (subidas por el chofer desde la app).
+// Fotos adicionales del viaje — las sube el chofer desde la app
+// (POST /api/mis-viajes/:id/fotos) o, desde acá, un admin/supervisor.
 viajesRouter.get(
   "/:id/fotos",
   ah<RequestConEmpresa>(async (req, res) => {
@@ -116,6 +131,92 @@ viajesRouter.get(
       (data ?? []).map(async (f) => ({ id: f.id, creado_en: f.creado_en, url: await urlFirmadaFotoGuia(f.foto_url, 15) }))
     );
     res.json(fotos);
+  })
+);
+
+// Subir una foto desde el panel de admin/supervisor — mismo storage y
+// mismo patrón que POST /api/mis-viajes/:id/fotos (subirFotoGuiaConNombre
+// + insert en viaje_fotos), pero sin el guard de "solo mis viajes" porque
+// este router ya está scopeado a rol de gestión.
+viajesRouter.post(
+  "/:id/fotos",
+  upload.single("foto"),
+  ah<RequestConEmpresa>(async (req, res) => {
+    if (!req.file) {
+      res.status(400).json({ error: "Falta la foto" });
+      return;
+    }
+    const { data: viaje } = await supabase
+      .from("viajes")
+      .select("id, numero_guia, estado")
+      .eq("empresa_id", req.empresaId!)
+      .eq("id", req.params.id)
+      .maybeSingle();
+    if (!viaje) {
+      res.status(404).json({ error: "Viaje no encontrado" });
+      return;
+    }
+    if (viaje.estado === "facturado") {
+      res.status(409).json({ error: "Este viaje ya fue facturado y no se puede editar" });
+      return;
+    }
+    const fotoKey = await subirFotoGuiaConNombre(req.empresaId!, viaje.numero_guia, req.file.buffer, req.file.mimetype);
+    const { data, error } = await supabase
+      .from("viaje_fotos")
+      .insert({
+        empresa_id: req.empresaId!,
+        viaje_id: req.params.id,
+        foto_url: fotoKey,
+        subida_por: req.userId ?? null,
+      })
+      .select("id, creado_en")
+      .single();
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    res.status(201).json({ id: data.id, creado_en: data.creado_en, url: await urlFirmadaFotoGuia(fotoKey, 15) });
+  })
+);
+
+// Eliminar una foto puntual. Borrado real — a diferencia de las fotos de
+// OS (analisis_fotos), no hay regla de inmutabilidad para fotos de viaje.
+// Bloqueado solo si el viaje ya fue facturado, igual que el resto de las
+// ediciones de este router.
+viajesRouter.delete(
+  "/:id/fotos/:fotoId",
+  ah<RequestConEmpresa>(async (req, res) => {
+    const { data: viaje } = await supabase
+      .from("viajes")
+      .select("id, estado")
+      .eq("empresa_id", req.empresaId!)
+      .eq("id", req.params.id)
+      .maybeSingle();
+    if (!viaje) {
+      res.status(404).json({ error: "Viaje no encontrado" });
+      return;
+    }
+    if (viaje.estado === "facturado") {
+      res.status(409).json({ error: "Este viaje ya fue facturado y no se puede editar" });
+      return;
+    }
+    const { data: foto } = await supabase
+      .from("viaje_fotos")
+      .select("id")
+      .eq("empresa_id", req.empresaId!)
+      .eq("viaje_id", req.params.id)
+      .eq("id", req.params.fotoId)
+      .maybeSingle();
+    if (!foto) {
+      res.status(404).json({ error: "Foto no encontrada" });
+      return;
+    }
+    const { error } = await supabase.from("viaje_fotos").delete().eq("empresa_id", req.empresaId!).eq("id", foto.id);
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    res.status(204).end();
   })
 );
 

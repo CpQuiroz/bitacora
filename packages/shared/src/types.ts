@@ -1523,14 +1523,18 @@ export type MensajePersonalizado = {
 };
 
 // Categoría de una foto de la OS (migración 98) — para agrupar la
-// galería del PDF. null = foto general.
+// galería del PDF. null = foto general. Los VALORES (antes/despues) no
+// se tocan a propósito — ya están guardados en analisis_fotos.categoria
+// en producción; solo se ajustó la ETIQUETA a pedido de la usuaria
+// (2026-09-11): "antes"/"despues" ahora se muestran como "Inicio"/
+// "Término" en mobile y en el PDF, sin migración ni backfill.
 export const CATEGORIAS_FOTO_OS = ["equipo", "antes", "durante", "despues"] as const;
 export type CategoriaFotoOS = (typeof CATEGORIAS_FOTO_OS)[number];
 export const ETIQUETA_CATEGORIA_FOTO_OS: Record<CategoriaFotoOS, string> = {
   equipo: "Equipo a intervenir",
-  antes: "Antes",
+  antes: "Inicio",
   durante: "Durante",
-  despues: "Después",
+  despues: "Término",
 };
 
 export type AnalisisFoto = {
