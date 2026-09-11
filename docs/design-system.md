@@ -391,9 +391,27 @@ por su alcance (no son parte de un bucket de páginas, dan leverage):
   chequeo de literales (`scripts/colores-permitidos.json`) — sigue
   exento, ahora con menos literales igual.
 
+### "Homologar todo" — grupo de nav "Clientes" ✅
+
+`registros/clientes/page.tsx`, `registros/clientes/[id]/page.tsx`,
+`agenda/paquetes/page.tsx`, `portal-cliente/page.tsx`.
+
+- `AsignarPackForm.tsx` (compartido entre `paquetes` y la ficha del
+  cliente) migrado de paso — mismo criterio que `Modal.tsx` en el
+  bucket anterior.
+- `SinAutorizacion` (ui.tsx, solo 2 usos) no se migró como export
+  compartido — se inlineó con `<Card>` directo en `portal-cliente`
+  (y se hace lo mismo en el otro call-site cuando le toque).
+- Gap real: `Input` (ds-) no tiene `onBlur` (solo `onSubmit`, que
+  dispara con Enter) — se pierde el auto-formateo de RUT "al salir
+  del campo"; la validación real (`validarRut`) sigue intacta en el
+  submit del form. El formateo (`formatearRut`) se aplica una vez,
+  al armar el body del POST/PATCH, no en cada tecla (evita que el
+  cursor salte mientras se escribe).
+
 ### Resto del orden del prompt
 
-4) Clientes · 5) Catálogo y stock · 6) Configuración · 7) resto — pendientes.
+5) Catálogo y stock · 6) Configuración · 7) resto — pendientes.
 Además, el pedido de la usuaria de homologar TODO suma: Agenda,
 Financiero (cotizaciones/cobros/gastos/remuneraciones), Recursos
 (equipos/inventario/catálogo/proveedores), Equipo (personas/documentos),

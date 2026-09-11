@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from "react";
 import type { Cliente, TipoPack } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
-import { Button, ErrorText, Input, Label, Select, Textarea } from "@/components/ui";
+import { Button, Input, Select, Textarea } from "@bitacora/ui/web";
 import { InputMonto } from "@/components/InputMonto";
 import { ComboboxCliente } from "@/components/ComboboxCliente";
 import { formatMoneda } from "@/lib/formatMoneda";
@@ -14,6 +14,8 @@ import { formatMoneda } from "@/lib/formatMoneda";
  * cliente) y la ficha del cliente (cliente fijo) — que no se desvíen.
  *
  * Si `clienteId` viene, el cliente está fijo y no se muestra el selector.
+ *
+ * PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
  */
 export function AsignarPackForm({
   clienteId: clienteIdFijo,
@@ -105,35 +107,28 @@ export function AsignarPackForm({
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-4">
-      <div className="grid gap-4 sm:grid-cols-2">
+    <form onSubmit={onSubmit} className="flex flex-col gap-ds-4">
+      <div className="grid gap-ds-4 sm:grid-cols-2">
         {!clienteFijo && (
-          <div>
-            <Label>Cliente</Label>
-            <ComboboxCliente
-              value={clienteId}
-              onChange={setClienteId}
-              clientes={clientes ?? []}
-              onClienteCreado={(c) => onClienteCreado?.(c)}
-            />
+          <div className="flex flex-col gap-ds-1">
+            <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Cliente</label>
+            <ComboboxCliente value={clienteId} onChange={setClienteId} clientes={clientes ?? []} onClienteCreado={(c) => onClienteCreado?.(c)} />
           </div>
         )}
         {tiposPack.length > 0 && (
-          <div>
-            <Label>Tipo de pack (opcional)</Label>
-            <Select value={tipoPackId} onChange={(e) => elegirTipoPack(e.target.value)}>
-              <option value="">Personalizado — completar a mano</option>
-              {tiposPack.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.nombre} ({t.cantidad_sesiones} sesiones)
-                </option>
-              ))}
-            </Select>
-          </div>
+          <Select
+            etiqueta="Tipo de pack (opcional)"
+            valor={tipoPackId}
+            onCambio={elegirTipoPack}
+            opciones={[
+              { valor: "", etiqueta: "Personalizado — completar a mano" },
+              ...tiposPack.map((t) => ({ valor: t.id, etiqueta: `${t.nombre} (${t.cantidad_sesiones} sesiones)` })),
+            ]}
+          />
         )}
         {tipoElegido ? (
-          <div className="sm:col-span-2 rounded-lg border border-border bg-surface-sunken px-3 py-2 text-xs text-muted">
-            Se copia del catálogo: <span className="font-medium text-foreground">{tipoElegido.nombre}</span> ·{" "}
+          <div className="rounded-ds-md border border-ds-divider bg-ds-text/[0.04] px-ds-3 py-ds-2 font-ds-body text-ds-caption text-ds-text/70 sm:col-span-2">
+            Se copia del catálogo: <span className="font-medium text-ds-text">{tipoElegido.nombre}</span> ·{" "}
             {tipoElegido.cantidad_sesiones} sesiones
             {tipoElegido.precio !== null && ` · lista ${formatMoneda(tipoElegido.precio, moneda)}`}
             {tipoElegido.vigencia_dias !== null && ` · vence a los ${tipoElegido.vigencia_dias} días`}. Si el catálogo cambia
@@ -141,37 +136,30 @@ export function AsignarPackForm({
           </div>
         ) : (
           <>
-            <div>
-              <Label>Nombre del paquete</Label>
-              <Input type="text" placeholder="Ej: Pack 10 sesiones" value={nombre} onChange={(e) => setNombre(e.target.value)} />
-            </div>
-            <div>
-              <Label>Cantidad de sesiones</Label>
-              <Input type="number" min={1} value={cantidadTotal} onChange={(e) => setCantidadTotal(Number(e.target.value) || 1)} />
-            </div>
+            <Input etiqueta="Nombre del paquete" placeholder="Ej: Pack 10 sesiones" valor={nombre} onCambio={setNombre} />
+            <Input
+              etiqueta="Cantidad de sesiones"
+              tipo="numero"
+              valor={String(cantidadTotal)}
+              onCambio={(v) => setCantidadTotal(Number(v) || 1)}
+            />
           </>
         )}
-        <div>
-          <Label>Precio pagado (opcional)</Label>
-          <InputMonto
-            placeholder={tipoElegido?.precio != null ? String(tipoElegido.precio) : "0"}
-            value={precioPagado}
-            onChange={setPrecioPagado}
-            moneda={moneda}
-          />
-          <p className="mt-1 text-xs text-muted">Lo realmente cobrado. Vacío = el precio de lista.</p>
+        <div className="flex flex-col gap-ds-1">
+          <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Precio pagado (opcional)</label>
+          <InputMonto placeholder={tipoElegido?.precio != null ? String(tipoElegido.precio) : "0"} value={precioPagado} onChange={setPrecioPagado} moneda={moneda} />
+          <p className="font-ds-body text-ds-caption text-ds-text/60">Lo realmente cobrado. Vacío = el precio de lista.</p>
         </div>
         <div className="sm:col-span-2">
-          <Label>Notas (opcional)</Label>
-          <Textarea rows={2} value={notas} onChange={(e) => setNotas(e.target.value)} />
+          <Textarea etiqueta="Notas (opcional)" filas={2} valor={notas} onCambio={setNotas} />
         </div>
       </div>
-      {formError && <ErrorText>{formError}</ErrorText>}
-      <div className="flex gap-2">
-        <Button type="submit" disabled={guardando} className="self-start">
-          {guardando ? "Guardando…" : "Asignar pack"}
+      {formError ? <p className="font-ds-body text-ds-small text-ds-accent-700">{formError}</p> : null}
+      <div className="flex gap-ds-2">
+        <Button tipo="submit" cargando={guardando}>
+          Asignar pack
         </Button>
-        <Button type="button" variant="ghost" onClick={onCancelar}>
+        <Button variante="ghost" onPress={onCancelar}>
           Cancelar
         </Button>
       </div>

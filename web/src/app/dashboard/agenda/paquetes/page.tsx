@@ -3,18 +3,18 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Box, Plus } from "lucide-react";
 import type { Cliente, PaqueteSesionesConSaldo, TipoPack } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Badge, Button, Card, ErrorText, Input, PageHeader, SuccessText } from "@/components/ui";
+import { Button, Card, EmptyState, ErrorState, Input, LoadingState, StatusBadge, Table } from "@bitacora/ui/web";
 import { AsignarPackForm } from "@/components/AsignarPackForm";
 import { formatMoneda } from "@/lib/formatMoneda";
-import { IconBox, IconPlus } from "@/components/icons";
-import { EstadoCargando, EstadoVacio } from "@/components/estados";
 
 type PaqueteListado = PaqueteSesionesConSaldo & { cliente: { nombre: string } | null };
 
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export default function PaquetesSesionesPage() {
   const router = useRouter();
   const [usuario, setUsuario] = useState<UsuarioShell | null>(null);
@@ -81,156 +81,139 @@ export default function PaquetesSesionesPage() {
 
   return (
     <DashboardShell usuario={usuario}>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <PageHeader title="Paquetes de sesiones" subtitle="Packs de sesiones vendidos a tus clientes — Agenda Pro" />
+      <div className="mb-ds-6 flex flex-wrap items-center justify-between gap-ds-3">
+        <div>
+          <p className="ds-heading text-ds-h2 text-ds-text">Paquetes de sesiones</p>
+          <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">Packs de sesiones vendidos a tus clientes — Agenda Pro</p>
+        </div>
         {!formAbierto && (
-          <Button type="button" onClick={() => setFormAbierto(true)}>
-            <IconPlus className="h-4 w-4" />
+          <Button iconoIzq={<Plus size={16} strokeWidth={2.75} />} onPress={() => setFormAbierto(true)}>
             Nuevo Paquete
           </Button>
         )}
       </div>
 
       {formAbierto && (
-        <Card className="mb-6">
-          <h2 className="mb-4 text-sm font-semibold text-foreground">Nuevo paquete</h2>
-          <AsignarPackForm
-            clientes={clientes}
-            onClienteCreado={(c) => setClientes((prev) => [...prev, c])}
-            tiposPack={tiposPack}
-            moneda={usuario.moneda ?? "CLP"}
-            onAsignado={() => {
-              setFormAbierto(false);
-              setAviso("Paquete creado.");
-              cargar();
-            }}
-            onCancelar={() => setFormAbierto(false)}
-          />
-        </Card>
-      )}
-
-      {renovando && (
-        <Card className="mb-6">
-          <h2 className="mb-1 text-sm font-semibold text-foreground">Renovar paquete</h2>
-          <p className="mb-4 text-xs text-muted">
-            {renovando.cliente?.nombre ?? "Cliente"} · <span className="font-medium text-foreground">{renovando.nombre}</span> —
-            mismo servicio y cantidad. Ajusta el precio si corresponde.
-          </p>
-          <AsignarPackForm
-            clienteId={renovando.cliente_id ?? undefined}
-            tiposPack={tiposPack}
-            moneda={usuario.moneda ?? "CLP"}
-            inicial={{
-              tipoPackId:
-                renovando.tipo_pack_id && tiposPack.some((t) => t.id === renovando.tipo_pack_id)
-                  ? renovando.tipo_pack_id
-                  : undefined,
-              nombre: renovando.nombre,
-              cantidadTotal: renovando.cantidad_total,
-              precioPagado: renovando.precio_pagado != null ? String(renovando.precio_pagado) : "",
-            }}
-            onAsignado={() => {
-              setRenovando(null);
-              setAviso("Paquete renovado.");
-              cargar();
-            }}
-            onCancelar={() => setRenovando(null)}
-          />
-        </Card>
-      )}
-
-      {aviso && (
-        <div className="mb-6">
-          <SuccessText>{aviso}</SuccessText>
+        <div className="mb-ds-6">
+          <Card>
+            <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Nuevo paquete</p>
+            <AsignarPackForm
+              clientes={clientes}
+              onClienteCreado={(c) => setClientes((prev) => [...prev, c])}
+              tiposPack={tiposPack}
+              moneda={usuario.moneda ?? "CLP"}
+              onAsignado={() => {
+                setFormAbierto(false);
+                setAviso("Paquete creado.");
+                cargar();
+              }}
+              onCancelar={() => setFormAbierto(false)}
+            />
+          </Card>
         </div>
       )}
 
-      <div className="mb-4">
-        <Input type="text" placeholder="Buscar por cliente o nombre del paquete..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} className="max-w-sm" />
+      {renovando && (
+        <div className="mb-ds-6">
+          <Card>
+            <p className="mb-ds-1 font-ds-body text-ds-small font-semibold text-ds-text">Renovar paquete</p>
+            <p className="mb-ds-4 font-ds-body text-ds-caption text-ds-text/60">
+              {renovando.cliente?.nombre ?? "Cliente"} · <span className="font-medium text-ds-text">{renovando.nombre}</span> —
+              mismo servicio y cantidad. Ajusta el precio si corresponde.
+            </p>
+            <AsignarPackForm
+              clienteId={renovando.cliente_id ?? undefined}
+              tiposPack={tiposPack}
+              moneda={usuario.moneda ?? "CLP"}
+              inicial={{
+                tipoPackId:
+                  renovando.tipo_pack_id && tiposPack.some((t) => t.id === renovando.tipo_pack_id)
+                    ? renovando.tipo_pack_id
+                    : undefined,
+                nombre: renovando.nombre,
+                cantidadTotal: renovando.cantidad_total,
+                precioPagado: renovando.precio_pagado != null ? String(renovando.precio_pagado) : "",
+              }}
+              onAsignado={() => {
+                setRenovando(null);
+                setAviso("Paquete renovado.");
+                cargar();
+              }}
+              onCancelar={() => setRenovando(null)}
+            />
+          </Card>
+        </div>
+      )}
+
+      {aviso ? <p className="mb-ds-6 font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}
+
+      <div className="mb-ds-4 max-w-sm">
+        <Input placeholder="Buscar por cliente o nombre del paquete..." valor={busqueda} onCambio={setBusqueda} />
       </div>
 
-      {error && <ErrorText>{error}</ErrorText>}
-      {paquetes === null && !error && <EstadoCargando />}
+      {error ? <ErrorState mensaje={error} /> : null}
+      {paquetes === null && !error ? <LoadingState /> : null}
 
       {paquetes?.length === 0 && (
-        <EstadoVacio
-          icono={IconBox}
+        <EmptyState
+          icono={<Box size={28} strokeWidth={2.75} />}
           titulo="Ningún paquete registrado"
           mensaje="Crea el primer paquete de sesiones para un cliente"
-          accion={<Button type="button" onClick={() => setFormAbierto(true)}>
-              <IconPlus className="h-4 w-4" />
+          accion={
+            <Button iconoIzq={<Plus size={16} strokeWidth={2.75} />} onPress={() => setFormAbierto(true)}>
               Nuevo Paquete
-            </Button>}
+            </Button>
+          }
         />
       )}
 
       {paquetes && paquetes.length > 0 && filtrados.length === 0 && (
-        <EstadoVacio icono={IconBox} titulo="Ningún paquete coincide con la búsqueda" />
+        <EmptyState icono={<Box size={28} strokeWidth={2.75} />} titulo="Ningún paquete coincide con la búsqueda" />
       )}
 
       {filtrados.length > 0 && (
-        <Card className="overflow-x-auto p-0">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
-                <th className="px-5 py-3 font-medium">Cliente</th>
-                <th className="px-5 py-3 font-medium">Paquete</th>
-                <th className="px-5 py-3 font-medium">Saldo</th>
-                <th className="px-5 py-3 font-medium">Cobrado</th>
-                <th className="px-5 py-3 font-medium">Fecha de compra</th>
-                <th className="px-5 py-3 font-medium">Vence</th>
-                <th className="px-5 py-3 font-medium">Notas</th>
-                <th className="px-5 py-3 font-medium">Estado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtrados.map((p) => (
-                <tr key={p.id} className="border-b border-border-soft last:border-0 hover:bg-surface-sunken">
-                  <td className="px-5 py-3 font-medium text-foreground">{p.cliente?.nombre ?? "—"}</td>
-                  <td className="px-5 py-3 text-foreground">{p.nombre}</td>
-                  <td className="px-5 py-3 text-foreground">
-                    {p.saldo} / {p.cantidad_total}
-                  </td>
-                  <td className="px-5 py-3 text-muted">
-                    {p.precio_pagado != null
-                      ? formatMoneda(p.precio_pagado, usuario.moneda)
-                      : p.precio != null
-                        ? formatMoneda(p.precio, usuario.moneda)
-                        : "—"}
-                  </td>
-                  <td className="px-5 py-3 text-muted">{new Date(`${p.fecha_compra}T00:00:00`).toLocaleDateString("es-CL")}</td>
-                  <td className="px-5 py-3 text-muted">
-                    {p.vence_el ? new Date(`${p.vence_el}T00:00:00`).toLocaleDateString("es-CL") : "No vence"}
-                  </td>
-                  <td className="px-5 py-3 text-muted">{p.notas || "—"}</td>
-                  <td className="px-5 py-3">
-                    <div className="flex items-center gap-2">
-                      <Badge value={p.saldo <= 0 ? "agotado" : "disponible"} />
-                      {p.saldo <= 0 && !renovando && !formAbierto && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => {
-                            setAviso(null);
-                            setRenovando(p);
-                          }}
-                        >
-                          Renovar
-                        </Button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
+        <Table<PaqueteListado>
+          filas={filtrados}
+          claveFila={(p) => p.id}
+          vacio={{ titulo: "Ningún paquete coincide con la búsqueda" }}
+          columnas={[
+            { encabezado: "Cliente", celda: (p) => p.cliente?.nombre ?? "—" },
+            { encabezado: "Paquete", celda: (p) => p.nombre },
+            { encabezado: "Saldo", celda: (p) => `${p.saldo} / ${p.cantidad_total}` },
+            {
+              encabezado: "Cobrado",
+              celda: (p) => (p.precio_pagado != null ? formatMoneda(p.precio_pagado, usuario.moneda) : p.precio != null ? formatMoneda(p.precio, usuario.moneda) : "—"),
+            },
+            { encabezado: "Fecha de compra", celda: (p) => new Date(`${p.fecha_compra}T00:00:00`).toLocaleDateString("es-CL") },
+            { encabezado: "Vence", celda: (p) => (p.vence_el ? new Date(`${p.vence_el}T00:00:00`).toLocaleDateString("es-CL") : "No vence") },
+            { encabezado: "Notas", celda: (p) => p.notas || "—" },
+            {
+              encabezado: "Estado",
+              celda: (p) => (
+                <div className="flex items-center gap-ds-2">
+                  <StatusBadge estado={p.saldo <= 0 ? "agotado" : "disponible"} />
+                  {p.saldo <= 0 && !renovando && !formAbierto && (
+                    <Button
+                      variante="secundario"
+                      onPress={() => {
+                        setAviso(null);
+                        setRenovando(p);
+                      }}
+                    >
+                      Renovar
+                    </Button>
+                  )}
+                </div>
+              ),
+            },
+          ]}
+        />
       )}
 
-      <p className="mt-4 text-xs text-muted">
+      <p className="mt-ds-4 font-ds-body text-ds-caption text-ds-text/60">
         El saldo se calcula a partir de las citas activas de cada paquete — no es un contador editable a mano. Para consumir sesiones
         de un paquete, asígnalo desde el formulario de una tarea en{" "}
-        <Link href="/dashboard/agenda" className="font-medium text-brand hover:underline">
+        <Link href="/dashboard/agenda" className="font-medium text-ds-brand hover:underline">
           Agenda
         </Link>
         .

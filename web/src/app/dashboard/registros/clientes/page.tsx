@@ -2,20 +2,20 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { MapPin, MessageCircle, Plus } from "lucide-react";
 import type { Cliente } from "@bitacora/shared";
 import { formatearRut, validarRut } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, SuccessText } from "@/components/ui";
-import { IconChat, IconMapPin, IconPlus } from "@/components/icons";
-import { EstadoCargando, EstadoVacio } from "@/components/estados";
+import { Button, Card, EmptyState, Input, LoadingState, StatusBadge, Table } from "@bitacora/ui/web";
 import { linkWhatsapp } from "@/lib/whatsapp";
 
 type ClienteConDatos = Cliente & { cantidad_os: number; cantidad_cotizaciones: number; ultima_actividad: string | null };
 
 type Filtro = "todos" | "activos" | "con_cotizaciones" | "con_os" | "inactivos";
 
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export default function ClientesPage() {
   const router = useRouter();
   const [usuario, setUsuario] = useState<UsuarioShell | null>(null);
@@ -81,7 +81,15 @@ export default function ClientesPage() {
     setGuardando(true);
     const res = await apiFetch("/api/clientes", {
       method: "POST",
-      body: JSON.stringify({ nombre, rut: rut.trim() || null, direccion, comuna, telefono, correo, fecha_nacimiento: fechaNacimiento || null }),
+      body: JSON.stringify({
+        nombre,
+        rut: rut.trim() ? formatearRut(rut) : null,
+        direccion,
+        comuna,
+        telefono,
+        correo,
+        fecha_nacimiento: fechaNacimiento || null,
+      }),
     });
     setGuardando(false);
     if (!res.ok) {
@@ -139,93 +147,67 @@ export default function ClientesPage() {
 
   return (
     <DashboardShell usuario={usuario}>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <PageHeader title="Clientes" subtitle="Gestiona tus clientes y revisa el historial" />
-        <div className="flex gap-2">
-          <Button type="button" variant="outline" onClick={() => alert("Importar clientes desde CSV — próximamente.")}>
+      <div className="mb-ds-6 flex flex-wrap items-center justify-between gap-ds-3">
+        <div>
+          <p className="ds-heading text-ds-h2 text-ds-text">Clientes</p>
+          <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">Gestiona tus clientes y revisa el historial</p>
+        </div>
+        <div className="flex gap-ds-2">
+          <Button variante="secundario" onPress={() => alert("Importar clientes desde CSV — próximamente.")}>
             Importar Clientes
           </Button>
-          <Button type="button" onClick={() => setFormAbierto((v) => !v)}>
-            <IconPlus className="h-4 w-4" />
+          <Button iconoIzq={<Plus size={16} strokeWidth={2.75} />} onPress={() => setFormAbierto((v) => !v)}>
             Nuevo Cliente
           </Button>
         </div>
       </div>
 
       {formAbierto && (
-        <Card className="mb-6">
-          <h2 className="mb-4 text-sm font-semibold text-foreground">Nuevo cliente</h2>
-          <form onSubmit={onSubmit} className="flex flex-col gap-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <Label>Nombre</Label>
-                <Input type="text" required value={nombre} onChange={(e) => setNombre(e.target.value)} />
+        <div className="mb-ds-6">
+          <Card>
+            <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Nuevo cliente</p>
+            <form onSubmit={onSubmit} className="flex flex-col gap-ds-4">
+              <div className="grid gap-ds-4 sm:grid-cols-2">
+                <Input etiqueta="Nombre" requerido valor={nombre} onCambio={setNombre} />
+                {/* Input (ds-) no tiene onBlur (solo onSubmit, que dispara con
+                    Enter) — se pierde el auto-formateo "al salir del campo"
+                    que tenía el Input viejo (reformatear en cada tecla
+                    movería el cursor mientras se escribe). La validación
+                    real (validarRut) sigue intacta en el submit del form. */}
+                <Input etiqueta="RUT (opcional — habilita el login al Portal de Cliente)" placeholder="12.345.678-9" valor={rut} onCambio={setRut} />
+                <Input etiqueta="Teléfono (para WhatsApp, puedes escribirlo con +56 9…)" placeholder="+56 9 1234 5678" valor={telefono} onCambio={setTelefono} />
+                <Input etiqueta="Correo" tipo="email" valor={correo} onCambio={setCorreo} />
+                <Input etiqueta="Dirección" requerido placeholder="Calle, número" valor={direccion} onCambio={setDireccion} />
+                <Input etiqueta="Comuna" valor={comuna} onCambio={setComuna} />
+                <FechaCampo etiqueta="Fecha de cumpleaños (opcional)" valor={fechaNacimiento} onCambio={setFechaNacimiento} />
               </div>
-              <div>
-                <Label>RUT (opcional — habilita el login al Portal de Cliente)</Label>
-                <Input
-                  type="text"
-                  placeholder="12.345.678-9"
-                  value={rut}
-                  onChange={(e) => setRut(e.target.value)}
-                  onBlur={() => rut.trim() && validarRut(rut) && setRut(formatearRut(rut))}
-                />
+              {formError ? <p className="font-ds-body text-ds-small text-ds-accent-700">{formError}</p> : null}
+              <div className="flex gap-ds-2">
+                <Button tipo="submit" cargando={guardando}>
+                  Agregar cliente
+                </Button>
+                <Button variante="ghost" onPress={() => setFormAbierto(false)}>
+                  Cancelar
+                </Button>
               </div>
-              <div>
-                <Label>Teléfono (para WhatsApp, puedes escribirlo con +56 9…)</Label>
-                <Input type="text" placeholder="+56 9 1234 5678" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
-              </div>
-              <div>
-                <Label>Correo</Label>
-                <Input type="email" value={correo} onChange={(e) => setCorreo(e.target.value)} />
-              </div>
-              <div>
-                <Label>Dirección</Label>
-                <Input
-                  type="text"
-                  required
-                  placeholder="Calle, número"
-                  value={direccion}
-                  onChange={(e) => setDireccion(e.target.value)}
-                />
-              </div>
-              <div>
-                <Label>Comuna</Label>
-                <Input type="text" value={comuna} onChange={(e) => setComuna(e.target.value)} />
-              </div>
-              <div>
-                <Label>Fecha de cumpleaños (opcional)</Label>
-                <Input type="date" value={fechaNacimiento} onChange={(e) => setFechaNacimiento(e.target.value)} />
-              </div>
-            </div>
-            {formError && <ErrorText>{formError}</ErrorText>}
-            <div className="flex gap-2">
-              <Button type="submit" disabled={guardando} className="self-start">
-                {guardando ? "Ubicando en el mapa…" : "Agregar cliente"}
-              </Button>
-              <Button type="button" variant="ghost" onClick={() => setFormAbierto(false)}>
-                Cancelar
-              </Button>
-            </div>
-          </form>
-        </Card>
-      )}
-      {aviso && (
-        <div className="mb-6">
-          <SuccessText>{aviso}</SuccessText>
+            </form>
+          </Card>
         </div>
       )}
+      {aviso ? <p className="mb-ds-6 font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}
 
-      <div className="mb-4 flex flex-col gap-3">
-        <Input type="text" placeholder="Buscar clientes..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} className="max-w-sm" />
-        <div className="flex flex-wrap gap-2">
+      <div className="mb-ds-4 flex flex-col gap-ds-3">
+        <div className="max-w-sm">
+          <Input placeholder="Buscar clientes..." valor={busqueda} onCambio={setBusqueda} />
+        </div>
+        <div className="flex flex-wrap gap-ds-2">
           {CHIPS.map((c) => (
             <button
               key={c.valor}
               type="button"
               onClick={() => setFiltro(c.valor)}
-              className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                filtro === c.valor ? "border-brand bg-brand-soft text-brand" : "border-border text-muted hover:border-muted-soft"
+              className={`rounded-ds-pill border px-ds-3 py-1 font-ds-body text-ds-caption font-medium transition-colors ${
+                filtro === c.valor ? "border-ds-brand bg-ds-brand/[0.08] text-ds-brand" : "border-ds-divider text-ds-text/70 hover:border-ds-text/30"
               }`}
             >
               {c.etiqueta} ({contadores[c.valor]})
@@ -234,76 +216,84 @@ export default function ClientesPage() {
         </div>
       </div>
 
-      {error && <ErrorText>{error}</ErrorText>}
-      {clientes === null && !error && <EstadoCargando />}
+      {error ? <p className="font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
+      {clientes === null && !error ? <LoadingState /> : null}
 
       {clientes?.length === 0 && (
-        <EstadoVacio
-          icono={IconMapPin}
+        <EmptyState
+          icono={<MapPin size={28} strokeWidth={2.75} />}
           titulo="Ningún cliente registrado"
           mensaje="Registra tu primer cliente para comenzar"
-          accion={<Button type="button" onClick={() => setFormAbierto(true)}>
-              <IconPlus className="h-4 w-4" />
+          accion={
+            <Button iconoIzq={<Plus size={16} strokeWidth={2.75} />} onPress={() => setFormAbierto(true)}>
               Nuevo Cliente
-            </Button>}
+            </Button>
+          }
         />
       )}
 
       {clientes && clientes.length > 0 && filtrados.length === 0 && (
-        <EstadoVacio icono={IconMapPin} titulo="Ningún cliente coincide con la búsqueda o el filtro" />
+        <EmptyState icono={<MapPin size={28} strokeWidth={2.75} />} titulo="Ningún cliente coincide con la búsqueda o el filtro" />
       )}
 
       {filtrados.length > 0 && (
-        <Card className="overflow-x-auto p-0">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
-                <th className="px-5 py-3 font-medium">Nombre</th>
-                <th className="px-5 py-3 font-medium">Contacto</th>
-                <th className="px-5 py-3 font-medium">OS</th>
-                <th className="px-5 py-3 font-medium">Última actividad</th>
-                <th className="px-5 py-3 font-medium">Estado</th>
-                <th className="px-5 py-3 font-medium"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtrados.map((c) => (
-                <tr
-                  key={c.id}
-                  onClick={() => router.push(`/dashboard/registros/clientes/${c.id}`)}
-                  className="cursor-pointer border-b border-border-soft last:border-0 hover:bg-surface-sunken"
-                >
-                  <td className="px-5 py-3 font-medium text-foreground">{c.nombre}</td>
-                  <td className="px-5 py-3 text-muted">
-                    {c.telefono && <p>{c.telefono}</p>}
-                    {c.correo && <p className="text-xs">{c.correo}</p>}
-                    {!c.telefono && !c.correo && "—"}
-                  </td>
-                  <td className="px-5 py-3">{c.cantidad_os}</td>
-                  <td className="px-5 py-3 text-muted">{c.ultima_actividad ?? "—"}</td>
-                  <td className="px-5 py-3">
-                    <Badge value={c.activo ? "activo" : "inactivo"} />
-                  </td>
-                  <td className="px-5 py-3">
-                    {c.telefono && (
-                      <a
-                        href={linkWhatsapp(c.telefono)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        title="Contactar por WhatsApp"
-                        className="inline-flex items-center justify-center rounded-full border border-border p-2 text-muted hover:border-brand hover:text-brand"
-                      >
-                        <IconChat className="h-4 w-4" />
-                      </a>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
+        <Table<ClienteConDatos>
+          filas={filtrados}
+          claveFila={(c) => c.id}
+          onFilaClick={(c) => router.push(`/dashboard/registros/clientes/${c.id}`)}
+          vacio={{ titulo: "Ningún cliente coincide con la búsqueda o el filtro" }}
+          columnas={[
+            { encabezado: "Nombre", celda: (c) => c.nombre },
+            {
+              encabezado: "Contacto",
+              celda: (c) => (
+                <>
+                  {c.telefono ? <p>{c.telefono}</p> : null}
+                  {c.correo ? <p className="text-ds-caption">{c.correo}</p> : null}
+                  {!c.telefono && !c.correo ? "—" : null}
+                </>
+              ),
+            },
+            { encabezado: "OS", celda: (c) => c.cantidad_os },
+            { encabezado: "Última actividad", celda: (c) => c.ultima_actividad ?? "—" },
+            {
+              encabezado: "Estado",
+              celda: (c) => <StatusBadge estado={c.activo ? "activo" : "inactivo"} />,
+            },
+            {
+              encabezado: "",
+              celda: (c) =>
+                c.telefono ? (
+                  <a
+                    href={linkWhatsapp(c.telefono)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    title="Contactar por WhatsApp"
+                    className="inline-flex items-center justify-center rounded-ds-pill border border-ds-divider p-ds-2 text-ds-text/60 hover:border-ds-brand hover:text-ds-brand"
+                  >
+                    <MessageCircle size={16} strokeWidth={2.75} />
+                  </a>
+                ) : null,
+            },
+          ]}
+        />
       )}
     </DashboardShell>
+  );
+}
+
+// Input nativo type="date" — ver el mismo helper en rutas/nueva/page.tsx.
+function FechaCampo({ etiqueta, valor, onCambio }: { etiqueta: string; valor: string; onCambio: (v: string) => void }) {
+  return (
+    <div className="flex flex-col gap-ds-1">
+      <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">{etiqueta}</label>
+      <input
+        type="date"
+        value={valor}
+        onChange={(e) => onCambio(e.target.value)}
+        className="h-11 w-full rounded-ds-md border border-ds-divider bg-ds-surface px-ds-3 font-ds-body text-ds-body text-ds-text transition-colors hover:border-ds-text/30 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ds-brand)]"
+      />
+    </div>
   );
 }

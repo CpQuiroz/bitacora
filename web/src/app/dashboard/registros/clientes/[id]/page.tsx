@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { ChevronLeft, MapPin, MessageCircle, Plus, Receipt, Tag, Wrench } from "lucide-react";
 import type { Cliente, Equipo, Factura, PaqueteSesionesConSaldo, Presupuesto, TipoPack, Trabajo, OrdenServicio } from "@bitacora/shared";
 import { estadoOsDeTrabajo, formatearRut, validarRut } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
@@ -10,8 +11,7 @@ import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { AsignarPackForm } from "@/components/AsignarPackForm";
-import { Badge, Button, buttonClass, Card, ErrorText, Input, Label, PageHeader, SuccessText } from "@/components/ui";
-import { IconChat, IconChevronLeft, IconMapPin, IconPlus, IconReceipt, IconTag, IconWrench } from "@/components/icons";
+import { Button, Card, Input, StatusBadge } from "@bitacora/ui/web";
 import { linkWhatsapp } from "@/lib/whatsapp";
 
 type TrabajoConOrden = Trabajo & { orden: Pick<OrdenServicio, "folio" | "estado_os"> | null };
@@ -40,6 +40,9 @@ type EventoHistorial = {
   onClick: () => void;
 };
 
+const ICONO_EVENTO = { os: Wrench, cotizacion: Tag, cobro: Receipt } as const;
+
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export default function ClienteDetallePage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -130,7 +133,7 @@ export default function ClienteDetallePage() {
     setGuardando(true);
     const res = await apiFetch(`/api/clientes/${params.id}`, {
       method: "PATCH",
-      body: JSON.stringify({ nombre, rut: rut.trim() || null, telefono, correo, direccion, comuna, fecha_nacimiento: fechaNacimiento || null }),
+      body: JSON.stringify({ nombre, rut: rut.trim() ? formatearRut(rut) : null, telefono, correo, direccion, comuna, fecha_nacimiento: fechaNacimiento || null }),
     });
     setGuardando(false);
     if (!res.ok) {
@@ -180,8 +183,6 @@ export default function ClienteDetallePage() {
     return eventos.sort((a, b) => (a.fecha < b.fecha ? 1 : a.fecha > b.fecha ? -1 : 0));
   }, [cliente, usuario?.moneda, router]);
 
-  const ICONO_EVENTO = { os: IconWrench, cotizacion: IconTag, cobro: IconReceipt } as const;
-
   // Saldo del cliente: total por cobrar y cuánto de eso está vencido
   // (fecha de vencimiento pasada y sin pagar).
   const hoyISO = new Date().toISOString().slice(0, 10);
@@ -195,171 +196,136 @@ export default function ClienteDetallePage() {
 
   return (
     <DashboardShell usuario={usuario}>
-      <Link href="/dashboard/registros/clientes" className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-brand hover:underline">
-        <IconChevronLeft className="h-4 w-4" />
+      <Link href="/dashboard/registros/clientes" className="mb-ds-4 inline-flex items-center gap-ds-1 font-ds-body text-ds-small font-medium text-ds-brand hover:underline">
+        <ChevronLeft size={16} strokeWidth={2.75} />
         Clientes
       </Link>
 
-      {error && !cliente && <ErrorText>{error}</ErrorText>}
+      {error && !cliente ? <p className="font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
 
       {cliente && (
         <>
-          <PageHeader
-            title={cliente.nombre}
-            subtitle={cliente.direccion}
-            action={
-              <div className="flex items-center gap-2">
-                <Badge value={cliente.activo ? "activo" : "inactivo"} />
-                {cliente.telefono && (
-                  <a
-                    href={linkWhatsapp(cliente.telefono)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={buttonClass("outline")}
-                  >
-                    <IconChat className="h-4 w-4" />
+          <div className="mb-ds-4 flex flex-wrap items-center justify-between gap-ds-3">
+            <div>
+              <p className="ds-heading text-ds-h2 text-ds-text">{cliente.nombre}</p>
+              <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">{cliente.direccion}</p>
+            </div>
+            <div className="flex items-center gap-ds-2">
+              <StatusBadge estado={cliente.activo ? "activo" : "inactivo"} />
+              {cliente.telefono && (
+                <a href={linkWhatsapp(cliente.telefono)} target="_blank" rel="noopener noreferrer">
+                  <Button variante="secundario" iconoIzq={<MessageCircle size={16} strokeWidth={2.75} />}>
                     WhatsApp
-                  </a>
-                )}
-                <Button type="button" variant="outline" onClick={onAlternarActivo}>
-                  {cliente.activo ? "Desactivar" : "Activar"}
-                </Button>
-                <Button type="button" variant="outline" onClick={() => setEditando((v) => !v)}>
-                  {editando ? "Cerrar" : "Editar"}
-                </Button>
-              </div>
-            }
-          />
+                  </Button>
+                </a>
+              )}
+              <Button variante="secundario" onPress={onAlternarActivo}>
+                {cliente.activo ? "Desactivar" : "Activar"}
+              </Button>
+              <Button variante="secundario" onPress={() => setEditando((v) => !v)}>
+                {editando ? "Cerrar" : "Editar"}
+              </Button>
+            </div>
+          </div>
 
           {/* Bloque A — accesos directos: cada uno abre el formulario
               correspondiente con este cliente ya preseleccionado. */}
-          <div className="mt-4 flex flex-wrap gap-2">
-            <Link href={`/dashboard/financiero/cotizaciones/nueva?cliente_id=${cliente.id}`} className={buttonClass("outline")}>
-              <IconPlus className="h-4 w-4" />
-              Nueva Cotización
+          <div className="mb-ds-6 flex flex-wrap gap-ds-2">
+            <Link href={`/dashboard/financiero/cotizaciones/nueva?cliente_id=${cliente.id}`}>
+              <Button variante="secundario" iconoIzq={<Plus size={16} strokeWidth={2.75} />}>
+                Nueva Cotización
+              </Button>
             </Link>
-            <Link href={`/dashboard/ordenes/nueva?cliente_id=${cliente.id}`} className={buttonClass("outline")}>
-              <IconPlus className="h-4 w-4" />
-              Nueva OS
+            <Link href={`/dashboard/ordenes/nueva?cliente_id=${cliente.id}`}>
+              <Button variante="secundario" iconoIzq={<Plus size={16} strokeWidth={2.75} />}>
+                Nueva OS
+              </Button>
             </Link>
-            <Link href={`/dashboard/financiero/cobros?nuevo=1&cliente_id=${cliente.id}`} className={buttonClass("outline")}>
-              <IconPlus className="h-4 w-4" />
-              Nuevo Cobro
+            <Link href={`/dashboard/financiero/cobros?nuevo=1&cliente_id=${cliente.id}`}>
+              <Button variante="secundario" iconoIzq={<Plus size={16} strokeWidth={2.75} />}>
+                Nuevo Cobro
+              </Button>
             </Link>
           </div>
 
           {editando && (
-            <Card className="my-6">
-              <h2 className="mb-4 text-sm font-semibold text-foreground">Editar datos</h2>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <Label>Nombre</Label>
-                  <Input type="text" value={nombre} onChange={(e) => setNombre(e.target.value)} />
+            <div className="mb-ds-6">
+              <Card>
+                <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Editar datos</p>
+                <div className="grid gap-ds-4 sm:grid-cols-2">
+                  <Input etiqueta="Nombre" valor={nombre} onCambio={setNombre} />
+                  {/* Sin onBlur en Input (ds-) — mismo motivo que en el listado de clientes. */}
+                  <Input etiqueta="RUT (habilita el login al Portal de Cliente)" placeholder="12.345.678-9" valor={rut} onCambio={setRut} />
+                  <Input etiqueta="Teléfono (para WhatsApp, puedes escribirlo con +56 9…)" placeholder="+56 9 1234 5678" valor={telefono} onCambio={setTelefono} />
+                  <Input etiqueta="Correo" tipo="email" valor={correo} onCambio={setCorreo} />
+                  <Input etiqueta="Dirección" valor={direccion} onCambio={setDireccion} />
+                  <Input etiqueta="Comuna" valor={comuna} onCambio={setComuna} />
+                  <FechaCampo etiqueta="Fecha de cumpleaños (opcional)" valor={fechaNacimiento} onCambio={setFechaNacimiento} />
                 </div>
-                <div>
-                  <Label>RUT (habilita el login al Portal de Cliente)</Label>
-                  <Input
-                    type="text"
-                    placeholder="12.345.678-9"
-                    value={rut}
-                    onChange={(e) => setRut(e.target.value)}
-                    onBlur={() => rut.trim() && validarRut(rut) && setRut(formatearRut(rut))}
-                  />
+                {errorForm ? <p className="mt-ds-3 font-ds-body text-ds-small text-ds-accent-700">{errorForm}</p> : null}
+                <div className="mt-ds-4">
+                  <Button onPress={onGuardar} cargando={guardando}>
+                    Guardar
+                  </Button>
                 </div>
-                <div>
-                  <Label>Teléfono (para WhatsApp, puedes escribirlo con +56 9…)</Label>
-                  <Input type="text" placeholder="+56 9 1234 5678" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
-                </div>
-                <div>
-                  <Label>Correo</Label>
-                  <Input type="email" value={correo} onChange={(e) => setCorreo(e.target.value)} />
-                </div>
-                <div>
-                  <Label>Dirección</Label>
-                  <Input type="text" value={direccion} onChange={(e) => setDireccion(e.target.value)} />
-                </div>
-                <div>
-                  <Label>Comuna</Label>
-                  <Input type="text" value={comuna} onChange={(e) => setComuna(e.target.value)} />
-                </div>
-                <div>
-                  <Label>Fecha de cumpleaños (opcional)</Label>
-                  <Input type="date" value={fechaNacimiento} onChange={(e) => setFechaNacimiento(e.target.value)} />
-                </div>
-              </div>
-              {errorForm && (
-                <div className="mt-3">
-                  <ErrorText>{errorForm}</ErrorText>
-                </div>
-              )}
-              <Button type="button" onClick={onGuardar} disabled={guardando} className="mt-4">
-                {guardando ? "Guardando…" : "Guardar"}
-              </Button>
-            </Card>
-          )}
-          {aviso && (
-            <div className="my-4">
-              <SuccessText>{aviso}</SuccessText>
+              </Card>
             </div>
           )}
+          {aviso ? <p className="my-ds-4 font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}
 
-          <Card className="my-6">
-            <h2 className="mb-4 text-sm font-semibold text-foreground">Contacto</h2>
-            <div className="grid gap-4 text-sm sm:grid-cols-3">
-              <div>
-                <p className="text-xs text-muted">RUT</p>
-                <p className="text-foreground">{cliente.rut ?? "—"}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted">Teléfono</p>
-                <div className="flex items-center gap-2">
-                  <p className="text-foreground">{cliente.telefono ?? "—"}</p>
-                  {cliente.telefono && (
-                    <a
-                      href={linkWhatsapp(cliente.telefono)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      title="Contactar por WhatsApp"
-                      className="text-muted hover:text-brand"
-                    >
-                      <IconChat className="h-4 w-4" />
-                    </a>
+          <div className="mb-ds-6">
+            <Card>
+              <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Contacto</p>
+              <div className="grid gap-ds-4 sm:grid-cols-3">
+                <div>
+                  <p className="font-ds-body text-ds-caption text-ds-text/60">RUT</p>
+                  <p className="font-ds-body text-ds-small text-ds-text">{cliente.rut ?? "—"}</p>
+                </div>
+                <div>
+                  <p className="font-ds-body text-ds-caption text-ds-text/60">Teléfono</p>
+                  <div className="flex items-center gap-ds-2">
+                    <p className="font-ds-body text-ds-small text-ds-text">{cliente.telefono ?? "—"}</p>
+                    {cliente.telefono && (
+                      <a href={linkWhatsapp(cliente.telefono)} target="_blank" rel="noopener noreferrer" title="Contactar por WhatsApp" className="text-ds-text/60 hover:text-ds-brand">
+                        <MessageCircle size={16} strokeWidth={2.75} />
+                      </a>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <p className="font-ds-body text-ds-caption text-ds-text/60">Cumpleaños</p>
+                  <p className="font-ds-body text-ds-small text-ds-text">
+                    {cliente.fecha_nacimiento
+                      ? new Date(`${cliente.fecha_nacimiento}T00:00:00`).toLocaleDateString("es-CL", { day: "2-digit", month: "long" })
+                      : "—"}
+                  </p>
+                </div>
+                <div>
+                  <p className="font-ds-body text-ds-caption text-ds-text/60">Correo</p>
+                  <p className="font-ds-body text-ds-small text-ds-text">{cliente.correo ?? "—"}</p>
+                </div>
+                <div>
+                  <p className="font-ds-body text-ds-caption text-ds-text/60">Ubicación</p>
+                  {cliente.lat != null ? (
+                    <span className="inline-flex items-center gap-ds-1 font-ds-body text-ds-small text-ds-accent2-800">
+                      <MapPin size={14} strokeWidth={2.75} /> Ubicado
+                    </span>
+                  ) : (
+                    <span className="font-ds-body text-ds-small text-ds-text/60">Sin ubicar</span>
                   )}
                 </div>
               </div>
-              <div>
-                <p className="text-xs text-muted">Cumpleaños</p>
-                <p className="text-foreground">
-                  {cliente.fecha_nacimiento
-                    ? new Date(`${cliente.fecha_nacimiento}T00:00:00`).toLocaleDateString("es-CL", { day: "2-digit", month: "long" })
-                    : "—"}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-muted">Correo</p>
-                <p className="text-foreground">{cliente.correo ?? "—"}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted">Ubicación</p>
-                {cliente.lat != null ? (
-                  <span className="inline-flex items-center gap-1 text-success">
-                    <IconMapPin className="h-3.5 w-3.5" /> Ubicado
-                  </span>
-                ) : (
-                  <span className="text-muted">Sin ubicar</span>
-                )}
-              </div>
-            </div>
-          </Card>
+            </Card>
+          </div>
 
-          <div className="mb-4 flex gap-1 border-b border-border">
+          <div className="mb-ds-4 flex gap-ds-1 border-b border-ds-divider">
             {TABS.map((t) => (
               <button
                 key={t.valor}
                 type="button"
                 onClick={() => setTab(t.valor)}
-                className={`px-4 py-2.5 text-sm font-medium transition-colors ${
-                  tab === t.valor ? "border-b-2 border-brand text-brand" : "text-muted hover:text-foreground"
+                className={`px-ds-4 py-2.5 font-ds-body text-ds-small font-medium transition-colors ${
+                  tab === t.valor ? "border-b-2 border-ds-brand text-ds-brand" : "text-ds-text/60 hover:text-ds-text"
                 }`}
               >
                 {t.etiqueta}
@@ -369,11 +335,11 @@ export default function ClienteDetallePage() {
 
           {tab === "historial" && (
             <Card>
-              <h2 className="mb-4 text-sm font-semibold text-foreground">Historial ({eventosHistorial.length})</h2>
+              <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Historial ({eventosHistorial.length})</p>
               {eventosHistorial.length === 0 ? (
-                <p className="text-sm text-muted">Sin actividad todavía.</p>
+                <p className="font-ds-body text-ds-small text-ds-text/70">Sin actividad todavía.</p>
               ) : (
-                <div className="flex flex-col divide-y divide-border">
+                <div className="flex flex-col divide-y divide-ds-divider">
                   {eventosHistorial.map((ev) => {
                     const Icono = ICONO_EVENTO[ev.tipo];
                     return (
@@ -381,16 +347,16 @@ export default function ClienteDetallePage() {
                         key={ev.id}
                         type="button"
                         onClick={ev.onClick}
-                        className="flex items-center justify-between gap-2 py-2.5 text-left text-sm hover:text-brand"
+                        className="flex items-center justify-between gap-ds-2 py-2.5 text-left font-ds-body text-ds-small hover:text-ds-brand"
                       >
-                        <div className="flex min-w-0 items-center gap-2">
-                          <Icono className="h-3.5 w-3.5 shrink-0 text-muted" />
+                        <div className="flex min-w-0 items-center gap-ds-2">
+                          <Icono size={14} strokeWidth={2.75} className="shrink-0 text-ds-text/60" />
                           <div className="min-w-0">
-                            <p className="truncate font-medium text-foreground">{ev.titulo}</p>
-                            <p className="text-xs text-muted">{ev.fecha}</p>
+                            <p className="truncate font-medium text-ds-text">{ev.titulo}</p>
+                            <p className="font-ds-body text-ds-caption text-ds-text/60">{ev.fecha}</p>
                           </div>
                         </div>
-                        <Badge value={ev.badgeValue} />
+                        <StatusBadge estado={ev.badgeValue} />
                       </button>
                     );
                   })}
@@ -401,29 +367,30 @@ export default function ClienteDetallePage() {
 
           {tab === "equipos" && (
             <Card>
-              <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-foreground">Equipos ({cliente.equipos.length})</h2>
-                <Link href="/dashboard/registros/equipos" className={buttonClass("outline")}>
-                  <IconPlus className="h-4 w-4" />
-                  Nuevo Equipo
+              <div className="mb-ds-4 flex items-center justify-between">
+                <p className="font-ds-body text-ds-small font-semibold text-ds-text">Equipos ({cliente.equipos.length})</p>
+                <Link href="/dashboard/registros/equipos">
+                  <Button variante="secundario" iconoIzq={<Plus size={16} strokeWidth={2.75} />}>
+                    Nuevo Equipo
+                  </Button>
                 </Link>
               </div>
               {cliente.equipos.length === 0 ? (
-                <p className="text-sm text-muted">Sin equipos registrados para este cliente.</p>
+                <p className="font-ds-body text-ds-small text-ds-text/70">Sin equipos registrados para este cliente.</p>
               ) : (
-                <div className="flex flex-col divide-y divide-border">
+                <div className="flex flex-col divide-y divide-ds-divider">
                   {cliente.equipos.map((e) => (
                     <button
                       key={e.id}
                       type="button"
                       onClick={() => router.push(`/dashboard/registros/equipos/${e.id}`)}
-                      className="flex items-center justify-between py-2.5 text-left text-sm hover:text-brand"
+                      className="flex items-center justify-between py-2.5 text-left font-ds-body text-ds-small hover:text-ds-brand"
                     >
                       <div>
-                        <p className="font-medium text-foreground">{e.nombre}</p>
-                        <p className="text-xs text-muted">{[e.categoria, e.marca, e.modelo].filter(Boolean).join(" · ") || "—"}</p>
+                        <p className="font-medium text-ds-text">{e.nombre}</p>
+                        <p className="font-ds-body text-ds-caption text-ds-text/60">{[e.categoria, e.marca, e.modelo].filter(Boolean).join(" · ") || "—"}</p>
                       </div>
-                      <Badge value={e.activo ? "activo" : "inactivo"} />
+                      <StatusBadge estado={e.activo ? "activo" : "inactivo"} />
                     </button>
                   ))}
                 </div>
@@ -432,40 +399,40 @@ export default function ClienteDetallePage() {
           )}
 
           {tab === "financiero" && (
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-ds-4">
               <Card>
-                <h2 className="mb-4 text-sm font-semibold text-foreground">Cobros ({cliente.facturas.length})</h2>
+                <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Cobros ({cliente.facturas.length})</p>
                 {cliente.facturas.length > 0 && (
-                  <div className="mb-4 grid grid-cols-2 gap-3">
-                    <div className="rounded-lg border border-border p-3">
-                      <p className="text-xs text-muted">Por cobrar</p>
-                      <p className="mt-1 text-lg font-semibold tabular-nums text-foreground">
+                  <div className="mb-ds-4 grid grid-cols-2 gap-ds-3">
+                    <div className="rounded-ds-md border border-ds-divider p-ds-3">
+                      <p className="font-ds-body text-ds-caption text-ds-text/60">Por cobrar</p>
+                      <p className="mt-ds-1 font-ds-body text-ds-h5 font-semibold tabular-nums text-ds-text">
                         {formatMoneda(totalPorCobrar, usuario.moneda)}
                       </p>
                     </div>
-                    <div className="rounded-lg border border-border p-3">
-                      <p className="text-xs text-muted">Vencido</p>
-                      <p className={`mt-1 text-lg font-semibold tabular-nums ${totalVencido > 0 ? "text-danger" : "text-foreground"}`}>
+                    <div className="rounded-ds-md border border-ds-divider p-ds-3">
+                      <p className="font-ds-body text-ds-caption text-ds-text/60">Vencido</p>
+                      <p className={`mt-ds-1 font-ds-body text-ds-h5 font-semibold tabular-nums ${totalVencido > 0 ? "text-ds-accent-700" : "text-ds-text"}`}>
                         {formatMoneda(totalVencido, usuario.moneda)}
                       </p>
                     </div>
                   </div>
                 )}
                 {cliente.facturas.length === 0 ? (
-                  <p className="text-sm text-muted">Sin cobros todavía.</p>
+                  <p className="font-ds-body text-ds-small text-ds-text/70">Sin cobros todavía.</p>
                 ) : (
-                  <div className="flex flex-col divide-y divide-border">
+                  <div className="flex flex-col divide-y divide-ds-divider">
                     {cliente.facturas.map((f) => (
-                      <div key={f.id} className="flex items-center justify-between py-2.5 text-sm">
+                      <div key={f.id} className="flex items-center justify-between py-2.5 font-ds-body text-ds-small">
                         <div>
-                          <p className="font-medium text-foreground">Factura</p>
-                          <p className="text-xs text-muted">
+                          <p className="font-medium text-ds-text">Factura</p>
+                          <p className="font-ds-body text-ds-caption text-ds-text/60">
                             Emitida {f.fecha_emision} · Vence {f.fecha_vencimiento}
                           </p>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-foreground">{formatMoneda(f.monto, usuario.moneda)}</span>
-                          <Badge value={f.estado} />
+                        <div className="flex items-center gap-ds-2">
+                          <span className="text-ds-text">{formatMoneda(f.monto, usuario.moneda)}</span>
+                          <StatusBadge estado={f.estado} />
                         </div>
                       </div>
                     ))}
@@ -477,24 +444,19 @@ export default function ClienteDetallePage() {
                   (si no, el fetch da 403 y `paquetes` queda en null). */}
               {paquetes !== null && (
                 <Card>
-                  <div className="mb-4 flex items-center justify-between gap-3">
-                    <h2 className="text-sm font-semibold text-foreground">Packs de sesiones ({paquetes.length})</h2>
+                  <div className="mb-ds-4 flex items-center justify-between gap-ds-3">
+                    <p className="font-ds-body text-ds-small font-semibold text-ds-text">Packs de sesiones ({paquetes.length})</p>
                     {!asignandoPack && (
-                      <Button type="button" variant="outline" onClick={() => setAsignandoPack(true)}>
-                        <IconPlus className="h-4 w-4" />
+                      <Button variante="secundario" iconoIzq={<Plus size={16} strokeWidth={2.75} />} onPress={() => setAsignandoPack(true)}>
                         Asignar pack
                       </Button>
                     )}
                   </div>
 
-                  {avisoPack && (
-                    <div className="mb-4">
-                      <SuccessText>{avisoPack}</SuccessText>
-                    </div>
-                  )}
+                  {avisoPack ? <p className="mb-ds-4 font-ds-body text-ds-small font-medium text-ds-accent2-800">{avisoPack}</p> : null}
 
                   {asignandoPack && (
-                    <div className="mb-4 rounded-lg border border-border p-3">
+                    <div className="mb-ds-4 rounded-ds-md border border-ds-divider p-ds-3">
                       <AsignarPackForm
                         clienteId={cliente.id}
                         tiposPack={tiposPack}
@@ -510,9 +472,9 @@ export default function ClienteDetallePage() {
                   )}
 
                   {renovandoPack && (
-                    <div className="mb-4 rounded-lg border border-border p-3">
-                      <p className="mb-3 text-xs text-muted">
-                        Renovando <span className="font-medium text-foreground">{renovandoPack.nombre}</span> — mismo servicio y
+                    <div className="mb-ds-4 rounded-ds-md border border-ds-divider p-ds-3">
+                      <p className="mb-ds-3 font-ds-body text-ds-caption text-ds-text/60">
+                        Renovando <span className="font-medium text-ds-text">{renovandoPack.nombre}</span> — mismo servicio y
                         cantidad. Ajusta el precio si corresponde.
                       </p>
                       <AsignarPackForm
@@ -539,14 +501,14 @@ export default function ClienteDetallePage() {
                   )}
 
                   {paquetes.length === 0 && !asignandoPack ? (
-                    <p className="text-sm text-muted">Este cliente no tiene packs.</p>
+                    <p className="font-ds-body text-ds-small text-ds-text/70">Este cliente no tiene packs.</p>
                   ) : (
-                    <div className="flex flex-col divide-y divide-border">
+                    <div className="flex flex-col divide-y divide-ds-divider">
                       {paquetes.map((p) => (
-                        <div key={p.id} className="flex items-center justify-between gap-3 py-2.5 text-sm">
+                        <div key={p.id} className="flex items-center justify-between gap-ds-3 py-2.5 font-ds-body text-ds-small">
                           <div>
-                            <p className="font-medium text-foreground">{p.nombre}</p>
-                            <p className="text-xs text-muted">
+                            <p className="font-medium text-ds-text">{p.nombre}</p>
+                            <p className="font-ds-body text-ds-caption text-ds-text/60">
                               {p.saldo} / {p.cantidad_total} sesiones ·{" "}
                               {p.precio_pagado != null
                                 ? `cobrado ${formatMoneda(p.precio_pagado, usuario.moneda)}`
@@ -556,12 +518,11 @@ export default function ClienteDetallePage() {
                               {p.vence_el ? ` · vence ${new Date(`${p.vence_el}T00:00:00`).toLocaleDateString("es-CL")}` : " · no vence"}
                             </p>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-ds-2">
                             {p.saldo <= 0 && !renovandoPack && !asignandoPack && (
                               <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => {
+                                variante="secundario"
+                                onPress={() => {
                                   setAvisoPack(null);
                                   setRenovandoPack(p);
                                 }}
@@ -569,7 +530,7 @@ export default function ClienteDetallePage() {
                                 Renovar
                               </Button>
                             )}
-                            <Badge value={p.saldo <= 0 ? "agotado" : "disponible"} />
+                            <StatusBadge estado={p.saldo <= 0 ? "agotado" : "disponible"} />
                           </div>
                         </div>
                       ))}
@@ -582,5 +543,20 @@ export default function ClienteDetallePage() {
         </>
       )}
     </DashboardShell>
+  );
+}
+
+// Input nativo type="date" — ver el mismo helper en rutas/nueva/page.tsx.
+function FechaCampo({ etiqueta, valor, onCambio }: { etiqueta: string; valor: string; onCambio: (v: string) => void }) {
+  return (
+    <div className="flex flex-col gap-ds-1">
+      <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">{etiqueta}</label>
+      <input
+        type="date"
+        value={valor}
+        onChange={(e) => onCambio(e.target.value)}
+        className="h-11 w-full rounded-ds-md border border-ds-divider bg-ds-surface px-ds-3 font-ds-body text-ds-body text-ds-text transition-colors hover:border-ds-text/30 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ds-brand)]"
+      />
+    </div>
   );
 }
