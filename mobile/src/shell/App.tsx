@@ -5,13 +5,16 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AuthProvider, useAuth } from "../features/auth/AuthContext";
 import { NetworkProvider } from "../services/sync/NetworkProvider";
 import { useEffect } from "react";
+import { ProveedorMarca } from "@bitacora/ui/native";
 import { ThemeProvider, fuentesFaena, fuentesDS } from "../theme";
 import { cargarPreferencias } from "../lib/preferencias";
 import { RootNavigator } from "./navigation/RootNavigator";
 import { BloqueoBiometrico } from "./BloqueoBiometrico";
 
-// El ThemeProvider necesita la marca de la empresa, que sale del
-// AuthProvider — por eso va anidado adentro.
+// El ThemeProvider (tema.ds — Faena en migración) y el ProveedorMarca de
+// @bitacora/ui (primitivas nuevas) necesitan la misma marca de la
+// empresa, que sale del AuthProvider — por eso van anidados adentro,
+// con el mismo color_primario/foreground para no divergir.
 function ConTema({ children }: { children: React.ReactNode }) {
   const auth = useAuth();
   const empresa = auth.fase === "listo" || auth.fase === "mfa-requerido" ? auth.usuario.empresa : null;
@@ -28,7 +31,9 @@ function ConTema({ children }: { children: React.ReactNode }) {
           : null
       }
     >
-      {children}
+      <ProveedorMarca colorPrimario={empresa?.color_primario} colorForeground={empresa?.color_primario_foreground}>
+        {children}
+      </ProveedorMarca>
     </ThemeProvider>
   );
 }

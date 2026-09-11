@@ -90,7 +90,7 @@ Faena que se van con la migración). Exentos con motivo en
 | 1 — `packages/design-tokens` | ✅ paquete + generadores + consumo web/mobile (namespace `ds-`) |
 | 2 — Marca por tenant | ✅ `--ds-brand` en shell web + `tema.ds.marca` en mobile + derivación OKLCH + check anti-hex |
 | 3 — Tipografía | ✅ Caprasimo + Figtree self-hosted (next/font + expo-font), `ds-heading`/`ds-body`, precarga sin salto |
-| 4 — `packages/ui` (primitivas) | ⬜ |
+| 4 — `packages/ui` (primitivas) | 🔶 en curso — `Button` hecho |
 | 5 — Reglas transversales | ⬜ |
 | 6 — Migración pantalla por pantalla | ⬜ |
 | 7 — Anti-degradación (ESLint, Storybook, CI) | ⬜ |
@@ -98,3 +98,23 @@ Faena que se van con la migración). Exentos con motivo en
 Durante la migración, el bloque "Faena" de `globals.css` y los tokens nuevos
 **conviven**. El bloque viejo se retira cuando todas las pantallas usen los
 tokens nuevos.
+
+## `packages/ui` — primitivas (Paso 4)
+
+API única en español, definida en `packages/ui/src/tipos.ts`; una
+implementación en `src/web` (Tailwind, exporta `@bitacora/ui/web`) y otra en
+`src/native` (RN, exporta `@bitacora/ui/native`). Sin build: web lo transpila
+Next (`transpilePackages`), mobile lo transpila Metro (ya observa el
+workspace root).
+
+- **`Button`** ✅ — `variante` (primario/secundario/ghost/peligro) ×
+  `tamano` (sm 36 · md 44 · lg 52 web; sm 44 · md 48 · lg 52 mobile — nunca
+  bajo 44). Todo pill. `primario` = `--ds-brand` (+ hover/pressed OKLCH).
+  Caprasimo **solo en `lg`**; sm/md en Figtree bold/semibold. Mobile resuelve
+  la marca vía `ProveedorMarca` (`packages/ui/src/native/marca.tsx`) —
+  mismo `color_primario` que le llega a `ThemeProvider` (ver `App.tsx`).
+  Nombres de familia RN centralizados en `packages/ui/src/native/fuentes.ts`
+  (`FUENTE_NATIVE`); `mobile/src/theme/fuentes.ts` los reexporta como
+  `FUENTE_DS` para no duplicarlos.
+- Siguientes: Input/Textarea/Select/DatePicker → Card → Tag/Badge/
+  StatusBadge → Table (web) → Dialog/Sheet → Empty/Loading/ErrorState → Toast.

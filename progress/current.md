@@ -1,51 +1,50 @@
 # Sesión actual
 
-- **Tarea en curso:** 8 — sistema_diseno (Paso 3 hecho, Paso 4 siguiente)
+- **Tarea en curso:** 8 — sistema_diseno (Paso 4 en curso: Button hecho)
 - **Inicio:** 2026-09-09
 - **Agente:** Claude Sonnet 5 (directo)
 
 ## Decisiones confirmadas por la usuaria
 
-- 2026-09-09: se reemplaza "Faena" por crema/Caprasimo. Íconos: Lucide en
-  ambos. Caprasimo: solo headings + botones lg. Storybook: web + pantalla
-  /dev/ui en mobile.
-- 2026-09-10: coexistencia web = tokens con namespace `ds-`.
+- 2026-09-09: reemplazar Faena por crema/Caprasimo. Lucide en ambos.
+  Caprasimo solo headings+lg. Storybook web + /dev/ui mobile.
+- 2026-09-10: coexistencia web = namespace `ds-`.
+- 2026-09-10: API de Button en español confirmada ("va así").
 
 ## Estado por paso
 
-- Paso 0 — Auditoría: ✅ `docs/design-audit.md`
-- Paso 1 — `packages/design-tokens`: ✅ `28c7f49`
-- Paso 2 — Marca por tenant: ✅ `748611f`
-- Paso 3 — Tipografía: ✅
-  - Web: `layout.tsx` carga Caprasimo (400) + Figtree (400/500/600/700) con
-    `next/font/google` self-hosted, `display: swap`, como `--font-caprasimo`
-    / `--font-figtree`. tokens.css: `--font-ds-heading`/`--font-ds-body` los
-    referencian. `@utility ds-heading` (familia+peso+leading 1.12+tracking
-    -0.015em) y `@utility ds-body` (familia+15px+leading 1.55).
-  - Mobile: `fuentes.ts` + `FUENTE_DS` (Caprasimo_400Regular,
-    Figtree_400/500/600/700). `App.tsx` `useFonts({...fuentesFaena,
-    ...fuentesDS})` (sin salto de fuente). `tema.ds.font` = nombres RN;
-    `ds.headingLeading` / `ds.headingTracking`.
-  - deps mobile: `@expo-google-fonts/caprasimo` `^0.4.0`,
-    `@expo-google-fonts/figtree` `^0.4.1`.
-  - Verificado: Tailwind compila `ds-heading` con `line-height:1.12`,
-    `letter-spacing:-0.015em`, `var(--font-caprasimo)`; `.ttf` presentes;
-    tsc x5 verde; 22 tests; `./verificar.sh` verde. Faena/IBM Plex intacto.
+- Paso 0-3: ✅ (`28c7f49`, `748611f`, `35bfa4f`)
+- Paso 4 — `packages/ui`: 🔶 en curso
+  - Paquete nuevo, source-only (sin build): `src/tipos.ts` (contrato
+    compartido), `src/web/` (Tailwind), `src/native/` (RN).
+  - Web: `transpilePackages` += `@bitacora/ui` en `next.config.ts`.
+  - Mobile: Metro ya observa el workspace root (config existente) — no
+    hizo falta tocarlo.
+  - **Button** hecho en ambas plataformas. Marca del tenant vía
+    `ProveedorMarca`/`useMarca` (`packages/ui/src/native/marca.tsx`) en
+    mobile — `App.tsx` lo envuelve con el mismo `color_primario` que ya le
+    pasa a `ThemeProvider` (para no divergir).
+  - Nombres de fuente RN centralizados en `packages/ui/src/native/fuentes.ts`
+    (`FUENTE_NATIVE`) — `mobile/theme/fuentes.ts` los reexporta como
+    `FUENTE_DS` (antes eran independientes, ahora una sola fuente de verdad).
+  - Verificado: tsc de `ui`/`mobile`/`web` verde; Tailwind CLI compiló las
+    clases reales de `Button.tsx` con los valores correctos (`bg-ds-brand`
+    → `#c67139`, `rounded-ds-pill` → `999px`, `h-11` → `44px`, `ds-heading`
+    con `outline-color: var(--ds-brand)` en focus). `./verificar.sh` verde.
+  - **Pendiente:** no hay render real (ni jsdom ni Expo corriendo) — la
+    verificación es tsc + compilación de clases, no un screenshot. Storybook
+    (Paso 7) va a cubrir esto.
 
 ## Próximo paso
 
-Paso 4 — `packages/ui`: primitivas con API única web/mobile (español).
-Button (primary/secondary/ghost/danger · sm/md/lg · block/loading/icon),
-Input/Textarea/Select/DatePicker, Card, Tag/Badge, StatusBadge (un solo
-mapa dominio→color), Table (web), Dialog/Sheet, EmptyState/LoadingState/
-ErrorState (skeletons, no spinner), Toast. Implementaciones separadas,
-props idénticas. Web `ui.tsx` y mobile `ui/` pasan a re-exports.
-**Ojo:** empezar por Button (define el patrón) y parar a mostrar la API
-antes de hacer las 12 primitivas.
+Seguir Paso 4: Input/Textarea/Select/DatePicker (siguiente commit), después
+Card, Tag/Badge/StatusBadge (unificar los 5 mapas dominio→color del
+audit), Table (solo web), Dialog/Sheet, Empty/Loading/ErrorState (skeletons,
+no spinner), Toast.
 
-## Pendiente / notas
+## Pendiente / notas generales
 
-- Falta `next build` real + verificación visual (Pasos 1-3).
+- Falta `next build` real + verificación visual (Pasos 1-4).
 - eslint web roto (tarea #1) — bloquea regla ESLint del Paso 7.
-- Lucide (decisión): `lucide-react` + `lucide-react-native` se agregan en
-  Paso 4 (los usan los primitivos) o Paso 5.
+- Lucide no agregado todavía — se suma cuando un primitivo lo necesite
+  (Input con icono, Toast, etc.) o al final del Paso 4.

@@ -18,6 +18,7 @@ import {
   Figtree_600SemiBold,
   Figtree_700Bold,
 } from "@expo-google-fonts/figtree";
+import { FUENTE_NATIVE } from "@bitacora/ui/native";
 
 export const NOMBRE_FUENTE = {
   regular: "IBMPlexSans_400Regular",
@@ -29,15 +30,10 @@ export const NOMBRE_FUENTE = {
   monoSemibold: "IBMPlexMono_600SemiBold",
 } as const;
 
-// Sistema nuevo. `heading` (Caprasimo) es peso único — solo para títulos
-// y botones grandes. `body*` (Figtree) para toda la UI.
-export const FUENTE_DS = {
-  heading: "Caprasimo_400Regular",
-  body: "Figtree_400Regular",
-  bodyMedium: "Figtree_500Medium",
-  bodySemiBold: "Figtree_600SemiBold",
-  bodyBold: "Figtree_700Bold",
-} as const;
+// Sistema nuevo — nombres de familia: fuente única de verdad en
+// packages/ui/src/native/fuentes.ts (para que las primitivas de
+// @bitacora/ui usen los mismos nombres sin duplicarlos).
+export const FUENTE_DS = FUENTE_NATIVE;
 
 export const fuentesFaena = {
   IBMPlexSans_400Regular,

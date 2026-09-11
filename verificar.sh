@@ -71,6 +71,7 @@ tsc_check() {
   fi
 }
 tsc_check tokens   packages/design-tokens/tsconfig.json
+tsc_check ui       packages/ui/tsconfig.json
 tsc_check backend  backend/tsconfig.json
 tsc_check shared   packages/shared/tsconfig.json
 tsc_check web      web/tsconfig.json
