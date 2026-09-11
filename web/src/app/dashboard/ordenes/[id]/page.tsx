@@ -238,8 +238,6 @@ export default function DetalleOrdenServicioPage() {
 
   return (
     <DashboardShell usuario={usuario}>
-      {/* Panel propio — mismo motivo que en el listado de OS, ver ese archivo. */}
-      <div className="rounded-[32px] bg-ds-bg p-ds-6 text-ds-text">
       <Link href="/dashboard/ordenes" className="mb-ds-4 inline-flex items-center gap-ds-1 font-ds-body text-ds-small font-medium text-ds-brand hover:underline">
         <ChevronLeft size={16} strokeWidth={2.75} />
         Órdenes de Trabajo/Servicio
@@ -610,7 +608,6 @@ export default function DetalleOrdenServicioPage() {
           {error ? <p className="my-ds-4 font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
         </>
       ) : null}
-      </div>
     </DashboardShell>
   );
 }

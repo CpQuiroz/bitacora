@@ -47,11 +47,24 @@ pantallas. Detalle completo en `docs/design-system.md` §"Bug real:
 contraste roto en dark mode". `DashboardShell` (el seam) sigue sin
 migrar — decisión pendiente de la usuaria si corresponde ahora.
 
+## 2026-09-11: la usuaria pidió "migrá la shell y homologá todo"
+
+Decisión de la usuaria (no turno a turno esta vez, autorización amplia):
+migrar `DashboardShell` y dejar TODAS las secciones con el mismo
+estilo/colores. `DashboardShell.tsx` ✅ migrado (Lucide + tokens ds-,
+detalle en docs/design-system.md). Alcance real: 71 páginas bajo
+`dashboard/**` sin migrar + `web/src/components/ui.tsx` (Faena, API
+inglesa) importado por 87 archivos — cada uno necesita reescritura de
+JSX contra la API nueva, no un alias. Sigo bucket por bucket (mismo
+orden de siempre: Operación → Clientes → Dinero → Recursos → Equipo →
+Informes → Configuración), comiteando y verificando en cada uno, sin
+esperar "sigue" (ya está autorizado). Mobile buckets 4-7 quedan
+aparte — la usuaria habló de "la shell" en el contexto web.
+
 ## Próximo paso
 
-Mostrarle a la usuaria el antes/después (capturas ya tomadas) y
-confirmar si sigue con bucket 4 (Clientes) o quiere migrar
-`DashboardShell` primero.
+Seguir con el resto de "Operación" (rutas, viajes) y luego el resto
+de los grupos de nav en orden.
 
 ## Pendiente / notas generales
 

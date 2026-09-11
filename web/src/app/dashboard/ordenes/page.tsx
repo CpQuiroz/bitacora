@@ -173,12 +173,6 @@ export default function OrdenesServicioPage() {
 
   return (
     <DashboardShell usuario={usuario}>
-      {/* Panel propio: DashboardShell (Faena) todavía cambia con el modo
-          oscuro del navegador/OS; sin este fondo explícito, el título y las
-          etiquetas que no van dentro de un Card heredan ese contraste y
-          quedan casi invisibles (bug real reportado — texto oscuro fijo
-          sobre el fondo navy oscuro de Faena). Ver docs/design-system.md. */}
-      <div className="rounded-[32px] bg-ds-bg p-ds-6 text-ds-text">
       <div className="mb-ds-6 flex flex-wrap items-center justify-between gap-ds-3">
         <p className="ds-heading flex items-center gap-ds-2 text-ds-h2 text-ds-text">
           <ClipboardCheck size={24} strokeWidth={2.75} className="text-ds-brand" />
@@ -313,7 +307,6 @@ export default function OrdenesServicioPage() {
           },
         ]}
       />
-      </div>
 
       <Dialog abierto={modalCobroAbierto} onCerrar={() => setModalCobroAbierto(false)} titulo="Generar Cobro">
         <div className="flex flex-col gap-ds-4">

@@ -324,6 +324,34 @@ Pendiente de decisión de la usuaria: si migrar `DashboardShell` mismo
 depender del dark mode de Faena también — hoy sigue siendo Faena
 (sidebar/header), a propósito, fuera del alcance de este bucket.
 
+**Actualización — la usuaria pidió migrar la shell y homologar todo.**
+
+`DashboardShell.tsx` migrado completo: íconos propios (`./icons`,
+SVG a mano) → `lucide-react` (mismo set que ya usan las páginas
+migradas); clases Faena (`bg-background`, `bg-surface`,
+`text-foreground`, `text-muted`, `border-border`, `bg-brand`,
+`bg-brand-soft`, `bg-danger`, el literal `amber-500` del banner de
+consentimiento) → tokens `ds-` (`bg-ds-bg`, `bg-ds-surface`,
+`text-ds-text`, `border-ds-divider`, `bg-ds-brand`, `hover:bg-ds-brand/
+[0.08]`). Sin tono "danger" propio en la paleta nueva: se reusa
+`accent-700/800` (mismo criterio que `Button` variante `peligro` y
+`Table` tono `peligro`) para impersonación, y `accent2-700` (informativo,
+no alarmante) para el banner de consentimiento — cero literales nuevos.
+
+Con la shell migrada, el panel `bg-ds-bg` que envolvía manualmente el
+contenido de las 3 páginas del bucket 3 quedó redundante (el canvas de
+`DashboardShell` ya es `bg-ds-bg` fijo, no depende más de Faena/dark
+mode) — se retiró de las 3 páginas.
+
+**Alcance real descubierto:** además de las páginas de
+`web/src/app/dashboard/**` (71 archivos sin migrar), hay un shared
+`web/src/components/ui.tsx` ("Faena", API en inglés: `variant`,
+`onChange` nativo) importado por **87 archivos** — no es un simple
+alias, cada página que lo usa tiene que reescribir su JSX contra la
+API nueva (española: `variante`, `onPress`, `onCambio`, `valor`),
+igual que se hizo en los buckets 1-3. Se sigue con el resto en el mismo
+ritmo de un bucket a la vez, comiteando y verificando en cada uno.
+
 ### Resto del orden del prompt
 
 4) Clientes · 5) Catálogo y stock · 6) Configuración · 7) resto — pendientes.

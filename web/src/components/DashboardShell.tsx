@@ -13,36 +13,36 @@ import { apiFetch, API_URL } from "@/lib/api";
 import { limpiarImpersonacion, obtenerImpersonacion } from "@/lib/impersonacion";
 import { asegurarFuenteCargada, fuenteDe } from "@/lib/fuentes";
 import {
-  IconBox,
-  IconBriefcase,
-  IconCalendar,
-  IconChevronRight,
-  IconClipboardCheck,
-  IconCreditCard,
-  IconHelp,
-  IconHome,
-  IconLayers,
-  IconLogOut,
-  IconMapPin,
-  IconMenu,
-  IconMessageShare,
-  IconPaperclip,
-  IconReceipt,
-  IconRoute,
-  IconSettings,
-  IconSparkle,
-  IconTag,
-  IconTruck,
-  IconUser,
-  IconUsers,
-  IconWallet,
-  IconWrench,
-} from "./icons";
+  Box,
+  Briefcase,
+  Calendar,
+  ChevronRight,
+  ClipboardCheck,
+  CreditCard,
+  HelpCircle,
+  Home,
+  Layers,
+  LogOut,
+  MapPin,
+  Menu,
+  Paperclip,
+  Receipt,
+  Route,
+  Settings,
+  Share2,
+  Sparkles,
+  Tag,
+  Truck,
+  User,
+  Users,
+  Wallet,
+  Wrench,
+} from "lucide-react";
 
 type NavLeaf = { href: string; label: string };
 type NavItem =
-  | { href: string; label: string; icon: typeof IconHome; modulo: Modulo | null; modulos?: Modulo[]; children?: undefined }
-  | { label: string; icon: typeof IconHome; children: NavLeaf[]; modulo: Modulo | null; modulos?: Modulo[]; href?: undefined };
+  | { href: string; label: string; icon: typeof Home; modulo: Modulo | null; modulos?: Modulo[]; children?: undefined }
+  | { label: string; icon: typeof Home; children: NavLeaf[]; modulo: Modulo | null; modulos?: Modulo[]; href?: undefined };
 type NavGroup = { titulo: string; items: NavItem[] };
 
 // modulo: null = siempre visible (la página misma decide qué mostrarle a
@@ -54,49 +54,49 @@ type NavGroup = { titulo: string; items: NavItem[] };
 const NAV_GROUPS: NavGroup[] = [
   {
     titulo: "Hoy",
-    items: [{ href: "/dashboard", label: "Visión general", icon: IconHome, modulo: null }],
+    items: [{ href: "/dashboard", label: "Visión general", icon: Home, modulo: null }],
   },
   {
     titulo: "Operación",
     items: [
-      { href: "/dashboard/agenda", label: "Agenda", icon: IconCalendar, modulo: "agenda" },
+      { href: "/dashboard/agenda", label: "Agenda", icon: Calendar, modulo: "agenda" },
       // Una sola lista: trabajos y OS son la misma fila. El filtro
       // "con documento / sin documento" y el alta rápida ("Nueva OS")
       // viven dentro de la página.
-      { href: "/dashboard/ordenes", label: "Órdenes de servicio", icon: IconClipboardCheck, modulo: "ordenes_servicio" },
+      { href: "/dashboard/ordenes", label: "Órdenes de servicio", icon: ClipboardCheck, modulo: "ordenes_servicio" },
       // Módulos apagables, cada uno con su propio gate.
-      { href: "/dashboard/rutas", label: "Rutas", icon: IconRoute, modulo: "rutas" },
-      { href: "/dashboard/viajes", label: "Viajes", icon: IconTruck, modulo: "viajes" },
+      { href: "/dashboard/rutas", label: "Rutas", icon: Route, modulo: "rutas" },
+      { href: "/dashboard/viajes", label: "Viajes", icon: Truck, modulo: "viajes" },
     ],
   },
   {
     titulo: "Clientes",
     items: [
-      { href: "/dashboard/registros/clientes", label: "Clientes", icon: IconMapPin, modulo: "registros" },
+      { href: "/dashboard/registros/clientes", label: "Clientes", icon: MapPin, modulo: "registros" },
       // Un pack es una relación comercial con el cliente, no una pieza de
       // la operación diaria.
-      { href: "/dashboard/agenda/paquetes", label: "Packs de sesiones", icon: IconBox, modulo: "agenda_pro" },
-      { href: "/dashboard/portal-cliente", label: "Portal del cliente", icon: IconMessageShare, modulo: "configuracion" },
+      { href: "/dashboard/agenda/paquetes", label: "Packs de sesiones", icon: Box, modulo: "agenda_pro" },
+      { href: "/dashboard/portal-cliente", label: "Portal del cliente", icon: Share2, modulo: "configuracion" },
     ],
   },
   {
     titulo: "Dinero",
     items: [
-      { href: "/dashboard/financiero/cotizaciones", label: "Cotizaciones", icon: IconTag, modulo: "financiero" },
-      { href: "/dashboard/financiero/cobros", label: "Cobros", icon: IconReceipt, modulo: "financiero" },
-      { href: "/dashboard/gastos", label: "Gastos", icon: IconWallet, modulo: "financiero" },
+      { href: "/dashboard/financiero/cotizaciones", label: "Cotizaciones", icon: Tag, modulo: "financiero" },
+      { href: "/dashboard/financiero/cobros", label: "Cobros", icon: Receipt, modulo: "financiero" },
+      { href: "/dashboard/gastos", label: "Gastos", icon: Wallet, modulo: "financiero" },
       // Remuneraciones deja de ser grupo de primer nivel: se usa una vez
       // al mes. Parámetros de remuneración pasa a Configuración.
-      { href: "/dashboard/remuneraciones", label: "Liquidaciones", icon: IconCreditCard, modulo: "remuneraciones" },
+      { href: "/dashboard/remuneraciones", label: "Liquidaciones", icon: CreditCard, modulo: "remuneraciones" },
     ],
   },
   {
     titulo: "Recursos",
     items: [
-      { href: "/dashboard/registros/equipos", label: "Equipos", icon: IconWrench, modulo: "registros" },
-      { href: "/dashboard/registros/inventario", label: "Inventario", icon: IconLayers, modulo: "registros" },
-      { href: "/dashboard/registros/catalogo", label: "Catálogo", icon: IconTag, modulo: "registros" },
-      { href: "/dashboard/registros/proveedores", label: "Proveedores", icon: IconBriefcase, modulo: "registros" },
+      { href: "/dashboard/registros/equipos", label: "Equipos", icon: Wrench, modulo: "registros" },
+      { href: "/dashboard/registros/inventario", label: "Inventario", icon: Layers, modulo: "registros" },
+      { href: "/dashboard/registros/catalogo", label: "Catálogo", icon: Tag, modulo: "registros" },
+      { href: "/dashboard/registros/proveedores", label: "Proveedores", icon: Briefcase, modulo: "registros" },
     ],
   },
   {
@@ -109,11 +109,11 @@ const NAV_GROUPS: NavGroup[] = [
       {
         href: "/dashboard/personas",
         label: "Personas",
-        icon: IconUsers,
+        icon: Users,
         modulo: null,
         modulos: ["gestion_control", "flota", "remuneraciones"],
       },
-      { href: "/dashboard/flota/documentos-por-vencer", label: "Documentos", icon: IconPaperclip, modulo: "flota" },
+      { href: "/dashboard/flota/documentos-por-vencer", label: "Documentos", icon: Paperclip, modulo: "flota" },
     ],
   },
   {
@@ -121,12 +121,12 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       // "Generar con IA" se fusiona: es una acción sobre los informes,
       // no un lugar aparte (se entra desde el dashboard y desde Informes).
-      { href: "/dashboard/informes", label: "Informes", icon: IconSparkle, modulo: "informes" },
+      { href: "/dashboard/informes", label: "Informes", icon: Sparkles, modulo: "informes" },
     ],
   },
   {
     titulo: "Configuración",
-    items: [{ href: "/dashboard/configuracion/cuenta", label: "Configuración", icon: IconSettings, modulo: null }],
+    items: [{ href: "/dashboard/configuracion/cuenta", label: "Configuración", icon: Settings, modulo: null }],
   },
 ];
 
@@ -358,7 +358,7 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
       <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-2 py-3">
         {gruposVisibles.map((grupo, i) =>
           compacto ? (
-            <div key={grupo.titulo} className={i > 0 ? "mt-2 border-t border-border pt-2" : ""}>
+            <div key={grupo.titulo} className={i > 0 ? "mt-2 border-t border-ds-divider pt-2" : ""}>
               {renderItems(grupo.items, compacto)}
             </div>
           ) : grupo.items.length === 1 ? (
@@ -370,7 +370,11 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
             </div>
           ) : (
             <div key={grupo.titulo}>
-              <p className={`px-3 pb-1 font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-muted ${i > 0 ? "pt-4" : "pt-1"}`}>
+              <p
+                className={`px-3 pb-1 font-ds-body text-[11px] font-semibold uppercase tracking-[0.12em] text-ds-text/60 ${
+                  i > 0 ? "pt-4" : "pt-1"
+                }`}
+              >
                 {grupo.titulo}
               </p>
               {renderItems(grupo.items, compacto)}
@@ -394,20 +398,20 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
                   type="button"
                   onClick={() => alternarGrupo(item.label)}
                   title={compacto ? item.label : undefined}
-                  className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                    activo ? "bg-brand text-brand-foreground" : "text-muted hover:bg-surface-sunken hover:text-foreground"
+                  className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 font-ds-body text-sm font-medium transition-colors ${
+                    activo ? "bg-ds-brand text-ds-brand-foreground" : "text-ds-text/70 hover:bg-ds-text/[0.06] hover:text-ds-text"
                   }`}
                 >
-                  <item.icon className="h-4.5 w-4.5 shrink-0" />
+                  <item.icon size={18} strokeWidth={2.75} className="shrink-0" />
                   {!compacto && (
                     <>
                       <span className="flex-1 text-left">{item.label}</span>
-                      <IconChevronRight className={`h-3.5 w-3.5 shrink-0 transition-transform ${abierto ? "rotate-90" : ""}`} />
+                      <ChevronRight size={14} strokeWidth={2.75} className={`shrink-0 transition-transform ${abierto ? "rotate-90" : ""}`} />
                     </>
                   )}
                 </button>
                 {abierto && (
-                  <div className="ml-4 mt-0.5 flex flex-col gap-0.5 border-l border-border pl-3">
+                  <div className="ml-4 mt-0.5 flex flex-col gap-0.5 border-l border-ds-divider pl-3">
                     {item.children.map((c) => {
                       const activoHijo = pathname.startsWith(c.href);
                       return (
@@ -415,8 +419,8 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
                           key={c.href}
                           href={c.href}
                           onClick={() => setMenuMovilAbierto(false)}
-                          className={`rounded-lg px-3 py-1.5 text-sm transition-colors ${
-                            activoHijo ? "font-medium text-brand" : "text-muted hover:text-brand"
+                          className={`rounded-lg px-3 py-1.5 font-ds-body text-sm transition-colors ${
+                            activoHijo ? "font-medium text-ds-brand" : "text-ds-text/70 hover:text-ds-brand"
                           }`}
                         >
                           {c.label}
@@ -435,11 +439,11 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
               href={item.href}
               onClick={() => setMenuMovilAbierto(false)}
               title={compacto ? item.label : undefined}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                activo ? "bg-brand text-brand-foreground" : "text-muted hover:bg-surface-sunken hover:text-foreground"
+              className={`flex items-center gap-3 rounded-lg px-3 py-2 font-ds-body text-sm font-medium transition-colors ${
+                activo ? "bg-ds-brand text-ds-brand-foreground" : "text-ds-text/70 hover:bg-ds-text/[0.06] hover:text-ds-text"
               }`}
             >
-              <item.icon className="h-4.5 w-4.5 shrink-0" />
+              <item.icon size={18} strokeWidth={2.75} className="shrink-0" />
               {!compacto && item.label}
             </Link>
           );
@@ -451,7 +455,7 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
   return (
     <>
       {impersonando && (
-        <div className="fixed inset-x-0 top-0 z-[60] flex flex-wrap items-center justify-center gap-x-3 gap-y-1 bg-danger px-4 py-2 text-center text-xs font-medium text-white print:hidden">
+        <div className="fixed inset-x-0 top-0 z-[60] flex flex-wrap items-center justify-center gap-x-3 gap-y-1 bg-ds-accent-700 px-4 py-2 text-center font-ds-body text-xs font-medium text-white print:hidden">
           <span>
             Estás viendo Bitácora como <strong>{usuario.nombre}</strong> — sesión de impersonación de Super-Admin (solo debug, acciones
             destructivas bloqueadas).
@@ -466,7 +470,7 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
         </div>
       )}
       {consentimientoPendiente && !impersonando && (
-        <div className="fixed inset-x-0 top-0 z-[60] flex flex-wrap items-center justify-center gap-x-3 gap-y-1 bg-amber-500 px-4 py-2 text-center text-xs font-medium text-white print:hidden">
+        <div className="fixed inset-x-0 top-0 z-[60] flex flex-wrap items-center justify-center gap-x-3 gap-y-1 bg-ds-accent2-700 px-4 py-2 text-center font-ds-body text-xs font-medium text-white print:hidden">
           <span>
             Actualizamos la Política de Privacidad y los Términos.{" "}
             <a href="/privacidad" target="_blank" className="underline">Revisar</a>.
@@ -481,21 +485,21 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
           </button>
         </div>
       )}
-      <div className={`flex min-h-screen bg-background ${impersonando || (consentimientoPendiente && !impersonando) ? "pt-9" : ""}`} style={temaStyle}>
+      <div className={`flex min-h-screen bg-ds-bg ${impersonando || (consentimientoPendiente && !impersonando) ? "pt-9" : ""}`} style={temaStyle}>
       {/* Sidebar de escritorio */}
       <aside
-        className={`sticky top-0 hidden h-screen shrink-0 flex-col border-r border-border bg-surface transition-[width] duration-150 print:hidden sm:flex ${
+        className={`sticky top-0 hidden h-screen shrink-0 flex-col border-r border-ds-divider bg-ds-surface transition-[width] duration-150 print:hidden sm:flex ${
           colapsado ? "w-[68px]" : "w-64"
         }`}
       >
-        <Link href="/dashboard" className="flex min-w-0 items-center gap-2 border-b border-border px-4 py-4">
+        <Link href="/dashboard" className="flex min-w-0 items-center gap-2 border-b border-ds-divider px-4 py-4">
           {usuario.empresaLogoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={usuario.empresaLogoUrl} alt={usuario.empresaNombre} className="h-8 w-8 shrink-0 rounded-lg object-cover" />
           ) : (
             <Logo markClassName="h-8 w-8 shrink-0" />
           )}
-          {!colapsado && <span className="truncate text-sm font-semibold text-foreground">{usuario.empresaNombre}</span>}
+          {!colapsado && <span className="truncate font-ds-body text-sm font-semibold text-ds-text">{usuario.empresaNombre}</span>}
         </Link>
 
         {renderNav(colapsado)}
@@ -503,9 +507,9 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
         <button
           type="button"
           onClick={alternarColapsado}
-          className="flex items-center justify-center gap-2 border-t border-border py-2.5 text-xs font-medium text-muted transition-colors hover:bg-brand-soft hover:text-brand"
+          className="flex items-center justify-center gap-2 border-t border-ds-divider py-2.5 font-ds-body text-xs font-medium text-ds-text/60 transition-colors hover:bg-ds-brand/[0.08] hover:text-ds-brand"
         >
-          <IconChevronRight className={`h-3.5 w-3.5 transition-transform ${colapsado ? "" : "rotate-180"}`} />
+          <ChevronRight size={14} strokeWidth={2.75} className={`transition-transform ${colapsado ? "" : "rotate-180"}`} />
           {!colapsado && "Contraer"}
         </button>
       </aside>
@@ -513,16 +517,16 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
       {/* Drawer móvil */}
       {menuMovilAbierto && (
         <div className="fixed inset-0 z-40 sm:hidden">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setMenuMovilAbierto(false)} />
-          <aside className="absolute inset-y-0 left-0 flex w-72 flex-col bg-surface shadow-xl">
-            <Link href="/dashboard" onClick={() => setMenuMovilAbierto(false)} className="flex items-center gap-2 border-b border-border px-4 py-4">
+          <div className="absolute inset-0 bg-ds-text/40" onClick={() => setMenuMovilAbierto(false)} />
+          <aside className="absolute inset-y-0 left-0 flex w-72 flex-col bg-ds-surface shadow-ds-lg">
+            <Link href="/dashboard" onClick={() => setMenuMovilAbierto(false)} className="flex items-center gap-2 border-b border-ds-divider px-4 py-4">
               {usuario.empresaLogoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={usuario.empresaLogoUrl} alt={usuario.empresaNombre} className="h-8 w-8 rounded-lg object-cover" />
               ) : (
                 <Logo markClassName="h-8 w-8" />
               )}
-              <span className="truncate text-sm font-semibold text-foreground">{usuario.empresaNombre}</span>
+              <span className="truncate font-ds-body text-sm font-semibold text-ds-text">{usuario.empresaNombre}</span>
             </Link>
             {renderNav(false)}
           </aside>
@@ -530,13 +534,13 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-surface px-4 py-3 print:hidden sm:px-6">
+        <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-ds-divider bg-ds-surface px-4 py-3 print:hidden sm:px-6">
           <button
             type="button"
             onClick={() => setMenuMovilAbierto(true)}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-muted hover:bg-brand-soft hover:text-brand sm:hidden"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-ds-text/60 hover:bg-ds-brand/[0.08] hover:text-ds-brand sm:hidden"
           >
-            <IconMenu className="h-5 w-5" />
+            <Menu size={20} strokeWidth={2.75} />
           </button>
 
           <div className="ml-auto">
@@ -547,50 +551,50 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
             <button
               type="button"
               onClick={() => setDropdownAbierto((v) => !v)}
-              className="flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-brand-soft"
+              className="flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-ds-brand/[0.08]"
             >
-              <span className="hidden text-right text-sm sm:block">
-                <span className="block font-medium text-foreground">{usuario.nombre}</span>
-                <span className="block font-mono text-[10px] uppercase tracking-[0.08em] text-muted">{usuario.rol}</span>
+              <span className="hidden text-right font-ds-body text-sm sm:block">
+                <span className="block font-medium text-ds-text">{usuario.nombre}</span>
+                <span className="block text-[10px] uppercase tracking-[0.08em] text-ds-text/60">{usuario.rol}</span>
               </span>
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand text-xs font-semibold text-brand-foreground">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-ds-brand font-ds-body text-xs font-semibold text-ds-brand-foreground">
                 {iniciales(usuario.nombre)}
               </span>
             </button>
 
             {dropdownAbierto && (
-              <div className="absolute right-0 top-full mt-2 w-52 overflow-hidden rounded-lg border border-border bg-surface py-1 shadow-lg">
+              <div className="absolute right-0 top-full mt-2 w-52 overflow-hidden rounded-lg border border-ds-divider bg-ds-surface py-1 shadow-ds-md">
                 <Link
                   href="/dashboard/perfil"
                   onClick={() => setDropdownAbierto(false)}
-                  className="flex items-center gap-2 px-4 py-2 text-sm text-foreground hover:bg-brand-soft hover:text-brand"
+                  className="flex items-center gap-2 px-4 py-2 font-ds-body text-sm text-ds-text hover:bg-ds-brand/[0.08] hover:text-ds-brand"
                 >
-                  <IconUser className="h-4 w-4" />
+                  <User size={16} strokeWidth={2.75} />
                   Perfil
                 </Link>
                 <Link
                   href="/dashboard/configuracion/cuenta"
                   onClick={() => setDropdownAbierto(false)}
-                  className="flex items-center gap-2 px-4 py-2 text-sm text-foreground hover:bg-brand-soft hover:text-brand"
+                  className="flex items-center gap-2 px-4 py-2 font-ds-body text-sm text-ds-text hover:bg-ds-brand/[0.08] hover:text-ds-brand"
                 >
-                  <IconSettings className="h-4 w-4" />
+                  <Settings size={16} strokeWidth={2.75} />
                   Configuración
                 </Link>
                 <Link
                   href="/dashboard/ayuda"
                   onClick={() => setDropdownAbierto(false)}
-                  className="flex items-center gap-2 px-4 py-2 text-sm text-foreground hover:bg-brand-soft hover:text-brand"
+                  className="flex items-center gap-2 px-4 py-2 font-ds-body text-sm text-ds-text hover:bg-ds-brand/[0.08] hover:text-ds-brand"
                 >
-                  <IconHelp className="h-4 w-4" />
+                  <HelpCircle size={16} strokeWidth={2.75} />
                   Ayuda
                 </Link>
-                <div className="my-1 border-t border-border" />
+                <div className="my-1 border-t border-ds-divider" />
                 <button
                   type="button"
                   onClick={cerrarSesion}
-                  className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-danger hover:bg-danger-soft"
+                  className="flex w-full items-center gap-2 px-4 py-2 text-left font-ds-body text-sm text-ds-accent-700 hover:bg-ds-accent-100"
                 >
-                  <IconLogOut className="h-4 w-4" />
+                  <LogOut size={16} strokeWidth={2.75} />
                   Cerrar sesión
                 </button>
               </div>
