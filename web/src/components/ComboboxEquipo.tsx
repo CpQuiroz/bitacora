@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { Equipo } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
-import { Button, ErrorText, Input, Label, Select } from "./ui";
+import { Button, Input, Select } from "@bitacora/ui/web";
 import { Combobox } from "./Combobox";
 
 const CATEGORIAS = ["Vehículo", "Maquinaria", "Herramienta", "Otro"];
@@ -12,6 +12,8 @@ const CATEGORIAS = ["Vehículo", "Maquinaria", "Herramienta", "Otro"];
 // existe, se crea en la base ahí mismo (nombre + categoría, asociado al
 // cliente indicado) y queda seleccionado. Mismo criterio que
 // ComboboxCliente.
+//
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export function ComboboxEquipo({
   value,
   onChange,
@@ -73,27 +75,15 @@ export function ComboboxEquipo({
 
   if (creando) {
     return (
-      <div className="flex flex-col gap-2 rounded-lg border border-border p-3">
-        <div>
-          <Label>Nombre del equipo</Label>
-          <Input type="text" value={nombre} onChange={(e) => setNombre(e.target.value)} />
-        </div>
-        <div>
-          <Label>Categoría</Label>
-          <Select value={categoria} onChange={(e) => setCategoria(e.target.value)}>
-            {CATEGORIAS.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </Select>
-        </div>
-        {error && <ErrorText>{error}</ErrorText>}
-        <div className="flex gap-2">
-          <Button type="button" onClick={guardar} disabled={guardando}>
-            {guardando ? "Guardando…" : "Crear equipo"}
+      <div className="flex flex-col gap-ds-2 rounded-ds-md border border-ds-divider p-ds-3">
+        <Input etiqueta="Nombre del equipo" valor={nombre} onCambio={setNombre} />
+        <Select etiqueta="Categoría" valor={categoria} onCambio={setCategoria} opciones={CATEGORIAS.map((c) => ({ valor: c, etiqueta: c }))} />
+        {error ? <p className="font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
+        <div className="flex gap-ds-2">
+          <Button onPress={guardar} cargando={guardando}>
+            Crear equipo
           </Button>
-          <Button type="button" variant="ghost" onClick={() => setCreando(false)}>
+          <Button variante="ghost" onPress={() => setCreando(false)}>
             Cancelar
           </Button>
         </div>

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { Cliente } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
-import { Button, ErrorText, Input, Label } from "./ui";
+import { Button, Input } from "@bitacora/ui/web";
 import { Combobox } from "./Combobox";
 
 // Selector de Cliente con búsqueda + creación inline real: si no
@@ -11,6 +11,8 @@ import { Combobox } from "./Combobox";
 // diferencia de ComboboxResponsable, donde "crear" dispara una
 // invitación y el campo se deja como estaba (ver ese componente para
 // el porqué).
+//
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export function ComboboxCliente({
   value,
   onChange,
@@ -84,31 +86,19 @@ export function ComboboxCliente({
 
   if (creando) {
     return (
-      <div className="flex flex-col gap-2 rounded-lg border border-border p-3">
-        <div>
-          <Label>Nombre</Label>
-          <Input type="text" value={nombre} onChange={(e) => setNombre(e.target.value)} />
+      <div className="flex flex-col gap-ds-2 rounded-ds-md border border-ds-divider p-ds-3">
+        <Input etiqueta="Nombre" valor={nombre} onCambio={setNombre} />
+        <Input etiqueta="Dirección" valor={direccion} onCambio={setDireccion} />
+        <div className="grid grid-cols-2 gap-ds-2">
+          <Input etiqueta="Teléfono (opcional)" valor={telefono} onCambio={setTelefono} />
+          <Input etiqueta="Correo (opcional)" tipo="email" valor={correo} onCambio={setCorreo} />
         </div>
-        <div>
-          <Label>Dirección</Label>
-          <Input type="text" value={direccion} onChange={(e) => setDireccion(e.target.value)} />
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <Label>Teléfono (opcional)</Label>
-            <Input type="text" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
-          </div>
-          <div>
-            <Label>Correo (opcional)</Label>
-            <Input type="email" value={correo} onChange={(e) => setCorreo(e.target.value)} />
-          </div>
-        </div>
-        {error && <ErrorText>{error}</ErrorText>}
-        <div className="flex gap-2">
-          <Button type="button" onClick={guardar} disabled={guardando}>
-            {guardando ? "Guardando…" : "Crear cliente"}
+        {error ? <p className="font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
+        <div className="flex gap-ds-2">
+          <Button onPress={guardar} cargando={guardando}>
+            Crear cliente
           </Button>
-          <Button type="button" variant="ghost" onClick={cancelar}>
+          <Button variante="ghost" onPress={cancelar}>
             Cancelar
           </Button>
         </div>

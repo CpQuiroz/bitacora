@@ -3,16 +3,16 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { ChevronLeft, Settings } from "lucide-react";
 import type { EstadoFactura, Factura, MedioPago } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText, Textarea } from "@/components/ui";
+import { Button, Card, Input, Select, StatusBadge, Textarea, type TonoEstado } from "@bitacora/ui/web";
 import { InputMonto } from "@/components/InputMonto";
 import { Modal } from "@/components/Modal";
 import { PanelAcciones } from "@/components/PanelAcciones";
-import { IconChevronLeft, IconSettings } from "@/components/icons";
 
 type ClienteInfo = { id: string; nombre: string; correo: string | null; telefono: string | null };
 type CobroDetalle = Factura & { cliente_info: ClienteInfo | null };
@@ -26,8 +26,11 @@ const MEDIOS_ETIQUETA: Record<MedioPago, string> = {
   efectivo: "Efectivo",
   otro: "Otro",
 };
+// "pendiente" no está en MAPA_ESTADO_TONO (ambiguo a propósito).
+const TONO_FORZADO: Partial<Record<EstadoFactura, TonoEstado>> = { pendiente: "en_progreso" };
 const HOY = () => new Date().toISOString().slice(0, 10);
 
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export default function CobroDetallePage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -142,7 +145,7 @@ export default function CobroDetallePage() {
   if (error) {
     return (
       <DashboardShell usuario={usuario}>
-        <ErrorText>{error}</ErrorText>
+        <p className="font-ds-body text-ds-small text-ds-accent-700">{error}</p>
       </DashboardShell>
     );
   }
@@ -150,81 +153,78 @@ export default function CobroDetallePage() {
 
   return (
     <DashboardShell usuario={usuario}>
-      <Link href="/dashboard/financiero/cobros" className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-brand hover:underline">
-        <IconChevronLeft className="h-4 w-4" />
+      <Link href="/dashboard/financiero/cobros" className="mb-ds-4 inline-flex items-center gap-ds-1 font-ds-body text-ds-small font-medium text-ds-brand hover:underline">
+        <ChevronLeft size={16} strokeWidth={2.75} />
         Cobros
       </Link>
 
-      <PageHeader
-        title={formatMoneda(cobro.monto, usuario.moneda)}
-        subtitle={cobro.cliente_info?.nombre ?? cobro.cliente}
-        action={
-          <div className="flex items-center gap-2">
-            <Badge value={cobro.estado} />
-            <Button type="button" variant="outline" onClick={() => setPanelAbierto(true)}>
-              <IconSettings className="h-4 w-4" />
-              Acciones
-            </Button>
-          </div>
-        }
-      />
-
-      {aviso && (
-        <div className="my-4">
-          <SuccessText>{aviso}</SuccessText>
+      <div className="flex flex-wrap items-center justify-between gap-ds-3">
+        <div>
+          <p className="ds-heading text-ds-h2 text-ds-text">{formatMoneda(cobro.monto, usuario.moneda)}</p>
+          <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">{cobro.cliente_info?.nombre ?? cobro.cliente}</p>
         </div>
-      )}
+        <div className="flex items-center gap-ds-2">
+          <StatusBadge estado={cobro.estado} tonoForzado={TONO_FORZADO[cobro.estado]} />
+          <Button variante="secundario" iconoIzq={<Settings size={16} strokeWidth={2.75} />} onPress={() => setPanelAbierto(true)}>
+            Acciones
+          </Button>
+        </div>
+      </div>
 
-      <div className="my-6 grid gap-6 lg:grid-cols-2">
+      {aviso ? <p className="my-ds-4 font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}
+
+      <div className="my-ds-6 grid gap-ds-6 lg:grid-cols-2">
         <Card>
-          <h2 className="mb-4 text-sm font-semibold text-foreground">Cliente</h2>
-          <div className="flex flex-col gap-1 text-sm">
-            <p className="font-medium text-foreground">{cobro.cliente_info?.nombre ?? cobro.cliente}</p>
-            {cobro.cliente_info?.correo && <p className="text-muted">{cobro.cliente_info.correo}</p>}
-            {cobro.cliente_info?.telefono && <p className="text-muted">{cobro.cliente_info.telefono}</p>}
+          <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Cliente</p>
+          <div className="flex flex-col gap-ds-1 font-ds-body text-ds-small">
+            <p className="font-medium text-ds-text">{cobro.cliente_info?.nombre ?? cobro.cliente}</p>
+            {cobro.cliente_info?.correo && <p className="text-ds-text/70">{cobro.cliente_info.correo}</p>}
+            {cobro.cliente_info?.telefono && <p className="text-ds-text/70">{cobro.cliente_info.telefono}</p>}
           </div>
         </Card>
 
         <Card>
-          <h2 className="mb-4 text-sm font-semibold text-foreground">Fechas y medio de pago</h2>
-          <div className="grid grid-cols-2 gap-3 text-sm">
+          <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Fechas y medio de pago</p>
+          <div className="grid grid-cols-2 gap-ds-3 font-ds-body text-ds-small">
             <div>
-              <Label>Emisión</Label>
-              <p className="text-foreground">{cobro.fecha_emision}</p>
+              <p className="text-ds-caption text-ds-text/60">Emisión</p>
+              <p className="text-ds-text">{cobro.fecha_emision}</p>
             </div>
             <div>
-              <Label>Vencimiento</Label>
-              <p className="text-foreground">{cobro.fecha_vencimiento}</p>
+              <p className="text-ds-caption text-ds-text/60">Vencimiento</p>
+              <p className="text-ds-text">{cobro.fecha_vencimiento}</p>
             </div>
             <div>
-              <Label>Medio de pago</Label>
-              <p className="text-foreground">{cobro.medio_pago ? MEDIOS_ETIQUETA[cobro.medio_pago] : "—"}</p>
+              <p className="text-ds-caption text-ds-text/60">Medio de pago</p>
+              <p className="text-ds-text">{cobro.medio_pago ? MEDIOS_ETIQUETA[cobro.medio_pago] : "—"}</p>
             </div>
             <div>
-              <Label>Fecha de pago</Label>
-              <p className="text-foreground">{cobro.fecha_pago ?? "—"}</p>
+              <p className="text-ds-caption text-ds-text/60">Fecha de pago</p>
+              <p className="text-ds-text">{cobro.fecha_pago ?? "—"}</p>
             </div>
           </div>
         </Card>
 
         {cobro.estado === "pagada" && (cobro.valor_recibido != null || cobro.observaciones_pago) && (
-          <Card className="lg:col-span-2">
-            <h2 className="mb-4 text-sm font-semibold text-foreground">Registro de pago</h2>
-            <div className="grid gap-3 text-sm sm:grid-cols-2">
-              {cobro.valor_recibido != null && (
-                <div>
-                  <Label>Valor recibido</Label>
-                  <p className="text-foreground">{formatMoneda(cobro.valor_recibido, usuario.moneda)}</p>
-                </div>
-              )}
-              {cobro.observaciones_pago && (
-                <div className="sm:col-span-2">
-                  <Label>Observaciones</Label>
-                  <p className="text-foreground">{cobro.observaciones_pago}</p>
-                </div>
-              )}
-            </div>
-          </Card>
+          <div className="lg:col-span-2">
+            <Card>
+              <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Registro de pago</p>
+              <div className="grid gap-ds-3 font-ds-body text-ds-small sm:grid-cols-2">
+                {cobro.valor_recibido != null && (
+                  <div>
+                    <p className="text-ds-caption text-ds-text/60">Valor recibido</p>
+                    <p className="text-ds-text">{formatMoneda(cobro.valor_recibido, usuario.moneda)}</p>
+                  </div>
+                )}
+                {cobro.observaciones_pago && (
+                  <div className="sm:col-span-2">
+                    <p className="text-ds-caption text-ds-text/60">Observaciones</p>
+                    <p className="text-ds-text">{cobro.observaciones_pago}</p>
+                  </div>
+                )}
+              </div>
+            </Card>
+          </div>
         )}
       </div>
 
@@ -234,16 +234,10 @@ export default function CobroDetallePage() {
         titulo={formatMoneda(cobro.monto, usuario.moneda)}
         subtitulo={cobro.cliente_info?.nombre ?? cobro.cliente}
         seccionEstado={
-          <div className="flex flex-col gap-3">
-            <Select value={cobro.estado} onChange={(e) => cambiarEstado(e.target.value as EstadoFactura)}>
-              {ESTADOS.map((e) => (
-                <option key={e} value={e}>
-                  {e}
-                </option>
-              ))}
-            </Select>
+          <div className="flex flex-col gap-ds-3">
+            <Select valor={cobro.estado} onCambio={(v) => cambiarEstado(v as EstadoFactura)} opciones={ESTADOS.map((e) => ({ valor: e, etiqueta: e }))} />
             {cobro.estado !== "pagada" && (
-              <Button type="button" variant="outline" onClick={abrirRegistrarPago}>
+              <Button variante="secundario" onPress={abrirRegistrarPago}>
                 Marcar como Pagada
               </Button>
             )}
@@ -251,66 +245,67 @@ export default function CobroDetallePage() {
         }
         seccionOtras={
           cobro.estado !== "pagada" ? (
-            <Button type="button" variant="outline" onClick={abrirRegistrarPago}>
+            <Button variante="secundario" onPress={abrirRegistrarPago}>
               Registrar Pago
             </Button>
           ) : (
-            <p className="text-sm text-muted">Este cobro ya está pagado.</p>
+            <p className="font-ds-body text-ds-small text-ds-text/70">Este cobro ya está pagado.</p>
           )
         }
         seccionPeligro={
           cobro.estado !== "pagada" ? (
-            <div className="flex flex-col gap-2">
-              <Button type="button" variant="danger" onClick={onEliminar} disabled={eliminando}>
-                {eliminando ? "Eliminando…" : "Eliminar cobro"}
+            <div className="flex flex-col gap-ds-2">
+              <Button variante="peligro" onPress={onEliminar} cargando={eliminando}>
+                Eliminar cobro
               </Button>
-              {errorEliminar && <ErrorText>{errorEliminar}</ErrorText>}
+              {errorEliminar ? <p className="font-ds-body text-ds-small text-ds-accent-700">{errorEliminar}</p> : null}
             </div>
           ) : (
-            <p className="text-sm text-muted">Ya fue pagado — no se puede eliminar.</p>
+            <p className="font-ds-body text-ds-small text-ds-text/70">Ya fue pagado — no se puede eliminar.</p>
           )
         }
       />
 
       <Modal open={pagoAbierto} onClose={() => setPagoAbierto(false)} title="Registrar Pago">
-        <form onSubmit={onRegistrarPago} className="flex flex-col gap-4">
+        <form onSubmit={onRegistrarPago} className="flex flex-col gap-ds-4">
           <div>
-            <Label>Valor original del cobro</Label>
-            <p className="text-sm text-foreground">{formatMoneda(cobro.monto, usuario.moneda)}</p>
+            <p className="font-ds-body text-ds-caption font-medium text-ds-text/70">Valor original del cobro</p>
+            <p className="font-ds-body text-ds-small text-ds-text">{formatMoneda(cobro.monto, usuario.moneda)}</p>
           </div>
-          <div>
-            <Label>Fecha del pago</Label>
-            <Input type="date" required value={fechaPago} onChange={(e) => setFechaPago(e.target.value)} />
-          </div>
-          <div>
-            <Label>Valor recibido</Label>
+          <FechaCampo etiqueta="Fecha del pago" requerido valor={fechaPago} onCambio={setFechaPago} />
+          <div className="flex flex-col gap-ds-1">
+            <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Valor recibido</label>
             <InputMonto required value={valorRecibido} onChange={setValorRecibido} moneda={usuario.moneda} />
           </div>
-          <div>
-            <Label>Forma de pago</Label>
-            <Select value={medioPago} onChange={(e) => setMedioPago(e.target.value as MedioPago)}>
-              {Object.entries(MEDIOS_ETIQUETA).map(([valor, etiqueta]) => (
-                <option key={valor} value={valor}>
-                  {etiqueta}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <div>
-            <Label>Observaciones (opcional)</Label>
-            <Textarea rows={2} value={observacionesPago} onChange={(e) => setObservacionesPago(e.target.value)} />
-          </div>
-          {errorPago && <ErrorText>{errorPago}</ErrorText>}
-          <div className="flex gap-2">
-            <Button type="submit" disabled={guardandoPago}>
-              {guardandoPago ? "Guardando…" : "Registrar pago"}
+          <Select etiqueta="Forma de pago" valor={medioPago} onCambio={(v) => setMedioPago(v as MedioPago)} opciones={Object.entries(MEDIOS_ETIQUETA).map(([valor, etiqueta]) => ({ valor, etiqueta }))} />
+          <Textarea etiqueta="Observaciones (opcional)" filas={2} valor={observacionesPago} onCambio={setObservacionesPago} />
+          {errorPago ? <p className="font-ds-body text-ds-small text-ds-accent-700">{errorPago}</p> : null}
+          <div className="flex gap-ds-2">
+            <Button tipo="submit" cargando={guardandoPago}>
+              Registrar pago
             </Button>
-            <Button type="button" variant="ghost" onClick={() => setPagoAbierto(false)}>
+            <Button variante="ghost" onPress={() => setPagoAbierto(false)}>
               Cancelar
             </Button>
           </div>
         </form>
       </Modal>
     </DashboardShell>
+  );
+}
+
+// Input nativo type="date" — ver el mismo helper en rutas/nueva/page.tsx.
+function FechaCampo({ etiqueta, valor, onCambio, requerido }: { etiqueta: string; valor: string; onCambio: (v: string) => void; requerido?: boolean }) {
+  return (
+    <div className="flex flex-col gap-ds-1">
+      <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">{etiqueta}</label>
+      <input
+        type="date"
+        required={requerido}
+        value={valor}
+        onChange={(e) => onCambio(e.target.value)}
+        className="h-11 w-full rounded-ds-md border border-ds-divider bg-ds-surface px-ds-3 font-ds-body text-ds-body text-ds-text transition-colors hover:border-ds-text/30 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ds-brand)]"
+      />
+    </div>
   );
 }
