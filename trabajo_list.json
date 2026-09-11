@@ -186,7 +186,7 @@
         "tsc backend + mobile limpio, ./verificar.sh verde (12 literales baseline, sin nuevos)",
         "APK nuevo (1.9.8) generado para probar en el teléfono"
       ],
-      "status": "in_progress"
+      "status": "done"
     }
   ]
 }

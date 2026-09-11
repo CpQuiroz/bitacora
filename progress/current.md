@@ -1,8 +1,10 @@
 # Sesión actual
 
-- **Tarea en curso:** 13 — galeria_y_eliminar_fotos_mobile (ver detalle abajo)
 - **Cerradas esta sesión:** 9 — edicion_viajes_y_fotos_os, 10 — fotos_mantencion_equipo,
-  11 — fix_sync_cola_apilamiento (insuficiente, ver tarea 12), 12 — fix_sync_reintentar_bloqueado
+  11 — fix_sync_cola_apilamiento (insuficiente, ver tarea 12), 12 — fix_sync_reintentar_bloqueado,
+  13 — galeria_y_eliminar_fotos_mobile
+- **En curso ahora:** tarea 5 (e2e_mantencion_pdf_prod) — esperando que la usuaria
+  inicie sesión en prod en el navegador (no toco credenciales); ver política.
 - **Pausada:** 8 — sistema_diseno (pending, no abandonada — retomar cuando la
   usuaria lo pida; ver `docs/design-system.md` §"Seams que quedan fuera de
   este pedido" para el estado exacto donde quedó)
@@ -336,4 +338,18 @@ eliminar en absoluto.
 — usé `t.colores.overlay`/`t.colores.brandForeground` (tokens ya
 existentes) para la etiqueta sobre la miniatura, no hex/rgba nuevos.
 
-APK 1.9.8 en build local para probar en el teléfono.
+APK 1.9.8 verificado (`strings` → URLs de prod, sin localhost/dev),
+copiado a `~/Desktop/bitacora-builds/bitacora-1.9.8.apk`. `.env`
+restaurado a dev, `package.json` revertido (prebuild lo pisa).
+
+## 2026-09-11: pedido "aplica el paso 5" (E2E prod) — bloqueado en login
+
+Al ir a ejecutar la tarea 5 (E2E en prod real), no había ninguna sesión
+iniciada en el navegador (`app.transportesitineris.cl` mostró la
+landing, no el dashboard). No puedo escribir la contraseña yo mismo
+(regla dura del harness, no la salteo aunque se autorice). Pregunté a
+la usuaria cómo seguir — eligió "inicia sesión vos en este navegador":
+ella entra con su usuario/contraseña en la pestaña que dejé abierta y
+después yo sigo operando la app (crear mantención, cerrar OS, generar
+PDFs) sin tocar credenciales. Queda pendiente que ella inicie sesión
+para retomar.
