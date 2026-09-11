@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useLayoutEffect, useState } from "react";
 import { Alert, Image, Pressable, ScrollView, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import * as ImagePicker from "expo-image-picker";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { ItemChecklistMantencion } from "@bitacora/shared";
 import { useTema } from "../../theme";
 import { Button, ErrorState, LoadingScreen, Text } from "../../components/ui";
-import { comprimirImagen } from "../../lib/imagen";
+import { elegirFotos } from "../../lib/imagen";
 import type { MasStackParamList } from "../../shell/navigation/types";
 import {
   eliminarFotoDeRegistro,
@@ -66,14 +65,10 @@ export function MantencionDetalleScreen({ route, navigation }: NativeStackScreen
   }, [cargar]);
 
   async function agregarFoto() {
-    const permiso = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permiso.granted) return Alert.alert("Permiso necesario", "Necesitamos la cámara para la foto.");
-    const r = await ImagePicker.launchCameraAsync({ quality: 0.8 });
-    if (r.canceled) return;
-    const a = r.assets[0];
-    const uri = await comprimirImagen(a.uri, a.width);
+    const [elegida] = await elegirFotos();
+    if (!elegida) return;
     setSubiendo(true);
-    const res = await subirFotoARegistro(equipoId, registroId, { uri, name: "mantencion.jpg", type: "image/jpeg" }, null);
+    const res = await subirFotoARegistro(equipoId, registroId, elegida, null);
     setSubiendo(false);
     if (!res.ok) {
       Alert.alert("No se pudo subir la foto", res.error);

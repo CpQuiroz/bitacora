@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
 import { Alert, Image, Linking, Pressable, ScrollView, View } from "react-native";
-import * as ImagePicker from "expo-image-picker";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
@@ -11,8 +10,8 @@ import { Badge, Button, Card, ErrorState, LoadingScreen, Text } from "../../comp
 import { OfflineBanner } from "../../components/OfflineBanner";
 import { useRed } from "../../services/sync/NetworkProvider";
 import { useAuth } from "../auth/AuthContext";
-import { comprimirImagen } from "../../lib/imagen";
-import { aprobarViaje, encolarFotoViaje, obtenerViaje, rechazarViaje, type ViajeDetalle } from "../../services/viajes";
+import { elegirFotos } from "../../lib/imagen";
+import { aprobarViaje, eliminarFotoViaje, encolarFotoViaje, obtenerViaje, rechazarViaje, type ViajeDetalle } from "../../services/viajes";
 import type { ViajesStackParamList } from "../../shell/navigation/types";
 
 const NOTA_ESTADO: Record<EstadoViaje, string> = {
@@ -45,6 +44,7 @@ export function ViajeDetalleScreen({ route, navigation }: NativeStackScreenProps
   const [error, setError] = useState<string | null>(null);
   const [guardadoEn, setGuardadoEn] = useState<number | undefined>();
   const [ocupado, setOcupado] = useState(false);
+  const [eliminandoFotoId, setEliminandoFotoId] = useState<string | null>(null);
 
   const cargar = useCallback(async () => {
     setError(null);
@@ -68,13 +68,27 @@ export function ViajeDetalleScreen({ route, navigation }: NativeStackScreenProps
   }, [fotosEnCola.length, cargar]);
 
   async function agregarFoto() {
-    const permiso = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permiso.granted) return Alert.alert("Permiso necesario", "Necesitamos la cámara para la foto del viaje.");
-    const r = await ImagePicker.launchCameraAsync({ quality: 0.8 });
-    if (r.canceled) return;
-    const a = r.assets[0];
-    const uri = await comprimirImagen(a.uri, a.width);
-    await encolarFotoViaje(viajeId, { uri, name: a.fileName ?? `viaje-${Date.now()}.jpg`, type: a.mimeType ?? "image/jpeg" });
+    const [elegida] = await elegirFotos({ titulo: "Foto del viaje" });
+    if (!elegida) return;
+    await encolarFotoViaje(viajeId, elegida);
+  }
+
+  function confirmarEliminarFoto(fotoId: string) {
+    Alert.alert("Eliminar foto", "¿Eliminar esta foto del viaje?", [
+      { text: "Cancelar", style: "cancel" },
+      {
+        text: "Eliminar",
+        style: "destructive",
+        onPress: async () => {
+          if (!enLinea) return Alert.alert("Sin conexión", "Necesitas conexión para eliminar una foto.");
+          setEliminandoFotoId(fotoId);
+          const res = await eliminarFotoViaje(viajeId, fotoId);
+          setEliminandoFotoId(null);
+          if (!res.ok) return Alert.alert("No se pudo eliminar", res.error);
+          void cargar();
+        },
+      },
+    ]);
   }
 
   async function aprobar() {
@@ -205,7 +219,30 @@ export function ViajeDetalleScreen({ route, navigation }: NativeStackScreenProps
               </View>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: t.espacio(2) }}>
                 {subidas.map((f) => (
-                  <Image key={f.id} source={{ uri: f.url }} style={{ width: 78, height: 78, borderRadius: t.radio.sm, borderWidth: 1, borderColor: t.colores.border }} />
+                  <View key={f.id} style={{ width: 78, height: 78 }}>
+                    <Image source={{ uri: f.url }} style={{ width: 78, height: 78, borderRadius: t.radio.sm, borderWidth: 1, borderColor: t.colores.border }} />
+                    {f.id !== "guia" && viaje.estado !== "facturado" ? (
+                      <Pressable
+                        onPress={() => confirmarEliminarFoto(f.id)}
+                        disabled={eliminandoFotoId === f.id}
+                        hitSlop={8}
+                        style={{
+                          position: "absolute",
+                          right: -6,
+                          top: -6,
+                          width: 22,
+                          height: 22,
+                          borderRadius: 11,
+                          backgroundColor: t.colores.danger,
+                          alignItems: "center",
+                          justifyContent: "center",
+                          opacity: eliminandoFotoId === f.id ? 0.6 : 1,
+                        }}
+                      >
+                        <Ionicons name="close" size={13} color={t.colores.brandForeground} />
+                      </Pressable>
+                    ) : null}
+                  </View>
                 ))}
                 {fotosEnCola.map((a) => (
                   <View key={a.id} style={{ width: 78, height: 78, borderRadius: t.radio.sm, backgroundColor: t.colores.surfaceAlt, borderWidth: 1, borderColor: t.colores.border, alignItems: "center", justifyContent: "center" }}>

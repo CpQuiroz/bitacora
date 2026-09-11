@@ -12,6 +12,7 @@ import { useRed } from "../../services/sync/NetworkProvider";
 import { useAuth } from "../auth/AuthContext";
 import { ubicacionActual } from "../../lib/geo";
 import {
+  eliminarFoto,
   encolarCheckin,
   encolarDatos,
   encolarFinalizar,
@@ -324,6 +325,14 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
           editable={!finalizada}
           onAgregar={(archivo, categoria) => void encolarFoto(trabajoId, archivo, categoria)}
           onQuitarPendiente={descartar}
+          onEliminar={async (fotoId) => {
+            const res = await eliminarFoto(trabajoId, fotoId);
+            if (!res.ok) {
+              Alert.alert("No se pudo eliminar", res.error);
+              return;
+            }
+            void cargar();
+          }}
         />
 
         <CierreFirma

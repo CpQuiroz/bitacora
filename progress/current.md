@@ -1,9 +1,8 @@
 # Sesión actual
 
+- **Tarea en curso:** 13 — galeria_y_eliminar_fotos_mobile (ver detalle abajo)
 - **Cerradas esta sesión:** 9 — edicion_viajes_y_fotos_os, 10 — fotos_mantencion_equipo,
   11 — fix_sync_cola_apilamiento (insuficiente, ver tarea 12), 12 — fix_sync_reintentar_bloqueado
-- **Sin tarea in_progress** — todo lo abierto de esta sesión quedó cerrado; ver
-  "Pendiente / notas generales" para el backlog general (#1-#6, #8).
 - **Pausada:** 8 — sistema_diseno (pending, no abandonada — retomar cuando la
   usuaria lo pida; ver `docs/design-system.md` §"Seams que quedan fuera de
   este pedido" para el estado exacto donde quedó)
@@ -292,3 +291,49 @@ rastro de `localhost`/dev. Copiado a
 `~/Desktop/bitacora-builds/bitacora-1.9.7.apk`. `.env` restaurado a
 dev y `mobile/package.json` revertido (prebuild le cambia los scripts
 `android`/`ios` — reversión ya conocida, ver memoria).
+
+## 2026-09-11: tarea 13 — galería + eliminar foto en toda la app
+
+Pedido de la usuaria tras probar Mantención: solo se podía sacar foto
+con cámara (no elegir de galería) y no había forma de ver/eliminar una
+que saliera borrosa o fuera la equivocada. Pidió extender a "todas las
+opciones" de la app.
+
+**Auditoría** (`grep ImagePicker` en mobile/src): 6 pantallas suben
+fotos. Solo `trabajos/FotosSection.tsx` (OS) ya tenía cámara+galería
+(patrón de referencia, con `Alert.alert` de 3 opciones). Las otras 5
+(`ChecklistMantencionScreen`, `MantencionDetalleScreen`,
+`ViajeFormScreen`, `ViajeDetalleScreen`, `NuevoGastoScreen`) eran solo
+cámara. De eliminar: `MantencionDetalleScreen` y las fotos pendientes
+de OS ya tenían alguna forma; `ChecklistMantencionScreen` (antes de
+crear) solo mostraba un chip de texto sin miniatura real; `Viajes`
+(fotos ya subidas) y OS (fotos ya subidas) no tenían ningún botón de
+eliminar en absoluto.
+
+**Construido**:
+- `mobile/src/lib/imagen.ts`: helper único `elegirFotos()` (Alert
+  "Tomar foto / Elegir de galería / Cancelar") — reemplaza las 5
+  llamadas directas a `ImagePicker.launchCameraAsync` que solo tenían
+  cámara.
+- `ChecklistMantencionScreen`: miniaturas reales (antes texto) +
+  eliminar por foto, con la etiqueta del ítem superpuesta.
+- `MantencionDetalleScreen`, `ViajeFormScreen`, `NuevoGastoScreen`:
+  galería agregada; `ViajeFormScreen`/`NuevoGastoScreen` ganaron un
+  botón "Quitar" explícito (antes solo "cambiar/volver a tomar").
+- `ViajeDetalleScreen`: eliminar una foto YA SUBIDA del viaje — no
+  existía el endpoint. Nuevo `DELETE /api/mis-viajes/:id/fotos/:fotoId`
+  en `misViajes.ts` (mismo patrón que el ya existente en `viajes.ts`
+  para admin/web, con el guard "solo tus propios viajes" para
+  colaborador) + `eliminarFotoViaje` en el servicio mobile. La foto de
+  guía (`foto_guia_url`) NO se puede borrar por acá a propósito — esa
+  se reemplaza, es la guía oficial.
+- `trabajos/FotosSection.tsx` + `TrabajoDetalleScreen`: botón
+  "Eliminar foto" en el visor (modal) de fotos de la OS — el backend
+  (`DELETE /api/trabajos/:id/fotos/:fotoId`) ya existía (bloqueado si
+  `trabajoBloqueado`/finalizada), solo faltaba la UI mobile.
+
+`./verificar.sh` verde: tsc x6, 27 tests, **12 literales (sin nuevos)**
+— usé `t.colores.overlay`/`t.colores.brandForeground` (tokens ya
+existentes) para la etiqueta sobre la miniatura, no hex/rgba nuevos.
+
+APK 1.9.8 en build local para probar en el teléfono.

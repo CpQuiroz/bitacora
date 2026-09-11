@@ -171,6 +171,22 @@
         "APK nuevo (1.9.7) generado con el fix, para reintentar el E2E de la tarea 5"
       ],
       "status": "done"
+    },
+    {
+      "id": 13,
+      "name": "galeria_y_eliminar_fotos_mobile",
+      "title": "Elegir foto de galería (no solo cámara) + eliminar en todas las pantallas de fotos",
+      "description": "Pedido de la usuaria: en Mantención no se podía elegir foto de la galería (solo cámara) ni ver/eliminar la que se sacó por error o salió borrosa; pidió extender lo mismo a TODAS las pantallas de la app que suben fotos. Auditoría: 6 pantallas usan ImagePicker — solo trabajos/FotosSection.tsx (OS) ya tenía cámara+galería; las otras 5 (Mantención x2, Viajes x2, Gastos) eran solo cámara. Delete: Mantención-detalle y trabajos-pendientes ya tenían alguna forma; Mantención-checklist (antes de crear), Viajes (fotos ya subidas) y Gastos (reemplazar) no.",
+      "acceptance": [
+        "mobile/src/lib/imagen.ts: nuevo helper elegirFotos() (Alert Tomar foto/Elegir de galería/Cancelar) — reutilizado en las 5 pantallas que solo tenían cámara",
+        "ChecklistMantencionScreen: fotos con miniatura real (antes solo texto) + botón eliminar por foto",
+        "MantencionDetalleScreen, ViajeFormScreen, NuevoGastoScreen: galería agregada (delete ya existía o se agregó Quitar)",
+        "ViajeDetalleScreen + nuevo DELETE /api/mis-viajes/:id/fotos/:fotoId (backend, no existía) + eliminarFotoViaje (mobile): eliminar una foto ya subida del viaje (no la foto de guía)",
+        "trabajos/FotosSection.tsx + TrabajoDetalleScreen: nuevo botón eliminar en el visor de fotos de la OS, usando el DELETE /api/trabajos/:id/fotos/:fotoId que ya existía en el backend",
+        "tsc backend + mobile limpio, ./verificar.sh verde (12 literales baseline, sin nuevos)",
+        "APK nuevo (1.9.8) generado para probar en el teléfono"
+      ],
+      "status": "in_progress"
     }
   ]
 }

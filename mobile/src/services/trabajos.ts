@@ -1,6 +1,6 @@
 import * as Crypto from "expo-crypto";
 import type { AnalisisFoto, Cliente, EstadoOS, EstadoTrabajo, OrdenServicio, TipoTrabajo, Trabajo, Usuario } from "@bitacora/shared";
-import { apiJson } from "./api";
+import { apiFetch, apiJson } from "./api";
 import { encolar } from "./sync/queue";
 import { guardarCache, leerCache } from "./sync/cache";
 import type { Ubicacion } from "../lib/geo";
@@ -168,6 +168,21 @@ export function encolarFoto(
     body: { foto_id: Crypto.randomUUID(), ...(categoria ? { categoria } : {}) },
     archivo: { ...archivo, campo: "foto" },
   });
+}
+
+/** Elimina una foto ya subida de la OS. Solo mientras no esté finalizada
+ * (mismo guard que `editable` en la pantalla — el backend igual lo valida). */
+export async function eliminarFoto(trabajoId: string, fotoId: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    const res = await apiFetch(`/api/trabajos/${trabajoId}/fotos/${fotoId}`, { method: "DELETE" });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      return { ok: false, error: (body as { error?: string }).error ?? `Error ${res.status}` };
+    }
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Sin conexión" };
+  }
 }
 
 export function encolarFirmaTecnico(

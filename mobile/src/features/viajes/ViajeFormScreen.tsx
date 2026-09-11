@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-import { Alert, Pressable, ScrollView, View } from "react-native";
-import * as ImagePicker from "expo-image-picker";
+import { Alert, Image, Pressable, ScrollView, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { Cliente, Equipo } from "@bitacora/shared";
@@ -9,7 +8,7 @@ import { Button, Card, Input, LoadingScreen, PickerBuscable, Text } from "../../
 import { SelectorCliente } from "../../components/SelectorCliente";
 import { InputMonto } from "../../components/InputMonto";
 import { useRed } from "../../services/sync/NetworkProvider";
-import { comprimirImagen } from "../../lib/imagen";
+import { elegirFotos } from "../../lib/imagen";
 import { CIUDADES_CHILE } from "../../lib/ciudadesChile";
 import {
   catalogoParaViaje,
@@ -78,13 +77,8 @@ export function ViajeFormScreen({ navigation, route }: NativeStackScreenProps<Vi
   const set = (k: keyof BorradorViaje, v: string | boolean) => setB((prev) => ({ ...prev, [k]: v }));
 
   async function adjuntarFoto() {
-    const permiso = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permiso.granted) return Alert.alert("Permiso necesario", "Necesitamos la cámara para la foto de la guía.");
-    const r = await ImagePicker.launchCameraAsync({ quality: 0.8 });
-    if (r.canceled) return;
-    const a = r.assets[0];
-    const uri = await comprimirImagen(a.uri, a.width);
-    setFoto({ uri, name: a.fileName ?? `guia-${Date.now()}.jpg`, type: a.mimeType ?? "image/jpeg" });
+    const [elegida] = await elegirFotos({ titulo: "Foto de la guía" });
+    if (elegida) setFoto(elegida);
   }
 
   async function guardar() {
@@ -177,15 +171,21 @@ export function ViajeFormScreen({ navigation, route }: NativeStackScreenProps<Vi
       <Input etiqueta="Número de guía" value={b.numero_guia} onChangeText={(v) => set("numero_guia", v)} />
 
       {!editandoId ? (
-        <Card plano>
-          <Text variante="etiqueta" tono="muted" style={{ marginBottom: t.espacio(2) }}>
+        <Card plano style={{ gap: t.espacio(2) }}>
+          <Text variante="etiqueta" tono="muted">
             Foto de la guía
           </Text>
-          <Button
-            titulo={foto ? "Cambiar foto ✓" : "Tomar foto de la guía"}
-            variante={foto ? "secundario" : "primario"}
-            onPress={adjuntarFoto}
-          />
+          {foto ? (
+            <View style={{ flexDirection: "row", gap: t.espacio(3), alignItems: "center" }}>
+              <Image source={{ uri: foto.uri }} style={{ width: 72, height: 72, borderRadius: t.radio.md, backgroundColor: t.colores.surfaceAlt }} />
+              <View style={{ flex: 1, gap: t.espacio(2) }}>
+                <Button titulo="Cambiar" variante="secundario" onPress={adjuntarFoto} />
+                <Button titulo="Quitar" variante="peligro" onPress={() => setFoto(null)} />
+              </View>
+            </View>
+          ) : (
+            <Button titulo="Adjuntar foto de la guía" variante="primario" onPress={adjuntarFoto} />
+          )}
         </Card>
       ) : null}
 

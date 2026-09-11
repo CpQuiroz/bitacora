@@ -206,6 +206,20 @@ export function encolarFotoViaje(viajeId: string, foto: Foto) {
   });
 }
 
+/** Elimina una foto extra ya subida (no la foto de guía, esa se reemplaza). */
+export async function eliminarFotoViaje(viajeId: string, fotoId: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    const res = await apiFetch(`/api/mis-viajes/${viajeId}/fotos/${fotoId}`, { method: "DELETE" });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      return { ok: false, error: (body as { error?: string }).error ?? `Error ${res.status}` };
+    }
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Sin conexión" };
+  }
+}
+
 /** Respaldo: encola la creación completa del viaje (JSON, + foto si hay). */
 export function encolarViaje(borrador: BorradorViaje, foto?: Foto) {
   return encolar({

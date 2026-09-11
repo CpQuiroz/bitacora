@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ActivityIndicator, Alert, Image, Modal, Pressable, ScrollView, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
-import { AlertCircle, AlertTriangle, Camera, RefreshCw } from "lucide-react-native";
+import { AlertCircle, AlertTriangle, Camera, RefreshCw, Trash2 } from "lucide-react-native";
 import { CATEGORIAS_FOTO_OS, ETIQUETA_CATEGORIA_FOTO_OS, type CategoriaFotoOS } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
 import { Texto, useMarca } from "@bitacora/ui/native";
@@ -26,17 +26,35 @@ export function FotosSection({
   editable,
   onAgregar,
   onQuitarPendiente,
+  onEliminar,
 }: {
   fotos: FotoConUrl[];
   pendientes?: FotoPendiente[];
   editable: boolean;
   onAgregar: (archivo: { uri: string; name: string; type: string }, categoria: CategoriaFotoOS | null) => void;
   onQuitarPendiente?: (id: string) => void;
+  onEliminar?: (fotoId: string) => Promise<void> | void;
 }) {
   const marca = useMarca();
   const [ocupado, setOcupado] = useState(false);
   const [abierta, setAbierta] = useState<FotoConUrl | null>(null);
   const [categoria, setCategoria] = useState<CategoriaFotoOS | null>(null);
+  const [eliminando, setEliminando] = useState(false);
+
+  async function eliminar() {
+    if (!abierta || !onEliminar) return;
+    setEliminando(true);
+    await onEliminar(abierta.id);
+    setEliminando(false);
+    setAbierta(null);
+  }
+
+  function confirmarEliminar() {
+    Alert.alert("Eliminar foto", "¿Eliminar esta foto de la orden de servicio?", [
+      { text: "Cancelar", style: "cancel" },
+      { text: "Eliminar", style: "destructive", onPress: () => void eliminar() },
+    ]);
+  }
 
   async function procesar(assets: ImagePicker.ImagePickerAsset[]) {
     setOcupado(true);
@@ -208,6 +226,31 @@ export function FotosSection({
                 <Texto tamano={tokens.size.body} color={tokens.color.neutral["100"]} style={{ marginTop: 12, textAlign: "center" }}>
                   {abierta.resumen}
                 </Texto>
+              ) : null}
+              {editable && onEliminar ? (
+                <Pressable
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    confirmarEliminar();
+                  }}
+                  disabled={eliminando}
+                  style={{
+                    marginTop: 16,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 8,
+                    paddingHorizontal: 16,
+                    paddingVertical: 10,
+                    borderRadius: tokens.radius.pill,
+                    backgroundColor: tokens.color.neutral["100"],
+                    opacity: eliminando ? 0.6 : 1,
+                  }}
+                >
+                  <Trash2 size={16} strokeWidth={2.5} color={tokens.color.accentRamp["700"]} />
+                  <Texto tamano={tokens.size.small} color={tokens.color.accentRamp["700"]} peso="semibold">
+                    Eliminar foto
+                  </Texto>
+                </Pressable>
               ) : null}
             </>
           ) : null}

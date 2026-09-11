@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Pressable, ScrollView, View } from "react-native";
+import { Alert, Image, Pressable, ScrollView, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import * as ImagePicker from "expo-image-picker";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { Proveedor, RespuestaChecklistMantencion } from "@bitacora/shared";
 import { MANTENCION_EXIGE_FOTO_EN_NO } from "@bitacora/shared";
@@ -9,7 +8,7 @@ import { useTema } from "../../theme";
 import { Button, Input, LoadingScreen, PickerBuscable, Text } from "../../components/ui";
 import { LienzoFirma, type LienzoFirmaHandle } from "../../components/LienzoFirma";
 import { useRed } from "../../services/sync/NetworkProvider";
-import { comprimirImagen } from "../../lib/imagen";
+import { elegirFotos } from "../../lib/imagen";
 import { listarProveedores } from "../../services/gastos";
 import type { MasStackParamList } from "../../shell/navigation/types";
 import {
@@ -89,13 +88,14 @@ export function ChecklistMantencionScreen({ route, navigation }: NativeStackScre
 
   async function tomarFoto(item: string | null) {
     if (fotos.length >= MAX_FOTOS) return Alert.alert("Máximo de fotos", `Puedes adjuntar hasta ${MAX_FOTOS}.`);
-    const permiso = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permiso.granted) return Alert.alert("Permiso necesario", "Necesitamos la cámara para la foto.");
-    const r = await ImagePicker.launchCameraAsync({ quality: 0.8 });
-    if (r.canceled) return;
-    const a = r.assets[0];
-    const uri = await comprimirImagen(a.uri, a.width);
-    setFotos((prev) => [...prev, { uri, item }]);
+    const elegidas = await elegirFotos({ multiple: !item });
+    if (!elegidas.length) return;
+    const cupo = MAX_FOTOS - fotos.length;
+    setFotos((prev) => [...prev, ...elegidas.slice(0, cupo).map((f) => ({ uri: f.uri, item }))]);
+  }
+
+  function quitarFoto(i: number) {
+    setFotos((prev) => prev.filter((_, j) => j !== i));
   }
 
   const sinResponder = respondidos === 0;
@@ -321,18 +321,25 @@ export function ChecklistMantencionScreen({ route, navigation }: NativeStackScre
             onPress={() => tomarFoto(null)}
           />
           {fotos.length > 0 && (
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: t.espacio(2) }}>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: t.espacio(2.5) }}>
               {fotos.map((f, i) => (
-                <Pressable
-                  key={`${f.uri}-${i}`}
-                  onPress={() => setFotos((prev) => prev.filter((_, j) => j !== i))}
-                  style={{ paddingHorizontal: t.espacio(2), paddingVertical: t.espacio(1), borderRadius: t.radio.sm, backgroundColor: t.colores.surfaceAlt, flexDirection: "row", alignItems: "center", gap: 4 }}
-                >
-                  <Text variante="caption" tono="muted" numberOfLines={1} style={{ maxWidth: 140 }}>
-                    {f.item ?? `Foto ${i + 1}`}
-                  </Text>
-                  <Ionicons name="close" size={14} color={t.colores.muted} />
-                </Pressable>
+                <View key={`${f.uri}-${i}`} style={{ width: 84, height: 84 }}>
+                  <Image source={{ uri: f.uri }} style={{ width: 84, height: 84, borderRadius: t.radio.md, backgroundColor: t.colores.surfaceAlt }} />
+                  <Pressable
+                    onPress={() => quitarFoto(i)}
+                    hitSlop={8}
+                    style={{ position: "absolute", right: -6, top: -6, width: 24, height: 24, borderRadius: 12, backgroundColor: t.colores.danger, alignItems: "center", justifyContent: "center" }}
+                  >
+                    <Ionicons name="close" size={14} color={t.colores.brandForeground} />
+                  </Pressable>
+                  {f.item ? (
+                    <View style={{ position: "absolute", bottom: 2, left: 2, right: 2, backgroundColor: t.colores.overlay, borderRadius: t.radio.sm, paddingHorizontal: 4, paddingVertical: 1 }}>
+                      <Text numberOfLines={1} style={{ fontSize: 10, lineHeight: 13, color: t.colores.brandForeground }}>
+                        {f.item}
+                      </Text>
+                    </View>
+                  ) : null}
+                </View>
               ))}
             </View>
           )}

@@ -131,6 +131,52 @@ misViajesRouter.post(
   })
 );
 
+// Eliminar una foto extra puntual — el chofer se equivocó de foto o
+// salió borrosa. Borrado real (mismo criterio que DELETE /api/viajes/:id/
+// fotos/:fotoId): no hay regla de inmutabilidad para fotos de viaje,
+// solo se bloquea si ya fue facturado. NO borra foto_guia_url (esa se
+// reemplaza, no se elimina — es la guía oficial del viaje).
+misViajesRouter.delete(
+  "/:id/fotos/:fotoId",
+  ah<RequestConEmpresa>(async (req, res) => {
+    const { data: viaje } = await supabase
+      .from("viajes")
+      .select("id, chofer_id, estado")
+      .eq("empresa_id", req.empresaId!)
+      .eq("id", req.params.id)
+      .maybeSingle();
+    if (!viaje) {
+      res.status(404).json({ error: "Viaje no encontrado" });
+      return;
+    }
+    if (req.rol === "colaborador" && viaje.chofer_id !== req.userId) {
+      res.status(403).json({ error: "Solo puedes editar tus propios viajes" });
+      return;
+    }
+    if (viaje.estado === "facturado") {
+      res.status(409).json({ error: "Este viaje ya fue facturado y no se puede editar" });
+      return;
+    }
+    const { data: foto } = await supabase
+      .from("viaje_fotos")
+      .select("id")
+      .eq("empresa_id", req.empresaId!)
+      .eq("viaje_id", req.params.id)
+      .eq("id", req.params.fotoId)
+      .maybeSingle();
+    if (!foto) {
+      res.status(404).json({ error: "Foto no encontrada" });
+      return;
+    }
+    const { error } = await supabase.from("viaje_fotos").delete().eq("empresa_id", req.empresaId!).eq("id", foto.id);
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    res.status(204).end();
+  })
+);
+
 misViajesRouter.post(
   "/",
   upload.single("foto"),

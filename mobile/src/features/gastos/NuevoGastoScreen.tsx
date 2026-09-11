@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { Alert, Image, Pressable, ScrollView, View } from "react-native";
-import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { CategoriaGasto, CentroCosto, EstadoGasto, Proveedor, Trabajo } from "@bitacora/shared";
@@ -8,7 +7,7 @@ import { useTema } from "../../theme";
 import { Button, Input, LoadingScreen, PickerBuscable, Text } from "../../components/ui";
 import { InputMonto } from "../../components/InputMonto";
 import { useRed } from "../../services/sync/NetworkProvider";
-import { comprimirImagen } from "../../lib/imagen";
+import { elegirFotos } from "../../lib/imagen";
 import { listarTrabajos } from "../../services/trabajos";
 import {
   crearGasto,
@@ -120,13 +119,8 @@ export function NuevoGastoScreen({ navigation }: NativeStackScreenProps<MasStack
   }, []);
 
   async function adjuntarFoto() {
-    const permiso = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permiso.granted) return Alert.alert("Permiso necesario", "Necesitamos la cámara para la foto del comprobante.");
-    const r = await ImagePicker.launchCameraAsync({ quality: 0.8 });
-    if (r.canceled) return;
-    const a = r.assets[0];
-    const uri = await comprimirImagen(a.uri, a.width);
-    setFoto({ uri, name: a.fileName ?? `comprobante-${Date.now()}.jpg`, type: a.mimeType ?? "image/jpeg" });
+    const [elegida] = await elegirFotos({ titulo: "Foto del comprobante" });
+    if (elegida) setFoto(elegida);
   }
 
   async function guardar() {
@@ -176,7 +170,14 @@ export function NuevoGastoScreen({ navigation }: NativeStackScreenProps<MasStack
         {foto ? (
           <View style={{ gap: t.espacio(2) }}>
             <Image source={{ uri: foto.uri }} style={{ width: "100%", height: 220, borderRadius: t.radio.md, backgroundColor: t.colores.surfaceAlt }} resizeMode="cover" />
-            <Button titulo="Volver a tomar" variante="secundario" onPress={adjuntarFoto} />
+            <View style={{ flexDirection: "row", gap: t.espacio(2) }}>
+              <View style={{ flex: 1 }}>
+                <Button titulo="Cambiar" variante="secundario" onPress={adjuntarFoto} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Button titulo="Quitar" variante="peligro" onPress={() => setFoto(null)} />
+              </View>
+            </View>
           </View>
         ) : (
           <Pressable
