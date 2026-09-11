@@ -2,8 +2,11 @@
 
 > Se carga automáticamente al inicio de cada sesión desde la raíz.
 
-Primero: leé **`AGENTS.md`** (mapa del repo). Este archivo solo define *cómo*
-trabajás; `AGENTS.md` define *qué* hay y *dónde*.
+Primero: leé **`AGENTS.md`** (mapa del repo). Este archivo define sobre todo
+*cómo* trabajás, más un resumen compacto de las reglas de negocio/
+arquitectura que más se repiten entre prompts (detalle completo y
+verificado contra el código en `docs/harness/arquitectura.md`); `AGENTS.md`
+sigue siendo la fuente de *qué* hay y *dónde*.
 
 ---
 
@@ -52,6 +55,28 @@ Las canónicas están en `AGENTS.md` §3. Recordatorio de las que más se pisan:
   (Next 16, Expo 57) — leelos antes de tocar esas carpetas.
 - **EAS builds** solo a pedido; bump de versión en `mobile/app.json`.
 - **Deploy** = push a `main` (Vercel + Render auto).
+
+## Reglas de negocio y arquitectura (resumen)
+
+Detalle completo, con referencias exactas a código, en
+`docs/harness/arquitectura.md` §Roles, §Patrones, §Invariantes, §Qué NO
+hacer. Lo que más se repite:
+
+- **RLS + filtrado por `empresa_id` son complementarios, no alternativos**
+  — no reabras esa discusión sin que se pida.
+- **Roles**: 4 de sistema (`admin/supervisor/contador/colaborador`), 3
+  capas (plantilla global → override por empresa → gating por plan).
+  Mobile usa `usuarios.funcion` aparte de los roles web.
+- **Reutilizá**: `subirAnexo`, `requiereModulo`/`requiereAccion`,
+  `ComboboxCliente`, `InputMonto` — no reimplementar.
+- **Invariantes**: OS inmutable post-firma; pack = plantilla que nunca se
+  decrementa + snapshot inmutable por venta; deletes condicionales
+  (error `23503` → "desactivar" en vez de eliminar); índice nuevo con
+  `EXPLAIN ANALYZE` validado antes de cerrar la tarea; IA de Informes =
+  RAG, nunca fine-tuning.
+- **No tocar sin pedido explícito**: tabs Agenda/Hoy de mobile
+  (congeladas); que Mantención de flota toque `trabajos`/
+  `ordenes_servicio` (deliberado).
 
 ## Memoria
 
