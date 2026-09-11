@@ -53,6 +53,37 @@ supabase) sin una razón documentada en `trabajo_list.json`.
   caso legítimo (ej. `.eq("id", x)` tras un guard de pertenencia), poné un
   comentario `// tenant-ok: <razón>`.
 
+## Roles y permisos
+
+- 4 roles de sistema: `admin | supervisor | contador | colaborador`
+  (`packages/shared/src/types.ts` → `Rol`). Editables desde el Panel de
+  Super-Admin (tabla `roles`, migración 71) — no son un enum cerrado en
+  el código, se resuelven en `backend/src/roles.ts`.
+- 3 capas de resolución:
+  1. **Plantilla global del rol** — módulos/acciones por defecto.
+  2. **Override por empresa** sobre esa plantilla (tabla
+     `empresa_rol_modulos`, migración 75).
+  3. **Gating por plan** — módulos contratados (`empresa_modulos`,
+     `Plan`: `trial | basico | pro`).
+  `requiereModulo`/`requiereAccion` (`backend/src/permisos.ts`) validan
+  rol + plan juntos.
+- Mobile usa un eje aparte de los roles web: `usuarios.funcion`
+  (`tecnico | chofer | instalador | administrativo | otro`, migración
+  65) filtra qué herramientas ve un colaborador en la app.
+
+## Patrones a reutilizar
+
+No reinventar lo que ya existe:
+- `subirAnexo` (`backend/src/storage.ts`) — sube a S3/Storage con el
+  límite de cuota por empresa ya resuelto.
+- `requiereModulo` / `requiereAccion` (`backend/src/permisos.ts`) —
+  guard de rol+plan sobre una ruta.
+- `ComboboxCliente` (`web/src/components/ComboboxCliente.tsx`),
+  `InputMonto` (web y mobile) — selector de cliente y campo de dinero
+  con su UX ya resuelta (formato de miles, símbolo de moneda).
+- Toda query: filtrar por `empresa_id`, `.limit()` explícito, columnas
+  explícitas — nunca `select("*")`.
+
 ## PDFs
 
 - **pdfkit puro** en un worker thread (`backend/src/workers/pdfWorker.ts`,
@@ -73,6 +104,22 @@ supabase) sin una razón documentada en `trabajo_list.json`.
   momento. Contenido nuevo del PDF debe existir *antes* de la firma.
 - `mapearCamposPersonalizados(campos, datos)` es la única forma de casar
   `TipoTrabajo.campos` con `trabajo.datos`.
+- **Catálogo de packs**: la definición (`tipos_pack`) es una plantilla
+  que nunca se decrementa. Cada venta crea un snapshot inmutable en
+  `paquetes_sesiones` (nombre, precio, sesiones — ver
+  `packages/shared/src/types.ts:643`) del cual se descuentan las
+  sesiones, nunca de la plantilla.
+- **Deletes condicionales** en catálogo/configuración con FKs (tipos de
+  trabajo, tipos de OS, categorías, proveedores…): intentar el
+  hard-delete y traducir el error `23503` (FK violation) a "está en uso
+  — desactívalo en vez de eliminarlo" (patrón real en
+  `backend/src/routes/tiposTrabajo.ts`). Nunca hard-delete si el ítem ya
+  se usó en algo.
+- **Índices**: todo objeto nuevo en la DB que se filtra/joinea seguido
+  lleva su índice, y el plan (`EXPLAIN ANALYZE`) se valida antes de
+  cerrar la tarea — no asumir que ayuda, confirmarlo.
+- **IA en Informes** (cuando se construya): se implementa como RAG,
+  nunca como fine-tuning.
 
 ## Qué NO hacer
 
@@ -83,3 +130,12 @@ supabase) sin una razón documentada en `trabajo_list.json`.
   otros PDFs.
 - Crear migraciones que no sean aditivas sin avisar (prod ya tiene datos).
 - Correr writes/DDL contra la DB de prod (lo hace el humano).
+- Reestructurar las tabs **Agenda** y **Hoy** de mobile sin que se pida
+  explícitamente — quedaron congeladas tras el refresco de navegación
+  de 2026-08/09.
+- Hacer que el módulo de **Mantención de flota** toque `trabajos` /
+  `ordenes_servicio` — es deliberado, evita los efectos secundarios de
+  facturación automática y requisitos de cliente que ese flujo dispara.
+- Proponer descartar RLS "porque el backend ya filtra por `empresa_id`"
+  — son mecanismos complementarios, no alternativos (ver §Multi-tenant
+  arriba). No reabrir esta discusión sin que se pida.
