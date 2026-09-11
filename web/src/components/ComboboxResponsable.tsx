@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { Usuario } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
 import { useRolesDisponibles } from "@/lib/roles";
-import { Button, ErrorText, Input, Label, Select, SuccessText } from "./ui";
+import { Button, Input, Select } from "@bitacora/ui/web";
 import { Combobox } from "./Combobox";
 
 // Selector de Responsable con búsqueda + invitación — a diferencia de
@@ -12,6 +12,8 @@ import { Combobox } from "./Combobox";
 // invitar a alguien crea su cuenta en Supabase Auth pero no la activa
 // hasta que acepte, así que no tiene sentido asignarle una tarea/OS
 // todavía. El campo queda como estaba y se avisa que quedó pendiente.
+//
+// PASO 6 (sistema de diseño) — retokenizado a ds-.
 export function ComboboxResponsable({
   value,
   onChange,
@@ -80,31 +82,16 @@ export function ComboboxResponsable({
 
   if (invitando) {
     return (
-      <div className="flex flex-col gap-2 rounded-lg border border-border p-3">
-        <div>
-          <Label>Nombre</Label>
-          <Input type="text" value={nombre} onChange={(e) => setNombre(e.target.value)} />
-        </div>
-        <div>
-          <Label>Correo</Label>
-          <Input type="email" placeholder="correo@empresa.cl" value={correo} onChange={(e) => setCorreo(e.target.value)} />
-        </div>
-        <div>
-          <Label>Rol</Label>
-          <Select value={rol} onChange={(e) => setRol(e.target.value)}>
-            {rolesDisponibles.map((r) => (
-              <option key={r.value} value={r.value}>
-                {r.label}
-              </option>
-            ))}
-          </Select>
-        </div>
-        {error && <ErrorText>{error}</ErrorText>}
-        <div className="flex gap-2">
-          <Button type="button" onClick={enviarInvitacion} disabled={enviando}>
-            {enviando ? "Invitando…" : "Invitar"}
+      <div className="flex flex-col gap-ds-2 rounded-ds-md border border-ds-divider p-ds-3">
+        <Input etiqueta="Nombre" valor={nombre} onCambio={setNombre} />
+        <Input etiqueta="Correo" tipo="email" placeholder="correo@empresa.cl" valor={correo} onCambio={setCorreo} />
+        <Select etiqueta="Rol" valor={rol} onCambio={setRol} opciones={rolesDisponibles.map((r) => ({ valor: r.value, etiqueta: r.label }))} />
+        {error ? <p className="font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
+        <div className="flex gap-ds-2">
+          <Button onPress={enviarInvitacion} cargando={enviando}>
+            Invitar
           </Button>
-          <Button type="button" variant="ghost" onClick={cancelar}>
+          <Button variante="ghost" onPress={cancelar}>
             Cancelar
           </Button>
         </div>
@@ -113,7 +100,7 @@ export function ComboboxResponsable({
   }
 
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-ds-1">
       <Combobox
         value={value}
         onChange={onChange}
@@ -127,7 +114,7 @@ export function ComboboxResponsable({
         gestionHref={gestionHref}
         gestionLabel={gestionLabel}
       />
-      {aviso && <SuccessText>{aviso}</SuccessText>}
+      {aviso ? <p className="font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}
     </div>
   );
 }

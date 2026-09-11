@@ -1,5 +1,6 @@
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { useTema } from "../../theme";
+import { tokens } from "@bitacora/design-tokens";
+import { FUENTE_NATIVE } from "@bitacora/ui/native";
 import type { TrabajosStackParamList } from "./types";
 import { TrabajosScreen } from "../../features/trabajos/TrabajosScreen";
 import { TrabajoDetalleScreen } from "../../features/trabajos/TrabajoDetalleScreen";
@@ -8,16 +9,18 @@ import { RegistrarVentaScreen } from "../../features/ventas/RegistrarVentaScreen
 
 const Stack = createNativeStackNavigator<TrabajosStackParamList>();
 
+// PASO 6 (sistema de diseño) — migrado a tokens ds-. Solo el header;
+// TrabajoForm/RegistrarVenta no forman parte de este bucket, su
+// contenido sigue Faena por ahora (seam conocido).
 export function TrabajosStack() {
-  const t = useTema();
   return (
     <Stack.Navigator
       screenOptions={{
-        headerStyle: { backgroundColor: t.colores.surface },
-        headerTintColor: t.colores.foreground,
-        headerTitleStyle: { fontWeight: "600" },
+        headerStyle: { backgroundColor: tokens.color.surface },
+        headerTintColor: tokens.color.text,
+        headerTitleStyle: { fontFamily: FUENTE_NATIVE.heading, fontWeight: "400" },
         headerShadowVisible: false,
-        contentStyle: { backgroundColor: t.colores.bg },
+        contentStyle: { backgroundColor: tokens.color.bg },
       }}
     >
       <Stack.Screen name="TrabajosLista" component={TrabajosScreen} options={{ title: "Trabajos" }} />

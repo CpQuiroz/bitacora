@@ -3,14 +3,15 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { Camera, ChevronLeft, ClipboardCheck, Mail, Plus } from "lucide-react";
 import type { AnalisisFoto, CatalogoItem, Cliente, OrdenServicio, OsItem, Trabajo, TipoTrabajo, Usuario } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { abrirPdfOS } from "@/lib/descargarPdf";
+import { formatearCLP } from "@bitacora/shared";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, SuccessText, Textarea } from "@/components/ui";
+import { Button, Card, Cifra, DatePicker, Input, StatusBadge, Table, Textarea } from "@bitacora/ui/web";
 import { InputMonto } from "@/components/InputMonto";
-import { IconCamera, IconChevronLeft, IconClipboardCheck, IconMail, IconPlus } from "@/components/icons";
 import { CatalogoSelectorModal, type ItemSeleccionadoCatalogo } from "@/components/CatalogoSelectorModal";
 import { ComboboxResponsable } from "@/components/ComboboxResponsable";
 
@@ -18,6 +19,19 @@ type ItemOS = { catalogo_item_id: string | null; descripcion: string; cantidad: 
 
 type OrdenConFirma = OrdenServicio & { firma_url_firmada: string | null };
 type AnalisisFotoConUrl = AnalisisFoto & { url: string };
+
+function aFecha(texto: string): Date | null {
+  if (!texto) return null;
+  const [y, m, d] = texto.split("-").map(Number);
+  return new Date(y, (m || 1) - 1, d || 1);
+}
+function aTexto(fecha: Date | null): string {
+  if (!fecha) return "";
+  const y = fecha.getFullYear();
+  const m = String(fecha.getMonth() + 1).padStart(2, "0");
+  const d = String(fecha.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
 type DetalleOS = Trabajo & {
   cliente_info: Cliente | null;
   responsable: Usuario | null;
@@ -27,8 +41,10 @@ type DetalleOS = Trabajo & {
   fotos: AnalisisFotoConUrl[];
 };
 
-const monto = (n: number) => `$${Math.round(n).toLocaleString("es-CL")}`;
-
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
+// Seams conocidos: DashboardShell (fuera de este bucket) y
+// CatalogoSelectorModal (compartido con Catálogo/Cotizaciones, 5
+// pantallas — tocarlo ahora habría salido del alcance de "Órdenes").
 export default function DetalleOrdenServicioPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -222,392 +238,376 @@ export default function DetalleOrdenServicioPage() {
 
   return (
     <DashboardShell usuario={usuario}>
-      <Link href="/dashboard/ordenes" className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-brand hover:underline">
-        <IconChevronLeft className="h-4 w-4" />
+      <Link href="/dashboard/ordenes" className="mb-ds-4 inline-flex items-center gap-ds-1 font-ds-body text-ds-small font-medium text-ds-brand hover:underline">
+        <ChevronLeft size={16} strokeWidth={2.75} />
         Órdenes de Trabajo/Servicio
       </Link>
 
-      {error && !detalle && <ErrorText>{error}</ErrorText>}
+      {error && !detalle ? <p className="font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
 
-      {detalle && (
+      {detalle ? (
         <>
-          <PageHeader
-            title={detalle.orden?.folio != null ? `OS N° ${detalle.orden.folio}` : "Orden de servicio"}
-            subtitle={`${detalle.cliente_info?.nombre ?? detalle.cliente} · ${detalle.fecha}${detalle.hora_programada ? ` ${detalle.hora_programada}` : ""}`}
-            action={
-              <div className="flex items-center gap-2">
-                <Badge value={detalle.orden?.estado_os ?? "pendiente"} />
-                {!editando && (
-                  <Button type="button" variant="outline" onClick={abrirEdicion}>
-                    Editar
-                  </Button>
-                )}
-              </div>
-            }
-          />
-
-          {editando && (
-            <Card className="my-6 border-brand/40">
-              <h2 className="mb-4 text-sm font-semibold text-foreground">Editar orden de servicio</h2>
-
-              {tieneFirma && (
-                <p className="mb-4 rounded-lg bg-warning-soft px-3 py-2 text-xs text-warning">
-                  Esta OS ya tiene firma de conformidad — los ítems y la descripción quedaron bloqueados. Solo las notas
-                  internas siguen editables.
-                </p>
-              )}
-
-              <div className="mb-5 grid gap-4 sm:grid-cols-2">
-                <div>
-                  <Label>Fecha</Label>
-                  <Input type="date" required value={fechaEdit} onChange={(e) => setFechaEdit(e.target.value)} />
-                </div>
-                <div>
-                  <Label>Hora (opcional)</Label>
-                  <Input type="time" value={horaEdit} onChange={(e) => setHoraEdit(e.target.value)} />
-                </div>
-              </div>
-
-              {usuario?.rol !== "colaborador" && (
-                <div className="mb-5">
-                  <Label>Colaborador asignado</Label>
-                  <ComboboxResponsable
-                    value={responsableEdit}
-                    onChange={setResponsableEdit}
-                    equipo={equipo}
-                    opcionVacia="Sin asignar"
-                    gestionHref="/dashboard/personas"
-                    gestionLabel="Gestionar equipo"
-                  />
-                </div>
-              )}
-
-              <div className="mb-5">
-                <Label>Descripción</Label>
-                <Textarea
-                  rows={2}
-                  value={descEdit}
-                  onChange={(e) => setDescEdit(e.target.value)}
-                  disabled={tieneFirma}
-                />
-              </div>
-
-              {detalle.tipo_trabajo && detalle.tipo_trabajo.campos.length > 0 && (
-                <div className="mb-5 grid gap-3 rounded-lg bg-surface-sunken p-3 sm:grid-cols-2">
-                  <p className="text-xs font-medium text-muted sm:col-span-2">Datos medidos — {detalle.tipo_trabajo.nombre}</p>
-                  {detalle.tipo_trabajo.campos.map((campo) => (
-                    <div key={campo.clave}>
-                      <Label>{campo.etiqueta}</Label>
-                      <Input
-                        type={campo.tipo === "numero" ? "number" : campo.tipo === "fecha" ? "date" : "text"}
-                        value={datosEdit[campo.clave] ?? ""}
-                        onChange={(e) => setDatosEdit((prev) => ({ ...prev, [campo.clave]: e.target.value }))}
-                      />
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <div className="mb-5">
-                <div className="mb-3 flex items-center justify-between">
-                  <Label>Ítems / materiales</Label>
-                  {!tieneFirma && (
-                    <Button type="button" variant="outline" onClick={() => setSelectorAbierto(true)}>
-                      <IconPlus className="h-4 w-4" />
-                      Agregar del catálogo
-                    </Button>
-                  )}
-                </div>
-                <div className="flex flex-col gap-2">
-                  {itemsEdit.map((it, i) => {
-                    const cat = it.catalogo_item_id ? catalogo.find((c) => c.id === it.catalogo_item_id) : null;
-                    const stock = cat && cat.tipo === "producto" && cat.stock_actual != null ? cat.stock_actual : null;
-                    return (
-                    <div key={i} className="grid grid-cols-[1fr_5rem_7rem_auto] items-start gap-2">
-                      <div>
-                      <Input
-                        type="text"
-                        placeholder="Descripción"
-                        value={it.descripcion}
-                        disabled={tieneFirma}
-                        onChange={(e) => actualizarItemEdit(i, "descripcion", e.target.value)}
-                      />
-                      {stock != null && (
-                        <p className={`mt-1 text-xs ${Number(it.cantidad || 0) > stock ? "text-danger" : "text-muted"}`}>
-                          Stock: {stock}
-                        </p>
-                      )}
-                      </div>
-                      <Input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={it.cantidad}
-                        disabled={tieneFirma}
-                        onChange={(e) => actualizarItemEdit(i, "cantidad", e.target.value)}
-                      />
-                      <InputMonto value={it.precio_unitario} disabled={tieneFirma} onChange={(v) => actualizarItemEdit(i, "precio_unitario", v)} moneda={usuario.moneda} />
-                      {!tieneFirma && (
-                        <Button type="button" variant="ghost" onClick={() => quitarItemEdit(i)}>
-                          Quitar
-                        </Button>
-                      )}
-                    </div>
-                    );
-                  })}
-                  {itemsEdit.length === 0 && <p className="text-sm text-muted">Sin ítems.</p>}
-                </div>
-              </div>
-
-              <div className="mb-5">
-                <Label>Notas internas (no se muestran al cliente)</Label>
-                <Textarea rows={3} value={notasEdit} onChange={(e) => setNotasEdit(e.target.value)} />
-              </div>
-
-              {errorEdit && (
-                <div className="mb-4">
-                  <ErrorText>{errorEdit}</ErrorText>
-                </div>
-              )}
-              <div className="flex gap-2">
-                <Button type="button" onClick={onGuardarEdicion} disabled={guardandoEdit}>
-                  {guardandoEdit ? "Guardando…" : "Guardar cambios"}
-                </Button>
-                <Button type="button" variant="ghost" onClick={() => setEditando(false)}>
-                  Cancelar
-                </Button>
-              </div>
-
-              <CatalogoSelectorModal
-                open={selectorAbierto}
-                onClose={() => setSelectorAbierto(false)}
-                onAgregar={onAgregarDesdeSelectorEdit}
-                moneda={usuario.moneda ?? "CLP"}
-                avisaDescuentoStock
-              />
-            </Card>
-          )}
-
-          <Card className="my-6">
-            <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-foreground">
-              <IconClipboardCheck className="h-4 w-4 text-brand" />
-              Detalle
-            </h2>
-            <div className="grid gap-4 text-sm sm:grid-cols-2">
-              <div>
-                <p className="text-xs text-muted">Colaborador asignado</p>
-                <p className="font-medium text-foreground">{detalle.responsable?.nombre ?? "—"}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted">Dirección</p>
-                <p className="font-medium text-foreground">{detalle.ubicacion ?? detalle.cliente_info?.direccion ?? "—"}</p>
-              </div>
-              {detalle.descripcion && (
-                <div className="sm:col-span-2">
-                  <p className="text-xs text-muted">Descripción</p>
-                  <p className="text-foreground">{detalle.descripcion}</p>
-                </div>
-              )}
-              {detalle.tipo_trabajo && (
-                <div>
-                  <p className="text-xs text-muted">Tipo de servicio</p>
-                  <p className="font-medium text-foreground">{detalle.tipo_trabajo.nombre}</p>
-                </div>
-              )}
-              {detalle.orden?.observaciones_cierre && (
-                <div className="sm:col-span-2">
-                  <p className="text-xs text-muted">Observaciones de cierre</p>
-                  <p className="text-foreground">{detalle.orden.observaciones_cierre}</p>
-                </div>
-              )}
-              {detalle.notas_internas && (
-                <div className="sm:col-span-2">
-                  <p className="text-xs text-muted">Notas internas (no visibles para el cliente)</p>
-                  <p className="text-foreground">{detalle.notas_internas}</p>
-                </div>
-              )}
+          <div className="mb-ds-6 flex flex-col gap-ds-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="ds-heading text-ds-h2 text-ds-text">
+                {detalle.orden?.folio != null ? `OS N° ${detalle.orden.folio}` : "Orden de servicio"}
+              </p>
+              <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">
+                {detalle.cliente_info?.nombre ?? detalle.cliente} · {detalle.fecha}
+                {detalle.hora_programada ? ` ${detalle.hora_programada}` : ""}
+              </p>
             </div>
+            <div className="flex items-center gap-ds-2">
+              <StatusBadge estado={detalle.orden?.estado_os ?? "pendiente"} />
+              {!editando ? (
+                <Button variante="secundario" onPress={abrirEdicion}>
+                  Editar
+                </Button>
+              ) : null}
+            </div>
+          </div>
 
-            {detalle.tipo_trabajo && detalle.tipo_trabajo.campos.length > 0 && (
-              <div className="mt-5 border-t border-border pt-5">
-                <p className="mb-3 text-xs font-medium text-muted">Datos medidos — {detalle.tipo_trabajo.nombre}</p>
-                <div className="grid gap-3 sm:grid-cols-3">
-                  {detalle.tipo_trabajo.campos.map((c) => (
-                    <div key={c.clave} className="rounded-lg border border-border p-3">
-                      <p className="text-xs text-muted">{c.etiqueta}</p>
-                      <p className="mt-1 text-sm font-semibold text-foreground">
-                        {String((detalle.datos as Record<string, unknown>)?.[c.clave] ?? "—")}
-                      </p>
+          {editando ? (
+            <div className="my-ds-6">
+              <Card elevacion="md">
+                <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Editar orden de servicio</p>
+
+                {tieneFirma ? (
+                  <p className="mb-ds-4 rounded-ds-md bg-ds-accent-100 px-ds-3 py-ds-2 font-ds-body text-ds-caption text-ds-accent-800">
+                    Esta OS ya tiene firma de conformidad — los ítems y la descripción quedaron bloqueados. Solo las notas
+                    internas siguen editables.
+                  </p>
+                ) : null}
+
+                <div className="mb-ds-5 grid gap-ds-4 sm:grid-cols-2">
+                  <DatePicker etiqueta="Fecha" valor={aFecha(fechaEdit)} onCambio={(f) => setFechaEdit(aTexto(f))} />
+                  <Input etiqueta="Hora (opcional)" tipo="hora" valor={horaEdit} onCambio={setHoraEdit} />
+                </div>
+
+                {usuario?.rol !== "colaborador" ? (
+                  <div className="mb-ds-5">
+                    <label className="mb-ds-1 block font-ds-body text-ds-caption font-medium text-ds-text/70">Colaborador asignado</label>
+                    <ComboboxResponsable
+                      value={responsableEdit}
+                      onChange={setResponsableEdit}
+                      equipo={equipo}
+                      opcionVacia="Sin asignar"
+                      gestionHref="/dashboard/personas"
+                      gestionLabel="Gestionar equipo"
+                    />
+                  </div>
+                ) : null}
+
+                <div className="mb-ds-5">
+                  <Textarea etiqueta="Descripción" filas={2} valor={descEdit} onCambio={setDescEdit} deshabilitado={tieneFirma} />
+                </div>
+
+                {detalle.tipo_trabajo && detalle.tipo_trabajo.campos.length > 0 ? (
+                  <div className="mb-ds-5 grid gap-ds-3 rounded-ds-md bg-ds-neutral-200 p-ds-3 sm:grid-cols-2">
+                    <p className="font-ds-body text-ds-caption font-medium text-ds-text/60 sm:col-span-2">
+                      Datos medidos — {detalle.tipo_trabajo.nombre}
+                    </p>
+                    {detalle.tipo_trabajo.campos.map((campo) =>
+                      campo.tipo === "fecha" ? (
+                        <DatePicker
+                          key={campo.clave}
+                          etiqueta={campo.etiqueta}
+                          valor={aFecha(datosEdit[campo.clave] ?? "")}
+                          onCambio={(f) => setDatosEdit((prev) => ({ ...prev, [campo.clave]: aTexto(f) }))}
+                        />
+                      ) : (
+                        <Input
+                          key={campo.clave}
+                          etiqueta={campo.etiqueta}
+                          tipo={campo.tipo === "numero" ? "numero" : "texto"}
+                          valor={datosEdit[campo.clave] ?? ""}
+                          onCambio={(v) => setDatosEdit((prev) => ({ ...prev, [campo.clave]: v }))}
+                        />
+                      )
+                    )}
+                  </div>
+                ) : null}
+
+                <div className="mb-ds-5">
+                  <div className="mb-ds-3 flex items-center justify-between">
+                    <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Ítems / materiales</label>
+                    {!tieneFirma ? (
+                      <Button variante="secundario" tamano="sm" iconoIzq={<Plus size={14} strokeWidth={2.75} />} onPress={() => setSelectorAbierto(true)}>
+                        Agregar del catálogo
+                      </Button>
+                    ) : null}
+                  </div>
+                  <div className="flex flex-col gap-ds-2">
+                    {itemsEdit.map((it, i) => {
+                      const cat = it.catalogo_item_id ? catalogo.find((c) => c.id === it.catalogo_item_id) : null;
+                      const stock = cat && cat.tipo === "producto" && cat.stock_actual != null ? cat.stock_actual : null;
+                      return (
+                        <div key={i} className="grid grid-cols-[1fr_5rem_7rem_auto] items-start gap-ds-2">
+                          <div>
+                            <Input
+                              placeholder="Descripción"
+                              valor={it.descripcion}
+                              deshabilitado={tieneFirma}
+                              onCambio={(v) => actualizarItemEdit(i, "descripcion", v)}
+                            />
+                            {stock != null ? (
+                              <p className={`mt-ds-1 font-ds-body text-ds-caption ${Number(it.cantidad || 0) > stock ? "text-ds-accent-700" : "text-ds-text/60"}`}>
+                                Stock: {stock}
+                              </p>
+                            ) : null}
+                          </div>
+                          <Input
+                            tipo="numero"
+                            valor={it.cantidad}
+                            deshabilitado={tieneFirma}
+                            onCambio={(v) => actualizarItemEdit(i, "cantidad", v)}
+                          />
+                          <InputMonto value={it.precio_unitario} disabled={tieneFirma} onChange={(v) => actualizarItemEdit(i, "precio_unitario", v)} moneda={usuario.moneda} />
+                          {!tieneFirma ? (
+                            <Button variante="ghost" tamano="sm" onPress={() => quitarItemEdit(i)}>
+                              Quitar
+                            </Button>
+                          ) : null}
+                        </div>
+                      );
+                    })}
+                    {itemsEdit.length === 0 ? <p className="font-ds-body text-ds-small text-ds-text/60">Sin ítems.</p> : null}
+                  </div>
+                </div>
+
+                <div className="mb-ds-5">
+                  <Textarea etiqueta="Notas internas (no se muestran al cliente)" filas={3} valor={notasEdit} onCambio={setNotasEdit} />
+                </div>
+
+                {errorEdit ? <p className="mb-ds-4 font-ds-body text-ds-small text-ds-accent-700">{errorEdit}</p> : null}
+                <div className="flex gap-ds-2">
+                  <Button onPress={onGuardarEdicion} cargando={guardandoEdit}>
+                    Guardar cambios
+                  </Button>
+                  <Button variante="ghost" onPress={() => setEditando(false)}>
+                    Cancelar
+                  </Button>
+                </div>
+
+                <CatalogoSelectorModal
+                  open={selectorAbierto}
+                  onClose={() => setSelectorAbierto(false)}
+                  onAgregar={onAgregarDesdeSelectorEdit}
+                  moneda={usuario.moneda ?? "CLP"}
+                  avisaDescuentoStock
+                />
+              </Card>
+            </div>
+          ) : null}
+
+          <div className="my-ds-6">
+            <Card>
+              <p className="mb-ds-4 flex items-center gap-ds-2 font-ds-body text-ds-small font-semibold text-ds-text">
+                <ClipboardCheck size={16} strokeWidth={2.75} className="text-ds-brand" />
+                Detalle
+              </p>
+              <div className="grid gap-ds-4 font-ds-body text-ds-small sm:grid-cols-2">
+                <div>
+                  <p className="text-ds-caption text-ds-text/60">Colaborador asignado</p>
+                  <p className="font-medium text-ds-text">{detalle.responsable?.nombre ?? "—"}</p>
+                </div>
+                <div>
+                  <p className="text-ds-caption text-ds-text/60">Dirección</p>
+                  <p className="font-medium text-ds-text">{detalle.ubicacion ?? detalle.cliente_info?.direccion ?? "—"}</p>
+                </div>
+                {detalle.descripcion ? (
+                  <div className="sm:col-span-2">
+                    <p className="text-ds-caption text-ds-text/60">Descripción</p>
+                    <p className="text-ds-text">{detalle.descripcion}</p>
+                  </div>
+                ) : null}
+                {detalle.tipo_trabajo ? (
+                  <div>
+                    <p className="text-ds-caption text-ds-text/60">Tipo de servicio</p>
+                    <p className="font-medium text-ds-text">{detalle.tipo_trabajo.nombre}</p>
+                  </div>
+                ) : null}
+                {detalle.orden?.observaciones_cierre ? (
+                  <div className="sm:col-span-2">
+                    <p className="text-ds-caption text-ds-text/60">Observaciones de cierre</p>
+                    <p className="text-ds-text">{detalle.orden.observaciones_cierre}</p>
+                  </div>
+                ) : null}
+                {detalle.notas_internas ? (
+                  <div className="sm:col-span-2">
+                    <p className="text-ds-caption text-ds-text/60">Notas internas (no visibles para el cliente)</p>
+                    <p className="text-ds-text">{detalle.notas_internas}</p>
+                  </div>
+                ) : null}
+              </div>
+
+              {detalle.tipo_trabajo && detalle.tipo_trabajo.campos.length > 0 ? (
+                <div className="mt-ds-5 border-t border-ds-divider pt-ds-5">
+                  <p className="mb-ds-3 font-ds-body text-ds-caption font-medium text-ds-text/60">
+                    Datos medidos — {detalle.tipo_trabajo.nombre}
+                  </p>
+                  <div className="grid gap-ds-3 sm:grid-cols-3">
+                    {detalle.tipo_trabajo.campos.map((c) => (
+                      <div key={c.clave} className="rounded-ds-md border border-ds-divider p-ds-3">
+                        <p className="font-ds-body text-ds-caption text-ds-text/60">{c.etiqueta}</p>
+                        <p className="mt-ds-1 font-ds-body text-ds-small font-semibold text-ds-text">
+                          {String((detalle.datos as Record<string, unknown>)?.[c.clave] ?? "—")}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </Card>
+          </div>
+
+          {detalle.items.length > 0 ? (
+            <div className="my-ds-6">
+              <Table<OsItem>
+                filas={detalle.items}
+                claveFila={(it) => it.id}
+                vacio={{ titulo: "Sin ítems" }}
+                columnas={[
+                  { encabezado: "Ítem", celda: (it) => it.descripcion },
+                  { encabezado: "Cant.", celda: (it) => <Cifra>{String(it.cantidad)}</Cifra> },
+                  { encabezado: "P. unitario", celda: (it) => <Cifra>{formatearCLP(it.precio_unitario)}</Cifra> },
+                  {
+                    encabezado: "Total",
+                    celda: (it) => (
+                      <span className="font-medium text-ds-text">
+                        <Cifra>{formatearCLP(it.cantidad * it.precio_unitario)}</Cifra>
+                      </span>
+                    ),
+                  },
+                ]}
+              />
+              <p className="mt-ds-2 flex justify-end gap-ds-2 font-ds-body text-ds-small">
+                <span className="text-ds-text/60">Total</span>
+                <span className="font-semibold text-ds-text">
+                  <Cifra>{formatearCLP(detalle.items.reduce((acc, it) => acc + it.cantidad * it.precio_unitario, 0))}</Cifra>
+                </span>
+              </p>
+            </div>
+          ) : null}
+
+          {detalle.fotos.length > 0 ? (
+            <div className="my-ds-6">
+              <Card>
+                <p className="mb-ds-4 flex items-center gap-ds-2 font-ds-body text-ds-small font-semibold text-ds-text">
+                  <Camera size={16} strokeWidth={2.75} className="text-ds-brand" />
+                  Fotos
+                </p>
+                <div className="grid gap-ds-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {detalle.fotos.map((f) => (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <div key={f.id} className="overflow-hidden rounded-ds-md border border-ds-divider">
+                      <img src={f.url} alt={f.resumen ?? "Foto de la OS"} className="h-40 w-full object-cover" />
+                      {f.resumen ? <p className="p-ds-2 font-ds-body text-ds-caption text-ds-text/60">{f.resumen}</p> : null}
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
-          </Card>
-
-          {detalle.items.length > 0 && (
-            <Card className="my-6 overflow-x-auto p-0">
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
-                    <th className="px-5 py-3 font-medium">Ítem</th>
-                    <th className="px-5 py-3 font-medium">Cant.</th>
-                    <th className="px-5 py-3 font-medium">P. unitario</th>
-                    <th className="px-5 py-3 font-medium">Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {detalle.items.map((it) => (
-                    <tr key={it.id} className="border-b border-border last:border-0">
-                      <td className="px-5 py-3">{it.descripcion}</td>
-                      <td className="px-5 py-3">{it.cantidad}</td>
-                      <td className="px-5 py-3">{monto(it.precio_unitario)}</td>
-                      <td className="px-5 py-3 font-medium text-foreground">{monto(it.cantidad * it.precio_unitario)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr>
-                    <td colSpan={3} className="px-5 py-3 text-right text-xs font-medium text-muted">
-                      Total
-                    </td>
-                    <td className="px-5 py-3 font-semibold text-foreground">
-                      {monto(detalle.items.reduce((acc, it) => acc + it.cantidad * it.precio_unitario, 0))}
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
-            </Card>
-          )}
-
-          {detalle.fotos.length > 0 && (
-            <Card className="my-6">
-              <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-foreground">
-                <IconCamera className="h-4 w-4 text-brand" />
-                Fotos
-              </h2>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {detalle.fotos.map((f) => (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <div key={f.id} className="overflow-hidden rounded-xl border border-border">
-                    <img src={f.url} alt={f.resumen ?? "Foto de la OS"} className="h-40 w-full object-cover" />
-                    {f.resumen && <p className="p-2 text-xs text-muted">{f.resumen}</p>}
-                  </div>
-                ))}
-              </div>
-            </Card>
-          )}
+              </Card>
+            </div>
+          ) : null}
 
           {/* Solo Admin, o Supervisor con el módulo informe_ia habilitado
               (el chequeo real es el backend — esto evita mostrar una
               acción que devolvería 403). */}
-          {detalle.orden &&
-            (usuario?.rol === "admin" || (usuario?.rol === "supervisor" && modulosVisibles.includes("informe_ia"))) && (
-            <Card className="my-6">
-              <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-                <h2 className="text-sm font-semibold text-foreground">Informe con IA (patrones personalizados)</h2>
-                <Button type="button" variant="outline" onClick={onGenerarInforme} disabled={generandoInforme}>
-                  {generandoInforme ? "Generando…" : detalle.orden.informe_ia ? "Regenerar" : "Generar informe con IA"}
-                </Button>
-              </div>
-              <div className="mb-4">
-                <Label>Qué revisar en las fotos (opcional)</Label>
-                <Textarea
-                  rows={2}
-                  value={patrones}
-                  onChange={(e) => setPatrones(e.target.value)}
-                  placeholder="Ej.: revisa daños visibles en la carga, verifica que el packaging esté sellado…"
-                  disabled={generandoInforme}
-                />
-              </div>
-              {errorInforme && <ErrorText>{errorInforme}</ErrorText>}
-              {detalle.orden.informe_ia ? (
-                <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-foreground">
-                  {detalle.orden.informe_ia}
-                </pre>
-              ) : (
-                !errorInforme && (
-                  <p className="text-sm text-muted">
+          {detalle.orden && (usuario?.rol === "admin" || (usuario?.rol === "supervisor" && modulosVisibles.includes("informe_ia"))) ? (
+            <div className="my-ds-6">
+              <Card>
+                <div className="mb-ds-4 flex flex-wrap items-center justify-between gap-ds-2">
+                  <p className="font-ds-body text-ds-small font-semibold text-ds-text">Informe con IA (patrones personalizados)</p>
+                  <Button variante="secundario" onPress={onGenerarInforme} cargando={generandoInforme}>
+                    {detalle.orden.informe_ia ? "Regenerar" : "Generar informe con IA"}
+                  </Button>
+                </div>
+                <div className="mb-ds-4">
+                  <Textarea
+                    etiqueta="Qué revisar en las fotos (opcional)"
+                    filas={2}
+                    valor={patrones}
+                    onCambio={setPatrones}
+                    placeholder="Ej.: revisa daños visibles en la carga, verifica que el packaging esté sellado…"
+                    deshabilitado={generandoInforme}
+                  />
+                </div>
+                {errorInforme ? <p className="font-ds-body text-ds-small text-ds-accent-700">{errorInforme}</p> : null}
+                {detalle.orden.informe_ia ? (
+                  <pre className="whitespace-pre-wrap font-ds-body text-ds-small leading-relaxed text-ds-text">{detalle.orden.informe_ia}</pre>
+                ) : !errorInforme ? (
+                  <p className="font-ds-body text-ds-small text-ds-text/60">
                     Redacta un informe técnico a partir de los datos medidos, el checklist, las observaciones y las
                     fotos de esta OS. Si escribís qué revisar, la IA analiza las fotos con ese foco.
                   </p>
-                )
-              )}
-            </Card>
-          )}
-
-          <Card className="my-6">
-            <h2 className="mb-4 text-sm font-semibold text-foreground">Firma de conformidad</h2>
-            {detalle.orden?.firma_url_firmada ? (
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-6">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={detalle.orden.firma_url_firmada}
-                  alt="Firma"
-                  className="h-24 w-48 rounded border border-border bg-white object-contain"
-                />
-                <div className="text-sm">
-                  {detalle.orden.firmante_nombre && (
-                    <p className="text-foreground">
-                      <span className="text-muted">Nombre:</span> {detalle.orden.firmante_nombre}
-                    </p>
-                  )}
-                  {detalle.orden.firmante_documento && (
-                    <p className="text-foreground">
-                      <span className="text-muted">RUT/Documento:</span> {detalle.orden.firmante_documento}
-                    </p>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <p className="text-sm text-muted">Todavía no se ha registrado la firma.</p>
-            )}
-          </Card>
-
-          {detalle.orden && (
-            <Card className="my-6">
-              <h2 className="mb-4 text-sm font-semibold text-foreground">PDF de la OS</h2>
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                <Button type="button" onClick={onDescargarPdf} disabled={descargando}>
-                  {descargando ? "Generando…" : "Descargar PDF"}
-                </Button>
-                <form onSubmit={onEnviarEmail} className="flex w-full max-w-sm items-end gap-2">
-                  <div className="flex-1">
-                    <Label className="flex items-center gap-1">
-                      <IconMail className="h-3.5 w-3.5" /> Enviar por email
-                    </Label>
-                    <Input
-                      type="email"
-                      placeholder="correo@cliente.cl"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                    />
-                  </div>
-                  <Button type="submit" variant="outline" disabled={enviando || !email.trim()}>
-                    {enviando ? "Enviando…" : "Enviar"}
-                  </Button>
-                </form>
-              </div>
-              {avisoEnvio && (
-                <div className="mt-3">
-                  <SuccessText>{avisoEnvio}</SuccessText>
-                </div>
-              )}
-              {errorEnvio && (
-                <div className="mt-3">
-                  <ErrorText>{errorEnvio}</ErrorText>
-                </div>
-              )}
-            </Card>
-          )}
-
-          {error && (
-            <div className="my-4">
-              <ErrorText>{error}</ErrorText>
+                ) : null}
+              </Card>
             </div>
-          )}
+          ) : null}
+
+          <div className="my-ds-6">
+            <Card>
+              <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Firma de conformidad</p>
+              {detalle.orden?.firma_url_firmada ? (
+                <div className="flex flex-col gap-ds-3 sm:flex-row sm:items-center sm:gap-ds-6">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={detalle.orden.firma_url_firmada}
+                    alt="Firma"
+                    className="h-24 w-48 rounded-ds-sm border border-ds-divider bg-white object-contain"
+                  />
+                  <div className="font-ds-body text-ds-small">
+                    {detalle.orden.firmante_nombre ? (
+                      <p className="text-ds-text">
+                        <span className="text-ds-text/60">Nombre:</span> {detalle.orden.firmante_nombre}
+                      </p>
+                    ) : null}
+                    {detalle.orden.firmante_documento ? (
+                      <p className="text-ds-text">
+                        <span className="text-ds-text/60">RUT/Documento:</span> {detalle.orden.firmante_documento}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+              ) : (
+                <p className="font-ds-body text-ds-small text-ds-text/60">Todavía no se ha registrado la firma.</p>
+              )}
+            </Card>
+          </div>
+
+          {detalle.orden ? (
+            <div className="my-ds-6">
+              <Card>
+                <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">PDF de la OS</p>
+                <div className="flex flex-col gap-ds-4 sm:flex-row sm:items-start sm:justify-between">
+                  <Button onPress={onDescargarPdf} cargando={descargando}>
+                    Descargar PDF
+                  </Button>
+                  <form onSubmit={onEnviarEmail} className="flex w-full max-w-sm items-end gap-ds-2">
+                    <div className="flex-1">
+                      <Input
+                        etiqueta="Enviar por email"
+                        iconoIzq={<Mail size={14} strokeWidth={2.75} />}
+                        tipo="email"
+                        placeholder="correo@cliente.cl"
+                        valor={email}
+                        onCambio={setEmail}
+                      />
+                    </div>
+                    <Button tipo="submit" variante="secundario" deshabilitado={enviando || !email.trim()} cargando={enviando}>
+                      Enviar
+                    </Button>
+                  </form>
+                </div>
+                {avisoEnvio ? <p className="mt-ds-3 font-ds-body text-ds-small font-medium text-ds-accent2-800">{avisoEnvio}</p> : null}
+                {errorEnvio ? <p className="mt-ds-3 font-ds-body text-ds-small text-ds-accent-700">{errorEnvio}</p> : null}
+              </Card>
+            </div>
+          ) : null}
+
+          {error ? <p className="my-ds-4 font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
         </>
-      )}
+      ) : null}
     </DashboardShell>
   );
 }

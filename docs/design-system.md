@@ -227,7 +227,32 @@ tengo credenciales para loguearme (ni las pediría: entrar con una cuenta
 no es algo que deba hacer sin que la usuaria lo autorice). Mismo
 criterio que `onboarding`/`invitacion` en el bucket 1.
 
+### Bucket 3 — Órdenes de servicio (listado + ficha) 🔶 en curso
+
+**Web (listado + ficha): ✅.** `ordenes/page.tsx` y `ordenes/[id]/page.tsx`
+migradas completas. Primero se extendió `Table` (`encabezado: ReactNode`
+para el checkbox "seleccionar todas"; `onFilaClick` para navegar al
+detalle) e `Input` (`tipo="hora"`, `maxLongitud`/`minLongitud`/`requerido`
+ya del bucket 1). Se retokenizaron 3 widgets compartidos de bajo riesgo
+(atómicos, no shells): `Combobox.tsx`, `ComboboxResponsable.tsx`,
+`InputMonto.tsx` — los usan otras pantallas no migradas, que ahora ven
+ese control puntual con la paleta nueva (mismo tipo de seam que ya
+documentamos, solo que en la dirección inversa: control nuevo dentro de
+pantalla vieja).
+**Seam conocido:** `CatalogoSelectorModal` (compartido con Catálogo y
+Cotizaciones — 5 pantallas) queda Faena, embebido en el modo edición
+ya migrado.
+
+**Mobile: listado ✅, ficha pendiente.** `TrabajosScreen.tsx` +
+`TrabajosStack.tsx` (solo header). Botón "Continuar" pasó de la variante
+Faena `acento` (naranja fijo) a `primario` — el sistema nuevo no separa
+"marca" de "acción de terreno", el brand del tenant ES el acento.
+**Seam conocido:** `TrabajosMapa.tsx` (vista de mapa) sigue Faena.
+
+Falta `TrabajoDetalleScreen.tsx` (mobile, ficha) — pantalla grande y
+compleja (fotos, firma, checklist, campos dinámicos), queda para la
+siguiente sesión de trabajo de este bucket.
+
 ### Resto del orden del prompt
 
-3) Órdenes de servicio (listado+ficha) · 4) Clientes · 5) Catálogo y
-stock · 6) Configuración · 7) resto — pendientes.
+4) Clientes · 5) Catálogo y stock · 6) Configuración · 7) resto — pendientes.

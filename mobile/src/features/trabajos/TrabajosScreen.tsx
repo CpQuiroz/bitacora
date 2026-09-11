@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Linking, Platform, Pressable, RefreshControl, SectionList, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { List, Map as MapIcon, Navigation, ClipboardList } from "lucide-react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { EstadoOS, EstadoTrabajo } from "@bitacora/shared";
 import { estadoOsDeTrabajo } from "@bitacora/shared";
-import { useTema } from "../../theme";
-import { Badge, Button, Card, EmptyState, ErrorState, LoadingScreen, Text } from "../../components/ui";
+import { tokens } from "@bitacora/design-tokens";
+import { Button, Card, EmptyState, ErrorState, LoadingState, Skeleton, StatusBadge, Texto, useMarca } from "@bitacora/ui/native";
 import { OfflineBanner } from "../../components/OfflineBanner";
 import { useAuth } from "../auth/AuthContext";
 import { listarTrabajos, type TrabajoLista } from "../../services/trabajos";
@@ -64,9 +64,12 @@ function agrupar(trabajos: TrabajoLista[]): Seccion[] {
   return [...map.values()].sort((a, b) => a.orden - b.orden);
 }
 
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
+// Seam conocido: TrabajosMapa.tsx (vista de mapa) sigue Faena — no
+// forma parte del bucket "listado + ficha".
 export function TrabajosScreen({ navigation }: NativeStackScreenProps<TrabajosStackParamList, "TrabajosLista">) {
-  const t = useTema();
   const auth = useAuth();
+  const marca = useMarca();
   const esGestion = auth.fase === "listo" && auth.usuario.rol !== "colaborador";
   const empresaNombre = auth.fase === "listo" ? auth.usuario.empresa.nombre : "";
   const usuarioNombre = auth.fase === "listo" ? auth.usuario.nombre : "";
@@ -125,9 +128,10 @@ export function TrabajosScreen({ navigation }: NativeStackScreenProps<TrabajosSt
   }, [trabajos]);
 
   const toggleVista = (
-    <View style={{ flexDirection: "row", gap: t.espacio(2), padding: t.espacio(4), paddingBottom: t.espacio(2) }}>
+    <View style={{ flexDirection: "row", gap: tokens.space["2"], padding: tokens.space["4"], paddingBottom: tokens.space["2"] }}>
       {(["lista", "mapa"] as const).map((v) => {
         const activo = vista === v;
+        const Icono = v === "lista" ? List : MapIcon;
         return (
           <Pressable
             key={v}
@@ -138,17 +142,17 @@ export function TrabajosScreen({ navigation }: NativeStackScreenProps<TrabajosSt
               alignItems: "center",
               justifyContent: "center",
               flexDirection: "row",
-              gap: t.espacio(2),
-              borderRadius: t.radio.md,
-              backgroundColor: activo ? t.colores.brand : t.colores.surface,
+              gap: tokens.space["2"],
+              borderRadius: tokens.radius.pill,
+              backgroundColor: activo ? marca.base : tokens.color.surface,
               borderWidth: 1,
-              borderColor: activo ? t.colores.brand : t.colores.border,
+              borderColor: activo ? marca.base : tokens.color.divider,
             }}
           >
-            <Ionicons name={v === "lista" ? "list-outline" : "map-outline"} size={16} color={activo ? t.colores.brandForeground : t.colores.muted} />
-            <Text variante="etiqueta" weight="semibold" tono={activo ? "inverso" : "muted"}>
+            <Icono size={16} strokeWidth={2.75} color={activo ? marca.foreground : `${tokens.color.text}99`} />
+            <Texto tamano={tokens.size.caption} color={activo ? marca.foreground : `${tokens.color.text}99`} peso="semibold">
               {v === "lista" ? "Lista" : "Mapa"}
-            </Text>
+            </Texto>
           </Pressable>
         );
       })}
@@ -157,7 +161,7 @@ export function TrabajosScreen({ navigation }: NativeStackScreenProps<TrabajosSt
 
   if (vista === "mapa") {
     return (
-      <View style={{ flex: 1, backgroundColor: t.colores.bg }}>
+      <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
         {toggleVista}
         <TrabajosMapa onVerOS={(trabajoId) => navigation.navigate("TrabajoDetalle", { trabajoId })} />
       </View>
@@ -165,16 +169,16 @@ export function TrabajosScreen({ navigation }: NativeStackScreenProps<TrabajosSt
   }
 
   const encabezado = (
-    <View style={{ backgroundColor: t.colores.brand, padding: t.espacio(5), gap: t.espacio(3) }}>
+    <View style={{ backgroundColor: marca.base, padding: tokens.space["6"], gap: tokens.space["3"] }}>
       <View>
-        <Text variante="titulo" tono="inverso">
+        <Texto tamano={tokens.size.h4} color={marca.foreground}>
           {formatearFechaLarga(HOY())}
-        </Text>
-        <Text variante="caption" style={{ color: t.colores.brandSoft }}>
+        </Texto>
+        <Texto tamano={tokens.size.caption} color={`${marca.foreground}b3`}>
           {[empresaNombre, usuarioNombre].filter(Boolean).join(" · ")}
-        </Text>
+        </Texto>
       </View>
-      <View style={{ flexDirection: "row", gap: t.espacio(2) }}>
+      <View style={{ flexDirection: "row", gap: tokens.space["2"] }}>
         {[
           { k: "Pendientes", v: String(contadores.pendientes) },
           { k: "Listas", v: String(contadores.listas) },
@@ -182,12 +186,14 @@ export function TrabajosScreen({ navigation }: NativeStackScreenProps<TrabajosSt
         ].map((c) => (
           <View
             key={c.k}
-            style={{ flex: 1, backgroundColor: "rgba(255,255,255,0.12)", borderRadius: t.radio.md, padding: t.espacio(3), gap: 2 }}
+            style={{ flex: 1, backgroundColor: `${marca.foreground}1f`, borderRadius: tokens.radius.md, padding: tokens.space["3"], gap: 2 }}
           >
-            <Text variante="cifra" tono="inverso" style={{ fontSize: 22 }}>
+            <Texto tamano={22} color={marca.foreground} style={{ fontVariant: ["tabular-nums"] }}>
               {c.v}
-            </Text>
-            <Text style={{ color: t.colores.brandSoft, fontSize: 11 }}>{c.k}</Text>
+            </Texto>
+            <Texto tamano={11} color={`${marca.foreground}b3`}>
+              {c.k}
+            </Texto>
           </View>
         ))}
       </View>
@@ -196,27 +202,34 @@ export function TrabajosScreen({ navigation }: NativeStackScreenProps<TrabajosSt
 
   if (trabajos === null && !error)
     return (
-      <View style={{ flex: 1, backgroundColor: t.colores.bg }}>
+      <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
         {toggleVista}
-        <LoadingScreen />
+        <View style={{ padding: tokens.space["4"], gap: tokens.space["3"] }}>
+          <LoadingState>
+            <Skeleton alto={72} radio={32} />
+            <Skeleton alto={72} radio={32} />
+          </LoadingState>
+        </View>
       </View>
     );
   if (error && !trabajos)
     return (
-      <View style={{ flex: 1, backgroundColor: t.colores.bg }}>
+      <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
         {toggleVista}
         <ErrorState mensaje={error} onReintentar={cargar} />
       </View>
     );
 
   return (
-    <View style={{ flex: 1, backgroundColor: t.colores.bg }}>
+    <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
       <OfflineBanner guardadoEn={guardadoEn} />
       {toggleVista}
-      {esGestion && (
-        <View style={{ paddingHorizontal: t.espacio(4), paddingBottom: t.espacio(2), gap: t.espacio(2) }}>
-          <Button titulo="Nuevo trabajo" onPress={() => navigation.navigate("TrabajoForm")} />
-          <View style={{ flexDirection: "row", gap: t.espacio(2) }}>
+      {esGestion ? (
+        <View style={{ paddingHorizontal: tokens.space["4"], paddingBottom: tokens.space["2"], gap: tokens.space["2"] }}>
+          <Button bloque onPress={() => navigation.navigate("TrabajoForm")}>
+            Nuevo trabajo
+          </Button>
+          <View style={{ flexDirection: "row", gap: tokens.space["2"] }}>
             {(["Míos", "Equipo"] as const).map((op, i) => {
               const activo = (i === 1) === equipo;
               return (
@@ -228,106 +241,101 @@ export function TrabajosScreen({ navigation }: NativeStackScreenProps<TrabajosSt
                     minHeight: 44,
                     alignItems: "center",
                     justifyContent: "center",
-                    borderRadius: t.radio.md,
-                    backgroundColor: activo ? t.colores.brand : t.colores.surface,
+                    borderRadius: tokens.radius.pill,
+                    backgroundColor: activo ? marca.base : tokens.color.surface,
                     borderWidth: 1,
-                    borderColor: activo ? t.colores.brand : t.colores.border,
+                    borderColor: activo ? marca.base : tokens.color.divider,
                   }}
                 >
-                  <Text variante="etiqueta" weight="semibold" tono={activo ? "inverso" : "muted"}>
+                  <Texto tamano={tokens.size.caption} color={activo ? marca.foreground : `${tokens.color.text}99`} peso="semibold">
                     {op}
-                  </Text>
+                  </Texto>
                 </Pressable>
               );
             })}
           </View>
         </View>
-      )}
+      ) : null}
       <SectionList
         sections={secciones}
         keyExtractor={(item) => item.id}
         stickySectionHeadersEnabled={false}
-        contentContainerStyle={{ paddingBottom: t.espacio(10), flexGrow: 1 }}
-        refreshControl={<RefreshControl refreshing={refrescando} onRefresh={onRefresh} tintColor={t.colores.brand} />}
+        contentContainerStyle={{ paddingBottom: tokens.space["8"], flexGrow: 1 }}
+        refreshControl={<RefreshControl refreshing={refrescando} onRefresh={onRefresh} tintColor={marca.base} />}
         ListHeaderComponent={encabezado}
         ListEmptyComponent={
-          <View style={{ padding: t.espacio(4) }}>
+          <View style={{ padding: tokens.space["4"] }}>
             <EmptyState
-              icono={<Ionicons name="clipboard-outline" size={40} color={t.colores.faint} />}
+              icono={<ClipboardList size={32} strokeWidth={2.75} color={tokens.color.accent2Ramp["800"]} />}
               titulo="Sin trabajos"
               mensaje={equipo ? "El equipo no tiene trabajos asignados." : "No tienes trabajos asignados."}
             />
           </View>
         }
         renderSectionHeader={({ section }) => (
-          <Text
-            mono
-            weight="semibold"
+          <Texto
+            tamano={10}
+            color={`${tokens.color.text}66`}
+            peso="semibold"
             style={{
-              fontSize: 10,
               letterSpacing: 1.5,
-              color: t.colores.faint,
-              paddingHorizontal: t.espacio(4),
-              paddingTop: t.espacio(4),
-              paddingBottom: t.espacio(2),
+              paddingHorizontal: tokens.space["4"],
+              paddingTop: tokens.space["4"],
+              paddingBottom: tokens.space["2"],
             }}
           >
             {section.titulo}
-          </Text>
+          </Texto>
         )}
         renderItem={({ item }) => {
           const estadoOs = item.orden?.estado_os ?? estadoOsDeTrabajo(item.estado as EstadoTrabajo);
           const enCurso = estadoOs === "en_proceso";
           const firmada = estadoOs === "firmada";
           return (
-            <View style={{ paddingHorizontal: t.espacio(4), paddingBottom: t.espacio(3), opacity: firmada ? 0.68 : 1 }}>
-              <Card
-                onPress={() => navigation.navigate("TrabajoDetalle", { trabajoId: item.id, titulo: item.cliente })}
-                style={enCurso ? { borderLeftWidth: 4, borderLeftColor: t.colores.accent } : undefined}
-              >
-                <View style={{ flexDirection: "row", gap: t.espacio(3) }}>
-                  <Text mono weight="semibold" style={{ width: 46, fontSize: 15 }}>
+            <View style={{ paddingHorizontal: tokens.space["4"], paddingBottom: tokens.space["3"], opacity: firmada ? 0.68 : 1 }}>
+              <Card onPress={() => navigation.navigate("TrabajoDetalle", { trabajoId: item.id, titulo: item.cliente })}>
+                <View style={{ flexDirection: "row", gap: tokens.space["3"] }}>
+                  <Texto tamano={15} color={tokens.color.text} peso="semibold" style={{ width: 46, fontVariant: ["tabular-nums"] }}>
                     {item.hora_programada ? item.hora_programada.slice(0, 5) : "--:--"}
-                  </Text>
+                  </Texto>
                   <View style={{ flex: 1, gap: 2 }}>
-                    <Text weight="semibold" style={{ fontSize: 16.5 }} numberOfLines={1}>
+                    <Texto tamano={16.5} color={tokens.color.text} peso="semibold" numberOfLines={1}>
                       {item.cliente}
-                    </Text>
+                    </Texto>
                     {item.ubicacion ? (
-                      <Text variante="caption" tono="muted" numberOfLines={1}>
+                      <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} numberOfLines={1}>
                         {item.ubicacion}
-                      </Text>
+                      </Texto>
                     ) : null}
                     {item.orden?.folio != null ? (
-                      <Text mono variante="caption" tono="muted">
+                      <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} style={{ fontVariant: ["tabular-nums"] }}>
                         OS N° {item.orden.folio}
-                      </Text>
+                      </Texto>
                     ) : null}
                   </View>
-                  <Badge estado={estadoOs} texto={ETIQUETA_OS[estadoOs] ?? estadoOs} />
+                  <StatusBadge estado={estadoOs} etiqueta={ETIQUETA_OS[estadoOs] ?? estadoOs} />
                 </View>
 
                 {enCurso ? (
-                  <View style={{ flexDirection: "row", gap: t.espacio(2), marginTop: t.espacio(3) }}>
-                    <Button
-                      titulo="Continuar"
-                      variante="acento"
-                      onPress={() => navigation.navigate("TrabajoDetalle", { trabajoId: item.id, titulo: item.cliente })}
-                      style={{ flex: 1 }}
-                    />
+                  <View style={{ flexDirection: "row", gap: tokens.space["2"], marginTop: tokens.space["3"] }}>
+                    <View style={{ flex: 1 }}>
+                      <Button onPress={() => navigation.navigate("TrabajoDetalle", { trabajoId: item.id, titulo: item.cliente })}>
+                        Continuar
+                      </Button>
+                    </View>
                     <Pressable
                       onPress={() => abrirNavegacion(item.ubicacion)}
                       style={{
                         width: 50,
                         height: 50,
-                        borderRadius: t.radio.md,
+                        borderRadius: tokens.radius.pill,
                         borderWidth: 1,
-                        borderColor: t.colores.border,
+                        borderColor: tokens.color.divider,
                         alignItems: "center",
                         justifyContent: "center",
                       }}
                     >
-                      <Ionicons name="navigate" size={20} color={t.colores.brand} />
+                      <Navigation size={20} strokeWidth={2.75} color={marca.base} />
                     </Pressable>
                   </View>
                 ) : null}

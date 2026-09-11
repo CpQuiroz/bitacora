@@ -3,17 +3,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ClipboardCheck, Plus, Receipt } from "lucide-react";
 import type { Cliente, EstadoOS, OrdenServicio, Trabajo, Usuario } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { abrirPdfOS } from "@/lib/descargarPdf";
-import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Badge, Button, Card, ErrorText, Input, Label, Select, SuccessText, buttonClass } from "@/components/ui";
-import { Combobox } from "@/components/Combobox";
-import { IconClipboardCheck, IconPlus, IconReceipt } from "@/components/icons";
-import { EstadoCargando, EstadoError, EstadoVacio } from "@/components/estados";
-import { Modal } from "@/components/Modal";
 import { formatMoneda } from "@/lib/formatMoneda";
+import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
+import { Combobox } from "@/components/Combobox";
+import { Button, Card, Cifra, DatePicker, Dialog, Input, Select, StatusBadge, Table } from "@bitacora/ui/web";
 
 type OrdenListado = Trabajo & {
   cliente_info: { nombre: string } | null;
@@ -23,6 +21,22 @@ type OrdenListado = Trabajo & {
 
 const ESTADOS_OS: EstadoOS[] = ["enviada", "en_proceso", "completada", "firmada", "cancelada"];
 
+function aFecha(texto: string): Date | null {
+  if (!texto) return null;
+  const [y, m, d] = texto.split("-").map(Number);
+  return new Date(y, (m || 1) - 1, d || 1);
+}
+function aTexto(fecha: Date | null): string {
+  if (!fecha) return "";
+  const y = fecha.getFullYear();
+  const m = String(fecha.getMonth() + 1).padStart(2, "0");
+  const d = String(fecha.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
+// Seam conocido: DashboardShell (sidebar/header) sigue Faena — no está en
+// este bucket, lo usan ~38 pantallas más.
 export default function OrdenesServicioPage() {
   const router = useRouter();
   const [usuario, setUsuario] = useState<UsuarioShell | null>(null);
@@ -159,208 +173,167 @@ export default function OrdenesServicioPage() {
 
   return (
     <DashboardShell usuario={usuario}>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight text-foreground">
-          <IconClipboardCheck className="h-6 w-6 text-brand" />
+      <div className="mb-ds-6 flex flex-wrap items-center justify-between gap-ds-3">
+        <p className="ds-heading flex items-center gap-ds-2 text-ds-h2 text-ds-text">
+          <ClipboardCheck size={24} strokeWidth={2.75} className="text-ds-brand" />
           Órdenes de servicio
-        </h1>
-        <Link href="/dashboard/ordenes/nueva" className={buttonClass("primary")}>
-          <IconPlus className="h-4 w-4" />
-          Nueva OS
+        </p>
+        <Link href="/dashboard/ordenes/nueva">
+          <Button iconoIzq={<Plus size={16} strokeWidth={2.75} />}>Nueva OS</Button>
         </Link>
       </div>
 
-      <Card className="mb-6">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
-          <div>
-            <Label>Documento</Label>
-            <Select value={documento} onChange={(e) => setDocumento(e.target.value as "" | "con" | "sin")}>
-              <option value="">Todas</option>
-              <option value="con">Con documento</option>
-              <option value="sin">Sin documento</option>
-            </Select>
-          </div>
-          <div>
-            <Label>Estado</Label>
-            <Select value={estadoOs} onChange={(e) => setEstadoOs(e.target.value)}>
-              <option value="">Todos</option>
-              {ESTADOS_OS.map((e) => (
-                <option key={e} value={e}>
-                  {e.replace("_", " ")}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <div>
-            <Label>Colaborador</Label>
-            <Combobox
-              value={responsableId}
-              onChange={setResponsableId}
-              opciones={[{ id: "", label: "Todos" }, ...equipo.map((u) => ({ id: u.id, label: u.nombre }))]}
-              placeholder="Todos"
+      <div className="mb-ds-6">
+        <Card>
+          <div className="grid gap-ds-4 sm:grid-cols-2 lg:grid-cols-6">
+            <Select
+              etiqueta="Documento"
+              valor={documento}
+              onCambio={(v) => setDocumento(v as "" | "con" | "sin")}
+              opciones={[
+                { valor: "", etiqueta: "Todas" },
+                { valor: "con", etiqueta: "Con documento" },
+                { valor: "sin", etiqueta: "Sin documento" },
+              ]}
             />
-          </div>
-          <div>
-            <Label>Cliente</Label>
-            <Combobox
-              value={clienteId}
-              onChange={setClienteId}
-              opciones={[{ id: "", label: "Todos" }, ...clientes.map((c) => ({ id: c.id, label: c.nombre }))]}
-              placeholder="Todos"
+            <Select
+              etiqueta="Estado"
+              valor={estadoOs}
+              onCambio={setEstadoOs}
+              opciones={[{ valor: "", etiqueta: "Todos" }, ...ESTADOS_OS.map((e) => ({ valor: e, etiqueta: e.replace("_", " ") }))]}
             />
+            <div className="flex flex-col gap-ds-1">
+              <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Colaborador</label>
+              <Combobox
+                value={responsableId}
+                onChange={setResponsableId}
+                opciones={[{ id: "", label: "Todos" }, ...equipo.map((u) => ({ id: u.id, label: u.nombre }))]}
+                placeholder="Todos"
+              />
+            </div>
+            <div className="flex flex-col gap-ds-1">
+              <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Cliente</label>
+              <Combobox
+                value={clienteId}
+                onChange={setClienteId}
+                opciones={[{ id: "", label: "Todos" }, ...clientes.map((c) => ({ id: c.id, label: c.nombre }))]}
+                placeholder="Todos"
+              />
+            </div>
+            <DatePicker etiqueta="Desde" valor={aFecha(desde)} onCambio={(f) => setDesde(aTexto(f))} />
+            <DatePicker etiqueta="Hasta" valor={aFecha(hasta)} onCambio={(f) => setHasta(aTexto(f))} />
           </div>
-          <div>
-            <Label>Desde</Label>
-            <input
-              type="date"
-              value={desde}
-              onChange={(e) => setDesde(e.target.value)}
-              className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground transition-colors hover:border-muted-soft focus:outline-none focus-visible:ring-[3px] focus-visible:ring-brand/25 focus-visible:border-brand"
-            />
-          </div>
-          <div>
-            <Label>Hasta</Label>
-            <input
-              type="date"
-              value={hasta}
-              onChange={(e) => setHasta(e.target.value)}
-              className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground transition-colors hover:border-muted-soft focus:outline-none focus-visible:ring-[3px] focus-visible:ring-brand/25 focus-visible:border-brand"
-            />
-          </div>
-        </div>
-      </Card>
+        </Card>
+      </div>
 
-      {aviso && (
-        <div className="mb-4">
-          <SuccessText>{aviso}</SuccessText>
-        </div>
-      )}
+      {aviso ? <p className="mb-ds-4 font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}
 
-      {seleccionados.size > 0 && (
-        <Card className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-foreground">
-            {seleccionados.size} OS seleccionada{seleccionados.size === 1 ? "" : "s"} — {formatMoneda(montoTotalSeleccion, usuario.moneda)}
+      {seleccionados.size > 0 ? (
+        <div className="mb-ds-4">
+          <Card>
+            <div className="flex flex-wrap items-center justify-between gap-ds-3">
+              <p className="font-ds-body text-ds-small text-ds-text">
+                {seleccionados.size} OS seleccionada{seleccionados.size === 1 ? "" : "s"} —{" "}
+                <Cifra>{formatMoneda(montoTotalSeleccion, usuario.moneda)}</Cifra>
+              </p>
+              <div className="flex gap-ds-2">
+                <Button variante="ghost" onPress={() => setSeleccionados(new Set())}>
+                  Limpiar selección
+                </Button>
+                <Button onPress={abrirModalCobro} iconoIzq={<Receipt size={16} strokeWidth={2.75} />}>
+                  Generar Cobro
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+      ) : null}
+
+      <Table<OrdenListado>
+        cargando={ordenes === null && !error}
+        error={error}
+        onReintentar={cargarOrdenes}
+        onFilaClick={(o) => router.push(`/dashboard/ordenes/${o.id}`)}
+        filas={ordenesFiltradas}
+        claveFila={(o) => o.id}
+        vacio={{ icono: <ClipboardCheck size={28} strokeWidth={2.75} />, titulo: "No hay órdenes de servicio con estos filtros" }}
+        columnas={[
+          {
+            encabezado: (
+              <input
+                type="checkbox"
+                checked={seleccionados.size > 0 && seleccionados.size === ordenesFiltradas.length}
+                onChange={toggleSeleccionTodos}
+                className="accent-[var(--ds-brand)]"
+                aria-label="Seleccionar todas"
+              />
+            ),
+            celda: (o) => (
+              <input
+                type="checkbox"
+                checked={seleccionados.has(o.id)}
+                onChange={() => toggleSeleccion(o.id)}
+                onClick={(e) => e.stopPropagation()}
+                className="accent-[var(--ds-brand)]"
+                aria-label={`Seleccionar OS de ${o.cliente_info?.nombre ?? o.cliente}`}
+              />
+            ),
+          },
+          { encabezado: "Folio", celda: (o) => (o.orden?.folio != null ? <Cifra>{`N° ${o.orden.folio}`}</Cifra> : "—") },
+          { encabezado: "Cliente", celda: (o) => o.cliente_info?.nombre ?? o.cliente },
+          { encabezado: "Colaborador", celda: (o) => o.responsable?.nombre ?? "—" },
+          {
+            encabezado: "Fecha",
+            celda: (o) => <Cifra>{`${o.fecha}${o.hora_programada ? ` ${o.hora_programada}` : ""}`}</Cifra>,
+          },
+          { encabezado: "Estado", celda: (o) => <StatusBadge estado={o.orden?.estado_os ?? "pendiente"} /> },
+          {
+            encabezado: "PDF",
+            celda: (o) =>
+              o.orden?.estado_os === "firmada" ? (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    abrirPdfOS(o.id);
+                  }}
+                  className="font-ds-body font-medium text-ds-brand hover:underline"
+                >
+                  Ver PDF
+                </button>
+              ) : (
+                <span className="text-ds-text/50">—</span>
+              ),
+          },
+        ]}
+      />
+
+      <Dialog abierto={modalCobroAbierto} onCerrar={() => setModalCobroAbierto(false)} titulo="Generar Cobro">
+        <div className="flex flex-col gap-ds-4">
+          <p className="font-ds-body text-ds-small text-ds-text/70">
+            Se agruparán {seleccionados.size} OS de <strong className="text-ds-text">{[...nombresClientesSeleccion].join(", ")}</strong> por un
+            total de <Cifra>{formatMoneda(montoTotalSeleccion, usuario.moneda)}</Cifra>.
           </p>
-          <div className="flex gap-2">
-            <Button type="button" variant="ghost" onClick={() => setSeleccionados(new Set())}>
-              Limpiar selección
-            </Button>
-            <Button type="button" onClick={abrirModalCobro}>
-              <IconReceipt className="h-4 w-4" />
+          {nombresClientesSeleccion.size > 1 ? (
+            <p className="font-ds-body text-ds-small text-ds-accent-700">
+              Las OS seleccionadas deben ser todas del mismo cliente — ajusta la selección.
+            </p>
+          ) : null}
+          <div className="grid gap-ds-4 sm:grid-cols-2">
+            <Input etiqueta="Semana (opcional)" placeholder="ej: S33" valor={semanaCobro} onCambio={setSemanaCobro} />
+            <Input etiqueta="Plazo de pago (días)" tipo="numero" valor={diasPlazoCobro} onCambio={setDiasPlazoCobro} />
+          </div>
+          {errorCobro ? <p className="font-ds-body text-ds-small text-ds-accent-700">{errorCobro}</p> : null}
+          <div className="flex gap-ds-2">
+            <Button onPress={generarCobro} deshabilitado={guardandoCobro || nombresClientesSeleccion.size !== 1} cargando={guardandoCobro}>
               Generar Cobro
             </Button>
-          </div>
-        </Card>
-      )}
-
-      {error && <EstadoError mensaje={error} onReintentar={cargarOrdenes} />}
-      {ordenes === null && !error && <EstadoCargando />}
-      {ordenes !== null && ordenesFiltradas.length === 0 && (
-        <EstadoVacio icono={IconClipboardCheck} titulo="No hay órdenes de servicio con estos filtros" />
-      )}
-      {ordenesFiltradas.length > 0 && (
-        <Card className="overflow-x-auto p-0">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
-                <th className="px-5 py-3 font-medium">
-                  <input
-                    type="checkbox"
-                    checked={seleccionados.size > 0 && seleccionados.size === ordenesFiltradas.length}
-                    onChange={toggleSeleccionTodos}
-                    className="accent-brand"
-                    aria-label="Seleccionar todas"
-                  />
-                </th>
-                <th className="px-5 py-3 font-medium">Folio</th>
-                <th className="px-5 py-3 font-medium">Cliente</th>
-                <th className="px-5 py-3 font-medium">Colaborador</th>
-                <th className="px-5 py-3 font-medium">Fecha</th>
-                <th className="px-5 py-3 font-medium">Estado</th>
-                <th className="px-5 py-3 font-medium">PDF</th>
-              </tr>
-            </thead>
-            <tbody>
-              {ordenesFiltradas.map((o) => (
-                <tr
-                  key={o.id}
-                  onClick={() => router.push(`/dashboard/ordenes/${o.id}`)}
-                  className="cursor-pointer border-b border-border-soft last:border-0 hover:bg-surface-sunken"
-                >
-                  <td className="px-5 py-3" onClick={(e) => e.stopPropagation()}>
-                    <input
-                      type="checkbox"
-                      checked={seleccionados.has(o.id)}
-                      onChange={() => toggleSeleccion(o.id)}
-                      className="accent-brand"
-                      aria-label={`Seleccionar OS de ${o.cliente_info?.nombre ?? o.cliente}`}
-                    />
-                  </td>
-                  <td className="px-5 py-3 font-medium text-foreground">
-                    {o.orden?.folio != null ? `N° ${o.orden.folio}` : "—"}
-                  </td>
-                  <td className="px-5 py-3">{o.cliente_info?.nombre ?? o.cliente}</td>
-                  <td className="px-5 py-3">{o.responsable?.nombre ?? "—"}</td>
-                  <td className="px-5 py-3">
-                    {o.fecha}
-                    {o.hora_programada ? ` ${o.hora_programada}` : ""}
-                  </td>
-                  <td className="px-5 py-3">
-                    <Badge value={o.orden?.estado_os ?? "pendiente"} />
-                  </td>
-                  <td className="px-5 py-3">
-                    {o.orden?.estado_os === "firmada" ? (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          abrirPdfOS(o.id);
-                        }}
-                        className="font-medium text-brand hover:underline"
-                      >
-                        Ver PDF
-                      </button>
-                    ) : (
-                      <span className="text-muted">—</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
-      )}
-
-      <Modal open={modalCobroAbierto} onClose={() => setModalCobroAbierto(false)} title="Generar Cobro">
-        <div className="flex flex-col gap-4">
-          <p className="text-sm text-muted">
-            Se agruparán {seleccionados.size} OS de <strong className="text-foreground">{[...nombresClientesSeleccion].join(", ")}</strong> por un
-            total de {formatMoneda(montoTotalSeleccion, usuario.moneda)}.
-          </p>
-          {nombresClientesSeleccion.size > 1 && (
-            <ErrorText>Las OS seleccionadas deben ser todas del mismo cliente — ajusta la selección.</ErrorText>
-          )}
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <Label>Semana (opcional)</Label>
-              <Input type="text" placeholder="ej: S33" value={semanaCobro} onChange={(e) => setSemanaCobro(e.target.value)} />
-            </div>
-            <div>
-              <Label>Plazo de pago (días)</Label>
-              <Input type="number" min="1" value={diasPlazoCobro} onChange={(e) => setDiasPlazoCobro(e.target.value)} />
-            </div>
-          </div>
-          {errorCobro && <ErrorText>{errorCobro}</ErrorText>}
-          <div className="flex gap-2">
-            <Button type="button" onClick={generarCobro} disabled={guardandoCobro || nombresClientesSeleccion.size !== 1}>
-              {guardandoCobro ? "Generando…" : "Generar Cobro"}
-            </Button>
-            <Button type="button" variant="ghost" onClick={() => setModalCobroAbierto(false)}>
+            <Button variante="ghost" onPress={() => setModalCobroAbierto(false)}>
               Cancelar
             </Button>
           </div>
         </div>
-      </Modal>
+      </Dialog>
     </DashboardShell>
   );
 }

@@ -46,7 +46,7 @@ export type PropsCampoBase = {
 // keyboardType="number-pad". Agregado al migrar el login (Paso 6): el
 // campo de código de 6 dígitos lo necesitaba y no había una forma
 // correcta de pedirlo con el contrato anterior.
-export type TipoInput = "texto" | "numero" | "codigo" | "email" | "password" | "tel";
+export type TipoInput = "texto" | "numero" | "codigo" | "email" | "password" | "tel" | "hora";
 
 export type PropsInput = PropsCampoBase & {
   valor: string;

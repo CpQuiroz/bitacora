@@ -10,6 +10,7 @@ const HTML_TYPE: Record<TipoInput, string> = {
   email: "email",
   password: "password",
   tel: "tel",
+  hora: "time",
 };
 
 export function Input({

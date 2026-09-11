@@ -13,6 +13,7 @@ const TECLADO: Record<TipoInput, KeyboardTypeOptions> = {
   email: "email-address",
   password: "default",
   tel: "phone-pad",
+  hora: "default",
 };
 
 const CONTENIDO: Record<TipoInput, TextInputProps["textContentType"]> = {
@@ -22,6 +23,7 @@ const CONTENIDO: Record<TipoInput, TextInputProps["textContentType"]> = {
   email: "emailAddress",
   password: "password",
   tel: "telephoneNumber",
+  hora: "none",
 };
 
 export function Input({

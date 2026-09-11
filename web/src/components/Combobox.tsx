@@ -1,17 +1,22 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { IconChevronDown } from "./icons";
+import { ChevronDown } from "lucide-react";
 
 export type ComboboxOpcion = { id: string; label: string };
 
 // Combobox con búsqueda y navegación por teclado (flechas + Enter),
 // sobre un <input> normal — sin librería nueva, mismo criterio que el
-// resto del design system (ver ui.tsx, sin Radix/shadcn). Es el
+// resto del design system (packages/ui, sin Radix/shadcn). Es el
 // primitivo genérico: solo busca/selecciona entre "opciones". La
 // lógica de "si no existe, crear uno nuevo" la arma cada caller vía
 // etiquetaCrear/onCrear (ver ComboboxCliente y ComboboxResponsable,
 // que sí saben qué significa "crear" para cada entidad).
+//
+// PASO 6 (sistema de diseño) — retokenizado a ds-. No es una primitiva de
+// packages/ui (busca + crea inline, más complejo que Select) — queda como
+// componente propio de la app, pero con los tokens nuevos porque lo usan
+// pantallas que se están migrando (Órdenes de servicio).
 export function Combobox({
   value,
   onChange,
@@ -133,21 +138,23 @@ export function Combobox({
           if (!abierto) setAbierto(true);
         }}
         onKeyDown={onKeyDown}
-        className={`w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 pr-9 text-sm text-foreground placeholder:text-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+        className={`h-11 w-full rounded-ds-pill border border-ds-divider bg-ds-surface px-ds-4 pr-9 font-ds-body text-ds-body text-ds-text placeholder:text-ds-text/40 outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ds-brand)] [caret-color:var(--ds-brand)] ${
           abierto ? "" : "cursor-pointer"
         } ${disabled ? "cursor-not-allowed opacity-60" : ""}`}
       />
-      <IconChevronDown
-        className={`pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted transition-transform ${
+      <ChevronDown
+        size={16}
+        strokeWidth={2.75}
+        className={`pointer-events-none absolute right-ds-3 top-1/2 -translate-y-1/2 text-ds-text/50 transition-transform ${
           abierto ? "rotate-180" : ""
         }`}
       />
-      {abierto && (
+      {abierto ? (
         <div
           role="listbox"
-          className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-lg border border-border bg-surface py-1 shadow-lg"
+          className="absolute z-20 mt-ds-1 max-h-60 w-full overflow-auto rounded-ds-md border border-ds-divider bg-ds-surface py-ds-1 shadow-ds-md"
         >
-          {filas.length === 0 && <p className="px-3.5 py-2 text-sm text-muted">Sin resultados.</p>}
+          {filas.length === 0 ? <p className="px-ds-4 py-ds-2 font-ds-body text-ds-small text-ds-text/60">Sin resultados.</p> : null}
           {filas.map((fila, i) => (
             <button
               key={fila.tipo === "opcion" ? fila.opcion.id : "__crear__"}
@@ -162,25 +169,25 @@ export function Combobox({
                 elegirFila(fila);
               }}
               onMouseEnter={() => setIndiceActivo(i)}
-              className={`block w-full truncate px-3.5 py-2 text-left text-sm ${
-                i === indiceActivo ? "bg-brand-soft text-brand" : "text-foreground"
-              } ${fila.tipo === "crear" ? "font-medium text-brand" : ""}`}
+              className={`block w-full truncate px-ds-4 py-ds-2 text-left font-ds-body text-ds-small ${
+                i === indiceActivo ? "bg-ds-brand/[0.08] text-ds-brand" : "text-ds-text"
+              } ${fila.tipo === "crear" ? "font-medium text-ds-brand" : ""}`}
             >
               {fila.tipo === "opcion" ? fila.opcion.label : etiquetaCrear!(fila.texto)}
             </button>
           ))}
         </div>
-      )}
-      {gestionHref && (
+      ) : null}
+      {gestionHref ? (
         <a
           href={gestionHref}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-1 inline-block text-xs font-medium text-muted transition-colors hover:text-brand"
+          className="mt-ds-1 inline-block font-ds-body text-ds-caption font-medium text-ds-text/60 transition-colors hover:text-ds-brand"
         >
           {gestionLabel ?? "Gestionar →"}
         </a>
-      )}
+      ) : null}
     </div>
   );
 }
