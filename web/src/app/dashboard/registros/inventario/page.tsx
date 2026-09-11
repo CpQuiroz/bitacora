@@ -1,19 +1,26 @@
 "use client";
 
 import { Fragment, useEffect, useState, type FormEvent } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Box } from "lucide-react";
 import type { CatalogoItem, Empresa, InventarioMovimiento, TipoMovimientoInventario, Usuario } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
-import { estadoStock } from "@/lib/estadoStock";
+import { estadoStock, ETIQUETA_ESTADO_STOCK } from "@/lib/estadoStock";
 import { DashboardShell } from "@/components/DashboardShell";
-import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, Stat, SuccessText, buttonClass } from "@/components/ui";
-import { IconBox } from "@/components/icons";
-import { EstadoCargando, EstadoVacio } from "@/components/estados";
+import { Button, Card, EmptyState, Input, LoadingState, Select, StatusBadge, Table, type TonoEstado } from "@bitacora/ui/web";
+import { Stat } from "@/components/Stat";
 
 type UsuarioConEmpresa = Usuario & { empresa: Empresa };
 type MovimientoConNombre = InventarioMovimiento & { item_nombre: string | null };
 
+// "en_stock"/"stock_bajo" no están en MAPA_ESTADO_TONO ("sin_stock" sí)
+// — mismo criterio que CatalogoSelectorModal.
+const TONO_STOCK: Record<string, TonoEstado> = { en_stock: "completado", stock_bajo: "en_progreso", sin_stock: "cancelado" };
+const TONO_MOVIMIENTO: Record<TipoMovimientoInventario, TonoEstado> = { entrada: "completado", salida: "en_progreso", ajuste: "cerrado" };
+
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export default function InventarioRegistroPage() {
   const router = useRouter();
   const [usuario, setUsuario] = useState<UsuarioConEmpresa | null>(null);
@@ -101,46 +108,39 @@ export default function InventarioRegistroPage() {
 
   return (
     <DashboardShell usuario={usuarioShell}>
-      <PageHeader title="Inventario" subtitle="Stock de los productos de tu Catálogo" />
+      <p className="ds-heading text-ds-h2 text-ds-text">Inventario</p>
+      <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">Stock de los productos de tu Catálogo</p>
 
       {!usuario.empresa.inventario_activado ? (
-        <div className="my-6">
-          <EstadoVacio
-            icono={IconBox}
+        <div className="my-ds-6">
+          <EmptyState
+            icono={<Box size={28} strokeWidth={2.75} />}
             titulo="Control de inventario desactivado"
             mensaje="Actívalo en la configuración para empezar a rastrear el stock de tus productos."
             accion={
-              <a href="/dashboard/configuracion/inventario" className={buttonClass("primary")}>
-                Configurar inventario
-              </a>
+              <Link href="/dashboard/configuracion/inventario">
+                <Button>Configurar inventario</Button>
+              </Link>
             }
           />
         </div>
       ) : (
         <>
-          {error && (
-            <div className="my-6">
-              <ErrorText>{error}</ErrorText>
-            </div>
-          )}
-          {aviso && (
-            <div className="my-4">
-              <SuccessText>{aviso}</SuccessText>
-            </div>
-          )}
+          {error ? <p className="my-ds-6 font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
+          {aviso ? <p className="my-ds-4 font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}
 
-          {productos === null && !error && <EstadoCargando />}
+          {productos === null && !error ? <LoadingState /> : null}
 
           {productos?.length === 0 && (
-            <div className="my-6">
-              <EstadoVacio
-                icono={IconBox}
+            <div className="my-ds-6">
+              <EmptyState
+                icono={<Box size={28} strokeWidth={2.75} />}
                 titulo="Ningún producto en el catálogo"
                 mensaje="Agrega ítems de tipo «Producto» en el Catálogo para empezar a controlar su stock acá."
                 accion={
-                  <a href="/dashboard/registros/catalogo" className={buttonClass("primary")}>
-                    Ir al Catálogo
-                  </a>
+                  <Link href="/dashboard/registros/catalogo">
+                    <Button>Ir al Catálogo</Button>
+                  </Link>
                 }
               />
             </div>
@@ -150,7 +150,7 @@ export default function InventarioRegistroPage() {
             const bajo = productos.filter((p) => estadoStock(p, usuario.empresa.inventario_stock_minimo_default) === "stock_bajo").length;
             const sin = productos.filter((p) => estadoStock(p, usuario.empresa.inventario_stock_minimo_default) === "sin_stock").length;
             return (
-              <div className="my-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="my-ds-6 grid gap-ds-4 sm:grid-cols-2 lg:grid-cols-4">
                 <Stat etiqueta="SKUs con stock" valor={productos.length} />
                 <Stat etiqueta="Cantidad total" valor={productos.reduce((acc, p) => acc + (p.stock_actual ?? 0), 0)} />
                 <Stat etiqueta="Stock bajo" valor={bajo} nota={bajo > 0 ? "revisar reposición" : undefined} tono="alerta" />
@@ -160,111 +160,116 @@ export default function InventarioRegistroPage() {
           })()}
 
           {productos && productos.length > 0 && (
-            <Card className="my-6 overflow-x-auto p-0">
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
-                    <th className="px-5 py-3 font-medium">Ítem</th>
-                    <th className="px-5 py-3 font-medium">SKU</th>
-                    <th className="px-5 py-3 font-medium">Categoría</th>
-                    <th className="px-5 py-3 font-medium">Stock actual</th>
-                    <th className="px-5 py-3 font-medium">Stock mínimo</th>
-                    <th className="px-5 py-3 font-medium">Estado</th>
-                    <th className="px-5 py-3 font-medium">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {productos.map((p) => (
-                    <Fragment key={p.id}>
-                      <tr className="border-b border-border last:border-0">
-                        <td className="px-5 py-3 font-medium text-foreground">{p.nombre}</td>
-                        <td className="px-5 py-3 text-muted">{p.sku || "—"}</td>
-                        <td className="px-5 py-3 text-muted">{p.categoria || "—"}</td>
-                        <td className="px-5 py-3 text-foreground">
-                          {p.stock_actual ?? 0} {p.unidad}
-                        </td>
-                        <td className="px-5 py-3 text-muted">
-                          {p.stock_minimo ?? `${usuario?.empresa.inventario_stock_minimo_default ?? 0} (por defecto)`}
-                        </td>
-                        <td className="px-5 py-3">
-                          <Badge value={estadoStock(p, usuario?.empresa.inventario_stock_minimo_default ?? 0)} />
-                        </td>
-                        <td className="px-5 py-3">
-                          <Button type="button" variant="outline" onClick={() => (ajustandoId === p.id ? setAjustandoId(null) : abrirAjuste(p.id))}>
-                            Ajustar
-                          </Button>
-                        </td>
+            <div className="my-ds-6">
+              <Card sinRelleno elevacion="sm">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-ds-body">
+                    <thead>
+                      <tr className="border-b border-ds-divider text-[11px] font-medium uppercase tracking-[0.08em] text-ds-text/60">
+                        <th className="px-ds-4 py-ds-3">Ítem</th>
+                        <th className="px-ds-4 py-ds-3">SKU</th>
+                        <th className="px-ds-4 py-ds-3">Categoría</th>
+                        <th className="px-ds-4 py-ds-3">Stock actual</th>
+                        <th className="px-ds-4 py-ds-3">Stock mínimo</th>
+                        <th className="px-ds-4 py-ds-3">Estado</th>
+                        <th className="px-ds-4 py-ds-3">Acciones</th>
                       </tr>
-                      {ajustandoId === p.id && (
-                        <tr className="border-b border-border bg-brand-soft/30 last:border-0">
-                          <td colSpan={7} className="px-5 py-4">
-                            <form onSubmit={onSubmitAjuste} className="flex flex-wrap items-end gap-3">
-                              <div>
-                                <Label>Movimiento</Label>
-                                <Select value={tipoMov} onChange={(e) => setTipoMov(e.target.value as TipoMovimientoInventario)} className="w-40">
-                                  <option value="entrada">Entrada</option>
-                                  <option value="salida">Salida</option>
-                                  <option value="ajuste">Ajuste (fija el stock)</option>
-                                </Select>
-                              </div>
-                              <div className="w-32">
-                                <Label>Cantidad</Label>
-                                <Input type="number" min="0.01" step="0.01" required value={cantidad} onChange={(e) => setCantidad(e.target.value)} />
-                              </div>
-                              <div className="flex-1 min-w-[200px]">
-                                <Label>Motivo (opcional)</Label>
-                                <Input type="text" value={motivo} onChange={(e) => setMotivo(e.target.value)} />
-                              </div>
-                              <Button type="submit" disabled={guardando}>
-                                {guardando ? "Guardando…" : "Registrar"}
-                              </Button>
-                              <Button type="button" variant="ghost" onClick={() => setAjustandoId(null)}>
-                                Cancelar
-                              </Button>
-                              {formError && (
-                                <div className="w-full">
-                                  <ErrorText>{formError}</ErrorText>
-                                </div>
-                              )}
-                            </form>
-                          </td>
-                        </tr>
-                      )}
-                    </Fragment>
-                  ))}
-                </tbody>
-              </table>
-            </Card>
+                    </thead>
+                    <tbody>
+                      {productos.map((p) => {
+                        const estado = estadoStock(p, usuario?.empresa.inventario_stock_minimo_default ?? 0);
+                        return (
+                          <Fragment key={p.id}>
+                            <tr className="border-b border-ds-text/[0.08] last:border-0">
+                              <td className="px-ds-4 py-ds-3 font-medium text-ds-text">{p.nombre}</td>
+                              <td className="px-ds-4 py-ds-3 text-ds-text/70">{p.sku || "—"}</td>
+                              <td className="px-ds-4 py-ds-3 text-ds-text/70">{p.categoria || "—"}</td>
+                              <td className="px-ds-4 py-ds-3 text-ds-text">
+                                {p.stock_actual ?? 0} {p.unidad}
+                              </td>
+                              <td className="px-ds-4 py-ds-3 text-ds-text/70">
+                                {p.stock_minimo ?? `${usuario?.empresa.inventario_stock_minimo_default ?? 0} (por defecto)`}
+                              </td>
+                              <td className="px-ds-4 py-ds-3">
+                                <StatusBadge estado={estado} etiqueta={ETIQUETA_ESTADO_STOCK[estado]} tonoForzado={TONO_STOCK[estado]} />
+                              </td>
+                              <td className="px-ds-4 py-ds-3">
+                                <Button variante="secundario" onPress={() => (ajustandoId === p.id ? setAjustandoId(null) : abrirAjuste(p.id))}>
+                                  Ajustar
+                                </Button>
+                              </td>
+                            </tr>
+                            {ajustandoId === p.id && (
+                              <tr className="border-b border-ds-divider bg-ds-brand/[0.06] last:border-0">
+                                <td colSpan={7} className="px-ds-4 py-ds-4">
+                                  <form onSubmit={onSubmitAjuste} className="flex flex-wrap items-end gap-ds-3">
+                                    <Select
+                                      etiqueta="Movimiento"
+                                      valor={tipoMov}
+                                      onCambio={(v) => setTipoMov(v as TipoMovimientoInventario)}
+                                      opciones={[
+                                        { valor: "entrada", etiqueta: "Entrada" },
+                                        { valor: "salida", etiqueta: "Salida" },
+                                        { valor: "ajuste", etiqueta: "Ajuste (fija el stock)" },
+                                      ]}
+                                    />
+                                    <div className="w-32">
+                                      <Input etiqueta="Cantidad" tipo="numero" requerido valor={cantidad} onCambio={setCantidad} />
+                                    </div>
+                                    <div className="min-w-[200px] flex-1">
+                                      <Input etiqueta="Motivo (opcional)" valor={motivo} onCambio={setMotivo} />
+                                    </div>
+                                    <Button tipo="submit" cargando={guardando}>
+                                      Registrar
+                                    </Button>
+                                    <Button variante="ghost" onPress={() => setAjustandoId(null)}>
+                                      Cancelar
+                                    </Button>
+                                    {formError ? <p className="w-full font-ds-body text-ds-small text-ds-accent-700">{formError}</p> : null}
+                                  </form>
+                                </td>
+                              </tr>
+                            )}
+                          </Fragment>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            </div>
           )}
 
           {movimientos.length > 0 && (
-            <Card className="my-6">
-              <h2 className="mb-4 text-sm font-semibold text-foreground">Movimientos recientes</h2>
-              <div className="flex flex-col divide-y divide-border">
-                {movimientos.map((m) => (
-                  <div key={m.id} className="flex items-center justify-between py-2.5 text-sm">
-                    <div>
-                      <p className="flex items-center gap-1.5 font-medium text-foreground">
-                        {m.item_nombre ?? "Ítem eliminado"}
-                        {m.origen === "automatico" && (
-                          <span className="rounded-full bg-brand-soft px-1.5 py-0.5 text-[10px] font-medium text-brand">automático</span>
-                        )}
-                      </p>
-                      <p className="text-xs text-muted">
-                        {m.motivo || "Sin motivo indicado"} · {new Date(m.creado_en).toLocaleString("es-CL")}
-                      </p>
+            <div className="my-ds-6">
+              <Card>
+                <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Movimientos recientes</p>
+                <div className="flex flex-col divide-y divide-ds-divider">
+                  {movimientos.map((m) => (
+                    <div key={m.id} className="flex items-center justify-between py-2.5 font-ds-body text-ds-small">
+                      <div>
+                        <p className="flex items-center gap-1.5 font-medium text-ds-text">
+                          {m.item_nombre ?? "Ítem eliminado"}
+                          {m.origen === "automatico" && (
+                            <span className="rounded-ds-pill bg-ds-brand/[0.08] px-1.5 py-0.5 text-[10px] font-medium text-ds-brand">automático</span>
+                          )}
+                        </p>
+                        <p className="font-ds-body text-ds-caption text-ds-text/60">
+                          {m.motivo || "Sin motivo indicado"} · {new Date(m.creado_en).toLocaleString("es-CL")}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-ds-2 text-right">
+                        <StatusBadge estado={m.tipo} tonoForzado={TONO_MOVIMIENTO[m.tipo]} />
+                        <span className="text-ds-text/70">
+                          {m.tipo === "salida" ? "-" : "+"}
+                          {m.cantidad} → {m.stock_resultante}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 text-right">
-                      <Badge value={m.tipo} />
-                      <span className="text-muted">
-                        {m.tipo === "salida" ? "-" : "+"}
-                        {m.cantidad} → {m.stock_resultante}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Card>
+                  ))}
+                </div>
+              </Card>
+            </div>
           )}
         </>
       )}
