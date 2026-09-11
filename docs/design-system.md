@@ -167,15 +167,29 @@ inventados): `Input.autoCapitalizar`, `Input.onSubmit` (encadena
 "siguiente"/"ir" del teclado — RN no tiene submit de formulario como el
 navegador), `textContentType` por `tipo` (autofill de iOS).
 
-**Sin verificación visual en vivo** — a diferencia de web (`next dev`
-real), intenté `expo start --web` y crasheó: `mobile/src/lib/fotoCola.ts`
-usa la API `Directory`/`Paths` de `expo-file-system`, que no soporta web
-(`this.validatePath is not a function` al cargar el módulo, antes de que
-React monte nada). **Es un bug preexistente de la app, no algo que
-causaron estos cambios** — nadie había podido previsualizar mobile en
-navegador. Verificado solo por `tsc` + mismos tokens/primitivas ya
-probados en vivo en web. Confirmación real pendiente en un dispositivo o
-simulador cuando la usuaria lo pruebe.
+**Bug preexistente arreglado** (a pedido de la usuaria, mismo día):
+`mobile/src/lib/fotoCola.ts` construía un `Directory` de
+`expo-file-system` (API `Directory`/`Paths`) en el nivel superior del
+módulo, sin soporte en web (`this.validatePath is not a function`) —
+crasheaba `expo start --web` antes de montar React, en CUALQUIER
+pantalla (el módulo lo carga `services/sync/queue.ts`, que carga con
+toda la app). Se agregó un guard `Platform.OS === "web"`: en iOS/Android
+el comportamiento es idéntico a antes; en web las funciones de la cola de
+fotos offline son no-op (no aplica ahí — no hay cámara ni filesystem
+persistente real). Con esto **`expo start --web` funciona por primera
+vez**, lo que habilitó verificación visual real (screenshot) para Login.
+
+**Verificado con capturas reales** (`expo start --web` + Chrome vía MCP):
+Login en mobile — crema, Caprasimo, pill, botón deshabilitado en 45%
+opacidad hasta llenar los 2 campos, luego full-color. Coincide
+visualmente con la versión web.
+
+**Seam conocido, deliberado:** el ícono de marca (`LogoMark`/`Logo`, web y
+mobile) sigue en navy Faena (`--brand`/`t.colores.brand`) en vez del
+acento nuevo — se usa también en `DashboardShell`/`SuperAdminShell`/
+`PortalShell` (mobile: `BloqueoBiometrico`), shells que no están en este
+bucket. Migrarlo ahora habría recoloreado el logo en pantallas Faena
+sin tocarlas. Se migra cuando le toque a esas pantallas.
 
 ### Resto del orden del prompt
 
