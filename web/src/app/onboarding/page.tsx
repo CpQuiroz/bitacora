@@ -7,15 +7,16 @@ import type { Rubro } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { AuthLayout } from "@/components/AuthLayout";
-import { Button, ErrorText, Input, Label, Select } from "@/components/ui";
+import { Button, Input, Select } from "@bitacora/ui/web";
 
-const RUBROS: { value: Rubro; label: string }[] = [
-  { value: "transporte", label: "Transporte" },
-  { value: "servicio_tecnico", label: "Servicio técnico / mantención" },
-  { value: "cosmetologia", label: "Cosmetología / belleza" },
-  { value: "otro", label: "Otro" },
+const RUBROS: { valor: Rubro; etiqueta: string }[] = [
+  { valor: "transporte", etiqueta: "Transporte" },
+  { valor: "servicio_tecnico", etiqueta: "Servicio técnico / mantención" },
+  { valor: "cosmetologia", etiqueta: "Cosmetología / belleza" },
+  { valor: "otro", etiqueta: "Otro" },
 ];
 
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export default function OnboardingPage() {
   const router = useRouter();
   const [verificando, setVerificando] = useState(true);
@@ -80,52 +81,27 @@ export default function OnboardingPage() {
 
   return (
     <AuthLayout title="Crea tu empresa" subtitle="Esta va a ser tu cuenta de administrador">
-      <form onSubmit={onSubmit} className="flex flex-col gap-4">
-        <div>
-          <Label>Tu nombre</Label>
-          <Input
-            type="text"
-            required
-            value={nombreUsuario}
-            onChange={(e) => setNombreUsuario(e.target.value)}
-          />
-        </div>
-        <div>
-          <Label>Nombre de la empresa</Label>
-          <Input
-            type="text"
-            required
-            value={nombreEmpresa}
-            onChange={(e) => setNombreEmpresa(e.target.value)}
-          />
-        </div>
-        <div>
-          <Label>Rubro</Label>
-          <Select value={rubro} onChange={(e) => setRubro(e.target.value as Rubro)}>
-            {RUBROS.map((r) => (
-              <option key={r.value} value={r.value}>
-                {r.label}
-              </option>
-            ))}
-          </Select>
-        </div>
-        <label className="flex items-start gap-2 text-sm text-muted">
+      <form onSubmit={onSubmit} className="flex flex-col gap-ds-4">
+        <Input etiqueta="Tu nombre" requerido valor={nombreUsuario} onCambio={setNombreUsuario} />
+        <Input etiqueta="Nombre de la empresa" requerido valor={nombreEmpresa} onCambio={setNombreEmpresa} />
+        <Select etiqueta="Rubro" valor={rubro} onCambio={(v) => setRubro(v as Rubro)} opciones={RUBROS} />
+        <label className="flex items-start gap-ds-2 font-ds-body text-ds-small text-ds-text/70">
           <input
             type="checkbox"
-            className="mt-0.5"
+            className="mt-0.5 accent-[var(--ds-brand)]"
             checked={acepto}
             onChange={(e) => setAcepto(e.target.checked)}
           />
           <span>
             He leído y acepto la{" "}
-            <Link href="/privacidad" target="_blank" className="text-brand hover:underline">Política de Privacidad</Link>{" "}
+            <Link href="/privacidad" target="_blank" className="text-ds-brand hover:underline">Política de Privacidad</Link>{" "}
             y los{" "}
-            <Link href="/terminos" target="_blank" className="text-brand hover:underline">Términos de Servicio</Link>.
+            <Link href="/terminos" target="_blank" className="text-ds-brand hover:underline">Términos de Servicio</Link>.
           </span>
         </label>
-        {error && <ErrorText>{error}</ErrorText>}
-        <Button type="submit" disabled={cargando || !acepto} className="mt-2 w-full">
-          {cargando ? "Creando…" : "Crear empresa"}
+        {error ? <p className="font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
+        <Button tipo="submit" bloque deshabilitado={cargando || !acepto} cargando={cargando}>
+          Crear empresa
         </Button>
       </form>
     </AuthLayout>

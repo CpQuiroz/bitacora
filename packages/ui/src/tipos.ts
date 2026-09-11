@@ -40,13 +40,25 @@ export type PropsCampoBase = {
   deshabilitado?: boolean;
 };
 
-export type TipoInput = "texto" | "numero" | "email" | "password" | "tel";
+// "codigo": texto con teclado numérico (OTP/2FA) — a diferencia de
+// "numero" (<input type=number>, con flechas y que puede comerse ceros
+// a la izquierda), esto es <input type=text inputMode=numeric> / RN
+// keyboardType="number-pad". Agregado al migrar el login (Paso 6): el
+// campo de código de 6 dígitos lo necesitaba y no había una forma
+// correcta de pedirlo con el contrato anterior.
+export type TipoInput = "texto" | "numero" | "codigo" | "email" | "password" | "tel";
 
 export type PropsInput = PropsCampoBase & {
   valor: string;
   onCambio: (texto: string) => void;
   placeholder?: string;
   tipo?: TipoInput;
+  /** Tope de caracteres (ej. código de 6 dígitos). */
+  maxLongitud?: number;
+  /** Mínimo de caracteres — validación nativa del navegador (ej. contraseña). */
+  minLongitud?: number;
+  /** Validación nativa del navegador: bloquea el submit si está vacío. */
+  requerido?: boolean;
   iconoIzq?: ReactNode;
   autoFoco?: boolean;
 };

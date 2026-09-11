@@ -7,8 +7,9 @@ import { supabase } from "@/lib/supabase";
 import { API_URL } from "@/lib/api";
 import { resolverDestinoPostLogin } from "@/lib/accesoPostLogin";
 import { AuthLayout } from "@/components/AuthLayout";
-import { Button, ErrorText, Input, Label } from "@/components/ui";
+import { Button, Input } from "@bitacora/ui/web";
 
+// PASO 6 (sistema de diseño) — migrado a @bitacora/ui. Ver docs/design-system.md.
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -97,22 +98,18 @@ export default function LoginPage() {
   if (ticket) {
     return (
       <AuthLayout title="Verificación en dos pasos" subtitle={metodo === "totp" ? "Ingresa el código de tu app de autenticación" : "Te enviamos un código a tu correo"}>
-        <form onSubmit={onSubmitCodigo} className="flex flex-col gap-4">
-          <div>
-            <Label>Código de 6 dígitos</Label>
-            <Input
-              type="text"
-              inputMode="numeric"
-              autoFocus
-              maxLength={6}
-              required
-              value={codigo}
-              onChange={(e) => setCodigo(e.target.value.replace(/\D/g, ""))}
-            />
-          </div>
-          {error && <ErrorText>{error}</ErrorText>}
-          <Button type="submit" disabled={cargando || codigo.length !== 6} className="mt-2 w-full">
-            {cargando ? "Verificando…" : "Verificar"}
+        <form onSubmit={onSubmitCodigo} className="flex flex-col gap-ds-4">
+          <Input
+            etiqueta="Código de 6 dígitos"
+            tipo="codigo"
+            maxLongitud={6}
+            autoFoco
+            valor={codigo}
+            onCambio={(v) => setCodigo(v.replace(/\D/g, ""))}
+            error={error}
+          />
+          <Button tipo="submit" bloque deshabilitado={cargando || codigo.length !== 6} cargando={cargando}>
+            Verificar
           </Button>
           <button
             type="button"
@@ -122,7 +119,7 @@ export default function LoginPage() {
               setCodigo("");
               setError(null);
             }}
-            className="text-sm font-medium text-muted hover:text-brand"
+            className="text-ds-small font-medium text-ds-brand hover:underline"
           >
             Volver a intentar con otra cuenta
           </button>
@@ -136,49 +133,32 @@ export default function LoginPage() {
       title="Iniciar sesión"
       subtitle="Entra a tu cuenta de Bitácora"
       footer={
-        <span className="text-muted">
+        <span className="text-ds-text/70">
           ¿No tienes cuenta?{" "}
-          <Link href="/registro" className="font-medium text-brand hover:underline">
+          <Link href="/registro" className="font-medium text-ds-brand hover:underline">
             Crear una
           </Link>
         </span>
       }
     >
-      <form onSubmit={onSubmit} className="flex flex-col gap-4">
-        <div>
-          <Label>Correo</Label>
-          <Input
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </div>
-        <div>
-          <Label>Contraseña</Label>
-          <Input
-            type="password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </div>
-        {error && <ErrorText>{error}</ErrorText>}
-        <Button type="submit" disabled={cargando} className="mt-2 w-full">
-          {cargando ? "Entrando…" : "Entrar"}
+      <form onSubmit={onSubmit} className="flex flex-col gap-ds-4">
+        <Input etiqueta="Correo" tipo="email" requerido valor={email} onCambio={setEmail} />
+        <Input etiqueta="Contraseña" tipo="password" requerido valor={password} onCambio={setPassword} error={error} />
+        <Button tipo="submit" bloque deshabilitado={cargando} cargando={cargando}>
+          Entrar
         </Button>
       </form>
 
-      <div className="my-5 flex items-center gap-3">
-        <div className="h-px flex-1 bg-border" />
-        <span className="text-xs text-muted">o</span>
-        <div className="h-px flex-1 bg-border" />
+      <div className="my-ds-6 flex items-center gap-ds-3">
+        <div className="h-px flex-1 bg-ds-divider" />
+        <span className="text-ds-caption text-ds-text/60">o</span>
+        <div className="h-px flex-1 bg-ds-divider" />
       </div>
 
       <button
         type="button"
         onClick={onGoogleClick}
-        className="flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-surface px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-brand-soft"
+        className="flex h-11 w-full items-center justify-center gap-ds-2 rounded-ds-pill border border-ds-divider bg-ds-surface px-ds-4 text-ds-small font-medium text-ds-text transition-colors hover:bg-ds-text/[0.05]"
       >
         <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
           <path fill="#4285F4" d="M23.49 12.27c0-.85-.08-1.67-.22-2.45H12v4.64h6.44c-.28 1.48-1.13 2.74-2.4 3.58v2.98h3.88c2.27-2.09 3.57-5.17 3.57-8.75z" />
@@ -188,11 +168,9 @@ export default function LoginPage() {
         </svg>
         Iniciar sesión con Google
       </button>
-      {errorGoogle && (
-        <div className="mt-3">
-          <ErrorText>{errorGoogle}</ErrorText>
-        </div>
-      )}
+      {errorGoogle ? (
+        <p className="mt-ds-3 text-ds-small text-ds-accent-700">{errorGoogle}</p>
+      ) : null}
     </AuthLayout>
   );
 }

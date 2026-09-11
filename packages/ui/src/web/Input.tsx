@@ -6,6 +6,7 @@ import { CAMPO_BASE, LABEL, MENSAJE_AYUDA, MENSAJE_ERROR, bordeDe } from "./camp
 const HTML_TYPE: Record<TipoInput, string> = {
   texto: "text",
   numero: "number",
+  codigo: "text",
   email: "email",
   password: "password",
   tel: "tel",
@@ -20,6 +21,9 @@ export function Input({
   onCambio,
   placeholder,
   tipo = "texto",
+  maxLongitud,
+  minLongitud,
+  requerido,
   iconoIzq,
   autoFoco,
 }: PropsInput) {
@@ -34,11 +38,16 @@ export function Input({
         ) : null}
         <input
           type={HTML_TYPE[tipo]}
+          inputMode={tipo === "codigo" ? "numeric" : undefined}
+          pattern={tipo === "codigo" ? "[0-9]*" : undefined}
           value={valor}
           onChange={(e) => onCambio(e.target.value)}
           placeholder={placeholder}
           disabled={deshabilitado}
           autoFocus={autoFoco}
+          maxLength={maxLongitud}
+          minLength={minLongitud}
+          required={requerido}
           aria-invalid={Boolean(error) || undefined}
           className={`h-11 rounded-ds-pill border ${bordeDe(error)} px-ds-4 ${iconoIzq ? "pl-ds-8" : ""} ${CAMPO_BASE}`}
         />

@@ -1,11 +1,21 @@
 @import "tailwindcss";
 
 /* Sistema de diseño nuevo — tokens generados desde
-   packages/design-tokens/tokens.json. Habilita utilidades
-   bg-bg / bg-surface / text-text / bg-accent-200 / rounded-pill /
-   font-heading / text-h1 / etc. Convive con el bloque "Faena" de
-   abajo durante la migración pantalla-por-pantalla (Paso 6). */
+   packages/design-tokens/tokens.json. Habilita utilidades con namespace
+   ds- (bg-ds-bg / bg-ds-surface / text-ds-text / bg-ds-accent-200 /
+   rounded-ds-pill / font-ds-heading / text-ds-h1 / etc.) Convive con el
+   bloque "Faena" de abajo durante la migración pantalla-por-pantalla
+   (Paso 6). Ver docs/design-system.md. */
 @import "@bitacora/design-tokens/tokens.css";
+
+/* Tailwind por defecto NO escanea fuera de web/ (packages/ui vive en el
+   monorepo, un nivel arriba). Sin este @source, las clases usadas
+   DENTRO de @bitacora/ui (Button, Input, Card…) no generan CSS —
+   compilan sin error pero se ven sin estilo (fondo transparente, texto
+   heredado). Encontrado corriendo `next dev` de verdad al migrar Login
+   (Paso 6) — la verificación con el CLI de Tailwind en Pasos 1-5 no lo
+   detectó porque yo pasaba el @source a mano en cada prueba. */
+@source "../../../packages/ui/src/**/*.{ts,tsx}";
 
 /* ─────────────────────────────────────────────────────────────
    Bitácora — dirección "Faena" (refresco 1a) — EN MIGRACIÓN

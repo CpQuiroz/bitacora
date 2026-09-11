@@ -82,24 +82,7 @@ Faena que se van con la migración). Exentos con motivo en
   `{ heading, body, bodyMedium, bodySemiBold, bodyBold }` (nombres RN).
   `ds.headingLeading` (1.12) y `ds.headingTracking` (-0.015).
 
-## Estado de la migración
-
-| Paso | Estado |
-|---|---|
-| 0 — Auditoría | ✅ `docs/design-audit.md` |
-| 1 — `packages/design-tokens` | ✅ paquete + generadores + consumo web/mobile (namespace `ds-`) |
-| 2 — Marca por tenant | ✅ `--ds-brand` en shell web + `tema.ds.marca` en mobile + derivación OKLCH + check anti-hex |
-| 3 — Tipografía | ✅ Caprasimo + Figtree self-hosted (next/font + expo-font), `ds-heading`/`ds-body`, precarga sin salto |
-| 4 — `packages/ui` (primitivas) | ✅ 12 primitivas (ver arriba) |
-| 5 — Reglas transversales | ✅ (ver abajo) |
-| 6 — Migración pantalla por pantalla | ⬜ |
-| 7 — Anti-degradación (ESLint, Storybook, CI) | ⬜ |
-
-Durante la migración, el bloque "Faena" de `globals.css` y los tokens nuevos
-**conviven**. El bloque viejo se retira cuando todas las pantallas usen los
-tokens nuevos.
-
-## `packages/ui` — primitivas (Paso 4)
+## `packages/ui` — primitivas (Paso 4 — completo)
 
 API única en español, definida en `packages/ui/src/tipos.ts`; una
 implementación en `src/web` (Tailwind, exporta `@bitacora/ui/web`) y otra en
@@ -107,92 +90,69 @@ implementación en `src/web` (Tailwind, exporta `@bitacora/ui/web`) y otra en
 Next (`transpilePackages`), mobile lo transpila Metro (ya observa el
 workspace root).
 
-- **`Button`** ✅ — `variante` (primario/secundario/ghost/peligro) ×
-  `tamano` (sm 36 · md 44 · lg 52 web; sm 44 · md 48 · lg 52 mobile — nunca
-  bajo 44). Todo pill. `primario` = `--ds-brand` (+ hover/pressed OKLCH).
-  Caprasimo **solo en `lg`**; sm/md en Figtree bold/semibold. Mobile resuelve
-  la marca vía `ProveedorMarca` (`packages/ui/src/native/marca.tsx`) —
-  mismo `color_primario` que le llega a `ThemeProvider` (ver `App.tsx`).
-  Nombres de familia RN centralizados en `packages/ui/src/native/fuentes.ts`
-  (`FUENTE_NATIVE`); `mobile/src/theme/fuentes.ts` los reexporta como
-  `FUENTE_DS` para no duplicarlos.
-- **`Input` / `Textarea` / `Select` / `DatePicker`** ✅ — mismo look de
-  campo (pill en Input/Select, `radius.md` en Textarea; fondo `surface`,
-  borde `divider`/`accent-700` en error, `caret-color` en la marca; label
-  12px al 70%, error en `accent-700`, ayuda al 60%). `Select` nativo es una
-  hoja simple (sin buscador — para eso quedan los `Selector*` propios de la
-  app). `DatePicker` nativo reusa el patrón ya establecido en
-  `SelectorHora.tsx` (Android: diálogo nativo; iOS: modal propio con
-  Listo/Cancelar), con `@react-native-community/datetimepicker` (ya era dep).
-- **`Card`** ✅ — fondo `surface`, `border-radius: 32px` (`radius.lg × 1.15`,
-  no es un token de `tokens.json` — ver `RADIO_CARD`), `elevacion?`
-  sm/md/lg opcional (`shadow-ds-*` en web, shadow+elevation en RN). Sin
-  bordes de 1px decorativos.
-- **`Tag`** ✅ — pill, 11px, `tracking 0.02em`. Tonos `accent`/`accent2`/
-  `neutral`/`outline`. De uso libre (roles, prioridad, canal…).
-- **`StatusBadge`** ✅ — **un solo mapa** `estado → tono` en
-  `packages/ui/src/tipos.ts` (`MAPA_ESTADO_TONO`), consolidando lo que
-  antes estaba repetido en 5 lugares (ver `docs/design-audit.md` §3). Solo
-  4 tonos fijos: `en_progreso` (accentRamp.200/800), `completado`
-  (accent2Ramp.200/800), `cerrado` (neutral.300/900), `cancelado`
-  (neutral.200/700). **Alcance deliberado:** solo entran estados de ciclo
-  de vida que caen sin forzar en uno de los 4 — roles/prioridad/canal
-  siguen siendo `<Tag>`, y un estado ambiguo (`pendiente`, `borrador`) usa
-  `tonoForzado` en el call-site en vez de adivinar. Terminar de mapear
-  cada estado real de cada pantalla es trabajo del Paso 6.
-- **`Skeleton` / `LoadingState` / `EmptyState` / `ErrorState`** ✅ — nunca
-  spinner de pantalla completa: `LoadingState` son esqueletos (`Skeleton`
-  pulsante en `neutral.200`, 3 líneas genéricas por defecto o `children` a
-  medida del contenido real). `EmptyState`: círculo 64px `accent2Ramp.200`
-  + título en `ds-heading` + frase + `accion` (CTA). `ErrorState`: círculo
-  `accentRamp.200` + botón Reintentar — el **texto** (red vs. permiso) y
-  que reintentar conserve filtros quedan a cargo de quien llama, no del
-  primitivo.
-- **`Table`** ✅ (solo web — mobile usa listas/cards). Header 11px
-  mayúscula `tracking-[0.08em]` color `text/60`, borde inferior `divider`.
-  Filas con borde `text/[0.08]`, hover `text/[0.04]`. Sin zebra. Compone
-  `Loading/Empty/ErrorState` internamente (`cargando`/`error`/`vacio` props).
-- **`Dialog`** ✅ — backdrop `neutral.900/50`, contenedor `radius.lg × 1.15`
-  (32px), `shadow.lg`. Web: modal centrado. Mobile: **siempre** bottom
-  sheet (no hay variante centrada) — mismo backdrop/radio/sombra, deslizado
-  desde abajo.
-- **`Toast`** ✅ — `ToastProvider` + `useToast()` (contexto). Pill oscuro
-  `neutral.900` / texto `neutral.100`, abajo y centrado, 2.6s. Montar
-  `ToastProvider` una vez en la raíz de cada plataforma.
+- **`Button`** — `variante` (primario/secundario/ghost/peligro) × `tamano`
+  (sm 36 · md 44 · lg 52 web; sm 44 · md 48 · lg 52 mobile — nunca bajo 44).
+  Todo pill. `primario` = `--ds-brand` (+ hover/pressed OKLCH). Caprasimo
+  **solo en `lg`**; sm/md en Figtree bold/semibold.
+- **`Input` / `Textarea` / `Select` / `DatePicker`** — mismo look de campo
+  (pill en Input/Select, `radius.md` en Textarea). `Select` nativo: hoja
+  modal simple. `DatePicker` nativo reusa el patrón de `SelectorHora.tsx`.
+  Extendido en el Paso 6 (migrando Login) con `tipo="codigo"` (OTP,
+  `inputMode=numeric` sin las flechas de `type=number`), `maxLongitud`,
+  `minLongitud`, `requerido` — huecos reales encontrados al migrar la
+  primera pantalla de verdad, no inventados de antemano.
+- **`Card`** — 32px (`radius.lg × 1.15`, `RADIO_CARD`), elevación opcional.
+- **`Tag`** — pill 11px, 4 tonos de uso libre.
+- **`StatusBadge`** — un solo mapa `estado → tono` (`MAPA_ESTADO_TONO`),
+  consolida los 5 que estaban duplicados en el audit. Solo 4 tonos fijos;
+  roles/prioridad/canal siguen siendo `<Tag>`.
+- **`Skeleton`/`LoadingState`/`EmptyState`/`ErrorState`** — nunca spinner de
+  pantalla completa.
+- **`Table`** (solo web) — header 11px mayúscula, sin zebra.
+- **`Dialog`** — web modal centrado; mobile **siempre** bottom sheet.
+- **`Toast`** — `ToastProvider`+`useToast()`, pill oscuro, 2.6s.
+- **`Cifra`** — `tabular-nums`.
 
-**Paso 4 completo — las 12 primitivas del prompt están hechas** (`Button`,
-`Input`, `Textarea`, `Select`, `DatePicker`, `Card`, `Tag`, `StatusBadge`,
-`Skeleton`+`LoadingState`+`EmptyState`+`ErrorState`, `Table`, `Dialog`,
-`Toast`). Ninguna pantalla las usa todavía — eso es el Paso 6.
+## Reglas transversales (Paso 5 — completo)
 
-## Paso 5 — Reglas transversales
+- **Lucide** en ambas plataformas (`lucide-react`/`lucide-react-native`),
+  `strokeWidth={2.75}`. `Dialog`/`Select` migrados de glifos a mano a
+  `X`/`ChevronDown`.
+- **`formatearCLP()`** único en `packages/shared/src/dinero.ts` (5 tests);
+  `web/lib/formatMoneda.ts` y `mobile/lib/plata.ts` delegan ahí para CLP.
+- **Contraste — decisión 2026-09-10:** el `accent` default (#c67139) da
+  3.61:1 con blanco (bajo AA 4.5:1) en el botón primario sin tenant. Se
+  acepta el fallback tal como está — solo afecta el estado sin tenant.
 
-- **Forma/Aire:** ya cumplido por construcción en las 12 primitivas (pill,
-  28-32px, escala `space`, sin bordes de 1px decorativos).
-- **Iconos:** agregado **Lucide** (`lucide-react` web, `lucide-react-native`
-  mobile — ya había `react-native-svg`, no se agregó nada más). `Dialog`
-  (web+native) y `Select` (web+native) migrados de glifos a mano
-  (`✕`, `▾`, un SVG propio) a `X`/`ChevronDown` de Lucide, `strokeWidth={2.75}`.
-- **Estados interactivos:** `focus-visible` con el outline de marca ya en
-  Button/Input/Textarea/Select/DatePicker/Card(botón)/Dialog. Mobile no
-  tiene "hover" (no aplica); `pressed` vía `Pressable` ya en todos.
-- **Touch targets:** ya 44px mínimo en todos los campos/botones mobile.
-- **`tabular-nums`:** nueva primitiva **`Cifra`** (web: clase `tabular-nums`;
-  native: `fontVariant: ["tabular-nums"]`) para montos/cantidades/fechas/folios.
-- **Helper de CLP único:** `formatearCLP()` en `packages/shared/src/dinero.ts`
-  (con 5 tests) — `web/lib/formatMoneda.ts` y `mobile/lib/plata.ts` ahora
-  **delegan** ahí para CLP (verificado: mismo resultado exacto que antes,
-  cero cambio visible; el resto de monedas sigue con `Intl` en web).
-- **Contraste — hallazgo, decisión tomada 2026-09-10:** el color de marca
-  por defecto (`accent` `#c67139`, cuando el tenant no fija
-  `color_primario`) da **3.61:1** con texto blanco — bajo el 4.5:1 de WCAG
-  AA texto normal. Texto oscuro empeora en `hover`/`pressed` (3.70 → 2.44)
-  mientras blanco mejora (3.61 → 4.49 → 6.81); ningún foreground único
-  cumple los 3 estados con ese hex. **Decisión: se acepta el fallback como
-  está** — solo afecta el estado sin tenant (login/onboarding/empresa sin
-  color configurado); un tenant real define su propio
-  `color_primario_foreground`. No se tocó `tokens.json`.
+## Paso 6 — Migración pantalla por pantalla (en curso)
 
-Verificado: tsc `ui`/`mobile`/`web` verde, `packages/shared` 22 tests
-(17+5 nuevos de `dinero.test.ts`), Tailwind CLI compiló `tabular-nums`.
-`./verificar.sh` verde, 19 literales (baseline, sin cambios).
+### Bucket 1 — Login y selección de empresa (web) ✅
+
+`web/src/components/AuthLayout.tsx` (shell compartido) +
+`web/src/app/{login,registro,invitacion,onboarding}/page.tsx`. Las 4
+comparten `AuthLayout`, así que migrarlo de forma aislada solo a Login
+hubiera dejado registro/invitacion/onboarding con el Card nuevo por fuera
+y los campos Faena por dentro — se migraron las 4 juntas.
+
+**Bug real encontrado corriendo `next dev` de verdad** (no lo agarró
+tsc ni el CLI de Tailwind en los Pasos 1-5): `campo.ts` tenía
+`outline-none focus-visible:outline-2 …`. En Tailwind v4 `outline-none`
+fija `--tw-outline-style: none` de forma incondicional; como
+`focus-visible:outline-2` solo pone el ancho (lee la misma variable), el
+foco quedaba **sin outline visible nunca**. Se sacó el `outline-none` —
+confirmado con captura de pantalla que el anillo de foco aparece.
+
+Verificado con capturas reales (`next dev`, no solo compilación):
+`/login`, `/registro` — Caprasimo en el título, pill en inputs/botón,
+foco con anillo de marca, card con sombra. `/onboarding` y `/invitacion`
+verificados por tsc + mismo patrón de primitivas (necesitan sesión activa
+para renderizar, no se pudieron capturar en vivo sin login).
+
+Primitivas extendidas en el camino (huecos reales, no inventados):
+`Input.tipo="codigo"` (OTP), `maxLongitud`, `minLongitud`, `requerido`.
+
+### Resto del orden del prompt
+
+2) Hoy/dashboard · 3) Órdenes de servicio (listado+ficha) · 4) Clientes ·
+5) Catálogo y stock · 6) Configuración · 7) resto — pendientes. Falta
+también el Login de **mobile** (`LoginScreen.tsx`).

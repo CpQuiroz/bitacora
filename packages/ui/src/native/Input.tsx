@@ -9,6 +9,7 @@ import { Campo } from "./campo";
 const TECLADO: Record<TipoInput, KeyboardTypeOptions> = {
   texto: "default",
   numero: "numeric",
+  codigo: "number-pad",
   email: "email-address",
   password: "default",
   tel: "phone-pad",
@@ -23,6 +24,7 @@ export function Input({
   onCambio,
   placeholder,
   tipo = "texto",
+  maxLongitud,
   iconoIzq,
   autoFoco,
 }: PropsInput) {
@@ -46,6 +48,7 @@ export function Input({
           autoFocus={autoFoco}
           secureTextEntry={tipo === "password"}
           keyboardType={TECLADO[tipo]}
+          maxLength={maxLongitud}
           onFocus={() => setEnfocado(true)}
           onBlur={() => setEnfocado(false)}
           style={{

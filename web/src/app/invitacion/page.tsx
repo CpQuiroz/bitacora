@@ -6,8 +6,9 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { AuthLayout } from "@/components/AuthLayout";
-import { Button, ErrorText, Input, Label } from "@/components/ui";
+import { Button, Input } from "@bitacora/ui/web";
 
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export default function InvitacionPage() {
   const router = useRouter();
   const [verificando, setVerificando] = useState(true);
@@ -63,41 +64,28 @@ export default function InvitacionPage() {
   return (
     <AuthLayout title="Bienvenido a Bitácora">
       {error ? (
-        <ErrorText>{error}</ErrorText>
+        <p className="font-ds-body text-ds-small text-ds-accent-700">{error}</p>
       ) : (
-        <form onSubmit={onSubmit} className="flex flex-col gap-4">
-          <p className="text-sm text-muted">Elige una contraseña para tu cuenta.</p>
-          <div>
-            <Label>Contraseña</Label>
-            <Input
-              type="password"
-              required
-              minLength={6}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Mínimo 6 caracteres"
+        <form onSubmit={onSubmit} className="flex flex-col gap-ds-4">
+          <p className="font-ds-body text-ds-small text-ds-text/70">Elige una contraseña para tu cuenta.</p>
+          <Input etiqueta="Contraseña" tipo="password" requerido minLongitud={6} valor={password} onCambio={setPassword} placeholder="Mínimo 6 caracteres" />
+          <Input etiqueta="Confirmar contraseña" tipo="password" requerido valor={confirmar} onCambio={setConfirmar} />
+          <label className="flex items-start gap-ds-2 font-ds-body text-ds-small text-ds-text/70">
+            <input
+              type="checkbox"
+              className="mt-0.5 accent-[var(--ds-brand)]"
+              checked={acepto}
+              onChange={(e) => setAcepto(e.target.checked)}
             />
-          </div>
-          <div>
-            <Label>Confirmar contraseña</Label>
-            <Input
-              type="password"
-              required
-              value={confirmar}
-              onChange={(e) => setConfirmar(e.target.value)}
-            />
-          </div>
-          <label className="flex items-start gap-2 text-sm text-muted">
-            <input type="checkbox" className="mt-0.5" checked={acepto} onChange={(e) => setAcepto(e.target.checked)} />
             <span>
               Acepto la{" "}
-              <Link href="/privacidad" target="_blank" className="text-brand hover:underline">Política de Privacidad</Link>{" "}
+              <Link href="/privacidad" target="_blank" className="text-ds-brand hover:underline">Política de Privacidad</Link>{" "}
               y los{" "}
-              <Link href="/terminos" target="_blank" className="text-brand hover:underline">Términos</Link>.
+              <Link href="/terminos" target="_blank" className="text-ds-brand hover:underline">Términos</Link>.
             </span>
           </label>
-          <Button type="submit" disabled={guardando || !acepto} className="mt-2 w-full">
-            {guardando ? "Guardando…" : "Entrar"}
+          <Button tipo="submit" bloque deshabilitado={guardando || !acepto} cargando={guardando}>
+            Entrar
           </Button>
         </form>
       )}
