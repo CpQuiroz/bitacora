@@ -2,14 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Plus, Receipt } from "lucide-react";
 import type { EstadoPresupuesto, Presupuesto } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Badge, Button, Card, Cifra, ErrorText, Input, PageHeader } from "@/components/ui";
-import { IconPlus, IconReceipt } from "@/components/icons";
-import { EstadoCargando, EstadoVacio } from "@/components/estados";
+import { Button, Cifra, EmptyState, ErrorState, Input, LoadingState, StatusBadge, Table, type TonoEstado } from "@bitacora/ui/web";
 
 type CotizacionConCliente = Presupuesto & { cliente_info: { nombre: string } | null };
 type Chip = "todos" | EstadoPresupuesto;
@@ -27,6 +26,15 @@ const CHIPS: { valor: Chip; etiqueta: string }[] = [
   { valor: "expirado", etiqueta: "Expirada" },
 ];
 
+// "borrador"/"enviado" no están en MAPA_ESTADO_TONO (ambiguos a propósito
+// — ver el comentario en tipos.ts), se fuerza el tono en vez de dejarlos
+// caer al fallback "cerrado".
+const TONO_FORZADO: Partial<Record<EstadoPresupuesto, TonoEstado>> = {
+  borrador: "en_progreso",
+  enviado: "en_progreso",
+};
+
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export default function CotizacionesPage() {
   const router = useRouter();
   const [usuario, setUsuario] = useState<UsuarioShell | null>(null);
@@ -92,24 +100,28 @@ export default function CotizacionesPage() {
 
   return (
     <DashboardShell usuario={usuario}>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <PageHeader title="Cotizaciones" subtitle="Gestiona tus cotizaciones y da seguimiento a las aprobaciones" />
-        <Button type="button" onClick={() => router.push("/dashboard/financiero/cotizaciones/nueva")}>
-          <IconPlus className="h-4 w-4" />
+      <div className="mb-ds-6 flex flex-wrap items-center justify-between gap-ds-3">
+        <div>
+          <p className="ds-heading text-ds-h2 text-ds-text">Cotizaciones</p>
+          <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">Gestiona tus cotizaciones y da seguimiento a las aprobaciones</p>
+        </div>
+        <Button iconoIzq={<Plus size={16} strokeWidth={2.75} />} onPress={() => router.push("/dashboard/financiero/cotizaciones/nueva")}>
           Nueva Cotización
         </Button>
       </div>
 
-      <div className="mb-4 flex flex-col gap-3">
-        <Input type="text" placeholder="Buscar cotizaciones..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} className="max-w-sm" />
-        <div className="flex flex-wrap gap-2">
+      <div className="mb-ds-4 flex flex-col gap-ds-3">
+        <div className="max-w-sm">
+          <Input placeholder="Buscar cotizaciones..." valor={busqueda} onCambio={setBusqueda} />
+        </div>
+        <div className="flex flex-wrap gap-ds-2">
           {CHIPS.map((c) => (
             <button
               key={c.valor}
               type="button"
               onClick={() => setFiltro(c.valor)}
-              className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                filtro === c.valor ? "border-brand bg-brand-soft text-brand" : "border-border text-muted hover:border-muted-soft"
+              className={`rounded-ds-pill border px-ds-3 py-1 font-ds-body text-ds-caption font-medium transition-colors ${
+                filtro === c.valor ? "border-ds-brand bg-ds-brand/[0.08] text-ds-brand" : "border-ds-divider text-ds-text/70 hover:border-ds-text/30"
               }`}
             >
               {c.etiqueta} ({contadores[c.valor]})
@@ -118,58 +130,41 @@ export default function CotizacionesPage() {
         </div>
       </div>
 
-      {error && <ErrorText>{error}</ErrorText>}
-      {cotizaciones === null && !error && <EstadoCargando />}
+      {error ? <ErrorState mensaje={error} /> : null}
+      {cotizaciones === null && !error ? <LoadingState /> : null}
 
       {cotizaciones?.length === 0 && (
-        <EstadoVacio
-          icono={IconReceipt}
+        <EmptyState
+          icono={<Receipt size={28} strokeWidth={2.75} />}
           titulo="Ninguna cotización registrada"
           mensaje="Crea tu primera cotización para comenzar"
-          accion={<Button type="button" onClick={() => router.push("/dashboard/financiero/cotizaciones/nueva")}>
-              <IconPlus className="h-4 w-4" />
+          accion={
+            <Button iconoIzq={<Plus size={16} strokeWidth={2.75} />} onPress={() => router.push("/dashboard/financiero/cotizaciones/nueva")}>
               Nueva Cotización
-            </Button>}
+            </Button>
+          }
         />
       )}
 
       {cotizaciones && cotizaciones.length > 0 && filtradas.length === 0 && (
-        <EstadoVacio icono={IconReceipt} titulo="Ninguna cotización coincide con la búsqueda o el filtro" />
+        <EmptyState icono={<Receipt size={28} strokeWidth={2.75} />} titulo="Ninguna cotización coincide con la búsqueda o el filtro" />
       )}
 
       {filtradas.length > 0 && (
-        <Card className="overflow-x-auto p-0">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
-                <th className="px-5 py-3 font-medium">N°</th>
-                <th className="px-5 py-3 font-medium">Cliente</th>
-                <th className="px-5 py-3 text-right font-medium">Monto</th>
-                <th className="px-5 py-3 font-medium">Estado</th>
-                <th className="px-5 py-3 font-medium">Creación</th>
-                <th className="px-5 py-3 font-medium">Vencimiento</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtradas.map((c) => (
-                <tr
-                  key={c.id}
-                  onClick={() => router.push(`/dashboard/financiero/cotizaciones/${c.id}`)}
-                  className="cursor-pointer border-b border-border-soft last:border-0 hover:bg-surface-sunken"
-                >
-                  <td className="px-5 py-3 font-medium text-foreground">{c.numero != null ? `#${String(c.numero).padStart(4, "0")}` : "—"}</td>
-                  <td className="px-5 py-3 text-foreground">{c.cliente_info?.nombre ?? "—"}</td>
-                  <td className="px-5 py-3 text-right"><Cifra>{formatMoneda(c.monto, usuario.moneda)}</Cifra></td>
-                  <td className="px-5 py-3">
-                    <Badge value={c.estado} />
-                  </td>
-                  <td className="px-5 py-3 text-muted">{c.fecha}</td>
-                  <td className="px-5 py-3 text-muted">{c.fecha_vencimiento ?? "—"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
+        <Table<CotizacionConCliente>
+          filas={filtradas}
+          claveFila={(c) => c.id}
+          onFilaClick={(c) => router.push(`/dashboard/financiero/cotizaciones/${c.id}`)}
+          vacio={{ titulo: "Ninguna cotización coincide con la búsqueda o el filtro" }}
+          columnas={[
+            { encabezado: "N°", celda: (c) => (c.numero != null ? `#${String(c.numero).padStart(4, "0")}` : "—") },
+            { encabezado: "Cliente", celda: (c) => c.cliente_info?.nombre ?? "—" },
+            { encabezado: "Monto", clase: "text-right", celda: (c) => <Cifra>{formatMoneda(c.monto, usuario.moneda)}</Cifra> },
+            { encabezado: "Estado", celda: (c) => <StatusBadge estado={c.estado} tonoForzado={TONO_FORZADO[c.estado]} /> },
+            { encabezado: "Creación", celda: (c) => c.fecha },
+            { encabezado: "Vencimiento", celda: (c) => c.fecha_vencimiento ?? "—" },
+          ]}
+        />
       )}
     </DashboardShell>
   );

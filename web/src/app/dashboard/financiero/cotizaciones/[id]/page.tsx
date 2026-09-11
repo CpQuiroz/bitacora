@@ -3,15 +3,15 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { ChevronLeft, Mail, Plus, Settings, Share2 } from "lucide-react";
 import type { Cliente, EstadoPresupuesto, Presupuesto, PresupuestoItem } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { abrirPdfCotizacion, urlCompartirPdfCotizacion } from "@/lib/descargarPdf";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText } from "@/components/ui";
+import { Button, Card, Input, Select, StatusBadge } from "@bitacora/ui/web";
 import { InputMonto } from "@/components/InputMonto";
-import { IconChevronLeft, IconMail, IconMessageShare, IconPlus, IconSettings } from "@/components/icons";
 import { CatalogoSelectorModal, type ItemSeleccionadoCatalogo } from "@/components/CatalogoSelectorModal";
 import { PanelAcciones } from "@/components/PanelAcciones";
 
@@ -22,6 +22,7 @@ type Linea = { catalogo_item_id: string | null; descripcion: string; cantidad: s
 const ESTADOS: EstadoPresupuesto[] = ["borrador", "enviado", "aprobado", "rechazado"];
 const IVA_TASA = 0.19;
 
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export default function CotizacionDetallePage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -244,7 +245,7 @@ export default function CotizacionDetallePage() {
   if (error) {
     return (
       <DashboardShell usuario={usuario}>
-        <ErrorText>{error}</ErrorText>
+        <p className="font-ds-body text-ds-small text-ds-accent-700">{error}</p>
       </DashboardShell>
     );
   }
@@ -252,108 +253,85 @@ export default function CotizacionDetallePage() {
 
   return (
     <DashboardShell usuario={usuario}>
-      <Link href="/dashboard/financiero/cotizaciones" className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-brand hover:underline">
-        <IconChevronLeft className="h-4 w-4" />
+      <Link href="/dashboard/financiero/cotizaciones" className="mb-ds-4 inline-flex items-center gap-ds-1 font-ds-body text-ds-small font-medium text-ds-brand hover:underline">
+        <ChevronLeft size={16} strokeWidth={2.75} />
         Cotizaciones
       </Link>
 
-      <PageHeader
-        title={cotizacion.numero != null ? `Cotización N° ${String(cotizacion.numero).padStart(4, "0")}` : "Cotización"}
-        subtitle={cotizacion.cliente_info?.nombre ?? "—"}
-        action={
-          <div className="flex items-center gap-2">
-            <Badge value={cotizacion.estado} />
-            <Button type="button" variant="outline" onClick={() => setPanelAbierto(true)}>
-              <IconSettings className="h-4 w-4" />
-              Acciones
-            </Button>
-          </div>
-        }
-      />
-
-      {aviso && (
-        <div className="my-4">
-          <SuccessText>{aviso}</SuccessText>
+      <div className="flex flex-wrap items-center justify-between gap-ds-3">
+        <div>
+          <p className="ds-heading text-ds-h2 text-ds-text">
+            {cotizacion.numero != null ? `Cotización N° ${String(cotizacion.numero).padStart(4, "0")}` : "Cotización"}
+          </p>
+          <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">{cotizacion.cliente_info?.nombre ?? "—"}</p>
         </div>
-      )}
+        <div className="flex items-center gap-ds-2">
+          <StatusBadge estado={cotizacion.estado} tonoForzado={cotizacion.estado === "borrador" || cotizacion.estado === "enviado" ? "en_progreso" : undefined} />
+          <Button variante="secundario" iconoIzq={<Settings size={16} strokeWidth={2.75} />} onPress={() => setPanelAbierto(true)}>
+            Acciones
+          </Button>
+        </div>
+      </div>
 
-      <div className="my-6 grid gap-6 lg:grid-cols-3">
-        <div className="flex flex-col gap-6 lg:col-span-2">
+      {aviso ? <p className="my-ds-4 font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}
+
+      <div className="my-ds-6 grid gap-ds-6 lg:grid-cols-3">
+        <div className="flex flex-col gap-ds-6 lg:col-span-2">
           {editando ? (
             <Card>
-              <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-foreground">Editar cotización</h2>
-              </div>
+              <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Editar cotización</p>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <Label>Fecha de vencimiento (opcional)</Label>
-                  <Input type="date" value={fechaVencEdit} onChange={(e) => setFechaVencEdit(e.target.value)} />
-                </div>
+              <div className="grid gap-ds-4 sm:grid-cols-2">
+                <FechaCampo etiqueta="Fecha de vencimiento (opcional)" valor={fechaVencEdit} onCambio={setFechaVencEdit} />
                 <div className="sm:col-span-2">
-                  <Label>Descripción (opcional)</Label>
-                  <Input type="text" value={descEdit} onChange={(e) => setDescEdit(e.target.value)} />
+                  <Input etiqueta="Descripción (opcional)" valor={descEdit} onCambio={setDescEdit} />
                 </div>
               </div>
 
-              <div className="mt-5 flex flex-col gap-3">
+              <div className="mt-ds-5 flex flex-col gap-ds-3">
                 {lineasEdit.map((l, idx) => (
-                  <div key={idx} className="grid items-end gap-3 sm:grid-cols-[2fr_1fr_1fr_auto]">
-                    <div>
-                      {idx === 0 && <Label>Descripción</Label>}
-                      <Input type="text" required value={l.descripcion} onChange={(e) => cambiarLineaEdit(idx, { descripcion: e.target.value })} />
-                    </div>
-                    <div>
-                      {idx === 0 && <Label>Cantidad</Label>}
-                      <Input type="number" min="0.01" step="0.01" required value={l.cantidad} onChange={(e) => cambiarLineaEdit(idx, { cantidad: e.target.value })} />
-                    </div>
-                    <div>
-                      {idx === 0 && <Label>Precio unitario</Label>}
+                  <div key={idx} className="grid items-end gap-ds-3 sm:grid-cols-[2fr_1fr_1fr_auto]">
+                    <Input etiqueta={idx === 0 ? "Descripción" : undefined} requerido valor={l.descripcion} onCambio={(v) => cambiarLineaEdit(idx, { descripcion: v })} />
+                    <Input etiqueta={idx === 0 ? "Cantidad" : undefined} tipo="numero" requerido valor={l.cantidad} onCambio={(v) => cambiarLineaEdit(idx, { cantidad: v })} />
+                    <div className="flex flex-col gap-ds-1">
+                      {idx === 0 && <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Precio unitario</label>}
                       <InputMonto required value={l.precio_unitario} onChange={(v) => cambiarLineaEdit(idx, { precio_unitario: v })} moneda={usuario.moneda} />
                     </div>
-                    <Button type="button" variant="ghost" onClick={() => quitarLineaEdit(idx)} disabled={lineasEdit.length === 1}>
+                    <Button variante="ghost" onPress={() => quitarLineaEdit(idx)} deshabilitado={lineasEdit.length === 1}>
                       Quitar
                     </Button>
                   </div>
                 ))}
               </div>
-              <Button type="button" variant="outline" onClick={() => setSelectorAbiertoEdit(true)} className="mt-4">
-                <IconPlus className="h-4 w-4" />
-                Agregar del catálogo
-              </Button>
+              <div className="mt-ds-4">
+                <Button variante="secundario" iconoIzq={<Plus size={16} strokeWidth={2.75} />} onPress={() => setSelectorAbiertoEdit(true)}>
+                  Agregar del catálogo
+                </Button>
+              </div>
 
-              <CatalogoSelectorModal
-                open={selectorAbiertoEdit}
-                onClose={() => setSelectorAbiertoEdit(false)}
-                onAgregar={onAgregarDesdeSelectorEdit}
-                moneda={usuario.moneda ?? "CLP"}
-              />
+              <CatalogoSelectorModal open={selectorAbiertoEdit} onClose={() => setSelectorAbiertoEdit(false)} onAgregar={onAgregarDesdeSelectorEdit} moneda={usuario.moneda ?? "CLP"} />
 
-              <div className="mt-6 flex flex-col items-end gap-1 border-t border-border pt-4 text-sm">
+              <div className="mt-ds-6 flex flex-col items-end gap-ds-1 border-t border-ds-divider pt-ds-4 font-ds-body text-ds-small">
                 <div className="flex w-56 justify-between">
-                  <span className="text-muted">Subtotal</span>
-                  <span className="text-foreground">{formatMoneda(totalesEdit.subtotal, usuario.moneda)}</span>
+                  <span className="text-ds-text/60">Subtotal</span>
+                  <span className="text-ds-text">{formatMoneda(totalesEdit.subtotal, usuario.moneda)}</span>
                 </div>
                 <div className="flex w-56 justify-between">
-                  <span className="text-muted">IVA (19%)</span>
-                  <span className="text-foreground">{formatMoneda(totalesEdit.iva, usuario.moneda)}</span>
+                  <span className="text-ds-text/60">IVA (19%)</span>
+                  <span className="text-ds-text">{formatMoneda(totalesEdit.iva, usuario.moneda)}</span>
                 </div>
-                <div className="flex w-56 justify-between text-base font-semibold">
-                  <span className="text-foreground">Total</span>
-                  <span className="text-foreground">{formatMoneda(totalesEdit.total, usuario.moneda)}</span>
+                <div className="flex w-56 justify-between text-ds-body font-semibold">
+                  <span className="text-ds-text">Total</span>
+                  <span className="text-ds-text">{formatMoneda(totalesEdit.total, usuario.moneda)}</span>
                 </div>
               </div>
 
-              {errorEdit && (
-                <div className="mt-4">
-                  <ErrorText>{errorEdit}</ErrorText>
-                </div>
-              )}
-              <div className="mt-4 flex gap-2">
-                <Button type="button" onClick={guardarEdicion} disabled={guardandoEdit}>
-                  {guardandoEdit ? "Guardando…" : "Guardar cambios"}
+              {errorEdit ? <p className="mt-ds-4 font-ds-body text-ds-small text-ds-accent-700">{errorEdit}</p> : null}
+              <div className="mt-ds-4 flex gap-ds-2">
+                <Button onPress={guardarEdicion} cargando={guardandoEdit}>
+                  Guardar cambios
                 </Button>
-                <Button type="button" variant="ghost" onClick={() => setEditando(false)}>
+                <Button variante="ghost" onPress={() => setEditando(false)}>
                   Cancelar
                 </Button>
               </div>
@@ -361,112 +339,105 @@ export default function CotizacionDetallePage() {
           ) : (
             <>
               <Card>
-                <div className="mb-4 flex items-center justify-between">
-                  <h2 className="text-sm font-semibold text-foreground">Ítems</h2>
-                </div>
+                <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Ítems</p>
                 {cotizacion.items.length === 0 ? (
-                  <p className="text-sm text-muted">Sin ítems.</p>
+                  <p className="font-ds-body text-ds-small text-ds-text/70">Sin ítems.</p>
                 ) : (
-                  <table className="w-full text-left text-sm">
+                  <table className="w-full text-left text-ds-body">
                     <thead>
-                      <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
-                        <th className="py-2 font-medium">Descripción</th>
-                        <th className="py-2 font-medium">Cantidad</th>
-                        <th className="py-2 font-medium">Precio unitario</th>
-                        <th className="py-2 text-right font-medium">Subtotal</th>
+                      <tr className="border-b border-ds-divider text-[11px] font-medium uppercase tracking-[0.08em] text-ds-text/60">
+                        <th className="py-ds-2">Descripción</th>
+                        <th className="py-ds-2">Cantidad</th>
+                        <th className="py-ds-2">Precio unitario</th>
+                        <th className="py-ds-2 text-right">Subtotal</th>
                       </tr>
                     </thead>
                     <tbody>
                       {cotizacion.items.map((it) => (
-                        <tr key={it.id} className="border-b border-border last:border-0">
-                          <td className="py-2.5 text-foreground">{it.descripcion}</td>
-                          <td className="py-2.5 text-muted">{it.cantidad}</td>
-                          <td className="py-2.5 text-muted">{formatMoneda(it.precio_unitario, usuario.moneda)}</td>
-                          <td className="py-2.5 text-right text-foreground">{formatMoneda(it.cantidad * it.precio_unitario, usuario.moneda)}</td>
+                        <tr key={it.id} className="border-b border-ds-text/[0.08] last:border-0">
+                          <td className="py-2.5 text-ds-text">{it.descripcion}</td>
+                          <td className="py-2.5 text-ds-text/70">{it.cantidad}</td>
+                          <td className="py-2.5 text-ds-text/70">{formatMoneda(it.precio_unitario, usuario.moneda)}</td>
+                          <td className="py-2.5 text-right text-ds-text">{formatMoneda(it.cantidad * it.precio_unitario, usuario.moneda)}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 )}
-                <div className="mt-6 flex flex-col items-end gap-1 border-t border-border pt-4 text-sm">
+                <div className="mt-ds-6 flex flex-col items-end gap-ds-1 border-t border-ds-divider pt-ds-4 font-ds-body text-ds-small">
                   <div className="flex w-56 justify-between">
-                    <span className="text-muted">Subtotal</span>
-                    <span className="text-foreground">{formatMoneda(cotizacion.subtotal ?? 0, usuario.moneda)}</span>
+                    <span className="text-ds-text/60">Subtotal</span>
+                    <span className="text-ds-text">{formatMoneda(cotizacion.subtotal ?? 0, usuario.moneda)}</span>
                   </div>
                   <div className="flex w-56 justify-between">
-                    <span className="text-muted">IVA (19%)</span>
-                    <span className="text-foreground">{formatMoneda(cotizacion.iva ?? 0, usuario.moneda)}</span>
+                    <span className="text-ds-text/60">IVA (19%)</span>
+                    <span className="text-ds-text">{formatMoneda(cotizacion.iva ?? 0, usuario.moneda)}</span>
                   </div>
-                  <div className="flex w-56 justify-between text-base font-semibold">
-                    <span className="text-foreground">Total</span>
-                    <span className="text-foreground">{formatMoneda(cotizacion.monto, usuario.moneda)}</span>
+                  <div className="flex w-56 justify-between text-ds-body font-semibold">
+                    <span className="text-ds-text">Total</span>
+                    <span className="text-ds-text">{formatMoneda(cotizacion.monto, usuario.moneda)}</span>
                   </div>
                 </div>
               </Card>
 
               {cotizacion.descripcion && (
                 <Card>
-                  <h2 className="mb-2 text-sm font-semibold text-foreground">Descripción</h2>
-                  <p className="text-sm text-muted">{cotizacion.descripcion}</p>
+                  <p className="mb-ds-2 font-ds-body text-ds-small font-semibold text-ds-text">Descripción</p>
+                  <p className="font-ds-body text-ds-small text-ds-text/70">{cotizacion.descripcion}</p>
                 </Card>
               )}
-
             </>
           )}
         </div>
 
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-ds-6">
           <Card>
-            <h2 className="mb-4 text-sm font-semibold text-foreground">Cliente</h2>
-            <div className="flex flex-col gap-2 text-sm">
-              <p className="font-medium text-foreground">{cotizacion.cliente_info?.nombre ?? "—"}</p>
-              {cotizacion.cliente_info?.correo && <p className="text-muted">{cotizacion.cliente_info.correo}</p>}
-              {cotizacion.cliente_info?.telefono && <p className="text-muted">{cotizacion.cliente_info.telefono}</p>}
-              {cotizacion.cliente_info?.direccion && <p className="text-muted">{cotizacion.cliente_info.direccion}</p>}
+            <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Cliente</p>
+            <div className="flex flex-col gap-ds-2 font-ds-body text-ds-small">
+              <p className="font-medium text-ds-text">{cotizacion.cliente_info?.nombre ?? "—"}</p>
+              {cotizacion.cliente_info?.correo && <p className="text-ds-text/70">{cotizacion.cliente_info.correo}</p>}
+              {cotizacion.cliente_info?.telefono && <p className="text-ds-text/70">{cotizacion.cliente_info.telefono}</p>}
+              {cotizacion.cliente_info?.direccion && <p className="text-ds-text/70">{cotizacion.cliente_info.direccion}</p>}
             </div>
           </Card>
 
           <Card>
-            <h2 className="mb-4 text-sm font-semibold text-foreground">Estado</h2>
-            <div className="grid gap-2 text-sm">
+            <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Estado</p>
+            <div className="grid gap-ds-2 font-ds-body text-ds-small">
               <div>
-                <Label>Fecha de creación</Label>
-                <p className="text-foreground">{cotizacion.fecha}</p>
+                <p className="text-ds-caption text-ds-text/60">Fecha de creación</p>
+                <p className="text-ds-text">{cotizacion.fecha}</p>
               </div>
               <div>
-                <Label>Fecha de vencimiento</Label>
-                <p className="text-foreground">{cotizacion.fecha_vencimiento ?? "—"}</p>
+                <p className="text-ds-caption text-ds-text/60">Fecha de vencimiento</p>
+                <p className="text-ds-text">{cotizacion.fecha_vencimiento ?? "—"}</p>
               </div>
             </div>
           </Card>
 
           <Card>
-            <h2 className="mb-3 text-sm font-semibold text-foreground">Orden de Servicio</h2>
+            <p className="mb-ds-3 font-ds-body text-ds-small font-semibold text-ds-text">Orden de Servicio</p>
             {cotizacion.trabajo_id ? (
-              <div className="flex flex-col gap-2">
-                <SuccessText>
+              <div className="flex flex-col gap-ds-2">
+                <p className="font-ds-body text-ds-small font-medium text-ds-accent2-800">
                   {folioGenerado != null || cotizacion.os_folio != null
                     ? `Convertida en OS N° ${folioGenerado ?? cotizacion.os_folio}.`
                     : "Esta cotización ya fue convertida en una OS."}
-                </SuccessText>
-                <Link href={`/dashboard/ordenes/${cotizacion.trabajo_id}`} className="text-sm font-medium text-brand hover:underline">
+                </p>
+                <Link href={`/dashboard/ordenes/${cotizacion.trabajo_id}`} className="font-ds-body text-ds-small font-medium text-ds-brand hover:underline">
                   Ver orden de servicio →
                 </Link>
               </div>
             ) : cotizacion.estado === "aprobado" ? (
               <>
-                <p className="mb-3 text-sm text-muted">La cotización está aprobada — puedes convertirla en una orden de servicio real.</p>
-                <Button type="button" onClick={convertirAOs} disabled={convirtiendo}>
-                  {convirtiendo ? "Convirtiendo…" : "Convertir a OS"}
+                <p className="mb-ds-3 font-ds-body text-ds-small text-ds-text/70">La cotización está aprobada — puedes convertirla en una orden de servicio real.</p>
+                <Button onPress={convertirAOs} cargando={convirtiendo}>
+                  Convertir a OS
                 </Button>
-                {errorConversion && (
-                  <div className="mt-3">
-                    <ErrorText>{errorConversion}</ErrorText>
-                  </div>
-                )}
+                {errorConversion ? <p className="mt-ds-3 font-ds-body text-ds-small text-ds-accent-700">{errorConversion}</p> : null}
               </>
             ) : (
-              <p className="text-sm text-muted">Aprueba la cotización para poder convertirla en una orden de servicio.</p>
+              <p className="font-ds-body text-ds-small text-ds-text/70">Aprueba la cotización para poder convertirla en una orden de servicio.</p>
             )}
           </Card>
         </div>
@@ -478,60 +449,48 @@ export default function CotizacionDetallePage() {
         titulo={cotizacion.numero != null ? `Cotización N° ${String(cotizacion.numero).padStart(4, "0")}` : "Cotización"}
         subtitulo={cotizacion.cliente_info?.nombre ?? undefined}
         seccionEstado={
-          <div className="flex flex-col gap-3">
-            <Select value={cotizacion.estado} onChange={(e) => cambiarEstado(e.target.value as EstadoPresupuesto)}>
-              {ESTADOS.map((e) => (
-                <option key={e} value={e}>
-                  {e}
-                </option>
-              ))}
-            </Select>
+          <div className="flex flex-col gap-ds-3">
+            <Select valor={cotizacion.estado} onCambio={(v) => cambiarEstado(v as EstadoPresupuesto)} opciones={ESTADOS.map((e) => ({ valor: e, etiqueta: e }))} />
             {cotizacion.estado === "borrador" && (
-              <Button type="button" variant="outline" onClick={() => cambiarEstado("enviado")}>
+              <Button variante="secundario" onPress={() => cambiarEstado("enviado")}>
                 Marcar como Enviado
               </Button>
             )}
           </div>
         }
         seccionCompartir={
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-wrap gap-2">
-              <Button type="button" onClick={onDescargarPdf} disabled={descargando}>
-                {descargando ? "Generando…" : "Descargar PDF"}
+          <div className="flex flex-col gap-ds-3">
+            <div className="flex flex-wrap gap-ds-2">
+              <Button onPress={onDescargarPdf} cargando={descargando}>
+                Descargar PDF
               </Button>
-              <Button type="button" variant="outline" onClick={onCompartirWhatsapp} disabled={compartiendo}>
-                <IconMessageShare className="h-4 w-4" />
-                {compartiendo ? "Generando link…" : "WhatsApp"}
+              <Button variante="secundario" iconoIzq={<Share2 size={16} strokeWidth={2.75} />} onPress={onCompartirWhatsapp} cargando={compartiendo}>
+                WhatsApp
               </Button>
             </div>
-            <form onSubmit={onEnviarEmail} className="flex flex-col gap-2">
-              <Label className="flex items-center gap-1">
-                <IconMail className="h-3.5 w-3.5" /> Enviar por email
-              </Label>
-              <div className="flex items-end gap-2">
-                <Input
-                  type="email"
-                  placeholder={cotizacion.cliente_info?.correo || "correo@cliente.cl"}
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="flex-1"
-                />
-                <Button type="submit" variant="outline" disabled={enviando || !email.trim()}>
-                  {enviando ? "Enviando…" : "Enviar"}
+            <form onSubmit={onEnviarEmail} className="flex flex-col gap-ds-2">
+              <label className="flex items-center gap-1 font-ds-body text-ds-caption font-medium text-ds-text/70">
+                <Mail size={14} strokeWidth={2.75} /> Enviar por email
+              </label>
+              <div className="flex items-end gap-ds-2">
+                <div className="flex-1">
+                  <Input tipo="email" placeholder={cotizacion.cliente_info?.correo || "correo@cliente.cl"} valor={email} onCambio={setEmail} />
+                </div>
+                <Button tipo="submit" variante="secundario" deshabilitado={enviando || !email.trim()} cargando={enviando}>
+                  Enviar
                 </Button>
               </div>
             </form>
-            {avisoEnvio && <SuccessText>{avisoEnvio}</SuccessText>}
-            {errorEnvio && <ErrorText>{errorEnvio}</ErrorText>}
-            {errorCompartir && <ErrorText>{errorCompartir}</ErrorText>}
+            {avisoEnvio ? <p className="font-ds-body text-ds-small font-medium text-ds-accent2-800">{avisoEnvio}</p> : null}
+            {errorEnvio ? <p className="font-ds-body text-ds-small text-ds-accent-700">{errorEnvio}</p> : null}
+            {errorCompartir ? <p className="font-ds-body text-ds-small text-ds-accent-700">{errorCompartir}</p> : null}
           </div>
         }
         seccionOtras={
           !cotizacion.trabajo_id ? (
             <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
+              variante="secundario"
+              onPress={() => {
                 setPanelAbierto(false);
                 abrirEdicion();
               }}
@@ -539,22 +498,37 @@ export default function CotizacionDetallePage() {
               Editar
             </Button>
           ) : (
-            <p className="text-sm text-muted">Ya fue convertida en OS — no se puede editar.</p>
+            <p className="font-ds-body text-ds-small text-ds-text/70">Ya fue convertida en OS — no se puede editar.</p>
           )
         }
         seccionPeligro={
           !cotizacion.trabajo_id ? (
-            <div className="flex flex-col gap-2">
-              <Button type="button" variant="danger" onClick={onEliminar} disabled={eliminando}>
-                {eliminando ? "Eliminando…" : "Eliminar cotización"}
+            <div className="flex flex-col gap-ds-2">
+              <Button variante="peligro" onPress={onEliminar} cargando={eliminando}>
+                Eliminar cotización
               </Button>
-              {errorEliminar && <ErrorText>{errorEliminar}</ErrorText>}
+              {errorEliminar ? <p className="font-ds-body text-ds-small text-ds-accent-700">{errorEliminar}</p> : null}
             </div>
           ) : (
-            <p className="text-sm text-muted">Ya fue convertida en OS — no se puede eliminar.</p>
+            <p className="font-ds-body text-ds-small text-ds-text/70">Ya fue convertida en OS — no se puede eliminar.</p>
           )
         }
       />
     </DashboardShell>
+  );
+}
+
+// Input nativo type="date" — ver el mismo helper en rutas/nueva/page.tsx.
+function FechaCampo({ etiqueta, valor, onCambio }: { etiqueta: string; valor: string; onCambio: (v: string) => void }) {
+  return (
+    <div className="flex flex-col gap-ds-1">
+      <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">{etiqueta}</label>
+      <input
+        type="date"
+        value={valor}
+        onChange={(e) => onCambio(e.target.value)}
+        className="h-11 w-full rounded-ds-md border border-ds-divider bg-ds-surface px-ds-3 font-ds-body text-ds-body text-ds-text transition-colors hover:border-ds-text/30 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ds-brand)]"
+      />
+    </div>
   );
 }

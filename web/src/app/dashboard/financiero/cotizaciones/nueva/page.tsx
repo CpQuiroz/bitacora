@@ -2,14 +2,14 @@
 
 import { Suspense, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { ChevronLeft, Plus } from "lucide-react";
 import type { Cliente } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Button, Card, ErrorText, Input, Label, PageHeader } from "@/components/ui";
+import { Button, Card, Input } from "@bitacora/ui/web";
 import { InputMonto } from "@/components/InputMonto";
-import { IconChevronLeft, IconPlus } from "@/components/icons";
 import { CatalogoSelectorModal, type ItemSeleccionadoCatalogo } from "@/components/CatalogoSelectorModal";
 import { ComboboxCliente } from "@/components/ComboboxCliente";
 
@@ -17,6 +17,7 @@ type Linea = { catalogo_item_id: string | null; descripcion: string; cantidad: s
 
 const IVA_TASA = 0.19;
 
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 function NuevaCotizacionContenido() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -128,18 +129,19 @@ function NuevaCotizacionContenido() {
       <button
         type="button"
         onClick={() => router.push("/dashboard/financiero/cotizaciones")}
-        className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-brand hover:underline"
+        className="mb-ds-4 inline-flex items-center gap-ds-1 font-ds-body text-ds-small font-medium text-ds-brand hover:underline"
       >
-        <IconChevronLeft className="h-4 w-4" />
+        <ChevronLeft size={16} strokeWidth={2.75} />
         Cotizaciones
       </button>
-      <PageHeader title="Nueva Cotización" subtitle="Arma la cotización con ítems de tu Catálogo" />
+      <p className="ds-heading text-ds-h2 text-ds-text">Nueva Cotización</p>
+      <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">Arma la cotización con ítems de tu Catálogo</p>
 
-      <form onSubmit={onSubmit} className="mt-6 flex flex-col gap-6">
+      <form onSubmit={onSubmit} className="mt-ds-6 flex flex-col gap-ds-6">
         <Card>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <Label>Cliente</Label>
+          <div className="grid gap-ds-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-ds-1">
+              <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Cliente</label>
               <ComboboxCliente
                 value={clienteId}
                 onChange={setClienteId}
@@ -148,85 +150,84 @@ function NuevaCotizacionContenido() {
                 placeholder="Selecciona un cliente…"
               />
             </div>
-            <div>
-              <Label>Fecha de vencimiento (opcional)</Label>
-              <Input type="date" value={fechaVencimiento} onChange={(e) => setFechaVencimiento(e.target.value)} />
-            </div>
+            <FechaCampo etiqueta="Fecha de vencimiento (opcional)" valor={fechaVencimiento} onCambio={setFechaVencimiento} />
             <div className="sm:col-span-2">
-              <Label>Descripción (opcional)</Label>
-              <Input type="text" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} placeholder="Ej: Mantención preventiva trimestral" />
+              <Input etiqueta="Descripción (opcional)" valor={descripcion} onCambio={setDescripcion} placeholder="Ej: Mantención preventiva trimestral" />
             </div>
           </div>
         </Card>
 
         <Card>
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-foreground">Ítems</h2>
-          </div>
+          <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Ítems</p>
 
-          {lineas.length === 0 && <p className="mb-4 text-sm text-muted">Todavía no agregas ítems.</p>}
+          {lineas.length === 0 && <p className="mb-ds-4 font-ds-body text-ds-small text-ds-text/70">Todavía no agregas ítems.</p>}
 
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-ds-3">
             {lineas.map((l, idx) => (
-              <div key={idx} className="grid items-end gap-3 sm:grid-cols-[2fr_1fr_1fr_auto]">
-                <div>
-                  <Label>Descripción</Label>
-                  <Input type="text" required value={l.descripcion} onChange={(e) => cambiarLinea(idx, { descripcion: e.target.value })} />
-                </div>
-                <div>
-                  <Label>Cantidad</Label>
-                  <Input type="number" min="0.01" step="0.01" required value={l.cantidad} onChange={(e) => cambiarLinea(idx, { cantidad: e.target.value })} />
-                </div>
-                <div>
-                  <Label>Precio unitario</Label>
+              <div key={idx} className="grid items-end gap-ds-3 sm:grid-cols-[2fr_1fr_1fr_auto]">
+                <Input etiqueta="Descripción" requerido valor={l.descripcion} onCambio={(v) => cambiarLinea(idx, { descripcion: v })} />
+                <Input etiqueta="Cantidad" tipo="numero" requerido valor={l.cantidad} onCambio={(v) => cambiarLinea(idx, { cantidad: v })} />
+                <div className="flex flex-col gap-ds-1">
+                  <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Precio unitario</label>
                   <InputMonto required value={l.precio_unitario} onChange={(v) => cambiarLinea(idx, { precio_unitario: v })} moneda={usuario.moneda} />
                 </div>
-                <Button type="button" variant="ghost" onClick={() => quitarLinea(idx)}>
+                <Button variante="ghost" onPress={() => quitarLinea(idx)}>
                   Quitar
                 </Button>
               </div>
             ))}
           </div>
 
-          <Button type="button" variant="outline" onClick={() => setSelectorAbierto(true)} className="mt-4">
-            <IconPlus className="h-4 w-4" />
-            Agregar del catálogo
-          </Button>
+          <div className="mt-ds-4">
+            <Button variante="secundario" iconoIzq={<Plus size={16} strokeWidth={2.75} />} onPress={() => setSelectorAbierto(true)}>
+              Agregar del catálogo
+            </Button>
+          </div>
 
-          <CatalogoSelectorModal
-            open={selectorAbierto}
-            onClose={() => setSelectorAbierto(false)}
-            onAgregar={onAgregarDesdeSelector}
-            moneda={usuario.moneda ?? "CLP"}
-          />
+          <CatalogoSelectorModal open={selectorAbierto} onClose={() => setSelectorAbierto(false)} onAgregar={onAgregarDesdeSelector} moneda={usuario.moneda ?? "CLP"} />
 
-          <div className="mt-6 flex flex-col items-end gap-1 border-t border-border pt-4 text-sm">
+          <div className="mt-ds-6 flex flex-col items-end gap-ds-1 border-t border-ds-divider pt-ds-4 font-ds-body text-ds-small">
             <div className="flex w-56 justify-between">
-              <span className="text-muted">Subtotal</span>
-              <span className="text-foreground">{formatMoneda(subtotal, usuario.moneda)}</span>
+              <span className="text-ds-text/60">Subtotal</span>
+              <span className="text-ds-text">{formatMoneda(subtotal, usuario.moneda)}</span>
             </div>
             <div className="flex w-56 justify-between">
-              <span className="text-muted">IVA (19%)</span>
-              <span className="text-foreground">{formatMoneda(iva, usuario.moneda)}</span>
+              <span className="text-ds-text/60">IVA (19%)</span>
+              <span className="text-ds-text">{formatMoneda(iva, usuario.moneda)}</span>
             </div>
-            <div className="flex w-56 justify-between text-base font-semibold">
-              <span className="text-foreground">Total</span>
-              <span className="text-foreground">{formatMoneda(total, usuario.moneda)}</span>
+            <div className="flex w-56 justify-between text-ds-body font-semibold">
+              <span className="text-ds-text">Total</span>
+              <span className="text-ds-text">{formatMoneda(total, usuario.moneda)}</span>
             </div>
           </div>
         </Card>
 
-        {error && <ErrorText>{error}</ErrorText>}
-        <div className="flex gap-2">
-          <Button type="submit" disabled={guardando}>
-            {guardando ? "Guardando…" : "Guardar cotización"}
+        {error ? <p className="font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
+        <div className="flex gap-ds-2">
+          <Button tipo="submit" cargando={guardando}>
+            Guardar cotización
           </Button>
-          <Button type="button" variant="ghost" onClick={() => router.push("/dashboard/financiero/cotizaciones")}>
+          <Button variante="ghost" onPress={() => router.push("/dashboard/financiero/cotizaciones")}>
             Cancelar
           </Button>
         </div>
       </form>
     </DashboardShell>
+  );
+}
+
+// Input nativo type="date" — ver el mismo helper en rutas/nueva/page.tsx.
+function FechaCampo({ etiqueta, valor, onCambio }: { etiqueta: string; valor: string; onCambio: (v: string) => void }) {
+  return (
+    <div className="flex flex-col gap-ds-1">
+      <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">{etiqueta}</label>
+      <input
+        type="date"
+        value={valor}
+        onChange={(e) => onCambio(e.target.value)}
+        className="h-11 w-full rounded-ds-md border border-ds-divider bg-ds-surface px-ds-3 font-ds-body text-ds-body text-ds-text transition-colors hover:border-ds-text/30 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ds-brand)]"
+      />
+    </div>
   );
 }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, type ReactNode } from "react";
-import { IconX } from "./icons";
+import { X } from "lucide-react";
 
 // Bloque H — Panel de Acciones: un solo drawer lateral reutilizado
 // entre el detalle de Cotización y el de Cobro (antes cada uno tenía
@@ -9,7 +9,8 @@ import { IconX } from "./icons";
 // qué acciones exactas mostrar — cada pantalla arma su propio
 // contenido para cada sección con sus componentes de siempre
 // (Button, Select, etc.), el panel solo da el layout/drawer/agrupación
-// común. Una sección se omite si no se pasa esa prop (ej. Cobro no
+// común. PASO 6 (sistema de diseño) — migrado, ver docs/design-system.md.
+// Una sección se omite si no se pasa esa prop (ej. Cobro no
 // tiene "Compartir" con PDF como Cotización).
 export function PanelAcciones({
   open,
@@ -43,45 +44,45 @@ export function PanelAcciones({
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} aria-hidden="true" />
-      <div role="dialog" aria-modal="true" aria-label={titulo} className="relative flex h-full w-full max-w-sm flex-col overflow-hidden border-l border-border bg-surface shadow-lg">
-        <div className="flex shrink-0 items-center justify-between border-b border-border px-5 py-4">
+      <div className="absolute inset-0 bg-ds-neutral-900/50" onClick={onClose} aria-hidden="true" />
+      <div role="dialog" aria-modal="true" aria-label={titulo} className="relative flex h-full w-full max-w-sm flex-col overflow-hidden border-l border-ds-divider bg-ds-surface shadow-ds-lg">
+        <div className="flex shrink-0 items-center justify-between border-b border-ds-divider px-ds-4 py-ds-4">
           <div className="min-w-0">
-            <h2 className="truncate text-sm font-semibold text-foreground">{titulo}</h2>
-            {subtitulo && <p className="truncate text-xs text-muted">{subtitulo}</p>}
+            <p className="truncate font-ds-body text-ds-small font-semibold text-ds-text">{titulo}</p>
+            {subtitulo && <p className="truncate font-ds-body text-ds-caption text-ds-text/60">{subtitulo}</p>}
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="Cerrar"
-            className="shrink-0 rounded-lg p-1 text-muted transition-colors hover:bg-brand-soft hover:text-brand"
+            className="shrink-0 rounded-ds-pill p-ds-1 text-ds-text/60 transition-colors hover:bg-ds-brand/[0.08] hover:text-ds-brand"
           >
-            <IconX className="h-4 w-4" />
+            <X size={16} strokeWidth={2.75} />
           </button>
         </div>
 
-        <div className="flex flex-1 flex-col gap-6 overflow-y-auto px-5 py-5">
+        <div className="flex flex-1 flex-col gap-ds-6 overflow-y-auto px-ds-4 py-ds-4">
           {seccionEstado && (
             <div>
-              <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">Estado</h3>
+              <p className="mb-ds-3 font-ds-body text-[11px] font-semibold uppercase tracking-wide text-ds-text/60">Estado</p>
               {seccionEstado}
             </div>
           )}
           {seccionCompartir && (
             <div>
-              <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">Compartir</h3>
+              <p className="mb-ds-3 font-ds-body text-[11px] font-semibold uppercase tracking-wide text-ds-text/60">Compartir</p>
               {seccionCompartir}
             </div>
           )}
           {seccionOtras && (
             <div>
-              <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">Otras acciones</h3>
+              <p className="mb-ds-3 font-ds-body text-[11px] font-semibold uppercase tracking-wide text-ds-text/60">Otras acciones</p>
               {seccionOtras}
             </div>
           )}
           {seccionPeligro && (
-            <div className="rounded-xl border border-danger bg-danger-soft p-4">
-              <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-danger">Zona de peligro</h3>
+            <div className="rounded-ds-md border border-ds-accent-700 bg-ds-accent-100 p-ds-4">
+              <p className="mb-ds-3 font-ds-body text-[11px] font-semibold uppercase tracking-wide text-ds-accent-700">Zona de peligro</p>
               {seccionPeligro}
             </div>
           )}
