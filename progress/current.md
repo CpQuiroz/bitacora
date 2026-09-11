@@ -63,16 +63,17 @@ aparte — la usuaria habló de "la shell" en el contexto web.
 
 ## Próximo paso
 
-"Operación" ✅, "Clientes" ✅, "Dinero" ✅, "Recursos" ✅ y "Equipo" ✅
-migrados y comiteados (15 commits desde que empezó "homologar
-todo"). `Stat.tsx`, `DocumentoForm.tsx` y `DataTable.tsx` migrados de
-paso (compartidos). Efecto colateral: `/superadmin` (shell aparte)
-también usa `Modal`/`DataTable` — se migró `SuperAdminShell.tsx` +
-`superadmin/page.tsx` para no dejarlo mezclado; sus otras 4 páginas
-(roles/resumen/cuenta/empresas[id], ~2300 líneas) quedan como seam
-nuevo. Sigue Informes (9 páginas + charts) → Configuración (~14
-subpáginas). Agenda queda para más adelante (usa `DataTable`/
-`EstadoCitaRiel`, sin migrar todavía).
+"Operación" ✅, "Clientes" ✅, "Dinero" ✅, "Recursos" ✅, "Equipo" ✅
+e "Informes" ✅ (9 páginas + 7 charts de Recharts) migrados y
+comiteados (17 commits desde que empezó "homologar todo"). Hallazgo
+clave de Informes: los charts Recharts son SVG — resuelven
+`var(--custom-property)` igual que CSS normal, así que se
+retokenizaron sin tocar la librería. Efecto colateral ya resuelto:
+`/superadmin` (shell aparte) — se migró `SuperAdminShell.tsx` +
+`superadmin/page.tsx`; sus otras 4 páginas quedan como seam. Sigue
+**Configuración** (última pieza grande del pedido — ~14-16
+subpáginas + `layout.tsx`). Agenda queda para más adelante (usa
+`DataTable`/`EstadoCitaRiel`, sin migrar todavía).
 
 ## Pendiente / notas generales
 

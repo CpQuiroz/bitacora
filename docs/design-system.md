@@ -474,11 +474,40 @@ por-vencer/page.tsx`.
   el dashboard principal entre el Paso 4 y el cierre de cada bucket.
 - `scripts/check-colores.mjs`: BASELINE 13→12 (bajó solo).
 
+### "Homologar todo" — grupo de nav "Informes" ✅
+
+`informes/layout.tsx` (shell compartido: tabs + selector de período +
+CSV/PDF/Actualizar) + las 7 páginas de informe (`vision-general`,
+`financiero`, `ventas`, `operaciones`, `servicios`, `clientes`,
+`gastos`). Los 3 redirects `gastos-*` e `informes/page.tsx` no tienen
+UI — sin cambios. `InformesContext.tsx` es un React context puro —
+tampoco.
+
+**Los 7 componentes de `charts/` (Recharts, SVG) migrados** — el
+hallazgo más importante de este bucket: Recharts renderiza SVG, y
+SVG resuelve `var(--custom-property)` igual que cualquier otro CSS,
+así que los `stroke`/`fill`/`contentStyle` de los gráficos pasaron de
+`var(--border)`/`var(--muted)`/`var(--brand)` (Faena) a
+`var(--color-ds-divider)`/`var(--color-ds-text)` (con `fillOpacity`
+para el equivalente de la opacidad `/60` de Tailwind)/`var(--ds-brand)`
+— mismo principio que ya se usó para los pines de Leaflet en
+`MapaRutas.tsx` (bucket de Operación).
+
+Sin tono "success/warning/danger" propio: cada página define su
+mapeo local a accent2 (bueno) / neutral (en curso, ambiguo) / accent
+más oscuro para diferenciar severidad (malo) — mismo criterio ya
+documentado en Cotizaciones/Cobros/Gastos, ahora aplicado a colores
+de gráfico en vez de `StatusBadge`. `GraficoDistribucion.tsx` tiene
+una paleta de 5 tonos de reserva (cuando el caller no pasa
+`coloresPorEstado`) armada solo con tokens de `tokens.json`.
+`GraficoBarras.tsx` generaba un color por mes con ángulo dorado (HSL
+calculado, no literal) — se dejó igual, es paleta de datos, no de UI.
+
 ### Resto del orden del prompt
 
-6) Configuración · 7) resto — pendientes. Además, el pedido de la
-usuaria de homologar TODO suma: Agenda (usa `DataTable`/
-`EstadoCitaRiel`, sin migrar), Informes (9 páginas + charts) y las
-~14 subpáginas de Configuración. `/superadmin` (roles/resumen/cuenta/
-empresas[id]) queda como seam adicional, fuera del alcance original
-del pedido (no es parte de la nav de `DashboardShell`).
+7) Configuración — pendiente (~14-16 subpáginas + `layout.tsx`).
+Además, el pedido de la usuaria de homologar TODO suma: Agenda (usa
+`DataTable`/`EstadoCitaRiel`, sin migrar). `/superadmin` (roles/
+resumen/cuenta/empresas[id]) queda como seam adicional, fuera del
+alcance original del pedido (no es parte de la nav de
+`DashboardShell`).
