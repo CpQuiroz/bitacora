@@ -191,7 +191,43 @@ acento nuevo — se usa también en `DashboardShell`/`SuperAdminShell`/
 bucket. Migrarlo ahora habría recoloreado el logo en pantallas Faena
 sin tocarlas. Se migra cuando le toque a esas pantallas.
 
+### Bucket 2 — Hoy / dashboard ✅
+
+**Decisión de alcance (no pedí confirmación porque encaja en la regla ya
+establecida en el bucket 1, solo a mayor escala):** `dashboard/page.tsx`
+(web) renderiza dentro de `DashboardShell`, que usan ~38 pantallas más —
+y `HoyScreen` (mobile) corre dentro del header de `HoyStack`, compartido
+con 2 pantallas más. Migrar el **shell completo** ahora habría
+recoloreado toda la app de una. Se migró solo el **contenido de la
+página/pantalla** en los dos casos:
+
+- Web: `dashboard/page.tsx` — saludo, accesos rápidos (`Button`), selector
+  de período (`Select` + `DatePicker` para el rango personalizado — antes
+  `<input type=date>` a mano), tarjetas KPI (`Card` + `Cifra` nueva,
+  `tabular-nums`), estados vacío/error/carga (`LoadingState`+`Skeleton`),
+  accesos de abajo. Íconos → Lucide.
+  - **Seam conocido:** `GraficoIngresos`/`GraficoDistribucion` (Recharts)
+    son compartidos con Informes → Visión General — siguen leyendo
+    `var(--success)` etc. de Faena, ahora **dentro** de una `Card` ya
+    migrada. `DashboardShell` (sidebar/header) también sigue Faena.
+- Mobile: `HoyScreen.tsx` + header de `HoyStack.tsx` (solo afecta
+  `HoyInicio`/`Asistente`, los stacks anidados tienen su propio
+  `screenOptions`) — `Card`/`StatusBadge`/`EmptyState`/`ErrorState`/
+  `LoadingState`+`Skeleton`. Ionicons → Lucide. `MAPA_ESTADO_TONO` +
+  `cancelada_anticipada` (síntesis clara → cancelado); los estados
+  genuinamente ambiguos de esta pantalla (`pendiente`, `enviada`,
+  `borrador`, `facturado`) quedan sin mapear a propósito — caen al
+  neutral `cerrado` por defecto (el sistema nuevo solo define 4 tonos,
+  no hay un 5to "alerta" como en Faena).
+
+Verificado por `tsc` (ambas plataformas) + compilación real de Tailwind
+para la página web (clases + valores). **Sin captura en vivo** — ninguna
+de las dos pantallas se puede ver sin una sesión autenticada real, y no
+tengo credenciales para loguearme (ni las pediría: entrar con una cuenta
+no es algo que deba hacer sin que la usuaria lo autorice). Mismo
+criterio que `onboarding`/`invitacion` en el bucket 1.
+
 ### Resto del orden del prompt
 
-2) Hoy/dashboard · 3) Órdenes de servicio (listado+ficha) · 4) Clientes ·
-5) Catálogo y stock · 6) Configuración · 7) resto — pendientes.
+3) Órdenes de servicio (listado+ficha) · 4) Clientes · 5) Catálogo y
+stock · 6) Configuración · 7) resto — pendientes.

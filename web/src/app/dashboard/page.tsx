@@ -3,38 +3,33 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Briefcase, MapPin, Plus, Receipt, Route, Sparkle, Tag, Wallet, ClipboardCheck } from "lucide-react";
 import type { Empresa, Modulo, Usuario } from "@bitacora/shared";
 import { puedeVerModulo } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell } from "@/components/DashboardShell";
-import { Button, buttonClass, Card, ErrorText, Select, Stat } from "@/components/ui";
-import {
-  IconBriefcase,
-  IconClipboardCheck,
-  IconMapPin,
-  IconPlus,
-  IconReceipt,
-  IconRoute,
-  IconSparkle,
-  IconTag,
-  IconWallet,
-} from "@/components/icons";
+import { Button, Card, Cifra, DatePicker, LoadingState, Select, Skeleton } from "@bitacora/ui/web";
 import dynamic from "next/dynamic";
 import type { PuntoDistribucion } from "@/components/charts/GraficoDistribucion";
 import type { PuntoIngresoMes } from "@/components/charts/GraficoIngresos";
-import { EstadoCargando } from "@/components/estados";
 
 // Recharts pesa ~340 KB — se carga aparte para no meterlo en el
 // first-load del dashboard (AUDITORIA_PERFORMANCE_COSTOS.md #7).
+// OJO (Paso 6 del sistema de diseño): estos dos charts son compartidos
+// con Informes → Visión General y siguen leyendo las variables CSS de
+// Faena (var(--success), var(--border)…) — no se migraron acá para no
+// recolorear una pantalla fuera de este bucket. Quedan con su paleta
+// vieja DENTRO de una Card ya migrada — es un seam conocido, documentado
+// en docs/design-system.md.
 const GraficoDistribucion = dynamic(
   () => import("@/components/charts/GraficoDistribucion").then((m) => m.GraficoDistribucion),
-  { ssr: false, loading: () => <div className="h-48 animate-pulse rounded-lg bg-surface" /> }
+  { ssr: false, loading: () => <Skeleton alto={192} radio={16} /> }
 );
 const GraficoIngresos = dynamic(
   () => import("@/components/charts/GraficoIngresos").then((m) => m.GraficoIngresos),
-  { ssr: false, loading: () => <div className="h-48 animate-pulse rounded-lg bg-surface" /> }
+  { ssr: false, loading: () => <Skeleton alto={192} radio={16} /> }
 );
 
 type UsuarioConEmpresa = Usuario & { empresa: Empresa };
@@ -77,21 +72,58 @@ const PERIODOS = [
 // (puedeVerModulo) y la empresa lo tiene activado. Antes solo se
 // filtraba por módulo opt-in, así que un colaborador (sin módulos) veía
 // atajos a Trabajos, Clientes, Cobros, etc. que no puede abrir.
-const ACCESOS: { href: string; label: string; icon: typeof IconBriefcase; modulo: Modulo }[] = [
-  { href: "/dashboard/ordenes", label: "Órdenes de servicio", icon: IconClipboardCheck, modulo: "ordenes_servicio" },
-  { href: "/dashboard/registros/clientes", label: "Clientes", icon: IconMapPin, modulo: "registros" },
-  { href: "/dashboard/rutas", label: "Rutas", icon: IconRoute, modulo: "rutas" },
-  { href: "/dashboard/financiero/cobros", label: "Cobros", icon: IconReceipt, modulo: "financiero" },
-  { href: "/dashboard/financiero/cotizaciones", label: "Cotizaciones", icon: IconTag, modulo: "financiero" },
-  { href: "/dashboard/gastos", label: "Gastos", icon: IconWallet, modulo: "financiero" },
-  { href: "/dashboard/informe", label: "Informe con IA", icon: IconSparkle, modulo: "informe_ia" },
+const ACCESOS: { href: string; label: string; icon: typeof Briefcase; modulo: Modulo }[] = [
+  { href: "/dashboard/ordenes", label: "Órdenes de servicio", icon: ClipboardCheck, modulo: "ordenes_servicio" },
+  { href: "/dashboard/registros/clientes", label: "Clientes", icon: MapPin, modulo: "registros" },
+  { href: "/dashboard/rutas", label: "Rutas", icon: Route, modulo: "rutas" },
+  { href: "/dashboard/financiero/cobros", label: "Cobros", icon: Receipt, modulo: "financiero" },
+  { href: "/dashboard/financiero/cotizaciones", label: "Cotizaciones", icon: Tag, modulo: "financiero" },
+  { href: "/dashboard/gastos", label: "Gastos", icon: Wallet, modulo: "financiero" },
+  { href: "/dashboard/informe", label: "Informe con IA", icon: Sparkle, modulo: "informe_ia" },
 ];
 
-function KpiCard({ etiqueta, valor, sub }: { etiqueta: string; valor: string; sub?: string }) {
-  return <Stat etiqueta={etiqueta} valor={valor} nota={sub} />;
+function Kpi({ etiqueta, valor, sub }: { etiqueta: string; valor: string; sub?: string }) {
+  return (
+    <Card>
+      <p className="font-ds-body text-[11px] font-semibold uppercase tracking-[0.1em] text-ds-text/60">{etiqueta}</p>
+      <p className="mt-ds-2 font-ds-body text-ds-h3 font-semibold tracking-tight text-ds-text">
+        <Cifra>{valor}</Cifra>
+      </p>
+      {sub ? <p className="mt-ds-1 font-ds-body text-ds-caption font-semibold text-ds-text/60">{sub}</p> : null}
+    </Card>
+  );
+}
+
+function Renglon({ etiqueta, valor, tono }: { etiqueta: string; valor: string; tono: "completado" | "en_progreso" | "cancelado" | "normal" }) {
+  const color = {
+    completado: "text-ds-accent2-800",
+    en_progreso: "text-ds-accent-800",
+    cancelado: "text-ds-accent-700",
+    normal: "text-ds-text",
+  }[tono];
+  return (
+    <div className="flex items-center justify-between">
+      <span className="font-ds-body text-ds-small text-ds-text/70">{etiqueta}</span>
+      <span className={`font-ds-body text-ds-small font-medium ${color}`}>
+        <Cifra>{valor}</Cifra>
+      </span>
+    </div>
+  );
 }
 
 const pct = (n: number) => `${n.toFixed(0)}%`;
+
+function aFecha(texto: string): Date {
+  const [y, m, d] = texto.split("-").map(Number);
+  return new Date(y, (m || 1) - 1, d || 1);
+}
+function aTexto(fecha: Date | null): string {
+  if (!fecha) return new Date().toISOString().slice(0, 10);
+  const y = fecha.getFullYear();
+  const m = String(fecha.getMonth() + 1).padStart(2, "0");
+  const d = String(fecha.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -185,80 +217,74 @@ export default function DashboardPage() {
         moneda,
       }}
     >
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <div className="mb-ds-6 flex flex-col gap-ds-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-sm font-medium text-brand">{usuario.empresa.nombre}</p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground">
-            Hola, {usuario.nombre.split(" ")[0]}
-          </h1>
-          {(puedeVer("ordenes_servicio") || puedeVer("financiero")) && (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {puedeVer("ordenes_servicio") && (
-                <Link href="/dashboard/ordenes/nueva" className={buttonClass("primary")}>
-                  <IconPlus className="h-4 w-4" />
-                  Nueva OS
+          <p className="font-ds-body text-ds-small font-medium text-ds-brand">{usuario.empresa.nombre}</p>
+          <p className="mt-ds-1 ds-heading text-ds-h2 text-ds-text">Hola, {usuario.nombre.split(" ")[0]}</p>
+          {puedeVer("ordenes_servicio") || puedeVer("financiero") ? (
+            <div className="mt-ds-3 flex flex-wrap gap-ds-2">
+              {puedeVer("ordenes_servicio") ? (
+                <Link href="/dashboard/ordenes/nueva">
+                  <Button tamano="sm" iconoIzq={<Plus size={16} strokeWidth={2.75} />}>
+                    Nueva OS
+                  </Button>
                 </Link>
-              )}
-              {puedeVer("financiero") && (
-                <Link href="/dashboard/financiero/cotizaciones/nueva" className={buttonClass("outline")}>
-                  <IconPlus className="h-4 w-4" />
-                  Nueva Cotización
+              ) : null}
+              {puedeVer("financiero") ? (
+                <Link href="/dashboard/financiero/cotizaciones/nueva">
+                  <Button variante="secundario" tamano="sm" iconoIzq={<Plus size={16} strokeWidth={2.75} />}>
+                    Nueva Cotización
+                  </Button>
                 </Link>
-              )}
+              ) : null}
             </div>
-          )}
+          ) : null}
         </div>
-        {verAnalitico && (
-          <div className="flex flex-wrap items-end gap-2">
-            <Select value={periodo} onChange={(e) => setPeriodo(e.target.value)} className="w-44">
-              {PERIODOS.map((p) => (
-                <option key={p.valor} value={p.valor}>
-                  {p.etiqueta}
-                </option>
-              ))}
-            </Select>
-            {periodo === "personalizado" && (
+        {verAnalitico ? (
+          <div className="flex flex-wrap items-end gap-ds-2">
+            <Select
+              valor={periodo}
+              onCambio={setPeriodo}
+              opciones={PERIODOS.map((p) => ({ valor: p.valor, etiqueta: p.etiqueta }))}
+            />
+            {periodo === "personalizado" ? (
               <>
-                <input
-                  type="date"
-                  value={desdeCustom}
-                  onChange={(e) => setDesdeCustom(e.target.value)}
-                  className="rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-                />
-                <input
-                  type="date"
-                  value={hastaCustom}
-                  onChange={(e) => setHastaCustom(e.target.value)}
-                  className="rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-                />
+                <DatePicker valor={aFecha(desdeCustom)} onCambio={(f) => setDesdeCustom(aTexto(f))} />
+                <DatePicker valor={aFecha(hastaCustom)} onCambio={(f) => setHastaCustom(aTexto(f))} />
               </>
-            )}
-            <Button type="button" onClick={cargarDashboard} disabled={cargandoDatos}>
-              {cargandoDatos ? "Actualizando…" : "Actualizar"}
+            ) : null}
+            <Button onPress={cargarDashboard} deshabilitado={cargandoDatos} cargando={cargandoDatos}>
+              Actualizar
             </Button>
           </div>
-        )}
+        ) : null}
       </div>
 
-      {!verAnalitico && (
-        <Card className="mb-6">
-          <p className="text-sm text-foreground">Tu perfil no tiene módulos de gestión asignados.</p>
-          <p className="mt-1 text-sm text-muted">
+      {!verAnalitico ? (
+        <Card>
+          <p className="font-ds-body text-ds-small text-ds-text">Tu perfil no tiene módulos de gestión asignados.</p>
+          <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">
             El trabajo en terreno (órdenes de servicio, checklists, fotos) se hace desde la app móvil. Si crees que deberías ver más
             acá, pídele a un administrador de tu empresa que revise tu rol en Grupo y usuario.
           </p>
         </Card>
-      )}
+      ) : null}
 
-      {verAnalitico && error && (
-        <div className="mb-6">
-          <ErrorText>{error}</ErrorText>
-        </div>
-      )}
+      {verAnalitico && error ? (
+        <p className="mb-ds-6 font-ds-body text-ds-small text-ds-accent-700">{error}</p>
+      ) : null}
 
-      {verAnalitico && !datos && !error && <EstadoCargando mensaje="Indicadores" />}
+      {verAnalitico && !datos && !error ? (
+        <LoadingState>
+          <div className="grid gap-ds-4 sm:grid-cols-2 lg:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} alto={92} radio={32} />
+            ))}
+          </div>
+        </LoadingState>
+      ) : null}
 
-      {verAnalitico && datos && (
+      {verAnalitico && datos ? (
         <>
           {/* TODO: decisión pendiente — estos KPIs y el gráfico de
               ingresos duplican casi exactamente lo que ya muestra
@@ -267,134 +293,128 @@ export default function DashboardPage() {
               ser más accionable (accesos rápidos + alertas) y Visión
               General se queda con el análisis profundo, sin repetir
               las mismas métricas en los dos lugares. */}
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <KpiCard etiqueta="Ingresos totales" valor={money(datos.kpis.ingresos_totales)} />
-            <KpiCard
+          <div className="grid gap-ds-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Kpi etiqueta="Ingresos totales" valor={money(datos.kpis.ingresos_totales)} />
+            <Kpi
               etiqueta="Ingresos recibidos"
               valor={money(datos.kpis.ingresos_recibidos)}
               sub={`${pct(datos.kpis.pct_recibido)} del total`}
             />
-            <KpiCard etiqueta="Pendiente de cobro" valor={money(datos.kpis.monto_pendiente)} />
-            <KpiCard etiqueta="Monto vencido" valor={money(datos.kpis.monto_vencido)} />
-            <KpiCard
+            <Kpi etiqueta="Pendiente de cobro" valor={money(datos.kpis.monto_pendiente)} />
+            <Kpi etiqueta="Monto vencido" valor={money(datos.kpis.monto_vencido)} />
+            <Kpi
               etiqueta="Cotizaciones"
               valor={String(datos.kpis.cant_presupuestos)}
               sub={`${pct(datos.kpis.pct_conversion)} de conversión`}
             />
-            <KpiCard
+            <Kpi
               etiqueta="OT completadas"
               valor={String(datos.kpis.ot_completadas)}
               sub={`${pct(datos.kpis.pct_conclusion_ot)} de conclusión`}
             />
-            <KpiCard etiqueta="Clientes activos" valor={String(datos.kpis.clientes_activos)} />
-            <KpiCard etiqueta="Ticket promedio" valor={money(datos.kpis.ticket_promedio)} />
+            <Kpi etiqueta="Clientes activos" valor={String(datos.kpis.clientes_activos)} />
+            <Kpi etiqueta="Ticket promedio" valor={money(datos.kpis.ticket_promedio)} />
           </div>
 
-          <div className="my-6 grid gap-6 lg:grid-cols-[1fr_20rem]">
+          <div className="my-ds-6 grid gap-ds-6 lg:grid-cols-[1fr_20rem]">
             <Card>
-              <h2 className="mb-4 text-sm font-semibold text-foreground">
+              <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">
                 Ingresos por período (últimos {datos.ingresos_por_mes.length} meses)
-              </h2>
+              </p>
               <GraficoIngresos datos={datos.ingresos_por_mes} moneda={moneda} />
             </Card>
 
             <Card>
-              <h2 className="mb-4 text-sm font-semibold text-foreground">Resumen financiero</h2>
-              <div className="flex flex-col gap-3 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted">Recibido</span>
-                  <span className="font-medium text-success">{money(datos.resumen_financiero.recibido)}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted">Pendiente</span>
-                  <span className="font-medium text-warning">{money(datos.resumen_financiero.pendiente)}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted">Atrasado</span>
-                  <span className="font-medium text-danger">{money(datos.resumen_financiero.atrasado)}</span>
-                </div>
-                <div className="mt-1 flex items-center justify-between border-t border-border pt-3">
-                  <span className="font-medium text-foreground">Total</span>
-                  <span className="font-semibold text-foreground">{money(datos.resumen_financiero.total)}</span>
+              <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Resumen financiero</p>
+              <div className="flex flex-col gap-ds-3">
+                <Renglon etiqueta="Recibido" valor={money(datos.resumen_financiero.recibido)} tono="completado" />
+                <Renglon etiqueta="Pendiente" valor={money(datos.resumen_financiero.pendiente)} tono="en_progreso" />
+                <Renglon etiqueta="Atrasado" valor={money(datos.resumen_financiero.atrasado)} tono="cancelado" />
+                <div className="mt-ds-1 flex items-center justify-between border-t border-ds-divider pt-ds-3">
+                  <span className="font-ds-body text-ds-small font-medium text-ds-text">Total</span>
+                  <span className="font-ds-body text-ds-small font-semibold text-ds-text">
+                    <Cifra>{money(datos.resumen_financiero.total)}</Cifra>
+                  </span>
                 </div>
               </div>
             </Card>
           </div>
 
-          <Card className="my-6">
-            <h2 className="mb-4 text-sm font-semibold text-foreground">Ingresos vs Gastos</h2>
-            <div className="grid gap-4 sm:grid-cols-3">
+          <div className="my-ds-6">
+          <Card>
+            <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Ingresos vs Gastos</p>
+            <div className="grid gap-ds-4 sm:grid-cols-3">
               <div>
-                <p className="text-xs text-muted">Ingresos recibidos</p>
-                <p className="mt-1 text-lg font-semibold text-success">{money(datos.ingresos_vs_gastos.ingresos_recibidos)}</p>
+                <p className="font-ds-body text-ds-caption text-ds-text/60">Ingresos recibidos</p>
+                <p className="mt-ds-1 font-ds-body text-ds-h5 font-semibold text-ds-accent2-800">
+                  <Cifra>{money(datos.ingresos_vs_gastos.ingresos_recibidos)}</Cifra>
+                </p>
               </div>
               <div>
-                <p className="text-xs text-muted">Gastos pagados</p>
-                <p className="mt-1 text-lg font-semibold text-danger">{money(datos.ingresos_vs_gastos.gastos_pagados)}</p>
+                <p className="font-ds-body text-ds-caption text-ds-text/60">Gastos pagados</p>
+                <p className="mt-ds-1 font-ds-body text-ds-h5 font-semibold text-ds-accent-700">
+                  <Cifra>{money(datos.ingresos_vs_gastos.gastos_pagados)}</Cifra>
+                </p>
               </div>
               <div>
-                <p className="text-xs text-muted">Resultado neto</p>
+                <p className="font-ds-body text-ds-caption text-ds-text/60">Resultado neto</p>
                 <p
-                  className={`mt-1 text-xl font-bold ${
-                    datos.ingresos_vs_gastos.resultado_neto >= 0 ? "text-success" : "text-danger"
+                  className={`mt-ds-1 font-ds-body text-ds-h3 font-semibold ${
+                    datos.ingresos_vs_gastos.resultado_neto >= 0 ? "text-ds-accent2-800" : "text-ds-accent-700"
                   }`}
                 >
-                  {money(datos.ingresos_vs_gastos.resultado_neto)}
+                  <Cifra>{money(datos.ingresos_vs_gastos.resultado_neto)}</Cifra>
                 </p>
               </div>
             </div>
           </Card>
+          </div>
 
-          <div className="my-6 grid gap-6 sm:grid-cols-2">
+          <div className="my-ds-6 grid gap-ds-6 sm:grid-cols-2">
             <Card>
-              <h2 className="mb-4 text-sm font-semibold text-foreground">Resumen de gastos</h2>
-              <div className="flex flex-col gap-3 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted">Pagado</span>
-                  <span className="font-medium text-success">{money(datos.resumen_gastos.pagado)}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted">Pendiente</span>
-                  <span className="font-medium text-warning">{money(datos.resumen_gastos.pendiente)}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted">Vencido</span>
-                  <span className="font-medium text-danger">{money(datos.resumen_gastos.vencido)}</span>
-                </div>
-                <div className="mt-1 flex items-center justify-between border-t border-border pt-3">
-                  <span className="font-medium text-foreground">Total</span>
-                  <span className="font-semibold text-foreground">{money(datos.resumen_gastos.total)}</span>
+              <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Resumen de gastos</p>
+              <div className="flex flex-col gap-ds-3">
+                <Renglon etiqueta="Pagado" valor={money(datos.resumen_gastos.pagado)} tono="completado" />
+                <Renglon etiqueta="Pendiente" valor={money(datos.resumen_gastos.pendiente)} tono="en_progreso" />
+                <Renglon etiqueta="Vencido" valor={money(datos.resumen_gastos.vencido)} tono="cancelado" />
+                <div className="mt-ds-1 flex items-center justify-between border-t border-ds-divider pt-ds-3">
+                  <span className="font-ds-body text-ds-small font-medium text-ds-text">Total</span>
+                  <span className="font-ds-body text-ds-small font-semibold text-ds-text">
+                    <Cifra>{money(datos.resumen_gastos.total)}</Cifra>
+                  </span>
                 </div>
               </div>
             </Card>
 
             <Card>
-              <h2 className="mb-4 text-sm font-semibold text-foreground">Estado de cotizaciones</h2>
+              <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Estado de cotizaciones</p>
               <GraficoDistribucion datos={datos.estado_presupuestos} mensajeVacio="Sin cotizaciones" />
             </Card>
           </div>
 
-          <Card className="my-6">
-            <h2 className="mb-4 text-sm font-semibold text-foreground">Estado de órdenes de trabajo</h2>
-            <GraficoDistribucion datos={datos.estado_ot} mensajeVacio="Sin órdenes de trabajo" />
-          </Card>
+          <div className="my-ds-6">
+            <Card>
+              <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Estado de órdenes de trabajo</p>
+              <GraficoDistribucion datos={datos.estado_ot} mensajeVacio="Sin órdenes de trabajo" />
+            </Card>
+          </div>
         </>
-      )}
+      ) : null}
 
-      {accesosVisibles.length > 0 && (
-        <div className="mt-8 flex flex-wrap gap-2">
+      {accesosVisibles.length > 0 ? (
+        <div className="mt-ds-8 flex flex-wrap gap-ds-2">
           {accesosVisibles.map((a) => (
             <Link
               key={a.href}
               href={a.href}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-medium text-muted transition-colors hover:border-brand hover:text-brand"
+              className="inline-flex items-center gap-ds-2 rounded-ds-pill border border-ds-divider bg-ds-surface px-ds-3 py-ds-2 font-ds-body text-ds-small font-medium text-ds-text/70 transition-colors hover:border-ds-brand hover:text-ds-brand"
             >
-              <a.icon className="h-4 w-4" />
+              <a.icon size={16} strokeWidth={2.75} />
               {a.label}
             </Link>
           ))}
         </div>
-      )}
+      ) : null}
     </DashboardShell>
   );
 }

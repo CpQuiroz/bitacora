@@ -1,7 +1,6 @@
 # Sesión actual
 
-- **Tarea en curso:** 8 — sistema_diseno (Paso 6: bucket 1 completo y
-  verificado visualmente en las 2 plataformas; arrancando bucket 2)
+- **Tarea en curso:** 8 — sistema_diseno (Paso 6: bucket 2 hecho)
 - **Inicio:** 2026-09-09
 - **Agente:** Claude Sonnet 5 (directo)
 
@@ -16,31 +15,34 @@
 
 ## Estado por paso
 
-- Paso 0-5: ✅. Paso 6 bucket 1 (web `970598e` + mobile `da94511`): ✅.
-- **`fotoCola.ts` arreglado** (este commit): guard `Platform.OS==="web"`
-  alrededor de `Directory`/`File` de `expo-file-system` — no soportado en
-  web, crasheaba `expo start --web` en CUALQUIER pantalla porque
-  `services/sync/queue.ts` carga el módulo con toda la app. iOS/Android
-  sin cambios de comportamiento; en web queda no-op.
-  - **`expo start --web` funciona por primera vez** → verificado con
-    captura real: Login en mobile (crema/Caprasimo/pill, botón
-    deshabilitado al 45% hasta llenar los 2 campos, full-color después).
-    Coincide con la versión web.
-  - Seam deliberado documentado: `LogoMark`/`Logo` (ambas plataformas)
-    sigue en navy Faena — se usa en shells no migrados
-    (DashboardShell/SuperAdminShell/PortalShell, mobile
-    BloqueoBiometrico). Se migra cuando le toque a esas pantallas.
-- `./verificar.sh` verde: tsc x6, 27 tests, 19 literales sin cambios.
+- Paso 0-5: ✅. Paso 6 bucket 1 (web+mobile+fix fotoCola): ✅ pusheado.
+- **Bucket 2 — Hoy/dashboard: ✅ (este commit)**
+  - Mismo criterio de alcance que el bucket 1, a mayor escala: no se
+    migró `DashboardShell` (usan ~38 pantallas) ni `HoyStack` completo
+    (solo su `screenOptions`, que únicamente afecta a
+    `HoyInicio`/`Asistente` — los stacks anidados tienen el suyo propio).
+  - Web `dashboard/page.tsx`: Button/Select/DatePicker/Card/Cifra/
+    LoadingState/Skeleton. Seam: los 2 charts Recharts (compartidos con
+    Informes) siguen Faena, dentro de una Card ya migrada.
+  - Mobile `HoyScreen.tsx` + header de `HoyStack.tsx`: Card/StatusBadge/
+    EmptyState/ErrorState/LoadingState+Skeleton, Ionicons→Lucide.
+    `MAPA_ESTADO_TONO` +`cancelada_anticipada`.
+  - Verificado por tsc (ambas plataformas) + Tailwind CLI real para la
+    página web. **Sin captura en vivo** — ninguna pantalla es alcanzable
+    sin sesión autenticada y no tengo (ni pediría) credenciales para
+    loguearme. Mismo criterio que onboarding/invitacion del bucket 1.
+  - `./verificar.sh` verde: tsc x6, 27 tests, 19 literales sin cambios.
 
 ## Próximo paso
 
-Bucket 2 del Paso 6: **Hoy/dashboard** (web `dashboard/page.tsx` +
-mobile `features/hoy/`). Ahora con `expo start --web` funcionando, puedo
-verificar mobile visualmente igual que web.
+Bucket 3: Órdenes de servicio (listado + ficha), web + mobile.
 
 ## Pendiente / notas generales
 
 - eslint web roto (tarea #1) — bloquea regla ESLint del Paso 7.
+- Seams conocidos acumulados: `DashboardShell`/`Screen.tsx`/`HoyStack`
+  (parcial)/`LogoMark`/`Logo`/charts Recharts de Informes — todos Faena,
+  se migran cuando les toque su propio bucket o si la usuaria pide
+  migrar el shell entero antes.
 - `MAPA_ESTADO_TONO`: completar por pantalla según vayan apareciendo
   estados reales.
-- `LogoMark`/`Logo`: pendiente de migrar cuando le toque su shell.

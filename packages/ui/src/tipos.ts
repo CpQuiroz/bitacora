@@ -235,6 +235,7 @@ export const MAPA_ESTADO_TONO: Record<string, TonoEstado> = {
   vencida: "cancelado",
   vencido: "cancelado",
   no_asistio: "cancelado",
+  cancelada_anticipada: "cancelado",
   sin_stock: "cancelado",
   fallido: "cancelado",
   agotado: "cancelado",

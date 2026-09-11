@@ -1,19 +1,19 @@
 import { useCallback, useLayoutEffect, useState } from "react";
 import { FlatList, Pressable, RefreshControl, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Sparkles, CalendarClock, Car, ClipboardList, Sun } from "lucide-react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { useTema } from "../../theme";
-import { Badge, Card, EmptyState, ErrorState, LoadingScreen, Text } from "../../components/ui";
+import { tokens } from "@bitacora/design-tokens";
+import { Card, EmptyState, ErrorState, LoadingState, Skeleton, StatusBadge, Texto, useMarca } from "@bitacora/ui/native";
 import { OfflineBanner } from "../../components/OfflineBanner";
 import { useAuth } from "../auth/AuthContext";
 import { cargarHoy, type ItemHoy } from "../../services/hoy";
 import type { HoyStackParamList } from "../../shell/navigation/types";
 
-const ICONO: Record<ItemHoy["tipo"], keyof typeof Ionicons.glyphMap> = {
-  trabajo: "clipboard-outline",
-  cita: "calendar-outline",
-  viaje: "car-outline",
+const ICONO: Record<ItemHoy["tipo"], typeof ClipboardList> = {
+  trabajo: ClipboardList,
+  cita: CalendarClock,
+  viaje: Car,
 };
 
 const ETIQUETA_ESTADO: Record<string, string> = {
@@ -31,9 +31,10 @@ const ETIQUETA_ESTADO: Record<string, string> = {
   facturado: "Facturado",
 };
 
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export function HoyScreen({ navigation }: NativeStackScreenProps<HoyStackParamList, "HoyInicio">) {
-  const t = useTema();
   const auth = useAuth();
+  const marca = useMarca();
   const esGestion = auth.fase === "listo" && auth.usuario.rol !== "colaborador";
   const incluirViajes = auth.fase === "listo" && !auth.modulosDeshabilitados.includes("viajes");
 
@@ -52,11 +53,11 @@ export function HoyScreen({ navigation }: NativeStackScreenProps<HoyStackParamLi
           accessibilityLabel="Asistente IA"
           style={{ paddingHorizontal: 4 }}
         >
-          <Ionicons name="sparkles-outline" size={22} color={t.colores.brand} />
+          <Sparkles size={22} strokeWidth={2.75} color={marca.base} />
         </Pressable>
       ),
     });
-  }, [navigation, t.colores.brand]);
+  }, [navigation, marca.base]);
 
   const cargar = useCallback(async () => {
     setError(null);
@@ -91,19 +92,37 @@ export function HoyScreen({ navigation }: NativeStackScreenProps<HoyStackParamLi
     }
   }
 
-  if (items === null && !error) return <LoadingScreen />;
-  if (error && !items) return <ErrorState mensaje={error} onReintentar={cargar} />;
+  // Esqueletos con la forma real de las tarjetas de la lista — nunca un
+  // spinner de pantalla completa.
+  if (items === null && !error) {
+    return (
+      <View style={{ flex: 1, backgroundColor: tokens.color.bg, padding: tokens.space["4"], gap: tokens.space["3"] }}>
+        <LoadingState>
+          <Skeleton alto={72} radio={32} />
+          <Skeleton alto={72} radio={32} />
+          <Skeleton alto={72} radio={32} />
+        </LoadingState>
+      </View>
+    );
+  }
+  if (error && !items) {
+    return (
+      <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+        <ErrorState mensaje={error} onReintentar={cargar} />
+      </View>
+    );
+  }
 
   return (
-    <View style={{ flex: 1, backgroundColor: t.colores.bg }}>
+    <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
       <OfflineBanner guardadoEn={guardadoEn} />
-      {esGestion && (
+      {esGestion ? (
         <View
           style={{
             flexDirection: "row",
-            gap: t.espacio(2),
-            paddingHorizontal: t.espacio(4),
-            paddingBottom: t.espacio(2),
+            gap: tokens.space["2"],
+            paddingHorizontal: tokens.space["4"],
+            paddingBottom: tokens.space["2"],
           }}
         >
           {(["Míos", "Equipo"] as const).map((op, i) => {
@@ -117,58 +136,66 @@ export function HoyScreen({ navigation }: NativeStackScreenProps<HoyStackParamLi
                   minHeight: 40,
                   alignItems: "center",
                   justifyContent: "center",
-                  borderRadius: t.radio.md,
-                  backgroundColor: activo ? t.colores.surfaceAlt : "transparent",
+                  borderRadius: tokens.radius.pill,
+                  backgroundColor: activo ? tokens.color.surface : "transparent",
                   borderWidth: 1,
-                  borderColor: activo ? t.colores.border : "transparent",
+                  borderColor: activo ? tokens.color.divider : "transparent",
                 }}
               >
-                <Text variante="caption" weight="semibold" tono={activo ? "normal" : "muted"}>
+                <Texto tamano={tokens.size.caption} color={activo ? tokens.color.text : `${tokens.color.text}99`} peso="semibold">
                   {op}
-                </Text>
+                </Texto>
               </Pressable>
             );
           })}
         </View>
-      )}
+      ) : null}
       <FlatList
         data={items ?? []}
         keyExtractor={(item) => `${item.tipo}:${item.id}`}
-        contentContainerStyle={{ padding: t.espacio(4), paddingTop: t.espacio(2), paddingBottom: t.espacio(10), gap: t.espacio(3), flexGrow: 1 }}
-        refreshControl={<RefreshControl refreshing={refrescando} onRefresh={onRefresh} tintColor={t.colores.brand} />}
+        contentContainerStyle={{
+          padding: tokens.space["4"],
+          paddingTop: tokens.space["2"],
+          paddingBottom: tokens.space["8"],
+          gap: tokens.space["3"],
+          flexGrow: 1,
+        }}
+        refreshControl={<RefreshControl refreshing={refrescando} onRefresh={onRefresh} tintColor={marca.base} />}
         ListEmptyComponent={
           <EmptyState
-            icono={<Ionicons name="sunny-outline" size={40} color={t.colores.faint} />}
+            icono={<Sun size={32} strokeWidth={2.75} color={tokens.color.accent2Ramp["800"]} />}
             titulo="Nada para hoy"
             mensaje={equipo ? "El equipo no tiene nada agendado hoy." : "No tienes trabajos, citas ni viajes hoy."}
           />
         }
-        renderItem={({ item }) => (
-          <Card onPress={() => abrir(item)}>
-            <View style={{ flexDirection: "row", alignItems: "flex-start", gap: t.espacio(3) }}>
-              <View style={{ width: 44, alignItems: "center", gap: 2 }}>
-                <Text variante="etiqueta" weight="bold">
-                  {item.hora ?? "—"}
-                </Text>
-                <Ionicons name={ICONO[item.tipo]} size={16} color={t.colores.faint} />
-              </View>
-              <View style={{ flex: 1, gap: 2 }}>
-                <Text variante="subtitulo">{item.titulo}</Text>
-                {item.subtitulo ? (
-                  <Text variante="caption" tono="muted" numberOfLines={1}>
-                    {item.subtitulo}
-                  </Text>
+        renderItem={({ item }) => {
+          const Icono = ICONO[item.tipo];
+          return (
+            <Card onPress={() => abrir(item)}>
+              <View style={{ flexDirection: "row", alignItems: "flex-start", gap: tokens.space["3"] }}>
+                <View style={{ width: 44, alignItems: "center", gap: 2 }}>
+                  <Texto tamano={tokens.size.caption} color={tokens.color.text} peso="semibold">
+                    {item.hora ?? "—"}
+                  </Texto>
+                  <Icono size={16} strokeWidth={2.75} color={`${tokens.color.text}66`} />
+                </View>
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Texto tamano={tokens.size.body} color={tokens.color.text} peso="semibold">
+                    {item.titulo}
+                  </Texto>
+                  {item.subtitulo ? (
+                    <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} numberOfLines={1}>
+                      {item.subtitulo}
+                    </Texto>
+                  ) : null}
+                </View>
+                {item.estado ? (
+                  <StatusBadge estado={String(item.estado)} etiqueta={ETIQUETA_ESTADO[String(item.estado)] ?? String(item.estado)} />
                 ) : null}
               </View>
-              {item.estado ? (
-                <Badge
-                  estado={String(item.estado)}
-                  texto={ETIQUETA_ESTADO[String(item.estado)] ?? String(item.estado)}
-                />
-              ) : null}
-            </View>
-          </Card>
-        )}
+            </Card>
+          );
+        }}
       />
     </View>
   );
