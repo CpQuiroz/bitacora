@@ -10,8 +10,8 @@
 > Todo lo relativo al despliegue, el estado de configuración de cada proveedor, los
 > secretos a rotar y los pasos que faltan para tener la primera empresa operativa está en
 > `docs/PUESTA_EN_PRODUCCION.md` — leerlo junto con este archivo.
-> **99 migraciones locales; prod tiene 1-98 aplicadas y trackeadas (la 99, solo índices de
-> performance, todavía no se corrió en prod — ver sección 8).** App móvil en **1.9.8 /
+> **99 migraciones aplicadas y trackeadas en prod** (la 99 —73 índices de cobertura de
+> FK— corrida el 11-sep, validada con `EXPLAIN ANALYZE`). App móvil en **1.9.8 /
 > versionCode 25**.
 >
 > ---
@@ -83,7 +83,10 @@
 >   previo, marcados `// tenant-ok: <razón>`). El chequeo pasó a **baseline 0** — ya no
 >   tolera ningún `.from(<tabla-empresa>)` sin `empresa_id` nuevo.
 > - **73 índices de cobertura para FKs sin índice** (migración 99, Supabase Performance
->   Advisor) — aplicada en dev, **pendiente en prod** (ver sección 8).
+>   Advisor) — aplicada en prod el 11-sep. Con el volumen de datos actual (tablas chicas)
+>   `EXPLAIN ANALYZE` muestra a Postgres eligiendo Seq Scan en varios casos, correctamente
+>   (más rápido que un índice con 2-3 filas) — es preparación para cuando haya volumen
+>   real, no algo que debiera cambiar el plan hoy.
 >
 > ---
 >
@@ -391,9 +394,8 @@ bitacora/
 │       ├── supabase.ts          factory del cliente supabase-js tipado
 │       └── rut.ts               validación/formato de RUT chileno
 └── supabase/
-    ├── migrations/              99 archivos SQL numerados, se aplican en orden (prod
-    │                            tiene 1-98 aplicadas; la 99 —índices de performance—
-    │                            pendiente, ver sección 8)
+    ├── migrations/              99 archivos SQL numerados, se aplican en orden — las
+    │                            99 aplicadas y trackeadas en prod
     └── fase2-referencia/        Terraform + RLS portable + CI — diseñados, no activados
 ```
 
@@ -497,8 +499,8 @@ a **toda la web** (las 7 pantallas del sidebar + la shell) y a mobile. Solo qued
 
 ## 5. Modelo de datos
 
-Esquema real (consultado en vivo, dev, 11-sep-2026: **84 tablas, 99 migraciones locales**
-— prod tiene 1-98 aplicadas y trackeadas, la 99 pendiente; ver header y sección 8).
+Esquema real (consultado en vivo, dev, 11-sep-2026: **84 tablas, 99 migraciones, todas
+aplicadas y trackeadas en prod**).
 **Las 84 tienen RLS activo** — 61 con policy de tenant real (`empresa_id =
 empresa_actual()`, código vivo si algún día un cliente consulta con anon key), 23 como
 cerrojo deny-all (ver la fila "Multi-tenant" de la sección 1). No son tablas de tenant
@@ -618,7 +620,7 @@ cerrojo deny-all (ver la fila "Multi-tenant" de la sección 1). No son tablas de
   4. **Backend sin tests** — falta un smoke mínimo (arranque real + `/health` + una ruta protegida + una feliz).
   5. **E2E de Mantención de flota + PDF Fase 2 en prod — parcialmente hecho (11-sep):** verificado en vivo que un registro de mantención con foto se crea y genera PDF sin error, y que el Informe con IA funciona (RAG real, sin fotos/checklist responde honestamente que no hay datos en vez de inventar). **Bloqueado**: cerrar una OS con fotos por categoría + 2 firmas requiere check-in/fotos/firma del técnico, que **solo existe en mobile** — no hay ninguna vista web equivalente, así que ese último tramo lo tiene que hacer alguien con el APK en un teléfono real.
   6. **Sistema de diseño — Paso 7** (único paso que falta de los 8): regla ESLint anti-hex/px, Storybook, check de CI, `docs/design-system.md` enlazado desde `CLAUDE.md`.
-- **Estado del despliegue (11-sep-2026):** la app **ya está en producción** (Vercel + Render + Supabase prod + Resend + Cloudflare, ver `docs/PUESTA_EN_PRODUCCION.md`). **Migraciones 1-98 aplicadas y trackeadas en prod; la 99 (73 índices de cobertura de FK, solo performance, ninguna tabla/columna nueva) todavía no se corrió en prod** — no rompe nada mientras tanto, las queries solo van más lentas de lo que podrían. El repo tiene 99 migraciones locales en total. **Gap de tracking en dev** (`pruwvpnlvrvgtmpetlsr`, detectado 11-sep): el *esquema* de dev está al día (todas las tablas/columnas hasta la 99 existen, verificado en vivo — se construyó y probó encima sin problema), pero `supabase_migrations.schema_migrations` de dev solo llega a la **74** — las migraciones 75+ se aplicaron con `supabase db query --linked -f <archivo>` en vez de `db push`, que no deja fila de tracking. No es urgente (dev funciona bien) pero un `migration repair` prolijo en algún momento evitaría confusión. Workflow `keep-warm.yml` mitiga el arranque en frío de Render. Empresa "Transportes Itineris" (`rubro='cosmetologia'` en la fila de `empresas` — el nombre de la empresa no define el rubro, verificado en vivo 11-sep; sigue siendo la misma empresa de prueba/piloto real de siempre, con Agenda Pro/reservas Y los módulos `agenda`/`viajes`/`ordenes_servicio`/Mantención de flota activos y usados de verdad) tiene datos de prueba mezclados con los reales — cliente interno **"Itineris Spa"** ya se usa como convención establecida para pruebas que no deben generar notificaciones a clientes de verdad (visto en varias OS y mantenciones de prueba existentes). **Auto-deploy**: Vercel se dispara solo por push a `main`; Render también (confirmado 11-sep, el Deploy Hook existe como respaldo pero no siempre hizo falta). **Clasificador de Claude Code**: permite consultas READ-ONLY a la DB de prod (`supabase db query --linked`) pero BLOQUEA writes/DDL — las migraciones a prod las corre la usuaria; **push a `main` (deploy de código) sí lo puede hacer el asistente**, con la usuaria al tanto dado el alcance (11-sep: 37 commits acumulados sin desplegar, incluido todo el rediseño visual, se empujaron juntos tras confirmarlo explícitamente). Lo que falta para estar 100% operativa:
+- **Estado del despliegue (11-sep-2026):** la app **ya está en producción** (Vercel + Render + Supabase prod + Resend + Cloudflare, ver `docs/PUESTA_EN_PRODUCCION.md`). **Las 99 migraciones están aplicadas y trackeadas en prod** (la 99 —73 índices de cobertura de FK— corrida y validada el 11-sep). **Gap de tracking en dev** (`pruwvpnlvrvgtmpetlsr`, detectado 11-sep): el *esquema* de dev está al día (todas las tablas/columnas hasta la 99 existen, verificado en vivo — se construyó y probó encima sin problema), pero `supabase_migrations.schema_migrations` de dev solo llega a la **74** — las migraciones 75+ se aplicaron con `supabase db query --linked -f <archivo>` en vez de `db push`, que no deja fila de tracking. No es urgente (dev funciona bien) pero un `migration repair` prolijo en algún momento evitaría confusión. Workflow `keep-warm.yml` mitiga el arranque en frío de Render. Empresa "Transportes Itineris" (`rubro='cosmetologia'` en la fila de `empresas` — el nombre de la empresa no define el rubro, verificado en vivo 11-sep; sigue siendo la misma empresa de prueba/piloto real de siempre, con Agenda Pro/reservas Y los módulos `agenda`/`viajes`/`ordenes_servicio`/Mantención de flota activos y usados de verdad) tiene datos de prueba mezclados con los reales — cliente interno **"Itineris Spa"** ya se usa como convención establecida para pruebas que no deben generar notificaciones a clientes de verdad (visto en varias OS y mantenciones de prueba existentes). **Auto-deploy**: Vercel se dispara solo por push a `main`; Render también (confirmado 11-sep, el Deploy Hook existe como respaldo pero no siempre hizo falta). **Clasificador de Claude Code**: permite consultas READ-ONLY a la DB de prod (`supabase db query --linked`) pero BLOQUEA writes/DDL — las migraciones a prod las corre la usuaria; **push a `main` (deploy de código) sí lo puede hacer el asistente**, con la usuaria al tanto dado el alcance (11-sep: 37 commits acumulados sin desplegar, incluido todo el rediseño visual, se empujaron juntos tras confirmarlo explícitamente). Lo que falta para estar 100% operativa:
   - Dar de alta la primera empresa cliente de punta a punta (crear empresa → invitación por correo → activar cuenta del admin → entrar al dashboard).
   - **Rotar secretos que se expusieron en texto plano durante la puesta en marcha:** la primera Resend API key, un GitHub PAT, la `SUPABASE_SERVICE_ROLE_KEY` de producción (implica rotar el JWT secret del proyecto Supabase), y **la key del Deploy Hook de Render** (ítem 3 del backlog arriba).
   - Confirmar en Supabase (prod) → Authentication → URL Configuration: Site URL y Redirect URLs con el dominio real.
@@ -645,5 +647,4 @@ cerrojo deny-all (ver la fila "Multi-tenant" de la sección 1). No son tablas de
   - **Tabla `vehiculos` huérfana** — sigue en la base de datos sin ningún código que la use tras la fusión con Equipos; candidata a eliminarse en una migración futura una vez confirmado en producción que nadie la necesita para rollback.
   - **Los números de `LIMITES_POR_PLAN` (usuarios/OS-mes/storage/IA por plan) son una propuesta inicial**, no una decisión de negocio final — quedan fáciles de ajustar en un solo lugar (`packages/shared/src/limites.ts`) si no calzan con la realidad una vez en uso.
   - **Incidente de login "Credenciales inválidas" (flagged 4-sep, no reproducido desde)** — se reportó un rechazo de `signInWithPassword` en prod; se descartó que fuera un bug de frontend o algo que hubiera tocado el auth. En sesiones posteriores el login funcionó sin problema (posible rate-limiting de Supabase o contraseñas mal tipeadas en su momento). Sin acción pendiente salvo que reaparezca.
-  - **Migración 99 pendiente en prod** — solo agrega índices de cobertura de FK (Supabase Performance Advisor), aplicada en dev, no rompe nada mientras no se corra en prod, pero conviene cerrarla pronto para que `check-migraciones-prod.yml` no quede en rojo.
   - **Tracking de migraciones en dev desincronizado desde la 75** — el esquema de dev está al día (tablas/columnas hasta la 99 existen y funcionan), pero `schema_migrations` solo tiene hasta la 74 registrada (se aplicaron con `db query` en vez de `db push`). No es un problema funcional, es prolijidad de tracking.
