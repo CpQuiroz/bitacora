@@ -409,6 +409,34 @@ por su alcance (no son parte de un bucket de páginas, dan leverage):
   al armar el body del POST/PATCH, no en cada tecla (evita que el
   cursor salte mientras se escribe).
 
+### "Homologar todo" — grupo de nav "Dinero" ✅
+
+Cotizaciones (arriba) + `financiero/cobros/page.tsx`, `[id]/page.tsx`,
+`gastos/page.tsx`, `[id]/page.tsx`, `remuneraciones/page.tsx`, `[id]/
+page.tsx`, `parametros/page.tsx` (`datos-laborales/page.tsx` es un
+redirect puro, sin UI).
+
+Componentes compartidos migrados de paso en este grupo:
+- `PanelAcciones.tsx`, `ComboboxCliente.tsx`, `ComboboxEquipo.tsx`,
+  `SelectCrear.tsx` — mismo criterio que buckets anteriores.
+  `Combobox.tsx`/`ComboboxResponsable.tsx` ya estaban migrados.
+- **`Stat.tsx` (nuevo, `web/src/components`)**: KPI chico (etiqueta +
+  número + nota), migrado desde `ui.tsx`. No es de `packages/ui`
+  (layout de KPI específico de web). Lo usan 8 archivos más
+  (Informes, Inventario, dashboard de Equipos) — se actualizan
+  cuando les toque su bucket, no hace falta tocarlos ahora.
+
+Gaps reales de primitivos encontrados (documentados, no inventados
+por archivo):
+- `Cifra` (ds-) no acepta `className` — se envuelve en el elemento
+  padre en vez de pasarle la clase directo.
+- Sin tono "estado ambiguo" para "pendiente"/"borrador"/"emitida"
+  (gastos, cobros, liquidaciones) — cada página fuerza el tono
+  localmente (`TONO_FORZADO`/`TONO_ESTADO`), nunca inventando un 5°
+  tono en el primitivo compartido.
+
+`scripts/check-colores.mjs`: BASELINE 15→14 (bajó solo).
+
 ### Resto del orden del prompt
 
 5) Catálogo y stock · 6) Configuración · 7) resto — pendientes.

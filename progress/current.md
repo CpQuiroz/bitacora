@@ -63,11 +63,13 @@ aparte — la usuaria habló de "la shell" en el contexto web.
 
 ## Próximo paso
 
-"Operación" ✅ y "Clientes" ✅ migrados y comiteados. `AsignarPackForm.tsx`
-migrado de paso (compartido). Sigue "Dinero" (cotizaciones, cobros,
-gastos, remuneraciones) y de ahí el resto de los grupos de nav en
-orden: Recursos, Equipo, Informes, Configuración. Agenda queda para
-más adelante (usa `DataTable`/`EstadoCitaRiel`, sin migrar todavía).
+"Operación" ✅, "Clientes" ✅ y "Dinero" ✅ (Cotizaciones, Cobros,
+Gastos, Liquidaciones) migrados y comiteados (9 commits desde que
+empezó "homologar todo"). `Stat.tsx` nuevo componente compartido
+(no es de packages/ui). Sigue "Recursos" (equipos, inventario,
+catálogo, proveedores) y de ahí Equipo → Informes → Configuración.
+Agenda queda para más adelante (usa `DataTable`/`EstadoCitaRiel`,
+sin migrar todavía).
 
 ## Pendiente / notas generales
 
