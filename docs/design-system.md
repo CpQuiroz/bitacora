@@ -183,17 +183,15 @@ workspace root).
   (con 5 tests) — `web/lib/formatMoneda.ts` y `mobile/lib/plata.ts` ahora
   **delegan** ahí para CLP (verificado: mismo resultado exacto que antes,
   cero cambio visible; el resto de monedas sigue con `Intl` en web).
-- **Contraste — hallazgo, sin resolver:** el color de marca por defecto
-  (`accent` `#c67139`, cuando el tenant no fija `color_primario`) da
-  **3.61:1** de contraste con texto blanco — no llega a 4.5:1 (WCAG AA
-  texto normal). Texto oscuro tampoco sirve: empeora en `hover`/`pressed`
-  (3.70 → 2.44) mientras que blanco mejora (3.61 → 4.49 → 6.81). No hay un
-  solo foreground que cumpla 4.5:1 en los 3 estados con ese hex exacto, y
-  no puedo inventar un color fuera de `tokens.json`. Como es solo el
-  *fallback* (un tenant real normalmente fija su propio
-  `color_primario_foreground`), lo dejo documentado en vez de improvisar
-  — **tu decisión** si esto amerita revisar el token `accent` o aceptar el
-  fallback como está.
+- **Contraste — hallazgo, decisión tomada 2026-09-10:** el color de marca
+  por defecto (`accent` `#c67139`, cuando el tenant no fija
+  `color_primario`) da **3.61:1** con texto blanco — bajo el 4.5:1 de WCAG
+  AA texto normal. Texto oscuro empeora en `hover`/`pressed` (3.70 → 2.44)
+  mientras blanco mejora (3.61 → 4.49 → 6.81); ningún foreground único
+  cumple los 3 estados con ese hex. **Decisión: se acepta el fallback como
+  está** — solo afecta el estado sin tenant (login/onboarding/empresa sin
+  color configurado); un tenant real define su propio
+  `color_primario_foreground`. No se tocó `tokens.json`.
 
 Verificado: tsc `ui`/`mobile`/`web` verde, `packages/shared` 22 tests
 (17+5 nuevos de `dinero.test.ts`), Tailwind CLI compiló `tabular-nums`.

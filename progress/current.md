@@ -24,11 +24,10 @@
     para CLP (mismo resultado exacto verificado, cero cambio visible).
   - Forma/aire/touch-targets/focus-visible: ya cumplidos por construcción
     en el Paso 4, sin cambios nuevos.
-  - **Hallazgo sin resolver, documentado en `docs/design-system.md`:** el
-    `accent` (#c67139) como marca default da 3.61:1 con blanco (bajo AA
-    4.5:1); texto oscuro empeora al oscurecer el botón. No hay foreground
-    único que cumpla en los 3 estados con ese hex exacto. Es señal
-    solamente el fallback sin tenant — decisión pendiente de la usuaria.
+  - **Hallazgo de contraste — decidido 2026-09-10:** `accent` (#c67139)
+    como marca default da 3.61:1 con blanco (bajo AA 4.5:1). La usuaria
+    eligió **aceptar el fallback como está** (solo afecta el estado sin
+    tenant); no se tocó `tokens.json`.
 
 ## Próximo paso — Paso 6: migración pantalla por pantalla
 
