@@ -156,7 +156,7 @@
         "./verificar.sh verde",
         "APK nuevo (1.9.6) generado con el fix, para reintentar el E2E de la tarea 5"
       ],
-      "status": "in_progress"
+      "status": "done"
     }
   ]
 }
