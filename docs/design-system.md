@@ -116,5 +116,13 @@ workspace root).
   Nombres de familia RN centralizados en `packages/ui/src/native/fuentes.ts`
   (`FUENTE_NATIVE`); `mobile/src/theme/fuentes.ts` los reexporta como
   `FUENTE_DS` para no duplicarlos.
-- Siguientes: Input/Textarea/Select/DatePicker → Card → Tag/Badge/
-  StatusBadge → Table (web) → Dialog/Sheet → Empty/Loading/ErrorState → Toast.
+- **`Input` / `Textarea` / `Select` / `DatePicker`** ✅ — mismo look de
+  campo (pill en Input/Select, `radius.md` en Textarea; fondo `surface`,
+  borde `divider`/`accent-700` en error, `caret-color` en la marca; label
+  12px al 70%, error en `accent-700`, ayuda al 60%). `Select` nativo es una
+  hoja simple (sin buscador — para eso quedan los `Selector*` propios de la
+  app). `DatePicker` nativo reusa el patrón ya establecido en
+  `SelectorHora.tsx` (Android: diálogo nativo; iOS: modal propio con
+  Listo/Cancelar), con `@react-native-community/datetimepicker` (ya era dep).
+- Siguientes: Card → Tag/Badge/StatusBadge → Table (web) → Dialog/Sheet →
+  Empty/Loading/ErrorState → Toast.

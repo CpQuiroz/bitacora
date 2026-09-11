@@ -1,6 +1,6 @@
 # Sesión actual
 
-- **Tarea en curso:** 8 — sistema_diseno (Paso 4 en curso: Button hecho)
+- **Tarea en curso:** 8 — sistema_diseno (Paso 4 en curso: Button + campos hechos)
 - **Inicio:** 2026-09-09
 - **Agente:** Claude Sonnet 5 (directo)
 
@@ -8,43 +8,39 @@
 
 - 2026-09-09: reemplazar Faena por crema/Caprasimo. Lucide en ambos.
   Caprasimo solo headings+lg. Storybook web + /dev/ui mobile.
-- 2026-09-10: coexistencia web = namespace `ds-`.
-- 2026-09-10: API de Button en español confirmada ("va así").
+- 2026-09-10: coexistencia web = namespace `ds-`. API de Button en español
+  confirmada ("va así"). "sigue derecho" = continuar sin pausar por grupo.
 
 ## Estado por paso
 
 - Paso 0-3: ✅ (`28c7f49`, `748611f`, `35bfa4f`)
 - Paso 4 — `packages/ui`: 🔶 en curso
-  - Paquete nuevo, source-only (sin build): `src/tipos.ts` (contrato
-    compartido), `src/web/` (Tailwind), `src/native/` (RN).
-  - Web: `transpilePackages` += `@bitacora/ui` en `next.config.ts`.
-  - Mobile: Metro ya observa el workspace root (config existente) — no
-    hizo falta tocarlo.
-  - **Button** hecho en ambas plataformas. Marca del tenant vía
-    `ProveedorMarca`/`useMarca` (`packages/ui/src/native/marca.tsx`) en
-    mobile — `App.tsx` lo envuelve con el mismo `color_primario` que ya le
-    pasa a `ThemeProvider` (para no divergir).
-  - Nombres de fuente RN centralizados en `packages/ui/src/native/fuentes.ts`
-    (`FUENTE_NATIVE`) — `mobile/theme/fuentes.ts` los reexporta como
-    `FUENTE_DS` (antes eran independientes, ahora una sola fuente de verdad).
-  - Verificado: tsc de `ui`/`mobile`/`web` verde; Tailwind CLI compiló las
-    clases reales de `Button.tsx` con los valores correctos (`bg-ds-brand`
-    → `#c67139`, `rounded-ds-pill` → `999px`, `h-11` → `44px`, `ds-heading`
-    con `outline-color: var(--ds-brand)` en focus). `./verificar.sh` verde.
-  - **Pendiente:** no hay render real (ni jsdom ni Expo corriendo) — la
-    verificación es tsc + compilación de clases, no un screenshot. Storybook
-    (Paso 7) va a cubrir esto.
+  - `Button` ✅ (`627abc5`)
+  - `Input` / `Textarea` / `Select` / `DatePicker` ✅ (este commit)
+    - Piezas compartidas de campo en `web/campo.ts` (LABEL/error/ayuda/foco)
+      y `native/campo.tsx` (`<Campo>` wrapper) + `native/Texto.tsx` (texto
+      interno mínimo de las primitivas, NO el `<Text>` de la app).
+    - `Select` nativo: hoja modal simple (sin buscador).
+    - `DatePicker` nativo: mismo patrón que `mobile/components/ui/SelectorHora.tsx`
+      (Android diálogo nativo que se cierra solo; iOS modal propio con
+      Listo/Cancelar). Usa `@react-native-community/datetimepicker`
+      (ya era dependencia de mobile, no se agregó nada).
+  - Verificado: tsc `ui`/`mobile`/`web` verde. Tailwind CLI compiló TODAS
+    las clases reales (`bg-ds-surface`, `border-ds-accent-700`,
+    `caret-color:var(--ds-brand)`, `rounded-ds-md`, `text-ds-text/70`,
+    etc.) — ojo, el `@source` de prueba tenía que incluir `.ts` además de
+    `.tsx` (los helpers de campo son `.ts`); Next por defecto sí escanea
+    ambos. `./verificar.sh` verde, 19 literales (baseline, sin cambios).
 
 ## Próximo paso
 
-Seguir Paso 4: Input/Textarea/Select/DatePicker (siguiente commit), después
-Card, Tag/Badge/StatusBadge (unificar los 5 mapas dominio→color del
-audit), Table (solo web), Dialog/Sheet, Empty/Loading/ErrorState (skeletons,
-no spinner), Toast.
+Card → Tag/Badge/StatusBadge (unificar los 5 mapas dominio→color
+detectados en el audit) → Table (solo web) → Dialog/Sheet →
+Empty/Loading/ErrorState (skeletons, no spinner) → Toast.
 
 ## Pendiente / notas generales
 
-- Falta `next build` real + verificación visual (Pasos 1-4).
+- Falta `next build` real + verificación visual (Pasos 1-4). Sin
+  Storybook todavía (Paso 7) para ver los componentes renderizados.
 - eslint web roto (tarea #1) — bloquea regla ESLint del Paso 7.
-- Lucide no agregado todavía — se suma cuando un primitivo lo necesite
-  (Input con icono, Toast, etc.) o al final del Paso 4.
+- Lucide no agregado todavía.

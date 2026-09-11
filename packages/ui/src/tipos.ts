@@ -31,3 +31,47 @@ export type PropsBoton = {
 // Web: 36 / 44 / 52. Native: nunca por debajo de 44.
 export const ALTURA_WEB: Record<Tamano, number> = { sm: 36, md: 44, lg: 52 };
 export const ALTURA_NATIVE: Record<Tamano, number> = { sm: 44, md: 48, lg: 52 };
+
+// ── Campos de formulario ───────────────────────────────────────────
+export type PropsCampoBase = {
+  etiqueta?: string;
+  error?: string | null;
+  ayuda?: string;
+  deshabilitado?: boolean;
+};
+
+export type TipoInput = "texto" | "numero" | "email" | "password" | "tel";
+
+export type PropsInput = PropsCampoBase & {
+  valor: string;
+  onCambio: (texto: string) => void;
+  placeholder?: string;
+  tipo?: TipoInput;
+  iconoIzq?: ReactNode;
+  autoFoco?: boolean;
+};
+
+export type PropsTextarea = PropsCampoBase & {
+  valor: string;
+  onCambio: (texto: string) => void;
+  placeholder?: string;
+  /** Alto sugerido en líneas visibles (web: rows; native: minHeight ≈ filas·20). */
+  filas?: number;
+};
+
+export type OpcionSelect = { valor: string; etiqueta: string };
+
+export type PropsSelect = PropsCampoBase & {
+  valor: string | null;
+  onCambio: (valor: string) => void;
+  opciones: OpcionSelect[];
+  placeholder?: string;
+};
+
+export type PropsDatePicker = PropsCampoBase & {
+  valor: Date | null;
+  onCambio: (fecha: Date | null) => void;
+  placeholder?: string;
+  minimo?: Date;
+  maximo?: Date;
+};
