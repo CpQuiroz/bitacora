@@ -1,12 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Bell, User } from "lucide-react";
 import type { NotificacionPreferencia, TipoNotificacion } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
-import { Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText } from "@/components/ui";
-import { IconBell, IconUser } from "@/components/icons";
-import { EstadoCargando } from "@/components/estados";
+import { Button, Card, Input, LoadingState, Select } from "@bitacora/ui/web";
 import { useConfiguracion } from "../ConfiguracionContext";
 
 const TIPO_LABEL: Record<TipoNotificacion, string> = {
@@ -52,6 +51,7 @@ function iniciales(nombre: string) {
   return nombre.trim().split(/\s+/).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? "").join("");
 }
 
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export default function CuentaPage() {
   const { usuario, recargar } = useConfiguracion();
   const inputFotoRef = useRef<HTMLInputElement>(null);
@@ -190,15 +190,18 @@ export default function CuentaPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader title="Cuenta" subtitle="Tus datos personales y preferencias" />
+    <div className="flex flex-col gap-ds-6">
+      <div>
+        <p className="ds-heading text-ds-h3 text-ds-text">Cuenta</p>
+        <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">Tus datos personales y preferencias</p>
+      </div>
 
       <Card>
-        <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-foreground">
-          <IconUser className="h-4 w-4 text-brand" />
+        <p className="mb-ds-4 flex items-center gap-2 font-ds-body text-ds-small font-semibold text-ds-text">
+          <User size={16} strokeWidth={2.75} className="text-ds-brand" />
           Foto de perfil
-        </h2>
-        <div className="flex items-center gap-4">
+        </p>
+        <div className="flex items-center gap-ds-4">
           <input
             ref={inputFotoRef}
             type="file"
@@ -210,116 +213,72 @@ export default function CuentaPage() {
           <label htmlFor="input-foto-perfil" onClick={() => inputFotoRef.current?.click()} className="cursor-pointer">
             {usuario.foto_url ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={usuario.foto_url} alt={usuario.nombre} className="h-16 w-16 rounded-full border border-border object-cover" />
+              <img src={usuario.foto_url} alt={usuario.nombre} className="h-16 w-16 rounded-ds-pill border border-ds-divider object-cover" />
             ) : (
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-brand text-lg font-semibold text-brand-foreground">
+              <div className="flex h-16 w-16 items-center justify-center rounded-ds-pill bg-ds-brand text-lg font-semibold text-ds-brand-foreground">
                 {iniciales(usuario.nombre)}
               </div>
             )}
           </label>
           <div>
             <label htmlFor="input-foto-perfil" onClick={() => inputFotoRef.current?.click()} className="inline-block cursor-pointer">
-              <Button type="button" variant="outline" disabled={subiendoFoto} className="pointer-events-none">
-                {subiendoFoto ? "Subiendo…" : "Cambiar imagen"}
-              </Button>
-            </label>
-            <p className="mt-2 text-xs text-muted">JPG, PNG o WEBP · máx. 5MB</p>
-            {errorFoto && (
-              <div className="mt-2">
-                <ErrorText>{errorFoto}</ErrorText>
+              <div className="pointer-events-none">
+                <Button variante="secundario" deshabilitado={subiendoFoto}>
+                  {subiendoFoto ? "Subiendo…" : "Cambiar imagen"}
+                </Button>
               </div>
-            )}
+            </label>
+            <p className="mt-ds-2 font-ds-body text-ds-caption text-ds-text/60">JPG, PNG o WEBP · máx. 5MB</p>
+            {errorFoto ? <p className="mt-ds-2 font-ds-body text-ds-small text-ds-accent-700">{errorFoto}</p> : null}
           </div>
         </div>
       </Card>
 
       <Card>
-        <h2 className="mb-4 text-sm font-semibold text-foreground">Datos de la cuenta</h2>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <Label>Nombre completo</Label>
-            <Input type="text" value={nombre} onChange={(e) => setNombre(e.target.value)} />
-          </div>
-          <div>
-            <Label>Correo</Label>
-            <Input type="email" value={correo ?? ""} disabled className="opacity-60" />
-          </div>
-          <div>
-            <Label>Teléfono</Label>
-            <Input type="tel" placeholder="+56 9 1234 5678" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
-          </div>
-          <div>
-            <Label>Idioma</Label>
-            <Select value={idioma} onChange={(e) => setIdioma(e.target.value)}>
-              {IDIOMAS.map((i) => (
-                <option key={i.valor} value={i.valor}>
-                  {i.etiqueta}
-                </option>
-              ))}
-            </Select>
-          </div>
+        <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Datos de la cuenta</p>
+        <div className="grid gap-ds-4 sm:grid-cols-2">
+          <Input etiqueta="Nombre completo" valor={nombre} onCambio={setNombre} />
+          <Input etiqueta="Correo" tipo="email" valor={correo ?? ""} onCambio={() => {}} deshabilitado />
+          <Input etiqueta="Teléfono" tipo="tel" placeholder="+56 9 1234 5678" valor={telefono} onCambio={setTelefono} />
+          <Select etiqueta="Idioma" valor={idioma} onCambio={setIdioma} opciones={IDIOMAS} />
         </div>
 
-        <h3 className="mb-3 mt-6 text-xs font-semibold uppercase tracking-wide text-muted">Configuración regional</h3>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <Label>País</Label>
-            <Select value={pais} onChange={(e) => setPais(e.target.value)}>
-              {PAISES.map((p) => (
-                <option key={p.valor} value={p.valor}>
-                  {p.etiqueta}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <div>
-            <Label>Huso horario</Label>
-            <Select value={husoHorario} onChange={(e) => setHusoHorario(e.target.value)}>
-              {HUSOS.map((h) => (
-                <option key={h.valor} value={h.valor}>
-                  {h.etiqueta}
-                </option>
-              ))}
-            </Select>
-          </div>
+        <p className="mb-ds-3 mt-ds-6 font-ds-body text-ds-caption font-semibold uppercase tracking-wide text-ds-text/60">Configuración regional</p>
+        <div className="grid gap-ds-4 sm:grid-cols-2">
+          <Select etiqueta="País" valor={pais} onCambio={setPais} opciones={PAISES} />
+          <Select etiqueta="Huso horario" valor={husoHorario} onCambio={setHusoHorario} opciones={HUSOS} />
         </div>
 
-        {error && (
-          <div className="mt-4">
-            <ErrorText>{error}</ErrorText>
-          </div>
-        )}
-        {aviso && (
-          <div className="mt-4">
-            <SuccessText>{aviso}</SuccessText>
-          </div>
-        )}
-        <Button type="button" onClick={onGuardarDatos} disabled={guardando} className="mt-4">
-          {guardando ? "Guardando…" : "Guardar"}
-        </Button>
+        {error ? <p className="mt-ds-4 font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
+        {aviso ? <p className="mt-ds-4 font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}
+        <div className="mt-ds-4">
+          <Button onPress={onGuardarDatos} cargando={guardando}>
+            Guardar
+          </Button>
+        </div>
       </Card>
 
       <Card>
-        <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-foreground">
-          <IconBell className="h-4 w-4 text-brand" />
+        <p className="mb-ds-4 flex items-center gap-2 font-ds-body text-ds-small font-semibold text-ds-text">
+          <Bell size={16} strokeWidth={2.75} className="text-ds-brand" />
           Notificaciones
-        </h2>
-        <p className="mb-4 text-xs text-muted">
+        </p>
+        <p className="mb-ds-4 font-ds-body text-ds-caption text-ds-text/60">
           Elige qué alertas quieres recibir dentro de la app. El envío por correo se activará más adelante.
         </p>
         {preferencias === null ? (
-          <EstadoCargando />
+          <LoadingState />
         ) : (
-          <div className="flex flex-col divide-y divide-border">
+          <div className="flex flex-col divide-y divide-ds-divider">
             {preferencias.map((p) => (
-              <label key={p.tipo} className="flex items-center justify-between gap-4 py-3">
-                <span className="text-sm text-foreground">{TIPO_LABEL[p.tipo]}</span>
+              <label key={p.tipo} className="flex items-center justify-between gap-ds-4 py-ds-3">
+                <span className="font-ds-body text-ds-small text-ds-text">{TIPO_LABEL[p.tipo]}</span>
                 <input
                   type="checkbox"
                   checked={p.app_activado}
                   disabled={guardandoTipo === p.tipo}
                   onChange={(e) => onCambiarPreferencia(p.tipo, e.target.checked)}
-                  className="h-4 w-4 accent-brand"
+                  className="h-4 w-4 accent-[var(--ds-brand)]"
                 />
               </label>
             ))}
@@ -328,39 +287,32 @@ export default function CuentaPage() {
       </Card>
 
       <Card>
-        <h2 className="mb-4 text-sm font-semibold text-foreground">Cambiar contraseña</h2>
-        <form onSubmit={onCambiarPassword} className="flex flex-col gap-4">
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div>
-              <Label>Contraseña actual</Label>
-              <Input type="password" required value={actualPass} onChange={(e) => setActualPass(e.target.value)} />
-            </div>
-            <div>
-              <Label>Nueva contraseña</Label>
-              <Input type="password" required minLength={8} value={nuevaPass} onChange={(e) => setNuevaPass(e.target.value)} />
-            </div>
-            <div>
-              <Label>Confirmar contraseña</Label>
-              <Input type="password" required minLength={8} value={confirmarPass} onChange={(e) => setConfirmarPass(e.target.value)} />
-            </div>
+        <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Cambiar contraseña</p>
+        <form onSubmit={onCambiarPassword} className="flex flex-col gap-ds-4">
+          <div className="grid gap-ds-4 sm:grid-cols-3">
+            <Input etiqueta="Contraseña actual" tipo="password" requerido valor={actualPass} onCambio={setActualPass} />
+            <Input etiqueta="Nueva contraseña" tipo="password" requerido minLongitud={8} valor={nuevaPass} onCambio={setNuevaPass} />
+            <Input etiqueta="Confirmar contraseña" tipo="password" requerido minLongitud={8} valor={confirmarPass} onCambio={setConfirmarPass} />
           </div>
-          {errorPass && <ErrorText>{errorPass}</ErrorText>}
-          {avisoPass && <SuccessText>{avisoPass}</SuccessText>}
-          <Button type="submit" disabled={cambiandoPass} className="self-start">
-            {cambiandoPass ? "Cambiando…" : "Cambiar contraseña"}
-          </Button>
+          {errorPass ? <p className="font-ds-body text-ds-small text-ds-accent-700">{errorPass}</p> : null}
+          {avisoPass ? <p className="font-ds-body text-ds-small font-medium text-ds-accent2-800">{avisoPass}</p> : null}
+          <div className="self-start">
+            <Button tipo="submit" cargando={cambiandoPass}>
+              Cambiar contraseña
+            </Button>
+          </div>
         </form>
       </Card>
 
       <Card>
-        <h2 className="mb-2 text-sm font-semibold text-foreground">Mis datos personales</h2>
-        <p className="mb-4 text-sm text-muted">
+        <p className="mb-ds-2 font-ds-body text-ds-small font-semibold text-ds-text">Mis datos personales</p>
+        <p className="mb-ds-4 font-ds-body text-ds-small text-ds-text/70">
           Descarga un archivo con todos los datos personales que Bitácora guarda sobre ti
           (perfil, datos laborales, liquidaciones, accesos, avisos). Ley 21.719 — derecho
           de acceso.
         </p>
-        <Button type="button" variant="outline" disabled={descargando} onClick={descargarMisDatos}>
-          {descargando ? "Preparando…" : "Descargar mis datos (JSON)"}
+        <Button variante="secundario" cargando={descargando} onPress={descargarMisDatos}>
+          Descargar mis datos (JSON)
         </Button>
       </Card>
     </div>

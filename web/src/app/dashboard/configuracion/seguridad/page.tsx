@@ -3,12 +3,11 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Shield } from "lucide-react";
 import type { AccesoUsuario } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
-import { Button, Card, ErrorText, Input, Label, PageHeader, SuccessText } from "@/components/ui";
-import { IconShield } from "@/components/icons";
-import { EstadoCargando } from "@/components/estados";
+import { Button, Card, Input, LoadingState, Table } from "@bitacora/ui/web";
 import { useConfiguracion } from "../ConfiguracionContext";
 
 function detectarNavegador(userAgent: string): string {
@@ -29,6 +28,7 @@ function detectarSO(userAgent: string): string {
 
 type EstadoMfa = { activado: boolean; metodo: "totp" | "email" | null };
 
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export default function SeguridadPage() {
   const { usuario } = useConfiguracion();
   const router = useRouter();
@@ -199,14 +199,17 @@ export default function SeguridadPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader title="Seguridad" subtitle="Sesiones activas y zona de peligro" />
+    <div className="flex flex-col gap-ds-6">
+      <div>
+        <p className="ds-heading text-ds-h3 text-ds-text">Seguridad</p>
+        <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">Sesiones activas y zona de peligro</p>
+      </div>
 
       <Card>
-        <h2 className="mb-2 text-sm font-semibold text-foreground">Contraseña</h2>
-        <p className="text-sm text-muted">
+        <p className="mb-ds-2 font-ds-body text-ds-small font-semibold text-ds-text">Contraseña</p>
+        <p className="font-ds-body text-ds-small text-ds-text/70">
           El cambio de contraseña está en{" "}
-          <Link href="/dashboard/configuracion/cuenta" className="font-medium text-brand hover:underline">
+          <Link href="/dashboard/configuracion/cuenta" className="font-medium text-ds-brand hover:underline">
             Cuenta
           </Link>
           {sesion?.actualizado && ` — tu cuenta se actualizó por última vez el ${new Date(sesion.actualizado).toLocaleDateString("es-CL")}.`}
@@ -214,169 +217,144 @@ export default function SeguridadPage() {
       </Card>
 
       <Card>
-        <h2 className="mb-4 text-sm font-semibold text-foreground">Sesiones activas</h2>
+        <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Sesiones activas</p>
         {sesion && (
-          <div className="flex items-center justify-between rounded-lg border border-border p-3 text-sm">
+          <div className="flex items-center justify-between rounded-ds-lg border border-ds-divider p-ds-3 font-ds-body text-ds-small">
             <div>
-              <p className="font-medium text-foreground">
+              <p className="font-medium text-ds-text">
                 {sesion.navegador} · {sesion.so}
               </p>
-              <p className="text-xs text-muted">Ahora</p>
+              <p className="font-ds-body text-ds-caption text-ds-text/60">Ahora</p>
             </div>
-            <span className="rounded-full bg-brand-soft px-2.5 py-0.5 text-xs font-medium text-brand">Sesión actual</span>
+            <span className="rounded-ds-pill bg-ds-brand/[0.08] px-2.5 py-0.5 text-ds-caption font-medium text-ds-brand">Sesión actual</span>
           </div>
         )}
-        <p className="mt-3 text-xs text-muted">
+        <p className="mt-ds-3 font-ds-body text-ds-caption text-ds-text/60">
           Esta es la única sesión que podemos identificar individualmente — Supabase no expone un listado de
           dispositivos activos, pero puedes cerrar cualquier otra sesión abierta con tu cuenta (otro navegador, otro
           celular) sin necesidad de saber cuál es.
         </p>
-        {errorCerrarOtras && (
-          <div className="mt-3">
-            <ErrorText>{errorCerrarOtras}</ErrorText>
-          </div>
-        )}
-        {avisoCerrarOtras && (
-          <div className="mt-3">
-            <SuccessText>{avisoCerrarOtras}</SuccessText>
-          </div>
-        )}
-        <Button type="button" variant="outline" onClick={onCerrarOtrasSesiones} disabled={cerrandoOtras} className="mt-4">
-          {cerrandoOtras ? "Cerrando…" : "Cerrar sesión en otros dispositivos"}
-        </Button>
+        {errorCerrarOtras ? <p className="mt-ds-3 font-ds-body text-ds-small text-ds-accent-700">{errorCerrarOtras}</p> : null}
+        {avisoCerrarOtras ? <p className="mt-ds-3 font-ds-body text-ds-small font-medium text-ds-accent2-800">{avisoCerrarOtras}</p> : null}
+        <div className="mt-ds-4">
+          <Button variante="secundario" onPress={onCerrarOtrasSesiones} cargando={cerrandoOtras}>
+            Cerrar sesión en otros dispositivos
+          </Button>
+        </div>
       </Card>
 
       <Card>
-        <h2 className="mb-4 text-sm font-semibold text-foreground">Historial de accesos</h2>
-        {accesos === null && <EstadoCargando />}
-        {accesos?.length === 0 && <p className="text-sm text-muted">Todavía no hay accesos registrados.</p>}
-        {accesos && accesos.length > 0 && (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
-                  <th className="py-2 pr-4 font-medium">Fecha</th>
-                  <th className="py-2 pr-4 font-medium">IP</th>
-                  <th className="py-2 font-medium">Dispositivo</th>
-                </tr>
-              </thead>
-              <tbody>
-                {accesos.map((a) => (
-                  <tr key={a.id} className="border-b border-border text-muted last:border-0">
-                    <td className="py-2 pr-4">{new Date(a.creado_en).toLocaleString("es-CL")}</td>
-                    <td className="py-2 pr-4">{a.ip ?? "—"}</td>
-                    <td className="py-2">{a.user_agent ? `${detectarNavegador(a.user_agent)} · ${detectarSO(a.user_agent)}` : "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Historial de accesos</p>
+        <Table
+          filas={accesos ?? []}
+          claveFila={(a) => a.id}
+          cargando={accesos === null}
+          columnas={[
+            { encabezado: "Fecha", celda: (a) => new Date(a.creado_en).toLocaleString("es-CL") },
+            { encabezado: "IP", celda: (a) => a.ip ?? "—" },
+            { encabezado: "Dispositivo", celda: (a) => (a.user_agent ? `${detectarNavegador(a.user_agent)} · ${detectarSO(a.user_agent)}` : "—") },
+          ]}
+          vacio={{ titulo: "Todavía no hay accesos registrados." }}
+        />
       </Card>
 
       <Card>
-        <h2 className="text-sm font-semibold text-foreground">Autenticación de dos factores</h2>
-        <p className="mt-1 mb-4 text-xs text-muted">
+        <p className="font-ds-body text-ds-small font-semibold text-ds-text">Autenticación de dos factores</p>
+        <p className="mb-ds-4 mt-ds-1 font-ds-body text-ds-caption text-ds-text/60">
           Un paso extra al iniciar sesión — con una app de autenticación (Google Authenticator, Authy...) o con un
           código que te mandamos por correo.
         </p>
 
         {mfaObligatoria && !mfa?.activado && (
-          <p className="mb-4 rounded-lg bg-warning-soft px-3 py-2 text-xs text-warning">
+          <p className="mb-ds-4 rounded-ds-lg bg-ds-accent-100 px-ds-3 py-ds-2 font-ds-body text-ds-caption text-ds-accent-800">
             Tu rol requiere tenerla activa — mientras no la actives, el resto de la app queda bloqueado salvo esta
             página.
           </p>
         )}
 
         {mfa === null ? (
-          <EstadoCargando />
+          <LoadingState />
         ) : mfa.activado ? (
-          <div className="flex items-center justify-between rounded-lg border border-border p-3 text-sm">
-            <div>
-              <p className="font-medium text-foreground">Activa — {mfa.metodo === "totp" ? "app de autenticación" : "código por correo"}</p>
-            </div>
-            <Button type="button" variant="outline" onClick={onDesactivarMfa} disabled={desactivando}>
-              {desactivando ? "Desactivando…" : "Desactivar"}
+          <div className="flex items-center justify-between rounded-ds-lg border border-ds-divider p-ds-3 font-ds-body text-ds-small">
+            <p className="font-medium text-ds-text">Activa — {mfa.metodo === "totp" ? "app de autenticación" : "código por correo"}</p>
+            <Button variante="secundario" onPress={onDesactivarMfa} cargando={desactivando}>
+              Desactivar
             </Button>
           </div>
         ) : modoActivacion === null ? (
-          <div className="flex flex-wrap gap-2">
-            <Button type="button" variant="outline" onClick={abrirActivacionTotp}>
+          <div className="flex flex-wrap gap-ds-2">
+            <Button variante="secundario" onPress={abrirActivacionTotp}>
               Con app de autenticación
             </Button>
-            <Button type="button" variant="outline" onClick={abrirActivacionEmail}>
+            <Button variante="secundario" onPress={abrirActivacionEmail}>
               Con código por correo
             </Button>
           </div>
         ) : modoActivacion === "totp" ? (
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-ds-3">
             {secretoTotp ? (
               <>
-                <p className="text-sm text-muted">
+                <p className="font-ds-body text-ds-small text-ds-text/70">
                   Escanea o abre este link con tu app de autenticación, o ingresa el código manualmente:
                 </p>
-                <a href={secretoTotp.otpauthUri} className="break-all text-sm font-medium text-brand hover:underline">
+                <a href={secretoTotp.otpauthUri} className="break-all font-ds-body text-ds-small font-medium text-ds-brand hover:underline">
                   {secretoTotp.otpauthUri}
                 </a>
-                <div className="flex items-center gap-2">
-                  <code className="rounded-lg border border-border bg-surface px-3 py-2 text-sm font-mono tracking-widest text-foreground">
+                <div className="flex items-center gap-ds-2">
+                  <code className="rounded-ds-lg border border-ds-divider bg-ds-surface px-ds-3 py-ds-2 font-mono text-ds-small tracking-widest text-ds-text">
                     {secretoTotp.secreto}
                   </code>
-                  <Button type="button" variant="ghost" onClick={copiarSecreto}>
+                  <Button variante="ghost" onPress={copiarSecreto}>
                     {copiadoSecreto ? "Copiado" : "Copiar"}
                   </Button>
                 </div>
-                <Label>Código de la app</Label>
-                <Input
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={6}
-                  value={codigoActivar}
-                  onChange={(e) => setCodigoActivar(e.target.value.replace(/\D/g, ""))}
-                  className="max-w-[10rem]"
-                />
+                <div className="max-w-[10rem]">
+                  <Input
+                    etiqueta="Código de la app"
+                    tipo="codigo"
+                    maxLongitud={6}
+                    valor={codigoActivar}
+                    onCambio={(v) => setCodigoActivar(v.replace(/\D/g, ""))}
+                  />
+                </div>
               </>
             ) : (
-              <p className="text-sm text-muted">Generando…</p>
+              <p className="font-ds-body text-ds-small text-ds-text/70">Generando…</p>
             )}
-            {errorMfa && <ErrorText>{errorMfa}</ErrorText>}
-            <div className="flex gap-2">
-              <Button type="button" onClick={confirmarTotp} disabled={cargandoMfa || codigoActivar.length !== 6}>
-                {cargandoMfa ? "Confirmando…" : "Confirmar y activar"}
+            {errorMfa ? <p className="font-ds-body text-ds-small text-ds-accent-700">{errorMfa}</p> : null}
+            <div className="flex gap-ds-2">
+              <Button onPress={confirmarTotp} cargando={cargandoMfa} deshabilitado={codigoActivar.length !== 6}>
+                Confirmar y activar
               </Button>
-              <Button type="button" variant="ghost" onClick={cerrarActivacion}>
+              <Button variante="ghost" onPress={cerrarActivacion}>
                 Cancelar
               </Button>
             </div>
           </div>
         ) : (
-          <div className="flex flex-col gap-3">
-            {avisoMfa && <SuccessText>{avisoMfa}</SuccessText>}
+          <div className="flex flex-col gap-ds-3">
+            {avisoMfa ? <p className="font-ds-body text-ds-small font-medium text-ds-accent2-800">{avisoMfa}</p> : null}
             {codigoEmailEnviado && (
-              <>
-                <Label>Código que te llegó por correo</Label>
+              <div className="max-w-[10rem]">
                 <Input
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={6}
-                  value={codigoActivar}
-                  onChange={(e) => setCodigoActivar(e.target.value.replace(/\D/g, ""))}
-                  className="max-w-[10rem]"
+                  etiqueta="Código que te llegó por correo"
+                  tipo="codigo"
+                  maxLongitud={6}
+                  valor={codigoActivar}
+                  onCambio={(v) => setCodigoActivar(v.replace(/\D/g, ""))}
                 />
-              </>
+              </div>
             )}
-            {errorMfa && <ErrorText>{errorMfa}</ErrorText>}
-            <div className="flex gap-2">
+            {errorMfa ? <p className="font-ds-body text-ds-small text-ds-accent-700">{errorMfa}</p> : null}
+            <div className="flex gap-ds-2">
               {codigoEmailEnviado ? (
-                <Button type="button" onClick={confirmarEmail} disabled={cargandoMfa || codigoActivar.length !== 6}>
-                  {cargandoMfa ? "Confirmando…" : "Confirmar y activar"}
+                <Button onPress={confirmarEmail} cargando={cargandoMfa} deshabilitado={codigoActivar.length !== 6}>
+                  Confirmar y activar
                 </Button>
               ) : (
-                <Button type="button" disabled className="opacity-60">
-                  Enviando…
-                </Button>
+                <Button deshabilitado>Enviando…</Button>
               )}
-              <Button type="button" variant="ghost" onClick={cerrarActivacion}>
+              <Button variante="ghost" onPress={cerrarActivacion}>
                 Cancelar
               </Button>
             </div>
@@ -385,31 +363,26 @@ export default function SeguridadPage() {
       </Card>
 
       {usuario.rol === "admin" && (
-        <Card className="border-danger/40">
-          <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-danger">
-            <IconShield className="h-4 w-4" />
-            Zona de peligro
-          </h2>
-          <p className="mb-4 text-sm text-muted">
-            Eliminar la cuenta borra <strong>permanentemente</strong> a {usuario.empresa.nombre} — clientes, cotizaciones,
-            órdenes de servicio, cobranzas y todo lo demás. Esta acción no se puede deshacer.
-          </p>
-          <Label>Escribe &ldquo;{usuario.empresa.nombre}&rdquo; para confirmar</Label>
-          <Input type="text" value={confirmacion} onChange={(e) => setConfirmacion(e.target.value)} className="max-w-sm" />
-          {errorEliminar && (
-            <div className="mt-3">
-              <ErrorText>{errorEliminar}</ErrorText>
+        <Card>
+          <div className="rounded-ds-md border border-ds-accent-700 bg-ds-accent-100 p-ds-4">
+            <p className="mb-ds-2 flex items-center gap-2 font-ds-body text-ds-small font-semibold text-ds-accent-700">
+              <Shield size={16} strokeWidth={2.75} />
+              Zona de peligro
+            </p>
+            <p className="mb-ds-4 font-ds-body text-ds-small text-ds-text/70">
+              Eliminar la cuenta borra <strong>permanentemente</strong> a {usuario.empresa.nombre} — clientes, cotizaciones,
+              órdenes de servicio, cobranzas y todo lo demás. Esta acción no se puede deshacer.
+            </p>
+            <div className="max-w-sm">
+              <Input etiqueta={`Escribe "${usuario.empresa.nombre}" para confirmar`} valor={confirmacion} onCambio={setConfirmacion} />
             </div>
-          )}
-          <Button
-            type="button"
-            variant="danger"
-            onClick={onEliminarCuenta}
-            disabled={eliminando || confirmacion !== usuario.empresa.nombre}
-            className="mt-4"
-          >
-            {eliminando ? "Eliminando…" : "Eliminar cuenta"}
-          </Button>
+            {errorEliminar ? <p className="mt-ds-3 font-ds-body text-ds-small text-ds-accent-700">{errorEliminar}</p> : null}
+            <div className="mt-ds-4">
+              <Button variante="peligro" onPress={onEliminarCuenta} cargando={eliminando} deshabilitado={confirmacion !== usuario.empresa.nombre}>
+                Eliminar cuenta
+              </Button>
+            </div>
+          </div>
         </Card>
       )}
     </div>
