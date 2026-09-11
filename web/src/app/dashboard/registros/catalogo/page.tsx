@@ -2,19 +2,18 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { HelpCircle, Layers, Plus } from "lucide-react";
 import type { CatalogoItem, SugerenciaRubro, TipoCatalogoItem, UnidadMedida } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
-import { estadoStock } from "@/lib/estadoStock";
+import { estadoStock, ETIQUETA_ESTADO_STOCK } from "@/lib/estadoStock";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { SelectCrear } from "@/components/SelectCrear";
 import { Combobox } from "@/components/Combobox";
-import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText } from "@/components/ui";
+import { Button, Card, EmptyState, ErrorState, Input, LoadingState, Select, StatusBadge, Table, Tag, type TonoEstado } from "@bitacora/ui/web";
 import { InputMonto } from "@/components/InputMonto";
-import { IconHelp, IconLayers, IconPlus } from "@/components/icons";
 import { ICONO_TIPO } from "@/components/CatalogoSelectorModal";
-import { EstadoCargando, EstadoVacio } from "@/components/estados";
 
 // Categorías sugeridas cuando el catálogo todavía no tiene ninguna
 // propia — una vez que existan categorías reales usadas, esas se
@@ -46,6 +45,11 @@ const TIPO_ETIQUETA: Record<TipoCatalogoItem, string> = {
   kit: "Kit",
 };
 
+// "en_stock"/"stock_bajo" no están en MAPA_ESTADO_TONO — mismo criterio
+// que CatalogoSelectorModal/Inventario.
+const TONO_STOCK: Record<string, TonoEstado> = { en_stock: "completado", stock_bajo: "en_progreso", sin_stock: "cancelado" };
+
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export default function CatalogoPage() {
   const router = useRouter();
   const [usuario, setUsuario] = useState<UsuarioShell | null>(null);
@@ -245,207 +249,193 @@ export default function CatalogoPage() {
 
   return (
     <DashboardShell usuario={usuario}>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <PageHeader title="Catálogo" subtitle="Productos, servicios y kits reutilizables en cotizaciones y órdenes de servicio" />
-        <div className="flex gap-2">
-          <Button type="button" variant="outline" onClick={() => alert("Importar catálogo desde CSV — próximamente.")}>
+      <div className="mb-ds-6 flex flex-wrap items-center justify-between gap-ds-3">
+        <div>
+          <p className="ds-heading text-ds-h2 text-ds-text">Catálogo</p>
+          <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">Productos, servicios y kits reutilizables en cotizaciones y órdenes de servicio</p>
+        </div>
+        <div className="flex gap-ds-2">
+          <Button variante="secundario" onPress={() => alert("Importar catálogo desde CSV — próximamente.")}>
             Importar Catálogo
           </Button>
-          <Button type="button" onClick={() => (formAbierto ? setFormAbierto(false) : abrirNuevo())}>
-            <IconPlus className="h-4 w-4" />
+          <Button iconoIzq={<Plus size={16} strokeWidth={2.75} />} onPress={() => (formAbierto ? setFormAbierto(false) : abrirNuevo())}>
             Nuevo Ítem
           </Button>
         </div>
       </div>
 
       {formAbierto && (
-        <Card className="mb-6">
-          <h2 className="mb-4 text-sm font-semibold text-foreground">{editandoId ? "Editar ítem" : "Nuevo ítem"}</h2>
-          <form onSubmit={onSubmit} className="flex flex-col gap-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <Label>Tipo</Label>
+        <div className="mb-ds-6">
+          <Card>
+            <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">{editandoId ? "Editar ítem" : "Nuevo ítem"}</p>
+            <form onSubmit={onSubmit} className="flex flex-col gap-ds-4">
+              <div className="grid gap-ds-4 sm:grid-cols-2">
                 <Select
-                  value={tipo}
-                  disabled={Boolean(editandoId)}
-                  onChange={(e) => setTipo(e.target.value as TipoCatalogoItem)}
-                >
-                  <option value="producto">Producto</option>
-                  <option value="servicio">Servicio</option>
-                  <option value="kit">Kit</option>
-                </Select>
+                  etiqueta="Tipo"
+                  deshabilitado={Boolean(editandoId)}
+                  valor={tipo}
+                  onCambio={(v) => setTipo(v as TipoCatalogoItem)}
+                  opciones={[
+                    { valor: "producto", etiqueta: "Producto" },
+                    { valor: "servicio", etiqueta: "Servicio" },
+                    { valor: "kit", etiqueta: "Kit" },
+                  ]}
+                />
+                <Input etiqueta="Nombre" requerido valor={nombre} onCambio={setNombre} />
+                <div className="flex flex-col gap-ds-1">
+                  <label className="flex items-center gap-1.5 font-ds-body text-ds-caption font-medium text-ds-text/70">
+                    SKU
+                    <span title="Código interno para identificar y buscar este ítem rápido — no tiene que ser el mismo del proveedor, es solo tuyo.">
+                      <HelpCircle size={14} strokeWidth={2.75} className="text-ds-text/40" />
+                    </span>
+                  </label>
+                  <Input valor={sku} onCambio={setSku} />
+                </div>
+                <div className="flex flex-col gap-ds-1">
+                  <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Categoría</label>
+                  <Input valor={categoria} onCambio={setCategoria} />
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    {chipsCategoria.map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => setCategoria(c)}
+                        className={`rounded-ds-pill border px-2.5 py-0.5 text-[11px] font-medium transition-colors ${
+                          categoria === c ? "border-ds-brand bg-ds-brand/[0.08] text-ds-brand" : "border-ds-divider text-ds-text/70 hover:border-ds-text/30"
+                        }`}
+                      >
+                        {c}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex flex-col gap-ds-1">
+                  <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Unidad</label>
+                  <SelectCrear
+                    value={unidades.find((u) => u.nombre === unidad)?.id ?? ""}
+                    onChange={(id) => setUnidad(unidades.find((u) => u.id === id)?.nombre ?? unidad)}
+                    opciones={unidades}
+                    endpoint="/api/unidades-medida"
+                    placeholder={unidad ? unidad : "Selecciona una unidad…"}
+                    etiquetaCrear="+ Crear unidad"
+                    onCreado={(nueva) => {
+                      setUnidades((prev) => [...prev, nueva]);
+                      setUnidad(nueva.nombre);
+                    }}
+                  />
+                </div>
+                <div className="flex flex-col gap-ds-1">
+                  <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Precio base (CLP)</label>
+                  <InputMonto required value={precioBase} onChange={setPrecioBase} moneda={usuario.moneda} />
+                </div>
+                {tipo === "producto" && !editandoId && (
+                  <div className="flex flex-col gap-ds-1">
+                    <label className="flex items-center gap-1.5 font-ds-body text-ds-caption font-medium text-ds-text/70">
+                      Stock inicial (opcional)
+                      <span title="Cantidad con la que arranca este producto. Después, ajustá el stock desde Inventario para mantener el historial de movimientos.">
+                        <HelpCircle size={14} strokeWidth={2.75} className="text-ds-text/40" />
+                      </span>
+                    </label>
+                    <Input tipo="numero" valor={stockInicial} onCambio={setStockInicial} />
+                  </div>
+                )}
+                {tipo === "producto" && (
+                  <div className="flex flex-col gap-ds-1">
+                    <label className="flex items-center gap-1.5 font-ds-body text-ds-caption font-medium text-ds-text/70">
+                      Stock mínimo (opcional)
+                      <span title="Cuando el stock baja de este número, el producto se marca como 'Stock bajo'. Vacío = usa el mínimo por defecto de la empresa (Configuración → Inventario).">
+                        <HelpCircle size={14} strokeWidth={2.75} className="text-ds-text/40" />
+                      </span>
+                    </label>
+                    <Input tipo="numero" placeholder={`Por defecto: ${stockMinimoDefault}`} valor={stockMinimo} onCambio={setStockMinimo} />
+                  </div>
+                )}
               </div>
-              <div>
-                <Label>Nombre</Label>
-                <Input type="text" required value={nombre} onChange={(e) => setNombre(e.target.value)} />
-              </div>
-              <div>
-                <Label className="flex items-center gap-1.5">
-                  SKU
-                  <span title="Código interno para identificar y buscar este ítem rápido — no tiene que ser el mismo del proveedor, es solo tuyo.">
-                    <IconHelp className="h-3.5 w-3.5 text-muted" />
+
+              {tipo === "kit" && (
+                <div className="rounded-ds-md border border-ds-divider p-ds-4">
+                  <p className="mb-ds-3 font-ds-body text-ds-small font-medium text-ds-text">Ítems del kit</p>
+                  <div className="flex flex-col gap-ds-2">
+                    {kitItems.map((k, idx) => (
+                      <div key={idx} className="flex items-center gap-ds-2">
+                        <div className="min-w-0 flex-1">
+                          <Combobox
+                            value={k.item_id}
+                            onChange={(id) => cambiarItemKit(idx, { item_id: id })}
+                            opciones={disponiblesParaKit.map((it) => ({
+                              id: it.id,
+                              label: `${TIPO_ETIQUETA[it.tipo]} — ${it.nombre}`,
+                            }))}
+                            placeholder="Buscar ítem del catálogo…"
+                          />
+                        </div>
+                        <div className="w-24">
+                          <Input tipo="numero" valor={k.cantidad} onCambio={(v) => cambiarItemKit(idx, { cantidad: v })} />
+                        </div>
+                        <Button variante="ghost" onPress={() => quitarItemKit(idx)}>
+                          Quitar
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-ds-3">
+                    <Button variante="secundario" iconoIzq={<Plus size={16} strokeWidth={2.75} />} onPress={agregarItemKit}>
+                      Agregar ítem al kit
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex flex-col gap-ds-1">
+                <label className="flex items-center gap-1.5 font-ds-body text-ds-caption font-medium text-ds-text/70">
+                  Aplica a tipo(s) de equipo (opcional)
+                  <span title="Al armar una OS/Cotización con un equipo asociado, estos ítems se destacan primero — no oculta el resto del catálogo.">
+                    <HelpCircle size={14} strokeWidth={2.75} className="text-ds-text/40" />
                   </span>
-                </Label>
-                <Input type="text" value={sku} onChange={(e) => setSku(e.target.value)} />
-              </div>
-              <div>
-                <Label>Categoría</Label>
-                <Input type="text" value={categoria} onChange={(e) => setCategoria(e.target.value)} />
+                </label>
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
-                  {chipsCategoria.map((c) => (
+                  {tiposEquipoDisponibles.map((t) => (
                     <button
-                      key={c}
+                      key={t}
                       type="button"
-                      onClick={() => setCategoria(c)}
-                      className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-colors ${
-                        categoria === c ? "border-brand bg-brand-soft text-brand" : "border-border text-muted hover:border-muted-soft"
+                      onClick={() => alternarTipoEquipo(t)}
+                      className={`rounded-ds-pill border px-2.5 py-0.5 text-[11px] font-medium transition-colors ${
+                        tiposEquipo.includes(t) ? "border-ds-brand bg-ds-brand/[0.08] text-ds-brand" : "border-ds-divider text-ds-text/70 hover:border-ds-text/30"
                       }`}
                     >
-                      {c}
+                      {t}
                     </button>
                   ))}
                 </div>
               </div>
-              <div>
-                <Label>Unidad</Label>
-                <SelectCrear
-                  value={unidades.find((u) => u.nombre === unidad)?.id ?? ""}
-                  onChange={(id) => setUnidad(unidades.find((u) => u.id === id)?.nombre ?? unidad)}
-                  opciones={unidades}
-                  endpoint="/api/unidades-medida"
-                  placeholder={unidad ? unidad : "Selecciona una unidad…"}
-                  etiquetaCrear="+ Crear unidad"
-                  onCreado={(nueva) => {
-                    setUnidades((prev) => [...prev, nueva]);
-                    setUnidad(nueva.nombre);
-                  }}
-                />
-              </div>
-              <div>
-                <Label>Precio base (CLP)</Label>
-                <InputMonto required value={precioBase} onChange={setPrecioBase} moneda={usuario.moneda} />
-              </div>
-              {tipo === "producto" && !editandoId && (
-                <div>
-                  <Label className="flex items-center gap-1.5">
-                    Stock inicial (opcional)
-                    <span title="Cantidad con la que arranca este producto. Después, ajustá el stock desde Inventario para mantener el historial de movimientos.">
-                      <IconHelp className="h-3.5 w-3.5 text-muted" />
-                    </span>
-                  </Label>
-                  <Input type="number" min="0" step="1" value={stockInicial} onChange={(e) => setStockInicial(e.target.value)} />
-                </div>
-              )}
-              {tipo === "producto" && (
-                <div>
-                  <Label className="flex items-center gap-1.5">
-                    Stock mínimo (opcional)
-                    <span title="Cuando el stock baja de este número, el producto se marca como 'Stock bajo'. Vacío = usa el mínimo por defecto de la empresa (Configuración → Inventario).">
-                      <IconHelp className="h-3.5 w-3.5 text-muted" />
-                    </span>
-                  </Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    step="1"
-                    placeholder={`Por defecto: ${stockMinimoDefault}`}
-                    value={stockMinimo}
-                    onChange={(e) => setStockMinimo(e.target.value)}
-                  />
-                </div>
-              )}
-            </div>
 
-            {tipo === "kit" && (
-              <div className="rounded-lg border border-border p-4">
-                <p className="mb-3 text-sm font-medium text-foreground">Ítems del kit</p>
-                <div className="flex flex-col gap-2">
-                  {kitItems.map((k, idx) => (
-                    <div key={idx} className="flex items-center gap-2">
-                      <div className="min-w-0 flex-1">
-                        <Combobox
-                          value={k.item_id}
-                          onChange={(id) => cambiarItemKit(idx, { item_id: id })}
-                          opciones={disponiblesParaKit.map((it) => ({
-                            id: it.id,
-                            label: `${TIPO_ETIQUETA[it.tipo]} — ${it.nombre}`,
-                          }))}
-                          placeholder="Buscar ítem del catálogo…"
-                        />
-                      </div>
-                      <div className="w-24">
-                        <Input
-                          type="number"
-                          min="0.01"
-                          step="0.01"
-                          value={k.cantidad}
-                          onChange={(e) => cambiarItemKit(idx, { cantidad: e.target.value })}
-                        />
-                      </div>
-                      <Button type="button" variant="ghost" onClick={() => quitarItemKit(idx)}>
-                        Quitar
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-                <Button type="button" variant="outline" onClick={agregarItemKit} className="mt-3">
-                  <IconPlus className="h-4 w-4" />
-                  Agregar ítem al kit
+              {formError ? <p className="font-ds-body text-ds-small text-ds-accent-700">{formError}</p> : null}
+              <div className="flex gap-ds-2">
+                <Button tipo="submit" cargando={guardando}>
+                  {editandoId ? "Guardar cambios" : "Agregar ítem"}
+                </Button>
+                <Button variante="ghost" onPress={() => setFormAbierto(false)}>
+                  Cancelar
                 </Button>
               </div>
-            )}
-
-            <div>
-              <Label className="flex items-center gap-1.5">
-                Aplica a tipo(s) de equipo (opcional)
-                <span title="Al armar una OS/Cotización con un equipo asociado, estos ítems se destacan primero — no oculta el resto del catálogo.">
-                  <IconHelp className="h-3.5 w-3.5 text-muted" />
-                </span>
-              </Label>
-              <div className="mt-1.5 flex flex-wrap gap-1.5">
-                {tiposEquipoDisponibles.map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => alternarTipoEquipo(t)}
-                    className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-colors ${
-                      tiposEquipo.includes(t) ? "border-brand bg-brand-soft text-brand" : "border-border text-muted hover:border-muted-soft"
-                    }`}
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {formError && <ErrorText>{formError}</ErrorText>}
-            <div className="flex gap-2">
-              <Button type="submit" disabled={guardando} className="self-start">
-                {guardando ? "Guardando…" : editandoId ? "Guardar cambios" : "Agregar ítem"}
-              </Button>
-              <Button type="button" variant="ghost" onClick={() => setFormAbierto(false)}>
-                Cancelar
-              </Button>
-            </div>
-          </form>
-        </Card>
-      )}
-      {aviso && (
-        <div className="mb-6">
-          <SuccessText>{aviso}</SuccessText>
+            </form>
+          </Card>
         </div>
       )}
+      {aviso ? <p className="mb-ds-6 font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}
 
-      <div className="mb-4 flex flex-col gap-3">
-        <Input type="text" placeholder="Buscar en el catálogo..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} className="max-w-sm" />
-        <div className="flex gap-1 border-b border-border">
+      <div className="mb-ds-4 flex flex-col gap-ds-3">
+        <div className="max-w-sm">
+          <Input placeholder="Buscar en el catálogo..." valor={busqueda} onCambio={setBusqueda} />
+        </div>
+        <div className="flex gap-ds-1 border-b border-ds-divider">
           {TABS.map((t) => (
             <button
               key={t.valor}
               type="button"
               onClick={() => setTab(t.valor)}
-              className={`px-4 py-2.5 text-sm font-medium transition-colors ${
-                tab === t.valor ? "border-b-2 border-brand text-brand" : "text-muted hover:text-foreground"
+              className={`px-ds-4 py-2.5 font-ds-body text-ds-small font-medium transition-colors ${
+                tab === t.valor ? "border-b-2 border-ds-brand text-ds-brand" : "text-ds-text/60 hover:text-ds-text"
               }`}
             >
               {t.etiqueta} ({contadores[t.valor]})
@@ -453,12 +443,12 @@ export default function CatalogoPage() {
           ))}
         </div>
         {categorias.length > 0 && (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-ds-2">
             <button
               type="button"
               onClick={() => setCategoriaFiltro(null)}
-              className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                categoriaFiltro === null ? "border-brand bg-brand-soft text-brand" : "border-border text-muted hover:border-muted-soft"
+              className={`rounded-ds-pill border px-ds-3 py-1 font-ds-body text-ds-caption font-medium transition-colors ${
+                categoriaFiltro === null ? "border-ds-brand bg-ds-brand/[0.08] text-ds-brand" : "border-ds-divider text-ds-text/70 hover:border-ds-text/30"
               }`}
             >
               Todas las categorías
@@ -468,8 +458,8 @@ export default function CatalogoPage() {
                 key={c}
                 type="button"
                 onClick={() => setCategoriaFiltro(categoriaFiltro === c ? null : c)}
-                className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                  categoriaFiltro === c ? "border-brand bg-brand-soft text-brand" : "border-border text-muted hover:border-muted-soft"
+                className={`rounded-ds-pill border px-ds-3 py-1 font-ds-body text-ds-caption font-medium transition-colors ${
+                  categoriaFiltro === c ? "border-ds-brand bg-ds-brand/[0.08] text-ds-brand" : "border-ds-divider text-ds-text/70 hover:border-ds-text/30"
                 }`}
               >
                 {c}
@@ -479,93 +469,90 @@ export default function CatalogoPage() {
         )}
       </div>
 
-      {error && <ErrorText>{error}</ErrorText>}
-      {items === null && !error && <EstadoCargando />}
+      {error ? <ErrorState mensaje={error} /> : null}
+      {items === null && !error ? <LoadingState /> : null}
 
       {items?.length === 0 && (
-        <EstadoVacio
-          icono={IconLayers}
+        <EmptyState
+          icono={<Layers size={28} strokeWidth={2.75} />}
           titulo="Ningún ítem en el catálogo"
           mensaje="Agrega tu primer producto, servicio o kit"
-          accion={<Button type="button" onClick={abrirNuevo}>
-              <IconPlus className="h-4 w-4" />
+          accion={
+            <Button iconoIzq={<Plus size={16} strokeWidth={2.75} />} onPress={abrirNuevo}>
               Nuevo Ítem
-            </Button>}
+            </Button>
+          }
         />
       )}
 
       {items && items.length > 0 && filtrados.length === 0 && (
-        <EstadoVacio icono={IconLayers} titulo="Ningún ítem coincide con la búsqueda o el filtro" />
+        <EmptyState icono={<Layers size={28} strokeWidth={2.75} />} titulo="Ningún ítem coincide con la búsqueda o el filtro" />
       )}
 
       {filtrados.length > 0 && (
-        <Card className="overflow-x-auto p-0">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
-                <th className="px-5 py-3 font-medium">Tipo</th>
-                <th className="px-5 py-3 font-medium">Ítem</th>
-                <th className="px-5 py-3 font-medium">SKU</th>
-                <th className="px-5 py-3 font-medium">Categoría</th>
-                <th className="px-5 py-3 font-medium">Unidad</th>
-                <th className="px-5 py-3 font-medium">Precio Base</th>
-                <th className="px-5 py-3 font-medium">Stock</th>
-                <th className="px-5 py-3 font-medium">Estado</th>
-                <th className="px-5 py-3 font-medium">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtrados.map((i) => (
-                <tr key={i.id} className="border-b border-border-soft last:border-0 hover:bg-surface-sunken">
-                  <td className="px-5 py-3">
-                    <span className="flex items-center gap-1.5">
-                      {(() => {
-                        const Icono = ICONO_TIPO[i.tipo];
-                        return <Icono className="h-4 w-4 text-muted" />;
-                      })()}
-                      <Badge value={i.tipo} />
-                    </span>
-                  </td>
-                  <td className="px-5 py-3 font-medium text-foreground">
-                    {i.nombre}
-                    {i.tipo === "kit" && i.items && i.items.length > 0 && (
-                      <p className="mt-0.5 text-xs font-normal text-muted">
-                        {i.items.map((k) => `${k.cantidad}× ${k.nombre}`).join(", ")}
-                      </p>
-                    )}
-                  </td>
-                  <td className="px-5 py-3 text-muted">{i.sku || "—"}</td>
-                  <td className="px-5 py-3 text-muted">{i.categoria || "—"}</td>
-                  <td className="px-5 py-3 text-muted">{i.unidad}</td>
-                  <td className="px-5 py-3 text-foreground">{formatMoneda(i.precio_base, usuario.moneda)}</td>
-                  <td className="px-5 py-3">
-                    {i.tipo === "producto" && i.stock_actual != null ? (
-                      <span className="flex items-center gap-1.5">
-                        <Badge value={estadoStock(i, stockMinimoDefault)} />
-                        <span className="text-xs text-muted">{i.stock_actual}</span>
-                      </span>
-                    ) : (
-                      <span className="text-muted">—</span>
-                    )}
-                  </td>
-                  <td className="px-5 py-3">
-                    <Badge value={i.activo ? "activo" : "inactivo"} />
-                  </td>
-                  <td className="px-5 py-3">
-                    <div className="flex gap-2">
-                      <Button type="button" variant="outline" onClick={() => abrirEdicion(i)}>
-                        Editar
-                      </Button>
-                      <Button type="button" variant="ghost" onClick={() => onAlternarActivo(i)}>
-                        {i.activo ? "Desactivar" : "Activar"}
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
+        <Table<ItemConKit>
+          filas={filtrados}
+          claveFila={(i) => i.id}
+          vacio={{ titulo: "Ningún ítem coincide con la búsqueda o el filtro" }}
+          columnas={[
+            {
+              encabezado: "Tipo",
+              celda: (i) => {
+                const Icono = ICONO_TIPO[i.tipo];
+                return (
+                  <span className="flex items-center gap-1.5">
+                    <Icono size={16} strokeWidth={2.75} className="text-ds-text/60" />
+                    <Tag>{TIPO_ETIQUETA[i.tipo]}</Tag>
+                  </span>
+                );
+              },
+            },
+            {
+              encabezado: "Ítem",
+              celda: (i) => (
+                <>
+                  {i.nombre}
+                  {i.tipo === "kit" && i.items && i.items.length > 0 && (
+                    <p className="mt-0.5 font-ds-body text-ds-caption font-normal text-ds-text/60">
+                      {i.items.map((k) => `${k.cantidad}× ${k.nombre}`).join(", ")}
+                    </p>
+                  )}
+                </>
+              ),
+            },
+            { encabezado: "SKU", celda: (i) => i.sku || "—" },
+            { encabezado: "Categoría", celda: (i) => i.categoria || "—" },
+            { encabezado: "Unidad", celda: (i) => i.unidad },
+            { encabezado: "Precio Base", celda: (i) => formatMoneda(i.precio_base, usuario.moneda) },
+            {
+              encabezado: "Stock",
+              celda: (i) => {
+                if (i.tipo !== "producto" || i.stock_actual == null) return <span className="text-ds-text/60">—</span>;
+                const estado = estadoStock(i, stockMinimoDefault);
+                return (
+                  <span className="flex items-center gap-1.5">
+                    <StatusBadge estado={estado} etiqueta={ETIQUETA_ESTADO_STOCK[estado]} tonoForzado={TONO_STOCK[estado]} />
+                    <span className="font-ds-body text-ds-caption text-ds-text/60">{i.stock_actual}</span>
+                  </span>
+                );
+              },
+            },
+            { encabezado: "Estado", celda: (i) => <StatusBadge estado={i.activo ? "activo" : "inactivo"} /> },
+            {
+              encabezado: "Acciones",
+              celda: (i) => (
+                <div className="flex gap-ds-2">
+                  <Button variante="secundario" onPress={() => abrirEdicion(i)}>
+                    Editar
+                  </Button>
+                  <Button variante="ghost" onPress={() => onAlternarActivo(i)}>
+                    {i.activo ? "Desactivar" : "Activar"}
+                  </Button>
+                </div>
+              ),
+            },
+          ]}
+        />
       )}
     </DashboardShell>
   );
