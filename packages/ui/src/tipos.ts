@@ -75,3 +75,95 @@ export type PropsDatePicker = PropsCampoBase & {
   minimo?: Date;
   maximo?: Date;
 };
+
+// ── Card ────────────────────────────────────────────────────────────
+export type Elevacion = "sm" | "md" | "lg";
+
+export type PropsCard = {
+  children: ReactNode;
+  onPress?: () => void;
+  elevacion?: Elevacion;
+  /** Sin padding interno (para envolver una tabla, por ejemplo). */
+  sinRelleno?: boolean;
+};
+
+/** radius.lg (28) × 1.15 — solo para Card, no es un token de tokens.json. */
+export const RADIO_CARD = 32;
+
+// ── Tag / Badge (tonal, de uso libre) ──────────────────────────────
+export type TonoTag = "accent" | "accent2" | "neutral" | "outline";
+
+export type PropsTag = {
+  children: ReactNode;
+  tono?: TonoTag;
+};
+
+// ── StatusBadge (semántico, un estado de dominio → un tono fijo) ──
+// Solo 4 tonos, tal como los define el prompt. Para roles, prioridad o
+// canal (que no son "estados" en el sentido de ciclo de vida) usá <Tag>
+// con el tono que corresponda — no fuerces esos casos en este mapa.
+export type TonoEstado = "en_progreso" | "completado" | "cerrado" | "cancelado";
+
+export type PropsStatusBadge = {
+  /** Valor crudo del dominio (ej. "en_curso", "firmada", "cancelada"). */
+  estado: string;
+  /** Texto a mostrar; por defecto `estado` con "_" → " ". */
+  etiqueta?: string;
+  /**
+   * Fuerza el tono cuando `estado` no está en MAPA_ESTADO_TONO (evita que
+   * un valor no mapeado caiga en el fallback "cerrado" por descuido).
+   */
+  tonoForzado?: TonoEstado;
+};
+
+/**
+ * Fuente única del mapa estado→tono. Consolida lo que antes estaba
+ * repetido en 5 lugares (web ui.tsx TONO_DE_ESTADO, EstadoCitaRiel,
+ * mobile ui/Badge.tsx POR_ESTADO, TareaDetalleScreen,
+ * DetalleReservaCosmetologia — ver docs/design-audit.md §3).
+ *
+ * Solo entran acá los estados de CICLO DE VIDA que caen sin forzar en uno
+ * de los 4 tonos. Roles (admin/colaborador…), prioridad (alta/media/baja)
+ * y canal (correo/whatsapp) NO son estados — quedan para <Tag>. Un estado
+ * ambiguo (ej. "pendiente", "borrador") tampoco entra: usá `tonoForzado`
+ * en el call-site en vez de adivinar.
+ */
+export const MAPA_ESTADO_TONO: Record<string, TonoEstado> = {
+  // en_progreso — accentRamp.200/800
+  en_curso: "en_progreso",
+  en_proceso: "en_progreso",
+  agendado: "en_progreso",
+  // completado — accent2Ramp.200/800
+  completado: "completado",
+  completada: "completado",
+  firmada: "completado",
+  pagada: "completado",
+  pagado: "completado",
+  aprobado: "completado",
+  confirmado: "completado",
+  confirmada: "completado",
+  vigente: "completado",
+  exitoso: "completado",
+  exito: "completado",
+  disponible: "completado",
+  activo: "completado",
+  activa: "completado",
+  entrada: "completado",
+  // cerrado — neutral.300/900
+  convertido: "cerrado",
+  cerrado: "cerrado",
+  inactivo: "cerrado",
+  dada_de_baja: "cerrado",
+  expirado: "cerrado",
+  // cancelado — neutral.200/700
+  cancelado: "cancelado",
+  cancelada: "cancelado",
+  rechazado: "cancelado",
+  vencida: "cancelado",
+  vencido: "cancelado",
+  no_asistio: "cancelado",
+  sin_stock: "cancelado",
+  fallido: "cancelado",
+  agotado: "cancelado",
+  salida: "cancelado",
+};

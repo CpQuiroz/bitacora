@@ -124,5 +124,20 @@ workspace root).
   app). `DatePicker` nativo reusa el patrón ya establecido en
   `SelectorHora.tsx` (Android: diálogo nativo; iOS: modal propio con
   Listo/Cancelar), con `@react-native-community/datetimepicker` (ya era dep).
-- Siguientes: Card → Tag/Badge/StatusBadge → Table (web) → Dialog/Sheet →
-  Empty/Loading/ErrorState → Toast.
+- **`Card`** ✅ — fondo `surface`, `border-radius: 32px` (`radius.lg × 1.15`,
+  no es un token de `tokens.json` — ver `RADIO_CARD`), `elevacion?`
+  sm/md/lg opcional (`shadow-ds-*` en web, shadow+elevation en RN). Sin
+  bordes de 1px decorativos.
+- **`Tag`** ✅ — pill, 11px, `tracking 0.02em`. Tonos `accent`/`accent2`/
+  `neutral`/`outline`. De uso libre (roles, prioridad, canal…).
+- **`StatusBadge`** ✅ — **un solo mapa** `estado → tono` en
+  `packages/ui/src/tipos.ts` (`MAPA_ESTADO_TONO`), consolidando lo que
+  antes estaba repetido en 5 lugares (ver `docs/design-audit.md` §3). Solo
+  4 tonos fijos: `en_progreso` (accentRamp.200/800), `completado`
+  (accent2Ramp.200/800), `cerrado` (neutral.300/900), `cancelado`
+  (neutral.200/700). **Alcance deliberado:** solo entran estados de ciclo
+  de vida que caen sin forzar en uno de los 4 — roles/prioridad/canal
+  siguen siendo `<Tag>`, y un estado ambiguo (`pendiente`, `borrador`) usa
+  `tonoForzado` en el call-site en vez de adivinar. Terminar de mapear
+  cada estado real de cada pantalla es trabajo del Paso 6.
+- Siguientes: Table (web) → Dialog/Sheet → Empty/Loading/ErrorState → Toast.
