@@ -437,11 +437,25 @@ por archivo):
 
 `scripts/check-colores.mjs`: BASELINE 15→14 (bajó solo).
 
+### "Homologar todo" — grupo de nav "Recursos" ✅
+
+`registros/proveedores`, `registros/inventario`, `registros/catalogo`,
+`registros/equipos` (listado + ficha + dashboard +
+`RegistrosMantencion.tsx`, el formulario grande de checklist con
+fotos).
+
+- `DocumentoForm.tsx` migrado de paso (compartido con `perfil` y
+  `personas/[id]`, que se actualizan cuando les toque su bucket).
+- Gap real: `Select`/`Input` (ds-) no aceptan `id` — un `<label
+  htmlFor>` externo (patrón de `DocumentoForm`) queda sin enlace
+  programático al control. Impacto visual nulo, gap de accesibilidad
+  real — documentado inline, no resuelto en el primitivo compartido
+  sin discutirlo antes.
+- `scripts/check-colores.mjs`: BASELINE 14→13 (bajó solo).
+
 ### Resto del orden del prompt
 
-5) Catálogo y stock · 6) Configuración · 7) resto — pendientes.
-Además, el pedido de la usuaria de homologar TODO suma: Agenda,
-Financiero (cotizaciones/cobros/gastos/remuneraciones), Recursos
-(equipos/inventario/catálogo/proveedores), Equipo (personas/documentos),
+6) Configuración · 7) resto — pendientes. Además, el pedido de la
+usuaria de homologar TODO suma: Agenda, Equipo (personas/documentos),
 Informes (9 páginas + charts) y las ~14 subpáginas de Configuración —
 ver "Alcance real descubierto" más arriba.

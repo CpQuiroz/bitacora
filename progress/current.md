@@ -63,13 +63,12 @@ aparte — la usuaria habló de "la shell" en el contexto web.
 
 ## Próximo paso
 
-"Operación" ✅, "Clientes" ✅ y "Dinero" ✅ (Cotizaciones, Cobros,
-Gastos, Liquidaciones) migrados y comiteados (9 commits desde que
-empezó "homologar todo"). `Stat.tsx` nuevo componente compartido
-(no es de packages/ui). Sigue "Recursos" (equipos, inventario,
-catálogo, proveedores) y de ahí Equipo → Informes → Configuración.
-Agenda queda para más adelante (usa `DataTable`/`EstadoCitaRiel`,
-sin migrar todavía).
+"Operación" ✅, "Clientes" ✅, "Dinero" ✅ y "Recursos" ✅ migrados y
+comiteados (13 commits desde que empezó "homologar todo"). `Stat.tsx`
+y `DocumentoForm.tsx` migrados de paso (compartidos). Sigue "Equipo"
+(personas, documentos-por-vencer) → Informes (9 páginas + charts) →
+Configuración (~14 subpáginas). Agenda queda para más adelante (usa
+`DataTable`/`EstadoCitaRiel`, sin migrar todavía).
 
 ## Pendiente / notas generales
 
