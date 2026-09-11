@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, Camera, Plus, Receipt, Truck, X } from "lucide-react";
+import { ChevronDown, Camera, Eye, Plus, Receipt, Truck, X } from "lucide-react";
 import type { Equipo, Proveedor, RegistroMantencionEquipo, RespuestaChecklistMantencion } from "@bitacora/shared";
 import { MANTENCION_EXIGE_FOTO_EN_NO } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
@@ -28,6 +28,7 @@ const OPCIONES: { valor: RespuestaChecklistMantencion; texto: string }[] = [
   { valor: "no", texto: "NO" },
   { valor: "na", texto: "N/A" },
 ];
+const respuestaTexto: Record<RespuestaChecklistMantencion, string> = { si: "Sí", no: "No", na: "N/A" };
 
 const clave = (s: string, i: string) => `${s}||${i}`;
 const fechaCL = (iso: string | null | undefined) => {
@@ -49,6 +50,7 @@ export function RegistrosMantencion({ equipo, puedeGestionar }: { equipo: Equipo
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
   const [modalAbierto, setModalAbierto] = useState(false);
+  const [detalleId, setDetalleId] = useState<string | null>(null);
 
   const cargar = useCallback(async () => {
     if (!puedeGestionar) {
@@ -177,14 +179,24 @@ export function RegistrosMantencion({ equipo, puedeGestionar }: { equipo: Equipo
                         </span>
                       </td>
                       <td className="px-ds-4 py-ds-3">
-                        <button
-                          type="button"
-                          onClick={() => abrirPdfRegistroMantencion(equipo.id, r.id)}
-                          aria-label="Ver PDF del registro"
-                          className="flex h-7 w-7 items-center justify-center rounded-ds-sm border border-ds-divider text-ds-text/60 transition-colors hover:border-ds-brand hover:text-ds-brand"
-                        >
-                          <Receipt size={16} strokeWidth={2.75} />
-                        </button>
+                        <div className="flex gap-ds-2">
+                          <button
+                            type="button"
+                            onClick={() => setDetalleId(r.id)}
+                            aria-label="Ver detalle y fotos"
+                            className="flex h-7 w-7 items-center justify-center rounded-ds-sm border border-ds-divider text-ds-text/60 transition-colors hover:border-ds-brand hover:text-ds-brand"
+                          >
+                            <Eye size={16} strokeWidth={2.75} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => abrirPdfRegistroMantencion(equipo.id, r.id)}
+                            aria-label="Ver PDF del registro"
+                            className="flex h-7 w-7 items-center justify-center rounded-ds-sm border border-ds-divider text-ds-text/60 transition-colors hover:border-ds-brand hover:text-ds-brand"
+                          >
+                            <Receipt size={16} strokeWidth={2.75} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -204,6 +216,183 @@ export function RegistrosMantencion({ equipo, puedeGestionar }: { equipo: Equipo
           }}
         />
       </Modal>
+
+      <Modal open={detalleId != null} onClose={() => setDetalleId(null)} title="Detalle del registro" xl>
+        {detalleId && <DetalleRegistro equipoId={equipo.id} registroId={detalleId} onCambio={cargar} />}
+      </Modal>
+    </div>
+  );
+}
+
+// ============================================================
+// Detalle de un registro ya creado — checklist + fotos (agregar/
+// eliminar). El registro en sí (checklist, km, firma) sigue sin poder
+// editarse acá; solo las fotos de respaldo, a pedido de la usuaria
+// (2026-09-11).
+// ============================================================
+type FotoDetalle = { id: string; url: string; item: string | null; creado_en: string };
+type DetalleRegistroData = RegistroConRelaciones & { fotos: FotoDetalle[]; firma_url_firmada: string | null };
+
+function DetalleRegistro({ equipoId, registroId, onCambio }: { equipoId: string; registroId: string; onCambio: () => void }) {
+  const [datos, setDatos] = useState<DetalleRegistroData | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [subiendo, setSubiendo] = useState(false);
+  const [eliminandoId, setEliminandoId] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const cargar = useCallback(async () => {
+    setError(null);
+    const res = await apiFetch(`/api/equipos/${equipoId}/registros-mantencion/${registroId}`);
+    if (!res.ok) {
+      setError("No se pudo cargar el detalle del registro.");
+      return;
+    }
+    setDatos(await res.json());
+  }, [equipoId, registroId]);
+
+  useEffect(() => {
+    cargar();
+  }, [cargar]);
+
+  async function subirFoto(archivo: File) {
+    setSubiendo(true);
+    setError(null);
+    const fd = new FormData();
+    fd.append("foto", archivo);
+    const res = await apiFetch(`/api/equipos/${equipoId}/registros-mantencion/${registroId}/fotos`, { method: "POST", body: fd });
+    setSubiendo(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setError(body.error ?? "No se pudo subir la foto");
+      return;
+    }
+    await cargar();
+    onCambio();
+  }
+
+  async function eliminarFoto(fotoId: string) {
+    if (!window.confirm("¿Eliminar esta foto de respaldo?")) return;
+    setEliminandoId(fotoId);
+    const res = await apiFetch(`/api/equipos/${equipoId}/registros-mantencion/${registroId}/fotos/${fotoId}`, { method: "DELETE" });
+    setEliminandoId(null);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setError(body.error ?? "No se pudo eliminar la foto");
+      return;
+    }
+    await cargar();
+    onCambio();
+  }
+
+  if (error && !datos) return <ErrorState mensaje={error} onReintentar={cargar} />;
+  if (!datos) return <LoadingState />;
+
+  // Agrupa el checklist por sección, respetando el orden de aparición.
+  const ordenSecciones: string[] = [];
+  const porSeccion = new Map<string, typeof datos.checklist>();
+  for (const it of datos.checklist ?? []) {
+    if (!porSeccion.has(it.seccion)) {
+      porSeccion.set(it.seccion, []);
+      ordenSecciones.push(it.seccion);
+    }
+    porSeccion.get(it.seccion)!.push(it);
+  }
+
+  return (
+    <div className="flex flex-col gap-ds-5">
+      <div className="grid gap-ds-3 sm:grid-cols-2">
+        <div>
+          <p className="font-ds-body text-ds-caption font-medium text-ds-text/70">Fecha</p>
+          <p className="font-ds-body text-ds-small text-ds-text">{fechaCL(datos.fecha)}</p>
+        </div>
+        <div>
+          <p className="font-ds-body text-ds-caption font-medium text-ds-text/70">Tipo</p>
+          <p className="font-ds-body text-ds-small text-ds-text">{datos.tipo === "programa" ? "Programa" : "Diario"} · {datos.origen === "externo" ? (datos.proveedor?.nombre ?? "Taller externo") : (datos.responsable?.nombre ?? "—")}</p>
+        </div>
+        <div>
+          <p className="font-ds-body text-ds-caption font-medium text-ds-text/70">Kilometraje / horas motor</p>
+          <p className="font-ds-body text-ds-small text-ds-text">
+            {datos.kilometraje != null ? `${Number(datos.kilometraje).toLocaleString("es-CL")} km` : "—"}
+            {datos.horas_motor != null ? ` · ${Number(datos.horas_motor).toLocaleString("es-CL")} h` : ""}
+          </p>
+        </div>
+        {datos.observaciones && (
+          <div className="sm:col-span-2">
+            <p className="font-ds-body text-ds-caption font-medium text-ds-text/70">Observaciones</p>
+            <p className="font-ds-body text-ds-small text-ds-text">{datos.observaciones}</p>
+          </div>
+        )}
+      </div>
+
+      <div>
+        <p className="mb-ds-2 font-ds-body text-ds-small font-semibold text-ds-text">Checklist</p>
+        <div className="flex flex-col gap-ds-3">
+          {ordenSecciones.map((seccion) => (
+            <div key={seccion}>
+              <p className="mb-ds-1 font-ds-body text-ds-caption font-semibold uppercase tracking-wide text-ds-text/60">{seccion}</p>
+              <div className="flex flex-col gap-1">
+                {porSeccion.get(seccion)!.map((it, i) => (
+                  <div key={i} className="flex items-center justify-between gap-ds-3 font-ds-body text-ds-small">
+                    <span className="text-ds-text">{it.item}</span>
+                    <span
+                      className={`rounded-ds-sm px-2 py-0.5 text-[11px] font-semibold ${
+                        it.respuesta === "no" ? "bg-ds-accent-100 text-ds-accent-800" : it.respuesta === "si" ? "bg-ds-accent2-100 text-ds-accent2-800" : "bg-ds-text/[0.06] text-ds-text/60"
+                      }`}
+                    >
+                      {respuestaTexto[it.respuesta]}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <div className="mb-ds-2 flex items-center justify-between">
+          <p className="font-ds-body text-ds-small font-semibold text-ds-text">Fotos de respaldo</p>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="hidden"
+            onChange={(e) => {
+              const archivo = e.target.files?.[0];
+              if (archivo) subirFoto(archivo);
+              e.target.value = "";
+            }}
+          />
+          <Button variante="secundario" tamano="sm" iconoIzq={<Camera size={16} strokeWidth={2.75} />} cargando={subiendo} onPress={() => fileRef.current?.click()}>
+            Agregar foto
+          </Button>
+        </div>
+        {datos.fotos.length > 0 ? (
+          <div className="grid grid-cols-3 gap-ds-3 sm:grid-cols-4">
+            {datos.fotos.map((f) => (
+              <div key={f.id} className="group relative">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <a href={f.url} target="_blank" rel="noopener noreferrer">
+                  <img src={f.url} alt={f.item ?? "Foto de respaldo"} className="aspect-square w-full rounded-ds-md border border-ds-divider object-cover" />
+                </a>
+                {f.item && <span className="absolute inset-x-0 bottom-0 truncate rounded-b-ds-md bg-ds-text/[0.7] px-1.5 py-0.5 text-[10px] text-white">{f.item}</span>}
+                <button
+                  type="button"
+                  onClick={() => eliminarFoto(f.id)}
+                  disabled={eliminandoId === f.id}
+                  className="absolute right-1.5 top-1.5 rounded-ds-pill bg-ds-accent-700 px-2 py-0.5 font-ds-body text-[11px] font-medium text-white opacity-0 transition-opacity group-hover:opacity-100 disabled:opacity-50"
+                >
+                  {eliminandoId === f.id ? "…" : "Eliminar"}
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="font-ds-body text-ds-small text-ds-text/70">Todavía no hay fotos de respaldo.</p>
+        )}
+      </div>
+
+      {error ? <p className="font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
     </div>
   );
 }
@@ -235,8 +424,15 @@ function ModalNuevoRegistro({ equipo, onListo }: { equipo: Equipo; onListo: () =
 
   useEffect(() => {
     (async () => {
+      // Sin equipoId a propósito: la ruta es /api/equipos/registros-mantencion/plantilla
+      // (registrosMantencion.ts la registra ANTES de las rutas con :equipoId
+      // justamente para no chocar con ellas). Bug real encontrado en vivo
+      // (2026-09-11): esto tenía ${equipo.id} de más, matcheaba contra
+      // GET /:equipoId/registros-mantencion/:id con id="plantilla" y
+      // rompía con 500 (uuid inválido) — el modal de "Nuevo registro"
+      // nunca llegaba a cargar, así que tampoco se podía subir una foto.
       const [resP, resProv] = await Promise.all([
-        apiFetch(`/api/equipos/${equipo.id}/registros-mantencion/plantilla`),
+        apiFetch(`/api/equipos/registros-mantencion/plantilla`),
         apiFetch("/api/proveedores"),
       ]);
       if (resP.ok) setPlantilla(await resP.json());

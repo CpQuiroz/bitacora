@@ -7,9 +7,14 @@
 //   * chofer: solo su vehículo asignado hoy; el historial completo con
 //     filtros NO (usa GET /api/usuarios/me/vehiculo/registros-mantencion).
 //
-// Registros INMUTABLES: no hay PATCH ni DELETE. El PDF se genera de
-// forma perezosa en el primer GET .../pdf y se cachea; subir una foto
-// después invalida ese caché (pdf_url → null).
+// Registros INMUTABLES en su contenido (checklist, km, firma, etc.): no
+// hay PATCH ni DELETE del registro en sí. Las fotos de respaldo son la
+// única excepción — se pueden agregar (POST .../fotos) y quitar (DELETE
+// .../fotos/:fotoId) después de creado el registro, a pedido de la
+// usuaria (2026-09-11): permite corregir/completar evidencia sin
+// habilitar edición del contenido auditado. El PDF se genera de forma
+// perezosa en el primer GET .../pdf y se cachea; agregar o quitar una
+// foto invalida ese caché (pdf_url → null).
 // ============================================================
 import { Router } from "express";
 import multer from "multer";
@@ -549,6 +554,54 @@ registrosMantencionRouter.post(
     await supabase.from("registros_mantencion_equipo").update({ pdf_url: null }).eq("id", id);
 
     res.status(201).json({ ...foto, url: await urlFirmada(key, 15) });
+  })
+);
+
+// ------------------------------------------------------------
+// DELETE /:equipoId/registros-mantencion/:id/fotos/:fotoId — elimina una
+// foto de respaldo puntual. El registro en sí sigue inmutable (checklist,
+// km, firma, etc. no tienen PATCH ni DELETE) — esto es una excepción
+// acotada a las fotos, mismo criterio que POST .../fotos arriba: se
+// puede seguir completando/corrigiendo la evidencia fotográfica después
+// de creado el registro. Invalida el PDF cacheado igual que el POST.
+// ------------------------------------------------------------
+registrosMantencionRouter.delete(
+  "/:equipoId/registros-mantencion/:id/fotos/:fotoId",
+  ah<RequestConEmpresa>(async (req, res) => {
+    const { equipoId, id, fotoId } = req.params;
+    if (!(await puedeSobreEquipo(req, equipoId))) {
+      res.status(403).json({ error: "No puedes editar este registro" });
+      return;
+    }
+    const { data: registro } = await supabase
+      .from("registros_mantencion_equipo")
+      .select("id")
+      .eq("empresa_id", req.empresaId!)
+      .eq("equipo_id", equipoId)
+      .eq("id", id)
+      .maybeSingle();
+    if (!registro) {
+      res.status(404).json({ error: "Registro no encontrado" });
+      return;
+    }
+    const { data: foto } = await supabase
+      .from("registro_mantencion_fotos")
+      .select("id")
+      .eq("empresa_id", req.empresaId!)
+      .eq("registro_id", id)
+      .eq("id", fotoId)
+      .maybeSingle();
+    if (!foto) {
+      res.status(404).json({ error: "Foto no encontrada" });
+      return;
+    }
+    const { error } = await supabase.from("registro_mantencion_fotos").delete().eq("empresa_id", req.empresaId!).eq("id", foto.id);
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    await supabase.from("registros_mantencion_equipo").update({ pdf_url: null }).eq("id", id);
+    res.status(204).end();
   })
 );
 

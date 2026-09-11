@@ -51,6 +51,7 @@ export type MasStackParamList = {
   MantencionVehiculo: undefined;
   ChecklistMantencion: { equipoId: string; tipo: "diario" | "programa"; patente: string | null };
   MantencionHistorial: { equipoId: string; patente: string | null };
+  MantencionDetalle: { equipoId: string; registroId: string };
   CobrosLista: undefined;
   CobroForm: undefined;
   CobroDetalle: { cobroId: string };

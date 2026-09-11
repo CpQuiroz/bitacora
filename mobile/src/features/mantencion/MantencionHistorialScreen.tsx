@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useState } from "react";
-import { ScrollView, View } from "react-native";
+import { Pressable, ScrollView, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useTema } from "../../theme";
@@ -54,8 +54,9 @@ export function MantencionHistorialScreen({ route, navigation }: NativeStackScre
     <ScrollView style={{ flex: 1, backgroundColor: t.colores.bg }} contentContainerStyle={{ padding: t.espacio(4) }}>
       <View style={{ borderTopWidth: 1, borderTopColor: t.colores.border }}>
         {(registros ?? []).map((r) => (
-          <View
+          <Pressable
             key={r.id}
+            onPress={() => navigation.navigate("MantencionDetalle", { equipoId, registroId: r.id })}
             style={{
               paddingVertical: t.espacio(3),
               borderBottomWidth: 1,
@@ -87,7 +88,7 @@ export function MantencionHistorialScreen({ route, navigation }: NativeStackScre
               {r.realizado_por_nombre ? ` · ${r.realizado_por_nombre}` : ""}
               {r.kilometraje != null ? ` · ${r.kilometraje.toLocaleString("es-CL")} km` : ""}
             </Text>
-          </View>
+          </Pressable>
         ))}
       </View>
     </ScrollView>

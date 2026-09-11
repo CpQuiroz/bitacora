@@ -1,6 +1,7 @@
 # Sesión actual
 
-- **Tarea en curso:** 9 — edicion_viajes_y_fotos_os (ver detalle abajo)
+- **Tarea en curso:** 10 — fotos_mantencion_equipo (ver detalle abajo)
+- **Cerrada esta sesión:** 9 — edicion_viajes_y_fotos_os
 - **Pausada:** 8 — sistema_diseno (pending, no abandonada — retomar cuando la
   usuaria lo pida; ver `docs/design-system.md` §"Seams que quedan fuera de
   este pedido" para el estado exacto donde quedó)
@@ -47,6 +48,52 @@ y 95), no hizo falta ninguno nuevo.
 
 Queda una nota de prueba en dev en el viaje G-4821 (Comercial Andes SpA)
 — dato de test, no de producción, no se limpió porque no afecta nada.
+
+## 2026-09-11: tarea 10 — flujo de mantención de equipo + unlock superadmin dev
+
+**Bug real encontrado y corregido** (era la causa de "no funciona subir
+imagen"): el modal "Nuevo registro de mantención" (web) pedía el
+checklist a `GET /api/equipos/${equipo.id}/registros-mantencion/
+plantilla` — con el `equipoId` de más. Esa URL no matcheaba ninguna
+ruta registrada tal cual, así que Express la resolvía contra
+`GET /:equipoId/registros-mantencion/:id` con `id="plantilla"` — un
+uuid inválido, 500 de Postgres. El modal nunca cargaba el checklist,
+así que jamás se llegaba a la sección de fotos. La ruta real
+(`registrosMantencion.ts`) es `/api/equipos/registros-mantencion/
+plantilla` (sin equipoId, registrada antes de las rutas con `:id` a
+propósito) — mobile ya la llamaba bien, solo la web tenía el bug.
+
+**Gap real de producto** (no solo bug): no existía ninguna forma de
+ver, agregar o eliminar fotos de un registro YA CREADO — ni en web ni
+en mobile. El registro core (checklist, km, firma) sigue inmutable a
+propósito (decisión de diseño ya existente, para no debilitar el
+registro auditable) — se agregó la excepción acotada que pedía la
+usuaria: fotos de respaldo editables después, mismo criterio que
+`viajes` en la tarea 9.
+- Backend: `DELETE /:equipoId/registros-mantencion/:id/fotos/:fotoId`
+  nuevo (el POST ya existía). Invalida el PDF cacheado igual que el POST.
+- Web: modal "Ver detalle" (ícono ojo, nuevo, junto al de PDF) con
+  checklist agrupado por sección + galería de fotos con agregar/eliminar.
+- Mobile: `MantencionDetalleScreen.tsx` nueva (ruta `MantencionDetalle`),
+  se llega tocando una fila en `MantencionHistorialScreen` (antes no
+  navegaba a ningún lado). Mismo patrón de cámara que
+  `ChecklistMantencionScreen.tsx`.
+
+**Verificado en vivo** (Chrome MCP, dev, Transportes Itineris): creé un
+registro nuevo con checklist + 1 foto (confirmó el fix del bug), abrí
+el detalle nuevo, agregué una segunda foto, la eliminé — los 4 pasos
+funcionaron de punta a punta contra el backend y S3 reales. Un primer
+intento de DELETE dio 503 (coincidió con un reinicio de `tsx watch` por
+un guardado de archivo mío) — el reintento inmediato, sin más cambios
+de código, funcionó limpio; no es un bug del endpoint.
+
+**Superadmin de dev desbloqueado**: `super_admins` (cquirozit@gmail.com)
+tenía `intentos_fallidos=5` y `bloqueado_hasta` en el futuro (423 al
+loguear). Reseteado a `intentos_fallidos=0, bloqueado_hasta=null`
+directo en la DB de dev (`pruwvpnlvrvgtmpetlsr`) — mismo efecto que
+un login exitoso, nada nuevo. No aplica a prod.
+
+`./verificar.sh` verde: tsc x6, 27 tests, 12 literales, 99 migraciones.
 
 ## Decisiones confirmadas por la usuaria
 

@@ -129,6 +129,21 @@
         "./verificar.sh verde"
       ],
       "status": "done"
+    },
+    {
+      "id": 10,
+      "name": "fotos_mantencion_equipo",
+      "title": "Flujo de mantención de equipo: bug real de subida + detalle con fotos editables",
+      "description": "Bug real encontrado en vivo: el modal 'Nuevo registro de mantención' (web) llamaba a GET /api/equipos/:equipoId/registros-mantencion/plantilla con el equipoId de más — matcheaba contra GET /:equipoId/registros-mantencion/:id (id='plantilla', uuid inválido) y tiraba 500. El checklist nunca cargaba, así que tampoco se llegaba a subir foto. Corregido: la ruta correcta es /api/equipos/registros-mantencion/plantilla (sin equipoId), como ya hacía mobile. Además: no existía ninguna vista para ver/agregar/eliminar fotos de un registro YA creado (ni web ni mobile) — se agregó un detalle (web: modal 'Ver detalle'; mobile: MantencionDetalleScreen nueva) con galería de fotos, agregar (POST ya existía) y eliminar (DELETE nuevo). El registro en sí (checklist/km/firma) sigue inmutable a propósito — solo las fotos se pueden completar/corregir después.",
+      "acceptance": [
+        "Bug de la URL de plantilla corregido en RegistrosMantencion.tsx",
+        "DELETE /api/equipos/:equipoId/registros-mantencion/:id/fotos/:fotoId nuevo en registrosMantencion.ts",
+        "Web: modal de detalle con checklist + galería de fotos (agregar/eliminar)",
+        "Mobile: MantencionDetalleScreen nueva, navegable desde MantencionHistorialScreen",
+        "Verificado en vivo contra dev: crear registro con foto, ver detalle, agregar foto, eliminar foto — los 4 pasos funcionaron",
+        "./verificar.sh verde"
+      ],
+      "status": "done"
     }
   ]
 }

@@ -215,3 +215,71 @@ export async function encolarRegistroMantencion(b: BorradorMantencion): Promise<
 }
 
 export const respuestaTexto: Record<RespuestaChecklistMantencion, string> = { si: "Sí", no: "No", na: "N/A" };
+
+// ============================================================
+// Detalle de un registro ya creado — checklist + fotos (agregar/
+// eliminar). El registro en sí sigue inmutable; solo las fotos de
+// respaldo se pueden completar/corregir después (2026-09-11).
+// ============================================================
+export type FotoRegistro = { id: string; url: string; item: string | null; creado_en: string };
+export type DetalleMantencion = {
+  id: string;
+  fecha: string;
+  folio: number | null;
+  tipo: TipoRegistroMantencion;
+  origen: "interno" | "externo";
+  kilometraje: number | null;
+  horas_motor: number | null;
+  observaciones: string | null;
+  checklist: ItemChecklistMantencion[];
+  proveedor: { nombre: string } | null;
+  responsable: { nombre: string } | null;
+  fotos: FotoRegistro[];
+};
+
+export async function obtenerDetalleRegistro(
+  equipoId: string,
+  registroId: string
+): Promise<{ detalle: DetalleMantencion | null; error: string | null }> {
+  const res = await apiJson<DetalleMantencion>(`/api/equipos/${equipoId}/registros-mantencion/${registroId}`);
+  if (!res.ok) return { detalle: null, error: res.error ?? "No se pudo cargar el detalle" };
+  return { detalle: res.data, error: null };
+}
+
+export async function subirFotoARegistro(
+  equipoId: string,
+  registroId: string,
+  foto: { uri: string; name?: string; type?: string },
+  item: string | null
+): Promise<{ ok: true; foto: FotoRegistro } | { ok: false; error: string }> {
+  const fd = new FormData();
+  if (item) fd.append("item", item);
+  fd.append("foto", { uri: foto.uri, name: foto.name ?? "foto.jpg", type: foto.type ?? "image/jpeg" } as unknown as Blob);
+  try {
+    const res = await apiFetch(`/api/equipos/${equipoId}/registros-mantencion/${registroId}/fotos`, { method: "POST", body: fd }, 60000);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      return { ok: false, error: (body as { error?: string }).error ?? `Error ${res.status}` };
+    }
+    return { ok: true, foto: await res.json() };
+  } catch {
+    return { ok: false, error: "Sin conexión" };
+  }
+}
+
+export async function eliminarFotoDeRegistro(
+  equipoId: string,
+  registroId: string,
+  fotoId: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    const res = await apiFetch(`/api/equipos/${equipoId}/registros-mantencion/${registroId}/fotos/${fotoId}`, { method: "DELETE" });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      return { ok: false, error: (body as { error?: string }).error ?? `Error ${res.status}` };
+    }
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Sin conexión" };
+  }
+}
