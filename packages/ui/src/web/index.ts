@@ -6,6 +6,11 @@ export { DatePicker } from "./DatePicker";
 export { Card } from "./Card";
 export { Tag } from "./Tag";
 export { StatusBadge } from "./StatusBadge";
+export { Skeleton } from "./Skeleton";
+export { LoadingState } from "./LoadingState";
+export { EmptyState } from "./EmptyState";
+export { ErrorState } from "./ErrorState";
+export { Table, type ColumnaTabla, type AccionFila, type PropsTable } from "./Table";
 export type {
   PropsBoton,
   VarianteBoton,
@@ -22,5 +27,9 @@ export type {
   TonoTag,
   PropsStatusBadge,
   TonoEstado,
+  PropsSkeleton,
+  PropsEmptyState,
+  PropsErrorState,
+  PropsLoadingState,
 } from "../tipos";
 export { MAPA_ESTADO_TONO } from "../tipos";

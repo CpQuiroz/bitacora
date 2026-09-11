@@ -140,4 +140,16 @@ workspace root).
   siguen siendo `<Tag>`, y un estado ambiguo (`pendiente`, `borrador`) usa
   `tonoForzado` en el call-site en vez de adivinar. Terminar de mapear
   cada estado real de cada pantalla es trabajo del Paso 6.
-- Siguientes: Table (web) → Dialog/Sheet → Empty/Loading/ErrorState → Toast.
+- **`Skeleton` / `LoadingState` / `EmptyState` / `ErrorState`** ✅ — nunca
+  spinner de pantalla completa: `LoadingState` son esqueletos (`Skeleton`
+  pulsante en `neutral.200`, 3 líneas genéricas por defecto o `children` a
+  medida del contenido real). `EmptyState`: círculo 64px `accent2Ramp.200`
+  + título en `ds-heading` + frase + `accion` (CTA). `ErrorState`: círculo
+  `accentRamp.200` + botón Reintentar — el **texto** (red vs. permiso) y
+  que reintentar conserve filtros quedan a cargo de quien llama, no del
+  primitivo.
+- **`Table`** ✅ (solo web — mobile usa listas/cards). Header 11px
+  mayúscula `tracking-[0.08em]` color `text/60`, borde inferior `divider`.
+  Filas con borde `text/[0.08]`, hover `text/[0.04]`. Sin zebra. Compone
+  `Loading/Empty/ErrorState` internamente (`cargando`/`error`/`vacio` props).
+- Siguiente: Dialog/Sheet → Toast (cierran el Paso 4).

@@ -98,6 +98,42 @@ export type PropsTag = {
   tono?: TonoTag;
 };
 
+// ── Estados de pantalla: vacío / cargando / error ──────────────────
+export type PropsSkeleton = {
+  ancho?: number | string;
+  alto?: number;
+  radio?: number;
+};
+
+export type PropsEmptyState = {
+  titulo: string;
+  mensaje?: string;
+  /** CTA primario (normalmente un <Button variante="primario">). */
+  accion?: ReactNode;
+  icono?: ReactNode;
+};
+
+export type PropsErrorState = {
+  titulo?: string;
+  /**
+   * Quien llama decide el texto: distinguí error de red ("no hay
+   * conexión, reintentá") de error de permiso ("no tenés acceso a esto")
+   * — el primitivo no lo adivina.
+   */
+  mensaje?: string;
+  /**
+   * Quien llama es responsable de que reintentar conserve los filtros
+   * activos (ej. volver a pedir con el mismo período/búsqueda).
+   */
+  onReintentar?: () => void;
+  icono?: ReactNode;
+};
+
+export type PropsLoadingState = {
+  /** Esqueletos a medida del contenido real. Sin children: 3 líneas genéricas. */
+  children?: ReactNode;
+};
+
 // ── StatusBadge (semántico, un estado de dominio → un tono fijo) ──
 // Solo 4 tonos, tal como los define el prompt. Para roles, prioridad o
 // canal (que no son "estados" en el sentido de ciclo de vida) usá <Tag>
