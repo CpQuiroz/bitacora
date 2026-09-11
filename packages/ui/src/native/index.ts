@@ -10,6 +10,8 @@ export { Skeleton } from "./Skeleton";
 export { LoadingState } from "./LoadingState";
 export { EmptyState } from "./EmptyState";
 export { ErrorState } from "./ErrorState";
+export { Dialog } from "./Dialog";
+export { ToastProvider, useToast } from "./Toast";
 export { ProveedorMarca, useMarca, resolverMarca, type Marca } from "./marca";
 export { FUENTE_NATIVE } from "./fuentes";
 export { Texto } from "./Texto";
@@ -33,5 +35,7 @@ export type {
   PropsEmptyState,
   PropsErrorState,
   PropsLoadingState,
+  PropsDialog,
+  MostrarToast,
 } from "../tipos";
 export { MAPA_ESTADO_TONO } from "../tipos";

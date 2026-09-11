@@ -134,6 +134,19 @@ export type PropsLoadingState = {
   children?: ReactNode;
 };
 
+// ── Dialog / Sheet ──────────────────────────────────────────────────
+// Web: modal centrado. Mobile: SIEMPRE bottom sheet (mismo componente,
+// no hay variante "centrada" en mobile — ver prompt del sistema de diseño).
+export type PropsDialog = {
+  abierto: boolean;
+  onCerrar: () => void;
+  titulo: string;
+  children: ReactNode;
+};
+
+// ── Toast ───────────────────────────────────────────────────────────
+export type MostrarToast = (mensaje: string) => void;
+
 // ── StatusBadge (semántico, un estado de dominio → un tono fijo) ──
 // Solo 4 tonos, tal como los define el prompt. Para roles, prioridad o
 // canal (que no son "estados" en el sentido de ciclo de vida) usá <Tag>

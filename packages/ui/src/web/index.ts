@@ -11,6 +11,8 @@ export { LoadingState } from "./LoadingState";
 export { EmptyState } from "./EmptyState";
 export { ErrorState } from "./ErrorState";
 export { Table, type ColumnaTabla, type AccionFila, type PropsTable } from "./Table";
+export { Dialog } from "./Dialog";
+export { ToastProvider, useToast } from "./Toast";
 export type {
   PropsBoton,
   VarianteBoton,
@@ -31,5 +33,7 @@ export type {
   PropsEmptyState,
   PropsErrorState,
   PropsLoadingState,
+  PropsDialog,
+  MostrarToast,
 } from "../tipos";
 export { MAPA_ESTADO_TONO } from "../tipos";

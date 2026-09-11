@@ -90,7 +90,7 @@ Faena que se van con la migración). Exentos con motivo en
 | 1 — `packages/design-tokens` | ✅ paquete + generadores + consumo web/mobile (namespace `ds-`) |
 | 2 — Marca por tenant | ✅ `--ds-brand` en shell web + `tema.ds.marca` en mobile + derivación OKLCH + check anti-hex |
 | 3 — Tipografía | ✅ Caprasimo + Figtree self-hosted (next/font + expo-font), `ds-heading`/`ds-body`, precarga sin salto |
-| 4 — `packages/ui` (primitivas) | 🔶 en curso — `Button` hecho |
+| 4 — `packages/ui` (primitivas) | ✅ 12 primitivas (ver arriba) |
 | 5 — Reglas transversales | ⬜ |
 | 6 — Migración pantalla por pantalla | ⬜ |
 | 7 — Anti-degradación (ESLint, Storybook, CI) | ⬜ |
@@ -152,4 +152,15 @@ workspace root).
   mayúscula `tracking-[0.08em]` color `text/60`, borde inferior `divider`.
   Filas con borde `text/[0.08]`, hover `text/[0.04]`. Sin zebra. Compone
   `Loading/Empty/ErrorState` internamente (`cargando`/`error`/`vacio` props).
-- Siguiente: Dialog/Sheet → Toast (cierran el Paso 4).
+- **`Dialog`** ✅ — backdrop `neutral.900/50`, contenedor `radius.lg × 1.15`
+  (32px), `shadow.lg`. Web: modal centrado. Mobile: **siempre** bottom
+  sheet (no hay variante centrada) — mismo backdrop/radio/sombra, deslizado
+  desde abajo.
+- **`Toast`** ✅ — `ToastProvider` + `useToast()` (contexto). Pill oscuro
+  `neutral.900` / texto `neutral.100`, abajo y centrado, 2.6s. Montar
+  `ToastProvider` una vez en la raíz de cada plataforma.
+
+**Paso 4 completo — las 12 primitivas del prompt están hechas** (`Button`,
+`Input`, `Textarea`, `Select`, `DatePicker`, `Card`, `Tag`, `StatusBadge`,
+`Skeleton`+`LoadingState`+`EmptyState`+`ErrorState`, `Table`, `Dialog`,
+`Toast`). Ninguna pantalla las usa todavía — eso es el Paso 6.
