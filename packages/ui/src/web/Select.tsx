@@ -1,5 +1,6 @@
 "use client";
 
+import { ChevronDown } from "lucide-react";
 import type { PropsSelect } from "../tipos";
 import { CAMPO_BASE, LABEL, MENSAJE_AYUDA, MENSAJE_ERROR, bordeDe } from "./campo";
 
@@ -26,18 +27,12 @@ export function Select({ etiqueta, error, ayuda, deshabilitado, valor, onCambio,
             </option>
           ))}
         </select>
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.75"
-          strokeLinecap="round"
-          strokeLinejoin="round"
+        <ChevronDown
+          size={16}
+          strokeWidth={2.75}
           aria-hidden="true"
-          className="pointer-events-none absolute right-ds-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ds-text/50"
-        >
-          <path d="M6 9l6 6 6-6" />
-        </svg>
+          className="pointer-events-none absolute right-ds-3 top-1/2 -translate-y-1/2 text-ds-text/50"
+        />
       </div>
       {error ? <p className={MENSAJE_ERROR}>{error}</p> : ayuda ? <p className={MENSAJE_AYUDA}>{ayuda}</p> : null}
     </div>

@@ -147,6 +147,10 @@ export type PropsDialog = {
 // ── Toast ───────────────────────────────────────────────────────────
 export type MostrarToast = (mensaje: string) => void;
 
+// ── Cifra: montos, cantidades, fechas, folios ──────────────────────
+// font-variant-numeric: tabular-nums, para que las columnas alineen.
+export type PropsCifra = { children: ReactNode };
+
 // ── StatusBadge (semántico, un estado de dominio → un tono fijo) ──
 // Solo 4 tonos, tal como los define el prompt. Para roles, prioridad o
 // canal (que no son "estados" en el sentido de ciclo de vida) usá <Tag>

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Modal, Pressable, ScrollView, View } from "react-native";
+import { ChevronDown } from "lucide-react-native";
 import { tokens } from "@bitacora/design-tokens";
 import type { PropsSelect } from "../tipos";
 import { useMarca } from "./marca";
@@ -34,9 +35,7 @@ export function Select({ etiqueta, error, ayuda, deshabilitado, valor, onCambio,
         <Texto tamano={tokens.size.body} color={seleccionada ? tokens.color.text : `${tokens.color.text}66`}>
           {seleccionada?.etiqueta ?? placeholder ?? ""}
         </Texto>
-        <Texto tamano={tokens.size.small} color={`${tokens.color.text}80`}>
-          ▾
-        </Texto>
+        <ChevronDown size={16} strokeWidth={2.75} color={`${tokens.color.text}80`} />
       </Pressable>
 
       <Modal visible={abierto} transparent animationType="fade" onRequestClose={() => setAbierto(false)}>

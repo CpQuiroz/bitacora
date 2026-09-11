@@ -91,7 +91,7 @@ Faena que se van con la migración). Exentos con motivo en
 | 2 — Marca por tenant | ✅ `--ds-brand` en shell web + `tema.ds.marca` en mobile + derivación OKLCH + check anti-hex |
 | 3 — Tipografía | ✅ Caprasimo + Figtree self-hosted (next/font + expo-font), `ds-heading`/`ds-body`, precarga sin salto |
 | 4 — `packages/ui` (primitivas) | ✅ 12 primitivas (ver arriba) |
-| 5 — Reglas transversales | ⬜ |
+| 5 — Reglas transversales | ✅ (ver abajo) |
 | 6 — Migración pantalla por pantalla | ⬜ |
 | 7 — Anti-degradación (ESLint, Storybook, CI) | ⬜ |
 
@@ -164,3 +164,37 @@ workspace root).
 `Input`, `Textarea`, `Select`, `DatePicker`, `Card`, `Tag`, `StatusBadge`,
 `Skeleton`+`LoadingState`+`EmptyState`+`ErrorState`, `Table`, `Dialog`,
 `Toast`). Ninguna pantalla las usa todavía — eso es el Paso 6.
+
+## Paso 5 — Reglas transversales
+
+- **Forma/Aire:** ya cumplido por construcción en las 12 primitivas (pill,
+  28-32px, escala `space`, sin bordes de 1px decorativos).
+- **Iconos:** agregado **Lucide** (`lucide-react` web, `lucide-react-native`
+  mobile — ya había `react-native-svg`, no se agregó nada más). `Dialog`
+  (web+native) y `Select` (web+native) migrados de glifos a mano
+  (`✕`, `▾`, un SVG propio) a `X`/`ChevronDown` de Lucide, `strokeWidth={2.75}`.
+- **Estados interactivos:** `focus-visible` con el outline de marca ya en
+  Button/Input/Textarea/Select/DatePicker/Card(botón)/Dialog. Mobile no
+  tiene "hover" (no aplica); `pressed` vía `Pressable` ya en todos.
+- **Touch targets:** ya 44px mínimo en todos los campos/botones mobile.
+- **`tabular-nums`:** nueva primitiva **`Cifra`** (web: clase `tabular-nums`;
+  native: `fontVariant: ["tabular-nums"]`) para montos/cantidades/fechas/folios.
+- **Helper de CLP único:** `formatearCLP()` en `packages/shared/src/dinero.ts`
+  (con 5 tests) — `web/lib/formatMoneda.ts` y `mobile/lib/plata.ts` ahora
+  **delegan** ahí para CLP (verificado: mismo resultado exacto que antes,
+  cero cambio visible; el resto de monedas sigue con `Intl` en web).
+- **Contraste — hallazgo, sin resolver:** el color de marca por defecto
+  (`accent` `#c67139`, cuando el tenant no fija `color_primario`) da
+  **3.61:1** de contraste con texto blanco — no llega a 4.5:1 (WCAG AA
+  texto normal). Texto oscuro tampoco sirve: empeora en `hover`/`pressed`
+  (3.70 → 2.44) mientras que blanco mejora (3.61 → 4.49 → 6.81). No hay un
+  solo foreground que cumpla 4.5:1 en los 3 estados con ese hex exacto, y
+  no puedo inventar un color fuera de `tokens.json`. Como es solo el
+  *fallback* (un tenant real normalmente fija su propio
+  `color_primario_foreground`), lo dejo documentado en vez de improvisar
+  — **tu decisión** si esto amerita revisar el token `accent` o aceptar el
+  fallback como está.
+
+Verificado: tsc `ui`/`mobile`/`web` verde, `packages/shared` 22 tests
+(17+5 nuevos de `dinero.test.ts`), Tailwind CLI compiló `tabular-nums`.
+`./verificar.sh` verde, 19 literales (baseline, sin cambios).

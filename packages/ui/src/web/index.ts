@@ -13,6 +13,7 @@ export { ErrorState } from "./ErrorState";
 export { Table, type ColumnaTabla, type AccionFila, type PropsTable } from "./Table";
 export { Dialog } from "./Dialog";
 export { ToastProvider, useToast } from "./Toast";
+export { Cifra } from "./Cifra";
 export type {
   PropsBoton,
   VarianteBoton,
@@ -35,5 +36,6 @@ export type {
   PropsLoadingState,
   PropsDialog,
   MostrarToast,
+  PropsCifra,
 } from "../tipos";
 export { MAPA_ESTADO_TONO } from "../tipos";

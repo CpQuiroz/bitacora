@@ -1,4 +1,5 @@
 import { Modal, Pressable, View } from "react-native";
+import { X } from "lucide-react-native";
 import { tokens } from "@bitacora/design-tokens";
 import type { PropsDialog } from "../tipos";
 import { FUENTE_NATIVE } from "./fuentes";
@@ -42,9 +43,7 @@ export function Dialog({ abierto, onCerrar, titulo, children }: PropsDialog) {
               {titulo}
             </Texto>
             <Pressable onPress={onCerrar} hitSlop={8}>
-              <Texto tamano={tokens.size.body} color={`${tokens.color.text}99`}>
-                ✕
-              </Texto>
+              <X size={18} strokeWidth={2.75} color={`${tokens.color.text}99`} />
             </Pressable>
           </View>
           <View style={{ paddingHorizontal: tokens.space["6"], paddingVertical: tokens.space["4"] }}>{children}</View>

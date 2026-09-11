@@ -1,3 +1,5 @@
+import { formatearCLP } from "@bitacora/shared";
+
 const LOCALE_POR_MONEDA: Record<string, string> = {
   CLP: "es-CL",
   USD: "en-US",
@@ -8,7 +10,12 @@ const LOCALE_POR_MONEDA: Record<string, string> = {
   ARS: "es-AR",
 };
 
+// CLP: fuente única en @bitacora/shared (mismo resultado que el
+// Intl.NumberFormat de acá, así que no cambia nada visible — ver
+// packages/shared/src/dinero.test.ts). El resto de monedas sigue con
+// Intl porque necesita el símbolo/formato real de cada una.
 export function formatMoneda(monto: number, moneda = "CLP"): string {
+  if (!moneda || moneda === "CLP") return formatearCLP(monto);
   const locale = LOCALE_POR_MONEDA[moneda] ?? "es-CL";
   return new Intl.NumberFormat(locale, {
     style: "currency",

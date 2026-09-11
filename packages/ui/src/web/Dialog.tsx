@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { X } from "lucide-react";
 import type { PropsDialog } from "../tipos";
 
 export function Dialog({ abierto, onCerrar, titulo, children }: PropsDialog) {
@@ -32,7 +33,7 @@ export function Dialog({ abierto, onCerrar, titulo, children }: PropsDialog) {
             aria-label="Cerrar"
             className="rounded-ds-pill p-ds-1 text-ds-text/60 transition-colors hover:bg-ds-text/[0.07] hover:text-ds-text"
           >
-            ✕
+            <X size={18} strokeWidth={2.75} />
           </button>
         </div>
         <div className="overflow-y-auto px-ds-6 py-ds-4">{children}</div>

@@ -1,6 +1,6 @@
 # Sesión actual
 
-- **Tarea en curso:** 8 — sistema_diseno (Paso 4 COMPLETO, Paso 5 siguiente)
+- **Tarea en curso:** 8 — sistema_diseno (Paso 5 COMPLETO, Paso 6 siguiente)
 - **Inicio:** 2026-09-09
 - **Agente:** Claude Sonnet 5 (directo)
 
@@ -8,45 +8,44 @@
 
 - 2026-09-09: reemplazar Faena por crema/Caprasimo. Lucide en ambos.
   Caprasimo solo headings+lg. Storybook web + /dev/ui mobile.
-- 2026-09-10: coexistencia web = namespace `ds-`. API de Button en español
-  ("va así"). "sigue derecho" = continuar sin pausar por grupo.
+- 2026-09-10: coexistencia web = namespace `ds-`. API de Button en español.
+  "sigue derecho" (x2) = continuar sin pausar por grupo/paso.
 
 ## Estado por paso
 
-- Paso 0-3: ✅ (`28c7f49`, `748611f`, `35bfa4f`)
-- **Paso 4 — `packages/ui`: ✅ COMPLETO** (`627abc5`, `b0af4f8`, `2660ebc`,
-  `d092104`, + este commit con Dialog/Toast). Las 12 primitivas del
-  prompt: Button, Input, Textarea, Select, DatePicker, Card, Tag,
-  StatusBadge, Skeleton/LoadingState/EmptyState/ErrorState, Table (web),
-  Dialog (mobile = siempre bottom sheet), Toast (Provider+hook).
-  - Ninguna pantalla las usa todavía — eso es el Paso 6.
-  - `verificar.sh` cubre `packages/ui` con `tsc --noEmit` (solo lado web +
-    tipos; el lado native lo typechea transitivamente el tsc de mobile).
+- Paso 0-4: ✅ (ver commits `28c7f49`..`6750d9f`)
+- **Paso 5 — reglas transversales: ✅ COMPLETO** (este commit)
+  - Lucide agregado (`lucide-react` + `lucide-react-native`, ya había
+    `react-native-svg`). `Dialog` y `Select` (ambas plataformas) migrados
+    de glifos a mano a `X`/`ChevronDown`, `strokeWidth={2.75}`.
+  - `Cifra` (13ª primitiva): `tabular-nums`.
+  - `formatearCLP()` en `packages/shared/src/dinero.ts` (5 tests) — fuente
+    única; `web/lib/formatMoneda.ts` y `mobile/lib/plata.ts` delegan ahí
+    para CLP (mismo resultado exacto verificado, cero cambio visible).
+  - Forma/aire/touch-targets/focus-visible: ya cumplidos por construcción
+    en el Paso 4, sin cambios nuevos.
+  - **Hallazgo sin resolver, documentado en `docs/design-system.md`:** el
+    `accent` (#c67139) como marca default da 3.61:1 con blanco (bajo AA
+    4.5:1); texto oscuro empeora al oscurecer el botón. No hay foreground
+    único que cumpla en los 3 estados con ese hex exacto. Es señal
+    solamente el fallback sin tenant — decisión pendiente de la usuaria.
 
-## Próximo paso — Paso 5: reglas transversales
+## Próximo paso — Paso 6: migración pantalla por pantalla
 
-- Forma: auditar que no queden esquinas rectas ni líneas de 1px
-  decorativas en las primitivas nuevas (ya cumplido, pero revisar).
-- Aire: nada que hacer nuevo (ya se usa la escala `space`).
-- Iconos: **agregar Lucide** (`lucide-react` + `lucide-react-native`),
-  `stroke-width: 2.75`. Reemplazar el "✕" a mano en Dialog por un ícono.
-- Estados interactivos: revisar que TODO elemento clickeable tenga
-  hover/pressed/focus-visible — falta hover real en native (RN no tiene
-  hover; usar Pressable con estados).
-- Contraste: verificar 4.5:1 en los pares de color usados (StatusBadge,
-  Tag, texto sobre --ds-brand con foreground calculado).
-- Touch targets: ya 44px mínimo en native.
-- `font-variant-numeric: tabular-nums` en montos/fechas/folios — falta un
-  helper/prop en las primitivas o un componente `Cifra` nuevo.
-- Helper de CLP único — hoy duplicado (`web/lib/formatMoneda.ts` vs
-  `mobile/lib/plata.ts`). Consolidar en `packages/shared` o `packages/ui`.
+Orden del prompt: 1) Login y selección de empresa, 2) Hoy/dashboard,
+3) Órdenes de servicio (listado+ficha), 4) Clientes, 5) Catálogo y stock,
+6) Configuración, 7) resto. Un commit por pantalla, screenshot antes/
+después (necesito correr la app real — Expo/Next dev — para eso, no solo
+tsc). Si una pantalla tiene un caso que las 13 primitivas no cubren:
+parar y preguntar, no inventar una variante nueva.
 
 ## Pendiente / notas generales
 
-- Falta `next build` real + verificación visual de todo el Paso 1-4. Sin
-  Storybook todavía (Paso 7) para ver los componentes renderizados de
-  verdad — toda la verificación hasta ahora es tsc + compilación real de
-  clases Tailwind (CLI), no un screenshot.
-- eslint web roto (tarea #1) — bloquea regla ESLint del Paso 7.
-- StatusBadge: `MAPA_ESTADO_TONO` tiene solo los estados que caen sin
-  forzar en los 4 tonos — completar por pantalla es trabajo del Paso 6.
+- Falta `next build`/Expo real + verificación visual de Pasos 1-5. Toda la
+  verificación hasta ahora es tsc + compilación real de Tailwind (CLI) +
+  tests unitarios — nada renderizado de verdad todavía.
+- eslint web roto (tarea #1) — bloquea la regla ESLint del Paso 7.
+- `MAPA_ESTADO_TONO` de StatusBadge: solo estados no ambiguos. Completar
+  por pantalla es trabajo del Paso 6.
+- Antes de arrancar el Paso 6 conviene levantar `next dev` / Expo para
+  screenshots reales — no lo hice todavía en esta sesión.

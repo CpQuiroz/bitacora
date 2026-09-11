@@ -1,4 +1,5 @@
 // Formato de plata para Chile: peso sin decimales, separador de miles con punto.
+import { formatearCLP } from "@bitacora/shared";
 
 /** Deja solo los dígitos de un texto ("$ 1.250" → "1250"). */
 export function soloDigitos(s: string): string {
@@ -11,9 +12,9 @@ export function agruparMiles(digitos: string): string {
   return limpio.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 }
 
-/** Monto en pesos con signo ("$1.250.000"). */
+/** Monto en pesos con signo ("$1.250.000"). Fuente única en @bitacora/shared. */
 export function pesos(n: number): string {
-  return `$${Math.round(n || 0).toLocaleString("es-CL")}`;
+  return formatearCLP(n);
 }
 
 /**
@@ -24,6 +25,6 @@ export function pesos(n: number): string {
  * probado en el resto de la app).
  */
 export function formatearMoneda(n: number, moneda = "CLP"): string {
-  const monto = Math.round(n || 0).toLocaleString("es-CL");
-  return !moneda || moneda === "CLP" ? `$${monto}` : `${moneda} ${monto}`;
+  if (!moneda || moneda === "CLP") return formatearCLP(n);
+  return `${moneda} ${Math.round(n || 0).toLocaleString("es-CL")}`;
 }
