@@ -2,12 +2,12 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { Briefcase, Plus } from "lucide-react";
 import type { Rubro } from "@bitacora/shared";
 import { SuperAdminShell } from "@/components/SuperAdminShell";
 import { DataTable, type ColumnaTabla } from "@/components/DataTable";
 import { Modal } from "@/components/Modal";
-import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select } from "@/components/ui";
-import { IconBriefcase, IconPlus } from "@/components/icons";
+import { Button, Card, Input, Select, StatusBadge, Tag } from "@bitacora/ui/web";
 import { obtenerTokenSuperAdmin, superadminFetch } from "@/lib/superadminApi";
 
 const RUBROS: { value: Rubro; label: string }[] = [
@@ -26,6 +26,7 @@ type EmpresaListado = {
   cantidad_usuarios: number;
 };
 
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export default function SuperAdminEmpresasPage() {
   const router = useRouter();
   const [empresas, setEmpresas] = useState<EmpresaListado[] | null>(null);
@@ -108,91 +109,64 @@ export default function SuperAdminEmpresasPage() {
   const filtradas = (empresas ?? []).filter((e) => e.nombre.toLowerCase().includes(busqueda.trim().toLowerCase()));
 
   const columnas: ColumnaTabla<EmpresaListado>[] = [
-    { header: "Nombre", cell: (e) => <span className="font-medium text-foreground">{e.nombre}</span> },
+    { header: "Nombre", cell: (e) => <span className="font-medium text-ds-text">{e.nombre}</span> },
     { header: "Fecha de alta", cell: (e) => new Date(e.creado_en).toLocaleDateString("es-CL") },
-    { header: "Estado", cell: (e) => <Badge value={e.estado} /> },
-    { header: "Plan", cell: (e) => <Badge value={e.plan} /> },
+    { header: "Estado", cell: (e) => <StatusBadge estado={e.estado} /> },
+    { header: "Plan", cell: (e) => <Tag>{e.plan}</Tag> },
     { header: "Usuarios", cell: (e) => e.cantidad_usuarios },
   ];
 
   return (
     <SuperAdminShell>
-      <PageHeader
-        title="Empresas clientes"
-        subtitle="Listado y salud de cada empresa que usa Bitácora"
-        action={
-          <Button type="button" onClick={abrirModal}>
-            <IconPlus className="h-4 w-4" />
-            Nueva empresa
-          </Button>
-        }
-      />
+      <div className="flex flex-wrap items-center justify-between gap-ds-3">
+        <div>
+          <p className="ds-heading text-ds-h2 text-ds-text">Empresas clientes</p>
+          <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">Listado y salud de cada empresa que usa Bitácora</p>
+        </div>
+        <Button iconoIzq={<Plus size={16} strokeWidth={2.75} />} onPress={abrirModal}>
+          Nueva empresa
+        </Button>
+      </div>
 
       <Modal open={modalAbierto} onClose={() => setModalAbierto(false)} title="Nueva empresa" wide>
-        <form onSubmit={onCrear} className="flex flex-col gap-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <Label>Nombre de la empresa</Label>
-              <Input type="text" required value={nombre} onChange={(e) => setNombre(e.target.value)} />
-            </div>
-            <div>
-              <Label>Rubro</Label>
-              <Select value={rubro} onChange={(e) => setRubro(e.target.value as Rubro)}>
-                {RUBROS.map((r) => (
-                  <option key={r.value} value={r.value}>
-                    {r.label}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <div>
-              <Label>RUT (opcional)</Label>
-              <Input type="text" placeholder="76.123.456-7" value={rut} onChange={(e) => setRut(e.target.value)} />
-            </div>
-            <div>
-              <Label>Giro (opcional)</Label>
-              <Input type="text" value={giro} onChange={(e) => setGiro(e.target.value)} />
-            </div>
-            <div>
-              <Label>Teléfono (opcional)</Label>
-              <Input type="text" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
-            </div>
-            <div>
-              <Label>Dirección (opcional)</Label>
-              <Input type="text" value={direccion} onChange={(e) => setDireccion(e.target.value)} />
-            </div>
+        <form onSubmit={onCrear} className="flex flex-col gap-ds-4">
+          <div className="grid gap-ds-4 sm:grid-cols-2">
+            <Input etiqueta="Nombre de la empresa" requerido valor={nombre} onCambio={setNombre} />
+            <Select etiqueta="Rubro" valor={rubro} onCambio={(v) => setRubro(v as Rubro)} opciones={RUBROS.map((r) => ({ valor: r.value, etiqueta: r.label }))} />
+            <Input etiqueta="RUT (opcional)" placeholder="76.123.456-7" valor={rut} onCambio={setRut} />
+            <Input etiqueta="Giro (opcional)" valor={giro} onCambio={setGiro} />
+            <Input etiqueta="Teléfono (opcional)" valor={telefono} onCambio={setTelefono} />
+            <Input etiqueta="Dirección (opcional)" valor={direccion} onCambio={setDireccion} />
           </div>
 
-          <div className="border-t border-border pt-4">
-            <p className="mb-3 text-sm font-medium text-foreground">Administrador inicial</p>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <Label>Nombre</Label>
-                <Input type="text" required value={adminNombre} onChange={(e) => setAdminNombre(e.target.value)} />
-              </div>
-              <div>
-                <Label>Correo</Label>
-                <Input type="email" required value={adminCorreo} onChange={(e) => setAdminCorreo(e.target.value)} />
-              </div>
+          <div className="border-t border-ds-divider pt-ds-4">
+            <p className="mb-ds-3 font-ds-body text-ds-small font-medium text-ds-text">Administrador inicial</p>
+            <div className="grid gap-ds-4 sm:grid-cols-2">
+              <Input etiqueta="Nombre" requerido valor={adminNombre} onCambio={setAdminNombre} />
+              <Input etiqueta="Correo" tipo="email" requerido valor={adminCorreo} onCambio={setAdminCorreo} />
             </div>
-            <p className="mt-2 text-xs text-muted">Recibe una invitación por correo para activar su cuenta como admin de esta empresa.</p>
+            <p className="mt-ds-2 font-ds-body text-ds-caption text-ds-text/60">Recibe una invitación por correo para activar su cuenta como admin de esta empresa.</p>
           </div>
 
-          {errorCrear && <ErrorText>{errorCrear}</ErrorText>}
-          <div className="flex gap-2">
-            <Button type="submit" disabled={creando}>
-              {creando ? "Creando…" : "Crear empresa"}
+          {errorCrear ? <p className="font-ds-body text-ds-small text-ds-accent-700">{errorCrear}</p> : null}
+          <div className="flex gap-ds-2">
+            <Button tipo="submit" cargando={creando}>
+              Crear empresa
             </Button>
-            <Button type="button" variant="ghost" onClick={() => setModalAbierto(false)}>
+            <Button variante="ghost" onPress={() => setModalAbierto(false)}>
               Cancelar
             </Button>
           </div>
         </form>
       </Modal>
 
-      <Card className="my-6">
-        <Input type="text" placeholder="Buscar por nombre…" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} className="max-w-sm" />
-      </Card>
+      <div className="my-ds-6">
+        <Card>
+          <div className="max-w-sm">
+            <Input placeholder="Buscar por nombre…" valor={busqueda} onCambio={setBusqueda} />
+          </div>
+        </Card>
+      </div>
 
       <DataTable
         columns={columnas}
@@ -201,7 +175,7 @@ export default function SuperAdminEmpresasPage() {
         loading={empresas === null && !error}
         error={error}
         actions={[{ label: "Ver salud →", onClick: (e) => router.push(`/superadmin/empresas/${e.id}`) }]}
-        emptyState={{ icon: IconBriefcase, message: busqueda ? "Ninguna empresa coincide con la búsqueda." : "Todavía no hay empresas registradas." }}
+        emptyState={{ icon: Briefcase, message: busqueda ? "Ninguna empresa coincide con la búsqueda." : "Todavía no hay empresas registradas." }}
       />
     </SuperAdminShell>
   );

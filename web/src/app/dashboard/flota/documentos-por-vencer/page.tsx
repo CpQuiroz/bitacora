@@ -2,13 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Clock } from "lucide-react";
 import type { Documento, EntidadDocumento, EstadoDocumento } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Badge, ErrorText } from "@/components/ui";
+import { StatusBadge, type TonoEstado } from "@bitacora/ui/web";
 import { DataTable } from "@/components/DataTable";
-import { IconClock } from "@/components/icons";
 
 type DocumentoPorVencer = Documento & { tipo: { nombre: string } | null; estado: EstadoDocumento | null; entidad_nombre: string };
 
@@ -27,13 +27,18 @@ const RUTA_POR_ENTIDAD: Record<EntidadDocumento, (id: string) => string> = {
   vehiculo: () => `/dashboard/registros/equipos`,
 };
 
-// Color de urgencia sobre la fecha — mismo criterio que el Badge de estado.
+// "por_vencer" no está en MAPA_ESTADO_TONO (ambiguo a propósito) — mismo
+// criterio que DocumentoForm.tsx.
+const TONO_FORZADO: Partial<Record<EstadoDocumento, TonoEstado>> = { por_vencer: "en_progreso" };
+
+// Color de urgencia sobre la fecha — mismo criterio que el badge de estado.
 const COLOR_ESTADO: Record<EstadoDocumento, string> = {
-  vencido: "text-danger font-medium",
-  por_vencer: "text-warning font-medium",
-  vigente: "text-muted",
+  vencido: "text-ds-accent-700 font-medium",
+  por_vencer: "text-ds-accent-700 font-medium",
+  vigente: "text-ds-text/60",
 };
 
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export default function DocumentosPorVencerPage() {
   const router = useRouter();
   const [usuario, setUsuario] = useState<UsuarioShell | null>(null);
@@ -85,21 +90,21 @@ export default function DocumentosPorVencerPage() {
 
   return (
     <DashboardShell usuario={usuario}>
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Documentos</h1>
-        <p className="mt-1 text-sm text-muted">Colaboradores y vehículos, ordenados por fecha de vencimiento (vencidos primero)</p>
+      <div className="mb-ds-6">
+        <p className="ds-heading text-ds-h2 text-ds-text">Documentos</p>
+        <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">Colaboradores y vehículos, ordenados por fecha de vencimiento (vencidos primero)</p>
       </div>
 
-      {error && <ErrorText>{error}</ErrorText>}
+      {error ? <p className="font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
 
-      <div className="mb-4 flex flex-wrap gap-2">
+      <div className="mb-ds-4 flex flex-wrap gap-ds-2">
         {FILTROS.map((f) => (
           <button
             key={f.valor}
             type="button"
             onClick={() => setFiltro(f.valor)}
-            className={`rounded-md border px-3 py-1.5 text-sm transition-colors ${
-              filtro === f.valor ? "border-brand bg-brand-soft text-brand" : "border-border text-muted hover:border-muted-soft"
+            className={`rounded-ds-md border px-ds-3 py-1.5 font-ds-body text-ds-small transition-colors ${
+              filtro === f.valor ? "border-ds-brand bg-ds-brand/[0.08] text-ds-brand" : "border-ds-divider text-ds-text/70 hover:border-ds-text/30"
             }`}
           >
             {f.etiqueta}
@@ -112,13 +117,13 @@ export default function DocumentosPorVencerPage() {
         rowKey={(d) => d.id}
         loading={documentos === null && !error}
         columns={[
-          { header: "Quién/Qué", cell: (d) => <span className="font-medium text-foreground">{d.entidad_nombre}</span> },
-          { header: "Tipo", cell: (d) => <span className="text-muted">{d.tipo?.nombre ?? "—"}</span> },
+          { header: "Quién/Qué", cell: (d) => <span className="font-medium text-ds-text">{d.entidad_nombre}</span> },
+          { header: "Tipo", cell: (d) => <span className="text-ds-text/60">{d.tipo?.nombre ?? "—"}</span> },
           {
             header: "Vence",
-            cell: (d) => <span className={d.estado ? COLOR_ESTADO[d.estado] : "text-muted"}>{d.fecha_vencimiento ?? "Sin vencimiento"}</span>,
+            cell: (d) => <span className={d.estado ? COLOR_ESTADO[d.estado] : "text-ds-text/60"}>{d.fecha_vencimiento ?? "Sin vencimiento"}</span>,
           },
-          { header: "Estado", cell: (d) => (d.estado ? <Badge value={d.estado} /> : "—") },
+          { header: "Estado", cell: (d) => (d.estado ? <StatusBadge estado={d.estado} tonoForzado={TONO_FORZADO[d.estado]} /> : "—") },
         ]}
         actions={[
           {
@@ -128,7 +133,7 @@ export default function DocumentosPorVencerPage() {
           },
         ]}
         emptyState={{
-          icon: IconClock,
+          icon: Clock,
           message:
             filtro === "por_vencer"
               ? "Nada por vencer en los próximos 30 días."

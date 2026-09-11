@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { Calendar, ChevronLeft } from "lucide-react";
 import type { AuditoriaUsuario, DatosLaborales, Modulo, RutaPlanificada, Usuario } from "@bitacora/shared";
 import { AFP_CHILE, ISAPRES_CHILE, REGIONES } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
@@ -11,11 +12,9 @@ import { useRolesDisponibles } from "@/lib/roles";
 import { FUNCIONES } from "@/lib/funciones";
 import { remuneraciones } from "@/lib/remuneracionesApi";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText } from "@/components/ui";
+import { Button, Card, Input, LoadingState, Select, StatusBadge } from "@bitacora/ui/web";
 import { InputMonto } from "@/components/InputMonto";
 import { DocumentoForm } from "@/components/DocumentoForm";
-import { IconCalendar, IconChevronLeft } from "@/components/icons";
-import { EstadoCargando } from "@/components/estados";
 
 // Ficha única de una persona. Cada pestaña conserva el gate de módulo
 // que tenía su pantalla original:
@@ -57,6 +56,7 @@ const LABORAL_VACIO = {
   cargas_familiares: "",
 };
 
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export default function PersonaFichaPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -279,14 +279,14 @@ export default function PersonaFichaPage() {
   if (error) {
     return (
       <DashboardShell usuario={usuario}>
-        <ErrorText>{error}</ErrorText>
+        <p className="font-ds-body text-ds-small text-ds-accent-700">{error}</p>
       </DashboardShell>
     );
   }
   if (!persona || modulos === null) {
     return (
       <DashboardShell usuario={usuario}>
-        <EstadoCargando />
+        <LoadingState />
       </DashboardShell>
     );
   }
@@ -305,27 +305,30 @@ export default function PersonaFichaPage() {
 
   return (
     <DashboardShell usuario={usuario}>
-      <Link href="/dashboard/personas" className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-brand hover:underline">
-        <IconChevronLeft className="h-4 w-4" />
+      <Link href="/dashboard/personas" className="mb-ds-4 inline-flex items-center gap-ds-1 font-ds-body text-ds-small font-medium text-ds-brand hover:underline">
+        <ChevronLeft size={16} strokeWidth={2.75} />
         Personas
       </Link>
 
-      <PageHeader
-        title={persona.nombre}
-        subtitle={`${etiquetaRol(persona.rol)}${persona.telefono ? ` · ${persona.telefono}` : ""}`}
-        action={<Badge value={persona.activo ? "activo" : "inactivo"} />}
-      />
+      <div className="flex flex-wrap items-center justify-between gap-ds-3">
+        <div>
+          <p className="ds-heading text-ds-h2 text-ds-text">{persona.nombre}</p>
+          <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">
+            {etiquetaRol(persona.rol)}
+            {persona.telefono ? ` · ${persona.telefono}` : ""}
+          </p>
+        </div>
+        <StatusBadge estado={persona.activo ? "activo" : "inactivo"} />
+      </div>
 
-      <div className="mt-6 flex flex-wrap gap-1 border-b border-border">
+      <div className="mt-ds-6 flex flex-wrap gap-ds-1 border-b border-ds-divider">
         {pestanas.map((p) => (
           <button
             key={p.id}
             type="button"
             onClick={() => setPestana(p.id)}
-            className={`-mb-px border-b-2 px-3 py-2 text-sm font-medium transition-colors ${
-              pestanaActiva === p.id
-                ? "border-brand text-brand"
-                : "border-transparent text-muted hover:text-foreground"
+            className={`-mb-px border-b-2 px-ds-3 py-2 font-ds-body text-ds-small font-medium transition-colors ${
+              pestanaActiva === p.id ? "border-ds-brand text-ds-brand" : "border-transparent text-ds-text/60 hover:text-ds-text"
             }`}
           >
             {p.label}
@@ -335,91 +338,70 @@ export default function PersonaFichaPage() {
 
       {/* ── Identidad ── */}
       {pestanaActiva === "identidad" && (
-        <div className="my-6 grid gap-6 lg:grid-cols-2">
+        <div className="my-ds-6 grid gap-ds-6 lg:grid-cols-2">
           <Card>
-            <h2 className="mb-4 text-sm font-semibold text-foreground">Datos de la persona</h2>
-            <div className="flex flex-col gap-4">
-              <div>
-                <Label>Nombre</Label>
-                <Input type="text" value={nombre} disabled={!puedeEditarIdentidad} onChange={(e) => setNombre(e.target.value)} />
+            <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Datos de la persona</p>
+            <div className="flex flex-col gap-ds-4">
+              <Input etiqueta="Nombre" valor={nombre} deshabilitado={!puedeEditarIdentidad} onCambio={setNombre} />
+              <div className="flex flex-col gap-ds-1">
+                <Input etiqueta="Teléfono" tipo="tel" placeholder="+56 9 1234 5678" valor={telefono} deshabilitado={!puedeEditarIdentidad} onCambio={setTelefono} />
+                <p className="font-ds-body text-ds-caption text-ds-text/60">Con código de país. Necesario para que use el bot de WhatsApp.</p>
               </div>
-              <div>
-                <Label>Teléfono</Label>
-                <Input
-                  type="tel"
-                  placeholder="+56 9 1234 5678"
-                  value={telefono}
-                  disabled={!puedeEditarIdentidad}
-                  onChange={(e) => setTelefono(e.target.value)}
+              <div className="flex flex-col gap-ds-1">
+                <Select
+                  etiqueta="Función"
+                  valor={funcion}
+                  deshabilitado={!puedeEditarIdentidad}
+                  onCambio={setFuncion}
+                  opciones={[{ valor: "", etiqueta: "Sin definir" }, ...FUNCIONES.map((f) => ({ valor: f.value, etiqueta: f.label }))]}
                 />
-                <p className="mt-1 text-xs text-muted">Con código de país. Necesario para que use el bot de WhatsApp.</p>
+                <p className="font-ds-body text-ds-caption text-ds-text/60">Define qué pestañas ve en la app móvil.</p>
               </div>
-              <div>
-                <Label>Función</Label>
-                <Select value={funcion} disabled={!puedeEditarIdentidad} onChange={(e) => setFuncion(e.target.value)}>
-                  <option value="">Sin definir</option>
-                  {FUNCIONES.map((f) => (
-                    <option key={f.value} value={f.value}>
-                      {f.label}
-                    </option>
-                  ))}
-                </Select>
-                <p className="mt-1 text-xs text-muted">Define qué pestañas ve en la app móvil.</p>
-              </div>
-              <div>
-                <Label>Zona / área de cobertura</Label>
-                <Select value={zona} disabled={!puedeEditarIdentidad} onChange={(e) => setZona(e.target.value)}>
-                  <option value="">Sin zona</option>
-                  {REGIONES.map((r) => (
-                    <option key={r} value={r}>
-                      {r}
-                    </option>
-                  ))}
-                  {zona && !REGIONES.includes(zona) && <option value={zona}>{zona} (actual)</option>}
-                </Select>
-              </div>
+              <Select
+                etiqueta="Zona / área de cobertura"
+                valor={zona}
+                deshabilitado={!puedeEditarIdentidad}
+                onCambio={setZona}
+                opciones={[
+                  { valor: "", etiqueta: "Sin zona" },
+                  ...REGIONES.map((r) => ({ valor: r, etiqueta: r })),
+                  ...(zona && !REGIONES.includes(zona) ? [{ valor: zona, etiqueta: `${zona} (actual)` }] : []),
+                ]}
+              />
             </div>
-            {!puedeEditarIdentidad && (
-              <p className="mt-3 text-xs text-muted">Solo lectura — editar identidad requiere el módulo de Flota.</p>
-            )}
-            {errorId && (
-              <div className="mt-3">
-                <ErrorText>{errorId}</ErrorText>
-              </div>
-            )}
-            {avisoId && (
-              <div className="mt-3">
-                <SuccessText>{avisoId}</SuccessText>
-              </div>
-            )}
+            {!puedeEditarIdentidad && <p className="mt-ds-3 font-ds-body text-ds-caption text-ds-text/60">Solo lectura — editar identidad requiere el módulo de Flota.</p>}
+            {errorId ? <p className="mt-ds-3 font-ds-body text-ds-small text-ds-accent-700">{errorId}</p> : null}
+            {avisoId ? <p className="mt-ds-3 font-ds-body text-ds-small font-medium text-ds-accent2-800">{avisoId}</p> : null}
             {puedeEditarIdentidad && (
-              <Button type="button" onClick={guardarIdentidad} disabled={guardandoId} className="mt-4">
-                {guardandoId ? "Guardando…" : "Guardar"}
-              </Button>
+              <div className="mt-ds-4">
+                <Button onPress={guardarIdentidad} cargando={guardandoId}>
+                  Guardar
+                </Button>
+              </div>
             )}
           </Card>
 
           <Card>
-            <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-foreground">
-              <IconCalendar className="h-4 w-4 text-brand" />
+            <p className="mb-ds-4 flex items-center gap-ds-2 font-ds-body text-ds-small font-semibold text-ds-text">
+              <Calendar size={16} strokeWidth={2.75} className="text-ds-brand" />
               Jornada / rutas planificadas
-            </h2>
+            </p>
             {!ve("flota") ? (
-              <p className="text-sm text-muted">Requiere el módulo de Flota.</p>
+              <p className="font-ds-body text-ds-small text-ds-text/70">Requiere el módulo de Flota.</p>
             ) : rutas.length === 0 ? (
-              <p className="text-sm text-muted">
+              <p className="font-ds-body text-ds-small text-ds-text/70">
                 Sin rutas planificadas asignadas — se configuran en{" "}
-                <Link href="/dashboard/rutas" className="font-medium text-brand hover:underline">
+                <Link href="/dashboard/rutas" className="font-medium text-ds-brand hover:underline">
                   Rutas
                 </Link>
                 .
               </p>
             ) : (
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-ds-3">
                 {rutas.map((r) => (
-                  <div key={r.id} className="border-b border-border pb-3 last:border-0">
-                    <p className="text-sm font-medium text-foreground">{r.nombre ?? "Ruta sin nombre"}</p>
-                    <p className="text-xs text-muted">
+                  <div key={r.id} className="border-b border-ds-divider pb-ds-3 last:border-0">
+                    <p className="font-ds-body text-ds-small font-medium text-ds-text">{r.nombre ?? "Ruta sin nombre"}</p>
+                    <p className="font-ds-body text-ds-caption text-ds-text/60">
                       {r.dias_semana.map((d) => DIAS[d] ?? d).join(", ")} · {r.hora_inicio}–{r.hora_fin}
                     </p>
                   </div>
@@ -432,38 +414,29 @@ export default function PersonaFichaPage() {
 
       {/* ── Acceso y permisos ── */}
       {pestanaActiva === "acceso" && ve("gestion_control") && (
-        <div className="my-6 flex flex-col gap-6">
+        <div className="my-ds-6 flex flex-col gap-ds-6">
           <Card>
-            <h2 className="mb-4 text-sm font-semibold text-foreground">Rol y estado</h2>
+            <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Rol y estado</p>
             {persona.id === yoId ? (
-              <p className="text-sm text-muted">No puedes cambiar tu propio rol ni tu estado.</p>
+              <p className="font-ds-body text-ds-small text-ds-text/70">No puedes cambiar tu propio rol ni tu estado.</p>
             ) : (
-              <div className="flex flex-col gap-4">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <Label>Rol</Label>
-                    <Select value={editRol} onChange={(e) => setEditRol(e.target.value)}>
-                      {rolesDisponibles.map((r) => (
-                        <option key={r.value} value={r.value}>
-                          {r.label}
-                        </option>
-                      ))}
-                    </Select>
-                  </div>
-                  <label className="flex items-center gap-2 self-end pb-2.5 text-sm text-foreground">
-                    <input type="checkbox" checked={editActivo} onChange={(e) => setEditActivo(e.target.checked)} />
+              <div className="flex flex-col gap-ds-4">
+                <div className="grid gap-ds-4 sm:grid-cols-2">
+                  <Select etiqueta="Rol" valor={editRol} onCambio={setEditRol} opciones={rolesDisponibles.map((r) => ({ valor: r.value, etiqueta: r.label }))} />
+                  <label className="flex items-center gap-ds-2 self-end pb-2.5 font-ds-body text-ds-small text-ds-text">
+                    <input type="checkbox" className="accent-[var(--ds-brand)]" checked={editActivo} onChange={(e) => setEditActivo(e.target.checked)} />
                     Activo
                   </label>
                 </div>
-                {errorAcc && <ErrorText>{errorAcc}</ErrorText>}
-                {avisoAcc && <SuccessText>{avisoAcc}</SuccessText>}
-                <div className="flex flex-wrap gap-2">
-                  <Button type="button" onClick={guardarAcceso} disabled={guardandoAcc}>
-                    {guardandoAcc ? "Guardando…" : "Guardar"}
+                {errorAcc ? <p className="font-ds-body text-ds-small text-ds-accent-700">{errorAcc}</p> : null}
+                {avisoAcc ? <p className="font-ds-body text-ds-small font-medium text-ds-accent2-800">{avisoAcc}</p> : null}
+                <div className="flex flex-wrap gap-ds-2">
+                  <Button onPress={guardarAcceso} cargando={guardandoAcc}>
+                    Guardar
                   </Button>
                   {persona.rol !== "admin" && (
-                    <Button type="button" variant="outline" onClick={restablecerPassword} disabled={reseteando}>
-                      {reseteando ? "Generando…" : "Restablecer contraseña"}
+                    <Button variante="secundario" onPress={restablecerPassword} cargando={reseteando}>
+                      Restablecer contraseña
                     </Button>
                   )}
                 </div>
@@ -471,18 +444,18 @@ export default function PersonaFichaPage() {
             )}
 
             {passwordGenerada && (
-              <div className="mt-4 rounded-lg border border-brand/40 bg-brand-soft/20 p-4">
-                <h3 className="text-sm font-semibold text-foreground">Contraseña nueva de {persona.nombre}</h3>
-                <p className="mt-1 text-xs text-muted">
+              <div className="mt-ds-4 rounded-ds-md border border-ds-brand/40 bg-ds-brand/[0.06] p-ds-4">
+                <p className="font-ds-body text-ds-small font-semibold text-ds-text">Contraseña nueva de {persona.nombre}</p>
+                <p className="mt-ds-1 font-ds-body text-ds-caption text-ds-text/60">
                   Pásasela a mano — no se guarda ni se envía por correo, y no vas a poder volver a verla. La contraseña anterior ya
                   no funciona.
                 </p>
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <code className="rounded-md bg-surface px-3 py-2 font-mono text-sm text-foreground">{passwordGenerada}</code>
-                  <Button type="button" variant="outline" onClick={() => navigator.clipboard.writeText(passwordGenerada)}>
+                <div className="mt-ds-3 flex flex-wrap items-center gap-ds-2">
+                  <code className="rounded-ds-md bg-ds-surface px-ds-3 py-ds-2 font-mono text-ds-small text-ds-text">{passwordGenerada}</code>
+                  <Button variante="secundario" onPress={() => navigator.clipboard.writeText(passwordGenerada)}>
                     Copiar
                   </Button>
-                  <Button type="button" variant="ghost" onClick={() => setPasswordGenerada(null)}>
+                  <Button variante="ghost" onPress={() => setPasswordGenerada(null)}>
                     Listo
                   </Button>
                 </div>
@@ -491,30 +464,32 @@ export default function PersonaFichaPage() {
           </Card>
 
           {auditoria.length > 0 && (
-            <Card className="overflow-x-auto p-0">
-              <h2 className="px-5 pt-5 text-sm font-semibold text-foreground">Historial de cambios</h2>
-              <table className="mt-3 w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
-                    <th className="px-5 py-3 font-medium">Campo</th>
-                    <th className="px-5 py-3 font-medium">Cambio</th>
-                    <th className="px-5 py-3 font-medium">Realizado por</th>
-                    <th className="px-5 py-3 font-medium">Fecha</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {auditoria.map((a) => (
-                    <tr key={a.id} className="border-b border-border text-muted last:border-0">
-                      <td className="px-5 py-3">{CAMPO_LABEL[a.campo] ?? a.campo}</td>
-                      <td className="px-5 py-3">
-                        {formatCampoValor(a.campo, a.valor_anterior)} → {formatCampoValor(a.campo, a.valor_nuevo)}
-                      </td>
-                      <td className="px-5 py-3">{a.realizado_por?.nombre ?? "—"}</td>
-                      <td className="px-5 py-3">{new Date(a.creado_en).toLocaleString("es-CL")}</td>
+            <Card sinRelleno elevacion="sm">
+              <p className="px-ds-4 pt-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Historial de cambios</p>
+              <div className="mt-ds-3 overflow-x-auto">
+                <table className="w-full text-left text-ds-body">
+                  <thead>
+                    <tr className="border-b border-ds-divider text-[11px] font-medium uppercase tracking-[0.08em] text-ds-text/60">
+                      <th className="px-ds-4 py-ds-3">Campo</th>
+                      <th className="px-ds-4 py-ds-3">Cambio</th>
+                      <th className="px-ds-4 py-ds-3">Realizado por</th>
+                      <th className="px-ds-4 py-ds-3">Fecha</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {auditoria.map((a) => (
+                      <tr key={a.id} className="border-b border-ds-text/[0.08] text-ds-text/70 last:border-0">
+                        <td className="px-ds-4 py-ds-3">{CAMPO_LABEL[a.campo] ?? a.campo}</td>
+                        <td className="px-ds-4 py-ds-3">
+                          {formatCampoValor(a.campo, a.valor_anterior)} → {formatCampoValor(a.campo, a.valor_nuevo)}
+                        </td>
+                        <td className="px-ds-4 py-ds-3">{a.realizado_por?.nombre ?? "—"}</td>
+                        <td className="px-ds-4 py-ds-3">{new Date(a.creado_en).toLocaleString("es-CL")}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </Card>
           )}
         </div>
@@ -522,130 +497,103 @@ export default function PersonaFichaPage() {
 
       {/* ── Datos laborales ── */}
       {pestanaActiva === "laboral" && ve("remuneraciones") && (
-        <Card className="my-6">
-          <h2 className="mb-1 text-sm font-semibold text-foreground">Contrato, previsión y haberes fijos</h2>
-          <p className="mb-4 text-sm text-muted">
-            Lo que la liquidación necesita y no vive en la identidad. {laboral ? "" : "Aún sin configurar."}
-          </p>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <div>
-              <Label>RUT</Label>
-              <Input placeholder="12.345.678-9" value={String(formLaboral.rut)} onChange={(e) => setL("rut", e.target.value)} />
-            </div>
-            <div>
-              <Label>Apellido paterno</Label>
-              <Input value={String(formLaboral.apellido_paterno)} onChange={(e) => setL("apellido_paterno", e.target.value)} />
-            </div>
-            <div>
-              <Label>Apellido materno</Label>
-              <Input value={String(formLaboral.apellido_materno)} onChange={(e) => setL("apellido_materno", e.target.value)} />
-            </div>
-            <div>
-              <Label>Tipo de contrato</Label>
-              <Select value={String(formLaboral.tipo_contrato)} onChange={(e) => setL("tipo_contrato", e.target.value)}>
-                <option value="indefinido">Indefinido</option>
-                <option value="plazo_fijo">Plazo fijo</option>
-                <option value="por_obra">Por obra / faena</option>
-              </Select>
-            </div>
-            <div>
-              <Label>Fecha de ingreso</Label>
-              <Input type="date" value={String(formLaboral.fecha_ingreso)} onChange={(e) => setL("fecha_ingreso", e.target.value)} />
-            </div>
-            <div>
-              <Label>Sueldo base ($)</Label>
-              <InputMonto value={String(formLaboral.sueldo_base)} onChange={(v) => setL("sueldo_base", v)} moneda={usuario?.moneda} />
-            </div>
-            <div>
-              <Label>Colación mensual ($)</Label>
-              <InputMonto value={String(formLaboral.colacion_mensual)} onChange={(v) => setL("colacion_mensual", v)} moneda={usuario?.moneda} />
-            </div>
-            <div>
-              <Label>Movilización mensual ($)</Label>
-              <InputMonto value={String(formLaboral.movilizacion_mensual)} onChange={(v) => setL("movilizacion_mensual", v)} moneda={usuario?.moneda} />
-            </div>
-            <div>
-              <Label>AFP</Label>
-              <Select value={String(formLaboral.afp)} onChange={(e) => setL("afp", e.target.value)}>
-                <option value="">Sin AFP</option>
-                {AFP_CHILE.map((a) => (
-                  <option key={a.afp} value={a.afp}>
-                    {a.nombre}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <div>
-              <Label>Sistema de salud</Label>
-              <Select value={String(formLaboral.sistema_salud)} onChange={(e) => setL("sistema_salud", e.target.value)}>
-                <option value="fonasa">Fonasa</option>
-                <option value="isapre">Isapre</option>
-              </Select>
-            </div>
-            {formLaboral.sistema_salud === "isapre" && (
-              <>
-                <div>
-                  <Label>Plan Isapre (UF)</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={String(formLaboral.plan_isapre_uf)}
-                    onChange={(e) => setL("plan_isapre_uf", e.target.value)}
+        <div className="my-ds-6">
+          <Card>
+            <p className="mb-ds-1 font-ds-body text-ds-small font-semibold text-ds-text">Contrato, previsión y haberes fijos</p>
+            <p className="mb-ds-4 font-ds-body text-ds-small text-ds-text/70">
+              Lo que la liquidación necesita y no vive en la identidad. {laboral ? "" : "Aún sin configurar."}
+            </p>
+            <div className="grid gap-ds-3 sm:grid-cols-2 lg:grid-cols-3">
+              <Input etiqueta="RUT" placeholder="12.345.678-9" valor={String(formLaboral.rut)} onCambio={(v) => setL("rut", v)} />
+              <Input etiqueta="Apellido paterno" valor={String(formLaboral.apellido_paterno)} onCambio={(v) => setL("apellido_paterno", v)} />
+              <Input etiqueta="Apellido materno" valor={String(formLaboral.apellido_materno)} onCambio={(v) => setL("apellido_materno", v)} />
+              <Select
+                etiqueta="Tipo de contrato"
+                valor={String(formLaboral.tipo_contrato)}
+                onCambio={(v) => setL("tipo_contrato", v)}
+                opciones={[
+                  { valor: "indefinido", etiqueta: "Indefinido" },
+                  { valor: "plazo_fijo", etiqueta: "Plazo fijo" },
+                  { valor: "por_obra", etiqueta: "Por obra / faena" },
+                ]}
+              />
+              <FechaCampo etiqueta="Fecha de ingreso" valor={String(formLaboral.fecha_ingreso)} onCambio={(v) => setL("fecha_ingreso", v)} />
+              <div className="flex flex-col gap-ds-1">
+                <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Sueldo base ($)</label>
+                <InputMonto value={String(formLaboral.sueldo_base)} onChange={(v) => setL("sueldo_base", v)} moneda={usuario?.moneda} />
+              </div>
+              <div className="flex flex-col gap-ds-1">
+                <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Colación mensual ($)</label>
+                <InputMonto value={String(formLaboral.colacion_mensual)} onChange={(v) => setL("colacion_mensual", v)} moneda={usuario?.moneda} />
+              </div>
+              <div className="flex flex-col gap-ds-1">
+                <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Movilización mensual ($)</label>
+                <InputMonto value={String(formLaboral.movilizacion_mensual)} onChange={(v) => setL("movilizacion_mensual", v)} moneda={usuario?.moneda} />
+              </div>
+              <Select
+                etiqueta="AFP"
+                valor={String(formLaboral.afp)}
+                onCambio={(v) => setL("afp", v)}
+                opciones={[{ valor: "", etiqueta: "Sin AFP" }, ...AFP_CHILE.map((a) => ({ valor: a.afp, etiqueta: a.nombre }))]}
+              />
+              <Select
+                etiqueta="Sistema de salud"
+                valor={String(formLaboral.sistema_salud)}
+                onCambio={(v) => setL("sistema_salud", v)}
+                opciones={[
+                  { valor: "fonasa", etiqueta: "Fonasa" },
+                  { valor: "isapre", etiqueta: "Isapre" },
+                ]}
+              />
+              {formLaboral.sistema_salud === "isapre" && (
+                <>
+                  <Input etiqueta="Plan Isapre (UF)" tipo="numero" valor={String(formLaboral.plan_isapre_uf)} onCambio={(v) => setL("plan_isapre_uf", v)} />
+                  <Select
+                    etiqueta="Isapre"
+                    valor={String(formLaboral.codigo_isapre)}
+                    onCambio={(v) => setL("codigo_isapre", v)}
+                    opciones={[{ valor: "", etiqueta: "Elegir…" }, ...ISAPRES_CHILE.map((i) => ({ valor: i.codigo, etiqueta: i.nombre }))]}
                   />
-                </div>
-                <div>
-                  <Label>Isapre</Label>
-                  <Select value={String(formLaboral.codigo_isapre)} onChange={(e) => setL("codigo_isapre", e.target.value)}>
-                    <option value="">Elegir…</option>
-                    {ISAPRES_CHILE.map((i) => (
-                      <option key={i.codigo} value={i.codigo}>
-                        {i.nombre}
-                      </option>
-                    ))}
-                  </Select>
-                </div>
-              </>
-            )}
-            <div>
-              <Label>Cargas familiares</Label>
-              <Input
-                type="number"
-                value={String(formLaboral.cargas_familiares)}
-                onChange={(e) => setL("cargas_familiares", e.target.value)}
-              />
+                </>
+              )}
+              <Input etiqueta="Cargas familiares" tipo="numero" valor={String(formLaboral.cargas_familiares)} onCambio={(v) => setL("cargas_familiares", v)} />
+              <label className="flex items-center gap-ds-2 self-end pb-2.5 font-ds-body text-ds-small text-ds-text">
+                <input type="checkbox" className="accent-[var(--ds-brand)]" checked={Boolean(formLaboral.gratificacion_legal)} onChange={(e) => setL("gratificacion_legal", e.target.checked)} />
+                Paga gratificación (Art. 50)
+              </label>
             </div>
-            <label className="flex items-center gap-2 self-end pb-2.5 text-sm text-foreground">
-              <input
-                type="checkbox"
-                checked={Boolean(formLaboral.gratificacion_legal)}
-                onChange={(e) => setL("gratificacion_legal", e.target.checked)}
-              />
-              Paga gratificación (Art. 50)
-            </label>
-          </div>
-          {errorLab && (
-            <div className="mt-3">
-              <ErrorText>{errorLab}</ErrorText>
+            {errorLab ? <p className="mt-ds-3 font-ds-body text-ds-small text-ds-accent-700">{errorLab}</p> : null}
+            {avisoLab ? <p className="mt-ds-3 font-ds-body text-ds-small font-medium text-ds-accent2-800">{avisoLab}</p> : null}
+            <div className="mt-ds-4">
+              <Button onPress={guardarLaboral} cargando={guardandoLab}>
+                Guardar
+              </Button>
             </div>
-          )}
-          {avisoLab && (
-            <div className="mt-3">
-              <SuccessText>{avisoLab}</SuccessText>
-            </div>
-          )}
-          <Button type="button" onClick={guardarLaboral} disabled={guardandoLab} className="mt-4">
-            {guardandoLab ? "Guardando…" : "Guardar"}
-          </Button>
-        </Card>
+          </Card>
+        </div>
       )}
 
       {/* ── Documentos ── */}
       {pestanaActiva === "documentos" && ve("flota") && (
-        <div className="my-6">
+        <div className="my-ds-6">
           <DocumentoForm entidadTipo="colaborador" entidadId={persona.id} />
         </div>
       )}
-
     </DashboardShell>
+  );
+}
+
+// Input nativo type="date" — ver el mismo helper en rutas/nueva/page.tsx.
+function FechaCampo({ etiqueta, valor, onCambio }: { etiqueta: string; valor: string; onCambio: (v: string) => void }) {
+  return (
+    <div className="flex flex-col gap-ds-1">
+      <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">{etiqueta}</label>
+      <input
+        type="date"
+        value={valor}
+        onChange={(e) => onCambio(e.target.value)}
+        className="h-11 w-full rounded-ds-md border border-ds-divider bg-ds-surface px-ds-3 font-ds-body text-ds-body text-ds-text transition-colors hover:border-ds-text/30 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ds-brand)]"
+      />
+    </div>
   );
 }

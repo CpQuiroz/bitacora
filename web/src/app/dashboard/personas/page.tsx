@@ -2,15 +2,14 @@
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { Mail, Users } from "lucide-react";
 import type { Usuario } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { useRolesDisponibles } from "@/lib/roles";
 import { FUNCIONES } from "@/lib/funciones";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText } from "@/components/ui";
-import { IconMail, IconUsers } from "@/components/icons";
-import { EstadoCargando, EstadoVacio } from "@/components/estados";
+import { Button, Card, EmptyState, ErrorState, Input, LoadingState, Select, StatusBadge, Table, Tag } from "@bitacora/ui/web";
 
 // Ficha única de personas — reemplaza Flota → Colaboradores, Grupo y
 // usuario, y Remuneraciones → Datos del equipo. Esta pantalla lista al
@@ -21,6 +20,7 @@ import { EstadoCargando, EstadoVacio } from "@/components/estados";
 
 type AccesoFila = { id: string; tipo: "correo" | "dominio"; valor: string; rol: string; creado_en: string };
 
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export default function PersonasPage() {
   const router = useRouter();
   const [usuario, setUsuario] = useState<UsuarioShell | null>(null);
@@ -157,171 +157,115 @@ export default function PersonasPage() {
 
   return (
     <DashboardShell usuario={usuario}>
-      <PageHeader title="Personas" subtitle="El equipo de la empresa: identidad, acceso, datos laborales y documentos" />
+      <p className="ds-heading text-ds-h2 text-ds-text">Personas</p>
+      <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">El equipo de la empresa: identidad, acceso, datos laborales y documentos</p>
 
       {puedeGestionar && (
-        <Card className="my-6">
-          <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-foreground">
-            <IconMail className="h-4 w-4 text-brand" />
-            Invitar a alguien nuevo
-          </h2>
-          <form onSubmit={onInvitar} className="flex flex-col gap-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="sm:col-span-2">
-                <Label>Correo</Label>
-                <Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
-              </div>
-              <div>
-                <Label>Nombre</Label>
-                <Input type="text" required value={nombre} onChange={(e) => setNombre(e.target.value)} />
-              </div>
-              <div>
-                <Label>Rol</Label>
-                <Select value={rol} onChange={(e) => setRol(e.target.value)}>
-                  {rolesDisponibles.map((r) => (
-                    <option key={r.value} value={r.value}>
-                      {r.label}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-              {rol === "colaborador" && (
-                <div>
-                  <Label>Función (opcional)</Label>
-                  <Select value={funcion} onChange={(e) => setFuncion(e.target.value)}>
-                    <option value="">Sin definir</option>
-                    {FUNCIONES.map((f) => (
-                      <option key={f.value} value={f.value}>
-                        {f.label}
-                      </option>
-                    ))}
-                  </Select>
-                  <p className="mt-1 text-xs text-muted">Define qué ve en la app móvil (un chofer no ve Órdenes de servicio).</p>
+        <div className="my-ds-6">
+          <Card>
+            <p className="mb-ds-4 flex items-center gap-ds-2 font-ds-body text-ds-small font-semibold text-ds-text">
+              <Mail size={16} strokeWidth={2.75} className="text-ds-brand" />
+              Invitar a alguien nuevo
+            </p>
+            <form onSubmit={onInvitar} className="flex flex-col gap-ds-4">
+              <div className="grid gap-ds-4 sm:grid-cols-2">
+                <div className="sm:col-span-2">
+                  <Input etiqueta="Correo" tipo="email" requerido valor={email} onCambio={setEmail} />
                 </div>
-              )}
-              <div className="sm:col-span-2">
-                <Label>Teléfono (opcional)</Label>
-                <Input type="tel" placeholder="+56 9 1234 5678" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
-                <p className="mt-1 text-xs text-muted">Con código de país. Sirve para que un chofer use el bot de WhatsApp.</p>
+                <Input etiqueta="Nombre" requerido valor={nombre} onCambio={setNombre} />
+                <Select etiqueta="Rol" valor={rol} onCambio={setRol} opciones={rolesDisponibles.map((r) => ({ valor: r.value, etiqueta: r.label }))} />
+                {rol === "colaborador" && (
+                  <div className="flex flex-col gap-ds-1">
+                    <Select
+                      etiqueta="Función (opcional)"
+                      valor={funcion}
+                      onCambio={setFuncion}
+                      opciones={[{ valor: "", etiqueta: "Sin definir" }, ...FUNCIONES.map((f) => ({ valor: f.value, etiqueta: f.label }))]}
+                    />
+                    <p className="font-ds-body text-ds-caption text-ds-text/60">Define qué ve en la app móvil (un chofer no ve Órdenes de servicio).</p>
+                  </div>
+                )}
+                <div className="sm:col-span-2">
+                  <Input etiqueta="Teléfono (opcional)" tipo="tel" placeholder="+56 9 1234 5678" valor={telefono} onCambio={setTelefono} />
+                  <p className="mt-ds-1 font-ds-body text-ds-caption text-ds-text/60">Con código de país. Sirve para que un chofer use el bot de WhatsApp.</p>
+                </div>
               </div>
-            </div>
-            {formError && <ErrorText>{formError}</ErrorText>}
-            {exito && <SuccessText>{exito}</SuccessText>}
-            <Button type="submit" disabled={invitando} className="self-start">
-              {invitando ? "Invitando…" : "Invitar"}
-            </Button>
-          </form>
-        </Card>
+              {formError ? <p className="font-ds-body text-ds-small text-ds-accent-700">{formError}</p> : null}
+              {exito ? <p className="font-ds-body text-ds-small font-medium text-ds-accent2-800">{exito}</p> : null}
+              <div>
+                <Button tipo="submit" cargando={invitando}>
+                  Invitar
+                </Button>
+              </div>
+            </form>
+          </Card>
+        </div>
       )}
 
-      {error && <ErrorText>{error}</ErrorText>}
-      {usuarios === null && !error && <EstadoCargando />}
-      {usuarios?.length === 0 && <EstadoVacio icono={IconUsers} titulo="Todavía no hay nadie en el equipo" />}
+      {error ? <ErrorState mensaje={error} /> : null}
+      {usuarios === null && !error ? <LoadingState /> : null}
+      {usuarios?.length === 0 && <EmptyState icono={<Users size={28} strokeWidth={2.75} />} titulo="Todavía no hay nadie en el equipo" />}
 
       {usuarios && usuarios.length > 0 && (
-        <Card className="my-6 overflow-x-auto p-0">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
-                <th className="px-5 py-3 font-medium">Nombre</th>
-                {puedeGestionar && <th className="px-5 py-3 font-medium">Correo</th>}
-                <th className="px-5 py-3 font-medium">Rol</th>
-                <th className="px-5 py-3 font-medium">Estado</th>
-                <th className="px-5 py-3 font-medium" />
-              </tr>
-            </thead>
-            <tbody>
-              {usuarios.map((u) => (
-                <tr
-                  key={u.id}
-                  onClick={() => router.push(`/dashboard/personas/${u.id}`)}
-                  className="cursor-pointer border-b border-border-soft last:border-0 hover:bg-surface-sunken"
-                >
-                  <td className="px-5 py-3 font-medium text-foreground">{u.nombre}</td>
-                  {puedeGestionar && <td className="px-5 py-3 text-muted">{u.correo ?? "—"}</td>}
-                  <td className="px-5 py-3">
-                    <Badge value={etiquetaRol(u.rol)} />
-                  </td>
-                  <td className="px-5 py-3">
-                    <Badge value={u.activo ? "activo" : "inactivo"} />
-                  </td>
-                  <td className="px-5 py-3 text-right">
-                    <span className="text-xs font-medium text-brand">Ver ficha →</span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
+        <div className="my-ds-6">
+          <Table<Usuario & { correo?: string | null }>
+            filas={usuarios}
+            claveFila={(u) => u.id}
+            onFilaClick={(u) => router.push(`/dashboard/personas/${u.id}`)}
+            vacio={{ titulo: "Todavía no hay nadie en el equipo" }}
+            columnas={[
+              { encabezado: "Nombre", celda: (u) => u.nombre },
+              ...(puedeGestionar ? [{ encabezado: "Correo", celda: (u: Usuario & { correo?: string | null }) => u.correo ?? "—" }] : []),
+              { encabezado: "Rol", celda: (u) => <Tag>{etiquetaRol(u.rol)}</Tag> },
+              { encabezado: "Estado", celda: (u) => <StatusBadge estado={u.activo ? "activo" : "inactivo"} /> },
+              { encabezado: "", celda: () => <span className="font-ds-body text-ds-caption font-medium text-ds-brand">Ver ficha →</span> },
+            ]}
+          />
+        </div>
       )}
 
       {puedeGestionar && (
-        <Card className="my-6">
-          <h2 className="mb-1 text-sm font-semibold text-foreground">Correos y dominios autorizados</h2>
-          <p className="mb-4 text-sm text-muted">
-            Un correo (<code>persona@tuempresa.cl</code>) o un dominio entero (<code>tuempresa.cl</code>) de esta lista puede entrar
-            a la empresa sin invitación — la primera vez que inicia sesión se le crea el usuario con el rol indicado. Un correo que
-            no está acá ni fue invitado no puede entrar.
-          </p>
+        <div className="my-ds-6">
+          <Card>
+            <p className="mb-ds-1 font-ds-body text-ds-small font-semibold text-ds-text">Correos y dominios autorizados</p>
+            <p className="mb-ds-4 font-ds-body text-ds-small text-ds-text/70">
+              Un correo (<code>persona@tuempresa.cl</code>) o un dominio entero (<code>tuempresa.cl</code>) de esta lista puede entrar
+              a la empresa sin invitación — la primera vez que inicia sesión se le crea el usuario con el rol indicado. Un correo que
+              no está acá ni fue invitado no puede entrar.
+            </p>
 
-          {accesos === null ? (
-            <EstadoCargando />
-          ) : accesos.length === 0 ? (
-            <p className="text-sm text-muted">Sin correos ni dominios autorizados.</p>
-          ) : (
-            <div className="flex flex-col gap-2">
-              {accesos.map((a) => (
-                <div key={a.id} className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2 text-sm">
-                  <span className="flex flex-wrap items-center gap-2">
-                    <Badge value={a.tipo} />
-                    <span className="font-mono text-foreground">{a.valor}</span>
-                    <span className="text-muted">→ {etiquetaRol(a.rol)}</span>
-                  </span>
-                  <Button type="button" variant="ghost" onClick={() => onQuitarAcceso(a.id)}>
-                    Quitar
-                  </Button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <form onSubmit={onAgregarAcceso} className="mt-4 grid gap-2 sm:grid-cols-[auto_1fr_auto_auto] sm:items-end">
-            <div>
-              <Label>Tipo</Label>
-              <Select value={accesoTipo} onChange={(e) => setAccesoTipo(e.target.value as "correo" | "dominio")}>
-                <option value="correo">Correo</option>
-                <option value="dominio">Dominio</option>
-              </Select>
-            </div>
-            <div>
-              <Label>{accesoTipo === "correo" ? "Correo" : "Dominio"}</Label>
-              <Input
-                type="text"
-                value={accesoValor}
-                onChange={(e) => setAccesoValor(e.target.value)}
-                placeholder={accesoTipo === "correo" ? "persona@tuempresa.cl" : "tuempresa.cl"}
-              />
-            </div>
-            <div>
-              <Label>Rol</Label>
-              <Select value={accesoRol} onChange={(e) => setAccesoRol(e.target.value)}>
-                {rolesDisponibles.map((r) => (
-                  <option key={r.value} value={r.value}>
-                    {r.label}
-                  </option>
+            {accesos === null ? (
+              <LoadingState />
+            ) : accesos.length === 0 ? (
+              <p className="font-ds-body text-ds-small text-ds-text/70">Sin correos ni dominios autorizados.</p>
+            ) : (
+              <div className="flex flex-col gap-ds-2">
+                {accesos.map((a) => (
+                  <div key={a.id} className="flex items-center justify-between gap-ds-3 rounded-ds-md border border-ds-divider px-ds-3 py-ds-2 font-ds-body text-ds-small">
+                    <span className="flex flex-wrap items-center gap-ds-2">
+                      <Tag tono="outline">{a.tipo}</Tag>
+                      <span className="font-mono text-ds-text">{a.valor}</span>
+                      <span className="text-ds-text/60">→ {etiquetaRol(a.rol)}</span>
+                    </span>
+                    <Button variante="ghost" onPress={() => onQuitarAcceso(a.id)}>
+                      Quitar
+                    </Button>
+                  </div>
                 ))}
-              </Select>
-            </div>
-            <Button type="submit" disabled={guardandoAcceso || accesoValor.trim().length < 3}>
-              {guardandoAcceso ? "Agregando…" : "Agregar"}
-            </Button>
-          </form>
-          {errorAcceso && (
-            <div className="mt-3">
-              <ErrorText>{errorAcceso}</ErrorText>
-            </div>
-          )}
-        </Card>
+              </div>
+            )}
+
+            <form onSubmit={onAgregarAcceso} className="mt-ds-4 grid gap-ds-2 sm:grid-cols-[auto_1fr_auto_auto] sm:items-end">
+              <Select etiqueta="Tipo" valor={accesoTipo} onCambio={(v) => setAccesoTipo(v as "correo" | "dominio")} opciones={[{ valor: "correo", etiqueta: "Correo" }, { valor: "dominio", etiqueta: "Dominio" }]} />
+              <Input etiqueta={accesoTipo === "correo" ? "Correo" : "Dominio"} valor={accesoValor} onCambio={setAccesoValor} placeholder={accesoTipo === "correo" ? "persona@tuempresa.cl" : "tuempresa.cl"} />
+              <Select etiqueta="Rol" valor={accesoRol} onCambio={setAccesoRol} opciones={rolesDisponibles.map((r) => ({ valor: r.value, etiqueta: r.label }))} />
+              <Button tipo="submit" deshabilitado={guardandoAcceso || accesoValor.trim().length < 3} cargando={guardandoAcceso}>
+                Agregar
+              </Button>
+            </form>
+            {errorAcceso ? <p className="mt-ds-3 font-ds-body text-ds-small text-ds-accent-700">{errorAcceso}</p> : null}
+          </Card>
+        </div>
       )}
     </DashboardShell>
   );
