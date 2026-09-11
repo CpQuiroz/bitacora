@@ -64,12 +64,12 @@
       "title": "E2E en prod: Mantención de flota + rediseño de PDF de OS",
       "description": "Verificar en producción (Transportes Itineris) el módulo Mantención de flota y los PDFs rediseñados (OS Fase 1+2, Informe IA). Cerrar OS nueva con fotos por categoría y firma del técnico.",
       "acceptance": [
-        "Registro de mantención creado en prod con foto, PDF generado OK",
-        "OS nueva cerrada en prod: fotos agrupadas por categoría + 2 bloques de firma en el PDF",
-        "Informe IA de negocio genera PDF con el formato nuevo",
+        "Registro de mantención creado en prod con foto, PDF generado OK — HECHO",
+        "OS nueva cerrada en prod: fotos agrupadas por categoría + 2 bloques de firma en el PDF — BLOQUEADO, requiere el APK 1.9.8 en un teléfono (no hay vista web para check-in/fotos/firma)",
+        "Informe IA de negocio genera PDF con el formato nuevo — HECHO",
         "Hallazgos anotados en progress/history.md"
       ],
-      "status": "pending"
+      "status": "blocked"
     },
     {
       "id": 6,

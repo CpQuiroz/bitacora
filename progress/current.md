@@ -351,5 +351,48 @@ landing, no el dashboard). No puedo escribir la contraseña yo mismo
 la usuaria cómo seguir — eligió "inicia sesión vos en este navegador":
 ella entra con su usuario/contraseña en la pestaña que dejé abierta y
 después yo sigo operando la app (crear mantención, cerrar OS, generar
-PDFs) sin tocar credenciales. Queda pendiente que ella inicie sesión
-para retomar.
+PDFs) sin tocar credenciales.
+
+## 2026-09-11: tarea 5 retomada — hallazgo real + resultado parcial
+
+Con la usuaria ya logueada, al abrir "Nuevo registro de mantención" en
+prod salió **"No se pudo cargar el checklist"** — el mismo bug de la
+tarea 10 (URL con `equipoId` de más), YA CORREGIDO en el código local,
+pero **nunca desplegado**: 37 commits sin pushear a `main` (incluía
+todo el rediseño visual crema/Caprasimo completo + los fixes de esta
+sesión). Como "deploy = push a main" (Vercel+Render auto), prod seguía
+corriendo código de antes de esa migración entera.
+
+Confirmé antes de tocar nada: (1) todas las tablas que el código nuevo
+necesita ya existían en prod (`viaje_fotos`, `registro_mantencion_
+fotos`, etc. — migración 95 ya estaba aplicada, a diferencia de lo que
+decía una nota vieja); (2) `./verificar.sh` en verde. Pregunté a la
+usuaria si pushear todo junto (dado el tamaño del cambio, visual +
+funcional, para un cliente real) — confirmó "pushea todo ahora".
+Push hecho (`48e0935..3d42342`, 37 commits). Vercel/Render redesplegaron
+solos (confirmado: la web ya mostraba el diseño crema nuevo).
+
+**Verificado en vivo contra PROD** (equipo real "Tracto Camion
+International 9200", cliente interno "Itineris Spa" — ya usado así en
+varias OS de prueba anteriores, confirma que es la convención correcta):
+- Registro de mantención con ítem en "NO" + foto etiquetada: **se creó
+  sin error** ("Con novedades", 412.870 km · 6.140 h). Bug de la tarea
+  10 confirmado resuelto en prod real.
+- Detalle del registro: checklist + 2 fotos (una general, una
+  etiquetada al ítem) — correcto.
+- PDF del registro: se generó sin error (blob abierto, formato no
+  inspeccionable por herramienta pero sin fallo de servidor).
+- OS nueva (N° 15, cliente Itineris Spa): creada OK. **Informe con IA**
+  generado correctamente — RAG real, honesto (dice explícitamente que
+  no hay fotos/checklist en vez de inventar contenido), formato con
+  las 4 secciones esperadas.
+- PDF de la OS: se generó sin error.
+
+**Bloqueado, no completado**: cerrar la OS con fotos agrupadas por
+categoría + 2 bloques de firma requiere check-in/fotos/firma del
+técnico — **eso es solo desde el celular** (confirmado: no existe
+ninguna vista web para eso, `grep` en `web/src/app` no encontró
+ninguna página de tipo "mi-trabajo"/checkin). No tengo acceso a un
+dispositivo Android real. Queda para que la usuaria lo haga con el
+APK 1.9.8 en su teléfono sobre la OS N° 15 (o una nueva) — reviso el
+resultado (PDF final) apenas avise.
