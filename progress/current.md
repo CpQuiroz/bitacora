@@ -1,7 +1,7 @@
 # Sesión actual
 
-- **Tarea en curso:** 10 — fotos_mantencion_equipo (ver detalle abajo)
-- **Cerrada esta sesión:** 9 — edicion_viajes_y_fotos_os
+- **Tarea en curso:** 11 — fix_sync_cola_apilamiento (ver detalle abajo)
+- **Cerradas esta sesión:** 9 — edicion_viajes_y_fotos_os, 10 — fotos_mantencion_equipo
 - **Pausada:** 8 — sistema_diseno (pending, no abandonada — retomar cuando la
   usuaria lo pida; ver `docs/design-system.md` §"Seams que quedan fuera de
   este pedido" para el estado exacto donde quedó)
@@ -190,3 +190,39 @@ también quedan aparte.
   (sin credenciales de sesión) — solo web (Login/Registro). Si la usuaria
   puede dar credenciales de un usuario dev, se podría verificar visualmente
   el resto también.
+
+## 2026-09-11: tarea 11 — bug real de sync encontrado probando en prod
+
+La usuaria probó el APK 1.9.5 contra producción real (siguiendo el plan
+de la tarea 5) y el registro de mantención con foto "se quedó
+sincronizando" y nunca se creó. Confirmado con una lectura contra prod
+(`yjbskbskyadxjooxngjv`, `equipos.patente = 'CFHGJ'`): 0 filas en
+`registros_mantencion_equipo` — no quedó nada a medio crear tampoco.
+
+**Causa raíz real** (`mobile/src/services/api.ts`, ya documentada ahí
+mismo pero sin mitigación): un `fetch` con body `FormData` en React
+Native **no se puede abortar de verdad** — cuando el timeout manual
+(`Promise.race`) "gana", la promesa se rechaza pero el `fetch`
+original sigue viajando en segundo plano, sin forma de cancelarlo.
+`services/sync/queue.ts` no tenía ningún guard contra esto: un
+reconectar o volver al foreground disparaba `procesar()` de nuevo
+mientras el intento anterior de la MISMA acción (con archivo) todavía
+podía estar en camino — apilando subidas concurrentes de la misma
+foto/registro que se saturaban entre sí hasta que ninguna llegaba a
+terminar. Con cold start de Render (30-60s) + subir 1+ fotos en una
+conexión mediocre, 60s de timeout se quedaba corto seguido, disparando
+justo este ciclo.
+
+**Fix**:
+- `TIMEOUT_MULTIPART_MS = 90000` compartido en `api.ts` (antes 60000
+  hardcodeado en 4 sitios: `mantencion.ts` x2, `viajes.ts` x2, y
+  `queue.ts`).
+- `queue.ts`: nuevo campo `ultimoIntentoEn` por acción — no se relanza
+  una acción con archivo(s) mientras su intento anterior pueda seguir
+  en vuelo (dentro de la ventana del timeout). Esto es el fix
+  estructural real; subir el timeout solo reduce cuán seguido se
+  dispara el ciclo, no lo elimina por sí solo.
+
+`./verificar.sh` verde: tsc x6, 27 tests, 12 literales, 99 migraciones.
+APK 1.9.6 (versionCode 23) generado igual que el anterior (local,
+apuntado a prod) para que la usuaria reintente el E2E de la tarea 5.

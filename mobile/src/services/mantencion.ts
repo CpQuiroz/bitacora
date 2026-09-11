@@ -4,7 +4,7 @@ import type {
   RespuestaChecklistMantencion,
   TipoRegistroMantencion,
 } from "@bitacora/shared";
-import { apiFetch, apiJson } from "./api";
+import { apiFetch, apiJson, TIMEOUT_MULTIPART_MS } from "./api";
 import { encolar } from "./sync/queue";
 import { guardarCache, leerCache } from "./sync/cache";
 
@@ -173,7 +173,7 @@ export async function crearRegistroMantencion(
   if (conFotos) {
     // multipart: la foto viaja como archivo, nunca en el body.
     try {
-      const res = await apiFetch(path, { method: "POST", body: formDataDe(b) }, 60000);
+      const res = await apiFetch(path, { method: "POST", body: formDataDe(b) }, TIMEOUT_MULTIPART_MS);
       if (res.ok) return { ok: true };
       const cuerpoErr = await res.json().catch(() => ({}));
       return {
@@ -256,7 +256,7 @@ export async function subirFotoARegistro(
   if (item) fd.append("item", item);
   fd.append("foto", { uri: foto.uri, name: foto.name ?? "foto.jpg", type: foto.type ?? "image/jpeg" } as unknown as Blob);
   try {
-    const res = await apiFetch(`/api/equipos/${equipoId}/registros-mantencion/${registroId}/fotos`, { method: "POST", body: fd }, 60000);
+    const res = await apiFetch(`/api/equipos/${equipoId}/registros-mantencion/${registroId}/fotos`, { method: "POST", body: fd }, TIMEOUT_MULTIPART_MS);
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
       return { ok: false, error: (body as { error?: string }).error ?? `Error ${res.status}` };

@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import NetInfo from "@react-native-community/netinfo";
-import { apiFetch } from "../api";
+import { apiFetch, TIMEOUT_MULTIPART_MS } from "../api";
 import { borrarFoto, fotoExiste } from "../../lib/fotoCola";
 import { preferencias } from "../../lib/preferencias";
 
@@ -43,6 +43,15 @@ export type AccionPendiente = {
   intentos: number;
   ultimoError?: string;
   fallida?: boolean; // agotó los reintentos — necesita acción del usuario
+  // Cuándo arrancó el intento más reciente que tiene archivo(s). Un
+  // fetch de FormData que "timeoutea" del lado del cliente NO se puede
+  // abortar de verdad en RN (ver api.ts) — el request original sigue
+  // viajando. Sin este campo, un reconectar/foreground disparaba un
+  // reintento mientras el intento anterior todavía podía estar en
+  // camino, apilando subidas concurrentes de la MISMA foto hasta que
+  // ninguna terminaba nunca. Bug real (2026-09-11): "se quedó
+  // sincronizando" y el registro nunca se creó.
+  ultimoIntentoEn?: number;
 };
 
 // Todos los archivos de una acción (unifica archivo + archivos).
@@ -131,7 +140,7 @@ async function ejecutar(a: AccionPendiente): Promise<Response> {
     }
     // Más margen para las fotos: la petición despierta al backend en
     // Render (cold start ~30–60s) además de subir la imagen.
-    return apiFetch(a.path, { method: a.method, body: fd }, 60000);
+    return apiFetch(a.path, { method: a.method, body: fd }, TIMEOUT_MULTIPART_MS);
   }
   return apiFetch(a.path, { method: a.method, body: JSON.stringify(a.body ?? {}) }, 30000);
 }
@@ -201,6 +210,13 @@ export async function procesar(): Promise<void> {
         await persistir();
         continue;
       }
+      // El intento anterior con archivo(s) puede seguir viajando de
+      // verdad (fetch de FormData no cancelable) aunque ya haya
+      // "timeouteado" para nosotros — no lanzar otro en paralelo. Se
+      // reintenta solo cuando ya pasó el margen del timeout de subida.
+      if (archivosDe(a).length > 0 && a.ultimoIntentoEn && Date.now() - a.ultimoIntentoEn < TIMEOUT_MULTIPART_MS) {
+        continue;
+      }
       // Escape hatch: una acción trancada más de 24 h se marca fallida
       // (quede como quede la señal) para que deje de aparecer como "sin
       // sincronizar" y el usuario la pueda descartar desde Perfil.
@@ -211,6 +227,7 @@ export async function procesar(): Promise<void> {
         continue;
       }
       try {
+        if (archivosDe(a).length > 0) a.ultimoIntentoEn = Date.now();
         const res = await ejecutar(a);
         if (res.ok || res.status === 409 || res.status === 404) {
           // 2xx = hecho. 409/404 = el servidor rechazó algo ya resuelto

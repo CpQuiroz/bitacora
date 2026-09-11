@@ -1,5 +1,5 @@
 import type { Cliente, Equipo, Viaje } from "@bitacora/shared";
-import { apiFetch, apiJson } from "./api";
+import { apiFetch, apiJson, TIMEOUT_MULTIPART_MS } from "./api";
 import { encolar } from "./sync/queue";
 import { guardarCache, leerCache } from "./sync/cache";
 import { borrarFoto } from "../lib/fotoCola";
@@ -163,7 +163,7 @@ export async function subirFotoGuia(viajeId: string, foto: Foto): Promise<boolea
   const fd = new FormData();
   fd.append("foto", { uri: foto.uri, name: foto.name, type: foto.type } as unknown as Blob);
   try {
-    const res = await apiFetch(`/api/mis-viajes/${viajeId}/foto-guia`, { method: "POST", body: fd }, 60000);
+    const res = await apiFetch(`/api/mis-viajes/${viajeId}/foto-guia`, { method: "POST", body: fd }, TIMEOUT_MULTIPART_MS);
     if (res.ok) borrarFoto(foto.uri);
     return res.ok;
   } catch {
@@ -187,7 +187,7 @@ export async function subirFotoViaje(viajeId: string, foto: Foto): Promise<boole
   const fd = new FormData();
   fd.append("foto", { uri: foto.uri, name: foto.name, type: foto.type } as unknown as Blob);
   try {
-    const res = await apiFetch(`/api/mis-viajes/${viajeId}/fotos`, { method: "POST", body: fd }, 60000);
+    const res = await apiFetch(`/api/mis-viajes/${viajeId}/fotos`, { method: "POST", body: fd }, TIMEOUT_MULTIPART_MS);
     if (res.ok) borrarFoto(foto.uri);
     return res.ok;
   } catch {

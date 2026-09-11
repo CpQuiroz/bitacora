@@ -144,6 +144,19 @@
         "./verificar.sh verde"
       ],
       "status": "done"
+    },
+    {
+      "id": 11,
+      "name": "fix_sync_cola_apilamiento",
+      "title": "Bug real (prod): sync de fotos se apila y el registro nunca se crea",
+      "description": "Reportado en vivo probando el APK contra prod: intentar crear un registro de mantención con fotos se quedó 'sincronizando' y nunca se creó (confirmado con 0 filas en prod, solo lectura). Causa raíz: mobile/src/services/api.ts documenta que un fetch de FormData NO se puede abortar de verdad en React Native — cuando el timeout manual (Promise.race) 'gana', el fetch original sigue viajando en segundo plano. services/sync/queue.ts no tenía ningún guard contra esto: un reconectar/foreground disparaba procesar() de nuevo mientras el intento anterior de la MISMA acción con archivo(s) todavía podía estar en camino, apilando subidas concurrentes que se saturaban entre sí hasta que ninguna terminaba.",
+      "acceptance": [
+        "TIMEOUT_MULTIPART_MS (90s) compartido en api.ts, reemplaza los 60000 hardcodeados en mantencion.ts/viajes.ts/queue.ts",
+        "queue.ts: nuevo campo ultimoIntentoEn por acción; no se relanza una acción con archivo(s) mientras su intento anterior pueda seguir en vuelo (dentro de la ventana del timeout)",
+        "./verificar.sh verde",
+        "APK nuevo (1.9.6) generado con el fix, para reintentar el E2E de la tarea 5"
+      ],
+      "status": "in_progress"
     }
   ]
 }

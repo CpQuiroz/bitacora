@@ -19,6 +19,21 @@ const TIMEOUT_REINTENTO_MS = 25000;
 const REINTENTOS = 2;
 const ESPERA_BASE_MS = 2000;
 
+// Timeout compartido para subidas multipart (fotos, registro de
+// mantención con fotos, firma) — cold start de Render (30-60s) + subir
+// una o más fotos por una conexión mala fácilmente supera 60s. Bug real
+// (2026-09-11): con 60s, una subida lenta pero real terminaba
+// timeouteando del lado del cliente antes de completar, encolándose
+// para reintento — y como el fetch de FormData NO se puede abortar de
+// verdad en RN (ver comentario más abajo), el intento original seguía
+// viajando en paralelo con el reintento, saturando la conexión y
+// haciendo que NINGUNO de los dos llegara a terminar nunca ("se quedó
+// sincronizando" sin crear el registro). Subir el timeout reduce cuánto
+// se dispara este ciclo; el guard de `ultimoIntentoEn` en
+// services/sync/queue.ts evita que se apilen intentos concurrentes de
+// la MISMA acción.
+export const TIMEOUT_MULTIPART_MS = 90000;
+
 const dormir = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export type TipoErrorApi = "red" | "timeout" | "servidor";
