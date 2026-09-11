@@ -1,11 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { Plus, Tag } from "lucide-react";
 import type { ChecklistTemplate, SugerenciaRubro, TipoOS } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
-import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select } from "@/components/ui";
+import { Button, Card, Input, Select, StatusBadge } from "@bitacora/ui/web";
 import { DataTable } from "@/components/DataTable";
-import { IconPlus, IconTag } from "@/components/icons";
 
 type TipoOsConChecklist = TipoOS & { checklist: { nombre: string } | null };
 
@@ -20,6 +20,7 @@ const SUGERIDOS: { nombre: string; color: string }[] = [
   { nombre: "Visita Técnica", color: "#4338ca" },
 ];
 
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export default function TiposOsPage() {
   const [tipos, setTipos] = useState<TipoOsConChecklist[] | null>(null);
   const [checklists, setChecklists] = useState<ChecklistTemplate[]>([]);
@@ -143,27 +144,29 @@ export default function TiposOsPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <PageHeader title="Tipos de OS" subtitle="Categoriza tus órdenes de servicio" />
-        <Button type="button" onClick={() => (formAbierto ? limpiarForm() : setFormAbierto(true))}>
-          <IconPlus className="h-4 w-4" />
+    <div className="flex flex-col gap-ds-6">
+      <div className="flex flex-wrap items-center justify-between gap-ds-3">
+        <div>
+          <p className="ds-heading text-ds-h3 text-ds-text">Tipos de OS</p>
+          <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">Categoriza tus órdenes de servicio</p>
+        </div>
+        <Button iconoIzq={<Plus size={16} strokeWidth={2.75} />} onPress={() => (formAbierto ? limpiarForm() : setFormAbierto(true))}>
           Nuevo Tipo
         </Button>
       </div>
 
       {tipos !== null && tipos.length === 0 && (
         <Card>
-          <p className="mb-3 text-sm text-muted">Tipos sugeridos — clic para crear con un color predefinido:</p>
-          <div className="flex flex-wrap gap-2">
+          <p className="mb-ds-3 font-ds-body text-ds-small text-ds-text/70">Tipos sugeridos — clic para crear con un color predefinido:</p>
+          <div className="flex flex-wrap gap-ds-2">
             {sugeridosFinal.map((s) => (
               <button
                 key={s.nombre}
                 type="button"
                 onClick={() => crearRapido(s)}
-                className="flex items-center gap-1.5 rounded-full border border-border px-3 py-1 text-xs font-medium text-foreground hover:border-brand"
+                className="flex items-center gap-1.5 rounded-ds-pill border border-ds-divider px-ds-3 py-1 font-ds-body text-ds-caption font-medium text-ds-text hover:border-ds-brand"
               >
-                <span className="h-2.5 w-2.5 rounded-full" style={{ background: s.color }} />
+                <span className="h-2.5 w-2.5 rounded-ds-pill" style={{ background: s.color }} />
                 {s.nombre}
               </button>
             ))}
@@ -173,90 +176,84 @@ export default function TiposOsPage() {
 
       {formAbierto && (
         <Card>
-          <h2 className="mb-4 text-sm font-semibold text-foreground">{editandoId ? "Editar tipo de OS" : "Nuevo tipo de OS"}</h2>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <Label>Nombre</Label>
-              <Input type="text" value={nombre} onChange={(e) => setNombre(e.target.value)} />
-            </div>
-            <div>
-              <Label>Color</Label>
-              <div className="flex items-center gap-3">
-                <input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="h-10 w-14 cursor-pointer rounded-lg border border-border bg-surface p-1" />
-                <span className="text-sm text-muted">{color}</span>
+          <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">{editandoId ? "Editar tipo de OS" : "Nuevo tipo de OS"}</p>
+          <div className="grid gap-ds-4 sm:grid-cols-2">
+            <Input etiqueta="Nombre" valor={nombre} onCambio={setNombre} />
+            <div className="flex flex-col gap-ds-1">
+              <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Color</label>
+              <div className="flex items-center gap-ds-3">
+                <input
+                  type="color"
+                  value={color}
+                  onChange={(e) => setColor(e.target.value)}
+                  className="h-10 w-14 cursor-pointer rounded-ds-md border border-ds-divider bg-ds-surface p-1"
+                />
+                <span className="font-ds-body text-ds-small text-ds-text/70">{color}</span>
               </div>
             </div>
             <div className="sm:col-span-2">
-              <Label>Descripción</Label>
-              <Input type="text" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />
+              <Input etiqueta="Descripción" valor={descripcion} onCambio={setDescripcion} />
             </div>
             <div>
-              <Label>Checklist predeterminado</Label>
-              <Select value={checklistId} onChange={(e) => setChecklistId(e.target.value)}>
-                <option value="">Sin checklist</option>
-                {checklists.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nombre}
-                  </option>
-                ))}
-              </Select>
+              <Select
+                etiqueta="Checklist predeterminado"
+                valor={checklistId}
+                onCambio={setChecklistId}
+                placeholder="Sin checklist"
+                opciones={checklists.map((c) => ({ valor: c.id, etiqueta: c.nombre }))}
+              />
               <a
                 href="/dashboard/configuracion/checklists"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-1 inline-block text-xs font-medium text-muted transition-colors hover:text-brand"
+                className="mt-ds-1 inline-block font-ds-body text-ds-caption font-medium text-ds-text/70 transition-colors hover:text-ds-brand"
               >
                 {checklists.length === 0 ? "Crear un checklist →" : "Gestionar checklists →"}
               </a>
             </div>
-            <div>
-              <Label>Tiempo estimado (minutos)</Label>
-              <Input type="number" min={0} placeholder="60" value={tiempoEstimado} onChange={(e) => setTiempoEstimado(e.target.value)} />
-            </div>
+            <Input etiqueta="Tiempo estimado (minutos)" tipo="numero" placeholder="60" valor={tiempoEstimado} onCambio={setTiempoEstimado} />
           </div>
-          {errorForm && (
-            <div className="mt-3">
-              <ErrorText>{errorForm}</ErrorText>
-            </div>
-          )}
-          <div className="mt-4 flex gap-3">
-            <Button type="button" onClick={onGuardar} disabled={guardando}>
-              {guardando ? "Guardando…" : "Guardar"}
+          {errorForm ? <p className="mt-ds-3 font-ds-body text-ds-small text-ds-accent-700">{errorForm}</p> : null}
+          <div className="mt-ds-4 flex gap-ds-3">
+            <Button onPress={onGuardar} cargando={guardando}>
+              Guardar
             </Button>
-            <Button type="button" variant="ghost" onClick={limpiarForm}>
+            <Button variante="ghost" onPress={limpiarForm}>
               Cancelar
             </Button>
           </div>
         </Card>
       )}
 
-      <div className="flex flex-wrap items-center gap-3">
-        <Input type="text" placeholder="Buscar por nombre o descripción" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} className="max-w-xs" />
-        <label className="flex items-center gap-2 text-sm text-muted">
-          <input type="checkbox" checked={mostrarInactivos} onChange={(e) => setMostrarInactivos(e.target.checked)} className="accent-brand" />
+      <div className="flex flex-wrap items-center gap-ds-3">
+        <div className="max-w-xs flex-1">
+          <Input placeholder="Buscar por nombre o descripción" valor={busqueda} onCambio={setBusqueda} />
+        </div>
+        <label className="flex items-center gap-ds-2 font-ds-body text-ds-small text-ds-text/70">
+          <input type="checkbox" checked={mostrarInactivos} onChange={(e) => setMostrarInactivos(e.target.checked)} className="accent-[var(--ds-brand)]" />
           Mostrar inactivos
         </label>
       </div>
 
-      {error && <ErrorText>{error}</ErrorText>}
+      {error ? <p className="font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
       <DataTable
         rows={filtrados}
         rowKey={(t) => t.id}
         loading={tipos === null && !error}
         columns={[
-          { header: "", className: "w-8", cell: (t) => <span className="inline-block h-3 w-3 rounded-full" style={{ background: t.color }} /> },
-          { header: "Nombre", cell: (t) => <span className="font-medium text-foreground">{t.nombre}</span> },
-          { header: "Descripción", cell: (t) => <span className="text-muted">{t.descripcion ?? "—"}</span> },
-          { header: "Checklist", cell: (t) => <span className="text-muted">{t.checklist?.nombre ?? "—"}</span> },
-          { header: "Tiempo estimado", cell: (t) => <span className="text-muted">{t.tiempo_estimado_minutos != null ? `${t.tiempo_estimado_minutos} min` : "—"}</span> },
-          { header: "Estado", cell: (t) => <Badge value={t.activo ? "activo" : "inactivo"} /> },
+          { header: "", className: "w-8", cell: (t) => <span className="inline-block h-3 w-3 rounded-ds-pill" style={{ background: t.color }} /> },
+          { header: "Nombre", cell: (t) => <span className="font-medium text-ds-text">{t.nombre}</span> },
+          { header: "Descripción", cell: (t) => <span className="text-ds-text/60">{t.descripcion ?? "—"}</span> },
+          { header: "Checklist", cell: (t) => <span className="text-ds-text/60">{t.checklist?.nombre ?? "—"}</span> },
+          { header: "Tiempo estimado", cell: (t) => <span className="text-ds-text/60">{t.tiempo_estimado_minutos != null ? `${t.tiempo_estimado_minutos} min` : "—"}</span> },
+          { header: "Estado", cell: (t) => <StatusBadge estado={t.activo ? "activo" : "inactivo"} /> },
         ]}
         actions={[
           { label: "Editar", onClick: abrirEdicion, variant: "brand" },
           { label: (t) => (t.activo ? "Desactivar" : "Activar"), onClick: onAlternarActivo, variant: "muted" },
           { label: "Eliminar", onClick: (t) => onEliminar(t.id), variant: "danger" },
         ]}
-        emptyState={{ icon: IconTag, message: "No hay tipos que coincidan." }}
+        emptyState={{ icon: Tag, message: "No hay tipos que coincidan." }}
       />
     </div>
   );

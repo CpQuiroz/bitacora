@@ -1,14 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { Layers, Plus } from "lucide-react";
 import type { CategoriaGasto } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
-import { Button, Card, ErrorText, Input, Label, PageHeader } from "@/components/ui";
+import { Button, Card, Input } from "@bitacora/ui/web";
 import { DataTable } from "@/components/DataTable";
-import { IconLayers, IconPlus } from "@/components/icons";
 
 type CentroConCategorias = { id: string; nombre: string; categoria_gasto_ids: string[]; categorias: string[]; creado_en: string };
 
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export default function CentrosCostoPage() {
   const [centros, setCentros] = useState<CentroConCategorias[] | null>(null);
   const [categorias, setCategorias] = useState<CategoriaGasto[]>([]);
@@ -74,41 +75,34 @@ export default function CentrosCostoPage() {
 
   const formulario = (
     <Card>
-      <h2 className="mb-4 text-sm font-semibold text-foreground">Nuevo centro de costo</h2>
-      <div>
-        <Label>Nombre</Label>
-        <Input type="text" value={nombre} onChange={(e) => setNombre(e.target.value)} />
-      </div>
+      <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Nuevo centro de costo</p>
+      <Input etiqueta="Nombre" valor={nombre} onCambio={setNombre} />
       {categorias.length > 0 && (
-        <div className="mt-4">
-          <Label>Categorías de gasto asociadas</Label>
-          <div className="flex flex-wrap gap-2">
+        <div className="mt-ds-4 flex flex-col gap-ds-1">
+          <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Categorías de gasto asociadas</label>
+          <div className="flex flex-wrap gap-ds-2">
             {categorias.map((c) => (
               <button
                 key={c.id}
                 type="button"
                 onClick={() => toggleCategoria(c.id)}
-                className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                  seleccionadas.has(c.id) ? "border-brand bg-brand-soft text-brand" : "border-border text-muted hover:border-muted-soft"
+                className={`flex items-center gap-1.5 rounded-ds-pill border px-ds-3 py-1 font-ds-body text-ds-caption font-medium transition-colors ${
+                  seleccionadas.has(c.id) ? "border-ds-brand bg-ds-brand/[0.08] text-ds-brand" : "border-ds-divider text-ds-text/70 hover:border-ds-text/30"
                 }`}
               >
-                <span className="h-2 w-2 rounded-full" style={{ background: c.color }} />
+                <span className="h-2 w-2 rounded-ds-pill" style={{ background: c.color }} />
                 {c.nombre}
               </button>
             ))}
           </div>
         </div>
       )}
-      {errorForm && (
-        <div className="mt-3">
-          <ErrorText>{errorForm}</ErrorText>
-        </div>
-      )}
-      <div className="mt-4 flex gap-3">
-        <Button type="button" onClick={onGuardar} disabled={guardando}>
-          {guardando ? "Guardando…" : "Guardar"}
+      {errorForm ? <p className="mt-ds-3 font-ds-body text-ds-small text-ds-accent-700">{errorForm}</p> : null}
+      <div className="mt-ds-4 flex gap-ds-3">
+        <Button onPress={onGuardar} cargando={guardando}>
+          Guardar
         </Button>
-        <Button type="button" variant="ghost" onClick={() => setFormAbierto(false)}>
+        <Button variante="ghost" onPress={() => setFormAbierto(false)}>
           Cancelar
         </Button>
       </div>
@@ -116,12 +110,14 @@ export default function CentrosCostoPage() {
   );
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <PageHeader title="Centros de Costo" subtitle="Agrupa gastos por área o proyecto" />
+    <div className="flex flex-col gap-ds-6">
+      <div className="flex flex-wrap items-center justify-between gap-ds-3">
+        <div>
+          <p className="ds-heading text-ds-h3 text-ds-text">Centros de Costo</p>
+          <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">Agrupa gastos por área o proyecto</p>
+        </div>
         {!formAbierto && (
-          <Button type="button" onClick={() => setFormAbierto(true)}>
-            <IconPlus className="h-4 w-4" />
+          <Button iconoIzq={<Plus size={16} strokeWidth={2.75} />} onPress={() => setFormAbierto(true)}>
             Nuevo Centro de Costo
           </Button>
         )}
@@ -129,14 +125,13 @@ export default function CentrosCostoPage() {
 
       {formAbierto && formulario}
 
-      {error && <ErrorText>{error}</ErrorText>}
+      {error ? <p className="font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
       {centros !== null && centros.length === 0 && !formAbierto && (
         <Card>
-          <div className="flex flex-col items-center gap-3 py-16 text-center">
-            <IconLayers className="h-8 w-8 text-muted" />
-            <p className="text-sm text-muted">Ningún centro de costo registrado.</p>
-            <Button type="button" onClick={() => setFormAbierto(true)}>
-              <IconPlus className="h-4 w-4" />
+          <div className="flex flex-col items-center gap-ds-3 py-16 text-center">
+            <Layers size={28} strokeWidth={2.75} className="text-ds-text/60" />
+            <p className="font-ds-body text-ds-small text-ds-text/70">Ningún centro de costo registrado.</p>
+            <Button iconoIzq={<Plus size={16} strokeWidth={2.75} />} onPress={() => setFormAbierto(true)}>
               Nuevo Centro de Costo
             </Button>
           </div>
@@ -147,11 +142,11 @@ export default function CentrosCostoPage() {
           rows={centros}
           rowKey={(c) => c.id}
           columns={[
-            { header: "Nombre", cell: (c) => <span className="font-medium text-foreground">{c.nombre}</span> },
-            { header: "Categorías", cell: (c) => <span className="text-muted">{c.categorias.length > 0 ? c.categorias.join(", ") : "—"}</span> },
+            { header: "Nombre", cell: (c) => <span className="font-medium text-ds-text">{c.nombre}</span> },
+            { header: "Categorías", cell: (c) => <span className="text-ds-text/60">{c.categorias.length > 0 ? c.categorias.join(", ") : "—"}</span> },
           ]}
           actions={[{ label: "Eliminar", onClick: (c) => onEliminar(c.id), variant: "danger" }]}
-          emptyState={{ icon: IconLayers, message: "Ningún centro de costo registrado." }}
+          emptyState={{ icon: Layers, message: "Ningún centro de costo registrado." }}
         />
       )}
     </div>

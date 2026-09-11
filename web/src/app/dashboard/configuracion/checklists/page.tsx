@@ -1,11 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { ClipboardCheck, Plus } from "lucide-react";
 import type { ChecklistTemplate, ItemChecklistPregunta, SeccionChecklist } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
-import { Badge, Button, Card, ErrorText, Input, Label, PageHeader } from "@/components/ui";
+import { Button, Card, Input, StatusBadge } from "@bitacora/ui/web";
 import { DataTable } from "@/components/DataTable";
-import { IconClipboardCheck, IconPlus } from "@/components/icons";
 
 type Editor = { id: string | null; nombre: string; descripcion: string; secciones: SeccionChecklist[] };
 
@@ -26,6 +26,7 @@ function aEditor(t: ChecklistTemplate): Editor {
   };
 }
 
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export default function ChecklistsPage() {
   const [templates, setTemplates] = useState<ChecklistTemplate[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -148,76 +149,69 @@ export default function ChecklistsPage() {
 
   if (editor) {
     return (
-      <div className="flex flex-col gap-6">
-        <PageHeader title={editor.id ? "Editar template" : "Nuevo template"} subtitle="Secciones con preguntas" />
+      <div className="flex flex-col gap-ds-6">
+        <div>
+          <p className="ds-heading text-ds-h3 text-ds-text">{editor.id ? "Editar template" : "Nuevo template"}</p>
+          <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">Secciones con preguntas</p>
+        </div>
         <Card>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <Label>Nombre</Label>
-              <Input type="text" value={editor.nombre} onChange={(e) => setEditor({ ...editor, nombre: e.target.value })} />
-            </div>
-            <div>
-              <Label>Descripción</Label>
-              <Input type="text" value={editor.descripcion} onChange={(e) => setEditor({ ...editor, descripcion: e.target.value })} />
-            </div>
+          <div className="grid gap-ds-4 sm:grid-cols-2">
+            <Input etiqueta="Nombre" valor={editor.nombre} onCambio={(v) => setEditor({ ...editor, nombre: v })} />
+            <Input etiqueta="Descripción" valor={editor.descripcion} onCambio={(v) => setEditor({ ...editor, descripcion: v })} />
           </div>
         </Card>
 
         {editor.secciones.map((s, si) => (
           <Card key={si}>
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <Input
-                type="text"
-                value={s.nombre}
-                onChange={(e) => actualizarSeccion(si, e.target.value)}
-                className="max-w-xs font-medium"
-              />
-              <button type="button" onClick={() => quitarSeccion(si)} className="text-xs font-medium text-danger hover:underline">
+            <div className="mb-ds-3 flex items-center justify-between gap-ds-3">
+              <div className="max-w-xs flex-1">
+                <Input valor={s.nombre} onCambio={(v) => actualizarSeccion(si, v)} />
+              </div>
+              <button type="button" onClick={() => quitarSeccion(si)} className="font-ds-body text-ds-caption font-medium text-ds-accent-700 hover:underline">
                 Quitar sección
               </button>
             </div>
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-ds-2">
               {s.preguntas.map((p, pi) => (
-                <div key={pi} className="flex items-center gap-2">
-                  <Input
-                    type="text"
-                    placeholder="Pregunta"
-                    value={p.texto}
-                    onChange={(e) => actualizarPregunta(si, pi, { texto: e.target.value })}
-                  />
-                  <label className="flex shrink-0 items-center gap-1.5 text-xs text-muted">
+                <div key={pi} className="flex items-center gap-ds-2">
+                  <div className="flex-1">
+                    <Input placeholder="Pregunta" valor={p.texto} onCambio={(v) => actualizarPregunta(si, pi, { texto: v })} />
+                  </div>
+                  <label className="flex shrink-0 items-center gap-1.5 font-ds-body text-ds-caption text-ds-text/70">
                     <input
                       type="checkbox"
                       checked={p.obligatorio}
                       onChange={(e) => actualizarPregunta(si, pi, { obligatorio: e.target.checked })}
-                      className="accent-brand"
+                      className="accent-[var(--ds-brand)]"
                     />
                     Obligatorio
                   </label>
-                  <button type="button" onClick={() => quitarPregunta(si, pi)} className="shrink-0 text-xs font-medium text-danger hover:underline">
+                  <button type="button" onClick={() => quitarPregunta(si, pi)} className="shrink-0 font-ds-body text-ds-caption font-medium text-ds-accent-700 hover:underline">
                     Quitar
                   </button>
                 </div>
               ))}
             </div>
-            <Button type="button" variant="outline" onClick={() => agregarPregunta(si)} className="mt-3">
-              <IconPlus className="h-4 w-4" />
-              Agregar pregunta
-            </Button>
+            <div className="mt-ds-3">
+              <Button variante="secundario" onPress={() => agregarPregunta(si)} iconoIzq={<Plus size={16} strokeWidth={2.75} />}>
+                Agregar pregunta
+              </Button>
+            </div>
           </Card>
         ))}
 
-        <Button type="button" variant="outline" onClick={agregarSeccion} className="self-start">
-          <IconPlus className="h-4 w-4" />
-          Agregar sección
-        </Button>
-
-        {errorEditor && <ErrorText>{errorEditor}</ErrorText>}
-        <div className="flex gap-3">
-          <Button type="button" onClick={onGuardarEditor} disabled={guardando}>
-            {guardando ? "Guardando…" : "Guardar template"}
+        <div>
+          <Button variante="secundario" onPress={agregarSeccion} iconoIzq={<Plus size={16} strokeWidth={2.75} />}>
+            Agregar sección
           </Button>
-          <Button type="button" variant="ghost" onClick={() => setEditor(null)}>
+        </div>
+
+        {errorEditor ? <p className="font-ds-body text-ds-small text-ds-accent-700">{errorEditor}</p> : null}
+        <div className="flex gap-ds-3">
+          <Button onPress={onGuardarEditor} cargando={guardando}>
+            Guardar template
+          </Button>
+          <Button variante="ghost" onPress={() => setEditor(null)}>
             Cancelar
           </Button>
         </div>
@@ -226,30 +220,28 @@ export default function ChecklistsPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <PageHeader title="Checklists" subtitle="Templates para las órdenes de servicio" />
-        <Button type="button" onClick={() => setEditor(nuevoEditor())}>
-          <IconPlus className="h-4 w-4" />
+    <div className="flex flex-col gap-ds-6">
+      <div className="flex flex-wrap items-center justify-between gap-ds-3">
+        <div>
+          <p className="ds-heading text-ds-h3 text-ds-text">Checklists</p>
+          <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">Templates para las órdenes de servicio</p>
+        </div>
+        <Button iconoIzq={<Plus size={16} strokeWidth={2.75} />} onPress={() => setEditor(nuevoEditor())}>
           Nuevo Template
         </Button>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <Input
-          type="text"
-          placeholder="Buscar por nombre o descripción"
-          value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
-          className="max-w-xs"
-        />
-        <label className="flex items-center gap-2 text-sm text-muted">
-          <input type="checkbox" checked={mostrarInactivos} onChange={(e) => setMostrarInactivos(e.target.checked)} className="accent-brand" />
+      <div className="flex flex-wrap items-center gap-ds-3">
+        <div className="max-w-xs flex-1">
+          <Input placeholder="Buscar por nombre o descripción" valor={busqueda} onCambio={setBusqueda} />
+        </div>
+        <label className="flex items-center gap-ds-2 font-ds-body text-ds-small text-ds-text/70">
+          <input type="checkbox" checked={mostrarInactivos} onChange={(e) => setMostrarInactivos(e.target.checked)} className="accent-[var(--ds-brand)]" />
           Mostrar inactivos
         </label>
       </div>
 
-      {error && <ErrorText>{error}</ErrorText>}
+      {error ? <p className="font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
       <DataTable
         rows={filtrados}
         rowKey={(t) => t.id}
@@ -259,15 +251,15 @@ export default function ChecklistsPage() {
             header: "Nombre",
             cell: (t) => (
               <>
-                <p className="font-medium text-foreground">{t.nombre}</p>
-                {t.descripcion && <p className="text-xs text-muted">{t.descripcion}</p>}
+                <p className="font-medium text-ds-text">{t.nombre}</p>
+                {t.descripcion && <p className="font-ds-body text-ds-caption text-ds-text/60">{t.descripcion}</p>}
               </>
             ),
           },
           { header: "Secciones", cell: (t) => t.secciones.length },
           { header: "Preguntas", cell: (t) => t.secciones.reduce((acc, s) => acc + s.preguntas.length, 0) },
           { header: "Versión", cell: (t) => `v${t.version}` },
-          { header: "Estado", cell: (t) => <Badge value={t.activo ? "activo" : "inactivo"} /> },
+          { header: "Estado", cell: (t) => <StatusBadge estado={t.activo ? "activo" : "inactivo"} /> },
         ]}
         actions={[
           { label: "Ver/Editar", onClick: (t) => setEditor(aEditor(t)), variant: "brand" },
@@ -275,7 +267,7 @@ export default function ChecklistsPage() {
           { label: (t) => (t.activo ? "Desactivar" : "Activar"), onClick: onAlternarActivo, variant: "muted" },
           { label: "Eliminar", onClick: (t) => onEliminar(t.id), variant: "danger" },
         ]}
-        emptyState={{ icon: IconClipboardCheck, message: "No hay checklists que coincidan." }}
+        emptyState={{ icon: ClipboardCheck, message: "No hay checklists que coincidan." }}
       />
     </div>
   );

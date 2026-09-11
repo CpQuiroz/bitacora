@@ -1,11 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { Plus, Wallet } from "lucide-react";
 import type { CategoriaGasto, SugerenciaRubro } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
-import { Button, Card, ErrorText, Input, Label, PageHeader } from "@/components/ui";
+import { Button, Card, Input } from "@bitacora/ui/web";
 import { DataTable } from "@/components/DataTable";
-import { IconPlus, IconWallet } from "@/components/icons";
 
 type CategoriaConCantidad = CategoriaGasto & { cantidad_gastos: number };
 
@@ -26,6 +26,9 @@ const SUGERIDAS: { nombre: string; color: string }[] = [
   { nombre: "Uniformes/EPP", color: "#65a30d" },
 ];
 
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
+// Los hex literales de SUGERIDAS son colores de categoría elegibles por la
+// usuaria (dato, no chrome de UI) — quedan fuera de los tokens ds-.
 export default function CategoriasGastosPage() {
   const [categorias, setCategorias] = useState<CategoriaConCantidad[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -109,27 +112,29 @@ export default function CategoriasGastosPage() {
   ];
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <PageHeader title="Categorías de Gastos" subtitle="Organiza tus gastos por categoría" />
-        <Button type="button" onClick={() => (formAbierto ? limpiarForm() : setFormAbierto(true))}>
-          <IconPlus className="h-4 w-4" />
+    <div className="flex flex-col gap-ds-6">
+      <div className="flex flex-wrap items-center justify-between gap-ds-3">
+        <div>
+          <p className="ds-heading text-ds-h3 text-ds-text">Categorías de Gastos</p>
+          <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">Organiza tus gastos por categoría</p>
+        </div>
+        <Button iconoIzq={<Plus size={16} strokeWidth={2.75} />} onPress={() => (formAbierto ? limpiarForm() : setFormAbierto(true))}>
           Nueva Categoría
         </Button>
       </div>
 
       {categorias !== null && categorias.length === 0 && (
         <Card>
-          <p className="mb-3 text-sm text-muted">Categorías sugeridas — clic para crear con un color predefinido:</p>
-          <div className="flex flex-wrap gap-2">
+          <p className="mb-ds-3 font-ds-body text-ds-small text-ds-text/70">Categorías sugeridas — clic para crear con un color predefinido:</p>
+          <div className="flex flex-wrap gap-ds-2">
             {sugeridasFinal.map((s) => (
               <button
                 key={s.nombre}
                 type="button"
                 onClick={() => crearRapida(s)}
-                className="flex items-center gap-1.5 rounded-full border border-border px-3 py-1 text-xs font-medium text-foreground hover:border-brand"
+                className="flex items-center gap-1.5 rounded-ds-pill border border-ds-divider px-ds-3 py-1 font-ds-body text-ds-caption font-medium text-ds-text hover:border-ds-brand"
               >
-                <span className="h-2.5 w-2.5 rounded-full" style={{ background: s.color }} />
+                <span className="h-2.5 w-2.5 rounded-ds-pill" style={{ background: s.color }} />
                 {s.nombre}
               </button>
             ))}
@@ -139,51 +144,49 @@ export default function CategoriasGastosPage() {
 
       {formAbierto && (
         <Card>
-          <h2 className="mb-4 text-sm font-semibold text-foreground">{editandoId ? "Editar categoría" : "Nueva categoría"}</h2>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <Label>Nombre</Label>
-              <Input type="text" value={nombre} onChange={(e) => setNombre(e.target.value)} />
-            </div>
-            <div>
-              <Label>Color</Label>
-              <div className="flex items-center gap-3">
-                <input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="h-10 w-14 cursor-pointer rounded-lg border border-border bg-surface p-1" />
-                <span className="text-sm text-muted">{color}</span>
+          <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">{editandoId ? "Editar categoría" : "Nueva categoría"}</p>
+          <div className="grid gap-ds-4 sm:grid-cols-2">
+            <Input etiqueta="Nombre" valor={nombre} onCambio={setNombre} />
+            <div className="flex flex-col gap-ds-1">
+              <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Color</label>
+              <div className="flex items-center gap-ds-3">
+                <input
+                  type="color"
+                  value={color}
+                  onChange={(e) => setColor(e.target.value)}
+                  className="h-10 w-14 cursor-pointer rounded-ds-md border border-ds-divider bg-ds-surface p-1"
+                />
+                <span className="font-ds-body text-ds-small text-ds-text/70">{color}</span>
               </div>
             </div>
           </div>
-          {errorForm && (
-            <div className="mt-3">
-              <ErrorText>{errorForm}</ErrorText>
-            </div>
-          )}
-          <div className="mt-4 flex gap-3">
-            <Button type="button" onClick={onGuardar} disabled={guardando}>
-              {guardando ? "Guardando…" : "Guardar"}
+          {errorForm ? <p className="mt-ds-3 font-ds-body text-ds-small text-ds-accent-700">{errorForm}</p> : null}
+          <div className="mt-ds-4 flex gap-ds-3">
+            <Button onPress={onGuardar} cargando={guardando}>
+              Guardar
             </Button>
-            <Button type="button" variant="ghost" onClick={limpiarForm}>
+            <Button variante="ghost" onPress={limpiarForm}>
               Cancelar
             </Button>
           </div>
         </Card>
       )}
 
-      {error && <ErrorText>{error}</ErrorText>}
+      {error ? <p className="font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
       <DataTable
         rows={categorias ?? []}
         rowKey={(c) => c.id}
         loading={categorias === null && !error}
         columns={[
-          { header: "", className: "w-8", cell: (c) => <span className="inline-block h-3 w-3 rounded-full" style={{ background: c.color }} /> },
-          { header: "Nombre", cell: (c) => <span className="font-medium text-foreground">{c.nombre}</span> },
-          { header: "Gastos asociados", cell: (c) => <span className="text-muted">{c.cantidad_gastos}</span> },
+          { header: "", className: "w-8", cell: (c) => <span className="inline-block h-3 w-3 rounded-ds-pill" style={{ background: c.color }} /> },
+          { header: "Nombre", cell: (c) => <span className="font-medium text-ds-text">{c.nombre}</span> },
+          { header: "Gastos asociados", cell: (c) => <span className="text-ds-text/60">{c.cantidad_gastos}</span> },
         ]}
         actions={[
           { label: "Editar", onClick: abrirEdicion, variant: "brand" },
           { label: "Eliminar", onClick: (c) => onEliminar(c.id), variant: "danger" },
         ]}
-        emptyState={{ icon: IconWallet, message: "Todavía no hay categorías propias — usa las sugeridas de arriba o crea una nueva." }}
+        emptyState={{ icon: Wallet, message: "Todavía no hay categorías propias — usa las sugeridas de arriba o crea una nueva." }}
       />
     </div>
   );

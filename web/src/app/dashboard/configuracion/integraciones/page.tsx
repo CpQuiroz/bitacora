@@ -1,10 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { CreditCard, MessageCircle, Sparkles } from "lucide-react";
 import { apiFetch } from "@/lib/api";
-import { Button, Card, ErrorText, Input, Label, PageHeader, SuccessText } from "@/components/ui";
-import { IconChat, IconCreditCard, IconSparkle } from "@/components/icons";
-import { EstadoCargando } from "@/components/estados";
+import { Button, Card, Input, LoadingState, StatusBadge } from "@bitacora/ui/web";
 
 type IntegracionPublica = {
   proveedor: string;
@@ -24,7 +23,7 @@ const CATEGORIAS = [
   { valor: "ia", etiqueta: "IA" },
 ] as const;
 
-const ICONO_CATEGORIA = { pagos: IconCreditCard, comunicacion: IconChat, ia: IconSparkle };
+const ICONO_CATEGORIA = { pagos: CreditCard, comunicacion: MessageCircle, ia: Sparkles };
 
 const ETIQUETA_CAMPO: Record<string, string> = {
   commerce_code: "Código de comercio",
@@ -38,6 +37,7 @@ const ETIQUETA_CAMPO: Record<string, string> = {
   service_account_json: "Service account (JSON)",
 };
 
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export default function IntegracionesPage() {
   const [integraciones, setIntegraciones] = useState<IntegracionPublica[] | null>(null);
   const [categoria, setCategoria] = useState<(typeof CATEGORIAS)[number]["valor"]>("todas");
@@ -112,20 +112,23 @@ export default function IntegracionesPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <PageHeader title="Integraciones" subtitle="Pagos, comunicación e IA" />
-        <span className="text-sm font-medium text-muted">{conectadas} conectadas</span>
+    <div className="flex flex-col gap-ds-6">
+      <div className="flex flex-wrap items-center justify-between gap-ds-3">
+        <div>
+          <p className="ds-heading text-ds-h3 text-ds-text">Integraciones</p>
+          <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">Pagos, comunicación e IA</p>
+        </div>
+        <span className="font-ds-body text-ds-small font-medium text-ds-text/70">{conectadas} conectadas</span>
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-ds-2">
         {CATEGORIAS.map((c) => (
           <button
             key={c.valor}
             type="button"
             onClick={() => setCategoria(c.valor)}
-            className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-              categoria === c.valor ? "border-brand bg-brand-soft text-brand" : "border-border text-muted hover:border-muted-soft"
+            className={`rounded-ds-pill border px-ds-3 py-1 font-ds-body text-ds-caption font-medium transition-colors ${
+              categoria === c.valor ? "border-ds-brand bg-ds-brand/[0.08] text-ds-brand" : "border-ds-divider text-ds-text/70 hover:border-ds-text/30"
             }`}
           >
             {c.etiqueta}
@@ -133,69 +136,66 @@ export default function IntegracionesPage() {
         ))}
       </div>
 
-      {integraciones === null && <EstadoCargando />}
+      {integraciones === null && <LoadingState />}
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-ds-4 sm:grid-cols-2">
         {filtradas.map((i) => {
           const Icono = ICONO_CATEGORIA[i.categoria];
           const estaAbierta = abierta === i.proveedor;
           return (
-            <Card key={i.proveedor} className={estaAbierta ? "sm:col-span-2" : undefined}>
-              <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-soft text-brand">
-                  <Icono className="h-5 w-5" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="font-medium text-foreground">{i.nombre}</p>
-                    <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-medium ${i.conectado ? "bg-success-soft text-success" : "bg-border text-muted"}`}>
-                      {i.conectado ? "Conectado" : "No conectado"}
-                    </span>
+            <div key={i.proveedor} className={estaAbierta ? "sm:col-span-2" : undefined}>
+              <Card>
+                <div className="flex items-start gap-ds-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-ds-lg bg-ds-brand/[0.08] text-ds-brand">
+                    <Icono size={20} strokeWidth={2.75} />
                   </div>
-                  <p className="mt-1 text-sm text-muted">{i.descripcion}</p>
-                  {i.preview && <p className="mt-1 text-xs text-muted">Guardado: {i.preview}</p>}
-                  <button type="button" onClick={() => abrir(i)} className="mt-2 text-xs font-medium text-brand hover:underline">
-                    {estaAbierta ? "Cerrar" : "Clic para configurar"}
-                  </button>
-                </div>
-              </div>
-
-              {estaAbierta && (
-                <div className="mt-4 border-t border-border pt-4">
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {i.campos.map((campo) => (
-                      <div key={campo}>
-                        <Label>{ETIQUETA_CAMPO[campo] ?? campo}</Label>
-                        <Input
-                          type={campo.includes("json") ? "text" : "password"}
-                          placeholder={i.preview && campo === i.campos[i.campos.length - 1] ? i.preview : ""}
-                          value={campos[campo] ?? ""}
-                          onChange={(e) => setCampos((prev) => ({ ...prev, [campo]: e.target.value }))}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                  {mensaje && (
-                    <div className="mt-3">
-                      {mensaje.tipo === "ok" ? <SuccessText>{mensaje.texto}</SuccessText> : <ErrorText>{mensaje.texto}</ErrorText>}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-ds-2">
+                      <p className="font-medium text-ds-text">{i.nombre}</p>
+                      <StatusBadge estado={i.conectado ? "conectado" : "no_conectado"} etiqueta={i.conectado ? "Conectado" : "No conectado"} />
                     </div>
-                  )}
-                  <div className="mt-4 flex flex-wrap gap-3">
-                    <Button type="button" onClick={() => onGuardar(i.proveedor)} disabled={guardando}>
-                      {guardando ? "Guardando…" : "Guardar"}
-                    </Button>
-                    <Button type="button" variant="outline" onClick={() => onProbar(i.proveedor)} disabled={probando || !i.preview}>
-                      {probando ? "Probando…" : "Probar conexión"}
-                    </Button>
-                    {i.conectado && (
-                      <Button type="button" variant="ghost" onClick={() => onDesconectar(i.proveedor)}>
-                        Desconectar
-                      </Button>
-                    )}
+                    <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">{i.descripcion}</p>
+                    {i.preview && <p className="mt-ds-1 font-ds-body text-ds-caption text-ds-text/60">Guardado: {i.preview}</p>}
+                    <button type="button" onClick={() => abrir(i)} className="mt-ds-2 font-ds-body text-ds-caption font-medium text-ds-brand hover:underline">
+                      {estaAbierta ? "Cerrar" : "Clic para configurar"}
+                    </button>
                   </div>
                 </div>
-              )}
-            </Card>
+
+                {estaAbierta && (
+                  <div className="mt-ds-4 border-t border-ds-divider pt-ds-4">
+                    <div className="grid gap-ds-3 sm:grid-cols-2">
+                      {i.campos.map((campo) => (
+                        <Input
+                          key={campo}
+                          etiqueta={ETIQUETA_CAMPO[campo] ?? campo}
+                          tipo={campo.includes("json") ? "texto" : "password"}
+                          placeholder={i.preview && campo === i.campos[i.campos.length - 1] ? i.preview : undefined}
+                          valor={campos[campo] ?? ""}
+                          onCambio={(v) => setCampos((prev) => ({ ...prev, [campo]: v }))}
+                        />
+                      ))}
+                    </div>
+                    {mensaje ? (
+                      <p className={`mt-ds-3 font-ds-body text-ds-small ${mensaje.tipo === "ok" ? "text-ds-accent2-800" : "text-ds-accent-700"}`}>{mensaje.texto}</p>
+                    ) : null}
+                    <div className="mt-ds-4 flex flex-wrap gap-ds-3">
+                      <Button onPress={() => onGuardar(i.proveedor)} cargando={guardando}>
+                        Guardar
+                      </Button>
+                      <Button variante="secundario" onPress={() => onProbar(i.proveedor)} deshabilitado={probando || !i.preview}>
+                        {probando ? "Probando…" : "Probar conexión"}
+                      </Button>
+                      {i.conectado && (
+                        <Button variante="ghost" onPress={() => onDesconectar(i.proveedor)}>
+                          Desconectar
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </Card>
+            </div>
           );
         })}
       </div>

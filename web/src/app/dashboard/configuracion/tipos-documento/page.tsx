@@ -1,11 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { Paperclip, Plus } from "lucide-react";
 import type { AplicaDocumento, SugerenciaRubro, TipoDocumento } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
-import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select } from "@/components/ui";
+import { Button, Card, Input, Select, StatusBadge } from "@bitacora/ui/web";
 import { DataTable } from "@/components/DataTable";
-import { IconPaperclip, IconPlus } from "@/components/icons";
 
 const APLICA: { valor: AplicaDocumento; etiqueta: string }[] = [
   { valor: "colaborador", etiqueta: "Solo colaboradores" },
@@ -21,6 +21,7 @@ const SUGERIDOS: { nombre: string; aplica_a: AplicaDocumento }[] = [
   { nombre: "Seguro Obligatorio (SOAP)", aplica_a: "vehiculo" },
 ];
 
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export default function TiposDocumentoPage() {
   const [tipos, setTipos] = useState<TipoDocumento[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -92,27 +93,29 @@ export default function TiposDocumentoPage() {
   ];
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <PageHeader title="Tipos de Documento" subtitle="Licencias, permisos y certificados que se pueden adjuntar en Flota" />
-        <Button type="button" onClick={() => (formAbierto ? limpiarForm() : setFormAbierto(true))}>
-          <IconPlus className="h-4 w-4" />
+    <div className="flex flex-col gap-ds-6">
+      <div className="flex flex-wrap items-center justify-between gap-ds-3">
+        <div>
+          <p className="ds-heading text-ds-h3 text-ds-text">Tipos de Documento</p>
+          <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">Licencias, permisos y certificados que se pueden adjuntar en Flota</p>
+        </div>
+        <Button iconoIzq={<Plus size={16} strokeWidth={2.75} />} onPress={() => (formAbierto ? limpiarForm() : setFormAbierto(true))}>
           Nuevo Tipo
         </Button>
       </div>
 
       {tipos !== null && tipos.length === 0 && (
         <Card>
-          <p className="mb-3 text-sm text-muted">Sugeridos — clic para crear:</p>
-          <div className="flex flex-wrap gap-2">
+          <p className="mb-ds-3 font-ds-body text-ds-small text-ds-text/70">Sugeridos — clic para crear:</p>
+          <div className="flex flex-wrap gap-ds-2">
             {sugeridosFinal.map((s) => (
               <button
                 key={s.nombre}
                 type="button"
                 onClick={() => crearRapido(s)}
-                className="flex items-center gap-1 rounded-full border border-border px-3 py-1 text-xs font-medium text-foreground hover:border-brand"
+                className="flex items-center gap-1 rounded-ds-pill border border-ds-divider px-ds-3 py-1 font-ds-body text-ds-caption font-medium text-ds-text hover:border-ds-brand"
               >
-                <IconPlus className="h-3 w-3" />
+                <Plus size={12} strokeWidth={2.75} />
                 {s.nombre}
               </button>
             ))}
@@ -122,46 +125,37 @@ export default function TiposDocumentoPage() {
 
       {formAbierto && (
         <Card>
-          <h2 className="mb-4 text-sm font-semibold text-foreground">Nuevo tipo de documento</h2>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <Label>Nombre</Label>
-              <Input type="text" value={nombre} onChange={(e) => setNombre(e.target.value)} />
-            </div>
-            <div>
-              <Label>Aplica a</Label>
-              <Select value={aplicaA} onChange={(e) => setAplicaA(e.target.value as AplicaDocumento)}>
-                {APLICA.map((a) => (
-                  <option key={a.valor} value={a.valor}>
-                    {a.etiqueta}
-                  </option>
-                ))}
-              </Select>
-            </div>
+          <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Nuevo tipo de documento</p>
+          <div className="grid gap-ds-4 sm:grid-cols-2">
+            <Input etiqueta="Nombre" valor={nombre} onCambio={setNombre} />
+            <Select
+              etiqueta="Aplica a"
+              valor={aplicaA}
+              onCambio={(v) => setAplicaA(v as AplicaDocumento)}
+              opciones={APLICA.map((a) => ({ valor: a.valor, etiqueta: a.etiqueta }))}
+            />
           </div>
-          {errorForm && (
-            <div className="mt-3">
-              <ErrorText>{errorForm}</ErrorText>
-            </div>
-          )}
-          <Button type="button" onClick={onGuardar} disabled={guardando} className="mt-4">
-            {guardando ? "Guardando…" : "Guardar"}
-          </Button>
+          {errorForm ? <p className="mt-ds-3 font-ds-body text-ds-small text-ds-accent-700">{errorForm}</p> : null}
+          <div className="mt-ds-4">
+            <Button onPress={onGuardar} cargando={guardando}>
+              Guardar
+            </Button>
+          </div>
         </Card>
       )}
 
-      {error && <ErrorText>{error}</ErrorText>}
+      {error ? <p className="font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
       <DataTable
         rows={tipos ?? []}
         rowKey={(t) => t.id}
         loading={tipos === null && !error}
         columns={[
-          { header: "Nombre", cell: (t) => <span className="font-medium text-foreground">{t.nombre}</span> },
-          { header: "Aplica a", cell: (t) => <span className="text-muted">{APLICA.find((a) => a.valor === t.aplica_a)?.etiqueta}</span> },
-          { header: "Estado", cell: (t) => <Badge value={t.activo ? "activo" : "inactivo"} /> },
+          { header: "Nombre", cell: (t) => <span className="font-medium text-ds-text">{t.nombre}</span> },
+          { header: "Aplica a", cell: (t) => <span className="text-ds-text/60">{APLICA.find((a) => a.valor === t.aplica_a)?.etiqueta}</span> },
+          { header: "Estado", cell: (t) => <StatusBadge estado={t.activo ? "activo" : "inactivo"} /> },
         ]}
         actions={[{ label: (t) => (t.activo ? "Desactivar" : "Activar"), onClick: onAlternarActivo, variant: "muted" }]}
-        emptyState={{ icon: IconPaperclip, message: "Todavía no hay tipos de documento — usa los sugeridos de arriba o crea uno nuevo." }}
+        emptyState={{ icon: Paperclip, message: "Todavía no hay tipos de documento — usa los sugeridos de arriba o crea uno nuevo." }}
       />
     </div>
   );

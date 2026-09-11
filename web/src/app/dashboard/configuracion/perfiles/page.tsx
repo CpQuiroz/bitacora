@@ -1,15 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Shield } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { ETIQUETA_MODULO } from "@/lib/etiquetasModulo";
-import { Button, Card, ErrorText, PageHeader, SuccessText } from "@/components/ui";
-import { IconShield } from "@/components/icons";
+import { Button, Card } from "@bitacora/ui/web";
 
 type RolFila = { slug: string; nombre: string; es_sistema: boolean; modulos: string[] };
 type CatalogoItem = { modulo: string; contratado: boolean };
 type Respuesta = { roles: RolFila[]; catalogo: CatalogoItem[] };
 
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export default function PerfilesPage() {
   const [data, setData] = useState<Respuesta | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -77,73 +78,67 @@ export default function PerfilesPage() {
     cargar();
   }
 
-  if (error && !data) return <ErrorText>{error}</ErrorText>;
+  if (error && !data) return <p className="font-ds-body text-ds-small text-ds-accent-700">{error}</p>;
   if (!data) return null;
 
   const catalogo = data.catalogo;
 
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader
-        title="Perfiles y permisos"
-        subtitle="Elige qué módulos ve cada perfil en tu empresa. No afecta a otras empresas."
-      />
+    <div className="flex flex-col gap-ds-6">
+      <div>
+        <p className="ds-heading text-ds-h3 text-ds-text">Perfiles y permisos</p>
+        <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">Elige qué módulos ve cada perfil en tu empresa. No afecta a otras empresas.</p>
+      </div>
 
       <Card>
-        <div className="flex items-start gap-3">
-          <IconShield className="mt-0.5 h-5 w-5 shrink-0 text-muted" />
-          <div className="text-sm text-muted">
+        <div className="flex items-start gap-ds-3">
+          <Shield size={20} strokeWidth={2.75} className="mt-0.5 shrink-0 text-ds-text/60" />
+          <div className="font-ds-body text-ds-small text-ds-text/70">
             <p>
-              El perfil <span className="font-medium text-foreground">Admin</span> siempre tiene acceso total y no se
-              edita. <span className="font-medium text-foreground">Configuración</span> y{" "}
-              <span className="font-medium text-foreground">Grupo y usuario</span> tampoco se delegan desde acá.
+              El perfil <span className="font-medium text-ds-text">Admin</span> siempre tiene acceso total y no se
+              edita. <span className="font-medium text-ds-text">Configuración</span> y{" "}
+              <span className="font-medium text-ds-text">Grupo y usuario</span> tampoco se delegan desde acá.
             </p>
-            <p className="mt-1">
+            <p className="mt-ds-1">
               Si un módulo aparece atenuado, tu plan no lo incluye: actívalo primero en{" "}
-              <span className="font-medium text-foreground">Configuración → Plan</span>.
+              <span className="font-medium text-ds-text">Configuración → Plan</span>.
             </p>
           </div>
         </div>
       </Card>
 
-      {error && <ErrorText>{error}</ErrorText>}
-      {okMsg && <SuccessText>{okMsg}</SuccessText>}
+      {error ? <p className="font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
+      {okMsg ? <p className="font-ds-body text-ds-small font-medium text-ds-accent2-800">{okMsg}</p> : null}
 
       {data.roles.map((rol) => (
         <Card key={rol.slug}>
-          <div className="mb-4 flex items-center justify-between gap-3">
+          <div className="mb-ds-4 flex items-center justify-between gap-ds-3">
             <div>
-              <h2 className="text-sm font-semibold text-foreground">{rol.nombre}</h2>
-              <p className="text-xs text-muted">
+              <p className="font-ds-body text-ds-small font-semibold text-ds-text">{rol.nombre}</p>
+              <p className="font-ds-body text-ds-caption text-ds-text/60">
                 {rol.es_sistema ? "Perfil de sistema" : "Perfil personalizado"} · {rol.slug}
               </p>
             </div>
             {sucio(rol.slug) && (
-              <Button type="button" onClick={() => guardar(rol.slug)} disabled={guardando === rol.slug}>
-                {guardando === rol.slug ? "Guardando…" : "Guardar cambios"}
+              <Button onPress={() => guardar(rol.slug)} cargando={guardando === rol.slug}>
+                Guardar cambios
               </Button>
             )}
           </div>
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="grid gap-ds-2 sm:grid-cols-2">
             {catalogo.map((c) => {
               const marcado = (edicion[rol.slug] ?? new Set()).has(c.modulo);
               return (
                 <label
                   key={c.modulo}
-                  className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm ${
-                    c.contratado ? "border-border text-foreground" : "border-dashed border-border text-muted"
+                  className={`flex items-center gap-ds-2 rounded-ds-md border px-ds-3 py-2 font-ds-body text-ds-small ${
+                    c.contratado ? "border-ds-divider text-ds-text" : "border-dashed border-ds-divider text-ds-text/60"
                   }`}
                 >
-                  <input
-                    type="checkbox"
-                    className="accent-brand"
-                    checked={marcado}
-                    disabled={!c.contratado}
-                    onChange={() => toggle(rol.slug, c.modulo)}
-                  />
+                  <input type="checkbox" className="accent-[var(--ds-brand)]" checked={marcado} disabled={!c.contratado} onChange={() => toggle(rol.slug, c.modulo)} />
                   <span>
                     {ETIQUETA_MODULO[c.modulo] ?? c.modulo}
-                    {!c.contratado && <span className="ml-1 text-xs">(no incluido en tu plan)</span>}
+                    {!c.contratado && <span className="ml-ds-1 text-ds-caption">(no incluido en tu plan)</span>}
                   </span>
                 </label>
               );
