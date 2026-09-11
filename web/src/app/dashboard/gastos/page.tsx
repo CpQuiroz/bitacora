@@ -3,16 +3,15 @@
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Paperclip, Plus, Wallet } from "lucide-react";
 import type { CategoriaGasto, CentroCosto, EstadoGasto, Gasto, Proveedor, Trabajo } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { SelectCrear } from "@/components/SelectCrear";
-import { Badge, Button, Card, Cifra, ErrorText, Input, Label, PageHeader, Select, SuccessText } from "@/components/ui";
+import { Button, Card, Cifra, EmptyState, ErrorState, Input, LoadingState, Select, StatusBadge, Table, type TonoEstado } from "@bitacora/ui/web";
 import { InputMonto } from "@/components/InputMonto";
-import { IconPaperclip, IconPlus, IconWallet } from "@/components/icons";
-import { EstadoCargando, EstadoVacio } from "@/components/estados";
 
 type GastoConDatos = Gasto & {
   categoria_info: Pick<CategoriaGasto, "id" | "nombre" | "color"> | null;
@@ -28,6 +27,16 @@ function estadoMostrado(g: Gasto): "pendiente" | "pagado" | "vencido" {
   return g.estado;
 }
 
+// "pendiente"/"vencido" no están en MAPA_ESTADO_TONO como estado de gasto
+// (vencido sí existe en el mapa para OTROS dominios, pero acá se calcula
+// aparte — se fuerza para no depender de esa coincidencia).
+const TONO_ESTADO: Record<ReturnType<typeof estadoMostrado>, TonoEstado> = {
+  pendiente: "en_progreso",
+  pagado: "completado",
+  vencido: "cancelado",
+};
+
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export default function GastosPage() {
   const router = useRouter();
   const [usuario, setUsuario] = useState<UsuarioShell | null>(null);
@@ -207,252 +216,256 @@ export default function GastosPage() {
 
   return (
     <DashboardShell usuario={usuario}>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <PageHeader title="Gastos" subtitle="Gestiona tus cuentas por pagar" />
-        <Button type="button" onClick={() => (formAbierto || editandoId ? cerrarFormulario() : abrirNuevo())}>
-          <IconPlus className="h-4 w-4" />
+      <div className="mb-ds-6 flex flex-wrap items-center justify-between gap-ds-3">
+        <div>
+          <p className="ds-heading text-ds-h2 text-ds-text">Gastos</p>
+          <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">Gestiona tus cuentas por pagar</p>
+        </div>
+        <Button iconoIzq={<Plus size={16} strokeWidth={2.75} />} onPress={() => (formAbierto || editandoId ? cerrarFormulario() : abrirNuevo())}>
           Nuevo Gasto
         </Button>
       </div>
 
-      <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-ds-6 grid gap-ds-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
-          <p className="text-xs text-muted">Total</p>
-          <p className="mt-1 text-xl font-semibold text-foreground">{formatMoneda(totales.total, usuario.moneda)}</p>
+          <p className="font-ds-body text-ds-caption text-ds-text/60">Total</p>
+          <p className="mt-ds-1 font-ds-body text-ds-h5 font-semibold text-ds-text">{formatMoneda(totales.total, usuario.moneda)}</p>
         </Card>
         <Card>
-          <p className="text-xs text-muted">Pendiente</p>
-          <p className="mt-1 text-xl font-semibold text-warning">{formatMoneda(totales.pendiente, usuario.moneda)}</p>
+          <p className="font-ds-body text-ds-caption text-ds-text/60">Pendiente</p>
+          <p className="mt-ds-1 font-ds-body text-ds-h5 font-semibold text-ds-accent-700">{formatMoneda(totales.pendiente, usuario.moneda)}</p>
         </Card>
         <Card>
-          <p className="text-xs text-muted">Pagado</p>
-          <p className="mt-1 text-xl font-semibold text-success">{formatMoneda(totales.pagado, usuario.moneda)}</p>
+          <p className="font-ds-body text-ds-caption text-ds-text/60">Pagado</p>
+          <p className="mt-ds-1 font-ds-body text-ds-h5 font-semibold text-ds-accent2-800">{formatMoneda(totales.pagado, usuario.moneda)}</p>
         </Card>
         <Card>
-          <p className="text-xs text-muted">Atrasado</p>
-          <p className="mt-1 text-xl font-semibold text-danger">{formatMoneda(totales.vencido, usuario.moneda)}</p>
+          <p className="font-ds-body text-ds-caption text-ds-text/60">Atrasado</p>
+          <p className="mt-ds-1 font-ds-body text-ds-h5 font-semibold text-ds-accent-800">{formatMoneda(totales.vencido, usuario.moneda)}</p>
         </Card>
       </div>
 
       {(formAbierto || editandoId) && (
-        <Card className="mb-6">
-          <h2 className="mb-4 text-sm font-semibold text-foreground">{editandoId ? "Editar gasto" : "Nuevo gasto"}</h2>
-          <form onSubmit={onSubmit} className="flex flex-col gap-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="sm:col-span-2">
-                <Label>Descripción</Label>
-                <Input type="text" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />
-              </div>
-              <div>
-                <Label>Monto</Label>
-                <InputMonto required value={monto} onChange={setMonto} moneda={usuario.moneda} />
-              </div>
-              <div>
-                <Label>Categoría</Label>
-                <SelectCrear
-                  value={categoriaGastoId}
-                  onChange={setCategoriaGastoId}
-                  opciones={categorias}
-                  endpoint="/api/categorias-gasto"
-                  placeholder="Selecciona una categoría…"
-                  etiquetaCrear="+ Crear categoría"
-                  onCreado={(nueva) => setCategorias((prev) => [...prev, nueva])}
-                  gestionHref="/dashboard/configuracion/categorias-gastos"
-                  gestionLabel="Gestionar categorías →"
-                />
-              </div>
-              <div>
-                <Label>Centro de costo (opcional)</Label>
-                <SelectCrear
-                  value={centroCostoId}
-                  onChange={setCentroCostoId}
-                  opciones={centrosCosto}
-                  endpoint="/api/centros-costo"
-                  placeholder="Sin centro de costo"
-                  etiquetaCrear="+ Crear centro de costo"
-                  onCreado={(nuevo) => setCentrosCosto((prev) => [...prev, nuevo])}
-                  gestionHref="/dashboard/configuracion/centros-costo"
-                  gestionLabel="Gestionar centros de costo →"
-                />
-              </div>
-              <div>
-                <Label>Proveedor (opcional)</Label>
-                <SelectCrear
-                  value={proveedorId}
-                  onChange={setProveedorId}
-                  opciones={proveedores}
-                  endpoint="/api/proveedores"
-                  placeholder="Sin proveedor"
-                  etiquetaCrear="+ Crear proveedor"
-                  onCreado={(nuevo) => setProveedores((prev) => [...prev, nuevo])}
-                  gestionHref="/dashboard/registros/proveedores"
-                  gestionLabel="Gestionar proveedores →"
-                />
-              </div>
-              <div>
-                <Label>Orden de Servicio (opcional)</Label>
-                <Select value={trabajoId} onChange={(e) => setTrabajoId(e.target.value)}>
-                  <option value="">Sin vincular a una OS</option>
-                  {trabajos.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.fecha} — {t.cliente}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-              <div>
-                <Label>Fecha</Label>
-                <Input type="date" required value={fecha} onChange={(e) => setFecha(e.target.value)} />
-              </div>
-              <div>
-                <Label>Estado</Label>
-                <Select value={estado} onChange={(e) => setEstado(e.target.value as EstadoGasto)}>
-                  <option value="pendiente">Pendiente</option>
-                  <option value="pagado">Pagado</option>
-                </Select>
-              </div>
-              {estado === "pagado" && (
-                <div>
-                  <Label>Fecha de pago</Label>
-                  <Input type="date" required value={fechaPago} onChange={(e) => setFechaPago(e.target.value)} />
+        <div className="mb-ds-6">
+          <Card>
+            <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">{editandoId ? "Editar gasto" : "Nuevo gasto"}</p>
+            <form onSubmit={onSubmit} className="flex flex-col gap-ds-4">
+              <div className="grid gap-ds-4 sm:grid-cols-2">
+                <div className="sm:col-span-2">
+                  <Input etiqueta="Descripción" valor={descripcion} onCambio={setDescripcion} />
                 </div>
-              )}
-              <div className="sm:col-span-2">
-                <Label>Comprobante / factura (opcional)</Label>
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,application/pdf"
-                  onChange={(e) => setComprobante(e.target.files?.[0] ?? null)}
-                  className="block w-full text-sm text-muted file:mr-3 file:rounded-lg file:border file:border-border file:bg-surface file:px-3.5 file:py-2 file:text-sm file:font-medium file:text-foreground"
+                <div className="flex flex-col gap-ds-1">
+                  <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Monto</label>
+                  <InputMonto required value={monto} onChange={setMonto} moneda={usuario.moneda} />
+                </div>
+                <div className="flex flex-col gap-ds-1">
+                  <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Categoría</label>
+                  <SelectCrear
+                    value={categoriaGastoId}
+                    onChange={setCategoriaGastoId}
+                    opciones={categorias}
+                    endpoint="/api/categorias-gasto"
+                    placeholder="Selecciona una categoría…"
+                    etiquetaCrear="+ Crear categoría"
+                    onCreado={(nueva) => setCategorias((prev) => [...prev, nueva])}
+                    gestionHref="/dashboard/configuracion/categorias-gastos"
+                    gestionLabel="Gestionar categorías →"
+                  />
+                </div>
+                <div className="flex flex-col gap-ds-1">
+                  <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Centro de costo (opcional)</label>
+                  <SelectCrear
+                    value={centroCostoId}
+                    onChange={setCentroCostoId}
+                    opciones={centrosCosto}
+                    endpoint="/api/centros-costo"
+                    placeholder="Sin centro de costo"
+                    etiquetaCrear="+ Crear centro de costo"
+                    onCreado={(nuevo) => setCentrosCosto((prev) => [...prev, nuevo])}
+                    gestionHref="/dashboard/configuracion/centros-costo"
+                    gestionLabel="Gestionar centros de costo →"
+                  />
+                </div>
+                <div className="flex flex-col gap-ds-1">
+                  <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Proveedor (opcional)</label>
+                  <SelectCrear
+                    value={proveedorId}
+                    onChange={setProveedorId}
+                    opciones={proveedores}
+                    endpoint="/api/proveedores"
+                    placeholder="Sin proveedor"
+                    etiquetaCrear="+ Crear proveedor"
+                    onCreado={(nuevo) => setProveedores((prev) => [...prev, nuevo])}
+                    gestionHref="/dashboard/registros/proveedores"
+                    gestionLabel="Gestionar proveedores →"
+                  />
+                </div>
+                <Select
+                  etiqueta="Orden de Servicio (opcional)"
+                  valor={trabajoId}
+                  onCambio={setTrabajoId}
+                  opciones={[{ valor: "", etiqueta: "Sin vincular a una OS" }, ...trabajos.map((t) => ({ valor: t.id, etiqueta: `${t.fecha} — ${t.cliente}` }))]}
                 />
+                <FechaCampo etiqueta="Fecha" requerido valor={fecha} onCambio={setFecha} />
+                <Select
+                  etiqueta="Estado"
+                  valor={estado}
+                  onCambio={(v) => setEstado(v as EstadoGasto)}
+                  opciones={[
+                    { valor: "pendiente", etiqueta: "Pendiente" },
+                    { valor: "pagado", etiqueta: "Pagado" },
+                  ]}
+                />
+                {estado === "pagado" && <FechaCampo etiqueta="Fecha de pago" requerido valor={fechaPago} onCambio={setFechaPago} />}
+                <div className="sm:col-span-2">
+                  <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Comprobante / factura (opcional)</label>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,application/pdf"
+                    onChange={(e) => setComprobante(e.target.files?.[0] ?? null)}
+                    className="block w-full font-ds-body text-ds-small text-ds-text/70 file:mr-ds-3 file:rounded-ds-md file:border file:border-ds-divider file:bg-ds-surface file:px-ds-3 file:py-2 file:font-ds-body file:text-ds-small file:font-medium file:text-ds-text"
+                  />
+                </div>
               </div>
-            </div>
-            {formError && <ErrorText>{formError}</ErrorText>}
-            <div className="flex gap-2">
-              <Button type="submit" disabled={guardando} className="self-start">
-                {guardando ? "Guardando…" : editandoId ? "Guardar cambios" : "Agregar gasto"}
-              </Button>
-              <Button type="button" variant="ghost" onClick={cerrarFormulario}>
-                Cancelar
-              </Button>
-            </div>
-          </form>
-        </Card>
-      )}
-      {aviso && (
-        <div className="mb-6">
-          <SuccessText>{aviso}</SuccessText>
+              {formError ? <p className="font-ds-body text-ds-small text-ds-accent-700">{formError}</p> : null}
+              <div className="flex gap-ds-2">
+                <Button tipo="submit" cargando={guardando}>
+                  {editandoId ? "Guardar cambios" : "Agregar gasto"}
+                </Button>
+                <Button variante="ghost" onPress={cerrarFormulario}>
+                  Cancelar
+                </Button>
+              </div>
+            </form>
+          </Card>
         </div>
       )}
+      {aviso ? <p className="mb-ds-6 font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}
 
-      <div className="mb-4 flex flex-wrap gap-3">
-        <Input type="text" placeholder="Buscar por descripción..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} className="max-w-sm" />
-        <Select value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value as typeof filtroEstado)} className="w-48">
-          <option value="todos">Todos los estados</option>
-          <option value="pendiente">Pendiente</option>
-          <option value="pagado">Pagado</option>
-          <option value="vencido">Atrasado</option>
-        </Select>
-        <Select value={filtroCategoria} onChange={(e) => setFiltroCategoria(e.target.value)} className="w-56">
-          <option value="todos">Todas las categorías</option>
-          {categorias.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.nombre}
-            </option>
-          ))}
-        </Select>
+      <div className="mb-ds-4 flex flex-wrap gap-ds-3">
+        <div className="max-w-sm">
+          <Input placeholder="Buscar por descripción..." valor={busqueda} onCambio={setBusqueda} />
+        </div>
+        <Select
+          valor={filtroEstado}
+          onCambio={(v) => setFiltroEstado(v as typeof filtroEstado)}
+          opciones={[
+            { valor: "todos", etiqueta: "Todos los estados" },
+            { valor: "pendiente", etiqueta: "Pendiente" },
+            { valor: "pagado", etiqueta: "Pagado" },
+            { valor: "vencido", etiqueta: "Atrasado" },
+          ]}
+        />
+        <Select
+          valor={filtroCategoria}
+          onCambio={setFiltroCategoria}
+          opciones={[{ valor: "todos", etiqueta: "Todas las categorías" }, ...categorias.map((c) => ({ valor: c.id, etiqueta: c.nombre }))]}
+        />
       </div>
 
-      {error && <ErrorText>{error}</ErrorText>}
-      {gastos === null && !error && <EstadoCargando />}
+      {error ? <ErrorState mensaje={error} /> : null}
+      {gastos === null && !error ? <LoadingState /> : null}
 
       {gastos?.length === 0 && (
-        <EstadoVacio
-          icono={IconWallet}
+        <EmptyState
+          icono={<Wallet size={28} strokeWidth={2.75} />}
           titulo="Ningún gasto registrado"
           mensaje="Registra tu primer gasto para comenzar"
-          accion={<Button type="button" onClick={abrirNuevo}>
-              <IconPlus className="h-4 w-4" />
+          accion={
+            <Button iconoIzq={<Plus size={16} strokeWidth={2.75} />} onPress={abrirNuevo}>
               Nuevo Gasto
-            </Button>}
+            </Button>
+          }
         />
       )}
 
       {gastos && gastos.length > 0 && filtrados.length === 0 && (
-        <EstadoVacio icono={IconWallet} titulo="Ningún gasto coincide con la búsqueda o el filtro" />
+        <EmptyState icono={<Wallet size={28} strokeWidth={2.75} />} titulo="Ningún gasto coincide con la búsqueda o el filtro" />
       )}
 
       {filtrados.length > 0 && (
-        <Card className="overflow-x-auto p-0">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
-                <th className="px-5 py-3 font-medium">Fecha</th>
-                <th className="px-5 py-3 font-medium">Descripción</th>
-                <th className="px-5 py-3 font-medium">Categoría</th>
-                <th className="px-5 py-3 font-medium">Centro de costo</th>
-                <th className="px-5 py-3 font-medium">Proveedor</th>
-                <th className="px-5 py-3 text-right font-medium">Monto</th>
-                <th className="px-5 py-3 font-medium">Estado</th>
-                <th className="px-5 py-3 font-medium">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtrados.map((g) => (
-                <tr key={g.id} className="border-b border-border-soft last:border-0 hover:bg-surface-sunken">
-                  <td className="px-5 py-3 text-muted">{g.fecha}</td>
-                  <td className="px-5 py-3 font-medium text-foreground">
-                    <Link href={`/dashboard/gastos/${g.id}`} className="hover:text-brand hover:underline">
-                      {g.descripcion || "—"}
-                    </Link>
-                  </td>
-                  <td className="px-5 py-3">
-                    {g.categoria_info ? (
-                      <span className="inline-flex items-center gap-1.5 text-xs font-medium" style={{ color: g.categoria_info.color }}>
-                        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: g.categoria_info.color }} />
-                        {g.categoria_info.nombre}
-                      </span>
-                    ) : (
-                      <span className="text-muted">{g.categoria}</span>
-                    )}
-                  </td>
-                  <td className="px-5 py-3 text-muted">{g.centro_costo_info?.nombre ?? "—"}</td>
-                  <td className="px-5 py-3 text-muted">{g.proveedor_info?.nombre ?? "—"}</td>
-                  <td className="px-5 py-3 text-right"><Cifra>{formatMoneda(g.monto, usuario.moneda)}</Cifra></td>
-                  <td className="px-5 py-3">
-                    <div className="flex items-center gap-1.5">
-                      <Badge value={estadoMostrado(g)} />
-                      {g.editado_en && (
-                        <span className="text-[11px] text-muted" title={`Editado el ${new Date(g.editado_en).toLocaleString("es-CL")} después de estar pagado`}>
-                          (editado)
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-5 py-3">
-                    <div className="flex items-center gap-3">
-                      <button type="button" onClick={() => abrirEdicion(g)} className="text-xs font-medium text-brand hover:underline">
-                        Editar
-                      </button>
-                      {g.estado === "pendiente" && (
-                        <button type="button" onClick={() => marcarPagado(g.id)} className="text-xs font-medium text-brand hover:underline">
-                          Marcar pagado
-                        </button>
-                      )}
-                      {g.comprobante_url && (
-                        <button type="button" onClick={() => verComprobante(g.id)} className="inline-flex items-center gap-1 text-xs font-medium text-muted hover:text-brand">
-                          <IconPaperclip className="h-3.5 w-3.5" />
-                          Comprobante
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
+        <Table<GastoConDatos>
+          filas={filtrados}
+          claveFila={(g) => g.id}
+          vacio={{ titulo: "Ningún gasto coincide con la búsqueda o el filtro" }}
+          columnas={[
+            { encabezado: "Fecha", celda: (g) => g.fecha },
+            {
+              encabezado: "Descripción",
+              celda: (g) => (
+                <Link href={`/dashboard/gastos/${g.id}`} className="font-medium text-ds-text hover:text-ds-brand hover:underline">
+                  {g.descripcion || "—"}
+                </Link>
+              ),
+            },
+            {
+              encabezado: "Categoría",
+              celda: (g) =>
+                g.categoria_info ? (
+                  <span className="inline-flex items-center gap-1.5 text-ds-caption font-medium" style={{ color: g.categoria_info.color }}>
+                    <span className="h-2 w-2 rounded-ds-pill" style={{ backgroundColor: g.categoria_info.color }} />
+                    {g.categoria_info.nombre}
+                  </span>
+                ) : (
+                  <span className="text-ds-text/60">{g.categoria}</span>
+                ),
+            },
+            { encabezado: "Centro de costo", celda: (g) => g.centro_costo_info?.nombre ?? "—" },
+            { encabezado: "Proveedor", celda: (g) => g.proveedor_info?.nombre ?? "—" },
+            { encabezado: "Monto", clase: "text-right", celda: (g) => <Cifra>{formatMoneda(g.monto, usuario.moneda)}</Cifra> },
+            {
+              encabezado: "Estado",
+              celda: (g) => (
+                <div className="flex items-center gap-1.5">
+                  <StatusBadge estado={estadoMostrado(g)} tonoForzado={TONO_ESTADO[estadoMostrado(g)]} />
+                  {g.editado_en && (
+                    <span className="text-[11px] text-ds-text/60" title={`Editado el ${new Date(g.editado_en).toLocaleString("es-CL")} después de estar pagado`}>
+                      (editado)
+                    </span>
+                  )}
+                </div>
+              ),
+            },
+            {
+              encabezado: "Acciones",
+              celda: (g) => (
+                <div className="flex items-center gap-ds-3">
+                  <button type="button" onClick={() => abrirEdicion(g)} className="font-ds-body text-ds-caption font-medium text-ds-brand hover:underline">
+                    Editar
+                  </button>
+                  {g.estado === "pendiente" && (
+                    <button type="button" onClick={() => marcarPagado(g.id)} className="font-ds-body text-ds-caption font-medium text-ds-brand hover:underline">
+                      Marcar pagado
+                    </button>
+                  )}
+                  {g.comprobante_url && (
+                    <button type="button" onClick={() => verComprobante(g.id)} className="inline-flex items-center gap-1 font-ds-body text-ds-caption font-medium text-ds-text/60 hover:text-ds-brand">
+                      <Paperclip size={14} strokeWidth={2.75} />
+                      Comprobante
+                    </button>
+                  )}
+                </div>
+              ),
+            },
+          ]}
+        />
       )}
     </DashboardShell>
+  );
+}
+
+// Input nativo type="date" — ver el mismo helper en rutas/nueva/page.tsx.
+function FechaCampo({ etiqueta, valor, onCambio, requerido }: { etiqueta: string; valor: string; onCambio: (v: string) => void; requerido?: boolean }) {
+  return (
+    <div className="flex flex-col gap-ds-1">
+      <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">{etiqueta}</label>
+      <input
+        type="date"
+        required={requerido}
+        value={valor}
+        onChange={(e) => onCambio(e.target.value)}
+        className="h-11 w-full rounded-ds-md border border-ds-divider bg-ds-surface px-ds-3 font-ds-body text-ds-body text-ds-text transition-colors hover:border-ds-text/30 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ds-brand)]"
+      />
+    </div>
   );
 }

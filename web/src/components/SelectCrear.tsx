@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { apiFetch } from "@/lib/api";
-import { ErrorText } from "./ui";
 import { Combobox } from "./Combobox";
 
 // Selector de entidad "solo nombre" (categoría de gasto, centro de
@@ -11,6 +10,8 @@ import { Combobox } from "./Combobox";
 // sobre Combobox para que todos los selectores de entidad de la app se
 // vean y se usen igual (misma caja de búsqueda que Cliente/Colaborador),
 // en vez de un <select> nativo.
+//
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export function SelectCrear<T extends { id: string; nombre: string }>({
   value,
   onChange,
@@ -54,7 +55,7 @@ export function SelectCrear<T extends { id: string; nombre: string }>({
   }
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-ds-1">
       <Combobox
         value={value}
         onChange={onChange}
@@ -69,7 +70,7 @@ export function SelectCrear<T extends { id: string; nombre: string }>({
         gestionLabel={gestionLabel}
         disabled={guardando}
       />
-      {error && <ErrorText>{error}</ErrorText>}
+      {error ? <p className="font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
     </div>
   );
 }

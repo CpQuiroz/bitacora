@@ -3,13 +3,13 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { ChevronLeft, Paperclip } from "lucide-react";
 import type { CategoriaGasto, CentroCosto, Gasto, Proveedor, Trabajo } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Badge, Button, Card, ErrorText, Label, PageHeader } from "@/components/ui";
-import { IconChevronLeft, IconPaperclip } from "@/components/icons";
+import { Button, Card, StatusBadge, type TonoEstado } from "@bitacora/ui/web";
 
 type GastoDetalle = Gasto & {
   categoria_info: Pick<CategoriaGasto, "id" | "nombre" | "color"> | null;
@@ -18,6 +18,9 @@ type GastoDetalle = Gasto & {
   trabajo_info: Pick<Trabajo, "id" | "cliente" | "fecha"> | null;
 };
 
+const TONO_ESTADO: Record<Gasto["estado"], TonoEstado> = { pendiente: "en_progreso", pagado: "completado" };
+
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export default function GastoDetallePage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -69,7 +72,7 @@ export default function GastoDetallePage() {
   if (error) {
     return (
       <DashboardShell usuario={usuario}>
-        <ErrorText>{error}</ErrorText>
+        <p className="font-ds-body text-ds-small text-ds-accent-700">{error}</p>
       </DashboardShell>
     );
   }
@@ -77,52 +80,52 @@ export default function GastoDetallePage() {
 
   return (
     <DashboardShell usuario={usuario}>
-      <Link href="/dashboard/gastos" className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-brand hover:underline">
-        <IconChevronLeft className="h-4 w-4" />
+      <Link href="/dashboard/gastos" className="mb-ds-4 inline-flex items-center gap-ds-1 font-ds-body text-ds-small font-medium text-ds-brand hover:underline">
+        <ChevronLeft size={16} strokeWidth={2.75} />
         Gastos
       </Link>
 
-      <PageHeader
-        title={gasto.descripcion || gasto.categoria}
-        subtitle={formatMoneda(gasto.monto, usuario.moneda)}
-        action={<Badge value={gasto.estado} />}
-      />
+      <div className="flex flex-wrap items-center justify-between gap-ds-3">
+        <div>
+          <p className="ds-heading text-ds-h2 text-ds-text">{gasto.descripcion || gasto.categoria}</p>
+          <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">{formatMoneda(gasto.monto, usuario.moneda)}</p>
+        </div>
+        <StatusBadge estado={gasto.estado} tonoForzado={TONO_ESTADO[gasto.estado]} />
+      </div>
 
-      <div className="my-6 grid gap-6 lg:grid-cols-2">
+      <div className="my-ds-6 grid gap-ds-6 lg:grid-cols-2">
         <Card>
-          <h2 className="mb-4 text-sm font-semibold text-foreground">Información del Gasto</h2>
-          <div className="grid grid-cols-2 gap-3 text-sm">
+          <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Información del Gasto</p>
+          <div className="grid grid-cols-2 gap-ds-3 font-ds-body text-ds-small">
             <div>
-              <Label>Monto</Label>
-              <p className="text-foreground">{formatMoneda(gasto.monto, usuario.moneda)}</p>
+              <p className="text-ds-caption text-ds-text/60">Monto</p>
+              <p className="text-ds-text">{formatMoneda(gasto.monto, usuario.moneda)}</p>
             </div>
             <div>
-              <Label>Fecha</Label>
-              <p className="text-foreground">{gasto.fecha}</p>
+              <p className="text-ds-caption text-ds-text/60">Fecha</p>
+              <p className="text-ds-text">{gasto.fecha}</p>
             </div>
             <div>
-              <Label>Estado</Label>
-              <p className="text-foreground">
-                <Badge value={gasto.estado} />
-              </p>
+              <p className="text-ds-caption text-ds-text/60">Estado</p>
+              <StatusBadge estado={gasto.estado} tonoForzado={TONO_ESTADO[gasto.estado]} />
             </div>
             <div>
-              <Label>Fecha de pago</Label>
-              <p className="text-foreground">{gasto.fecha_pago ?? "—"}</p>
+              <p className="text-ds-caption text-ds-text/60">Fecha de pago</p>
+              <p className="text-ds-text">{gasto.fecha_pago ?? "—"}</p>
             </div>
             {gasto.trabajo_info && (
               <div className="col-span-2">
-                <Label>Orden de Servicio</Label>
-                <Link href={`/dashboard/trabajos/${gasto.trabajo_info.id}`} className="text-brand hover:underline">
+                <p className="text-ds-caption text-ds-text/60">Orden de Servicio</p>
+                <Link href={`/dashboard/trabajos/${gasto.trabajo_info.id}`} className="text-ds-brand hover:underline">
                   {gasto.trabajo_info.fecha} — {gasto.trabajo_info.cliente}
                 </Link>
               </div>
             )}
             {gasto.comprobante_url && (
               <div className="col-span-2">
-                <Label>Comprobante</Label>
-                <button type="button" onClick={verComprobante} className="inline-flex items-center gap-1 text-brand hover:underline">
-                  <IconPaperclip className="h-3.5 w-3.5" />
+                <p className="text-ds-caption text-ds-text/60">Comprobante</p>
+                <button type="button" onClick={verComprobante} className="inline-flex items-center gap-1 text-ds-brand hover:underline">
+                  <Paperclip size={14} strokeWidth={2.75} />
                   {gasto.comprobante_nombre ?? "Ver comprobante"}
                 </button>
               </div>
@@ -131,20 +134,20 @@ export default function GastoDetallePage() {
         </Card>
 
         <Card>
-          <h2 className="mb-4 text-sm font-semibold text-foreground">Categoría</h2>
-          <div className="flex flex-col gap-1 text-sm">
+          <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Categoría</p>
+          <div className="flex flex-col gap-ds-1 font-ds-body text-ds-small">
             {gasto.categoria_info ? (
               <span className="inline-flex items-center gap-1.5 font-medium" style={{ color: gasto.categoria_info.color }}>
-                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: gasto.categoria_info.color }} />
+                <span className="h-2 w-2 rounded-ds-pill" style={{ backgroundColor: gasto.categoria_info.color }} />
                 {gasto.categoria_info.nombre}
               </span>
             ) : (
-              <p className="text-foreground">{gasto.categoria}</p>
+              <p className="text-ds-text">{gasto.categoria}</p>
             )}
             {gasto.centro_costo_info && (
-              <div className="mt-3">
-                <Label>Centro de costo</Label>
-                <p className="text-foreground">{gasto.centro_costo_info.nombre}</p>
+              <div className="mt-ds-3">
+                <p className="text-ds-caption text-ds-text/60">Centro de costo</p>
+                <p className="text-ds-text">{gasto.centro_costo_info.nombre}</p>
               </div>
             )}
           </div>
@@ -152,33 +155,33 @@ export default function GastoDetallePage() {
 
         {gasto.proveedor_info && (
           <Card>
-            <h2 className="mb-4 text-sm font-semibold text-foreground">Proveedor</h2>
-            <div className="flex flex-col gap-1 text-sm">
-              <p className="font-medium text-foreground">{gasto.proveedor_info.nombre}</p>
-              {gasto.proveedor_info.correo && <p className="text-muted">{gasto.proveedor_info.correo}</p>}
-              {gasto.proveedor_info.telefono && <p className="text-muted">{gasto.proveedor_info.telefono}</p>}
+            <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Proveedor</p>
+            <div className="flex flex-col gap-ds-1 font-ds-body text-ds-small">
+              <p className="font-medium text-ds-text">{gasto.proveedor_info.nombre}</p>
+              {gasto.proveedor_info.correo && <p className="text-ds-text/70">{gasto.proveedor_info.correo}</p>}
+              {gasto.proveedor_info.telefono && <p className="text-ds-text/70">{gasto.proveedor_info.telefono}</p>}
             </div>
           </Card>
         )}
 
         <Card>
-          <h2 className="mb-4 text-sm font-semibold text-foreground">Información Adicional</h2>
-          <div className="grid grid-cols-2 gap-3 text-sm">
+          <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Información Adicional</p>
+          <div className="grid grid-cols-2 gap-ds-3 font-ds-body text-ds-small">
             <div>
-              <Label>Creado</Label>
-              <p className="text-foreground">{new Date(gasto.creado_en).toLocaleString("es-CL")}</p>
+              <p className="text-ds-caption text-ds-text/60">Creado</p>
+              <p className="text-ds-text">{new Date(gasto.creado_en).toLocaleString("es-CL")}</p>
             </div>
             {gasto.editado_en && (
               <div>
-                <Label>Editado (post-pago)</Label>
-                <p className="text-foreground">{new Date(gasto.editado_en).toLocaleString("es-CL")}</p>
+                <p className="text-ds-caption text-ds-text/60">Editado (post-pago)</p>
+                <p className="text-ds-text">{new Date(gasto.editado_en).toLocaleString("es-CL")}</p>
               </div>
             )}
           </div>
         </Card>
       </div>
 
-      <Button type="button" variant="outline" onClick={() => router.push("/dashboard/gastos")}>
+      <Button variante="secundario" onPress={() => router.push("/dashboard/gastos")}>
         Volver a Gastos
       </Button>
     </DashboardShell>
