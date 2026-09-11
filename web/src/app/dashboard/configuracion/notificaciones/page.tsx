@@ -1,12 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { Clock, Mail, MessageCircle } from "lucide-react";
 import type { MensajePersonalizado, NotificacionClienteLog, NotificacionesConfig, TipoMensajePersonalizado } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
-import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText, Textarea } from "@/components/ui";
+import { Button, Card, Input, LoadingState, Select, StatusBadge, Textarea } from "@bitacora/ui/web";
 import { DataTable } from "@/components/DataTable";
-import { IconChat, IconClock, IconMail } from "@/components/icons";
-import { EstadoCargando } from "@/components/estados";
 
 type Tab = "correo" | "whatsapp" | "recordatorios" | "historial";
 
@@ -90,6 +89,7 @@ function camposCompletados(m: MensajePersonalizado | null): number {
   return [m.mensaje_whatsapp, m.asunto_correo, m.cuerpo_correo].filter((v) => Boolean(v && v.trim())).length;
 }
 
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export default function NotificacionesPage() {
   const [tab, setTab] = useState<Tab>("correo");
   const [config, setConfig] = useState<NotificacionesConfig | null>(null);
@@ -191,35 +191,41 @@ export default function NotificacionesPage() {
 
   if (!config || !mensajes) {
     return (
-      <div className="flex flex-col gap-6">
-        <PageHeader title="Notificaciones" subtitle="Correo, WhatsApp y recordatorios" />
-        {error ? <ErrorText>{error}</ErrorText> : <EstadoCargando />}
+      <div className="flex flex-col gap-ds-6">
+        <div>
+          <p className="ds-heading text-ds-h3 text-ds-text">Notificaciones</p>
+          <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">Correo, WhatsApp y recordatorios</p>
+        </div>
+        {error ? <p className="font-ds-body text-ds-small text-ds-accent-700">{error}</p> : <LoadingState />}
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader title="Notificaciones" subtitle="Correo, WhatsApp y recordatorios" />
+    <div className="flex flex-col gap-ds-6">
+      <div>
+        <p className="ds-heading text-ds-h3 text-ds-text">Notificaciones</p>
+        <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">Correo, WhatsApp y recordatorios</p>
+      </div>
 
-      <div className="flex gap-1 border-b border-border">
+      <div className="flex gap-1 border-b border-ds-divider">
         {(
           [
-            { valor: "correo", etiqueta: "Correo", icon: IconMail },
-            { valor: "whatsapp", etiqueta: "WhatsApp", icon: IconChat },
-            { valor: "recordatorios", etiqueta: "Recordatorios", icon: IconClock },
-            { valor: "historial", etiqueta: "Historial de envíos", icon: IconClock },
+            { valor: "correo", etiqueta: "Correo", icon: Mail },
+            { valor: "whatsapp", etiqueta: "WhatsApp", icon: MessageCircle },
+            { valor: "recordatorios", etiqueta: "Recordatorios", icon: Clock },
+            { valor: "historial", etiqueta: "Historial de envíos", icon: Clock },
           ] as const
         ).map((t) => (
           <button
             key={t.valor}
             type="button"
             onClick={() => setTab(t.valor)}
-            className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors ${
-              tab === t.valor ? "border-b-2 border-brand text-brand" : "text-muted hover:text-brand"
+            className={`flex items-center gap-1.5 px-ds-3 py-2 font-ds-body text-ds-small font-medium transition-colors ${
+              tab === t.valor ? "border-b-2 border-ds-brand text-ds-brand" : "text-ds-text/60 hover:text-ds-brand"
             }`}
           >
-            <t.icon className="h-4 w-4" />
+            <t.icon size={16} strokeWidth={2.75} />
             {t.etiqueta}
           </button>
         ))}
@@ -227,56 +233,53 @@ export default function NotificacionesPage() {
 
       {tab === "correo" && (
         <Card>
-          <div className="mb-5 flex items-center justify-between">
+          <div className="mb-ds-5 flex items-center justify-between">
             <div>
-              <p className="font-medium text-foreground">Notificaciones por correo</p>
-              <p className="text-sm text-muted">Apaga esto para silenciar todos los correos de eventos.</p>
+              <p className="font-medium text-ds-text">Notificaciones por correo</p>
+              <p className="font-ds-body text-ds-small text-ds-text/70">Apaga esto para silenciar todos los correos de eventos.</p>
             </div>
             <button
               type="button"
               role="switch"
               aria-checked={config.correo_activado}
               onClick={() => actualizarToggle("correo_activado", !config.correo_activado)}
-              className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${config.correo_activado ? "bg-brand" : "bg-border"}`}
+              className={`relative h-6 w-11 shrink-0 rounded-ds-pill transition-colors ${config.correo_activado ? "bg-ds-brand" : "bg-ds-divider"}`}
             >
-              <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${config.correo_activado ? "translate-x-5" : "translate-x-0.5"}`} />
+              <span className={`absolute top-0.5 h-5 w-5 rounded-ds-pill bg-white shadow transition-transform ${config.correo_activado ? "translate-x-5" : "translate-x-0.5"}`} />
             </button>
           </div>
 
-          <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-ds-5">
             {TOGGLES.map((grupo) => (
               <div key={grupo.grupo}>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">{grupo.grupo}</p>
-                <div className="flex flex-col gap-2">
+                <p className="mb-ds-2 font-ds-body text-ds-caption font-semibold uppercase tracking-wide text-ds-text/60">{grupo.grupo}</p>
+                <div className="flex flex-col gap-ds-2">
                   {grupo.items.map((item) => (
-                    <label key={item.campo} className="flex items-center gap-2 text-sm text-foreground">
+                    <label key={item.campo} className="flex items-center gap-2 font-ds-body text-ds-small text-ds-text">
                       <input
                         type="checkbox"
                         checked={Boolean(config[item.campo])}
                         onChange={(e) => actualizarToggle(item.campo, e.target.checked)}
-                        className="accent-brand"
+                        className="accent-[var(--ds-brand)]"
                       />
                       {item.etiqueta}
                     </label>
                   ))}
                 </div>
                 {grupo.grupo === "Clientes" && config.cliente_cumpleanos && (
-                  <div className="mt-3 max-w-xs">
-                    <Label>Descuento a mencionar en el correo (opcional)</Label>
+                  <div className="mt-ds-3 max-w-xs">
                     <Select
-                      value={config.cliente_cumpleanos_descuento_pct ?? ""}
-                      onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-                        setConfig((prev) =>
-                          prev ? { ...prev, cliente_cumpleanos_descuento_pct: e.target.value ? Number(e.target.value) : null } : prev
-                        )
-                      }
-                    >
-                      <option value="">Sin descuento</option>
-                      <option value="10">10%</option>
-                      <option value="15">15%</option>
-                      <option value="20">20%</option>
-                    </Select>
-                    <p className="mt-1.5 text-xs text-muted">
+                      etiqueta="Descuento a mencionar en el correo (opcional)"
+                      valor={config.cliente_cumpleanos_descuento_pct != null ? String(config.cliente_cumpleanos_descuento_pct) : ""}
+                      onCambio={(v) => setConfig((prev) => (prev ? { ...prev, cliente_cumpleanos_descuento_pct: v ? Number(v) : null } : prev))}
+                      placeholder="Sin descuento"
+                      opciones={[
+                        { valor: "10", etiqueta: "10%" },
+                        { valor: "15", etiqueta: "15%" },
+                        { valor: "20", etiqueta: "20%" },
+                      ]}
+                    />
+                    <p className="mt-ds-1.5 font-ds-body text-ds-caption text-ds-text/60">
                       Solo informativo — se menciona en el texto del correo, nunca se calcula ni se aplica nada en la app. La
                       empresa lo honra a mano cuando el cliente vuelve.
                     </p>
@@ -286,112 +289,93 @@ export default function NotificacionesPage() {
             ))}
           </div>
 
-          {error && (
-            <div className="mt-4">
-              <ErrorText>{error}</ErrorText>
-            </div>
-          )}
-          {aviso && (
-            <div className="mt-4">
-              <SuccessText>{aviso}</SuccessText>
-            </div>
-          )}
-          <Button type="button" onClick={onGuardarPreferencias} disabled={guardando} className="mt-4">
-            {guardando ? "Guardando…" : "Guardar preferencias"}
-          </Button>
+          {error ? <p className="mt-ds-4 font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
+          {aviso ? <p className="mt-ds-4 font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}
+          <div className="mt-ds-4">
+            <Button onPress={onGuardarPreferencias} cargando={guardando}>
+              Guardar preferencias
+            </Button>
+          </div>
         </Card>
       )}
 
       {tab === "whatsapp" && (
         <Card>
-          <div className="mb-5 flex items-center justify-between">
+          <div className="mb-ds-5 flex items-center justify-between">
             <div>
-              <p className="font-medium text-foreground">Notificaciones por WhatsApp</p>
-              <p className="text-sm text-muted">Apaga esto para silenciar todos los avisos por WhatsApp a clientes.</p>
+              <p className="font-medium text-ds-text">Notificaciones por WhatsApp</p>
+              <p className="font-ds-body text-ds-small text-ds-text/70">Apaga esto para silenciar todos los avisos por WhatsApp a clientes.</p>
             </div>
             <button
               type="button"
               role="switch"
               aria-checked={config.whatsapp_activado}
               onClick={() => actualizarToggle("whatsapp_activado", !config.whatsapp_activado)}
-              className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${config.whatsapp_activado ? "bg-brand" : "bg-border"}`}
+              className={`relative h-6 w-11 shrink-0 rounded-ds-pill transition-colors ${config.whatsapp_activado ? "bg-ds-brand" : "bg-ds-divider"}`}
             >
               <span
-                className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${config.whatsapp_activado ? "translate-x-5" : "translate-x-0.5"}`}
+                className={`absolute top-0.5 h-5 w-5 rounded-ds-pill bg-white shadow transition-transform ${config.whatsapp_activado ? "translate-x-5" : "translate-x-0.5"}`}
               />
             </button>
           </div>
-          <p className="text-sm text-muted">
+          <p className="font-ds-body text-ds-small text-ds-text/70">
             Usa los mismos eventos que ya prendiste en la pestaña Correo — un cliente con teléfono recibe el aviso por
             WhatsApp además del correo (o en su lugar, si no dejó correo). Edita el texto del mensaje en “Mensajes
             personalizados” más abajo.
           </p>
-          {error && (
-            <div className="mt-4">
-              <ErrorText>{error}</ErrorText>
-            </div>
-          )}
-          {aviso && (
-            <div className="mt-4">
-              <SuccessText>{aviso}</SuccessText>
-            </div>
-          )}
-          <Button type="button" onClick={onGuardarPreferencias} disabled={guardando} className="mt-4">
-            {guardando ? "Guardando…" : "Guardar"}
-          </Button>
+          {error ? <p className="mt-ds-4 font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
+          {aviso ? <p className="mt-ds-4 font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}
+          <div className="mt-ds-4">
+            <Button onPress={onGuardarPreferencias} cargando={guardando}>
+              Guardar
+            </Button>
+          </div>
         </Card>
       )}
 
       {tab === "recordatorios" && (
         <Card>
-          <p className="mb-4 text-sm text-muted">
+          <p className="mb-ds-4 font-ds-body text-ds-small text-ds-text/70">
             &ldquo;Cotización por vencer&rdquo; y &ldquo;Cobro pendiente/vencido&rdquo; se activan o desactivan en la
             pestaña Correo — acá solo se ajusta cuántos días antes avisar de una cotización por vencer.
           </p>
           <div className="max-w-xs">
-            <Label>Días de aviso antes del vencimiento</Label>
             <Input
-              type="number"
-              min={0}
-              value={config.dias_aviso_vencimiento}
-              onChange={(e) => setConfig((prev) => (prev ? { ...prev, dias_aviso_vencimiento: Number(e.target.value) } : prev))}
+              etiqueta="Días de aviso antes del vencimiento"
+              tipo="numero"
+              valor={String(config.dias_aviso_vencimiento)}
+              onCambio={(v) => setConfig((prev) => (prev ? { ...prev, dias_aviso_vencimiento: Number(v) } : prev))}
             />
           </div>
-          {error && (
-            <div className="mt-4">
-              <ErrorText>{error}</ErrorText>
-            </div>
-          )}
-          {aviso && (
-            <div className="mt-4">
-              <SuccessText>{aviso}</SuccessText>
-            </div>
-          )}
-          <Button type="button" onClick={onGuardarPreferencias} disabled={guardando} className="mt-4">
-            {guardando ? "Guardando…" : "Guardar"}
-          </Button>
+          {error ? <p className="mt-ds-4 font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
+          {aviso ? <p className="mt-ds-4 font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}
+          <div className="mt-ds-4">
+            <Button onPress={onGuardarPreferencias} cargando={guardando}>
+              Guardar
+            </Button>
+          </div>
         </Card>
       )}
 
       {tab === "historial" && (
-        <Card className="p-0">
-          <div className="p-6 pb-0">
-            <p className="text-sm text-muted">
+        <Card sinRelleno>
+          <div className="p-ds-4 pb-0">
+            <p className="font-ds-body text-ds-small text-ds-text/70">
               Cada intento de correo automático al cliente queda registrado acá — si algo falló, puedes reenviarlo.
             </p>
           </div>
-          <div className="p-6">
-            {errorHistorial && <ErrorText>{errorHistorial}</ErrorText>}
+          <div className="p-ds-4">
+            {errorHistorial ? <p className="font-ds-body text-ds-small text-ds-accent-700">{errorHistorial}</p> : null}
             <DataTable
               rows={historial ?? []}
               rowKey={(h) => h.id}
               loading={historial === null && !errorHistorial}
               columns={[
                 { header: "Evento", cell: (h) => ETIQUETA_TIPO_LOG[h.tipo] ?? h.tipo },
-                { header: "Canal", cell: (h) => <Badge value={h.canal} /> },
-                { header: "Destinatario", cell: (h) => <span className="text-muted">{h.destinatario}</span> },
-                { header: "Fecha", cell: (h) => <span className="text-muted">{new Date(h.creado_en).toLocaleString("es-CL")}</span> },
-                { header: "Estado", cell: (h) => <Badge value={h.exito ? "exito" : "fallido"} /> },
+                { header: "Canal", cell: (h) => <StatusBadge estado={h.canal} tonoForzado="cerrado" /> },
+                { header: "Destinatario", cell: (h) => <span className="text-ds-text/60">{h.destinatario}</span> },
+                { header: "Fecha", cell: (h) => <span className="text-ds-text/60">{new Date(h.creado_en).toLocaleString("es-CL")}</span> },
+                { header: "Estado", cell: (h) => <StatusBadge estado={h.exito ? "exito" : "fallido"} tonoForzado={h.exito ? "completado" : "cancelado"} /> },
               ]}
               actions={[
                 {
@@ -401,24 +385,24 @@ export default function NotificacionesPage() {
                   hidden: (h) => h.exito,
                 },
               ]}
-              emptyState={{ icon: IconMail, message: "Todavía no se ha enviado ninguna notificación al cliente." }}
+              emptyState={{ icon: Mail, message: "Todavía no se ha enviado ninguna notificación al cliente." }}
             />
           </div>
         </Card>
       )}
 
       <Card>
-        <div className="mb-1 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-foreground">Mensajes personalizados</h2>
-          <span className="text-xs font-medium text-muted">
+        <div className="mb-ds-1 flex items-center justify-between">
+          <p className="font-ds-body text-ds-small font-semibold text-ds-text">Mensajes personalizados</p>
+          <span className="font-ds-body text-ds-caption font-medium text-ds-text/60">
             {TIPOS_MENSAJE.filter((t) => camposCompletados(mensajes[t.valor]) === CAMPOS_POR_MENSAJE).length} de {TIPOS_MENSAJE.length} completados
           </span>
         </div>
-        <p className="mb-4 text-xs text-muted">
+        <p className="mb-ds-4 font-ds-body text-ds-caption text-ds-text/60">
           Si dejas asunto/cuerpo vacíos, se usa un mensaje por defecto. El cuerpo del correo es texto simple, sin editor
           enriquecido.
         </p>
-        <div className="flex flex-col divide-y divide-border">
+        <div className="flex flex-col divide-y divide-ds-divider">
           {TIPOS_MENSAJE.map((t) => (
             <AcordeonMensaje
               key={t.valor}
@@ -466,34 +450,29 @@ function AcordeonMensaje({
   }
 
   return (
-    <div className="py-3">
-      <button type="button" onClick={onToggle} className="flex w-full items-center justify-between text-left text-sm font-medium text-foreground">
+    <div className="py-ds-3">
+      <button type="button" onClick={onToggle} className="flex w-full items-center justify-between text-left font-ds-body text-ds-small font-medium text-ds-text">
         {etiqueta}
-        <span className="flex items-center gap-2 text-xs text-muted">
-          <span className={completados === CAMPOS_POR_MENSAJE ? "font-medium text-success" : ""}>
+        <span className="flex items-center gap-2 font-ds-body text-ds-caption text-ds-text/60">
+          <span className={completados === CAMPOS_POR_MENSAJE ? "font-medium text-ds-accent2-800" : ""}>
             {completados} de {CAMPOS_POR_MENSAJE} completados
           </span>
           {abierto ? "Ocultar" : "Editar"}
         </span>
       </button>
       {abierto && (
-        <div className="mt-3 flex flex-col gap-3">
+        <div className="mt-ds-3 flex flex-col gap-ds-3">
+          <Textarea etiqueta="Mensaje de WhatsApp" filas={2} valor={whatsapp} onCambio={setWhatsapp} />
+          <Input etiqueta="Asunto del correo" valor={asunto} onCambio={setAsunto} />
           <div>
-            <Label>Mensaje de WhatsApp</Label>
-            <Textarea rows={2} value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} />
+            <Textarea etiqueta="Cuerpo del correo" filas={4} valor={cuerpo} onCambio={setCuerpo} />
+            <p className="mt-ds-1.5 font-mono text-[11px] text-ds-text/60">Variables disponibles: {variables}</p>
           </div>
-          <div>
-            <Label>Asunto del correo</Label>
-            <Input type="text" value={asunto} onChange={(e) => setAsunto(e.target.value)} />
+          <div className="self-start">
+            <Button onPress={guardar} cargando={guardando}>
+              Guardar mensaje
+            </Button>
           </div>
-          <div>
-            <Label>Cuerpo del correo</Label>
-            <Textarea rows={4} value={cuerpo} onChange={(e) => setCuerpo(e.target.value)} />
-            <p className="mt-1.5 font-mono text-[11px] text-muted">Variables disponibles: {variables}</p>
-          </div>
-          <Button type="button" onClick={guardar} disabled={guardando} className="self-start">
-            {guardando ? "Guardando…" : "Guardar mensaje"}
-          </Button>
         </div>
       )}
     </div>
