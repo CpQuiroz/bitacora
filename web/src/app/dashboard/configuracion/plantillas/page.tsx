@@ -4,8 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { PlantillaDocumento, PosicionLogo, TipoPlantilla, VariablePlantilla } from "@bitacora/shared";
 import { VARIABLES_COBRANZA, VARIABLES_COTIZACION, VARIABLES_OS, sustituirVariables } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
-import { Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText, Textarea } from "@/components/ui";
-import { EstadoCargando } from "@/components/estados";
+import { Button, Card, Input, LoadingState, Select, Textarea } from "@bitacora/ui/web";
 import { useConfiguracion } from "../ConfiguracionContext";
 
 const VARIABLES_POR_TIPO: Record<TipoPlantilla, VariablePlantilla[]> = {
@@ -55,7 +54,7 @@ function ChipsVariables({ variables, onInsertar }: { variables: VariablePlantill
           type="button"
           title={v.etiqueta}
           onClick={() => onInsertar(v.clave)}
-          className="rounded-full border border-border px-2 py-0.5 font-mono text-[11px] text-muted hover:border-brand hover:text-brand"
+          className="rounded-ds-pill border border-ds-divider px-2 py-0.5 font-mono text-[11px] text-ds-text/60 hover:border-ds-brand hover:text-ds-brand"
         >
           {`{${v.clave}}`}
         </button>
@@ -64,6 +63,10 @@ function ChipsVariables({ variables, onInsertar }: { variables: VariablePlantill
   );
 }
 
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
+// La "vista previa en vivo" simula la hoja PDF impresa (fondo blanco,
+// grises fijos) — a propósito no usa tokens ds-, igual que un documento
+// impreso no cambia con el tema de la app.
 export default function PlantillasPage() {
   const { usuario } = useConfiguracion();
   const [tab, setTab] = useState<TipoPlantilla>("cotizacion");
@@ -160,17 +163,20 @@ export default function PlantillasPage() {
   const variablesTab = VARIABLES_POR_TIPO[tab];
 
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader title="Plantillas" subtitle="Apariencia de tus documentos PDF" />
+    <div className="flex flex-col gap-ds-6">
+      <div>
+        <p className="ds-heading text-ds-h3 text-ds-text">Plantillas</p>
+        <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">Apariencia de tus documentos PDF</p>
+      </div>
 
-      <div className="flex gap-1 overflow-x-auto border-b border-border">
+      <div className="flex gap-1 overflow-x-auto border-b border-ds-divider">
         {TABS.map((t) => (
           <button
             key={t.valor}
             type="button"
             onClick={() => setTab(t.valor)}
-            className={`shrink-0 whitespace-nowrap px-3 py-2 text-sm font-medium transition-colors ${
-              tab === t.valor ? "border-b-2 border-brand text-brand" : "text-muted hover:text-brand"
+            className={`shrink-0 whitespace-nowrap px-ds-3 py-2 font-ds-body text-ds-small font-medium transition-colors ${
+              tab === t.valor ? "border-b-2 border-ds-brand text-ds-brand" : "text-ds-text/60 hover:text-ds-brand"
             }`}
           >
             {t.etiqueta}
@@ -179,106 +185,99 @@ export default function PlantillasPage() {
       </div>
 
       {cargando ? (
-        <EstadoCargando />
+        <LoadingState />
       ) : (
         plantilla && (
-          <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
-            <div className="flex flex-col gap-6">
+          <div className="grid gap-ds-6 lg:grid-cols-[1fr_22rem]">
+            <div className="flex flex-col gap-ds-6">
               <Card>
-                <h2 className="mb-4 text-sm font-semibold text-foreground">Logo</h2>
-                <label className="flex items-center gap-2 text-sm text-foreground">
-                  <input type="checkbox" checked={mostrarLogo} onChange={(e) => setMostrarLogo(e.target.checked)} className="accent-brand" />
+                <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Logo</p>
+                <label className="flex items-center gap-ds-2 font-ds-body text-ds-small text-ds-text">
+                  <input type="checkbox" checked={mostrarLogo} onChange={(e) => setMostrarLogo(e.target.checked)} className="accent-[var(--ds-brand)]" />
                   Mostrar logo
                 </label>
                 {mostrarLogo && (
-                  <div className="mt-3 w-48">
-                    <Label>Posición</Label>
-                    <Select value={posicionLogo} onChange={(e) => setPosicionLogo(e.target.value as PosicionLogo)}>
-                      {POSICIONES.map((p) => (
-                        <option key={p.valor} value={p.valor}>
-                          {p.etiqueta}
-                        </option>
-                      ))}
-                    </Select>
+                  <div className="mt-ds-3 w-48">
+                    <Select etiqueta="Posición" valor={posicionLogo} onCambio={(v) => setPosicionLogo(v as PosicionLogo)} opciones={POSICIONES} />
                   </div>
                 )}
               </Card>
 
               <Card>
-                <h2 className="mb-4 text-sm font-semibold text-foreground">Colores</h2>
-                <div className="grid gap-4 sm:grid-cols-2">
+                <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Colores</p>
+                <div className="grid gap-ds-4 sm:grid-cols-2">
                   <div>
-                    <Label>Color primario</Label>
-                    <div className="flex items-center gap-3">
+                    <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Color primario</label>
+                    <div className="mt-ds-1 flex items-center gap-ds-3">
                       <input
                         type="color"
                         value={colorPrimario}
                         onChange={(e) => setColorPrimario(e.target.value)}
-                        className="h-10 w-14 cursor-pointer rounded-lg border border-border bg-surface p-1"
+                        className="h-10 w-14 cursor-pointer rounded-ds-md border border-ds-divider bg-ds-surface p-1"
                       />
-                      <Input type="text" value={colorPrimario} onChange={(e) => setColorPrimario(e.target.value)} />
+                      <div className="flex-1">
+                        <Input valor={colorPrimario} onCambio={setColorPrimario} />
+                      </div>
                     </div>
                   </div>
                   <div>
-                    <Label>Color secundario</Label>
-                    <div className="flex items-center gap-3">
+                    <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Color secundario</label>
+                    <div className="mt-ds-1 flex items-center gap-ds-3">
                       <input
                         type="color"
                         value={colorSecundario}
                         onChange={(e) => setColorSecundario(e.target.value)}
-                        className="h-10 w-14 cursor-pointer rounded-lg border border-border bg-surface p-1"
+                        className="h-10 w-14 cursor-pointer rounded-ds-md border border-ds-divider bg-ds-surface p-1"
                       />
-                      <Input type="text" value={colorSecundario} onChange={(e) => setColorSecundario(e.target.value)} />
+                      <div className="flex-1">
+                        <Input valor={colorSecundario} onCambio={setColorSecundario} />
+                      </div>
                     </div>
                   </div>
                 </div>
               </Card>
 
               <Card>
-                <h2 className="mb-4 text-sm font-semibold text-foreground">Textos</h2>
-                <div className="flex flex-col gap-4">
+                <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Textos</p>
+                <div className="flex flex-col gap-ds-4">
                   <div>
-                    <Label>Texto de encabezado</Label>
-                    <Input type="text" value={textoEncabezado} onChange={(e) => setTextoEncabezado(e.target.value)} />
+                    <Input etiqueta="Texto de encabezado" valor={textoEncabezado} onCambio={setTextoEncabezado} />
                     <ChipsVariables variables={variablesTab} onInsertar={(c) => setTextoEncabezado((v) => `${v}{${c}}`)} />
                   </div>
                   <div>
-                    <Label>Texto de pie de página</Label>
-                    <Input type="text" value={textoPie} onChange={(e) => setTextoPie(e.target.value)} />
+                    <Input etiqueta="Texto de pie de página" valor={textoPie} onCambio={setTextoPie} />
                     <ChipsVariables variables={variablesTab} onInsertar={(c) => setTextoPie((v) => `${v}{${c}}`)} />
                   </div>
                   <div>
-                    <Label>Mensaje predeterminado</Label>
-                    <Textarea rows={3} value={mensajePredeterminado} onChange={(e) => setMensajePredeterminado(e.target.value)} />
+                    <Textarea etiqueta="Mensaje predeterminado" filas={3} valor={mensajePredeterminado} onCambio={setMensajePredeterminado} />
                     <ChipsVariables variables={variablesTab} onInsertar={(c) => setMensajePredeterminado((v) => `${v}{${c}}`)} />
                   </div>
                   <div>
-                    <Label>Términos y condiciones</Label>
-                    <Textarea rows={4} value={terminosCondiciones} onChange={(e) => setTerminosCondiciones(e.target.value)} />
+                    <Textarea etiqueta="Términos y condiciones" filas={4} valor={terminosCondiciones} onCambio={setTerminosCondiciones} />
                     <ChipsVariables variables={variablesTab} onInsertar={(c) => setTerminosCondiciones((v) => `${v}{${c}}`)} />
                   </div>
-                  <label className="flex items-center gap-2 text-sm text-foreground">
-                    <input type="checkbox" checked={mostrarFirma} onChange={(e) => setMostrarFirma(e.target.checked)} className="accent-brand" />
+                  <label className="flex items-center gap-ds-2 font-ds-body text-ds-small text-ds-text">
+                    <input type="checkbox" checked={mostrarFirma} onChange={(e) => setMostrarFirma(e.target.checked)} className="accent-[var(--ds-brand)]" />
                     Mostrar campo de firma
                   </label>
                 </div>
               </Card>
 
-              {error && <ErrorText>{error}</ErrorText>}
-              {aviso && <SuccessText>{aviso}</SuccessText>}
-              <div className="flex gap-3">
-                <Button type="button" onClick={onGuardar} disabled={guardando}>
-                  {guardando ? "Guardando…" : "Guardar plantilla"}
+              {error ? <p className="font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
+              {aviso ? <p className="font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}
+              <div className="flex gap-ds-3">
+                <Button onPress={onGuardar} cargando={guardando}>
+                  Guardar plantilla
                 </Button>
-                <Button type="button" variant="outline" onClick={onRestaurar} disabled={restaurando}>
-                  {restaurando ? "Restaurando…" : "Restaurar predeterminado"}
+                <Button variante="secundario" onPress={onRestaurar} cargando={restaurando}>
+                  Restaurar predeterminado
                 </Button>
               </div>
             </div>
 
             <div>
-              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted">Vista previa en vivo</p>
-              <div className="rounded-2xl border border-border bg-white p-5 text-[#16161f] shadow-sm">
+              <p className="mb-ds-2 font-ds-body text-ds-caption font-medium uppercase tracking-wide text-ds-text/60">Vista previa en vivo</p>
+              <div className="rounded-2xl border border-ds-divider bg-white p-5 text-[#16161f] shadow-sm">
                 {mostrarLogo && (
                   <div className={`mb-3 flex ${justify}`}>
                     {usuario.empresa.logo_url ? (
@@ -326,7 +325,7 @@ export default function PlantillasPage() {
                 )}
                 {textoPie && <p className="mt-4 text-center text-[10px] text-gray-400">{sustituirVariables(textoPie, DATOS_EJEMPLO)}</p>}
               </div>
-              <p className="mt-2 text-xs text-muted">Así se ve con los cambios sin guardar todavía.</p>
+              <p className="mt-ds-2 font-ds-body text-ds-caption text-ds-text/60">Así se ve con los cambios sin guardar todavía.</p>
             </div>
           </div>
         )
