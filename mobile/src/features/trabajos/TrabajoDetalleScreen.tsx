@@ -4,9 +4,9 @@ import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { EstadoTrabajo, ItemChecklist } from "@bitacora/shared";
 import { estadoOsDeTrabajo } from "@bitacora/shared";
-import { Ionicons } from "@expo/vector-icons";
-import { useTema } from "../../theme";
-import { Badge, Button, ErrorState, LoadingScreen, Text } from "../../components/ui";
+import { ChevronRight, Navigation, Phone, type LucideIcon } from "lucide-react-native";
+import { tokens } from "@bitacora/design-tokens";
+import { Button, ErrorState, LoadingState, Skeleton, StatusBadge, Texto, useMarca } from "@bitacora/ui/native";
 import { OfflineBanner } from "../../components/OfflineBanner";
 import { useRed } from "../../services/sync/NetworkProvider";
 import { useAuth } from "../auth/AuthContext";
@@ -43,18 +43,7 @@ function haceCuanto(iso: string): string {
   return `hace ${h} h ${min % 60} min`;
 }
 
-function Fila({
-  etiqueta,
-  valor,
-  onPress,
-  icono,
-}: {
-  etiqueta: string;
-  valor: string;
-  onPress?: () => void;
-  icono?: keyof typeof Ionicons.glyphMap;
-}) {
-  const t = useTema();
+function Fila({ etiqueta, valor, onPress, Icono }: { etiqueta: string; valor: string; onPress?: () => void; Icono?: LucideIcon }) {
   return (
     <Pressable
       onPress={onPress}
@@ -62,25 +51,28 @@ function Fila({
       style={{
         flexDirection: "row",
         alignItems: "center",
-        gap: t.espacio(3),
-        paddingVertical: t.espacio(3),
+        gap: tokens.space["3"],
+        paddingVertical: tokens.space["3"],
         borderBottomWidth: 1,
-        borderBottomColor: t.colores.border,
+        borderBottomColor: tokens.color.divider,
       }}
     >
-      <Text variante="etiqueta" tono="muted" style={{ width: 92 }}>
+      <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`} style={{ width: 92 }}>
         {etiqueta}
-      </Text>
-      <Text style={{ flex: 1 }}>{valor}</Text>
-      {onPress ? <Ionicons name={icono ?? "chevron-forward"} size={18} color={t.colores.faint} /> : null}
+      </Texto>
+      <Texto tamano={tokens.size.body} color={tokens.color.text} style={{ flex: 1 }}>
+        {valor}
+      </Texto>
+      {onPress ? (Icono ? <Icono size={18} strokeWidth={2.75} color={`${tokens.color.text}66`} /> : <ChevronRight size={18} strokeWidth={2.75} color={`${tokens.color.text}66`} />) : null}
     </Pressable>
   );
 }
 
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenProps<TrabajosStackParamList, "TrabajoDetalle">) {
-  const t = useTema();
   const { trabajoId } = route.params;
   const auth = useAuth();
+  const marca = useMarca();
   const esGestion = auth.fase === "listo" && auth.usuario.rol !== "colaborador";
   const { pendientes, fallidas, enLinea, descartar } = useRed();
   const fotosPendientes = useMemo(() => {
@@ -126,8 +118,24 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
     return () => clearInterval(id);
   }, [hayFotoProcesando, cargar]);
 
-  if (!detalle && !error) return <LoadingScreen />;
-  if (error && !detalle) return <ErrorState mensaje={error} onReintentar={cargar} />;
+  if (!detalle && !error) {
+    return (
+      <View style={{ flex: 1, backgroundColor: tokens.color.bg, padding: tokens.space["4"], gap: tokens.space["3"] }}>
+        <LoadingState>
+          <Skeleton alto={120} radio={28} />
+          <Skeleton alto={44} radio={999} />
+          <Skeleton alto={200} radio={16} />
+        </LoadingState>
+      </View>
+    );
+  }
+  if (error && !detalle) {
+    return (
+      <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+        <ErrorState mensaje={error} onReintentar={cargar} />
+      </View>
+    );
+  }
   if (!detalle) return null;
 
   const { trabajo, orden, fotos } = detalle;
@@ -192,84 +200,84 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: t.colores.bg }}>
+    <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
       <OfflineBanner guardadoEn={detalle.desdeCache ? detalle.guardadoEn : undefined} />
-      <ScrollView contentContainerStyle={{ padding: t.espacio(5), gap: t.espacio(4), paddingBottom: t.espacio(24) }}>
+      <ScrollView contentContainerStyle={{ padding: tokens.space["6"], gap: tokens.space["4"], paddingBottom: tokens.space["8"] * 3 }}>
         {/* Cabecera: folio + cliente */}
-        <View style={{ gap: t.espacio(1) }}>
+        <View style={{ gap: tokens.space["1"] }}>
           {orden?.folio != null ? (
-            <Text mono variante="caption" tono="muted">
+            <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} style={{ fontVariant: ["tabular-nums"] }}>
               OS N° {orden.folio}
-            </Text>
+            </Texto>
           ) : null}
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: t.espacio(2) }}>
-            <Text variante="titulo" style={{ flex: 1 }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: tokens.space["2"] }}>
+            <Texto tamano={tokens.size.h4} color={tokens.color.text} style={{ flex: 1 }}>
               {cli?.nombre ?? trabajo.cliente}
-            </Text>
-            <Badge texto={estadoMostrar} estado={estadoOsEfectivo} />
+            </Texto>
+            <StatusBadge estado={estadoOsEfectivo} etiqueta={estadoMostrar} />
           </View>
-          <Text mono variante="caption" tono="muted">
+          <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} style={{ fontVariant: ["tabular-nums"] }}>
             {trabajo.fecha}
             {trabajo.hora_programada ? ` · ${trabajo.hora_programada.slice(0, 5)}` : ""}
-          </Text>
+          </Texto>
           {esGestion ? (
-            <Pressable onPress={() => navigation.navigate("TrabajoForm", { trabajoId })} style={{ marginTop: t.espacio(1) }}>
-              <Text variante="etiqueta" tono="brand" weight="semibold">
+            <Pressable onPress={() => navigation.navigate("TrabajoForm", { trabajoId })} style={{ marginTop: tokens.space["1"] }}>
+              <Texto tamano={tokens.size.small} color={marca.base} peso="semibold">
                 Editar datos
-              </Text>
+              </Texto>
             </Pressable>
           ) : null}
         </View>
 
-        {/* Bloque de foco — lo único con fondo navy */}
-        <View style={{ backgroundColor: t.colores.brand, borderRadius: t.radio.lg, padding: t.espacio(5), gap: t.espacio(3) }}>
+        {/* Bloque de foco — el único con el fondo de marca */}
+        <View style={{ backgroundColor: marca.base, borderRadius: 32, padding: tokens.space["6"], gap: tokens.space["3"] }}>
           {checkInAt ? (
             <>
-              <Text variante="caption" style={{ color: t.colores.brandSoft, letterSpacing: 1.2 }}>
+              <Texto tamano={tokens.size.caption} color={`${marca.foreground}b3`} style={{ letterSpacing: 1.2 }}>
                 CHECK-IN REGISTRADO
-              </Text>
-              <View style={{ flexDirection: "row", alignItems: "baseline", gap: t.espacio(3) }}>
-                <Text variante="cifra" tono="inverso" style={{ fontSize: 30 }}>
+              </Texto>
+              <View style={{ flexDirection: "row", alignItems: "baseline", gap: tokens.space["3"] }}>
+                <Texto tamano={30} color={marca.foreground} style={{ fontVariant: ["tabular-nums"] }}>
                   {new Date(checkInAt).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })}
-                </Text>
-                <Text style={{ color: t.colores.brandSoft }}>{haceCuanto(checkInAt)}</Text>
+                </Texto>
+                <Texto tamano={tokens.size.body} color={`${marca.foreground}b3`}>
+                  {haceCuanto(checkInAt)}
+                </Texto>
               </View>
-              <View style={{ borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.15)", paddingTop: t.espacio(3) }}>
-                <Text mono variante="caption" style={{ color: t.colores.brandSoft }}>
+              <View style={{ borderTopWidth: 1, borderTopColor: `${marca.foreground}26`, paddingTop: tokens.space["3"] }}>
+                <Texto tamano={tokens.size.caption} color={`${marca.foreground}b3`} style={{ fontVariant: ["tabular-nums"] }}>
                   {orden?.check_in_precision != null ? `Precisión GPS ±${Math.round(orden.check_in_precision)} m` : "Precisión GPS no disponible"}
                   {orden?.check_in_lat != null && orden?.check_in_lng != null
                     ? `  ·  ${orden.check_in_lat.toFixed(5)}, ${orden.check_in_lng.toFixed(5)}`
                     : ""}
-                </Text>
+                </Texto>
               </View>
             </>
           ) : (
             <>
-              <Text variante="caption" style={{ color: t.colores.brandSoft, letterSpacing: 1.2 }}>
+              <Texto tamano={tokens.size.caption} color={`${marca.foreground}b3`} style={{ letterSpacing: 1.2 }}>
                 SIN CHECK-IN
-              </Text>
-              <Text tono="inverso">Marca tu llegada para empezar el trabajo.</Text>
-              <Button
-                titulo="Marcar check-in"
-                variante="acento"
-                cargando={marcando === "Check-in"}
-                disabled={finalizada}
-                onPress={() => marcar("Check-in")}
-              />
+              </Texto>
+              <Texto tamano={tokens.size.body} color={marca.foreground}>
+                Marca tu llegada para empezar el trabajo.
+              </Texto>
+              <Button cargando={marcando === "Check-in"} deshabilitado={finalizada} onPress={() => marcar("Check-in")}>
+                Marcar check-in
+              </Button>
             </>
           )}
         </View>
 
         {/* Filas de datos */}
-        <View style={{ borderTopWidth: 1, borderTopColor: t.colores.border }}>
+        <View style={{ borderTopWidth: 1, borderTopColor: tokens.color.divider }}>
           <Fila etiqueta="Servicio" valor={trabajo.tipo_trabajo?.nombre ?? trabajo.descripcion ?? "—"} />
-          {direccion ? <Fila etiqueta="Dirección" valor={direccion} onPress={abrirMapa} icono="navigate-outline" /> : null}
+          {direccion ? <Fila etiqueta="Dirección" valor={direccion} onPress={abrirMapa} Icono={Navigation} /> : null}
           {cli?.telefono ? (
             <Fila
               etiqueta="Contacto"
               valor={`${cli.nombre}${cli.telefono ? ` · ${cli.telefono}` : ""}`}
               onPress={() => Linking.openURL(`tel:${cli.telefono}`)}
-              icono="call-outline"
+              Icono={Phone}
             />
           ) : cli?.nombre ? (
             <Fila etiqueta="Contacto" valor={cli.nombre} />
@@ -279,21 +287,23 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
 
         {/* Nota interna */}
         {trabajo.notas_internas ? (
-          <View style={{ backgroundColor: t.colores.surfaceAlt, borderRadius: t.radio.md, padding: t.espacio(4), gap: t.espacio(1) }}>
-            <Text variante="caption" tono="muted" weight="semibold" style={{ textTransform: "uppercase" }}>
+          <View style={{ backgroundColor: tokens.color.neutral["200"], borderRadius: tokens.radius.md, padding: tokens.space["4"], gap: tokens.space["1"] }}>
+            <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} peso="semibold" style={{ textTransform: "uppercase" }}>
               Nota interna
-            </Text>
-            <Text>{trabajo.notas_internas}</Text>
+            </Texto>
+            <Texto tamano={tokens.size.body} color={tokens.color.text}>
+              {trabajo.notas_internas}
+            </Texto>
           </View>
         ) : null}
 
-        {finalizada && (
-          <View style={{ backgroundColor: t.colores.successSoft, borderRadius: t.radio.md, padding: t.espacio(3) }}>
-            <Text variante="etiqueta" weight="semibold" style={{ color: t.colores.success }}>
-              ✓ Trabajo finalizado — ya no se puede editar
-            </Text>
+        {finalizada ? (
+          <View style={{ backgroundColor: tokens.color.accent2Ramp["200"], borderRadius: tokens.radius.md, padding: tokens.space["3"] }}>
+            <Texto tamano={tokens.size.small} color={tokens.color.accent2Ramp["800"]} peso="semibold">
+              Trabajo finalizado — ya no se puede editar
+            </Texto>
           </View>
-        )}
+        ) : null}
 
         {trabajo.tipo_trabajo ? (
           <CamposDinamicos
@@ -328,15 +338,17 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
         />
 
         {/* Pie de acciones */}
-        {!finalizada && (
-          <View style={{ gap: t.espacio(2), marginTop: t.espacio(2) }}>
+        {!finalizada ? (
+          <View style={{ gap: tokens.space["2"], marginTop: tokens.space["2"] }}>
             {checkIn?.hecho && !checkOut?.hecho ? (
-              <Button titulo="Registrar salida y firmar" tamano="lg" cargando={marcando === "Check-out"} onPress={() => marcar("Check-out")} />
+              <Button tamano="lg" bloque cargando={marcando === "Check-out"} onPress={() => marcar("Check-out")}>
+                Registrar salida y firmar
+              </Button>
             ) : null}
             {trabajo.cliente_id ? (
               <Button
-                titulo="Registrar venta"
                 variante="secundario"
+                bloque
                 onPress={() =>
                   navigation.navigate("RegistrarVenta", {
                     origenTipo: "os",
@@ -346,10 +358,12 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
                     folio: orden?.folio ?? null,
                   })
                 }
-              />
+              >
+                Registrar venta
+              </Button>
             ) : null}
           </View>
-        )}
+        ) : null}
       </ScrollView>
     </View>
   );

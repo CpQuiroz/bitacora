@@ -11,7 +11,11 @@ const SOMBRA: Record<Elevacion, string> = {
 };
 
 export function Card({ children, onPress, elevacion, sinRelleno = false }: PropsCard) {
-  const clase = `rounded-[32px] bg-ds-surface ${sinRelleno ? "" : "p-ds-4"} ${elevacion ? SOMBRA[elevacion] : ""}`;
+  // text-ds-text explícito: sin esto, el texto sin color propio hereda el
+  // --foreground ambiente (Faena, con override de dark mode del navegador/OS)
+  // en vez del texto oscuro fijo que corresponde sobre un fondo ds-surface
+  // (crema) — bug real encontrado en vivo (tabla de OS ilegible en dark mode).
+  const clase = `rounded-[32px] bg-ds-surface text-ds-text ${sinRelleno ? "" : "p-ds-4"} ${elevacion ? SOMBRA[elevacion] : ""}`;
   if (onPress) {
     return (
       <button

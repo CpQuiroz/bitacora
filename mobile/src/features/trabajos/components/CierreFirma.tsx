@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { Alert, Image, View } from "react-native";
-import { useTema } from "../../../theme";
-import { Button, Card, Input, Text } from "../../../components/ui";
+import { tokens } from "@bitacora/design-tokens";
+import { Button, Card, Input, Textarea, Texto, useMarca } from "@bitacora/ui/native";
 import { LienzoFirma, type LienzoFirmaHandle } from "../../../components/LienzoFirma";
 import type { OrdenConFirma } from "../../../services/trabajos";
 
@@ -16,6 +16,7 @@ function duracion(a: string | null | undefined, b: string | null | undefined): s
   return min < 60 ? `${min} min` : `${Math.floor(min / 60)} h ${min % 60} min`;
 }
 
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export function CierreFirma({
   orden,
   editable,
@@ -31,7 +32,7 @@ export function CierreFirma({
   onCerrar?: () => void;
   onGuardarSinFirmar?: (observaciones: string) => void;
 }) {
-  const t = useTema();
+  const marca = useMarca();
   const [nombre, setNombre] = useState("");
   const [cargo, setCargo] = useState("");
   const [observaciones, setObservaciones] = useState("");
@@ -85,119 +86,123 @@ export function CierreFirma({
   }
 
   return (
-    <View style={{ gap: t.espacio(3) }}>
+    <View style={{ gap: tokens.space["3"] }}>
       {/* Firma del técnico — opcional, queda en el PDF */}
       {onFirmarTecnico ? (
-        <View style={{ gap: t.espacio(2) }}>
-          <Text variante="etiqueta" tono="muted" weight="semibold" style={{ textTransform: "uppercase" }}>
+        <View style={{ gap: tokens.space["2"] }}>
+          <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`} peso="semibold" style={{ textTransform: "uppercase" }}>
             Firma del técnico
-          </Text>
+          </Texto>
           {tecFirmado ? (
-            <Card plano>
+            <Card>
               {orden?.firma_tecnico_url_firmada ? (
-                <Image source={{ uri: orden.firma_tecnico_url_firmada }} resizeMode="contain" style={{ width: "100%", height: 90, marginBottom: t.espacio(2) }} />
+                <Image source={{ uri: orden.firma_tecnico_url_firmada }} resizeMode="contain" style={{ width: "100%", height: 90, marginBottom: tokens.space["2"] }} />
               ) : null}
-              <Text variante="cuerpo">
+              <Texto tamano={tokens.size.body} color={tokens.color.text}>
                 Firma del técnico registrada ✓{orden?.tecnico_firmante_nombre ? ` — ${orden.tecnico_firmante_nombre}` : ""}
-              </Text>
+              </Texto>
             </Card>
           ) : editable ? (
             <>
               <LienzoFirma ref={lienzoTec} />
-              <Input etiqueta="Nombre del técnico" value={tecNombre} onChangeText={setTecNombre} />
-              <Input etiqueta="RUT del técnico (opcional)" value={tecDoc} onChangeText={setTecDoc} />
-              <Button titulo="Guardar firma del técnico" variante="secundario" onPress={guardarFirmaTecnico} cargando={guardandoTec} />
-              <Text variante="caption" tono="muted">
+              <Input etiqueta="Nombre del técnico" valor={tecNombre} onCambio={setTecNombre} />
+              <Input etiqueta="RUT del técnico (opcional)" valor={tecDoc} onCambio={setTecDoc} />
+              <Button variante="secundario" onPress={guardarFirmaTecnico} cargando={guardandoTec}>
+                Guardar firma del técnico
+              </Button>
+              <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
                 Opcional. Va en el PDF junto a la firma del cliente.
-              </Text>
+              </Texto>
             </>
           ) : (
-            <Text variante="cuerpo" tono="muted">
+            <Texto tamano={tokens.size.body} color={`${tokens.color.text}99`}>
               Sin firma del técnico.
-            </Text>
+            </Texto>
           )}
         </View>
       ) : null}
 
-      <Text variante="etiqueta" tono="muted" weight="semibold" style={{ textTransform: "uppercase" }}>
+      <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`} peso="semibold" style={{ textTransform: "uppercase" }}>
         Cierre y firma del cliente
-      </Text>
+      </Texto>
 
-      <View style={{ flexDirection: "row", gap: t.espacio(2) }}>
+      <View style={{ flexDirection: "row", gap: tokens.space["2"] }}>
         {cajas.map((c) => (
           <View
             key={c.k}
             style={{
               flex: 1,
-              borderRadius: t.radio.md,
+              borderRadius: tokens.radius.md,
               borderWidth: 1,
-              borderColor: c.activa ? t.colores.brand : t.colores.border,
-              backgroundColor: c.activa ? "#F3F6F9" : t.colores.surface,
-              padding: t.espacio(3),
+              borderColor: c.activa ? marca.base : tokens.color.divider,
+              backgroundColor: c.activa ? `${marca.base}14` : tokens.color.surface,
+              padding: tokens.space["3"],
               gap: 2,
             }}
           >
-            <Text variante="caption" tono="faint" style={{ textTransform: "uppercase", letterSpacing: 0.6 }}>
+            <Texto tamano={11} color={`${tokens.color.text}66`} style={{ textTransform: "uppercase", letterSpacing: 0.6 }}>
               {c.k}
-            </Text>
-            <Text mono weight="semibold" style={{ fontSize: 15 }}>
+            </Texto>
+            <Texto tamano={15} color={tokens.color.text} peso="semibold" style={{ fontVariant: ["tabular-nums"] }}>
               {c.v}
-            </Text>
+            </Texto>
           </View>
         ))}
       </View>
 
       {orden?.firma_url_firmada ? (
-        <Card plano>
-          <Image source={{ uri: orden.firma_url_firmada }} resizeMode="contain" style={{ width: "100%", height: 120, marginBottom: t.espacio(2) }} />
-          <Text variante="cuerpo">
+        <Card>
+          <Image source={{ uri: orden.firma_url_firmada }} resizeMode="contain" style={{ width: "100%", height: 120, marginBottom: tokens.space["2"] }} />
+          <Texto tamano={tokens.size.body} color={tokens.color.text}>
             Firma registrada ✓{orden.firmante_nombre ? ` — ${orden.firmante_nombre}` : ""}
-          </Text>
+          </Texto>
           {orden.firmante_documento ? (
-            <Text variante="etiqueta" tono="muted">
+            <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
               {orden.firmante_documento}
-            </Text>
+            </Texto>
           ) : null}
           {orden.observaciones_cierre ? (
-            <Text variante="etiqueta" tono="muted">
+            <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
               Obs: {orden.observaciones_cierre}
-            </Text>
+            </Texto>
           ) : null}
         </Card>
       ) : editable ? (
         <>
           <LienzoFirma ref={lienzo} />
-          <Input etiqueta="Nombre de quien firma" value={nombre} onChangeText={setNombre} />
-          <Input etiqueta="Cargo o RUT de quien firma" value={cargo} onChangeText={setCargo} />
-          <Input etiqueta="Observación para el cliente" multiline value={observaciones} onChangeText={setObservaciones} />
+          <Input etiqueta="Nombre de quien firma" valor={nombre} onCambio={setNombre} />
+          <Input etiqueta="Cargo o RUT de quien firma" valor={cargo} onCambio={setCargo} />
+          <Textarea etiqueta="Observación para el cliente" filas={2} valor={observaciones} onCambio={setObservaciones} />
 
-          <View style={{ backgroundColor: t.colores.accentSoft, borderRadius: t.radio.md, padding: t.espacio(3) }}>
-            <Text variante="caption" style={{ color: t.colores.warning }}>
+          <View style={{ backgroundColor: tokens.color.accentRamp["100"], borderRadius: tokens.radius.md, padding: tokens.space["3"] }}>
+            <Texto tamano={tokens.size.caption} color={tokens.color.accentRamp["800"]}>
               Al firmar se descuenta el stock de los productos de la OS y la orden queda firmada. Sin señal, queda en la cola y
               se envía al recuperar conexión.
-            </Text>
+            </Texto>
           </View>
 
-          <Button titulo="Firmar y cerrar" tamano="lg" onPress={firmarYCerrar} cargando={cerrando} disabled={!salidaHecha} />
+          <Button tamano="lg" bloque onPress={firmarYCerrar} cargando={cerrando} deshabilitado={!salidaHecha}>
+            Firmar y cerrar
+          </Button>
           {!salidaHecha ? (
-            <Text variante="caption" tono="muted" style={{ textAlign: "center" }}>
+            <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} style={{ textAlign: "center" }}>
               Registra la salida para poder cerrar.
-            </Text>
+            </Texto>
           ) : onGuardarSinFirmar ? (
-            <Text
+            <Texto
               onPress={() => onGuardarSinFirmar(observaciones.trim())}
-              variante="etiqueta"
-              tono="muted"
+              tamano={tokens.size.small}
+              color={`${tokens.color.text}99`}
               style={{ textAlign: "center", textDecorationLine: "underline" }}
             >
               Guardar sin firmar
-            </Text>
+            </Texto>
           ) : null}
         </>
       ) : (
-        <Text variante="cuerpo" tono="muted">
+        <Texto tamano={tokens.size.body} color={`${tokens.color.text}99`}>
           Sin firma registrada.
-        </Text>
+        </Texto>
       )}
     </View>
   );

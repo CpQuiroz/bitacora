@@ -217,6 +217,8 @@ export default function DashboardPage() {
         moneda,
       }}
     >
+      {/* Panel propio — mismo motivo que en el listado de OS, ver ese archivo. */}
+      <div className="rounded-[32px] bg-ds-bg p-ds-6 text-ds-text">
       <div className="mb-ds-6 flex flex-col gap-ds-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="font-ds-body text-ds-small font-medium text-ds-brand">{usuario.empresa.nombre}</p>
@@ -415,6 +417,7 @@ export default function DashboardPage() {
           ))}
         </div>
       ) : null}
+      </div>
     </DashboardShell>
   );
 }

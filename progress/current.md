@@ -1,7 +1,6 @@
 # Sesión actual
 
-- **Tarea en curso:** 8 — sistema_diseno (Paso 6: bucket 3 en curso —
-  web listado+ficha y mobile listado hechos, falta mobile ficha)
+- **Tarea en curso:** 8 — sistema_diseno (Paso 6: bucket 3 COMPLETO, bucket 4 siguiente)
 - **Inicio:** 2026-09-09
 - **Agente:** Claude Sonnet 5 (directo)
 
@@ -11,33 +10,48 @@
   Caprasimo solo headings+lg. Storybook web + /dev/ui mobile.
 - 2026-09-10: coexistencia web = namespace `ds-`. API de Button en español.
   "sigue derecho" (x3), "sigue con mobile login", "sigue con el bucket 2 y
-  arregla el problema", "sigue con el bucket 3, no toques el shell todavía".
+  arregla el problema", "sigue con el bucket 3, no toques el shell",
+  "sigue con TrabajoDetalleScreen ahora".
 - 2026-09-10: contraste del accent default — aceptado el fallback tal cual.
 
 ## Estado por paso
 
 - Paso 0-5 + bucket 1 + bucket 2: ✅ pusheados.
-- **Bucket 3 — Órdenes de servicio: 🔶 en curso (este commit)**
-  - **Web listado + ficha: ✅.** `ordenes/page.tsx` +
-    `ordenes/[id]/page.tsx`. `Table` extendido (`encabezado: ReactNode`,
-    `onFilaClick`). `Input.tipo="hora"` nuevo. Retokenizados
-    `Combobox.tsx`/`ComboboxResponsable.tsx`/`InputMonto.tsx` (widgets
-    atómicos compartidos, no shells — bajo riesgo). Seam: `CatalogoSelectorModal`
-    (5 pantallas) sigue Faena.
-  - **Mobile listado: ✅.** `TrabajosScreen.tsx` + header de
-    `TrabajosStack.tsx`. Botón "Continuar" Faena `acento`→ nuevo `primario`
-    (ya no hay separación marca/acento-de-terreno). Seam: `TrabajosMapa.tsx`.
-  - **Mobile ficha: ⬜ pendiente.** `TrabajoDetalleScreen.tsx` (356 líneas,
-    fotos/firma/checklist/campos dinámicos) — no llegué a esta en el turno,
-    queda para la próxima.
-  - `check-colores.mjs`: BASELINE 19→18 (bajó solo).
-  - `./verificar.sh` verde: tsc x6, 27 tests, 18 literales.
+- **Bucket 3 — Órdenes de servicio: ✅ COMPLETO (este commit)**
+  - Web listado + ficha: ✅ (commit `48e0935`, ya pusheado).
+  - Mobile listado: ✅ (mismo commit).
+  - **Mobile ficha (este commit):** `TrabajoDetalleScreen.tsx` +
+    `CamposDinamicos.tsx`/`FotosSection.tsx`/`CierreFirma.tsx` (uso
+    exclusivo de esta pantalla, verificado). Bloque de foco (check-in)
+    navy→`marca.base`. Banner "finalizado" verde→`accent2Ramp` (no hay
+    tono éxito separado del accent2 en el sistema nuevo). Ionicons→Lucide.
+    `Textarea` usado donde antes era `Input multiline` (no soportado en
+    el contrato nuevo).
+  - Verificado: tsc limpio, `expo start --web` carga y monta TODO el
+    árbol de navegación sin errores de consola (buena señal de imports
+    correctos), sin poder navegar a la ficha en sí sin sesión real.
+  - `check-colores.mjs`: BASELINE 18→15 (bajó solo).
+  - `./verificar.sh` verde: tsc x6, 27 tests, 15 literales.
+
+## Bug real encontrado y corregido (post bucket 3)
+
+La usuaria reportó texto ilegible en `/dashboard/ordenes` (tabla y
+título) y trajo un prompt para abandonar crema y volver a navy único.
+Diagnostiqué en vivo antes de tocar nada: no era la dirección crema,
+era herencia de color con el dark-mode de Faena (`@media
+(prefers-color-scheme: dark)`) filtrándose en elementos sin `color`
+propio. Fix: `text-ds-text` explícito en `Card` (cubre `Table`) +
+panel propio (`bg-ds-bg`) en las 3 páginas migradas, mismo patrón que
+ya usa `AuthLayout`. Verificado en vivo (Chrome MCP) en las 3
+pantallas. Detalle completo en `docs/design-system.md` §"Bug real:
+contraste roto en dark mode". `DashboardShell` (el seam) sigue sin
+migrar — decisión pendiente de la usuaria si corresponde ahora.
 
 ## Próximo paso
 
-Terminar bucket 3: `mobile/src/features/trabajos/TrabajoDetalleScreen.tsx`
-(+ sus componentes `FotosSection.tsx`/`CierreFirma.tsx` si hace falta).
-Después: bucket 4 (Clientes).
+Mostrarle a la usuaria el antes/después (capturas ya tomadas) y
+confirmar si sigue con bucket 4 (Clientes) o quiere migrar
+`DashboardShell` primero.
 
 ## Pendiente / notas generales
 
@@ -47,5 +61,8 @@ Después: bucket 4 (Clientes).
   (parcial), `LogoMark`/`Logo`, charts Recharts de Informes,
   `CatalogoSelectorModal`, `TrabajosMapa.tsx`.
 - `MAPA_ESTADO_TONO`: completar por pantalla según vayan apareciendo
-  estados reales (ya tiene en_curso→en_progreso, completada/firmada/
-  confirmado→completado, cancelada/cancelada_anticipada/no_asistio→cancelado).
+  estados reales.
+- Ningún bucket verificado con captura de pantalla REAL en mobile todavía
+  (sin credenciales de sesión) — solo web (Login/Registro). Si la usuaria
+  puede dar credenciales de un usuario dev, se podría verificar visualmente
+  el resto también.

@@ -1,8 +1,9 @@
 import { View } from "react-native";
 import type { CampoTipoTrabajo } from "@bitacora/shared";
-import { useTema } from "../../../theme";
-import { Button, Input, Text } from "../../../components/ui";
+import { tokens } from "@bitacora/design-tokens";
+import { Button, Input, Texto } from "@bitacora/ui/native";
 
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export function CamposDinamicos({
   nombre,
   campos,
@@ -20,25 +21,28 @@ export function CamposDinamicos({
   guardando: boolean;
   editable: boolean;
 }) {
-  const t = useTema();
   if (campos.length === 0) return null;
 
   return (
-    <View style={{ gap: t.espacio(3) }}>
-      <Text variante="etiqueta" tono="muted" weight="semibold" style={{ textTransform: "uppercase" }}>
+    <View style={{ gap: tokens.space["3"] }}>
+      <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`} peso="semibold" style={{ textTransform: "uppercase" }}>
         {nombre}
-      </Text>
+      </Texto>
       {campos.map((campo) => (
         <Input
           key={campo.clave}
           etiqueta={campo.etiqueta}
-          editable={editable}
-          value={valores[campo.clave] ?? ""}
-          onChangeText={(v) => onCambiar(campo.clave, v)}
-          keyboardType={campo.tipo === "numero" ? "numeric" : "default"}
+          deshabilitado={!editable}
+          valor={valores[campo.clave] ?? ""}
+          onCambio={(v) => onCambiar(campo.clave, v)}
+          tipo={campo.tipo === "numero" ? "numero" : "texto"}
         />
       ))}
-      {editable && <Button titulo={guardando ? "Guardando…" : "Guardar formulario"} onPress={onGuardar} cargando={guardando} />}
+      {editable ? (
+        <Button bloque onPress={onGuardar} cargando={guardando}>
+          Guardar formulario
+        </Button>
+      ) : null}
     </View>
   );
 }

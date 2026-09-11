@@ -23,7 +23,7 @@ const EXENTOS = new Set(Object.keys(permitidos.archivos_exentos));
 // modal, divisores sobre bloques oscuros, fondo "hoy", texto sobre el
 // header navy). Se van con la migración del Paso 6. Bajá este número
 // cada vez que una pantalla migrada elimine los suyos; a 0 pasa a estricto.
-const BASELINE = 18;
+const BASELINE = 15;
 
 const RAICES = ["web/src", "mobile/src", "packages/shared/src"];
 const SALTAR_ARCHIVO = [

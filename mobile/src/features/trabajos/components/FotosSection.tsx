@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { ActivityIndicator, Alert, Image, Modal, Pressable, ScrollView, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import { AlertCircle, AlertTriangle, Camera, RefreshCw } from "lucide-react-native";
 import { CATEGORIAS_FOTO_OS, ETIQUETA_CATEGORIA_FOTO_OS, type CategoriaFotoOS } from "@bitacora/shared";
-import { useTema } from "../../../theme";
-import { Text } from "../../../components/ui";
+import { tokens } from "@bitacora/design-tokens";
+import { Texto, useMarca } from "@bitacora/ui/native";
 import { comprimirImagen } from "../../../lib/imagen";
 import type { FotoConUrl } from "../../../services/trabajos";
 
@@ -19,6 +19,7 @@ const OPCIONES_CAT: { valor: CategoriaFotoOS | null; texto: string }[] = [
   ...CATEGORIAS_FOTO_OS.map((c) => ({ valor: c, texto: ETIQUETA_CATEGORIA_FOTO_OS[c] })),
 ];
 
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export function FotosSection({
   fotos,
   pendientes = [],
@@ -32,7 +33,7 @@ export function FotosSection({
   onAgregar: (archivo: { uri: string; name: string; type: string }, categoria: CategoriaFotoOS | null) => void;
   onQuitarPendiente?: (id: string) => void;
 }) {
-  const t = useTema();
+  const marca = useMarca();
   const [ocupado, setOcupado] = useState(false);
   const [abierta, setAbierta] = useState<FotoConUrl | null>(null);
   const [categoria, setCategoria] = useState<CategoriaFotoOS | null>(null);
@@ -74,21 +75,21 @@ export function FotosSection({
   const total = fotos.length + pendientes.length;
   const alertas = fotos.filter((f) => f.alerta && f.detalle_alerta);
 
-  const cuadro = { width: LADO, height: LADO, borderRadius: t.radio.sm, backgroundColor: t.colores.surfaceAlt } as const;
+  const cuadro = { width: LADO, height: LADO, borderRadius: tokens.radius.md, backgroundColor: tokens.color.neutral["200"] } as const;
 
   return (
-    <View style={{ gap: t.espacio(2.5) }}>
+    <View style={{ gap: tokens.space["3"] }}>
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-        <Text variante="etiqueta" tono="muted" weight="semibold" style={{ textTransform: "uppercase" }}>
+        <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`} peso="semibold" style={{ textTransform: "uppercase" }}>
           Fotos
-        </Text>
-        <Text mono variante="caption" tono="faint">
+        </Texto>
+        <Texto tamano={tokens.size.caption} color={`${tokens.color.text}66`} style={{ fontVariant: ["tabular-nums"] }}>
           {total} de {MAX}
-        </Text>
+        </Texto>
       </View>
 
       {editable && total < MAX ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: t.espacio(1.5) }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: tokens.space["2"] }}>
           {OPCIONES_CAT.map((o) => {
             const sel = categoria === o.valor;
             return (
@@ -97,34 +98,34 @@ export function FotosSection({
                 onPress={() => setCategoria(o.valor)}
                 style={{
                   minHeight: 32,
-                  paddingHorizontal: t.espacio(2.5),
-                  borderRadius: 999,
+                  paddingHorizontal: tokens.space["3"],
+                  borderRadius: tokens.radius.pill,
                   borderWidth: 1,
-                  borderColor: sel ? t.colores.brand : t.colores.border,
-                  backgroundColor: sel ? t.colores.brandSoft : t.colores.surface,
+                  borderColor: sel ? marca.base : tokens.color.divider,
+                  backgroundColor: sel ? `${marca.base}1f` : tokens.color.surface,
                   alignItems: "center",
                   justifyContent: "center",
                 }}
               >
-                <Text variante="caption" weight={sel ? "bold" : "medium"} style={{ color: sel ? t.colores.brand : t.colores.muted }}>
+                <Texto tamano={tokens.size.caption} color={sel ? marca.base : `${tokens.color.text}99`} peso={sel ? "semibold" : "medium"}>
                   {o.texto}
-                </Text>
+                </Texto>
               </Pressable>
             );
           })}
         </ScrollView>
       ) : null}
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: t.espacio(2) }}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: tokens.space["2"] }}>
         {pendientes.map((p) => (
           <Pressable key={p.id} onLongPress={() => onQuitarPendiente?.(p.id)}>
-            <View style={[cuadro, { overflow: "hidden", borderWidth: 1, borderColor: t.colores.border }]}>
+            <View style={[cuadro, { overflow: "hidden", borderWidth: 1, borderColor: tokens.color.divider }]}>
               {p.uri ? <Image source={{ uri: p.uri }} style={{ width: "100%", height: "100%", opacity: 0.6 }} /> : null}
               <View style={{ position: "absolute", right: 3, top: 3 }}>
                 {p.fallida ? (
-                  <Ionicons name="alert-circle" size={16} color={t.colores.danger} />
+                  <AlertCircle size={16} strokeWidth={2.75} color={tokens.color.accentRamp["700"]} />
                 ) : (
-                  <Ionicons name="sync" size={15} color={t.colores.accent} />
+                  <RefreshCw size={15} strokeWidth={2.75} color={marca.base} />
                 )}
               </View>
             </View>
@@ -132,16 +133,27 @@ export function FotosSection({
         ))}
         {fotos.map((f) => (
           <Pressable key={f.id} onPress={() => setAbierta(f)}>
-            <View style={[cuadro, { overflow: "hidden", borderWidth: 1, borderColor: t.colores.border }]}>
+            <View style={[cuadro, { overflow: "hidden", borderWidth: 1, borderColor: tokens.color.divider }]}>
               <Image source={{ uri: f.url }} style={{ width: "100%", height: "100%" }} />
               {f.estado === "procesando" ? (
-                <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.4)" }}>
-                  <ActivityIndicator size="small" color={t.colores.muted} />
+                <View
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: "rgba(255,255,255,0.4)",
+                  }}
+                >
+                  <ActivityIndicator size="small" color={`${tokens.color.text}99`} />
                 </View>
               ) : null}
               {f.alerta ? (
                 <View style={{ position: "absolute", right: 3, top: 3 }}>
-                  <Ionicons name="warning" size={15} color={t.colores.danger} />
+                  <AlertTriangle size={15} strokeWidth={2.75} color={tokens.color.accentRamp["700"]} />
                 </View>
               ) : null}
             </View>
@@ -153,44 +165,49 @@ export function FotosSection({
               style={[
                 cuadro,
                 {
+                  backgroundColor: tokens.color.surface,
                   borderWidth: 1.5,
                   borderStyle: "dashed",
-                  borderColor: t.colores.borderStrong,
+                  borderColor: tokens.color.divider,
                   alignItems: "center",
                   justifyContent: "center",
                 },
               ]}
             >
-              {ocupado ? <ActivityIndicator size="small" color={t.colores.muted} /> : <Ionicons name="camera-outline" size={22} color={t.colores.muted} />}
+              {ocupado ? (
+                <ActivityIndicator size="small" color={`${tokens.color.text}99`} />
+              ) : (
+                <Camera size={22} strokeWidth={2.75} color={`${tokens.color.text}99`} />
+              )}
             </View>
           </Pressable>
         ) : null}
       </ScrollView>
 
       {total === 0 ? (
-        <Text variante="caption" tono="muted">
+        <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
           Sin fotos todavía.
-        </Text>
+        </Texto>
       ) : null}
 
       {alertas.map((f) => (
-        <Text key={f.id} variante="caption" tono="danger" weight="semibold">
+        <Texto key={f.id} tamano={tokens.size.caption} color={tokens.color.accentRamp["700"]} peso="semibold">
           ⚠ {f.detalle_alerta}
-        </Text>
+        </Texto>
       ))}
 
       <Modal visible={abierta != null} transparent animationType="fade" onRequestClose={() => setAbierta(null)}>
         <Pressable
           onPress={() => setAbierta(null)}
-          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.85)", alignItems: "center", justifyContent: "center", padding: 16 }}
+          style={{ flex: 1, backgroundColor: `${tokens.color.neutral["900"]}d9`, alignItems: "center", justifyContent: "center", padding: 16 }}
         >
           {abierta ? (
             <>
               <Image source={{ uri: abierta.url }} resizeMode="contain" style={{ width: "100%", height: "70%" }} />
               {abierta.resumen ? (
-                <Text tono="inverso" style={{ marginTop: 12, textAlign: "center" }}>
+                <Texto tamano={tokens.size.body} color={tokens.color.neutral["100"]} style={{ marginTop: 12, textAlign: "center" }}>
                   {abierta.resumen}
-                </Text>
+                </Texto>
               ) : null}
             </>
           ) : null}

@@ -227,7 +227,7 @@ tengo credenciales para loguearme (ni las pediría: entrar con una cuenta
 no es algo que deba hacer sin que la usuaria lo autorice). Mismo
 criterio que `onboarding`/`invitacion` en el bucket 1.
 
-### Bucket 3 — Órdenes de servicio (listado + ficha) 🔶 en curso
+### Bucket 3 — Órdenes de servicio (listado + ficha) ✅
 
 **Web (listado + ficha): ✅.** `ordenes/page.tsx` y `ordenes/[id]/page.tsx`
 migradas completas. Primero se extendió `Table` (`encabezado: ReactNode`
@@ -249,9 +249,80 @@ Faena `acento` (naranja fijo) a `primario` — el sistema nuevo no separa
 "marca" de "acción de terreno", el brand del tenant ES el acento.
 **Seam conocido:** `TrabajosMapa.tsx` (vista de mapa) sigue Faena.
 
-Falta `TrabajoDetalleScreen.tsx` (mobile, ficha) — pantalla grande y
-compleja (fotos, firma, checklist, campos dinámicos), queda para la
-siguiente sesión de trabajo de este bucket.
+**Mobile ficha: ✅.** `TrabajoDetalleScreen.tsx` + sus 3 componentes de uso
+exclusivo (`CamposDinamicos.tsx`, `FotosSection.tsx`, `CierreFirma.tsx` —
+verifiqué que ningún otro archivo los importa, cero riesgo de blast
+radius). El bloque de foco (check-in) pasó de `t.colores.brand` (navy
+fijo) a `marca.base` (tenant); mismo criterio que el header de
+`TrabajosScreen`. Banner de "finalizado" pasó de verde Faena a
+`accent2Ramp` (el sistema nuevo no tiene un tono "éxito" separado del
+accent2). Ionicons → Lucide en los 4 archivos.
+
+Extendí `Input`/`Textarea` en el camino: `Textarea` reemplaza al
+`Input multiline` que no existía en el contrato nuevo (el campo de
+observación del cierre de firma lo necesitaba).
+
+Verificado: tsc limpio en los 4 archivos + `expo start --web` carga y
+monta el árbol de navegación completo (incluye `TrabajosStack`/`HoyStack`
+con las pantallas migradas) sin errores de consola — buena señal de que
+los imports de Lucide/primitivas están bien resueltos, aunque no pude
+navegar hasta la ficha en sí sin una sesión autenticada real.
+
+`scripts/check-colores.mjs`: BASELINE 18→15 (bajó solo, tres literales
+menos: los `rgba()` de scrims/divisores que reemplacé por tokens).
+
+**Bucket 3 completo.**
+
+### Bug real: contraste roto en dark mode (encontrado y corregido)
+
+La usuaria reportó texto ilegible en `/dashboard/ordenes` (texto claro
+sobre fondo crema en la tabla, título casi invisible) y trajo un prompt
+que pedía abandonar crema y volver a un tema único navy/azul. Antes de
+tocar nada, diagnostiqué en vivo (Chrome MCP + `getComputedStyle`) con
+la sesión real de la usuaria: **no era un problema de la dirección
+crema, era un bug de herencia de color con Faena en dark mode.**
+
+Causa raíz (dos formas del mismo problema):
+
+1. `Card`/`Table` no fijaban `color` propio → el texto heredaba el
+   `--foreground` ambiente, que Faena invierte con
+   `@media (prefers-color-scheme: dark)`. Con el navegador/OS en modo
+   oscuro, esa herencia daba texto claro (`#eef1f4`) sobre `bg-ds-surface`
+   (crema) — ilegible. Confirmado con `window.matchMedia(...).matches`
+   → `true` en la sesión real.
+2. El título y las etiquetas que están fuera de cualquier `Card` (el
+   header de la página) se pintan directo sobre el fondo de
+   `DashboardShell` (`mx-auto max-w-6xl px-6 py-10`, todavía Faena) —
+   con texto `text-ds-text` fijo oscuro. En dark mode ese fondo también
+   se invierte a navy oscuro → texto oscuro sobre navy oscuro,
+   igualmente ilegible (por eso el título se veía "casi invisible" aun
+   con su color computado correcto).
+
+Fix aplicado (sin tocar `DashboardShell` ni rutas/lógica):
+
+- `Card.tsx`: agregado `text-ds-text` explícito a la clase base — cubre
+  también a `Table` (que renderiza dentro de un `Card`).
+- Las 3 páginas migradas de momento (`dashboard/page.tsx`,
+  `dashboard/ordenes/page.tsx`, `dashboard/ordenes/[id]/page.tsx`):
+  el contenido que pasa como `children` de `DashboardShell` ahora va
+  envuelto en un panel propio (`rounded-[32px] bg-ds-bg p-ds-6
+  text-ds-text`) — mismo patrón que ya usa `AuthLayout` para Login
+  (fondo `ds-bg` explícito en su wrapper más externo), aplicado acá al
+  área de contenido en vez de a toda la pantalla. Así ninguna pantalla
+  migrada depende de qué fondo tenga Faena alrededor (claro u oscuro).
+  `Dialog` queda afuera del panel (es un overlay, no contenido de
+  página).
+
+Verificado en vivo (Chrome MCP, sesión real de la usuaria) en las 3
+pantallas: tabla, filtros, título, ficha de OS y KPIs del dashboard —
+todo legible, un solo panel crema continuo, naranja aislado a las CTAs
+("Nueva OS", "Actualizar"). `./verificar.sh` en verde, sin literales
+nuevos.
+
+Pendiente de decisión de la usuaria: si migrar `DashboardShell` mismo
+(el seam de siempre) para que el "gutter" alrededor del panel deje de
+depender del dark mode de Faena también — hoy sigue siendo Faena
+(sidebar/header), a propósito, fuera del alcance de este bucket.
 
 ### Resto del orden del prompt
 
