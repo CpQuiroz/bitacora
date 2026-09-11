@@ -2,7 +2,7 @@
 
 - **Cerradas esta sesión:** 9 — edicion_viajes_y_fotos_os, 10 — fotos_mantencion_equipo,
   11 — fix_sync_cola_apilamiento (insuficiente, ver tarea 12), 12 — fix_sync_reintentar_bloqueado,
-  13 — galeria_y_eliminar_fotos_mobile
+  13 — galeria_y_eliminar_fotos_mobile, 6 — regenerar_contexto_proyecto
 - **En curso ahora:** tarea 5 (e2e_mantencion_pdf_prod) — esperando que la usuaria
   inicie sesión en prod en el navegador (no toco credenciales); ver política.
 - **Pausada:** 8 — sistema_diseno (pending, no abandonada — retomar cuando la
@@ -396,3 +396,37 @@ ninguna página de tipo "mi-trabajo"/checkin). No tengo acceso a un
 dispositivo Android real. Queda para que la usuaria lo haga con el
 APK 1.9.8 en su teléfono sobre la OS N° 15 (o una nueva) — reviso el
 resultado (PDF final) apenas avise.
+
+## 2026-09-11: tarea 6 — regenerar CONTEXTO_PROYECTO.md
+
+Verificado en vivo contra dev/prod antes de escribir nada (no reusar
+contenido viejo sin re-chequear, por regla de la memoria):
+- Migraciones: 99 locales; prod trackea 1-98 (la 99 —solo índices—
+  pendiente); **dev tiene el esquema al día pero `schema_migrations`
+  solo llega a la 74** (75+ se aplicaron con `db query`, sin dejar
+  tracking) — hallazgo nuevo, no estaba documentado.
+- RLS: 84/84 tablas del schema `public` tienen RLS activo (61 con
+  policy de tenant real, 23 deny-all) — subió bastante desde la última
+  foto (79 tablas, conteo de RLS no verificado entonces). Aproveché
+  para corregir una afirmación falsa que ya venía arrastrando el
+  documento ("se evaluó RLS y se descartó" — no es así, están
+  complementados, ya corregido en `CLAUDE.md`/`arquitectura.md` esta
+  sesión pero se me había pasado acá).
+- Rubro de la empresa de prueba: verificado en vivo, `cosmetologia`
+  (no `transporte` — el nombre "Transportes Itineris" no define el
+  rubro; casi lo doy vuelta mal, lo corregí antes de cerrar).
+- Versiones: mobile 1.9.8/vc25 (era 1.7.0/vc14), Next 16.3.2 sin cambio.
+
+**Reescrito**: intro/changelog (nueva sección "Novedades 9-11 sep":
+sistema de diseño completo, Mantención de flota, PDF OS Fase 2, edición
+de viajes, galería+eliminar fotos, 2 bugs de sync, tenant baseline 0),
+sección 3 (theming → sistema de diseño crema/Caprasimo completo,
+reemplaza la descripción de Faena), sección 4 (nuevas filas Mantención
+de flota y Ventas—venta rápida—, actualizadas OS/Viajes/App móvil),
+sección 5 (tablas nuevas: registros_mantencion_equipo+fotos,
+viaje_fotos, ventas+venta_lineas), sección 7 (RLS corregido + 3
+decisiones nuevas), sección 8 (backlog real de trabajo_list.json en
+vez de texto genérico, migración 99 pendiente, gap de tracking en dev).
+
+Pendiente: la usuaria tiene que volver a subir el archivo a su Proyecto
+de claude.ai a mano (no se sincroniza solo).
