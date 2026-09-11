@@ -4,12 +4,12 @@ import { useEffect, useMemo, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { descargarCSV } from "@/lib/exportCsv";
-import { Card, ErrorText, Stat } from "@/components/ui";
+import { Card, ErrorState, LoadingState } from "@bitacora/ui/web";
+import { Stat } from "@/components/Stat";
 import { GraficoDistribucion, type PuntoDistribucion } from "@/components/charts/GraficoDistribucion";
 import { GraficoEvolucionDoble } from "@/components/charts/GraficoEvolucionDoble";
 import { GraficoEvolucionPorcentaje, type PuntoPorcentaje } from "@/components/charts/GraficoEvolucionPorcentaje";
 import { GraficoRankingHorizontal, type PuntoRanking } from "@/components/charts/GraficoRankingHorizontal";
-import { EstadoCargando } from "@/components/estados";
 import { useInformes } from "../InformesContext";
 
 type Kpis = { total_clientes: number; clientes_activos: number; nuevos_clientes: number; ingreso_promedio: number };
@@ -27,6 +27,7 @@ function KpiCard({ etiqueta, valor, sub }: { etiqueta: string; valor: string; su
   return <Stat etiqueta={etiqueta} valor={valor} nota={sub} />;
 }
 
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export default function InformeClientesPage() {
   const { desde, hasta, refreshKey, usuario, registrarExportCsv } = useInformes();
   const [datos, setDatos] = useState<Datos | null>(null);
@@ -71,14 +72,14 @@ export default function InformeClientesPage() {
     [datos]
   );
 
-  if (error) return <ErrorText>{error}</ErrorText>;
-  if (!datos) return <EstadoCargando />;
+  if (error) return <ErrorState mensaje={error} />;
+  if (!datos) return <LoadingState />;
 
   const { kpis, distribucion_estado, tasa_retencion, por_comuna } = datos;
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="flex flex-col gap-ds-6">
+      <div className="grid gap-ds-4 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard etiqueta="Total de Clientes" valor={String(kpis.total_clientes)} />
         <KpiCard etiqueta="Clientes Activos" valor={String(kpis.clientes_activos)} />
         <KpiCard etiqueta="Nuevos Clientes" valor={String(kpis.nuevos_clientes)} />
@@ -86,33 +87,28 @@ export default function InformeClientesPage() {
       </div>
 
       <Card>
-        <h2 className="mb-4 text-sm font-semibold text-foreground">Evolución de la Base de Clientes</h2>
-        <GraficoEvolucionDoble
-          datos={evolucionBase}
-          etiquetaA="Nuevos"
-          etiquetaB="Total"
-          mensajeVacio="Sin clientes registrados en los últimos 12 meses."
-        />
+        <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Evolución de la Base de Clientes</p>
+        <GraficoEvolucionDoble datos={evolucionBase} etiquetaA="Nuevos" etiquetaB="Total" mensajeVacio="Sin clientes registrados en los últimos 12 meses." />
       </Card>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-ds-6 lg:grid-cols-2">
         <Card>
-          <h2 className="mb-4 text-sm font-semibold text-foreground">Distribución por Estado</h2>
+          <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Distribución por Estado</p>
           <GraficoDistribucion
             datos={distribucion_estado}
             mensajeVacio="Ningún cliente registrado."
-            coloresPorEstado={{ Activo: "var(--success)", Inactivo: "var(--border)" }}
+            coloresPorEstado={{ Activo: "var(--color-ds-accent2-700)", Inactivo: "var(--color-ds-divider)" }}
           />
         </Card>
 
         <Card>
-          <h2 className="mb-4 text-sm font-semibold text-foreground">Tasa de Retención</h2>
+          <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Tasa de Retención</p>
           <GraficoEvolucionPorcentaje datos={tasa_retencion} mensajeVacio="Sin actividad suficiente para calcular retención mes a mes." />
         </Card>
       </div>
 
       <Card>
-        <h2 className="mb-4 text-sm font-semibold text-foreground">Clientes por Comuna</h2>
+        <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Clientes por Comuna</p>
         <GraficoRankingHorizontal datos={por_comuna} mensajeVacio="Ningún cliente tiene comuna registrada todavía." />
       </Card>
     </div>

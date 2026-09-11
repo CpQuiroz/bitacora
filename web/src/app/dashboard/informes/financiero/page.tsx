@@ -4,10 +4,10 @@ import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { descargarCSV } from "@/lib/exportCsv";
-import { Card, ErrorText, Stat } from "@/components/ui";
+import { Card, ErrorState, LoadingState } from "@bitacora/ui/web";
+import { Stat } from "@/components/Stat";
 import { GraficoIngresos, type PuntoIngresoMes } from "@/components/charts/GraficoIngresos";
 import { GraficoDistribucion } from "@/components/charts/GraficoDistribucion";
-import { EstadoCargando } from "@/components/estados";
 import { useInformes } from "../InformesContext";
 
 type ResumenFinanciero = { recibido: number; pendiente: number; atrasado: number; total: number };
@@ -37,6 +37,7 @@ function KpiCard({ etiqueta, valor, sub }: { etiqueta: string; valor: string; su
 
 const pct = (parte: number, total: number) => (total > 0 ? `${((parte / total) * 100).toFixed(0)}% del total` : undefined);
 
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export default function InformeFinancieroPage() {
   const { desde, hasta, refreshKey, usuario, registrarExportCsv } = useInformes();
   const [datos, setDatos] = useState<Datos | null>(null);
@@ -80,8 +81,8 @@ export default function InformeFinancieroPage() {
     return () => registrarExportCsv(null);
   }, [datos, desde, hasta, registrarExportCsv]);
 
-  if (error) return <ErrorText>{error}</ErrorText>;
-  if (!datos) return <EstadoCargando />;
+  if (error) return <ErrorState mensaje={error} />;
+  if (!datos) return <LoadingState />;
 
   const { resumen_financiero, ingresos_por_mes, por_forma_pago, mejores_clientes } = datos;
 
@@ -97,8 +98,8 @@ export default function InformeFinancieroPage() {
   }));
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="flex flex-col gap-ds-6">
+      <div className="grid gap-ds-4 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard etiqueta="Ingreso Total" valor={formatMoneda(resumen_financiero.total, moneda)} />
         <KpiCard etiqueta="Total Recibido" valor={formatMoneda(resumen_financiero.recibido, moneda)} sub={pct(resumen_financiero.recibido, resumen_financiero.total)} />
         <KpiCard etiqueta="Total Pendiente" valor={formatMoneda(resumen_financiero.pendiente, moneda)} sub={pct(resumen_financiero.pendiente, resumen_financiero.total)} />
@@ -106,50 +107,50 @@ export default function InformeFinancieroPage() {
       </div>
 
       <Card>
-        <h2 className="mb-4 text-sm font-semibold text-foreground">Ingreso por Período</h2>
+        <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Ingreso por Período</p>
         <GraficoIngresos datos={ingresos_por_mes} moneda={moneda} />
       </Card>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-ds-6 lg:grid-cols-2">
         <Card>
-          <h2 className="mb-4 text-sm font-semibold text-foreground">Ingreso por Estado</h2>
+          <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Ingreso por Estado</p>
           <GraficoDistribucion
             datos={distribucionEstado}
             mensajeVacio="Ningún ingreso registrado en el período."
             formatearValor={(n) => formatMoneda(n, moneda)}
-            coloresPorEstado={{ Recibido: "var(--success)", Pendiente: "var(--warning)", Vencido: "var(--danger)" }}
+            coloresPorEstado={{
+              Recibido: "var(--color-ds-accent2-700)",
+              Pendiente: "var(--color-ds-neutral-600)",
+              Vencido: "var(--color-ds-accent-700)",
+            }}
           />
         </Card>
 
         <Card>
-          <h2 className="mb-4 text-sm font-semibold text-foreground">Por Forma de Pago</h2>
-          <GraficoDistribucion
-            datos={distribucionFormaPago}
-            mensajeVacio="Ningún cobro con forma de pago registrada en el período."
-            formatearValor={(n) => formatMoneda(n, moneda)}
-          />
+          <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Por Forma de Pago</p>
+          <GraficoDistribucion datos={distribucionFormaPago} mensajeVacio="Ningún cobro con forma de pago registrada en el período." formatearValor={(n) => formatMoneda(n, moneda)} />
         </Card>
       </div>
 
       <Card>
-        <h2 className="mb-4 text-sm font-semibold text-foreground">Mejores Clientes</h2>
+        <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Mejores Clientes</p>
         {mejores_clientes.length === 0 ? (
-          <p className="text-sm text-muted">Ningún cobro registrado en el período.</p>
+          <p className="font-ds-body text-ds-small text-ds-text/70">Ningún cobro registrado en el período.</p>
         ) : (
-          <table className="w-full text-left text-sm">
+          <table className="w-full text-left text-ds-body">
             <thead>
-              <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
-                <th className="py-2 font-medium">Cliente</th>
-                <th className="py-2 font-medium">Cobros</th>
-                <th className="py-2 text-right font-medium">Ingreso</th>
+              <tr className="border-b border-ds-divider text-[11px] font-medium uppercase tracking-[0.08em] text-ds-text/60">
+                <th className="py-ds-2">Cliente</th>
+                <th className="py-ds-2">Cobros</th>
+                <th className="py-ds-2 text-right">Ingreso</th>
               </tr>
             </thead>
             <tbody>
               {mejores_clientes.map((c) => (
-                <tr key={c.cliente} className="border-b border-border last:border-0">
-                  <td className="py-2.5 font-medium text-foreground">{c.cliente}</td>
-                  <td className="py-2.5 text-muted">{c.cobros}</td>
-                  <td className="py-2.5 text-right text-foreground">{formatMoneda(c.ingreso, moneda)}</td>
+                <tr key={c.cliente} className="border-b border-ds-text/[0.08] last:border-0">
+                  <td className="py-2.5 font-medium text-ds-text">{c.cliente}</td>
+                  <td className="py-2.5 text-ds-text/70">{c.cobros}</td>
+                  <td className="py-2.5 text-right text-ds-text">{formatMoneda(c.ingreso, moneda)}</td>
                 </tr>
               ))}
             </tbody>

@@ -4,7 +4,15 @@ import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from "recha
 
 export type PuntoDistribucion = { estado: string; cantidad: number };
 
-const PALETA = ["var(--brand)", "var(--success)", "var(--warning)", "var(--danger)", "var(--accent)"];
+// Fallback cuando el caller no pasa coloresPorEstado — 5 tonos
+// distinguibles de la paleta nueva (sin colores fuera de tokens.json).
+const PALETA = [
+  "var(--ds-brand)",
+  "var(--color-ds-accent2-600)",
+  "var(--color-ds-accent-700)",
+  "var(--color-ds-neutral-500)",
+  "var(--color-ds-accent2-800)",
+];
 
 export function GraficoDistribucion({
   datos,
@@ -24,8 +32,8 @@ export function GraficoDistribucion({
 
   if (total === 0) {
     return (
-      <div className="flex h-56 flex-col items-center justify-center gap-2 text-center">
-        <p className="text-sm text-muted">{mensajeVacio}</p>
+      <div className="flex h-56 flex-col items-center justify-center gap-ds-2 text-center">
+        <p className="font-ds-body text-ds-small text-ds-text/70">{mensajeVacio}</p>
       </div>
     );
   }
@@ -45,15 +53,15 @@ export function GraficoDistribucion({
               String(name).replace("_", " "),
             ]}
             contentStyle={{
-              background: "var(--surface)",
-              border: "1px solid var(--border)",
+              background: "var(--color-ds-surface)",
+              border: "1px solid var(--color-ds-divider)",
               borderRadius: 8,
               fontSize: 12,
             }}
           />
           <Legend
             formatter={(value: string) => (
-              <span style={{ color: "var(--foreground)", fontSize: 12, textTransform: "capitalize" }}>
+              <span style={{ color: "var(--color-ds-text)", fontSize: 12, textTransform: "capitalize" }}>
                 {value.replace("_", " ")}
               </span>
             )}

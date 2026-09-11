@@ -5,11 +5,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { descargarCSV } from "@/lib/exportCsv";
-import { Card, ErrorText } from "@/components/ui";
+import { Card, ErrorState, LoadingState } from "@bitacora/ui/web";
 import { GraficoDistribucion, type PuntoDistribucion } from "@/components/charts/GraficoDistribucion";
 import { GraficoRankingHorizontal, type PuntoRanking } from "@/components/charts/GraficoRankingHorizontal";
 import { GraficoEvolucionSimple, type PuntoEvolucionSimple } from "@/components/charts/GraficoEvolucionSimple";
-import { EstadoCargando } from "@/components/estados";
 import { useInformes } from "../InformesContext";
 
 type Agrupacion = "categoria" | "centro_costo" | "os";
@@ -31,9 +30,9 @@ type Datos = {
 
 function KpiCard({ etiqueta, valor }: { etiqueta: string; valor: string }) {
   return (
-    <Card className="p-4">
-      <p className="text-xs font-medium text-muted">{etiqueta}</p>
-      <p className="mt-1 text-xl font-semibold tabular-nums text-foreground">{valor}</p>
+    <Card>
+      <p className="font-ds-body text-ds-caption font-medium text-ds-text/60">{etiqueta}</p>
+      <p className="mt-ds-1 font-ds-body text-ds-h5 font-semibold tabular-nums text-ds-text">{valor}</p>
     </Card>
   );
 }
@@ -42,6 +41,7 @@ function agrupacionValida(valor: string | null): Agrupacion {
   return AGRUPACIONES.some((a) => a.valor === valor) ? (valor as Agrupacion) : "categoria";
 }
 
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 function InformeGastosContenido() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -93,15 +93,15 @@ function InformeGastosContenido() {
   }, [datos, desde, hasta, registrarExportCsv, config]);
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap gap-2">
+    <div className="flex flex-col gap-ds-6">
+      <div className="flex flex-wrap gap-ds-2">
         {AGRUPACIONES.map((a) => (
           <button
             key={a.valor}
             type="button"
             onClick={() => cambiarAgrupacion(a.valor)}
-            className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-              agrupacion === a.valor ? "border-transparent bg-brand text-brand-foreground" : "border-border text-muted hover:bg-brand-soft"
+            className={`rounded-ds-pill border px-ds-3 py-1 font-ds-body text-ds-caption font-medium transition-colors ${
+              agrupacion === a.valor ? "border-transparent bg-ds-brand text-ds-brand-foreground" : "border-ds-divider text-ds-text/70 hover:bg-ds-brand/[0.08]"
             }`}
           >
             {a.etiqueta}
@@ -109,21 +109,21 @@ function InformeGastosContenido() {
         ))}
       </div>
 
-      {error && <ErrorText>{error}</ErrorText>}
-      {!error && !datos && <EstadoCargando />}
+      {error ? <ErrorState mensaje={error} /> : null}
+      {!error && !datos ? <LoadingState /> : null}
 
       {datos && (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-ds-4 sm:grid-cols-2 lg:grid-cols-4">
             <KpiCard etiqueta="Total de Gastos" valor={formatMoneda(datos.kpis.total_gastos, moneda)} />
             <KpiCard etiqueta={`${config.dimensionPlural} con Gastos`} valor={String(datos.kpis.grupos_con_gastos)} />
             <KpiCard etiqueta={`Promedio por ${config.dimension}`} valor={formatMoneda(datos.kpis.promedio_por_grupo, moneda)} />
             <KpiCard etiqueta={`Mayor ${config.dimension}`} valor={datos.kpis.mayor_grupo ?? "—"} />
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid gap-ds-6 lg:grid-cols-2">
             <Card>
-              <h2 className="mb-4 text-sm font-semibold text-foreground">Distribución de Gastos</h2>
+              <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Distribución de Gastos</p>
               <GraficoDistribucion
                 datos={datos.distribucion}
                 mensajeVacio={`Ningún gasto con ${config.dimension.toLowerCase()} asignada en el período.`}
@@ -132,7 +132,7 @@ function InformeGastosContenido() {
             </Card>
 
             <Card>
-              <h2 className="mb-4 text-sm font-semibold text-foreground">Ranking de {config.dimensionPlural}</h2>
+              <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Ranking de {config.dimensionPlural}</p>
               <GraficoRankingHorizontal
                 datos={datos.ranking}
                 mensajeVacio={`Ningún gasto con ${config.dimension.toLowerCase()} asignada en el período.`}
@@ -142,12 +142,8 @@ function InformeGastosContenido() {
           </div>
 
           <Card>
-            <h2 className="mb-4 text-sm font-semibold text-foreground">Evolución por {config.dimension}</h2>
-            <GraficoEvolucionSimple
-              datos={datos.evolucion}
-              mensajeVacio="Ningún gasto en el período seleccionado."
-              formatearValor={(n) => formatMoneda(n, moneda)}
-            />
+            <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Evolución por {config.dimension}</p>
+            <GraficoEvolucionSimple datos={datos.evolucion} mensajeVacio="Ningún gasto en el período seleccionado." formatearValor={(n) => formatMoneda(n, moneda)} />
           </Card>
         </>
       )}

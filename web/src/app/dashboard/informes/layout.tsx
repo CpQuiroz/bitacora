@@ -3,24 +3,25 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { BarChart3, ClipboardCheck, Receipt, Tag, Users, Wallet, Wrench } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell } from "@/components/DashboardShell";
-import { Button, Input, PageHeader } from "@/components/ui";
+import { Button, Input } from "@bitacora/ui/web";
 import { PERIODOS, resolverPeriodo, type PeriodoValor } from "@/lib/periodo";
-import { IconChartBar, IconClipboardCheck, IconReceipt, IconTag, IconUsers, IconWallet, IconWrench } from "@/components/icons";
 import { InformesContext, type UsuarioConEmpresa } from "./InformesContext";
 
 const TABS = [
-  { valor: "vision-general", label: "Visión General", icon: IconChartBar },
-  { valor: "financiero", label: "Financiero", icon: IconWallet },
-  { valor: "ventas", label: "Ventas", icon: IconTag },
-  { valor: "operaciones", label: "Operaciones", icon: IconClipboardCheck },
-  { valor: "servicios", label: "Servicios", icon: IconWrench },
-  { valor: "clientes", label: "Clientes", icon: IconUsers },
-  { valor: "gastos", label: "Gastos", icon: IconReceipt },
+  { valor: "vision-general", label: "Visión General", icon: BarChart3 },
+  { valor: "financiero", label: "Financiero", icon: Wallet },
+  { valor: "ventas", label: "Ventas", icon: Tag },
+  { valor: "operaciones", label: "Operaciones", icon: ClipboardCheck },
+  { valor: "servicios", label: "Servicios", icon: Wrench },
+  { valor: "clientes", label: "Clientes", icon: Users },
+  { valor: "gastos", label: "Gastos", icon: Receipt },
 ];
 
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export default function InformesLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -81,9 +82,10 @@ export default function InformesLayout({ children }: { children: ReactNode }) {
         moneda: usuario.empresa.moneda,
       }}
     >
-      <PageHeader title="Informes" subtitle="Análisis detallado de tu negocio" />
+      <p className="ds-heading text-ds-h2 text-ds-text">Informes</p>
+      <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">Análisis detallado de tu negocio</p>
 
-      <nav className="mt-6 flex gap-1 overflow-x-auto border-b border-border pb-px print:hidden">
+      <nav className="mt-ds-6 flex gap-ds-1 overflow-x-auto border-b border-ds-divider pb-px print:hidden">
         {TABS.map((t) => {
           const href = `/dashboard/informes/${t.valor}`;
           const activo = pathname.startsWith(href);
@@ -91,57 +93,51 @@ export default function InformesLayout({ children }: { children: ReactNode }) {
             <Link
               key={t.valor}
               href={href}
-              className={`flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-3 py-2.5 text-sm font-medium transition-colors ${
-                activo ? "border-brand text-brand" : "border-transparent text-muted hover:text-foreground"
+              className={`flex shrink-0 items-center gap-ds-2 whitespace-nowrap border-b-2 px-ds-3 py-2.5 font-ds-body text-ds-small font-medium transition-colors ${
+                activo ? "border-ds-brand text-ds-brand" : "border-transparent text-ds-text/60 hover:text-ds-text"
               }`}
             >
-              <t.icon className="h-4 w-4 shrink-0" />
+              <t.icon size={16} strokeWidth={2.75} className="shrink-0" />
               {t.label}
             </Link>
           );
         })}
       </nav>
 
-      <div className="mt-4 flex flex-wrap items-center gap-2 print:hidden">
+      <div className="mt-ds-4 flex flex-wrap items-center gap-ds-2 print:hidden">
         {PERIODOS.map((p) => (
           <button
             key={p.valor}
             type="button"
             onClick={() => setPeriodo(p.valor)}
-            className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-              periodo === p.valor ? "border-brand bg-brand-soft text-brand" : "border-border text-muted hover:border-muted-soft"
+            className={`rounded-ds-pill border px-ds-3 py-1 font-ds-body text-ds-caption font-medium transition-colors ${
+              periodo === p.valor ? "border-ds-brand bg-ds-brand/[0.08] text-ds-brand" : "border-ds-divider text-ds-text/70 hover:border-ds-text/30"
             }`}
           >
             {p.etiqueta}
           </button>
         ))}
-        <div className="ml-auto flex gap-2 print:hidden">
+        <div className="ml-auto flex gap-ds-2 print:hidden">
           {!pathname.endsWith("/vision-general") && (
             <>
-              <Button type="button" variant="outline" disabled={!exportCsv} onClick={() => exportCsv?.()}>
+              <Button variante="secundario" deshabilitado={!exportCsv} onPress={() => exportCsv?.()}>
                 CSV
               </Button>
-              <Button type="button" variant="outline" onClick={() => window.print()}>
+              <Button variante="secundario" onPress={() => window.print()}>
                 PDF
               </Button>
             </>
           )}
-          <Button type="button" variant="outline" onClick={() => setRefreshKey((k) => k + 1)}>
+          <Button variante="secundario" onPress={() => setRefreshKey((k) => k + 1)}>
             Actualizar
           </Button>
         </div>
       </div>
 
       {periodo === "personalizado" && (
-        <div className="mt-3 flex flex-wrap items-end gap-3 print:hidden">
-          <div>
-            <label className="mb-1.5 block text-xs font-medium text-muted">Desde</label>
-            <Input type="date" value={desdePersonalizado} onChange={(e) => setDesdePersonalizado(e.target.value)} />
-          </div>
-          <div>
-            <label className="mb-1.5 block text-xs font-medium text-muted">Hasta</label>
-            <Input type="date" value={hastaPersonalizado} onChange={(e) => setHastaPersonalizado(e.target.value)} />
-          </div>
+        <div className="mt-ds-3 flex flex-wrap items-end gap-ds-3 print:hidden">
+          <FechaCampo etiqueta="Desde" valor={desdePersonalizado} onCambio={setDesdePersonalizado} />
+          <FechaCampo etiqueta="Hasta" valor={hastaPersonalizado} onCambio={setHastaPersonalizado} />
         </div>
       )}
 
@@ -161,8 +157,23 @@ export default function InformesLayout({ children }: { children: ReactNode }) {
           registrarExportCsv,
         }}
       >
-        <div className="mt-6">{children}</div>
+        <div className="mt-ds-6">{children}</div>
       </InformesContext.Provider>
     </DashboardShell>
+  );
+}
+
+// Input nativo type="date" — ver el mismo helper en rutas/nueva/page.tsx.
+function FechaCampo({ etiqueta, valor, onCambio }: { etiqueta: string; valor: string; onCambio: (v: string) => void }) {
+  return (
+    <div className="flex flex-col gap-ds-1">
+      <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">{etiqueta}</label>
+      <input
+        type="date"
+        value={valor}
+        onChange={(e) => onCambio(e.target.value)}
+        className="h-11 w-full rounded-ds-md border border-ds-divider bg-ds-surface px-ds-3 font-ds-body text-ds-body text-ds-text transition-colors hover:border-ds-text/30 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ds-brand)]"
+      />
+    </div>
   );
 }

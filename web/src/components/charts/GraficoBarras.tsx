@@ -32,8 +32,8 @@ export function GraficoBarras({
 
   if (sinDatos) {
     return (
-      <div className="flex h-64 flex-col items-center justify-center gap-2 text-center">
-        <p className="text-sm text-muted">{mensajeVacio}</p>
+      <div className="flex h-64 flex-col items-center justify-center gap-ds-2 text-center">
+        <p className="font-ds-body text-ds-small text-ds-text/70">{mensajeVacio}</p>
       </div>
     );
   }
@@ -42,17 +42,17 @@ export function GraficoBarras({
     <div className="h-64 w-full">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={datos} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--color-ds-divider)" />
           <XAxis
             dataKey="mes"
             tickFormatter={etiquetaMes}
-            tick={{ fill: "var(--muted)", fontSize: 12 }}
-            axisLine={{ stroke: "var(--border)" }}
+            tick={{ fill: "var(--color-ds-text)", fillOpacity: 0.6, fontSize: 12 }}
+            axisLine={{ stroke: "var(--color-ds-divider)" }}
             tickLine={false}
           />
           <YAxis
             tickFormatter={(v) => `${v}${sufijo}`}
-            tick={{ fill: "var(--muted)", fontSize: 11 }}
+            tick={{ fill: "var(--color-ds-text)", fillOpacity: 0.6, fontSize: 11 }}
             axisLine={false}
             tickLine={false}
             width={40}
@@ -61,8 +61,8 @@ export function GraficoBarras({
             formatter={(value) => (value == null ? "Sin datos" : `${value}${sufijo}`)}
             labelFormatter={(label) => etiquetaMes(String(label))}
             contentStyle={{
-              background: "var(--surface)",
-              border: "1px solid var(--border)",
+              background: "var(--color-ds-surface)",
+              border: "1px solid var(--color-ds-divider)",
               borderRadius: 8,
               fontSize: 12,
             }}

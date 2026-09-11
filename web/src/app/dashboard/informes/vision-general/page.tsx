@@ -4,10 +4,10 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
-import { Card, ErrorText, Stat } from "@/components/ui";
+import { ArrowRight, BarChart3, ClipboardCheck, Tag, Users, Wallet } from "lucide-react";
+import { Card, ErrorState, LoadingState } from "@bitacora/ui/web";
+import { Stat } from "@/components/Stat";
 import { GraficoIngresos, type PuntoIngresoMes } from "@/components/charts/GraficoIngresos";
-import { IconArrowRight, IconChartBar, IconClipboardCheck, IconTag, IconUsers, IconWallet } from "@/components/icons";
-import { EstadoCargando } from "@/components/estados";
 import { useInformes } from "../InformesContext";
 
 type Kpis = {
@@ -45,24 +45,25 @@ function KpiCard({ etiqueta, valor, sub }: { etiqueta: string; valor: string; su
 
 function MiniCard({ etiqueta, valor, cantidad, color }: { etiqueta: string; valor: string; cantidad: number; color: string }) {
   return (
-    <div className="rounded-xl border border-border p-3">
-      <p className="text-xs text-muted">{etiqueta}</p>
-      <p className={`mt-1 text-base font-semibold tabular-nums ${color}`}>{valor}</p>
-      <p className="text-xs text-muted">{cantidad} {cantidad === 1 ? "ítem" : "ítems"}</p>
+    <div className="rounded-ds-md border border-ds-divider p-ds-3">
+      <p className="font-ds-body text-ds-caption text-ds-text/60">{etiqueta}</p>
+      <p className={`mt-ds-1 font-ds-body text-ds-body font-semibold tabular-nums ${color}`}>{valor}</p>
+      <p className="font-ds-body text-ds-caption text-ds-text/60">{cantidad} {cantidad === 1 ? "ítem" : "ítems"}</p>
     </div>
   );
 }
 
 const ACCESOS = [
-  { href: "/dashboard/informes/financiero", icon: IconWallet, titulo: "Financiero", desc: "Ingresos, cobros y morosidad" },
-  { href: "/dashboard/informes/ventas", icon: IconTag, titulo: "Ventas", desc: "Cotizaciones, conversión y ticket promedio" },
-  { href: "/dashboard/informes/operaciones", icon: IconClipboardCheck, titulo: "Operaciones", desc: "OS, tiempo promedio y productividad" },
-  { href: "/dashboard/informes/clientes", icon: IconUsers, titulo: "Clientes", desc: "Base de clientes, top clientes y retención" },
-  { href: "/dashboard/informes/financiero", icon: IconChartBar, titulo: "Ganancia/Pérdida", desc: "Ingresos vs gastos y análisis de rentabilidad" },
+  { href: "/dashboard/informes/financiero", icon: Wallet, titulo: "Financiero", desc: "Ingresos, cobros y morosidad" },
+  { href: "/dashboard/informes/ventas", icon: Tag, titulo: "Ventas", desc: "Cotizaciones, conversión y ticket promedio" },
+  { href: "/dashboard/informes/operaciones", icon: ClipboardCheck, titulo: "Operaciones", desc: "OS, tiempo promedio y productividad" },
+  { href: "/dashboard/informes/clientes", icon: Users, titulo: "Clientes", desc: "Base de clientes, top clientes y retención" },
+  { href: "/dashboard/informes/financiero", icon: BarChart3, titulo: "Ganancia/Pérdida", desc: "Ingresos vs gastos y análisis de rentabilidad" },
 ];
 
 const pct = (n: number) => `${n.toFixed(0)}%`;
 
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export default function VisionGeneralPage() {
   const { desde, hasta, refreshKey, usuario } = useInformes();
   const [datos, setDatos] = useState<Datos | null>(null);
@@ -84,8 +85,8 @@ export default function VisionGeneralPage() {
 
   const moneda = usuario.empresa.moneda;
 
-  if (error) return <ErrorText>{error}</ErrorText>;
-  if (!datos) return <EstadoCargando />;
+  if (error) return <ErrorState mensaje={error} />;
+  if (!datos) return <LoadingState />;
 
   const { kpis, resumen_gastos, ingresos_vs_gastos, ingresos_por_mes } = datos;
 
@@ -96,8 +97,8 @@ export default function VisionGeneralPage() {
   // ser más accionable (accesos rápidos + alertas) y esta pantalla se
   // queda con el análisis profundo, sin repetir las mismas métricas.
   return (
-    <div className="flex flex-col gap-6">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+    <div className="flex flex-col gap-ds-6">
+      <div className="grid gap-ds-4 sm:grid-cols-2 lg:grid-cols-5">
         <KpiCard etiqueta="Ingreso Total" valor={formatMoneda(kpis.ingresos_totales, moneda)} />
         <KpiCard etiqueta="Total de Gastos" valor={formatMoneda(resumen_gastos.total, moneda)} />
         <KpiCard etiqueta="Cotizaciones" valor={String(kpis.cant_presupuestos)} sub={`${pct(kpis.pct_conversion)} de conversión`} />
@@ -105,21 +106,21 @@ export default function VisionGeneralPage() {
         <KpiCard etiqueta="Clientes Activos" valor={String(kpis.clientes_activos)} />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-ds-6 lg:grid-cols-2">
         <Card>
-          <h2 className="mb-4 text-sm font-semibold text-foreground">Ingresos vs Gastos</h2>
-          <div className="flex flex-col divide-y divide-border text-sm">
+          <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Ingresos vs Gastos</p>
+          <div className="flex flex-col divide-y divide-ds-divider font-ds-body text-ds-small">
             <div className="flex items-center justify-between py-2.5">
-              <span className="text-muted">Ingreso Recibido</span>
-              <span className="font-medium text-success">{formatMoneda(ingresos_vs_gastos.ingresos_recibidos, moneda)}</span>
+              <span className="text-ds-text/70">Ingreso Recibido</span>
+              <span className="font-medium text-ds-accent2-800">{formatMoneda(ingresos_vs_gastos.ingresos_recibidos, moneda)}</span>
             </div>
             <div className="flex items-center justify-between py-2.5">
-              <span className="text-muted">Gastos Pagados</span>
-              <span className="font-medium text-danger">{formatMoneda(ingresos_vs_gastos.gastos_pagados, moneda)}</span>
+              <span className="text-ds-text/70">Gastos Pagados</span>
+              <span className="font-medium text-ds-accent-700">{formatMoneda(ingresos_vs_gastos.gastos_pagados, moneda)}</span>
             </div>
             <div className="flex items-center justify-between py-2.5">
-              <span className="font-semibold text-foreground">Resultado Neto</span>
-              <span className={`font-semibold ${ingresos_vs_gastos.resultado_neto >= 0 ? "text-success" : "text-danger"}`}>
+              <span className="font-semibold text-ds-text">Resultado Neto</span>
+              <span className={`font-semibold ${ingresos_vs_gastos.resultado_neto >= 0 ? "text-ds-accent2-800" : "text-ds-accent-700"}`}>
                 {formatMoneda(ingresos_vs_gastos.resultado_neto, moneda)}
               </span>
             </div>
@@ -127,34 +128,34 @@ export default function VisionGeneralPage() {
         </Card>
 
         <Card>
-          <h2 className="mb-4 text-sm font-semibold text-foreground">Resumen de Gastos</h2>
-          <div className="grid grid-cols-2 gap-3">
-            <MiniCard etiqueta="Pagado" valor={formatMoneda(resumen_gastos.pagado, moneda)} cantidad={resumen_gastos.cantidad_pagado} color="text-success" />
-            <MiniCard etiqueta="Pendiente" valor={formatMoneda(resumen_gastos.pendiente, moneda)} cantidad={resumen_gastos.cantidad_pendiente} color="text-warning" />
-            <MiniCard etiqueta="Vencido" valor={formatMoneda(resumen_gastos.vencido, moneda)} cantidad={resumen_gastos.cantidad_vencido} color="text-danger" />
-            <MiniCard etiqueta="Total de Gastos" valor={formatMoneda(resumen_gastos.total, moneda)} cantidad={resumen_gastos.cantidad_total} color="text-foreground" />
+          <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Resumen de Gastos</p>
+          <div className="grid grid-cols-2 gap-ds-3">
+            <MiniCard etiqueta="Pagado" valor={formatMoneda(resumen_gastos.pagado, moneda)} cantidad={resumen_gastos.cantidad_pagado} color="text-ds-accent2-800" />
+            <MiniCard etiqueta="Pendiente" valor={formatMoneda(resumen_gastos.pendiente, moneda)} cantidad={resumen_gastos.cantidad_pendiente} color="text-ds-accent-700" />
+            <MiniCard etiqueta="Vencido" valor={formatMoneda(resumen_gastos.vencido, moneda)} cantidad={resumen_gastos.cantidad_vencido} color="text-ds-accent-800" />
+            <MiniCard etiqueta="Total de Gastos" valor={formatMoneda(resumen_gastos.total, moneda)} cantidad={resumen_gastos.cantidad_total} color="text-ds-text" />
           </div>
         </Card>
       </div>
 
       <Card>
-        <h2 className="mb-4 text-sm font-semibold text-foreground">Ingreso por Período</h2>
+        <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Ingreso por Período</p>
         <GraficoIngresos datos={ingresos_por_mes} moneda={moneda} />
       </Card>
 
       <Card>
-        <h2 className="mb-4 text-sm font-semibold text-foreground">Informes Detallados</h2>
-        <div className="flex flex-col divide-y divide-border">
+        <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Informes Detallados</p>
+        <div className="flex flex-col divide-y divide-ds-divider">
           {ACCESOS.map((a) => (
-            <Link key={a.titulo} href={a.href} className="flex items-center gap-3 py-3 hover:bg-surface-sunken">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-soft text-brand">
-                <a.icon className="h-4 w-4" />
+            <Link key={a.titulo} href={a.href} className="flex items-center gap-ds-3 py-ds-3 hover:bg-ds-text/[0.04]">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-ds-pill bg-ds-brand/[0.08] text-ds-brand">
+                <a.icon size={16} strokeWidth={2.75} />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-foreground">{a.titulo}</p>
-                <p className="text-xs text-muted">{a.desc}</p>
+                <p className="font-ds-body text-ds-small font-medium text-ds-text">{a.titulo}</p>
+                <p className="font-ds-body text-ds-caption text-ds-text/60">{a.desc}</p>
               </div>
-              <IconArrowRight className="h-4 w-4 shrink-0 text-muted" />
+              <ArrowRight size={16} strokeWidth={2.75} className="shrink-0 text-ds-text/60" />
             </Link>
           ))}
         </div>

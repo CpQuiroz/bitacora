@@ -18,8 +18,8 @@ export function GraficoRankingHorizontal({
 }) {
   if (datos.length === 0) {
     return (
-      <div className="flex h-40 flex-col items-center justify-center gap-2 text-center">
-        <p className="text-sm text-muted">{mensajeVacio}</p>
+      <div className="flex h-40 flex-col items-center justify-center gap-ds-2 text-center">
+        <p className="font-ds-body text-ds-small text-ds-text/70">{mensajeVacio}</p>
       </div>
     );
   }
@@ -28,15 +28,15 @@ export function GraficoRankingHorizontal({
   const fmt = formatearValor ?? ((n: number) => String(n));
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-ds-3">
       {datos.map((d) => (
         <div key={d.nombre}>
-          <div className="mb-1 flex items-center justify-between text-sm">
-            <span className="font-medium text-foreground">{d.nombre}</span>
-            <span className="text-muted">{fmt(d.valor)}</span>
+          <div className="mb-ds-1 flex items-center justify-between font-ds-body text-ds-small">
+            <span className="font-medium text-ds-text">{d.nombre}</span>
+            <span className="text-ds-text/60">{fmt(d.valor)}</span>
           </div>
-          <div className="h-2 w-full overflow-hidden rounded-full bg-brand-soft">
-            <div className="h-full rounded-full bg-brand" style={{ width: `${(d.valor / maximo) * 100}%` }} />
+          <div className="h-2 w-full overflow-hidden rounded-ds-pill bg-ds-brand/[0.08]">
+            <div className="h-full rounded-ds-pill bg-ds-brand" style={{ width: `${(d.valor / maximo) * 100}%` }} />
           </div>
         </div>
       ))}

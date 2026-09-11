@@ -4,11 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { descargarCSV } from "@/lib/exportCsv";
-import { Card, ErrorText, Stat } from "@/components/ui";
+import { Card, ErrorState, LoadingState } from "@bitacora/ui/web";
+import { Stat } from "@/components/Stat";
 import { GraficoDistribucion, type PuntoDistribucion } from "@/components/charts/GraficoDistribucion";
 import { GraficoEvolucionDoble } from "@/components/charts/GraficoEvolucionDoble";
 import { GraficoEvolucionPorcentaje, type PuntoPorcentaje } from "@/components/charts/GraficoEvolucionPorcentaje";
-import { EstadoCargando } from "@/components/estados";
 import { useInformes } from "../InformesContext";
 
 type Kpis = { total_cotizaciones: number; valor_total: number; tasa_conversion: number; ticket_promedio: number };
@@ -22,19 +22,23 @@ type Datos = {
   top_servicios: TopServicio[];
 };
 
+// Sin tono "success/danger/warning" propio — accent2 (verde) = bueno,
+// neutral = en curso/ambiguo, accent (terracota) = malo, más oscuro
+// para diferenciar rechazado de vencida/expirado.
 const COLOR_ESTADO: Record<string, string> = {
-  borrador: "var(--muted)",
-  enviado: "var(--brand)",
-  aprobado: "var(--success)",
-  rechazado: "var(--danger)",
-  vencida: "var(--warning)",
-  expirado: "var(--warning)",
+  borrador: "var(--color-ds-neutral-600)",
+  enviado: "var(--ds-brand)",
+  aprobado: "var(--color-ds-accent2-700)",
+  rechazado: "var(--color-ds-accent-700)",
+  vencida: "var(--color-ds-accent-800)",
+  expirado: "var(--color-ds-accent-800)",
 };
 
 function KpiCard({ etiqueta, valor, sub }: { etiqueta: string; valor: string; sub?: string }) {
   return <Stat etiqueta={etiqueta} valor={valor} nota={sub} />;
 }
 
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export default function InformeVentasPage() {
   const { desde, hasta, refreshKey, usuario, registrarExportCsv } = useInformes();
   const [datos, setDatos] = useState<Datos | null>(null);
@@ -83,14 +87,14 @@ export default function InformeVentasPage() {
     [datos]
   );
 
-  if (error) return <ErrorText>{error}</ErrorText>;
-  if (!datos) return <EstadoCargando />;
+  if (error) return <ErrorState mensaje={error} />;
+  if (!datos) return <LoadingState />;
 
   const { kpis, distribucion_estado, top_servicios } = datos;
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="flex flex-col gap-ds-6">
+      <div className="grid gap-ds-4 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard etiqueta="Total de Cotizaciones" valor={String(kpis.total_cotizaciones)} />
         <KpiCard etiqueta="Valor Total" valor={formatMoneda(kpis.valor_total, moneda)} />
         <KpiCard etiqueta="Tasa de Conversión" valor={`${kpis.tasa_conversion.toFixed(0)}%`} />
@@ -98,46 +102,41 @@ export default function InformeVentasPage() {
       </div>
 
       <Card>
-        <h2 className="mb-4 text-sm font-semibold text-foreground">Cotizaciones por Período</h2>
-        <GraficoEvolucionDoble
-          datos={cotizacionesEvolucion}
-          etiquetaA="Aprobadas"
-          etiquetaB="Total"
-          mensajeVacio="Sin cotizaciones registradas en los últimos 12 meses."
-        />
+        <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Cotizaciones por Período</p>
+        <GraficoEvolucionDoble datos={cotizacionesEvolucion} etiquetaA="Aprobadas" etiquetaB="Total" mensajeVacio="Sin cotizaciones registradas en los últimos 12 meses." />
       </Card>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-ds-6 lg:grid-cols-2">
         <Card>
-          <h2 className="mb-4 text-sm font-semibold text-foreground">Distribución por Estado</h2>
+          <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Distribución por Estado</p>
           <GraficoDistribucion datos={distribucion_estado} mensajeVacio="Ninguna cotización registrada en el período." coloresPorEstado={COLOR_ESTADO} />
         </Card>
 
         <Card>
-          <h2 className="mb-4 text-sm font-semibold text-foreground">Tasa de Conversión</h2>
+          <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Tasa de Conversión</p>
           <GraficoEvolucionPorcentaje datos={tasaConversionEvolucion} mensajeVacio="Sin cotizaciones registradas en los últimos 12 meses." />
         </Card>
       </div>
 
       <Card>
-        <h2 className="mb-4 text-sm font-semibold text-foreground">Top Servicios Vendidos</h2>
+        <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Top Servicios Vendidos</p>
         {top_servicios.length === 0 ? (
-          <p className="text-sm text-muted">Ningún servicio vendido en el período.</p>
+          <p className="font-ds-body text-ds-small text-ds-text/70">Ningún servicio vendido en el período.</p>
         ) : (
-          <table className="w-full text-left text-sm">
+          <table className="w-full text-left text-ds-body">
             <thead>
-              <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
-                <th className="py-2 font-medium">Servicio</th>
-                <th className="py-2 font-medium">Cantidad</th>
-                <th className="py-2 text-right font-medium">Valor</th>
+              <tr className="border-b border-ds-divider text-[11px] font-medium uppercase tracking-[0.08em] text-ds-text/60">
+                <th className="py-ds-2">Servicio</th>
+                <th className="py-ds-2">Cantidad</th>
+                <th className="py-ds-2 text-right">Valor</th>
               </tr>
             </thead>
             <tbody>
               {top_servicios.map((s) => (
-                <tr key={s.servicio} className="border-b border-border last:border-0">
-                  <td className="py-2.5 font-medium text-foreground">{s.servicio}</td>
-                  <td className="py-2.5 text-muted">{s.cantidad}</td>
-                  <td className="py-2.5 text-right text-foreground">{formatMoneda(s.valor, moneda)}</td>
+                <tr key={s.servicio} className="border-b border-ds-text/[0.08] last:border-0">
+                  <td className="py-2.5 font-medium text-ds-text">{s.servicio}</td>
+                  <td className="py-2.5 text-ds-text/70">{s.cantidad}</td>
+                  <td className="py-2.5 text-right text-ds-text">{formatMoneda(s.valor, moneda)}</td>
                 </tr>
               ))}
             </tbody>

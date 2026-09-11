@@ -3,12 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { descargarCSV } from "@/lib/exportCsv";
-import { Card, ErrorText, Stat } from "@/components/ui";
+import { Card, ErrorState, LoadingState } from "@bitacora/ui/web";
+import { Stat } from "@/components/Stat";
 import { GraficoDistribucion, type PuntoDistribucion } from "@/components/charts/GraficoDistribucion";
 import { GraficoEvolucionDoble } from "@/components/charts/GraficoEvolucionDoble";
 import { GraficoEvolucionPorcentaje, type PuntoPorcentaje } from "@/components/charts/GraficoEvolucionPorcentaje";
 import { GraficoBarras, type PuntoBarraMes } from "@/components/charts/GraficoBarras";
-import { EstadoCargando } from "@/components/estados";
 import { useInformes } from "../InformesContext";
 
 type Kpis = { total_os: number; completadas: number; pct_conclusion: number; en_curso: number; agendadas: number };
@@ -29,17 +29,19 @@ const ETIQUETA_ESTADO: Record<string, string> = {
   cancelado: "Cancelado",
 };
 
+// Sin tono "success/warning/danger" propio.
 const COLOR_ESTADO: Record<string, string> = {
-  Agendado: "var(--brand)",
-  "En Curso": "var(--warning)",
-  Completado: "var(--success)",
-  Cancelado: "var(--danger)",
+  Agendado: "var(--ds-brand)",
+  "En Curso": "var(--color-ds-neutral-600)",
+  Completado: "var(--color-ds-accent2-700)",
+  Cancelado: "var(--color-ds-accent-700)",
 };
 
 function KpiCard({ etiqueta, valor, sub }: { etiqueta: string; valor: string; sub?: string }) {
   return <Stat etiqueta={etiqueta} valor={valor} nota={sub} />;
 }
 
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export default function InformeOperacionesPage() {
   const { desde, hasta, refreshKey, registrarExportCsv } = useInformes();
   const [datos, setDatos] = useState<Datos | null>(null);
@@ -102,14 +104,14 @@ export default function InformeOperacionesPage() {
     [datos]
   );
 
-  if (error) return <ErrorText>{error}</ErrorText>;
-  if (!datos) return <EstadoCargando />;
+  if (error) return <ErrorState mensaje={error} />;
+  if (!datos) return <LoadingState />;
 
   const { kpis } = datos;
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="flex flex-col gap-ds-6">
+      <div className="grid gap-ds-4 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard etiqueta="Total de OS" valor={String(kpis.total_os)} />
         <KpiCard etiqueta="Completadas" valor={String(kpis.completadas)} sub={`${kpis.pct_conclusion.toFixed(0)}% de conclusión`} />
         <KpiCard etiqueta="En Curso" valor={String(kpis.en_curso)} />
@@ -117,29 +119,24 @@ export default function InformeOperacionesPage() {
       </div>
 
       <Card>
-        <h2 className="mb-4 text-sm font-semibold text-foreground">OS por Período</h2>
-        <GraficoEvolucionDoble
-          datos={osEvolucion}
-          etiquetaA="Completadas"
-          etiquetaB="Total"
-          mensajeVacio="Sin órdenes de servicio registradas en los últimos 12 meses."
-        />
+        <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">OS por Período</p>
+        <GraficoEvolucionDoble datos={osEvolucion} etiquetaA="Completadas" etiquetaB="Total" mensajeVacio="Sin órdenes de servicio registradas en los últimos 12 meses." />
       </Card>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-ds-6 lg:grid-cols-2">
         <Card>
-          <h2 className="mb-4 text-sm font-semibold text-foreground">Distribución por Estado</h2>
+          <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Distribución por Estado</p>
           <GraficoDistribucion datos={distribucionTraducida} mensajeVacio="Ninguna OS registrada en el período." coloresPorEstado={COLOR_ESTADO} />
         </Card>
 
         <Card>
-          <h2 className="mb-4 text-sm font-semibold text-foreground">Tasa de Conclusión</h2>
+          <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Tasa de Conclusión</p>
           <GraficoEvolucionPorcentaje datos={tasaConclusionEvolucion} mensajeVacio="Sin órdenes de servicio registradas en los últimos 12 meses." />
         </Card>
       </div>
 
       <Card>
-        <h2 className="mb-4 text-sm font-semibold text-foreground">Tiempo Promedio de Conclusión</h2>
+        <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Tiempo Promedio de Conclusión</p>
         <GraficoBarras datos={tiempoConclusion} mensajeVacio="Ninguna OS cerrada en los últimos 12 meses." sufijo=" días" />
       </Card>
     </div>
