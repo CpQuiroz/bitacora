@@ -52,6 +52,15 @@ export type AccionPendiente = {
   // ninguna terminaba nunca. Bug real (2026-09-11): "se quedó
   // sincronizando" y el registro nunca se creó.
   ultimoIntentoEn?: number;
+  // true SOLO mientras el intento en curso pudo haber quedado viajando
+  // en segundo plano (timeout del lado del cliente, ver api.ts) — se
+  // limpia en cuanto llega una respuesta HTTP real (éxito o error) o un
+  // fallo de red normal, casos en los que el fetch ya terminó de verdad
+  // y no hay nada "en vuelo". Bug real (2026-09-11, v2): con solo
+  // `ultimoIntentoEn`, CUALQUIER intento fallido (no solo un timeout)
+  // dejaba bloqueado el botón "Reintentar ahora" hasta 90s después,
+  // sin ningún aviso — el usuario tocaba sincronizar y "no pasaba nada".
+  intentoEnVuelo?: boolean;
 };
 
 // Todos los archivos de una acción (unifica archivo + archivos).
@@ -212,9 +221,12 @@ export async function procesar(): Promise<void> {
       }
       // El intento anterior con archivo(s) puede seguir viajando de
       // verdad (fetch de FormData no cancelable) aunque ya haya
-      // "timeouteado" para nosotros — no lanzar otro en paralelo. Se
-      // reintenta solo cuando ya pasó el margen del timeout de subida.
-      if (archivosDe(a).length > 0 && a.ultimoIntentoEn && Date.now() - a.ultimoIntentoEn < TIMEOUT_MULTIPART_MS) {
+      // "timeouteado" para nosotros — no lanzar otro en paralelo. Solo
+      // aplica mientras `intentoEnVuelo` sigue true (timeout del
+      // cliente sin respuesta real todavía); un intento que ya recibió
+      // una respuesta HTTP o un error de red se puede reintentar al
+      // toque, sin esperar.
+      if (archivosDe(a).length > 0 && a.intentoEnVuelo && a.ultimoIntentoEn && Date.now() - a.ultimoIntentoEn < TIMEOUT_MULTIPART_MS) {
         continue;
       }
       // Escape hatch: una acción trancada más de 24 h se marca fallida
@@ -227,8 +239,14 @@ export async function procesar(): Promise<void> {
         continue;
       }
       try {
-        if (archivosDe(a).length > 0) a.ultimoIntentoEn = Date.now();
+        if (archivosDe(a).length > 0) {
+          a.ultimoIntentoEn = Date.now();
+          a.intentoEnVuelo = true;
+        }
         const res = await ejecutar(a);
+        // Llegó una respuesta HTTP real: el fetch terminó de verdad, ya
+        // no hay nada "en vuelo" para esta acción.
+        a.intentoEnVuelo = false;
         if (res.ok || res.status === 409 || res.status === 404) {
           // 2xx = hecho. 409/404 = el servidor rechazó algo ya resuelto
           // (ej. OS ya finalizada) — no tiene sentido reintentar.
@@ -264,14 +282,20 @@ export async function procesar(): Promise<void> {
           a.intentos += 1;
           a.ultimoError = "El servidor no respondió a tiempo";
           if (a.intentos >= MAX_INTENTOS) a.fallida = true;
+          // NO se limpia intentoEnVuelo: es justo el caso en que el
+          // fetch original puede seguir viajando de verdad.
         } else if (archivosDe(a).some((f) => !fotoExiste(f.uri))) {
           // El fetch no pudo leer el archivo — ya no está.
           a.fallida = true;
           a.ultimoError = "Una foto ya no está en el teléfono — vuelve a sacarla y a guardar";
+          a.intentoEnVuelo = false;
         } else {
           // Guardrail: dejamos el error real (no solo "Sin conexión") —
           // si esto vuelve a fallar, que se sepa por qué sin adivinar.
           a.ultimoError = detalle && detalle !== "Network request failed" ? `Sin conexión — ${detalle.slice(0, 100)}` : "Sin conexión";
+          // Un error de red normal (no timeout) significa que el fetch
+          // ya terminó (rechazado), no que sigue viajando.
+          a.intentoEnVuelo = false;
         }
         await persistir();
         if (a.fallida) continue;

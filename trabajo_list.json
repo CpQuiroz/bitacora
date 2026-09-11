@@ -157,6 +157,20 @@
         "APK nuevo (1.9.6) generado con el fix, para reintentar el E2E de la tarea 5"
       ],
       "status": "done"
+    },
+    {
+      "id": 12,
+      "name": "fix_sync_reintentar_bloqueado",
+      "title": "Regresión real del fix 11: 'Reintentar ahora' bloqueado en silencio",
+      "description": "La usuaria reprobó el APK 1.9.6: seguía sin crear el registro con NO+foto, el auto-reintento nunca terminaba, y 'sincronizar da fallo y no hace nada'. Descartado bug de backend reproduciendo el mismo caso contra el endpoint real vía web (guardó limpio). Causa real: el guard `ultimoIntentoEn` de la tarea 11 bloqueaba CUALQUIER reintento (no solo uno que pudiera seguir en vuelo) hasta 90s después de cualquier fallo, sin aviso — eso es lo que la usuaria vio como 'sincronizar no hace nada'.",
+      "acceptance": [
+        "Reproducción del caso NO+foto contra el backend real (vía web) sin error — descarta bug de backend",
+        "queue.ts: nuevo campo `intentoEnVuelo`, distingue 'puede seguir viajando' (timeout AbortError) de 'ya terminó' (cualquier respuesta HTTP o error de red normal)",
+        "El guard de no-relanzar-en-paralelo solo bloquea mientras intentoEnVuelo=true",
+        "./verificar.sh verde",
+        "APK nuevo (1.9.7) generado con el fix, para reintentar el E2E de la tarea 5"
+      ],
+      "status": "in_progress"
     }
   ]
 }

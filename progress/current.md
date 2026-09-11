@@ -1,7 +1,8 @@
 # Sesión actual
 
-- **Tarea en curso:** 11 — fix_sync_cola_apilamiento (ver detalle abajo)
-- **Cerradas esta sesión:** 9 — edicion_viajes_y_fotos_os, 10 — fotos_mantencion_equipo
+- **Tarea en curso:** 12 — fix_sync_reintentar_bloqueado (ver detalle abajo)
+- **Cerradas esta sesión:** 9 — edicion_viajes_y_fotos_os, 10 — fotos_mantencion_equipo,
+  11 — fix_sync_cola_apilamiento (insuficiente, ver tarea 12)
 - **Pausada:** 8 — sistema_diseno (pending, no abandonada — retomar cuando la
   usuaria lo pida; ver `docs/design-system.md` §"Seams que quedan fuera de
   este pedido" para el estado exacto donde quedó)
@@ -226,3 +227,54 @@ justo este ciclo.
 `./verificar.sh` verde: tsc x6, 27 tests, 12 literales, 99 migraciones.
 APK 1.9.6 (versionCode 23) generado igual que el anterior (local,
 apuntado a prod) para que la usuaria reintente el E2E de la tarea 5.
+
+## 2026-09-11: tarea 12 — el fix de la 11 no alcanzó, regresión propia real
+
+La usuaria reprobó 1.9.6: "no permite crear mantención si indico algún
+valor en NO y subo imagen" (falla igual al intento directo → se
+encola), "el chequeo... se envía a la oficina cuando haya señal y eso
+nunca ocurre" (el auto-reintento no llega a completar), y
+"sincronizar da fallo y no hace nada" (botón "Reintentar ahora" en
+Perfil).
+
+**Paso de descarte primero**: reproduje el escenario exacto ("Aceite
+de motor" en NO + foto etiquetada a ese ítem, mismo body/shape que
+manda mobile — checklist + `fotos_items` + multipart) contra el
+backend real vía la web de dev (mismo endpoint `POST
+/api/equipos/:id/registros-mantencion` que usa mobile). **Guardó
+limpio, sin error** — quedó "Con novedades" en el historial. Esto
+descarta un bug de backend para esta combinación puntual: el problema
+es del cliente mobile.
+
+**Regresión real encontrada en mi propio fix de la tarea 11**: el
+guard `ultimoIntentoEn` que agregué comparaba tiempo transcurrido
+contra CUALQUIER intento anterior con archivo(s), sin distinguir "el
+fetch anterior puede seguir viajando de verdad" (timeout del cliente,
+`AbortError`) de "el fetch anterior YA terminó con una respuesta o un
+error de red normal". Consecuencia: después de CUALQUIER intento
+fallido (no solo un timeout), el botón "Reintentar ahora" quedaba
+bloqueado en silencio hasta 90s después, sin ningún aviso — exactamente
+"sincronizar da fallo y no hace nada" que reportó la usuaria.
+
+**Fix**: nuevo campo `intentoEnVuelo` (boolean) — se pone `true` justo
+antes de lanzar un intento con archivo(s) y se limpia a `false` en
+cuanto llega CUALQUIER desenlace que confirma que el fetch ya terminó
+de verdad (respuesta HTTP de cualquier código, o un error de red que
+no sea el `AbortError` del timeout manual). El guard de "no relanzar
+en paralelo" ahora solo bloquea mientras `intentoEnVuelo` sigue `true`
+Y no pasó el margen del timeout — el único caso real donde el fetch
+original podría seguir viajando en segundo plano.
+
+**Lo que sigue abierto (no resuelto por este fix)**: el motivo de que
+el intento ONLINE DIRECTO (antes de encolar, en
+`ChecklistMantencionScreen.guardar()`) esté fallando en el teléfono de
+la usuaria en primer lugar — probablemente una subida real lenta
+(foto de cámara real + señal de terreno débil, contexto del negocio)
+que agota los 90s, no reproducible desde escritorio con buena señal.
+Este fix corrige el síntoma más grave y verificable (el botón de
+sincronizar bloqueado en silencio); si la falla del primer intento
+persiste, la cola ahora al menos puede reintentarse de verdad al
+tocar "Reintentar ahora" en vez de parecer congelada.
+
+`./verificar.sh` verde: tsc x6, 27 tests, 12 literales, 99 migraciones.
+APK 1.9.7 (versionCode 24) en build local para reintentar.
