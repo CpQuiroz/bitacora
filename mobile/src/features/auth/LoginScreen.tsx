@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from "react";
-import { Alert, KeyboardAvoidingView, Platform, Pressable, View } from "react-native";
+import { Alert, Pressable, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { tokens } from "@bitacora/design-tokens";
+import { Button, FUENTE_NATIVE, Input, Texto } from "@bitacora/ui/native";
 import { supabase } from "../../lib/supabase";
 import { apiJson } from "../../services/api";
 import { entrarConGoogle } from "./googleAuth";
-import { useTema } from "../../theme";
-import { Button, Input, LogoMark, Screen, Text } from "../../components/ui";
+import { LogoMark } from "../../components/ui";
+import { PantallaAuth } from "./PantallaAuth";
 import type { RootStackParamList } from "../../shell/navigation/types";
 
 // El botón de Google aparece solo cuando está configurado del lado
@@ -16,8 +18,8 @@ type RespuestaLogin =
   | { requiere_codigo: true; ticket: string; metodo: "totp" | "email" }
   | { requiere_codigo?: false; access_token: string; refresh_token: string };
 
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export function LoginScreen({ navigation }: NativeStackScreenProps<RootStackParamList, "Login">) {
-  const t = useTema();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [cargando, setCargando] = useState(false);
@@ -66,85 +68,65 @@ export function LoginScreen({ navigation }: NativeStackScreenProps<RootStackPara
   }
 
   return (
-    <Screen>
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
-        <View style={{ flex: 1, justifyContent: "center", gap: t.espacio(3) }}>
-          <View style={{ alignItems: "center", gap: t.espacio(2.5), marginBottom: t.espacio(4) }}>
-            <LogoMark size={56} />
-            <Text variante="titulo">Bitácora</Text>
-            <Text variante="etiqueta" tono="muted">
-              App de trabajo en terreno
-            </Text>
+    <PantallaAuth>
+      <View style={{ alignItems: "center", gap: tokens.space["2"], marginBottom: tokens.space["4"] }}>
+        <LogoMark size={56} />
+        <Texto tamano={tokens.size.h3} color={tokens.color.text} style={{ fontFamily: FUENTE_NATIVE.heading }}>
+          Bitácora
+        </Texto>
+        <Texto tamano={tokens.size.small} color={`${tokens.color.text}b3`}>
+          App de trabajo en terreno
+        </Texto>
+      </View>
+      <Input
+        etiqueta="Correo"
+        tipo="email"
+        autoCapitalizar={false}
+        valor={email}
+        onCambio={setEmail}
+        onSubmit={entrar}
+      />
+      <Input etiqueta="Contraseña" tipo="password" valor={password} onCambio={setPassword} onSubmit={entrar} />
+      {error ? (
+        <Texto tamano={tokens.size.small} color={tokens.color.accentRamp["700"]} style={{ textAlign: "center" }}>
+          {error}
+        </Texto>
+      ) : lento ? (
+        <Texto tamano={tokens.size.small} color={`${tokens.color.text}b3`} style={{ textAlign: "center" }}>
+          Conectando… puede tardar unos segundos si el servidor estuvo inactivo.
+        </Texto>
+      ) : null}
+      <Button tamano="lg" bloque onPress={entrar} cargando={cargando} deshabilitado={!email.trim() || !password}>
+        Entrar
+      </Button>
+      {GOOGLE_HABILITADO ? (
+        <>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: tokens.space["2"] }}>
+            <View style={{ flex: 1, height: 1, backgroundColor: tokens.color.divider }} />
+            <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
+              o
+            </Texto>
+            <View style={{ flex: 1, height: 1, backgroundColor: tokens.color.divider }} />
           </View>
-          <Input
-            etiqueta="Correo"
-            autoCapitalize="none"
-            autoCorrect={false}
-            keyboardType="email-address"
-            textContentType="emailAddress"
-            value={email}
-            onChangeText={setEmail}
-            returnKeyType="next"
-          />
-          <Input
-            etiqueta="Contraseña"
-            secureTextEntry
-            textContentType="password"
-            value={password}
-            onChangeText={setPassword}
-            returnKeyType="go"
-            onSubmitEditing={entrar}
-          />
-          {error ? (
-            <Text variante="etiqueta" tono="danger" style={{ textAlign: "center" }}>
-              {error}
-            </Text>
-          ) : lento ? (
-            <Text variante="etiqueta" tono="muted" style={{ textAlign: "center" }}>
-              Conectando… puede tardar unos segundos si el servidor estuvo inactivo.
-            </Text>
-          ) : null}
-          <Button
-            titulo="Entrar"
-            tamano="lg"
-            onPress={entrar}
-            cargando={cargando}
-            disabled={!email.trim() || !password}
-          />
-          {GOOGLE_HABILITADO ? (
-            <>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: t.espacio(2) }}>
-                <View style={{ flex: 1, height: 1, backgroundColor: t.colores.border }} />
-                <Text variante="caption" tono="muted">
-                  o
-                </Text>
-                <View style={{ flex: 1, height: 1, backgroundColor: t.colores.border }} />
-              </View>
-              <Button
-                titulo="Continuar con Google"
-                variante="secundario"
-                tamano="lg"
-                onPress={entrarGoogle}
-                cargando={conGoogle}
-              />
-            </>
-          ) : null}
-          <Pressable
-            hitSlop={10}
-            style={{ alignSelf: "center", paddingVertical: t.espacio(2), minHeight: 44, justifyContent: "center" }}
-            onPress={() =>
-              Alert.alert(
-                "¿Olvidaste tu contraseña?",
-                "Pídele a quien administra Bitácora en tu empresa que te genere una clave nueva desde el panel web."
-              )
-            }
-          >
-            <Text variante="etiqueta" tono="muted">
-              ¿Olvidaste tu contraseña?
-            </Text>
-          </Pressable>
-        </View>
-      </KeyboardAvoidingView>
-    </Screen>
+          <Button variante="secundario" tamano="lg" bloque onPress={entrarGoogle} cargando={conGoogle}>
+            Continuar con Google
+          </Button>
+        </>
+      ) : null}
+      <Pressable
+        hitSlop={10}
+        style={{ alignSelf: "center", paddingVertical: tokens.space["2"], minHeight: 44, justifyContent: "center" }}
+        onPress={() =>
+          Alert.alert(
+            "¿Olvidaste tu contraseña?",
+            "Pídele a quien administra Bitácora en tu empresa que te genere una clave nueva desde el panel web."
+          )
+        }
+      >
+        <Texto tamano={tokens.size.small} color={`${tokens.color.text}b3`}>
+          ¿Olvidaste tu contraseña?
+        </Texto>
+      </Pressable>
+    </PantallaAuth>
   );
 }

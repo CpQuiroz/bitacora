@@ -26,6 +26,8 @@ export function Input({
   requerido,
   iconoIzq,
   autoFoco,
+  autoCapitalizar = true,
+  onSubmit,
 }: PropsInput) {
   return (
     <div className="flex flex-col gap-ds-1">
@@ -48,6 +50,8 @@ export function Input({
           maxLength={maxLongitud}
           minLength={minLongitud}
           required={requerido}
+          autoCapitalize={autoCapitalizar ? undefined : "off"}
+          onKeyDown={onSubmit ? (e) => e.key === "Enter" && onSubmit() : undefined}
           aria-invalid={Boolean(error) || undefined}
           className={`h-11 rounded-ds-pill border ${bordeDe(error)} px-ds-4 ${iconoIzq ? "pl-ds-8" : ""} ${CAMPO_BASE}`}
         />

@@ -151,8 +151,33 @@ para renderizar, no se pudieron capturar en vivo sin login).
 Primitivas extendidas en el camino (huecos reales, no inventados):
 `Input.tipo="codigo"` (OTP), `maxLongitud`, `minLongitud`, `requerido`.
 
+### Bucket 1 — Login y selección de empresa (mobile) ✅
+
+`LoginScreen`, `Verify2faScreen`, `SinEmpresaScreen`, `MfaRequeridoScreen` —
+las 4 pantallas del flujo de auth de mobile. Nuevo `PantallaAuth.tsx`
+(análogo a `AuthLayout` en web): deliberadamente **no reusa**
+`components/ui/Screen.tsx` (shell de las ~50 pantallas de la app — tocar
+su fondo habría recoloreado todo Faena de una).
+
+Íconos: `Ionicons` → Lucide (`UserX`, `ShieldCheck`), mismo criterio del
+Paso 5.
+
+Primitivas extendidas (huecos reales de un formulario nativo real, no
+inventados): `Input.autoCapitalizar`, `Input.onSubmit` (encadena
+"siguiente"/"ir" del teclado — RN no tiene submit de formulario como el
+navegador), `textContentType` por `tipo` (autofill de iOS).
+
+**Sin verificación visual en vivo** — a diferencia de web (`next dev`
+real), intenté `expo start --web` y crasheó: `mobile/src/lib/fotoCola.ts`
+usa la API `Directory`/`Paths` de `expo-file-system`, que no soporta web
+(`this.validatePath is not a function` al cargar el módulo, antes de que
+React monte nada). **Es un bug preexistente de la app, no algo que
+causaron estos cambios** — nadie había podido previsualizar mobile en
+navegador. Verificado solo por `tsc` + mismos tokens/primitivas ya
+probados en vivo en web. Confirmación real pendiente en un dispositivo o
+simulador cuando la usuaria lo pruebe.
+
 ### Resto del orden del prompt
 
 2) Hoy/dashboard · 3) Órdenes de servicio (listado+ficha) · 4) Clientes ·
-5) Catálogo y stock · 6) Configuración · 7) resto — pendientes. Falta
-también el Login de **mobile** (`LoginScreen.tsx`).
+5) Catálogo y stock · 6) Configuración · 7) resto — pendientes.

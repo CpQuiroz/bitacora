@@ -61,6 +61,14 @@ export type PropsInput = PropsCampoBase & {
   requerido?: boolean;
   iconoIzq?: ReactNode;
   autoFoco?: boolean;
+  /**
+   * false para correo/usuario — evita la mayúscula automática de la
+   * primera letra (RN: autoCapitalize; web: no aplica, autoCapitalize del
+   * navegador no interfiere igual). Default true.
+   */
+  autoCapitalizar?: boolean;
+  /** Se llama al presionar "siguiente/ir" en el teclado (RN) o Enter (web). */
+  onSubmit?: () => void;
 };
 
 export type PropsTextarea = PropsCampoBase & {

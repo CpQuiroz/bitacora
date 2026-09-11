@@ -1,27 +1,30 @@
 import { View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { useTema } from "../../theme";
-import { Button, Screen, Text } from "../../components/ui";
+import { UserX } from "lucide-react-native";
+import { tokens } from "@bitacora/design-tokens";
+import { Button, Texto } from "@bitacora/ui/native";
+import { PantallaAuth } from "./PantallaAuth";
 import { useAuth } from "./AuthContext";
 
+// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export function SinEmpresaScreen() {
-  const t = useTema();
   const auth = useAuth();
   const correo = auth.session?.user?.email ?? "tu cuenta";
 
   return (
-    <Screen style={{ flex: 1, justifyContent: "center", gap: t.espacio(4) }}>
-      <View style={{ alignItems: "center", gap: t.espacio(3) }}>
-        <Ionicons name="person-remove-outline" size={44} color={t.colores.muted} />
-        <Text variante="titulo" style={{ textAlign: "center" }}>
+    <PantallaAuth>
+      <View style={{ alignItems: "center", gap: tokens.space["3"] }}>
+        <UserX size={44} strokeWidth={2.75} color={`${tokens.color.text}b3`} />
+        <Texto tamano={tokens.size.h4} color={tokens.color.text} style={{ textAlign: "center" }}>
           Sin empresa asociada
-        </Text>
-        <Text variante="etiqueta" tono="muted" style={{ textAlign: "center" }}>
-          {correo} inició sesión, pero ese correo no está registrado en ninguna empresa de Bitácora. Pídele a quien administra
-          Bitácora en tu empresa que te agregue con ese mismo correo.
-        </Text>
+        </Texto>
+        <Texto tamano={tokens.size.small} color={`${tokens.color.text}b3`} style={{ textAlign: "center" }}>
+          {correo} inició sesión, pero ese correo no está registrado en ninguna empresa de Bitácora. Pídele a quien
+          administra Bitácora en tu empresa que te agregue con ese mismo correo.
+        </Texto>
       </View>
-      <Button titulo="Cerrar sesión" variante="peligro" onPress={auth.cerrarSesion} />
-    </Screen>
+      <Button variante="peligro" bloque onPress={auth.cerrarSesion}>
+        Cerrar sesión
+      </Button>
+    </PantallaAuth>
   );
 }

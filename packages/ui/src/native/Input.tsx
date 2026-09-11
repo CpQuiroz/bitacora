@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { TextInput, View, type KeyboardTypeOptions } from "react-native";
+import { TextInput, View, type KeyboardTypeOptions, type TextInputProps } from "react-native";
 import { tokens } from "@bitacora/design-tokens";
 import type { PropsInput, TipoInput } from "../tipos";
 import { useMarca } from "./marca";
@@ -15,6 +15,15 @@ const TECLADO: Record<TipoInput, KeyboardTypeOptions> = {
   tel: "phone-pad",
 };
 
+const CONTENIDO: Record<TipoInput, TextInputProps["textContentType"]> = {
+  texto: "none",
+  numero: "none",
+  codigo: "oneTimeCode",
+  email: "emailAddress",
+  password: "password",
+  tel: "telephoneNumber",
+};
+
 export function Input({
   etiqueta,
   error,
@@ -27,6 +36,8 @@ export function Input({
   maxLongitud,
   iconoIzq,
   autoFoco,
+  autoCapitalizar = true,
+  onSubmit,
 }: PropsInput) {
   const marca = useMarca();
   const [enfocado, setEnfocado] = useState(false);
@@ -48,7 +59,12 @@ export function Input({
           autoFocus={autoFoco}
           secureTextEntry={tipo === "password"}
           keyboardType={TECLADO[tipo]}
+          textContentType={CONTENIDO[tipo]}
           maxLength={maxLongitud}
+          autoCapitalize={autoCapitalizar ? "sentences" : "none"}
+          autoCorrect={autoCapitalizar}
+          returnKeyType={onSubmit ? "go" : "next"}
+          onSubmitEditing={onSubmit}
           onFocus={() => setEnfocado(true)}
           onBlur={() => setEnfocado(false)}
           style={{
