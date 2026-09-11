@@ -453,9 +453,32 @@ fotos).
   sin discutirlo antes.
 - `scripts/check-colores.mjs`: BASELINE 14→13 (bajó solo).
 
+### "Homologar todo" — grupo de nav "Equipo" ✅
+
+`personas/page.tsx`, `personas/[id]/page.tsx` (4 pestañas: identidad,
+acceso y permisos, datos laborales, documentos), `flota/documentos-
+por-vencer/page.tsx`.
+
+- `DataTable.tsx` migrado de paso — usado por 8 archivos más (este,
+  y 6 páginas de Configuración + `/superadmin`).
+- **Efecto colateral encontrado y corregido:** `DataTable.tsx` y
+  `Modal.tsx` (migrado en el commit de "Operación") también los usa
+  `/superadmin`, un shell aparte (`SuperAdminShell`) fuera de los
+  grupos de nav de `DashboardShell` — sin arreglarlo, esa pantalla
+  habría quedado mezclando Faena y ds- en la misma vista. Se migró
+  `SuperAdminShell.tsx` + `superadmin/page.tsx` (la que realmente usa
+  ambos) para cerrar el hueco. Las otras 4 páginas de superadmin
+  (`roles`, `resumen`, `cuenta`, `empresas/[id]` — este último solo,
+  1447 líneas) quedan como seam nuevo: su contenido sigue en Faena,
+  parado sobre un shell ya en ds-, mismo patrón transitorio que tuvo
+  el dashboard principal entre el Paso 4 y el cierre de cada bucket.
+- `scripts/check-colores.mjs`: BASELINE 13→12 (bajó solo).
+
 ### Resto del orden del prompt
 
 6) Configuración · 7) resto — pendientes. Además, el pedido de la
-usuaria de homologar TODO suma: Agenda, Equipo (personas/documentos),
-Informes (9 páginas + charts) y las ~14 subpáginas de Configuración —
-ver "Alcance real descubierto" más arriba.
+usuaria de homologar TODO suma: Agenda (usa `DataTable`/
+`EstadoCitaRiel`, sin migrar), Informes (9 páginas + charts) y las
+~14 subpáginas de Configuración. `/superadmin` (roles/resumen/cuenta/
+empresas[id]) queda como seam adicional, fuera del alcance original
+del pedido (no es parte de la nav de `DashboardShell`).

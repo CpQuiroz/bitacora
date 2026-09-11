@@ -63,12 +63,16 @@ aparte — la usuaria habló de "la shell" en el contexto web.
 
 ## Próximo paso
 
-"Operación" ✅, "Clientes" ✅, "Dinero" ✅ y "Recursos" ✅ migrados y
-comiteados (13 commits desde que empezó "homologar todo"). `Stat.tsx`
-y `DocumentoForm.tsx` migrados de paso (compartidos). Sigue "Equipo"
-(personas, documentos-por-vencer) → Informes (9 páginas + charts) →
-Configuración (~14 subpáginas). Agenda queda para más adelante (usa
-`DataTable`/`EstadoCitaRiel`, sin migrar todavía).
+"Operación" ✅, "Clientes" ✅, "Dinero" ✅, "Recursos" ✅ y "Equipo" ✅
+migrados y comiteados (15 commits desde que empezó "homologar
+todo"). `Stat.tsx`, `DocumentoForm.tsx` y `DataTable.tsx` migrados de
+paso (compartidos). Efecto colateral: `/superadmin` (shell aparte)
+también usa `Modal`/`DataTable` — se migró `SuperAdminShell.tsx` +
+`superadmin/page.tsx` para no dejarlo mezclado; sus otras 4 páginas
+(roles/resumen/cuenta/empresas[id], ~2300 líneas) quedan como seam
+nuevo. Sigue Informes (9 páginas + charts) → Configuración (~14
+subpáginas). Agenda queda para más adelante (usa `DataTable`/
+`EstadoCitaRiel`, sin migrar todavía).
 
 ## Pendiente / notas generales
 
