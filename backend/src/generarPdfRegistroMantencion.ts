@@ -71,7 +71,7 @@ export async function generarPdfRegistroMantencion(datos: DatosRegistroMantencio
   ]);
   const colorMarca = datos.colorPrimario ?? PDF.marca;
   const titulo = "Registro de mantención";
-  const subtitulo = datos.tipo === "diario" ? "Chequeo diario" : "Programa de mantención";
+  const subtitulo = datos.tipo === "diario" ? "Checklist diario" : "Mantención Flota";
 
   const doc = new PDFDocument({ size: "LETTER", margin: 46 });
   const chunks: Buffer[] = [];
@@ -114,13 +114,21 @@ export async function generarPdfRegistroMantencion(datos: DatosRegistroMantencio
   ];
   doc.fontSize(10).fillColor(PDF.tinta);
   const colY = doc.y;
+  // Filas más compactas que otros PDFs del proyecto (24 en vez de 30) —
+  // acá SIEMPRE hay 8 filas fijas de identificación antes de un
+  // checklist que puede tener hasta 35 ítems; el margen se necesita
+  // para que el registro largo (Mantención Flota) entre en 1-2 páginas
+  // (pedido de la usuaria, 12-sep). No se tocó pdfEstilo.ts —
+  // tituloSeccion() es compartido con el resto de los PDFs del
+  // proyecto (OS, cotización, etc.), esto es solo de este documento.
+  const FILA_ID = 24;
   filasId.forEach(([etiqueta, valor], i) => {
     const x = i % 2 === 0 ? L : MID + 6;
-    const y = colY + Math.floor(i / 2) * 30;
-    doc.font("Helvetica").fontSize(7.5).fillColor(PDF.faint).text(etiqueta.toUpperCase(), x, y, { characterSpacing: 0.5, width: 240 });
-    doc.font("Helvetica-Bold").fontSize(10.5).fillColor(PDF.tinta).text(valor, x, y + 10, { width: 240 });
+    const y = colY + Math.floor(i / 2) * FILA_ID;
+    doc.font("Helvetica").fontSize(7).fillColor(PDF.faint).text(etiqueta.toUpperCase(), x, y, { characterSpacing: 0.5, width: 240 });
+    doc.font("Helvetica-Bold").fontSize(9.5).fillColor(PDF.tinta).text(valor, x, y + 9, { width: 240 });
   });
-  doc.y = colY + Math.ceil(filasId.length / 2) * 30 + 10;
+  doc.y = colY + Math.ceil(filasId.length / 2) * FILA_ID + 6;
 
   // ---- Checklist en 2 columnas por sección ----
   const conNovedad = datos.secciones.some((s) => s.items.some((i) => i.respuesta === "no"));
@@ -133,24 +141,29 @@ export async function generarPdfRegistroMantencion(datos: DatosRegistroMantencio
   let colDer = doc.y + 4;
   const colW = (R - L) / 2 - 8;
 
+  // Filas de ítem compactas (11pt en vez de 13) — con Mantención Flota
+  // (hasta 35 ítems en 7 secciones) la columna más cargada suma varias
+  // pulgadas; este ajuste es lo que más aporta a que el PDF entre en
+  // 1-2 páginas (pedido de la usuaria, 12-sep).
+  const ALTO_ITEM = 11;
   const dibujarSeccion = (sec: SeccionChecklistPdf, x: number, y: number): number => {
     let cursor = y;
-    doc.font("Helvetica-Bold").fontSize(9).fillColor(colorMarca).text(sec.nombre.toUpperCase(), x, cursor, { width: colW, characterSpacing: 0.4 });
-    cursor += 14;
+    doc.font("Helvetica-Bold").fontSize(8.5).fillColor(colorMarca).text(sec.nombre.toUpperCase(), x, cursor, { width: colW, characterSpacing: 0.4 });
+    cursor += 12;
     for (const it of sec.items) {
       const esNo = it.respuesta === "no";
       if (esNo) {
-        doc.rect(x - 2, cursor - 1.5, colW + 4, 13).fill(PDF.dangerSoft);
+        doc.rect(x - 2, cursor - 1, colW + 4, ALTO_ITEM).fill(PDF.dangerSoft);
         doc.fillColor(PDF.danger);
       } else {
         doc.fillColor(PDF.tinta);
       }
-      doc.font("Helvetica").fontSize(8.5).text(it.item, x, cursor, { width: colW - 34 });
-      doc.font("Helvetica-Bold").fontSize(8.5).text(RESPUESTA_TEXTO[it.respuesta], x + colW - 30, cursor, { width: 30, align: "right" });
+      doc.font("Helvetica").fontSize(7.5).text(it.item, x, cursor, { width: colW - 34 });
+      doc.font("Helvetica-Bold").fontSize(7.5).text(RESPUESTA_TEXTO[it.respuesta], x + colW - 30, cursor, { width: 30, align: "right" });
       doc.fillColor(PDF.tinta);
-      cursor += 13;
+      cursor += ALTO_ITEM;
     }
-    return cursor + 8;
+    return cursor + 5;
   };
 
   datos.secciones.forEach((sec, i) => {
@@ -164,62 +177,71 @@ export async function generarPdfRegistroMantencion(datos: DatosRegistroMantencio
 
   // ---- Observaciones ----
   if (datos.observaciones) {
-    if (doc.y > 640) doc.addPage();
+    if (doc.y > 680) doc.addPage();
     tituloSeccion(doc, "Observaciones", colorMarca, L);
-    doc.font("Helvetica").fontSize(10).fillColor(PDF.tinta).text(datos.observaciones, L, doc.y, { width: R - L });
-    doc.moveDown(0.8);
+    doc.font("Helvetica").fontSize(9).fillColor(PDF.tinta).text(datos.observaciones, L, doc.y, { width: R - L });
+    doc.moveDown(0.4);
   }
 
-  // ---- Fotos ----
+  // ---- Fotos ---- (thumbnails más chicos que otros PDFs del proyecto,
+  // 4 por fila en vez de 3 — mismo motivo que el checklist: que
+  // Mantención Flota, con más ítems "NO" y por lo tanto más fotos,
+  // entre en 1-2 páginas.)
   const fotosValidas = fotoBuffers
     .map((buf, i) => ({ buf, item: datos.fotos[i]?.item ?? null }))
     .filter((f): f is { buf: Buffer; item: string | null } => f.buf !== null);
   if (fotosValidas.length > 0) {
-    if (doc.y > 560) doc.addPage();
+    if (doc.y > 680) doc.addPage();
     tituloSeccion(doc, "Fotos de respaldo", colorMarca, L);
     let x = L;
-    const w = 158;
+    const w = 118;
+    const h = 66;
     let filaY = doc.y;
     for (const foto of fotosValidas.slice(0, 6)) {
       if (x + w > R) {
         x = L;
-        filaY += 108;
+        filaY += h + 20;
       }
-      if (filaY > 690) {
+      if (filaY > 710) {
         doc.addPage();
         filaY = doc.y;
       }
       try {
-        doc.image(foto.buf, x, filaY, { width: w, height: 88, fit: [w, 88] });
+        doc.image(foto.buf, x, filaY, { width: w, height: h, fit: [w, h] });
       } catch {
         /* foto corrupta */
       }
-      doc.font("Helvetica").fontSize(7).fillColor(PDF.muted).text(foto.item ?? "General", x, filaY + 90, { width: w });
+      doc.font("Helvetica").fontSize(6.5).fillColor(PDF.muted).text(foto.item ?? "General", x, filaY + h + 2, { width: w });
       doc.fillColor(PDF.tinta);
-      x += w + 8;
+      x += w + 6;
     }
-    doc.y = filaY + 108;
+    doc.y = filaY + h + 20;
   }
 
   // ---- Firma ----
   if (doc.y > 660) doc.addPage();
-  doc.moveDown(0.5);
+  doc.moveDown(0.3);
   tituloSeccion(doc, "Firma del responsable", colorMarca, L);
   if (datos.tipo === "programa" && firmaBuffer) {
     try {
-      doc.image(firmaBuffer, L, doc.y, { width: 170, height: 66, fit: [170, 66] });
-      doc.y += 70;
+      doc.image(firmaBuffer, L, doc.y, { width: 130, height: 46, fit: [130, 46] });
+      doc.y += 50;
     } catch {
-      doc.y += 8;
+      doc.y += 6;
     }
   }
-  doc.moveTo(L, doc.y + 18).lineTo(L + 240, doc.y + 18).strokeColor(PDF.regla).lineWidth(1).stroke();
-  doc.font("Helvetica").fontSize(8.5).fillColor(PDF.tinta).text(datos.realizadoPor ?? "", L, doc.y + 22, { width: 240 });
+  doc.moveTo(L, doc.y + 14).lineTo(L + 200, doc.y + 14).strokeColor(PDF.regla).lineWidth(1).stroke();
+  doc.font("Helvetica").fontSize(8).fillColor(PDF.tinta).text(datos.realizadoPor ?? "", L, doc.y + 18, { width: 200 });
 
-  // ---- Pie ----
+  // ---- Pie ---- (y=730/718, no 748/736: el margen inferior del
+  // documento es 792-46=746 — a 748 quedaba 2pt AFUERA, y pdfkit
+  // agrega una página nueva sola para ese texto. Con el resto del
+  // layout ya comprimido a 1 página, ese detalle pasó de ser
+  // invisible —siempre había otra página igual— a generar una página
+  // extra completa solo para el pie.)
   doc.font("Helvetica").fontSize(7.5).fillColor(PDF.faint);
-  doc.text(`Generado por Bitácora · ${fechaHoraCL(datos.generadoEn)}`, L, 748, { width: R - L, align: "center" });
-  if (datos.textoPie) doc.text(datos.textoPie, L, 736, { width: R - L, align: "center" });
+  doc.text(`Generado por Bitácora · ${fechaHoraCL(datos.generadoEn)}`, L, 730, { width: R - L, align: "center" });
+  if (datos.textoPie) doc.text(datos.textoPie, L, 718, { width: R - L, align: "center" });
 
   doc.end();
   return listo;

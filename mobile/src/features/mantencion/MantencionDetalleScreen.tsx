@@ -111,7 +111,7 @@ export function MantencionDetalleScreen({ route, navigation }: NativeStackScreen
           {fechaCorta(detalle.fecha)}
           {detalle.folio != null ? ` · N° ${String(detalle.folio).padStart(4, "0")}` : ""}
         </Text>
-        <Text weight="semibold">{detalle.tipo === "programa" ? "Programa de mantención" : "Chequeo diario"}</Text>
+        <Text weight="semibold">{detalle.tipo === "programa" ? "Mantención Flota" : "Checklist diario"}</Text>
         <Text variante="caption" tono="muted">
           {detalle.origen === "externo" ? "Taller externo" : "Interno"} · {quien}
           {detalle.kilometraje != null ? ` · ${detalle.kilometraje.toLocaleString("es-CL")} km` : ""}

@@ -59,7 +59,7 @@ export function ChecklistMantencionScreen({ route, navigation }: NativeStackScre
   const lienzo = useRef<LienzoFirmaHandle>(null);
 
   useEffect(() => {
-    navigation.setOptions({ title: tipo === "diario" ? "Chequeo diario" : "Programa de mantención" });
+    navigation.setOptions({ title: tipo === "diario" ? "Checklist diario" : "Mantención Flota" });
   }, [navigation, tipo]);
 
   useEffect(() => {

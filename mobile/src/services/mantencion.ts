@@ -39,7 +39,7 @@ function seccionesDe(lista: { nombre: string; preguntas: string[] }[]) {
 }
 
 const PLANTILLA_FALLBACK_PROGRAMA: PlantillaMantencion = {
-  nombre: "Mantención de flota - Programa",
+  nombre: "Mantención Flota",
   secciones: seccionesDe([
     { nombre: "Motor y filtros", preguntas: ["Aceite de motor", "Filtro de aceite del motor", "Filtro de combustible", "Filtro de aire", "Filtro decantador de agua", "Correa de accesorios"] },
     { nombre: "Niveles y fluidos", preguntas: ["Refrigerante de motor", "Aceite de dirección", "Aceite de diferenciales", "Aceite de mazas ejes direccional", "Aceite de mazas ejes traseros", "Aceite de transmisión", "Líquido limpiaparabrisas"] },
@@ -52,7 +52,7 @@ const PLANTILLA_FALLBACK_PROGRAMA: PlantillaMantencion = {
 };
 
 const PLANTILLA_FALLBACK_DIARIO: PlantillaMantencion = {
-  nombre: "Mantención de flota - Diario",
+  nombre: "Checklist diario",
   secciones: seccionesDe([
     { nombre: "Niveles y fluidos", preguntas: ["Aceite de motor", "Refrigerante de motor", "Líquido limpiaparabrisas"] },
     { nombre: "Neumáticos y luces", preguntas: ["Presión de neumáticos", "Estado llanta de repuesto", "Batería y terminales", "Luces y señalización"] },

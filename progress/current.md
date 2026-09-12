@@ -963,3 +963,48 @@ cosmético, no se tocó por no ser parte del pedido.
 
 `./verificar.sh` completo verde (tsc × 6, 101 migraciones). Datos de
 prueba limpiados de dev.
+
+## 2026-09-12: tarea 19, segunda vuelta — nombres finales + PDF a 1 página
+
+La usuaria pidió 2 ajustes sobre lo recién cerrado: renombrar
+"Diario"/"Programa" a **"Checklist diario"** y **"Mantención Flota"**,
+y que el PDF entre en 1 página (2 como máximo, solo si hace falta de
+verdad).
+
+**Nombres**: como la migración 101 nunca se había pusheado ni aplicado
+en prod (solo en dev), la reescribí directo con los nombres finales en
+vez de agregar una migración encima — más limpio que dejar un historial
+de renombres intermedios que nunca existieron en prod. El estado
+intermedio de dev (que ya tenía los nombres viejos de la primera
+vuelta) se corrigió con un rename directo, sin duplicar filas —
+verificado después que quedaron exactamente 2 templates por empresa,
+los nombres correctos. Alineé el nombre también en: subtítulo del PDF,
+título de pantalla en mobile (3 pantallas), y las etiquetas/badges de
+la UI web (toggle del formulario, filtro del historial, badges de la
+lista) — para que no quedara "Checklist diario" en un lado y "Diario"
+en otro dentro de la misma pantalla.
+
+**PDF a 1 página**: el caso más exigente (Mantención Flota, 35 ítems,
+2 "NO" con foto + firma) daba **3 páginas**, la última casi vacía.
+Comprimí el layout — SOLO de este PDF, sin tocar `pdfEstilo.ts`
+(compartido con el resto de los PDFs del proyecto: OS, cotización,
+etc.): alto de fila de identificación 30→24, alto de ítem de checklist
+13→11 (con fuente un poco más chica), fotos más chicas con más por
+fila (158×88→118×66), firma más chica.
+
+**Hallazgo real en el camino**: después de comprimir todo, seguía
+saliendo una página extra — el pie de página se dibujaba en `y=748`,
+pero el margen inferior real del documento es `792-46=746`: quedaba
+**2pt afuera del margen**, y pdfkit agrega una página nueva sola para
+cualquier texto que caiga fuera del margen. Esto siempre existió, pero
+era invisible porque el checklist largo ya generaba más de 1 página
+igual — recién se hizo visible al comprimir todo lo demás. Corregido a
+`y=730/718`.
+
+**Verificado en vivo de nuevo** (no asumido): mismos 2 casos reales que
+la primera vuelta (diario corto, y Mantención Flota con 35 ítems + 2
+fotos + firma, el caso más cargado posible) — los dos entran ahora en
+**1 sola página**, sin superposición de texto, legibles. Datos de
+prueba limpiados de dev otra vez.
+
+`./verificar.sh` completo verde.

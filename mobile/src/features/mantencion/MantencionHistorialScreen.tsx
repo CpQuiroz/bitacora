@@ -82,7 +82,7 @@ export function MantencionHistorialScreen({ route, navigation }: NativeStackScre
                 </Text>
               </View>
             </View>
-            <Text weight="semibold">{r.tipo === "programa" ? "Programa de mantención" : "Chequeo diario"}</Text>
+            <Text weight="semibold">{r.tipo === "programa" ? "Mantención Flota" : "Checklist diario"}</Text>
             <Text variante="caption" tono="muted">
               {r.origen === "externo" ? "Taller externo" : "Interno"}
               {r.realizado_por_nombre ? ` · ${r.realizado_por_nombre}` : ""}

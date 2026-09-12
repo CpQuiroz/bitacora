@@ -91,7 +91,7 @@ export function RegistrosMantencion({ equipo, puedeGestionar }: { equipo: Equipo
       {/* Barra de filtros */}
       <div className="flex flex-wrap items-end gap-ds-3 border-b border-ds-divider p-ds-5">
         <div className="w-40">
-          <Select etiqueta="Tipo" valor={tipo} onCambio={(v) => setTipo(v as FiltroTipo)} opciones={[{ valor: "", etiqueta: "Todos" }, { valor: "diario", etiqueta: "Diario" }, { valor: "programa", etiqueta: "Programa" }]} />
+          <Select etiqueta="Tipo" valor={tipo} onCambio={(v) => setTipo(v as FiltroTipo)} opciones={[{ valor: "", etiqueta: "Todos" }, { valor: "diario", etiqueta: "Checklist diario" }, { valor: "programa", etiqueta: "Mantención Flota" }]} />
         </div>
         <div className="flex flex-col gap-ds-1">
           <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Desde</label>
@@ -129,7 +129,7 @@ export function RegistrosMantencion({ equipo, puedeGestionar }: { equipo: Equipo
           <EmptyState
             icono={<Truck size={28} strokeWidth={2.75} />}
             titulo="Todavía no hay registros de mantención para este vehículo"
-            mensaje="Registra el chequeo diario o el Programa de Mantención para empezar el historial."
+            mensaje="Registra un Checklist diario o Mantención Flota para empezar el historial."
             accion={
               <Button iconoIzq={<Plus size={16} strokeWidth={2.75} />} onPress={() => setModalAbierto(true)}>
                 Nuevo registro
@@ -162,7 +162,7 @@ export function RegistrosMantencion({ equipo, puedeGestionar }: { equipo: Equipo
                       </td>
                       <td className="px-ds-4 py-ds-3">
                         <span className={`inline-block rounded-ds-sm px-2 py-0.5 text-[11px] font-semibold ${r.tipo === "programa" ? "bg-ds-brand/[0.08] text-ds-brand" : "bg-ds-text/[0.05] text-ds-text/60"}`}>
-                          {r.tipo === "programa" ? "Programa" : "Diario"}
+                          {r.tipo === "programa" ? "Mantención Flota" : "Checklist diario"}
                         </span>
                       </td>
                       <td className="px-ds-4 py-ds-3 text-ds-text/70">{r.origen === "externo" ? "Taller externo" : "Interno"}</td>
@@ -307,7 +307,7 @@ function DetalleRegistro({ equipoId, registroId, onCambio }: { equipoId: string;
         </div>
         <div>
           <p className="font-ds-body text-ds-caption font-medium text-ds-text/70">Tipo</p>
-          <p className="font-ds-body text-ds-small text-ds-text">{datos.tipo === "programa" ? "Programa" : "Diario"} · {datos.origen === "externo" ? (datos.proveedor?.nombre ?? "Taller externo") : (datos.responsable?.nombre ?? "—")}</p>
+          <p className="font-ds-body text-ds-small text-ds-text">{datos.tipo === "programa" ? "Mantención Flota" : "Checklist diario"} · {datos.origen === "externo" ? (datos.proveedor?.nombre ?? "Taller externo") : (datos.responsable?.nombre ?? "—")}</p>
         </div>
         <div>
           <p className="font-ds-body text-ds-caption font-medium text-ds-text/70">Kilometraje / horas motor</p>
@@ -577,8 +577,8 @@ function ModalNuevoRegistro({ equipo, onListo }: { equipo: Equipo; onListo: () =
         <legend className="mb-ds-1 font-ds-body text-[13px] font-semibold text-ds-text">Tipo de registro</legend>
         <div className="flex flex-wrap gap-ds-2">
           {([
-            { v: "diario", t: "Chequeo diario" },
-            { v: "programa", t: "Programa de mantención" },
+            { v: "diario", t: "Checklist diario" },
+            { v: "programa", t: "Mantención Flota" },
           ] as const).map((o) => (
             <button
               key={o.v}

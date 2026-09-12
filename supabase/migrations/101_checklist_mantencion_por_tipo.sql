@@ -3,36 +3,39 @@
 -- (250h/6 meses). Pedido real de la usuaria (12-sep-2026): hasta ahora
 -- ambos tipos usaban LA MISMA plantilla en checklist_templates (36
 -- ítems, 7 secciones) — el chequeo diario del chofer antes de salir a
--- ruta necesita ser mucho más corto que el Programa de Mantención en
--- taller.
+-- ruta necesita ser mucho más corto que el de la mantención cada 6
+-- meses/250h en taller. Nombres ajustados a pedido explícito de la
+-- usuaria (12-sep, segunda vuelta): "Checklist diario" y "Mantención
+-- Flota" (no "Mantención de flota - Diario/Programa").
 --
 -- No hay FK de registros_mantencion_equipo a checklist_templates (las
 -- respuestas quedan copiadas en registros_mantencion_equipo.checklist
 -- jsonb) — renombrar/agregar templates NO afecta registros ya creados.
 --
 -- 1) La plantilla existente ("Mantención de flota", 36 ítems) pasa a
---    llamarse "Mantención de flota - Programa" — sigue siendo la del
---    Programa de 250h/6 meses, sin cambios de contenido.
--- 2) Se agrega "Mantención de flota - Diario", más corta (11 ítems, 4
---    secciones) — pensada para un chequeo visual/funcional rápido
---    antes de salir a ruta, no un service completo. Es un punto de
---    partida razonable: cada empresa puede editarla libremente desde
---    Configuración → Checklists (CRUD genérico ya existente, sin
---    código nuevo — ver backend/src/routes/checklists.ts).
+--    llamarse "Mantención Flota" — sigue siendo la de cada 6 meses/
+--    250h, sin cambios de contenido.
+-- 2) Se agrega "Checklist diario", más corta (12 ítems, 4 secciones) —
+--    pensada para un chequeo visual/funcional rápido antes de salir a
+--    ruta, no un service completo. Es un punto de partida razonable:
+--    cada empresa puede editarla libremente desde Configuración →
+--    Checklists (CRUD genérico ya existente, sin código nuevo — ver
+--    backend/src/routes/checklists.ts).
 --
--- Idempotente: no duplica "- Diario" si ya existe (reintento seguro).
+-- Idempotente: no duplica "Checklist diario" si ya existe (reintento
+-- seguro).
 -- ============================================================
 
 update checklist_templates
-set nombre = 'Mantención de flota - Programa',
+set nombre = 'Mantención Flota',
     actualizado_en = now()
 where nombre = 'Mantención de flota';
 
 insert into checklist_templates (empresa_id, nombre, descripcion, secciones)
 select
   e.id,
-  'Mantención de flota - Diario',
-  'Chequeo visual/funcional antes de salir a ruta — más corto que el Programa de Mantención (250 h / 6 meses).',
+  'Checklist diario',
+  'Chequeo visual/funcional antes de salir a ruta — más corto que Mantención Flota (250 h / 6 meses).',
   '[
     {"nombre":"Niveles y fluidos","preguntas":[
       {"texto":"Aceite de motor","obligatorio":true},
@@ -57,12 +60,12 @@ select
   ]'::jsonb
 from empresas e
 where exists (
-  -- Solo empresas que ya usan Mantención de flota (tienen la de
-  -- Programa) — no le crea el módulo a una empresa que nunca lo usó.
+  -- Solo empresas que ya usan Mantención Flota — no le crea el módulo
+  -- a una empresa que nunca lo usó.
   select 1 from checklist_templates ct
-  where ct.empresa_id = e.id and ct.nombre = 'Mantención de flota - Programa'
+  where ct.empresa_id = e.id and ct.nombre = 'Mantención Flota'
 )
 and not exists (
   select 1 from checklist_templates ct2
-  where ct2.empresa_id = e.id and ct2.nombre = 'Mantención de flota - Diario'
+  where ct2.empresa_id = e.id and ct2.nombre = 'Checklist diario'
 );

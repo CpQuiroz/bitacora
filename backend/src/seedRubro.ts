@@ -32,7 +32,7 @@ function seccionesDe(lista: { nombre: string; preguntas: string[] }[]) {
 }
 
 const CHECKLIST_MANTENCION_PROGRAMA = {
-  nombre: "Mantención de flota - Programa",
+  nombre: "Mantención Flota",
   descripcion: "Programa de Mantención (250 h / 6 meses), en taller externo o interno.",
   secciones: seccionesDe([
     { nombre: "Motor y filtros", preguntas: ["Aceite de motor", "Filtro de aceite del motor", "Filtro de combustible", "Filtro de aire", "Filtro decantador de agua", "Correa de accesorios"] },
@@ -46,7 +46,7 @@ const CHECKLIST_MANTENCION_PROGRAMA = {
 };
 
 const CHECKLIST_MANTENCION_DIARIO = {
-  nombre: "Mantención de flota - Diario",
+  nombre: "Checklist diario",
   descripcion: "Chequeo visual/funcional antes de salir a ruta — más corto que el Programa de Mantención.",
   secciones: seccionesDe([
     { nombre: "Niveles y fluidos", preguntas: ["Aceite de motor", "Refrigerante de motor", "Líquido limpiaparabrisas"] },

@@ -109,14 +109,14 @@ export function MantencionVehiculoScreen({ navigation }: NativeStackScreenProps<
       {vehiculo && (
         <View style={{ flexDirection: "row", gap: t.espacio(3) }}>
           <BotonGrande
-            titulo="Chequeo diario"
+            titulo="Checklist diario"
             sub={hizoDiarioHoy ? "35 ítems · ya lo hiciste hoy" : "35 ítems · aún no lo haces hoy"}
             icono="checkmark-done-outline"
             tono="brand"
             onPress={() => irAChecklist("diario")}
           />
           <BotonGrande
-            titulo="Programa de mantención"
+            titulo="Mantención Flota"
             sub="Cada 250 h o 6 meses"
             icono="construct-outline"
             tono="accent"
