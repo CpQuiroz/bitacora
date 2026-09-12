@@ -24,7 +24,7 @@
 // ============================================================
 import { Router } from "express";
 import multer from "multer";
-import type { EstadoLevantamiento, FuncionColaborador } from "@bitacora/shared";
+import type { EstadoLevantamiento, FuncionColaborador, Levantamiento } from "@bitacora/shared";
 import { ESTADOS_LEVANTAMIENTO, FUNCIONES_LEVANTAMIENTOS } from "@bitacora/shared";
 import { supabase } from "../supabase";
 import type { RequestConEmpresa } from "../empresa";
@@ -243,6 +243,118 @@ levantamientosRouter.post(
 );
 
 // ------------------------------------------------------------
+// PATCH /:id — Admin edita los datos de creación (cliente, técnico
+// asignado, qué pidió evaluar). Si cambia el técnico y el levantamiento
+// seguía en 'creado', pasa a 'asignado' y se notifica — mismo criterio
+// que POST /.
+// ------------------------------------------------------------
+levantamientosRouter.patch(
+  "/:id",
+  ah<RequestConEmpresa>(async (req, res) => {
+    if (!(await moduloActivo(req, res))) return;
+    if (!esAdmin(req)) {
+      res.status(403).json({ error: "Solo un Admin puede editar un levantamiento" });
+      return;
+    }
+    const lev = await buscarLevantamiento(req.empresaId!, req.params.id);
+    if (!lev) {
+      res.status(404).json({ error: "Levantamiento no encontrado" });
+      return;
+    }
+    if (["aprobado", "rechazado"].includes(lev.estado)) {
+      res.status(409).json({ error: "Este levantamiento ya fue cerrado" });
+      return;
+    }
+
+    const { cliente_id, tecnico_id, descripcion_requerimiento } = req.body ?? {};
+    const cambios: Partial<Levantamiento> = { actualizado_en: new Date().toISOString() };
+
+    if (cliente_id !== undefined) {
+      if (typeof cliente_id !== "string" || !cliente_id) {
+        res.status(400).json({ error: "cliente_id inválido" });
+        return;
+      }
+      const { data: cliente } = await supabase.from("clientes").select("id").eq("empresa_id", req.empresaId!).eq("id", cliente_id).maybeSingle();
+      if (!cliente) {
+        res.status(400).json({ error: "cliente_id inválido" });
+        return;
+      }
+      cambios.cliente_id = cliente_id;
+    }
+
+    let notificarNuevoTecnico: string | null = null;
+    if (tecnico_id !== undefined) {
+      if (tecnico_id === null || tecnico_id === "") {
+        cambios.tecnico_id = null;
+        if (lev.estado === "asignado") cambios.estado = "creado";
+      } else {
+        if (typeof tecnico_id !== "string" || !(await esTecnicoAsignable(req.empresaId!, tecnico_id))) {
+          res.status(400).json({ error: "tecnico_id inválido — el usuario debe tener función Técnico o Chofer" });
+          return;
+        }
+        cambios.tecnico_id = tecnico_id;
+        if (tecnico_id !== lev.tecnico_id) {
+          if (lev.estado === "creado") cambios.estado = "asignado";
+          notificarNuevoTecnico = tecnico_id;
+        }
+      }
+    }
+
+    if (descripcion_requerimiento !== undefined) {
+      cambios.descripcion_requerimiento = typeof descripcion_requerimiento === "string" ? descripcion_requerimiento.trim() || null : null;
+    }
+
+    const { error } = await supabase.from("levantamientos").update(cambios).eq("id", lev.id);
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+
+    if (notificarNuevoTecnico) {
+      await notificar(req.empresaId!, notificarNuevoTecnico, "levantamiento_asignado", {
+        cuerpo: "Tienes un nuevo levantamiento asignado.",
+        entidadTipo: "levantamiento",
+        entidadId: lev.id,
+      });
+    }
+
+    res.json({ ok: true });
+  })
+);
+
+// ------------------------------------------------------------
+// DELETE /:id — Admin. Borrado real (levantamiento_materiales y
+// levantamiento_fotos caen en cascada) — bloqueado solo si ya está
+// 'aprobado' (perdería la trazabilidad de por qué nació esa OS); un
+// 'rechazado' sí se puede borrar, no deja nada corriendo.
+// ------------------------------------------------------------
+levantamientosRouter.delete(
+  "/:id",
+  ah<RequestConEmpresa>(async (req, res) => {
+    if (!(await moduloActivo(req, res))) return;
+    if (!esAdmin(req)) {
+      res.status(403).json({ error: "Solo un Admin puede eliminar un levantamiento" });
+      return;
+    }
+    const lev = await buscarLevantamiento(req.empresaId!, req.params.id);
+    if (!lev) {
+      res.status(404).json({ error: "Levantamiento no encontrado" });
+      return;
+    }
+    if (lev.estado === "aprobado") {
+      res.status(409).json({ error: "Un levantamiento aprobado no se puede eliminar — ya generó una orden de servicio" });
+      return;
+    }
+    const { error } = await supabase.from("levantamientos").delete().eq("empresa_id", req.empresaId!).eq("id", lev.id);
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    res.status(204).end();
+  })
+);
+
+// ------------------------------------------------------------
 // PATCH /:id/completar — el técnico asignado completa lo observado en
 // terreno: descripción + materiales (reemplaza los existentes) + pasa a
 // 'completado_tecnico'. No toca stock. El Admin también puede (por si
@@ -352,6 +464,49 @@ levantamientosRouter.post(
       return;
     }
     res.status(201).json({ id: data.id, creado_en: data.creado_en, url: await urlFirmada(key, 15) });
+  })
+);
+
+// ------------------------------------------------------------
+// DELETE /:id/fotos/:fotoId — Admin o el técnico asignado (se
+// equivocó de foto o salió borrosa). Borrado real de la fila — mismo
+// criterio que registro_mantencion_fotos, no borra el objeto de S3.
+// ------------------------------------------------------------
+levantamientosRouter.delete(
+  "/:id/fotos/:fotoId",
+  ah<RequestConEmpresa>(async (req, res) => {
+    if (!(await moduloActivo(req, res))) return;
+    const lev = await buscarLevantamiento(req.empresaId!, req.params.id);
+    if (!lev) {
+      res.status(404).json({ error: "Levantamiento no encontrado" });
+      return;
+    }
+    const esElTecnico = lev.tecnico_id === req.userId && (await esTecnicoAsignable(req.empresaId!, req.userId!));
+    if (!esAdmin(req) && !esElTecnico) {
+      res.status(403).json({ error: "No puedes eliminar fotos de este levantamiento" });
+      return;
+    }
+    if (["aprobado", "rechazado"].includes(lev.estado)) {
+      res.status(409).json({ error: "Este levantamiento ya fue cerrado" });
+      return;
+    }
+    const { data: foto } = await supabase
+      .from("levantamiento_fotos")
+      .select("id")
+      .eq("empresa_id", req.empresaId!)
+      .eq("levantamiento_id", lev.id)
+      .eq("id", req.params.fotoId)
+      .maybeSingle();
+    if (!foto) {
+      res.status(404).json({ error: "Foto no encontrada" });
+      return;
+    }
+    const { error } = await supabase.from("levantamiento_fotos").delete().eq("empresa_id", req.empresaId!).eq("id", foto.id);
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    res.status(204).end();
   })
 );
 

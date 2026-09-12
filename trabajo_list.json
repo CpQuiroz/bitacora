@@ -215,6 +215,21 @@
         "./verificar.sh verde"
       ],
       "status": "done"
+    },
+    {
+      "id": 16,
+      "name": "levantamientos_editar_fotos_eliminar",
+      "title": "Levantamientos (web): Admin puede editar, subir/eliminar fotos y eliminar el levantamiento",
+      "description": "Pedido de la usuaria tras cerrar el módulo: el Admin necesitaba poder editar un levantamiento ya creado (cliente/técnico/descripción), subir fotos desde la web (antes solo el técnico en mobile), eliminar una foto puntual, y eliminar el levantamiento entero. Backend: PATCH /api/levantamientos/:id (edita, reasigna técnico con notificación si cambia, bloqueado si aprobado/rechazado), DELETE /api/levantamientos/:id/fotos/:fotoId (Admin o el técnico asignado), DELETE /api/levantamientos/:id (Admin, bloqueado solo si 'aprobado' — perdería la trazabilidad de la OS que generó). POST /:id/fotos ya permitía Admin, solo faltaba la UI. Web: botón Editar (formulario inline con ComboboxCliente/ComboboxResponsable), input de archivo + miniaturas con botón eliminar al hover, botón Eliminar levantamiento en el pie del modal.",
+      "acceptance": [
+        "Editar cambia cliente/técnico/descripción y respeta la transición creado→asignado al asignar técnico por primera vez",
+        "Subir foto (Admin) funciona igual que ya funcionaba para el técnico",
+        "Eliminar foto puntual funciona (probado vía API para no bloquear el navegador con el confirm() nativo)",
+        "Eliminar levantamiento funciona y lo saca de la lista (probado vía API, mismo motivo)",
+        "tsc backend + web limpio, ./verificar.sh verde",
+        "Verificado en vivo contra dev: crear → editar (asigna técnico, pasa a Asignado) → subir foto → eliminar foto → eliminar levantamiento — los 5 pasos funcionaron"
+      ],
+      "status": "done"
     }
   ]
 }

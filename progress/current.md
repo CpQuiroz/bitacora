@@ -495,3 +495,26 @@ migraciones**, audit:tenant 0 hallazgos.
 Pendiente real: activar el módulo en prod (`empresa_modulos` vía panel
 Super-Admin, apagado por defecto) cuando la usuaria quiera probarlo
 ahí; correr la migración 100 en prod (ella la corre).
+
+## 2026-09-12: tarea 16 — Admin edita/sube-elimina fotos/elimina levantamiento
+
+Pedido de seguimiento inmediato tras cerrar el módulo. Backend nuevo:
+`PATCH /:id` (editar cliente/técnico/descripción — reasignar técnico
+notifica y respeta creado→asignado), `DELETE /:id/fotos/:fotoId`
+(Admin o el técnico asignado), `DELETE /:id` (Admin, bloqueado solo si
+`aprobado` — perdería la trazabilidad de la OS que generó; `rechazado`
+sí se puede borrar). `POST /:id/fotos` ya aceptaba Admin desde el
+Paso 2 original, solo faltaba la UI web.
+
+**Verificado en vivo contra dev** (crear → editar asignando técnico,
+confirmó el paso automático creado→asignado → subir foto → eliminar
+foto → eliminar levantamiento). **Encontré un límite real de mis
+herramientas de navegador**: "Eliminar foto" y "Eliminar
+levantamiento" usan `window.confirm()` (mismo patrón que el resto del
+código, ej. Mantención) — un diálogo nativo bloquea el navegador para
+la automatización y no lo puedo cerrar yo mismo; tuve que pedirle a la
+usuaria que lo aceptara a mano una vez. Terminé de verificar esas dos
+acciones llamando la API directo (mismo resultado, sin volver a
+disparar el diálogo).
+
+`./verificar.sh` verde. Datos de prueba limpiados de dev.
