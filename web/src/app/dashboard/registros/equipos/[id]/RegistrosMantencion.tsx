@@ -424,6 +424,24 @@ function ModalNuevoRegistro({ equipo, onListo }: { equipo: Equipo; onListo: () =
 
   useEffect(() => {
     (async () => {
+      const resProv = await apiFetch("/api/proveedores");
+      if (resProv.ok) setProveedores((await resProv.json()).filter((p: Proveedor) => p.activo));
+    })();
+  }, []);
+
+  // Recarga el checklist correcto cada vez que cambia `tipo` (diario ⇒
+  // checklist corto, programa ⇒ el completo de 250h/6 meses — pedido
+  // real de la usuaria, 12-sep-2026: antes ambos compartían UNA sola
+  // plantilla). Limpia respuestas/fotos/secciones abiertas al cambiar:
+  // quedan ligadas a los ítems de la plantilla anterior, no tiene
+  // sentido arrastrarlas a un checklist distinto.
+  useEffect(() => {
+    setCargando(true);
+    setErrorCarga(null);
+    setRespuestas({});
+    setFotos([]);
+    setAbiertas(new Set([0]));
+    (async () => {
       // Sin equipoId a propósito: la ruta es /api/equipos/registros-mantencion/plantilla
       // (registrosMantencion.ts la registra ANTES de las rutas con :equipoId
       // justamente para no chocar con ellas). Bug real encontrado en vivo
@@ -431,16 +449,12 @@ function ModalNuevoRegistro({ equipo, onListo }: { equipo: Equipo; onListo: () =
       // GET /:equipoId/registros-mantencion/:id con id="plantilla" y
       // rompía con 500 (uuid inválido) — el modal de "Nuevo registro"
       // nunca llegaba a cargar, así que tampoco se podía subir una foto.
-      const [resP, resProv] = await Promise.all([
-        apiFetch(`/api/equipos/registros-mantencion/plantilla`),
-        apiFetch("/api/proveedores"),
-      ]);
+      const resP = await apiFetch(`/api/equipos/registros-mantencion/plantilla?tipo=${tipo}`);
       if (resP.ok) setPlantilla(await resP.json());
       else setErrorCarga("No se pudo cargar el checklist.");
-      if (resProv.ok) setProveedores((await resProv.json()).filter((p: Proveedor) => p.activo));
       setCargando(false);
     })();
-  }, [equipo.id]);
+  }, [tipo]);
 
   const responder = (s: string, i: string, v: RespuestaChecklistMantencion) =>
     setRespuestas((r) => ({ ...r, [clave(s, i)]: v }));

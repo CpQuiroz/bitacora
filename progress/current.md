@@ -901,3 +901,65 @@ todavía sin confirmar por la usuaria).
 Pendiente, como siempre con este archivo: la usuaria tiene que
 volver a subirlo a mano a su Project de claude.ai — no se sincroniza
 solo.
+
+## 2026-09-12: tarea 19 — checklist de mantención distinto por tipo + verificación del PDF
+
+Pedido de la usuaria: el chequeo diario y el Programa (250h/6 meses)
+compartían UNA sola plantilla de checklist (36 ítems, 7 secciones) —
+necesitaba una más corta para el diario. Además pidió confirmar que
+el PDF muestra todos los campos con su respuesta sí/no/na más la
+foto donde corresponda.
+
+**Auditoría antes de tocar nada**: confirmé que `checklist_templates`
+no tiene FK desde `registros_mantencion_equipo` (las respuestas quedan
+copiadas en el registro al crearlo) — renombrar/agregar plantillas no
+afecta ningún registro ya existente. También confirmé (0 filas) que
+ningún `tipos_os` usa esa plantilla para OS, así que renombrarla era
+seguro.
+
+**Migración 101** (aplicada en dev): renombra la plantilla existente a
+"Mantención de flota - Programa" (sin tocar su contenido) y agrega
+"Mantención de flota - Diario" — 12 ítems / 4 secciones, un punto de
+partida razonable (chequeo visual/funcional rápido antes de salir a
+ruta: niveles básicos, neumáticos/luces, frenos/dirección, seguridad)
+que la empresa puede editar libremente desde Configuración →
+Checklists (CRUD genérico ya existente, sin código nuevo). Se lo dejé
+claro a la usuaria: es mi propuesta de contenido, no una decisión de
+negocio cerrada.
+
+**Backend**: `GET /registros-mantencion/plantilla` ahora exige
+`?tipo=diario|programa` (400 si falta/inválido) y devuelve la
+plantilla correcta, con un fallback hardcodeado por tipo si la
+empresa borró la fila. `seedRubro.ts` siembra ambas plantillas para
+empresas nuevas de rubro transporte.
+
+**Web**: `ModalNuevoRegistro` — el toggle Diario/Programa antes no
+hacía nada (la plantilla se pedía una sola vez, sin `tipo`, al montar
+el modal). Ahora el fetch depende de `tipo` y se recarga al tocar el
+toggle, limpiando respuestas/fotos/secciones abiertas (quedaban
+ligadas a ítems de la plantilla anterior).
+
+**Mobile**: `obtenerPlantillaMantencion(tipo)` parametrizado; caché
+por tipo (`mantencion:plantilla:diario`/`:programa` — antes una sola
+clave servía mal a uno de los dos tipos si el otro se cacheaba
+encima); 2 fallbacks offline (corto/largo).
+
+**PDF — verificado en vivo, no solo leyendo código**: antes de tocar
+nada confirmé leyendo `generarPdfRegistroMantencion.ts` que ya
+recorre TODAS las secciones/ítems del checklist guardado (sin
+filtrar) y ya arma "Fotos de respaldo" con la etiqueta del ítem. Para
+no quedarme solo con la lectura, creé un registro diario real (12
+ítems, 1 NO con foto) y uno programa real (35 ítems, 2 NO con fotos +
+firma) contra dev vía API directa (login por magiclink,
+`prueba@bitacora.app`), descargué ambos PDFs y los renderticé con
+`pdftoppm` para mirarlos — los dos salen correctos: título con el
+tipo, TODOS los ítems con su respuesta agrupados por sección, los NO
+resaltados en rojo, fotos con su etiqueta, firma (imagen) solo en el
+de programa. **No hizo falta ningún cambio de código en el PDF** —
+esa parte del pedido ya estaba hecha. Nota menor sin importancia
+funcional: con 35 ítems + 2 fotos + firma el PDF de programa se
+extiende a 3 páginas y la última queda casi en blanco (solo el pie) —
+cosmético, no se tocó por no ser parte del pedido.
+
+`./verificar.sh` completo verde (tsc × 6, 101 migraciones). Datos de
+prueba limpiados de dev.

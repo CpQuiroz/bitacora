@@ -20,13 +20,21 @@ import { supabase } from "./supabase";
 
 const APLICA_VALIDO = new Set(["colaborador", "vehiculo", "ambos"]);
 
-// Checklist "Mantención de flota" (migración 96) — para empresas de
-// transporte nuevas. La migración ya lo sembró en las existentes.
-// Idempotente: no lo duplica si ya hay uno con ese nombre.
-const CHECKLIST_MANTENCION_FLOTA = {
-  nombre: "Mantención de flota",
-  descripcion: "Chequeo diario del camión y Programa de Mantención (250 h / 6 meses).",
-  secciones: [
+// Checklists "Mantención de flota" (migración 96, separados por tipo
+// desde la migración 101) — para empresas de transporte nuevas. Las
+// migraciones ya los sembraron en las existentes. Idempotente: no
+// duplica si ya hay uno con ese nombre. El diario es deliberadamente
+// más corto que el Programa (chequeo antes de salir a ruta, no un
+// service completo) — cada empresa puede editar cualquiera de los dos
+// desde Configuración → Checklists.
+function seccionesDe(lista: { nombre: string; preguntas: string[] }[]) {
+  return lista.map((s) => ({ nombre: s.nombre, preguntas: s.preguntas.map((texto) => ({ texto, obligatorio: true })) }));
+}
+
+const CHECKLIST_MANTENCION_PROGRAMA = {
+  nombre: "Mantención de flota - Programa",
+  descripcion: "Programa de Mantención (250 h / 6 meses), en taller externo o interno.",
+  secciones: seccionesDe([
     { nombre: "Motor y filtros", preguntas: ["Aceite de motor", "Filtro de aceite del motor", "Filtro de combustible", "Filtro de aire", "Filtro decantador de agua", "Correa de accesorios"] },
     { nombre: "Niveles y fluidos", preguntas: ["Refrigerante de motor", "Aceite de dirección", "Aceite de diferenciales", "Aceite de mazas ejes direccional", "Aceite de mazas ejes traseros", "Aceite de transmisión", "Líquido limpiaparabrisas"] },
     { nombre: "Embrague y transmisión", preguntas: ["Ajuste de embrague", "Engrasado de embrague", "Rodamiento de embrague", "Collarín del embrague"] },
@@ -34,25 +42,43 @@ const CHECKLIST_MANTENCION_FLOTA = {
     { nombre: "Frenos", preguntas: ["Ajustadores de freno delantero", "Ajustadores de frenos traseros", "Sistema de frenos de aire / válvulas"] },
     { nombre: "Neumáticos y eléctrico", preguntas: ["Presión de neumáticos", "Profundidad banda de rodado", "Estado llanta de repuesto", "Batería y terminales", "Luces y señalización"] },
     { nombre: "Seguridad y documentación", preguntas: ["Extintor vigente", "Botiquín / kit de emergencia", "Triángulos y conos de seguridad"] },
-  ].map((s) => ({ nombre: s.nombre, preguntas: s.preguntas.map((texto) => ({ texto, obligatorio: true })) })),
+  ]),
 };
+
+const CHECKLIST_MANTENCION_DIARIO = {
+  nombre: "Mantención de flota - Diario",
+  descripcion: "Chequeo visual/funcional antes de salir a ruta — más corto que el Programa de Mantención.",
+  secciones: seccionesDe([
+    { nombre: "Niveles y fluidos", preguntas: ["Aceite de motor", "Refrigerante de motor", "Líquido limpiaparabrisas"] },
+    { nombre: "Neumáticos y luces", preguntas: ["Presión de neumáticos", "Estado llanta de repuesto", "Batería y terminales", "Luces y señalización"] },
+    { nombre: "Frenos y dirección", preguntas: ["Sistema de frenos de aire / válvulas", "Terminal de dirección"] },
+    { nombre: "Seguridad y documentación", preguntas: ["Extintor vigente", "Botiquín / kit de emergencia", "Triángulos y conos de seguridad"] },
+  ]),
+};
+
+async function sembrarUnChecklist(empresaId: string, plantilla: typeof CHECKLIST_MANTENCION_PROGRAMA): Promise<void> {
+  const { data: existente } = await supabase
+    .from("checklist_templates")
+    .select("id")
+    .eq("empresa_id", empresaId)
+    .eq("nombre", plantilla.nombre)
+    .maybeSingle();
+  if (existente) return;
+  const { error } = await supabase.from("checklist_templates").insert({
+    empresa_id: empresaId,
+    nombre: plantilla.nombre,
+    descripcion: plantilla.descripcion,
+    secciones: plantilla.secciones,
+  });
+  if (error) console.error(`Error sembrando checklist "${plantilla.nombre}":`, error);
+}
 
 async function sembrarChecklistMantencion(empresaId: string): Promise<void> {
   try {
-    const { data: existente } = await supabase
-      .from("checklist_templates")
-      .select("id")
-      .eq("empresa_id", empresaId)
-      .eq("nombre", CHECKLIST_MANTENCION_FLOTA.nombre)
-      .maybeSingle();
-    if (existente) return;
-    const { error } = await supabase.from("checklist_templates").insert({
-      empresa_id: empresaId,
-      nombre: CHECKLIST_MANTENCION_FLOTA.nombre,
-      descripcion: CHECKLIST_MANTENCION_FLOTA.descripcion,
-      secciones: CHECKLIST_MANTENCION_FLOTA.secciones,
-    });
-    if (error) console.error("Error sembrando checklist de mantención:", error);
+    await Promise.all([
+      sembrarUnChecklist(empresaId, CHECKLIST_MANTENCION_PROGRAMA),
+      sembrarUnChecklist(empresaId, CHECKLIST_MANTENCION_DIARIO),
+    ]);
   } catch (err) {
     console.error("Error en sembrarChecklistMantencion():", err);
   }

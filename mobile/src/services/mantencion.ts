@@ -31,9 +31,16 @@ export type MantencionInicio = {
   registros: MantencionResumen[];
 };
 
-const PLANTILLA_FALLBACK: PlantillaMantencion = {
-  nombre: "Mantención de flota",
-  secciones: [
+// Un fallback por tipo (12-sep-2026: el diario y el programa dejaron de
+// compartir una sola plantilla — el diario es bastante más corto). Se
+// usan solo si el backend no responde Y no hay nada en caché todavía.
+function seccionesDe(lista: { nombre: string; preguntas: string[] }[]) {
+  return lista.map((s) => ({ nombre: s.nombre, preguntas: s.preguntas.map((texto) => ({ texto, obligatorio: true })) }));
+}
+
+const PLANTILLA_FALLBACK_PROGRAMA: PlantillaMantencion = {
+  nombre: "Mantención de flota - Programa",
+  secciones: seccionesDe([
     { nombre: "Motor y filtros", preguntas: ["Aceite de motor", "Filtro de aceite del motor", "Filtro de combustible", "Filtro de aire", "Filtro decantador de agua", "Correa de accesorios"] },
     { nombre: "Niveles y fluidos", preguntas: ["Refrigerante de motor", "Aceite de dirección", "Aceite de diferenciales", "Aceite de mazas ejes direccional", "Aceite de mazas ejes traseros", "Aceite de transmisión", "Líquido limpiaparabrisas"] },
     { nombre: "Embrague y transmisión", preguntas: ["Ajuste de embrague", "Engrasado de embrague", "Rodamiento de embrague", "Collarín del embrague"] },
@@ -41,16 +48,28 @@ const PLANTILLA_FALLBACK: PlantillaMantencion = {
     { nombre: "Frenos", preguntas: ["Ajustadores de freno delantero", "Ajustadores de frenos traseros", "Sistema de frenos de aire / válvulas"] },
     { nombre: "Neumáticos y eléctrico", preguntas: ["Presión de neumáticos", "Profundidad banda de rodado", "Estado llanta de repuesto", "Batería y terminales", "Luces y señalización"] },
     { nombre: "Seguridad y documentación", preguntas: ["Extintor vigente", "Botiquín / kit de emergencia", "Triángulos y conos de seguridad"] },
-  ].map((s) => ({ nombre: s.nombre, preguntas: s.preguntas.map((texto) => ({ texto, obligatorio: true })) })),
+  ]),
 };
 
-export async function obtenerPlantillaMantencion(): Promise<PlantillaMantencion> {
-  const res = await apiJson<PlantillaMantencion>("/api/equipos/registros-mantencion/plantilla");
+const PLANTILLA_FALLBACK_DIARIO: PlantillaMantencion = {
+  nombre: "Mantención de flota - Diario",
+  secciones: seccionesDe([
+    { nombre: "Niveles y fluidos", preguntas: ["Aceite de motor", "Refrigerante de motor", "Líquido limpiaparabrisas"] },
+    { nombre: "Neumáticos y luces", preguntas: ["Presión de neumáticos", "Estado llanta de repuesto", "Batería y terminales", "Luces y señalización"] },
+    { nombre: "Frenos y dirección", preguntas: ["Sistema de frenos de aire / válvulas", "Terminal de dirección"] },
+    { nombre: "Seguridad y documentación", preguntas: ["Extintor vigente", "Botiquín / kit de emergencia", "Triángulos y conos de seguridad"] },
+  ]),
+};
+
+export async function obtenerPlantillaMantencion(tipo: TipoRegistroMantencion): Promise<PlantillaMantencion> {
+  const claveCache = `mantencion:plantilla:${tipo}`;
+  const res = await apiJson<PlantillaMantencion>(`/api/equipos/registros-mantencion/plantilla?tipo=${tipo}`);
   if (res.ok && res.data?.secciones?.length) {
-    await guardarCache("mantencion:plantilla", res.data);
+    await guardarCache(claveCache, res.data);
     return res.data;
   }
-  return (await leerCache<PlantillaMantencion>("mantencion:plantilla"))?.datos ?? PLANTILLA_FALLBACK;
+  const fallback = tipo === "diario" ? PLANTILLA_FALLBACK_DIARIO : PLANTILLA_FALLBACK_PROGRAMA;
+  return (await leerCache<PlantillaMantencion>(claveCache))?.datos ?? fallback;
 }
 
 export async function obtenerMantencionInicio(

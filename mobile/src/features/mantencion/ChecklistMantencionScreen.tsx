@@ -63,7 +63,7 @@ export function ChecklistMantencionScreen({ route, navigation }: NativeStackScre
   }, [navigation, tipo]);
 
   useEffect(() => {
-    void obtenerPlantillaMantencion().then(setPlantilla);
+    void obtenerPlantillaMantencion(tipo).then(setPlantilla);
     if (tipo === "programa") void listarProveedores().then((p) => setProveedores(p.filter((x) => x.activo)));
   }, [tipo]);
 
