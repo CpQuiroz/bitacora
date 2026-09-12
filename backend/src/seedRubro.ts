@@ -33,26 +33,32 @@ function seccionesDe(lista: { nombre: string; preguntas: string[] }[]) {
 
 const CHECKLIST_MANTENCION_PROGRAMA = {
   nombre: "Mantención Flota",
-  descripcion: "Programa de Mantención (250 h / 6 meses), en taller externo o interno.",
+  descripcion: "Service preventivo cada 6 meses / 250h, por sistema del camión.",
   secciones: seccionesDe([
-    { nombre: "Motor y filtros", preguntas: ["Aceite de motor", "Filtro de aceite del motor", "Filtro de combustible", "Filtro de aire", "Filtro decantador de agua", "Correa de accesorios"] },
-    { nombre: "Niveles y fluidos", preguntas: ["Refrigerante de motor", "Aceite de dirección", "Aceite de diferenciales", "Aceite de mazas ejes direccional", "Aceite de mazas ejes traseros", "Aceite de transmisión", "Líquido limpiaparabrisas"] },
-    { nombre: "Embrague y transmisión", preguntas: ["Ajuste de embrague", "Engrasado de embrague", "Rodamiento de embrague", "Collarín del embrague"] },
-    { nombre: "Dirección y suspensión", preguntas: ["Terminal de dirección", "Rótulas de brazo viajero", "Rótulas de barra estabilizadora", "Pernos de muelle", "Cruceta flecha de dirección", "Crucetas de flecha intereje", "Flechas deslizables"] },
-    { nombre: "Frenos", preguntas: ["Ajustadores de freno delantero", "Ajustadores de frenos traseros", "Sistema de frenos de aire / válvulas"] },
-    { nombre: "Neumáticos y eléctrico", preguntas: ["Presión de neumáticos", "Profundidad banda de rodado", "Estado llanta de repuesto", "Batería y terminales", "Luces y señalización"] },
-    { nombre: "Seguridad y documentación", preguntas: ["Extintor vigente", "Botiquín / kit de emergencia", "Triángulos y conos de seguridad"] },
+    { nombre: "Motor y lubricación", preguntas: ["Cambio de aceite y filtro de motor", "Filtro de combustible", "Filtro de aire", "Correas y mangueras"] },
+    { nombre: "Enfriamiento", preguntas: ["Refrigerante (nivel y estado)", "Radiador y manguitos"] },
+    { nombre: "Transmisión y embrague", preguntas: ["Nivel de aceite de transmisión", "Ajuste y desgaste del embrague"] },
+    { nombre: "Diferenciales y ejes", preguntas: ["Nivel de aceite diferencial", "Rodamientos de cubo"] },
+    { nombre: "Dirección y suspensión", preguntas: ["Terminales y rótulas de dirección", "Muelles y amortiguadores"] },
+    { nombre: "Frenos", preguntas: ["Guarniciones / pastillas", "Compresor y secador de aire", "Cámaras de freno"] },
+    { nombre: "Neumáticos", preguntas: ["Rotación y alineación", "Torque de pernos de rueda"] },
+    { nombre: "Eléctrico", preguntas: ["Batería y alternador"] },
+    { nombre: "Escape", preguntas: ["Sistema de escape completo"] },
+    { nombre: "Seguridad", preguntas: ["Extintor recargado", "Botiquín completo"] },
   ]),
 };
 
 const CHECKLIST_MANTENCION_DIARIO = {
   nombre: "Checklist diario",
-  descripcion: "Chequeo visual/funcional antes de salir a ruta — más corto que el Programa de Mantención.",
+  descripcion: "Chequeo antes de salir a ruta — solo lo que compromete seguridad o deja el camión botado.",
   secciones: seccionesDe([
-    { nombre: "Niveles y fluidos", preguntas: ["Aceite de motor", "Refrigerante de motor", "Líquido limpiaparabrisas"] },
-    { nombre: "Neumáticos y luces", preguntas: ["Presión de neumáticos", "Estado llanta de repuesto", "Batería y terminales", "Luces y señalización"] },
-    { nombre: "Frenos y dirección", preguntas: ["Sistema de frenos de aire / válvulas", "Terminal de dirección"] },
-    { nombre: "Seguridad y documentación", preguntas: ["Extintor vigente", "Botiquín / kit de emergencia", "Triángulos y conos de seguridad"] },
+    { nombre: "Motor y niveles", preguntas: ["Aceite de motor", "Refrigerante", "Fugas visibles (aceite / combustible / refrigerante)"] },
+    { nombre: "Frenos", preguntas: ["Presión de aire alcanza régimen", "Freno de estacionamiento"] },
+    { nombre: "Neumáticos y ruedas", preguntas: ["Presión de neumáticos", "Estado visual (cortes, desgaste irregular)", "Pernos de rueda"] },
+    { nombre: "Luces", preguntas: ["Luces delanteras y traseras", "Direccionales y baliza"] },
+    { nombre: "Eléctrico", preguntas: ["Batería (terminales)"] },
+    { nombre: "Cabina", preguntas: ["Cinturón de seguridad"] },
+    { nombre: "Seguridad", preguntas: ["Extintor vigente"] },
   ]),
 };
 

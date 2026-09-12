@@ -1008,3 +1008,35 @@ fotos + firma, el caso más cargado posible) — los dos entran ahora en
 prueba limpiados de dev otra vez.
 
 `./verificar.sh` completo verde.
+
+## 2026-09-12: tarea 19, tercera vuelta — contenido curado del checklist
+
+La usuaria comentó que estaba mostrando campos que no van a usar y
+pidió sugerencias de contenido real para un tractor tipo International
+9200 — se las di (24 ítems diario / 30 ítems programa, basado en
+pre-trip inspection estándar + service preventivo por sistema, con la
+salvedad explícita de que no es la ficha técnica oficial del
+fabricante, es un punto de partida). Pidió reducirlo a lo principal —
+bajé a 13/7 y 21/10, priorizando lo que compromete seguridad o deja el
+camión botado en ruta para el diario, y agrupando pares que casi
+siempre se revisan juntos en un service para el de 6 meses. Confirmó
+que le servía y pidió que lo cargara yo directamente (en vez de
+tipearlo a mano en Configuración → Checklists).
+
+Actualizado en los 4 lugares donde vive el contenido — migración 101
+(reescrita otra vez con el contenido final; sigue sin haber llegado a
+prod, así que reescribirla en vez de apilar una migración más sigue
+siendo seguro), defaults hardcodeados del backend
+(`PLANTILLA_POR_DEFECTO_*`), seed de empresas nuevas (`seedRubro.ts`),
+y fallback offline de mobile (`PLANTILLA_FALLBACK_*`) — las 4 copias
+necesitan estar sincronizadas a mano, no hay una sola fuente de verdad
+para el contenido por defecto (solo para lo que ya está guardado en
+`checklist_templates`, que si existe siempre gana).
+
+Aplicado en dev con un `UPDATE` directo sobre
+`checklist_templates.secciones` (no un re-insert, para no duplicar
+filas sobre las que ya existían de la vuelta anterior). Verificado
+contra el backend real (`GET .../plantilla?tipo=diario|programa`) que
+devuelve exactamente el contenido acordado, ítem por ítem.
+
+`./verificar.sh` completo verde.
