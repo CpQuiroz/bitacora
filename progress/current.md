@@ -864,3 +864,40 @@ estados reales por componente (variantes, disabled, cargando, error,
 vacío — no solo el caso feliz). No se agregó a CI (no era parte del
 pedido). `docs/design-system.md` documenta cómo correrlo + los 3
 hallazgos.
+
+## 2026-09-12: re-homologar CONTEXTO_PROYECTO.md (pedido directo)
+
+La usuaria pidió "homologar conocimiento con claude.ia" — el flujo ya
+establecido (ver memoria `claude-ai-arquitectura-proyecto`): regenerar
+`CONTEXTO_PROYECTO.md`, que alimenta un Project separado de claude.ai
+sin acceso a código, verificando contra el código/DB real, no
+reusando contenido viejo sin re-chequear.
+
+El archivo tenía **3 contradicciones internas reales** (no solo
+desactualizado) — el mismo dato de "migración 100 pendiente en prod"
+aparecía corregido en un lugar (arriba, commit de anoche) pero seguía
+sin corregir en otros 2 (la sección de Novedades del 12-sep y la
+sección 8) — señal de que los parches incrementales habían perdido
+sincronía entre sí. Verificado en vivo antes de escribir nada:
+`supabase migration list --linked` contra prod confirmó **100/100
+migraciones aplicadas y trackeadas** (no solo confiar en el mensaje
+del commit anterior); una consulta a `pg_tables`/`pg_policies` de prod
+confirmó **87/87 tablas con RLS activo** (subió de 84, doc todavía
+decía 84) y **63 con policy de tenant real** (doc decía 61).
+
+Corregidas las 3 contradicciones + agregado lo que faltaba por
+completo (nada de esto estaba reflejado todavía): CI real
+(`verificar.yml`), backend con su primer test, deploy hook rotado,
+Paso 7 del sistema de diseño cerrado + Storybook — con nuevo texto en
+la intro, secciones 3, 4 (fila nueva de Levantamientos en la tabla de
+módulos, faltaba), 5 (fila nueva de Levantamientos en el modelo de
+datos, faltaba), 7 y 8. Backlog del ítem 8 recontado: 5 de 6 cerrados,
+queda solo el E2E de Mantención (bloqueado en probar desde el APK) —
+y se agregó ahí mismo el reporte de la usuaria de esta sesión ("sigue
+fallando al subir imágenes") con lo que ya se descartó (tamaño de
+imagen poco probable, ya comprime) y lo que falta (síntoma exacto,
+todavía sin confirmar por la usuaria).
+
+Pendiente, como siempre con este archivo: la usuaria tiene que
+volver a subirlo a mano a su Project de claude.ai — no se sincroniza
+solo.
