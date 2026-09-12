@@ -116,7 +116,8 @@
         "Paso 7: regla ESLint anti-hex/px, Storybook, check de CI, docs/design-system.md enlazado desde CLAUDE.md",
         "./verificar.sh verde en cada paso"
       ],
-      "status": "pending"
+      "resolution": "Pasos 0-6: hechos en sesiones anteriores (detalle en docs/design-system.md — tokens, packages/ui, Caprasimo+Figtree, marca por tenant, los 7 grupos de nav de DashboardShell migrados). 2 seams quedan fuera A PROPÓSITO (decisión ya tomada antes de esta tarea, documentada en docs/design-system.md §'Seams que quedan fuera de este pedido'): contenido de Agenda y de /superadmin, ninguno de los dos era parte de los 7 grupos de nav del pedido original. Paso 7 (esta pasada, 12-sep-2026): CI ya quedado cubierto de rebote por la tarea #2 (verificar.sh corre check-colores.mjs en cada push/PR). Nuevo: web/eslint-rules/anti-token.mjs (regla bitacora/no-literal-color-or-px) — mismo criterio y misma lista de exentos que check-colores.mjs, pero a nivel de editor/PR; cubre color hex/rgb + espaciado arbitrario de Tailwind en px, deliberadamente SIN marcar tamaño/radio arbitrario (text-[11px]/rounded-[32px] son convención ya establecida, no evasión — confirmado probando la versión amplia primero, marcaba 109 falsos positivos). Alcance solo web (mobile no tiene ESLint). CLAUDE.md ahora linkea docs/design-system.md. Storybook (el 4to ítem del Paso 7) se separó a la tarea #18 por decisión explícita de la usuaria — no se pierde, se prioriza distinto. ./verificar.sh completo verde.",
+      "status": "done"
     },
     {
       "id": 9,
@@ -248,6 +249,19 @@
         "tsc mobile limpio, ./verificar.sh verde"
       ],
       "status": "done"
+    },
+    {
+      "id": 18,
+      "name": "storybook_packages_ui",
+      "title": "Storybook para packages/ui",
+      "description": "Separado de la tarea #8 (Paso 7 del sistema de diseño) por decisión explícita de la usuaria (12-sep-2026): es la pieza más pesada de ese paso (paquetes nuevos, config, historias por componente) y no debía bloquear el resto (regla ESLint anti-hex/px + link desde CLAUDE.md, ya hechos). Cubre las primitivas web de packages/ui/src/web (Button, Input, Card, Tag, StatusBadge, Table, Dialog/Sheet, EmptyState/LoadingState/ErrorState, Toast); evaluar si conviene o no cubrir también las de native.",
+      "acceptance": [
+        "Storybook corriendo (npm run storybook, o el script que corresponda) con una historia por primitiva de packages/ui/src/web",
+        "Historias muestran los estados relevantes de cada componente (variantes, disabled, loading, error, etc. según aplique)",
+        "No rompe ./verificar.sh (si se agrega un build de Storybook a CI, documentarlo; si no, decirlo explícitamente)",
+        "docs/design-system.md enlaza a cómo correrlo"
+      ],
+      "status": "pending"
     }
   ]
 }

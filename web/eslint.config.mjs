@@ -1,10 +1,19 @@
 import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
+import antiToken from "./eslint-rules/anti-token.mjs";
 
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
+  // Sistema de diseño (Paso 7, tarea #8) — ver web/eslint-rules/anti-token.mjs.
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    plugins: { bitacora: antiToken },
+    rules: {
+      "bitacora/no-literal-color-or-px": "error",
+    },
+  },
   {
     rules: {
       // "Calling setState synchronously within an effect can trigger

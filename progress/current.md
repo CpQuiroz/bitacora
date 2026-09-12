@@ -5,7 +5,11 @@
   13 — galeria_y_eliminar_fotos_mobile, 6 — regenerar_contexto_proyecto,
   14 — levantamientos_paso0, 15 — levantamientos_paso1_5, 16 — levantamientos_admin_editar,
   17 — levantamientos_cola_offline, 1 — eslint_web_next16, 2 — ci_verificar,
-  4 — smoke_backend
+  4 — smoke_backend, 8 — sistema_diseno (Paso 7)
+- **Bloqueada:** 3 — rotar_deploy_hook_render (esperando que la usuaria
+  rote la key en Render; ver detalle abajo, 12-sep)
+- **Nueva, pendiente:** 18 — storybook_packages_ui (separada de la 8
+  por decisión de la usuaria)
 - **En curso ahora:** tarea 5 (e2e_mantencion_pdf_prod) — esperando que la usuaria
   inicie sesión en prod en el navegador (no toco credenciales); ver política.
 - **Pausada:** 8 — sistema_diseno (pending, no abandonada — retomar cuando la
@@ -723,3 +727,49 @@ Settings → Deploy Hook — no tengo login ahí. Le pedí que la rote pero
 este incidente) — que quede en Render o en su gestor de secretos
 propio; el agente no necesita conocerlo para nada de lo que hace hoy.
 Tarea marcada `blocked` hasta que confirme.
+
+## 2026-09-12: tarea 8 — Paso 7 del sistema de diseño (ESLint + doc, sin Storybook)
+
+Pasos 0-6 ya estaban hechos de sesiones anteriores. De Paso 7 quedaban
+4 ítems; le pregunté a la usuaria cómo priorizar (Storybook es la
+pieza más pesada — paquetes nuevos, config, historias por componente
+— y mobile no tiene ESLint configurado hoy) y eligió "todo salvo
+Storybook".
+
+**CI ya estaba cubierto de rebote**: `.github/workflows/verificar.yml`
+(tarea #2) corre `./verificar.sh` completo en cada push/PR, que ya
+incluye `check-colores.mjs` en su paso 8 — nada nuevo que hacer ahí.
+
+**Regla de ESLint nueva** (`web/eslint-rules/anti-token.mjs`,
+`bitacora/no-literal-color-or-px`, registrada en `web/eslint.config.mjs`):
+mismo criterio y misma lista de exentos que `check-colores.mjs`
+(`scripts/colores-permitidos.json`, una sola fuente de verdad) pero a
+nivel de editor/PR — deliberadamente NO es un port 1:1 (opera sobre el
+AST, no sobre texto crudo).
+
+**Hallazgo real al probarla, no asumido**: la primera versión también
+marcaba CUALQUIER valor arbitrario de Tailwind en px (`[Npx]`) — corrí
+`npm run lint -w web` con esa versión antes de darla por buena y
+marcó **109 sitios**, casi todos `text-[11px]` (microtipografía) y
+`rounded-[32px]` (la forma "pill") — exactamente las convenciones que
+el Paso 5 estableció a propósito, no algo que las esté evadiendo.
+Acoté la regla a solo utilidades de ESPACIADO arbitrario en px (`m*`,
+`p*`, `gap*`, `space-*`, `inset*`, `top/right/bottom/left` — la parte
+real de "aire por escala") antes de sumarla al lint real. Verifiqué
+con un fixture manual (7 casos que debían marcar: 2 colores hex
+sueltos, 1 rgb, 1 hex embebido en Tailwind, 3 espaciados en px; 2 que
+NO debían marcar: `text-[11px] rounded-[32px]`, y una mención de texto
+"OS #142 desde el celular" que no es un color) — los 7 dispararon, los
+2 no, antes de correrla contra el repo real. Contra el repo real: 0
+hallazgos (el repo ya usa `p-ds-*`/`gap-ds-*` en vez de espaciado
+arbitrario en px). Alcance solo `web` — mobile no tiene ESLint.
+
+**Doc**: `CLAUDE.md` ahora linkea `docs/design-system.md`.
+`docs/design-system.md` actualizado (baseline de colores 19→12,
+sección de Paso 7 con el detalle de arriba).
+
+**Storybook** separado a la tarea #18 (`pending`) — decisión de la
+usuaria, no abandonado.
+
+`./verificar.sh` completo verde (`web` — 0 errores, 20 warnings
+preexistentes, igual que antes de esta tarea).

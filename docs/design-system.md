@@ -56,13 +56,42 @@ lo demás es igual para todos los tenants.
   `hover`/`pressed` con `oscurecerOklch()` (OKLab en JS puro, en
   `@bitacora/design-tokens`, con tests). Fallback `#c67139`.
 
-## Anti-degradación (parcial — resto en Paso 7)
+## Anti-degradación (Paso 7 — hecho salvo Storybook, ver tarea #18)
 
-`scripts/check-colores.mjs` (en `verificar.sh`): falla si aparecen colores
-literales (`#hex`, `rgb()`) en `web/src` / `mobile/src` / `packages/shared`
-fuera del paquete de tokens. Baseline actual **19** (literales de pantallas
-Faena que se van con la migración). Exentos con motivo en
-`scripts/colores-permitidos.json` (paletas de datos, previews de PDF, SVG).
+`scripts/check-colores.mjs` (en `verificar.sh` paso 8, y en CI desde la
+tarea #2 — `.github/workflows/verificar.yml` corre `./verificar.sh`
+completo en cada push/PR): falla si aparecen colores literales (`#hex`,
+`rgb()`) en `web/src` / `mobile/src` / `packages/shared` fuera del
+paquete de tokens. Baseline actual **12** (literales de pantallas Faena
+que se van con la migración — bajó de 19 a medida que se migraron
+pantallas). Exentos con motivo en `scripts/colores-permitidos.json`
+(paletas de datos, previews de PDF, SVG).
+
+**Regla de ESLint (solo `web`, tarea #8, 12-sep-2026):**
+`web/eslint-rules/anti-token.mjs` (`bitacora/no-literal-color-or-px`,
+registrada en `web/eslint.config.mjs`) marca lo mismo que
+`check-colores.mjs` pero en el editor/PR, antes de llegar a
+`verificar.sh` — mismo criterio de exentos (`scripts/colores-
+permitidos.json`, una sola fuente de verdad), pero NO es un port 1:1:
+opera sobre el AST (nodos `Literal`/`TemplateElement`), no sobre texto
+crudo. También marca **espaciado arbitrario de Tailwind en px**
+(`p-[13px]`, `gap-x-[7px]`, `mt-[3px]`…) — la parte "aire por escala"
+del Paso 5. Deliberadamente **no** marca tamaño/radio arbitrario
+(`text-[11px]`, `rounded-[32px]`): probé primero una versión amplia
+("cualquier `[Npx]`") y marcó 109 sitios, casi todos esos dos patrones
+— son convenciones YA establecidas del sistema (microtipografía, la
+forma "pill"), no algo que lo esté evadiendo. Se acotó a solo
+utilidades de espaciado (`m*`, `p*`, `gap*`, `space-*`, `inset*`,
+`top/right/bottom/left`) antes de sumarla al lint — verificado con un
+fixture manual (7 positivos reales, 2 negativos esperados) antes de
+correrla contra el repo real. Mobile queda afuera: no tiene ESLint
+configurado hoy.
+
+**No incluido en la tarea #8 (Paso 7):** Storybook para `packages/ui`
+— separado en su propia tarea (#18, `pending`) por ser la pieza más
+pesada (paquetes nuevos, config, historias por componente) y una
+decisión explícita de la usuaria (12-sep-2026) de no bloquear el resto
+de Paso 7 en eso.
 
 ## Tipografía (Paso 3 — hecho)
 

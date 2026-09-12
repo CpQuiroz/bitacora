@@ -55,6 +55,11 @@ Las canónicas están en `AGENTS.md` §3. Recordatorio de las que más se pisan:
   (Next 16, Expo 57) — leelos antes de tocar esas carpetas.
 - **EAS builds** solo a pedido; bump de versión en `mobile/app.json`.
 - **Deploy** = push a `main` (Vercel + Render auto).
+- **Sistema de diseño** (tokens, `packages/ui`, convenciones de color/
+  espaciado/tipografía): `docs/design-system.md` es la fuente de verdad.
+  Colores literales fuera de `packages/design-tokens` los bloquea
+  `scripts/check-colores.mjs` (en `verificar.sh` y en CI); en `web`
+  también hay una regla de ESLint (`web/eslint-rules/anti-token.mjs`).
 
 ## Reglas de negocio y arquitectura (resumen)
 
