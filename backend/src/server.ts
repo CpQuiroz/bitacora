@@ -77,7 +77,9 @@ import { ah } from "./asyncHandler";
 
 const RUBROS: Rubro[] = ["transporte", "servicio_tecnico", "cosmetologia", "otro"];
 
-const app = express();
+// export solo para que server.smoke.test.ts pueda importar la app real
+// sin reimplementar el proceso de arranque — nada más la usa.
+export const app = express();
 // Cabeceras de seguridad estándar (X-Content-Type-Options,
 // X-Frame-Options, etc.) — lo más temprano posible, antes de
 // cualquier ruta. Ver checklist de seguridad pre-lanzamiento.
@@ -457,6 +459,9 @@ process.on("uncaughtException", (err) => {
   Sentry.flush(2000).finally(() => process.exit(1));
 });
 
-app.listen(env.PORT, () => {
+// export por el mismo motivo que `app` — server.smoke.test.ts necesita
+// el Server real para saber en qué puerto quedó (PORT=0 → el SO asigna
+// uno libre) y cerrarlo prolijo al terminar.
+export const httpServer = app.listen(env.PORT, () => {
   console.log(`Bitácora backend escuchando en :${env.PORT}`);
 });

@@ -58,7 +58,8 @@
         "Cubre: /health 200, ruta protegida sin token 401, una ruta feliz",
         "verificar.sh paso 5 corre también el runner de backend"
       ],
-      "status": "pending"
+      "resolution": "`backend/src/server.smoke.test.ts` (node:test + tsx, mismo patrón que packages/shared) importa dinámicamente el server.ts REAL (app.listen real, PORT=0 → puerto libre) — no mockea express. Como env.ts exige ~12 variables con requerido() para poder cargar el módulo, se fijan como strings dummy ANTES del import (import dinámico porque tsx transpila el backend a CJS y no permite top-level await; el import estático de ESM se ejecutaría antes que cualquier código de este archivo sin importar el orden en el texto). Verifiqué leyendo cada handler que ninguna de las 3 rutas cubiertas toca Supabase/S3/Anthropic de verdad: GET /health (sin DB), GET /api/me sin Authorization (requiereAuth corta con 401 antes de llamar a supabase.auth.getUser), GET /api/whatsapp/webhook (compara solo contra WHATSAPP_VERIFY_TOKEN vía env, sin DB) — 'ruta feliz' cubierta con esa última (200 + eco del challenge) más su contraparte de token equivocado (403). 4 tests verdes, sin tocar ninguna credencial real (confirmado: la única URL de Supabase que aparece en el log es el string dummy). `backend/tsconfig.json` ganó `exclude: ['src/**/*.test.ts']` (mismo patrón que packages/shared) — confirmado con `npm run build -w backend` que el test NO queda en dist/ y que el `exports.httpServer = exports.app.listen(...)` compilado sigue llamando a .listen() una sola vez, igual que antes, en el camino real de producción (`node dist/server.js`). `server.ts` ganó 2 exports (`app`, `httpServer`) — sin otro cambio de comportamiento. `verificar.sh` paso 5 corre `test_ws backend` junto a shared/design-tokens.",
+      "status": "done"
     },
     {
       "id": 5,

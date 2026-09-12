@@ -4,7 +4,8 @@
   11 — fix_sync_cola_apilamiento (insuficiente, ver tarea 12), 12 — fix_sync_reintentar_bloqueado,
   13 — galeria_y_eliminar_fotos_mobile, 6 — regenerar_contexto_proyecto,
   14 — levantamientos_paso0, 15 — levantamientos_paso1_5, 16 — levantamientos_admin_editar,
-  17 — levantamientos_cola_offline, 1 — eslint_web_next16, 2 — ci_verificar
+  17 — levantamientos_cola_offline, 1 — eslint_web_next16, 2 — ci_verificar,
+  4 — smoke_backend
 - **En curso ahora:** tarea 5 (e2e_mantencion_pdf_prod) — esperando que la usuaria
   inicie sesión en prod en el navegador (no toco credenciales); ver política.
 - **Pausada:** 8 — sistema_diseno (pending, no abandonada — retomar cuando la
@@ -648,3 +649,50 @@ acá (sin pedir push todavía) — la validación es: YAML parseado sin
 error, y los mismos 3 pasos (`npm ci` limpio → `./verificar.sh`)
 reproducidos a mano en este entorno con resultado verde real, no
 asumido.
+
+## 2026-09-12: tarea 4 — smoke test de arranque del backend
+
+`backend/src/server.smoke.test.ts` (node:test + tsx, mismo patrón que
+`packages/shared`): importa DINÁMICAMENTE el `server.ts` real — mismo
+`app.listen()` de producción, `PORT=0` para que el SO asigne un
+puerto libre, no mockea express en ningún punto.
+
+`env.ts` exige ~12 variables con `requerido()` para poder cargar el
+módulo (SUPABASE_*, STORAGE_*, ANTHROPIC_API_KEY, 4 llaves de
+cifrado/firma) — se fijan como strings dummy claramente falsos ANTES
+del import. Tuvo que ser import dinámico, no estático: `tsx` transpila
+el backend a CJS (no tiene `"type": "module"`) y ahí no se permite
+top-level await; además con `import` estático de ESM el módulo
+importado se ejecuta antes que cualquier otro código del archivo sin
+importar dónde esté escrito el `import` en el texto — las env vars
+dummy nunca llegarían a tiempo.
+
+**Verifiqué leyendo cada handler, no asumiendo**, que ninguna de las 3
+rutas cubiertas toca Supabase/S3/Anthropic de verdad con esos valores
+dummy:
+- `GET /health` — no toca la base (ver `/health/ready` para el que sí).
+- `GET /api/me` sin header `Authorization` — `requiereAuth` corta con
+  401 ANTES de llamar a `supabase.auth.getUser`.
+- `GET /api/whatsapp/webhook` (verificación de Meta) — compara solo
+  contra `WHATSAPP_VERIFY_TOKEN` vía `env`, sin DB. Esta es la "ruta
+  feliz" (200 + eco del `hub.challenge`), con su contraparte de token
+  equivocado (403) al lado.
+
+`medirLatencia` (middleware global) solo escribe en `requests_lentos`
+si la respuesta tarda ≥2s — ninguna de estas 4 llamadas locales llega
+ni cerca, así que tampoco dispara ahí.
+
+4 tests verdes. Confirmado en el log que la única "conexión a
+Supabase" que aparece es el string dummy (`smoke-test.supabase.co`),
+nunca un proyecto real.
+
+**Cambios de soporte**: `server.ts` ganó 2 exports (`app`, `httpServer`
+— el `Server` real que devuelve `.listen()`), sin otro cambio de
+comportamiento. `backend/tsconfig.json` ganó `exclude:
+["src/**/*.test.ts"]` (mismo patrón que `packages/shared/tsconfig.json`,
+que ya lo tenía) — confirmado con `npm run build -w backend` que el
+test NO queda en `dist/` y que el `.listen()` compilado sigue
+llamándose una sola vez en el camino real de producción
+(`node dist/server.js`). `verificar.sh` paso 5 ahora corre
+`test_ws backend` junto a shared/design-tokens — confirmado con
+`./verificar.sh` completo en verde (backend — 4 tests verdes).

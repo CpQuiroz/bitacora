@@ -106,7 +106,8 @@ else
   }
   test_ws packages/shared
   test_ws packages/design-tokens
-  # A medida que backend/web/mobile ganen suite, agregá acá sus runners.
+  test_ws backend
+  # A medida que web/mobile ganen suite, agregá acá sus runners.
 fi
 
 echo ""
