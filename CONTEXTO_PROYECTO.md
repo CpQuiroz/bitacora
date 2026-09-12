@@ -10,9 +10,15 @@
 > Todo lo relativo al despliegue, el estado de configuración de cada proveedor, los
 > secretos a rotar y los pasos que faltan para tener la primera empresa operativa está en
 > `docs/PUESTA_EN_PRODUCCION.md` — leerlo junto con este archivo.
-> **100 migraciones locales; prod tiene 1-99 aplicadas y trackeadas** (la 100 —módulo
-> Levantamientos, nuevo, ver más abajo— aplicada en dev, pendiente en prod). App móvil en
-> **1.9.8 / versionCode 25**.
+> **100 migraciones, todas aplicadas y trackeadas en prod** (la 100 —módulo Levantamientos,
+> nuevo, ver más abajo— corrida el 12-sep). **Gotcha real encontrado al correrla**: sin
+> ceros a la izquierda, `supabase db push` compara los nombres de archivo como texto —
+> "100" ordena antes que "11"-"99" — y se negó a aplicarla ("found local migration files
+> to be inserted before the last migration"). Se resuelve con `--include-all`; fue un
+> problema puntual del cruce 99→100, no debería repetirse hasta la 1000. El módulo sigue
+> **apagado por defecto** — falta activarlo por empresa desde el Panel de Super-Admin. App
+> móvil en **1.9.8 / versionCode 25** (todavía sin la pantalla de Levantamientos — eso
+> necesita un APK nuevo).
 >
 > ---
 >
@@ -666,4 +672,4 @@ cerrojo deny-all (ver la fila "Multi-tenant" de la sección 1). No son tablas de
   - **Los números de `LIMITES_POR_PLAN` (usuarios/OS-mes/storage/IA por plan) son una propuesta inicial**, no una decisión de negocio final — quedan fáciles de ajustar en un solo lugar (`packages/shared/src/limites.ts`) si no calzan con la realidad una vez en uso.
   - **Incidente de login "Credenciales inválidas" (flagged 4-sep, no reproducido desde)** — se reportó un rechazo de `signInWithPassword` en prod; se descartó que fuera un bug de frontend o algo que hubiera tocado el auth. En sesiones posteriores el login funcionó sin problema (posible rate-limiting de Supabase o contraseñas mal tipeadas en su momento). Sin acción pendiente salvo que reaparezca.
   - **Tracking de migraciones en dev desincronizado desde la 75** — el esquema de dev está al día (tablas/columnas hasta la 100 existen y funcionan), pero `schema_migrations` solo tiene hasta la 74 registrada (se aplicaron con `db query` en vez de `db push`). No es un problema funcional, es prolijidad de tracking.
-  - **Migración 100 (módulo Levantamientos) pendiente en prod** — tablas nuevas (`levantamientos`, `levantamiento_materiales`, `levantamiento_fotos`), aplicada y probada en dev. El módulo además necesita activarse por empresa desde el Panel de Super-Admin (`empresa_modulos`, apagado por defecto) antes de que cualquier empresa lo vea.
+  - **Módulo Levantamientos activo en el código pero apagado por defecto** — migración 100 aplicada en prod (12-sep, con `--include-all` por el gotcha de ordenamiento de nombres sin ceros a la izquierda). Falta: activarlo por empresa desde el Panel de Super-Admin (`empresa_modulos`) para que cualquier empresa lo vea, y un APK nuevo para que el técnico lo use desde mobile (el 1.9.8 instalado no lo tiene).
