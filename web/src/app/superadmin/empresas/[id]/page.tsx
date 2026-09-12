@@ -65,6 +65,15 @@ export default function SuperAdminSaludEmpresaPage() {
   const router = useRouter();
   const [salud, setSalud] = useState<Salud | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Date.now() es impuro durante el render (regla nueva react-hooks/purity
+  // de eslint-config-next 16) — y useMemo no alcanza porque su callback
+  // también corre en fase de render. Se fija recién en un efecto (fase de
+  // commit), null hasta entonces; alcanza para mostrar "hace N días" sin
+  // necesidad de que se actualice al segundo.
+  const [ahora, setAhora] = useState<number | null>(null);
+  useEffect(() => {
+    setAhora(Date.now());
+  }, []);
 
   const [editandoIdentidad, setEditandoIdentidad] = useState(false);
   const [nombreEdit, setNombreEdit] = useState("");
@@ -671,7 +680,7 @@ export default function SuperAdminSaludEmpresaPage() {
                     ))}
                   </Select>
                   <p className="mt-1 text-xs text-muted">
-                    Cosmetología activa el tema visual "Vino y eucalipto" en la app móvil (pantallas de reserva).
+                    Cosmetología activa el tema visual &ldquo;Vino y eucalipto&rdquo; en la app móvil (pantallas de reserva).
                   </p>
                 </div>
               </div>
@@ -771,10 +780,10 @@ export default function SuperAdminSaludEmpresaPage() {
               <p className="mb-3 text-sm text-muted">
                 Estado actual: <Badge value={salud.empresa.estado} />
               </p>
-              {salud.empresa.estado === "dada_de_baja" && salud.empresa.dada_de_baja_en && (
+              {salud.empresa.estado === "dada_de_baja" && salud.empresa.dada_de_baja_en && ahora != null && (
                 <p className="mb-3 rounded-lg bg-amber-50 p-2 text-xs text-amber-900">
                   Dada de baja el {new Date(salud.empresa.dada_de_baja_en).toLocaleDateString("es-CL")} (
-                  {Math.floor((Date.now() - new Date(salud.empresa.dada_de_baja_en).getTime()) / 86400000)} días).
+                  {Math.floor((ahora - new Date(salud.empresa.dada_de_baja_en).getTime()) / 86400000)} días).
                   Ley 21.719 — evaluar eliminar sus datos personales pasado el plazo de conservación.
                 </p>
               )}

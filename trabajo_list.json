@@ -18,7 +18,8 @@
         "verificar.sh paso 6 pasa a [OK] sin el WARN especial",
         "No se bajó la severidad de reglas para 'lograrlo' — o se documenta por qué"
       ],
-      "status": "pending"
+      "resolution": "Causa raíz: bug de hoisting de npm workspaces — `next` quedaba anidado en web/node_modules/next mientras eslint-config-next se hoisteaba a la raíz, y su parser (`require('next/dist/compiled/babel/eslint-parser')`) no llega a node_modules de un workspace hermano. Fix: se agregó \"next\": \"16.3.2\" a devDependencies de la raíz + npm install, lo que hoisteó next correctamente. Con el parser resuelto, lint corrió por primera vez y salieron 79 errores + 20 warnings reales. 75 errores eran la misma regla nueva `react-hooks/set-state-in-effect`, que marca el patrón de carga establecido a propósito en todo el dashboard (fetch en useEffect + setState — ver docs/harness/arquitectura.md). Se documentó y desactivó ESA regla puntual en web/eslint.config.mjs con comentario explicando por qué (no se bajó severidad global, solo esa regla con justificación). Los otros 4 errores se arreglaron en el código real: 2 comillas sin escapar (react/no-unescaped-entities) en superadmin/empresas/[id]/page.tsx, 1 llamada impura a Date.now() durante el render (se movió a useEffect con useState en vez de useMemo, que también corre en fase de render) en el mismo archivo, y 1 react-hooks/immutability en dashboard/agenda/page.tsx:276 que se dejó con un eslint-disable-next-line puntual y justificado (mover cargarOpcionesFormTarea antes del guard `if (!usuario) return null` es un refactor más grande y arriesgado para un solo hallazgo). Resultado final: 0 errores, 20 warnings (preexistentes, no bloqueantes), exit 0. verificar.sh paso 6 → [OK] sin WARN.",
+      "status": "done"
     },
     {
       "id": 2,

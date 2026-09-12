@@ -273,6 +273,15 @@ function AgendaContenido() {
     setTrabajoVinculado(trabajoId ? { id: trabajoId, folio: folioRaw ? Number(folioRaw) : null } : null);
     setDiaSeleccionado(fecha);
     setTareaRapidaFecha(fecha);
+    // react-hooks/immutability: cargarOpcionesFormTarea se declara más
+    // abajo (line ~331) — es seguro por hoisting de function declaration
+    // y porque para cuando este efecto realmente se ejecuta (post-mount,
+    // async) el render ya corrió completo. Convertirla en useCallback y
+    // moverla antes del guard `if (!usuario) return null` (línea ~614,
+    // de donde depende puedeAgendaPro) arrastra ese guard a un refactor
+    // más grande y arriesgado para un solo hallazgo de lint — no vale la
+    // pena tocar código que ya funciona sin una prueba dedicada.
+    // eslint-disable-next-line react-hooks/immutability
     cargarOpcionesFormTarea();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

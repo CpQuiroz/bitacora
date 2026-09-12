@@ -18,5 +18,8 @@
     "build:backend": "npm run build -w backend",
     "build:web": "npm run build -w web",
     "gen:tokens": "npm run gen -w packages/design-tokens"
+  },
+  "devDependencies": {
+    "next": "16.3.2"
   }
 }

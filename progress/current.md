@@ -2,7 +2,9 @@
 
 - **Cerradas esta sesión:** 9 — edicion_viajes_y_fotos_os, 10 — fotos_mantencion_equipo,
   11 — fix_sync_cola_apilamiento (insuficiente, ver tarea 12), 12 — fix_sync_reintentar_bloqueado,
-  13 — galeria_y_eliminar_fotos_mobile, 6 — regenerar_contexto_proyecto
+  13 — galeria_y_eliminar_fotos_mobile, 6 — regenerar_contexto_proyecto,
+  14 — levantamientos_paso0, 15 — levantamientos_paso1_5, 16 — levantamientos_admin_editar,
+  17 — levantamientos_cola_offline, 1 — eslint_web_next16
 - **En curso ahora:** tarea 5 (e2e_mantencion_pdf_prod) — esperando que la usuaria
   inicie sesión en prod en el navegador (no toco credenciales); ver política.
 - **Pausada:** 8 — sistema_diseno (pending, no abandonada — retomar cuando la
@@ -541,3 +543,59 @@ vivo (Chrome MCP es para web, no simula mobile offline) — se apoya en
 que reutiliza exactamente la misma infraestructura de cola ya
 verificada esta sesión para Mantención/Viajes/OS, no un mecanismo
 nuevo.
+
+## 2026-09-12: tarea 1 — eslint web (Next 16) arreglado
+
+Causa raíz real, no solo config: bug de hoisting de npm workspaces.
+`next` quedaba anidado en `web/node_modules/next` mientras
+`eslint-config-next` se hoisteaba a la raíz — su parser
+(`eslint-config-next/dist/parser.js` → `require('next/dist/compiled/
+babel/eslint-parser')`) resuelve módulos hacia ARRIBA desde su propio
+directorio, nunca hacia un `node_modules` hermano (`web/node_modules`).
+Verificado en `package-lock.json` que no había conflicto real de
+versión (una sola versión de `next`, pedida solo por `web`). Fix:
+`"next": "16.3.2"` agregado a `devDependencies` de la raíz + `npm
+install` → hoisteó `next` a la raíz, eliminó la copia anidada.
+
+Con el parser resuelto, `npm run lint -w web` corrió por primera vez
+de verdad: 79 errores + 20 warnings reales (antes crasheaba antes de
+poder mostrar nada). 75 de los 79 errores eran la misma regla nueva
+`react-hooks/set-state-in-effect` — marca el patrón "fetch en
+`useEffect` + `setState` con el resultado" que es la arquitectura
+establecida a propósito en TODO el dashboard (`docs/harness/
+arquitectura.md`, "cada página del dashboard sigue el mismo patrón de
+carga"), no un bug real. Reescribir ~50 pantallas para evitarla sería
+un cambio de arquitectura grande y arriesgado solo para silenciar un
+lint. Por la regla explícita de la tarea ("no bajar severidad para
+lograrlo, o documentar por qué"): se desactivó ESA regla puntual (no
+un `--max-warnings 0` global ni bajar todo a warn) en
+`web/eslint.config.mjs`, con comentario explicando la justificación.
+
+Los otros 4 errores eran genuinos y se arreglaron en el código, no
+silenciados:
+- 2× `react/no-unescaped-entities` (comillas literales) en
+  `superadmin/empresas/[id]/page.tsx` → entidades HTML (`&ldquo;`/
+  `&rdquo;`).
+- 1× "Cannot call impure function during render" (`Date.now()` en el
+  cuerpo del render) en el mismo archivo → intenté primero
+  `useMemo(() => Date.now(), [])`, pero la regla (`react-hooks/
+  purity`) también lo marca porque el callback de `useMemo` sigue
+  corriendo en fase de render. Fix real: `useState<number|null>(null)`
+  + `useEffect` que lo fija en fase de commit — "hace N días" queda
+  `null` en el primer render y se completa solo, sin parpadeo visible.
+- 1× `react-hooks/immutability` en `dashboard/agenda/page.tsx:276`
+  (`cargarOpcionesFormTarea` referenciada antes de su declaración más
+  abajo). Tracé la cadena completa: "arreglarlo bien" implica mover
+  `puedeAgendaPro`/`moduloVisible` de después de un guard `if
+  (!usuario) return null` (línea ~614) a antes — riesgo real de
+  crashear si `usuario` sigue null. Juzgado demasiado riesgoso para un
+  solo hallazgo de lint sin prueba dedicada → `eslint-disable-next-line`
+  puntual con el razonamiento completo en comentario.
+
+Resultado: `npm run lint -w web` → 0 errores, 20 warnings
+(preexistentes: `<img>` sin `next/image`, `window.location.href` en
+vez de `router.push()`, unused-vars sueltos, algún `eslint-disable`
+ya innecesario — ninguno bloqueaba antes de esta tarea, no se tocaron).
+Exit 0 confirmado. `./verificar.sh` paso 6 → `[OK]` sin el WARN
+especial. `./verificar.sh` completo verde (tsc x6, tests, audit:tenant
+0, 100 migraciones).
