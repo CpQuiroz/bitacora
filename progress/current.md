@@ -696,3 +696,30 @@ llamándose una sola vez en el camino real de producción
 (`node dist/server.js`). `verificar.sh` paso 5 ahora corre
 `test_ws backend` junto a shared/design-tokens — confirmado con
 `./verificar.sh` completo en verde (backend — 4 tests verdes).
+
+## 2026-09-12: tarea 3 — deploy hook de Render, hallazgo real + bloqueada en el humano
+
+Antes de tocar nada, auditoría de dónde vive el secreto: el repo (tree
+actual Y `git log -p -S` sobre todo el historial) **nunca** tuvo el
+valor real de la key — siempre `?key=…` redactado, en `CONTEXTO_
+PROYECTO.md` y en 2 memorias del agente. **Pero una tercera memoria
+(`migracion-95-ventas-viaje-fotos.md`) sí tenía el valor real en texto
+plano** (pegado en una sesión de hace 5 días al documentar el flujo de
+deploy manual) — ese es el leak real que motivó la tarea, no el repo.
+Esa memoria además ya estaba obsoleta (hablaba de la migración 95 como
+pendiente en prod; hoy la 100 ya está aplicada) — la borré entera en
+vez de solo redactar el secreto, y saqué su línea de `MEMORY.md`.
+
+`docs/PUESTA_EN_PRODUCCION.md` §3.4 (nuevo): documenta el incidente y
+la regla en adelante — la key del deploy hook (y cualquier otra:
+Resend, GitHub PAT, `SUPABASE_SERVICE_ROLE_KEY`, ver §3.3) se pide a
+la usuaria cuando hace falta, nunca se escribe en repo, docs, ni en la
+memoria persistente del agente.
+
+**Lo que sigue bloqueado en la usuaria** (no lo puedo hacer yo): la
+key vieja solo se revoca regenerándola en Render → el servicio →
+Settings → Deploy Hook — no tengo login ahí. Le pedí que la rote pero
+**no** que me pegue el valor nuevo en el chat (repetiría exactamente
+este incidente) — que quede en Render o en su gestor de secretos
+propio; el agente no necesita conocerlo para nada de lo que hace hoy.
+Tarea marcada `blocked` hasta que confirme.

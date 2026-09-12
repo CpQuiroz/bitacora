@@ -168,6 +168,24 @@ esto obligó a ajustar el build de los dos proveedores (ver §2).
   a todos) y re-cargar la key en Render + `.env.produccion.local`. Evaluar hacerlo antes de
   tener datos reales de clientes.
 
+### 3.4 Deploy Hook de Render — se pide a la usuaria, nunca al agente
+
+El **Deploy Hook** (`https://api.render.com/deploy/srv-daatkjf10e5c73cnrb30?key=…`,
+Render → servicio `bitacora-backend` → **Settings → Deploy Hook**) es el disparador manual
+de deploy cuando el auto-deploy por push no alcanza (ver §0). Es un secreto: quien tenga la
+URL completa puede disparar un deploy sin login.
+
+**Incidente (12-sep-2026, tarea #3):** el valor completo de una key anterior quedó pegado en
+texto plano en una nota de memoria del agente (no en el repo ni en su historial de git — ahí
+siempre quedó redactado con `?key=…`). Se encontró y se borró esa nota. La key vieja la
+rota/revoca la usuaria en Render (Settings → Deploy Hook → regenerar) — el agente no tiene
+login ahí y no debe pedir que se la peguen en el chat.
+
+**Regla en adelante:** si un comando necesita esta key (redeploy manual puntual), el agente
+la pide a la usuaria para que la use ella con `!` en su propia terminal — nunca la escribe en
+código, docs, ni en su memoria persistente. Ídem cualquier otra key de servicio externo
+(Resend, GitHub PAT, `SUPABASE_SERVICE_ROLE_KEY`, etc. — ver §3.3).
+
 ---
 
 ## 4. Issue conocido encontrado en el alta de empresa
