@@ -5,9 +5,7 @@
   13 — galeria_y_eliminar_fotos_mobile, 6 — regenerar_contexto_proyecto,
   14 — levantamientos_paso0, 15 — levantamientos_paso1_5, 16 — levantamientos_admin_editar,
   17 — levantamientos_cola_offline, 1 — eslint_web_next16, 2 — ci_verificar,
-  4 — smoke_backend, 8 — sistema_diseno (Paso 7)
-- **Bloqueada:** 3 — rotar_deploy_hook_render (esperando que la usuaria
-  rote la key en Render; ver detalle abajo, 12-sep)
+  4 — smoke_backend, 8 — sistema_diseno (Paso 7), 3 — rotar_deploy_hook_render
 - **Nueva, pendiente:** 18 — storybook_packages_ui (separada de la 8
   por decisión de la usuaria)
 - **En curso ahora:** tarea 5 (e2e_mantencion_pdf_prod) — esperando que la usuaria
@@ -727,6 +725,11 @@ Settings → Deploy Hook — no tengo login ahí. Le pedí que la rote pero
 este incidente) — que quede en Render o en su gestor de secretos
 propio; el agente no necesita conocerlo para nada de lo que hace hoy.
 Tarea marcada `blocked` hasta que confirme.
+
+**12-sep, más tarde**: la usuaria confirmó "ya rote la key de render"
+— tarea cerrada (`done`). No se le pidió ni se guardó el valor nuevo
+en ningún lado (ni chat, ni memoria, ni repo), consistente con la
+regla que se documentó en §3.4.
 
 ## 2026-09-12: tarea 8 — Paso 7 del sistema de diseño (ESLint + doc, sin Storybook)
 

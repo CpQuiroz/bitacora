@@ -45,8 +45,8 @@
         "Key nueva guardada donde corresponde (no en el repo)",
         "Documentado en docs/PUESTA_EN_PRODUCCION.md que la key se pide al humano"
       ],
-      "resolution": "Auditoría: el repo (tree actual y git log completo) nunca tuvo el valor real de la key, siempre `?key=…` redactado. El valor real SÍ estaba en texto plano en una nota de memoria del agente (`migracion-95-ventas-viaje-fotos.md`) — borrada. `docs/PUESTA_EN_PRODUCCION.md` §3.4 nuevo: documenta el incidente y la regla en adelante (la key se pide a la usuaria, nunca se escribe en repo/docs/memoria del agente). Falta la parte que solo la usuaria puede hacer: regenerar la key en Render (Settings → Deploy Hook) para que la vieja quede revocada — el agente no tiene login ahí. No pedir que la pegue en el chat (repetiría el mismo incidente); que quede solo en su gestor de secretos o en el propio Render. Queda 'blocked' hasta que confirme que la rotó.",
-      "status": "blocked"
+      "resolution": "Auditoría: el repo (tree actual y git log completo) nunca tuvo el valor real de la key, siempre `?key=…` redactado. El valor real SÍ estaba en texto plano en una nota de memoria del agente (`migracion-95-ventas-viaje-fotos.md`) — borrada. `docs/PUESTA_EN_PRODUCCION.md` §3.4 nuevo: documenta el incidente y la regla en adelante (la key se pide a la usuaria, nunca se escribe en repo/docs/memoria del agente). 12-sep-2026: la usuaria confirmó que rotó la key en Render (Settings → Deploy Hook) — la vieja queda revocada. No se le pidió (ni se guardó) el valor nuevo, por la misma regla que se documentó.",
+      "status": "done"
     },
     {
       "id": 4,
