@@ -18,7 +18,24 @@
     "lucide-react-native": "*"
   },
   "peerDependenciesMeta": {
-    "lucide-react": { "optional": true },
-    "lucide-react-native": { "optional": true }
+    "lucide-react": {
+      "optional": true
+    },
+    "lucide-react-native": {
+      "optional": true
+    }
+  },
+  "scripts": {
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
+  },
+  "devDependencies": {
+    "storybook": "^10.6.0",
+    "@storybook/react-vite": "^10.6.0",
+    "@storybook/addon-docs": "^10.6.0",
+    "@storybook/addon-a11y": "^10.6.0",
+    "@tailwindcss/vite": "^4",
+    "lucide-react": "*",
+    "vite": "^7"
   }
 }

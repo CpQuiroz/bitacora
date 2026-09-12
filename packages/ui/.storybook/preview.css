@@ -1,0 +1,7 @@
+/* Mismo setup que web/src/app/globals.css (sin el bloque "Faena" —
+   packages/ui ya vive 100% en tokens nuevos, ver docs/design-system.md).
+   Sin esto, las primitivas se ven sin estilo: compilan pero las clases
+   con prefijo ds- (bg-ds, text-ds, rounded-ds, etc.) no generan CSS. */
+@import "tailwindcss";
+@import "@bitacora/design-tokens/tokens.css";
+@source "../src/**/*.{ts,tsx}";

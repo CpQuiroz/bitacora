@@ -266,7 +266,8 @@
         "No rompe ./verificar.sh (si se agrega un build de Storybook a CI, documentarlo; si no, decirlo explícitamente)",
         "docs/design-system.md enlaza a cómo correrlo"
       ],
-      "status": "pending"
+      "status": "done",
+      "resolution": "packages/ui/.storybook/ (main.ts + preview.tsx + preview.css) con storybook@10.6, @storybook/react-vite, addon-docs, addon-a11y — deliberadamente mínimo, sin Chromatic/Vitest/Playwright/addon-mcp que traía el init por defecto (se recortaron del package.json antes de instalar). 16 historias, una por primitiva de src/web (Button, Input, Textarea, Select, DatePicker, Card, Tag, StatusBadge, Skeleton, LoadingState, EmptyState, ErrorState, Table, Dialog, Toast, Cifra), cubriendo estados reales (variantes, disabled, cargando, error, vacio) no solo el caso feliz. preview.tsx envuelve todo en bg-ds-bg/text-ds-text + ToastProvider (mismo contexto que usa una pantalla real). main.ts usa @tailwindcss/vite para que las clases ds-* generen CSS de verdad. 3 bugs reales encontrados y corregidos construyendolo: (1) npx storybook init resolvio un react-dom que chocaba con el pin exacto de mobile/Expo -- instalado con --legacy-peer-deps, verificado que npm aislo bien las 2 versiones (web ya necesitaba su propia copia igual) y que verificar.sh sigue verde; (2) @tailwindcss/vite fallaba por falta de vite (su propio peer, nunca instalado en el repo) -- agregado explicito; (3) el build de Tailwind fallaba por un */ literal dentro de mi propio comentario en preview.css que cerraba el comentario antes de tiempo. Verificado de punta a punta: npm run build-storybook (build estatico real) + npm run storybook con captura de pantalla real via Chrome MCP en 3 historias (Button, Table con logica condicional de acciones, Dialog abriendo/cerrando de verdad, Toast disparando). No se agrego a CI (no fue parte del pedido). docs/design-system.md documenta como correrlo + los 3 hallazgos."
     }
   ]
 }

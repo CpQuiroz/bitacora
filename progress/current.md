@@ -6,8 +6,7 @@
   14 — levantamientos_paso0, 15 — levantamientos_paso1_5, 16 — levantamientos_admin_editar,
   17 — levantamientos_cola_offline, 1 — eslint_web_next16, 2 — ci_verificar,
   4 — smoke_backend, 8 — sistema_diseno (Paso 7), 3 — rotar_deploy_hook_render
-- **Nueva, pendiente:** 18 — storybook_packages_ui (separada de la 8
-  por decisión de la usuaria)
+- **Cerrada también:** 18 — storybook_packages_ui
 - **En curso ahora:** tarea 5 (e2e_mantencion_pdf_prod) — esperando que la usuaria
   inicie sesión en prod en el navegador (no toco credenciales); ver política.
 - **Pausada:** 8 — sistema_diseno (pending, no abandonada — retomar cuando la
@@ -811,3 +810,57 @@ usuaria, no abandonado.
 
 `./verificar.sh` completo verde (`web` — 0 errores, 20 warnings
 preexistentes, igual que antes de esta tarea).
+
+## 2026-09-12: tarea 18 — Storybook para packages/ui
+
+`npx storybook@latest init --type react --builder vite` dentro de
+`packages/ui` — mejor dejar que el CLI oficial detecte/configure la
+versión correcta (Storybook 10, cambia rápido) que armar el config a
+mano. Recorté el `package.json` que dejó el init ANTES de instalar:
+sacó `@chromatic-com/storybook` (SaaS externo), `@storybook/addon-vitest`
++ `vitest` + `playwright` + `@vitest/browser-playwright` +
+`@vitest/coverage-v8` (todo el stack de testing de interacción con
+navegador real) y `@storybook/addon-mcp` — nada de eso hacía falta
+para "navegar las primitivas visualmente", que era el pedido. También
+borré el boilerplate de demo genérico (`src/stories/Button|Header|Page`)
+que el init siempre escribe.
+
+**3 bugs reales, todos encontrados corriendo el build de verdad, no
+asumiendo que iba a andar**:
+1. `npm install` del init falló con `ERESOLVE`: el `react-dom` que
+   quiere `@storybook/react-vite@10.6` no satisface el pin EXACTO de
+   `mobile` (`react@19.2.3`, Expo). Instalé con `--legacy-peer-deps` y
+   verifiqué después que npm aisló bien las 2 versiones que YA
+   convivían en el repo desde antes (`web` también pinea exacto,
+   `19.2.8`, con su propia copia anidada en `web/node_modules`) — no
+   es un bug nuevo que yo introduje, es el mismo patrón de 2 pines
+   exactos distintos en el monorepo, ya resuelto por npm de la forma
+   correcta. `./verificar.sh` completo sigue verde después.
+2. `npm run build-storybook` falló: `@tailwindcss/vite` (que agregué a
+   mano para que las clases `ds-*` generen CSS real, mismo criterio
+   que `web/postcss.config.mjs`) no encontraba el paquete `vite` — es
+   su propio peer dependency, y nada en el repo lo había instalado
+   nunca (packages/ui no tenía ningún bundler hasta ahora). Agregado
+   explícito a `devDependencies`.
+3. Con `vite` resuelto, el build seguía fallando: Tailwind tiraba
+   "Invalid declaration" señalando texto de MI PROPIO comentario en
+   `preview.css` — tenía la secuencia literal `*/` en medio de la
+   frase ("...clases bg-ds-*/text-ds-*/rounded-ds-*..."), que cierra
+   un comentario CSS antes de tiempo y deja el resto como CSS inválido
+   de verdad. Reescrito sin esa secuencia.
+
+**Verificado de punta a punta, no solo "compila"**: `npm run
+build-storybook` (build estático real) + `npm run storybook` en
+background y captura de pantalla real vía Chrome MCP en 3 historias
+representativas — Button (tokens/colores aplicados), Table con
+acciones condicionales (`oculta` ocultando "Dar de baja" en la fila ya
+dada de baja, StatusBadge con los 3 tonos reales), Dialog abriendo de
+verdad al clickear (backdrop, título, botones), Toast disparando al
+clickear "Guardar" ("Cambios guardados" visible en pantalla). Los 4
+casos renderizaron con el sistema de diseño real, sin bugs visuales.
+
+16 historias en total (una por primitiva de `src/web`), cubriendo
+estados reales por componente (variantes, disabled, cargando, error,
+vacío — no solo el caso feliz). No se agregó a CI (no era parte del
+pedido). `docs/design-system.md` documenta cómo correrlo + los 3
+hallazgos.

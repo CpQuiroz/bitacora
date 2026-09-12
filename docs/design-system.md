@@ -88,10 +88,60 @@ correrla contra el repo real. Mobile queda afuera: no tiene ESLint
 configurado hoy.
 
 **No incluido en la tarea #8 (Paso 7):** Storybook para `packages/ui`
-— separado en su propia tarea (#18, `pending`) por ser la pieza más
-pesada (paquetes nuevos, config, historias por componente) y una
-decisión explícita de la usuaria (12-sep-2026) de no bloquear el resto
-de Paso 7 en eso.
+— separado en su propia tarea (#18) por ser la pieza más pesada
+(paquetes nuevos, config, historias por componente) y una decisión
+explícita de la usuaria (12-sep-2026) de no bloquear el resto de Paso
+7 en eso.
+
+## Storybook (`packages/ui`, tarea #18 — hecho)
+
+```
+cd packages/ui
+npm run storybook          # dev server en http://localhost:6006
+npm run build-storybook    # build estático en storybook-static/ (gitignorado)
+```
+
+Cubre las 16 primitivas de `src/web` (una historia por componente,
+con los estados reales: variantes, disabled, cargando, error, vacío,
+etc. según aplique — no solo el caso feliz). `.storybook/preview.tsx`
+envuelve todas las historias en el mismo fondo/texto base que ve una
+pantalla real (`bg-ds-bg text-ds-text`) + `ToastProvider` (Toast usa
+`useToast()` vía contexto). `.storybook/main.ts` usa el plugin de Vite
+de Tailwind v4 (mismo criterio que `web/postcss.config.mjs`, builder
+distinto) para que las clases `ds-*` generen CSS de verdad — sin esto
+las primitivas se ven sin estilo.
+
+Deliberadamente mínimo — nada de Chromatic (SaaS externo), addon-test/
+Vitest/Playwright (testing de interacción con navegador real) ni
+addon-mcp: el objetivo es navegar las primitivas visualmente, no armar
+un runner de tests. Verificado de punta a punta antes de cerrar la
+tarea: `npm run build-storybook` (build estático real, no solo
+`tsc`) + `npm run storybook` con captura de pantalla real vía Chrome
+MCP en 3 historias representativas (Button, Table con acciones
+condicionales, Dialog abriéndose de verdad, Toast disparando).
+
+No corre en CI — `verificar.sh`/`verificar.yml` no lo invocan (no
+había pedido de agregarlo; si hace falta más adelante, agregar
+`npm run build-storybook -w packages/ui` como paso nuevo).
+
+**2 bugs reales encontrados construyéndolo** (ninguno hipotético — los
+dos rompían el build hasta corregirlos):
+1. `npx storybook@latest init` resolvió a un `react-dom@19.3.0` que no
+   satisfacía el pin exacto de `mobile` (Expo, `react@19.2.3`) — falló
+   con `ERESOLVE`. Se instaló con `--legacy-peer-deps`; verificado que
+   npm anidó correctamente una copia propia en `web/node_modules`
+   (igual que web ya necesitaba, por su propio pin exacto
+   `19.2.8`) en vez de romper nada — `./verificar.sh` completo sigue
+   verde después.
+2. `@tailwindcss/vite` (agregado a mano, el `init` no lo trae) fallaba
+   con `Cannot find package 'vite'` — es peer de `@storybook/react-vite`,
+   nunca se había instalado en el repo (nada más lo necesitaba). Se
+   agregó `vite` explícito a `devDependencies`.
+3. El build de Tailwind fallaba con un error de "Invalid declaration"
+   apuntando a mi propio comentario en `preview.css` — tenía la
+   secuencia literal `*/` en medio del texto (`...ds-*/text-ds-*/...`),
+   que cierra un comentario CSS antes de tiempo. Reescrito sin esa
+   secuencia.
 
 ## Tipografía (Paso 3 — hecho)
 
