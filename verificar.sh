@@ -81,6 +81,13 @@ tsc_check tokens   packages/design-tokens/tsconfig.json
 tsc_check ui       packages/ui/tsconfig.json
 tsc_check backend  backend/tsconfig.json
 tsc_check shared   packages/shared/tsconfig.json
+# web/tsconfig.json incluye .next/types/**/*.ts (rutas tipadas de Next
+# 16, ej. LayoutProps<"/"> en layout.tsx) — Next lo genera solo, no
+# está versionado. Cualquiera que haya corrido `next dev`/`build` una
+# vez en esta carpeta ya lo tiene sin darse cuenta (así pasó
+# desapercibido hasta el primer checkout 100% limpio, en CI — tarea
+# #2, 12-sep-2026: tsc web rompía con "Cannot find name 'LayoutProps'").
+(cd web && npx next typegen) >/tmp/harness_next_typegen.log 2>&1 || { fail "next typegen — ver /tmp/harness_next_typegen.log"; EXIT_CODE=1; }
 tsc_check web      web/tsconfig.json
 if [ $RAPIDO -eq 0 ]; then
   tsc_check mobile mobile/tsconfig.json

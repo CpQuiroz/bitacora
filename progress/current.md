@@ -731,6 +731,41 @@ Tarea marcada `blocked` hasta que confirme.
 en ningún lado (ni chat, ni memoria, ni repo), consistente con la
 regla que se documentó en §3.4.
 
+## 2026-09-12: push a main + primera corrida real de CI — falló, hallazgo real
+
+La usuaria pidió "hace un push" de los 6 commits acumulados (tareas
+#1/#2/#4/#3/#8). Fast-forward limpio, sin divergencia con
+`origin/main`. Dispara auto-deploy (Vercel+Render) y, por primera vez,
+la corrida REAL del workflow `verificar.yml` (tarea #2) en GitHub
+Actions — hasta ahora solo lo había validado simulando `npm ci` limpio
+en mi propia máquina.
+
+**Falló.** Usé la API de GitHub (sin `gh` CLI disponible en esta
+sesión) para diagnosticar sin acceso a los logs completos (403, "Must
+have admin rights") — los `annotations` del check-run sí estaban
+públicos y bastaron: `web/src/app/layout.tsx:40:50 — Cannot find name
+'LayoutProps'`.
+
+**Causa real**: `web/tsconfig.json` incluye `.next/types/**/*.ts` —
+las rutas tipadas de Next 16 (`LayoutProps<"/">` en `layout.tsx`), que
+Next genera solo (`next dev`/`next build`), nunca están versionadas.
+Mi simulación de "npm ci limpio" de la tarea #2 borró `node_modules` y
+`dist/`, pero **no borré `web/.next`** — ya lo tenía puesto de sesiones
+de `next dev` anteriores en esta misma máquina, así que `tsc web`
+pasaba igual sin que yo notara que dependía de ese directorio. Es el
+mismo tipo de error que el del `--stack-size` de la tarea #2 (artefacto
+viejo tapando un gap real) — esta vez se me escapó uno de los
+directorios a limpiar.
+
+**Fix**: `verificar.sh` corre `npx next typegen` (comando dedicado de
+Next 16 para esto, sin necesidad de un build completo) antes de
+`tsc_check web`. Re-verificado localmente borrando `node_modules` +
+`dist/` + **`web/.next`** juntos esta vez — verde de punta a punta.
+Comiteado y pusheado; quedo mirando la corrida real de CI sobre este
+fix para confirmar que también pasa en el runner de Ubuntu (mi
+máquina es macOS — otra diferencia que la simulación local no cubre
+del todo).
+
 ## 2026-09-12: tarea 8 — Paso 7 del sistema de diseño (ESLint + doc, sin Storybook)
 
 Pasos 0-6 ya estaban hechos de sesiones anteriores. De Paso 7 quedaban
