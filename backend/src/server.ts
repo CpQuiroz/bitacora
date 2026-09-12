@@ -42,6 +42,7 @@ import { encuestaPublicaRouter } from "./routes/encuestaPublica";
 import { equiposRouter } from "./routes/equipos";
 import { planesMantencionRouter } from "./routes/planesMantencion";
 import { registrosMantencionRouter } from "./routes/registrosMantencion";
+import { levantamientosRouter } from "./routes/levantamientos";
 import { sugerenciasRubroRouter } from "./routes/sugerenciasRubro";
 import { catalogoRouter } from "./routes/catalogo";
 import { inventarioRouter } from "./routes/inventario";
@@ -346,6 +347,11 @@ app.use("/api/equipos", requiereAuth, requiereEmpresa, equiposRouter);
 // requiereModulo (igual que equipos): la autorización es por handler
 // (gestionar flota vs. chofer del vehículo). Ver routes/registrosMantencion.ts.
 app.use("/api/equipos", requiereAuth, requiereEmpresa, registrosMantencionRouter);
+// Sin requiereModulo a nivel de router (igual que registrosMantencion):
+// el técnico asignado (usuarios.funcion, no rol) necesita pasar por acá
+// aunque su rol "colaborador" no vea el módulo — cada handler valida
+// empresaTieneModulo() + el permiso puntual. Ver routes/levantamientos.ts.
+app.use("/api/levantamientos", requiereAuth, requiereEmpresa, levantamientosRouter);
 app.use("/api/planes-mantencion", requiereAuth, requiereEmpresa, planesMantencionRouter);
 app.use("/api/sugerencias-rubro", requiereAuth, requiereEmpresa, sugerenciasRubroRouter);
 app.use("/api/catalogo", requiereAuth, requiereEmpresa, catalogoRouter);

@@ -16,6 +16,7 @@ export const ETIQUETA_MODULO: Record<string, string> = {
   flota: "Flota",
   agenda_pro: "Agenda Pro (paquetes de sesiones y confirmación por el cliente)",
   remuneraciones: "Remuneraciones (liquidaciones de sueldo — legislación chilena)",
+  levantamientos: "Levantamientos (evaluación en terreno + materiales, cotización fuera de Bitácora)",
 };
 
 // Acciones sensibles delegables a un rol (además de sus módulos). Se

@@ -187,6 +187,34 @@
         "APK nuevo (1.9.8) generado para probar en el teléfono"
       ],
       "status": "done"
+    },
+    {
+      "id": 14,
+      "name": "modulo_levantamientos_paso0",
+      "title": "Módulo Levantamientos — Paso 0 (auditoría, sin código)",
+      "description": "Paso 0 cerrado. Hallazgos clave: (1) empresa_modulos/requiereModulo se replica agregando 'levantamientos' a MODULOS+MODULOS_OPCIONALES; (2) CatalogoSelectorModal (web) ya reutilizable; (3) el descuento de stock (aplicarDescuentoInventarioSiCorresponde) se dispara por transición de estado_os configurable por empresa, NO en la creación — una OS nacida de un levantamiento no necesita ningún gancho especial, solo crearse igual que una OS manual; (4) el Chequeo diario YA es configurable vía checklist_templates (Configuración > Checklists) — agregar ítems es cambio de datos, no de código; (5) os_items: trabajo_id/catalogo_item_id/descripcion/cantidad/precio_unitario, mapeo directo; (6) NO existe hoy ninguna matriz de perfiles mobile — usuarios.funcion no gatea nada (solo texto en Perfil), decidido con la usuaria repurposearlo como el eje real para Levantamientos.",
+      "acceptance": [
+        "Hallazgos de los 7 puntos reportados a la usuaria, sin escribir código de la feature — HECHO",
+        "Confirmado con la usuaria: solo Admin crea/aprueba (no Supervisor); cotizar/aprobar solo desde web; usuarios.funcion (tecnico/chofer, extensible) gatea la sección mobile"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 15,
+      "name": "modulo_levantamientos",
+      "title": "Módulo Levantamientos — implementación (Pasos 1-5)",
+      "description": "Nuevo módulo opcional (empresa_modulos, apagado por defecto): Admin crea Orden de Levantamiento (cliente + técnico asignado + descripción del requerimiento); el técnico (funcion=tecnico|chofer) visita al cliente, completa descripción de terreno + materiales del Catálogo con cantidad (sin tocar stock) + fotos; el Admin cotiza fuera de Bitácora (referencia_externa libre) y marca aprobado/rechazado desde la web; al aprobar nace automáticamente una OS con esos materiales como os_items — el descuento de stock ocurre solo, vía el mecanismo ya existente por transición de estado_os (sin gancho nuevo). Rechazado no genera OS ni toca stock.",
+      "acceptance": [
+        "Migración nueva: levantamientos, levantamiento_materiales, levantamiento_fotos + índice por cada FK",
+        "Backend: crear (Admin), completar en terreno (técnico/chofer vía funcion), marcar cotizado externo, aprobar (crea OS + os_items + vincula orden_servicio_id, reutilizando crearOrdenServicio), rechazar (no crea nada)",
+        "'levantamientos' sumado a MODULOS + MODULOS_OPCIONALES (shared), activable desde Super-Admin igual que agenda_pro",
+        "Web: pantalla Admin para crear/listar/ver detalle/cotizar/aprobar-rechazar",
+        "Mobile: sección nueva (visible solo si funcion ∈ {tecnico, chofer}) — listado de asignados + detalle para completar (descripción, selector de materiales del catálogo, fotos vía subirFotoGuiaConNombre)",
+        "EXPLAIN ANALYZE sobre listar levantamientos por empresa/técnico confirmando uso de los índices nuevos",
+        "Probado de punta a punta: crear → completar en terreno (sin tocar stock) → cotizado externo con referencia → aprobado (nace la OS correcta, stock recién ahí) y el camino de rechazo (sin OS, sin stock)",
+        "./verificar.sh verde"
+      ],
+      "status": "done"
     }
   ]
 }

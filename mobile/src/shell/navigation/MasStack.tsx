@@ -14,6 +14,8 @@ import { MantencionVehiculoScreen } from "../../features/mantencion/MantencionVe
 import { ChecklistMantencionScreen } from "../../features/mantencion/ChecklistMantencionScreen";
 import { MantencionHistorialScreen } from "../../features/mantencion/MantencionHistorialScreen";
 import { MantencionDetalleScreen } from "../../features/mantencion/MantencionDetalleScreen";
+import { LevantamientosListScreen } from "../../features/levantamientos/LevantamientosListScreen";
+import { LevantamientoDetalleScreen } from "../../features/levantamientos/LevantamientoDetalleScreen";
 import { TrabajosStack } from "./TrabajosStack";
 import { ViajesStack } from "./ViajesStack";
 
@@ -37,6 +39,8 @@ export function MasStack() {
       <Stack.Screen name="ChecklistMantencion" component={ChecklistMantencionScreen} options={{ title: "Mantención" }} />
       <Stack.Screen name="MantencionHistorial" component={MantencionHistorialScreen} options={{ title: "Historial" }} />
       <Stack.Screen name="MantencionDetalle" component={MantencionDetalleScreen} options={{ title: "Detalle" }} />
+      <Stack.Screen name="Levantamientos" component={LevantamientosListScreen} options={{ title: "Levantamientos" }} />
+      <Stack.Screen name="LevantamientoDetalle" component={LevantamientoDetalleScreen} options={{ title: "Levantamiento" }} />
       <Stack.Screen name="CobrosLista" component={CobrosListaScreen} options={{ title: "Cobros" }} />
       <Stack.Screen name="CobroForm" component={CobroFormScreen} options={{ title: "Nuevo cobro", presentation: "modal" }} />
       <Stack.Screen name="CobroDetalle" component={CobroDetalleScreen} options={{ title: "Cobro" }} />

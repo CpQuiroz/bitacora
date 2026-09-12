@@ -420,9 +420,10 @@ export type TipoNotificacion =
   | "documento_por_vencer"
   | "cita_confirmada"
   | "cita_cancelada"
-  | "solicitud_correccion_datos";
+  | "solicitud_correccion_datos"
+  | "levantamiento_asignado";
 
-export type EntidadNotificacion = "trabajo" | "factura" | "ruta" | "usuario" | "cotizacion" | "tarea" | "documento";
+export type EntidadNotificacion = "trabajo" | "factura" | "ruta" | "usuario" | "cotizacion" | "tarea" | "documento" | "levantamiento";
 
 export type Notificacion = {
   id: string;
@@ -1045,6 +1046,64 @@ export type RegistroMantencionFoto = {
 // que lo respalde. Flag para poder apagarlo por completo.
 export const MANTENCION_EXIGE_FOTO_EN_NO = true;
 
+// ============================================================
+// Levantamientos — módulo opt-in (empresa_modulos, ver permisos.ts).
+// Admin crea → técnico completa en terreno (materiales + fotos, sin
+// tocar stock) → Admin cotiza fuera de Bitácora → aprobado crea una OS
+// automáticamente (el descuento de stock ocurre ahí, vía el mecanismo
+// ya existente por transición de estado_os — sin gancho nuevo).
+// ============================================================
+export const ESTADOS_LEVANTAMIENTO = [
+  "creado",
+  "asignado",
+  "en_terreno",
+  "completado_tecnico",
+  "cotizado_externo",
+  "aprobado",
+  "rechazado",
+] as const;
+export type EstadoLevantamiento = (typeof ESTADOS_LEVANTAMIENTO)[number];
+
+export type Levantamiento = {
+  id: string;
+  empresa_id: string;
+  cliente_id: string;
+  tecnico_id: string | null;
+  creado_por: string | null;
+  estado: EstadoLevantamiento;
+  descripcion_requerimiento: string | null;
+  descripcion_tecnico: string | null;
+  referencia_externa: string | null;
+  orden_servicio_id: string | null;
+  creado_en: string;
+  actualizado_en: string;
+};
+
+export type LevantamientoMaterial = {
+  id: string;
+  empresa_id: string;
+  levantamiento_id: string;
+  catalogo_item_id: string;
+  cantidad: number;
+  creado_en: string;
+};
+
+// Molde: RegistroMantencionFoto. Varias fotos por levantamiento, misma
+// cola offline (subirFotoLevantamiento, ver storage.ts).
+export type LevantamientoFoto = {
+  id: string;
+  empresa_id: string;
+  levantamiento_id: string;
+  foto_url: string;
+  subida_por: string | null;
+  creado_en: string;
+};
+
+// Perfiles mobile (usuarios.funcion) que ven la sección Levantamientos.
+// Array, no un solo valor — sumar "instalador"/otro a futuro es un
+// cambio acá, no de lógica dispersa por pantallas.
+export const FUNCIONES_LEVANTAMIENTOS: FuncionColaborador[] = ["tecnico", "chofer"];
+
 export type TipoCatalogoItem = "producto" | "servicio" | "kit";
 
 export type CatalogoItem = {
@@ -1661,6 +1720,9 @@ export type Database = {
       planes_mantencion: Tabla<PlanMantencion>;
       registros_mantencion_equipo: Tabla<RegistroMantencionEquipo>;
       registro_mantencion_fotos: Tabla<RegistroMantencionFoto>;
+      levantamientos: Tabla<Levantamiento>;
+      levantamiento_materiales: Tabla<LevantamientoMaterial>;
+      levantamiento_fotos: Tabla<LevantamientoFoto>;
       sugerencias_rubro: Tabla<SugerenciaRubro>;
       catalogo_items: Tabla<CatalogoItem>;
       catalogo_kit_items: Tabla<CatalogoKitItem>;

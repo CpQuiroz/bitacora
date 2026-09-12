@@ -430,3 +430,68 @@ vez de texto genérico, migración 99 pendiente, gap de tracking en dev).
 
 Pendiente: la usuaria tiene que volver a subir el archivo a su Proyecto
 de claude.ai a mano (no se sincroniza solo).
+
+## 2026-09-11/12: tarea 14+15 — Módulo Levantamientos (prompt completo)
+
+Prompt estructurado de la usuaria (Paso 0 auditoría → Paso 1-5
+implementación). Paso 0 reportado y 3 decisiones confirmadas antes de
+seguir: (1) `usuarios.funcion` (hoy solo texto, no gatea nada en
+mobile) se repurpone como el eje real de visibilidad de esta sección
+— array `FUNCIONES_LEVANTAMIENTOS` extensible; (2) solo Admin crea/
+cotiza/aprueba/rechaza, Supervisor no; (3) cotizar/aprobar es solo web,
+el técnico en mobile no ve esos estados/botones.
+
+**Hallazgo clave de la auditoría**: el descuento de stock
+(`aplicarDescuentoInventarioSiCorresponde`) se dispara por transición
+de `estado_os` configurable por empresa, NO en la creación de la OS —
+así que la OS que nace al aprobar un levantamiento **no necesita
+ningún gancho nuevo**, se crea igual que una manual y el descuento ya
+existente se aplica solo, en el mismo punto de siempre.
+
+**Construido**: migración 100 (`levantamientos`, `levantamiento_
+materiales`, `levantamiento_fotos` + índices + seed de "levantamientos"
+en el rol admin ya existente — el seed de `roles` solo corre con la
+tabla vacía, sumar un módulo a `MODULOS` no le llega solo a las filas
+ya sembradas, gotcha ya documentado en `CONTEXTO_PROYECTO.md`).
+Backend `routes/levantamientos.ts` (crear, completar, fotos, cotizado,
+aprobar, rechazar) — autorización por handler, no `requiereModulo()` a
+nivel de router (el técnico es rol=colaborador, `requiereModulo` no
+lo dejaría pasar). Web `/dashboard/levantamientos` (lista + crear +
+detalle con acciones). Mobile: `LevantamientosListScreen` +
+`LevantamientoDetalleScreen`, visibles en "Más" solo si
+`funcion ∈ {tecnico, chofer}` — sin cola offline a propósito (se
+completa en una sesión con señal, no es un formulario de campo sin
+conexión como check-in de OS).
+
+**2 bugs reales encontrados probando en vivo contra dev** (no en
+teoría):
+1. PostgREST no podía resolver `tecnico:usuarios(...)` porque
+   `levantamientos` tiene 2 FK a `usuarios` (`tecnico_id`,
+   `creado_por`) — "more than one relationship was found". Fix: hint
+   de columna `usuarios!tecnico_id(...)`.
+2. `audit:tenant` encontró un hallazgo real, no solo heurístico: al
+   validar `tecnico_id` en la creación, `esTecnicoAsignable()`
+   consultaba `usuarios` sin `empresa_id` — un Admin podía (por un id
+   mal tipeado o adivinado) asignar como técnico a un usuario de OTRA
+   empresa. Corregido acotando esa consulta a `req.empresaId!`; las
+   otras 3 alertas del audit eran legítimas (ids ya venían de una fila
+   de `levantamientos` previamente acotada por empresa) y quedaron
+   marcadas `// tenant-ok:`.
+
+**Verificado en vivo de punta a punta** (Chrome MCP + llamadas
+directas a la API con el token de sesión, contra dev): crear
+levantamiento (cliente + técnico filtrado por función) → técnico
+completa (descripción + material del catálogo + cantidad) → Admin
+marca cotizado con referencia externa → Admin aprueba → nace la OS
+correcta (folio, colaborador, ítem con cantidad/precio) con
+`stock_descontado=false` (no se tocó el stock, correcto). Camino de
+rechazo probado aparte: no crea ninguna OS ni toca nada. `EXPLAIN
+ANALYZE` confirmó Index Scan en `levantamientos (empresa_id,
+tecnico_id)`. Datos de prueba limpiados de dev al cerrar.
+
+`./verificar.sh` verde: tsc x6, 27 tests, 12 literales, **100
+migraciones**, audit:tenant 0 hallazgos.
+
+Pendiente real: activar el módulo en prod (`empresa_modulos` vía panel
+Super-Admin, apagado por defecto) cuando la usuaria quiera probarlo
+ahí; correr la migración 100 en prod (ella la corre).

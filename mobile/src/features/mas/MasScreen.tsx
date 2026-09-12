@@ -3,6 +3,7 @@ import { Pressable, ScrollView, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { FUNCIONES_LEVANTAMIENTOS } from "@bitacora/shared";
 import { useTema } from "../../theme";
 import { Text } from "../../components/ui";
 import { pesos } from "../../lib/plata";
@@ -31,6 +32,13 @@ export function MasScreen({ navigation }: NativeStackScreenProps<MasStackParamLi
   const visibles = listo ? auth.modulosVisibles : [];
   const acciones = listo ? auth.acciones : [];
   const deshabilitados = listo ? auth.modulosDeshabilitados : [];
+  // Levantamientos no se gatea por rol/módulo (el técnico es
+  // rol=colaborador, igual que cualquier otro terreno) — el eje real es
+  // usuarios.funcion. Sumar un perfil nuevo a futuro (ej. "asistente")
+  // es un cambio acá, en FUNCIONES_LEVANTAMIENTOS (shared), no de lógica
+  // dispersa por pantallas.
+  const funcion = listo ? auth.usuario.funcion : null;
+  const veLevantamientos = funcion != null && FUNCIONES_LEVANTAMIENTOS.includes(funcion);
 
   const [cobros, setCobros] = useState<{ vencidos: number; monto: number } | null>(null);
 
@@ -65,6 +73,14 @@ export function MasScreen({ navigation }: NativeStackScreenProps<MasStackParamLi
     icono: "construct-outline",
     ir: () => navigation.navigate("MantencionVehiculo"),
   });
+  if (veLevantamientos) {
+    terreno.push({
+      titulo: "Levantamientos",
+      contexto: "Evaluaciones en terreno asignadas a vos",
+      icono: "search-outline",
+      ir: () => navigation.navigate("Levantamientos"),
+    });
+  }
   grupos.push({ titulo: "Terreno", items: terreno });
 
   // --- Dinero ---

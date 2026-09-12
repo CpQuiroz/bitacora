@@ -27,6 +27,10 @@ export const MODULOS = [
   // Cálculo de liquidaciones de sueldo (legislación chilena) — opt-in,
   // apagado por defecto, lo enciende el Super-Admin por empresa.
   "remuneraciones",
+  // Levantamientos: Admin crea, técnico evalúa en terreno, Admin cotiza
+  // fuera de Bitácora y al aprobar nace una OS. Opt-in, apagado por
+  // defecto.
+  "levantamientos",
 ] as const;
 
 export type Modulo = (typeof MODULOS)[number];
@@ -94,7 +98,7 @@ export function puedeVerModulo(rol: Rol, modulo: Modulo): boolean {
 // exclusivos de Pro — antes eran base, empresas ya existentes se
 // migran explícitamente en la migración que agrega esto (no quedan
 // des-sincronizadas silenciosamente).
-export const MODULOS_OPCIONALES: Modulo[] = ["agenda_pro", "informe_ia", "asistente", "remuneraciones"];
+export const MODULOS_OPCIONALES: Modulo[] = ["agenda_pro", "informe_ia", "asistente", "remuneraciones", "levantamientos"];
 
 export function moduloActivadoPorDefecto(modulo: Modulo): boolean {
   return !MODULOS_OPCIONALES.includes(modulo);

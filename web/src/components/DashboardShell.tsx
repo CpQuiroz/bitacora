@@ -28,6 +28,7 @@ import {
   Paperclip,
   Receipt,
   Route,
+  Search,
   Settings,
   Share2,
   Sparkles,
@@ -64,6 +65,10 @@ const NAV_GROUPS: NavGroup[] = [
       // "con documento / sin documento" y el alta rápida ("Nueva OS")
       // viven dentro de la página.
       { href: "/dashboard/ordenes", label: "Órdenes de servicio", icon: ClipboardCheck, modulo: "ordenes_servicio" },
+      // Opt-in (empresa_modulos): evaluación en terreno + materiales,
+      // antes de que exista una OS — la cotización ocurre fuera de
+      // Bitácora, al aprobar nace la OS.
+      { href: "/dashboard/levantamientos", label: "Levantamientos", icon: Search, modulo: "levantamientos" },
       // Módulos apagables, cada uno con su propio gate.
       { href: "/dashboard/rutas", label: "Rutas", icon: Route, modulo: "rutas" },
       { href: "/dashboard/viajes", label: "Viajes", icon: Truck, modulo: "viajes" },

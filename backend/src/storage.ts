@@ -313,6 +313,21 @@ export async function subirFotoRegistroMantencion(
   return key; // se guarda en registro_mantencion_fotos.foto_url
 }
 
+// Molde: subirFotoRegistroMantencion. Fotos del levantamiento (lo que
+// el técnico ve en terreno), mismo bucket privado.
+export async function subirFotoLevantamiento(
+  empresaId: string,
+  levantamientoId: string,
+  archivo: Buffer | Uint8Array,
+  contentType: string
+): Promise<string> {
+  await verificarLimiteStorage(empresaId, archivo.byteLength);
+  const key = `${empresaId}/levantamientos/${levantamientoId}/${Date.now()}.jpg`;
+  await client.send(new PutObjectCommand({ Bucket: BUCKET, Key: key, Body: archivo, ContentType: contentType }));
+  incrementarStorageUsado(empresaId, archivo.byteLength);
+  return key; // se guarda en levantamiento_fotos.foto_url
+}
+
 export async function subirFirmaRegistroMantencion(
   empresaId: string,
   registroId: string,
