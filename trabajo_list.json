@@ -230,6 +230,20 @@
         "Verificado en vivo contra dev: crear → editar (asigna técnico, pasa a Asignado) → subir foto → eliminar foto → eliminar levantamiento — los 5 pasos funcionaron"
       ],
       "status": "done"
+    },
+    {
+      "id": 17,
+      "name": "levantamientos_cola_offline",
+      "title": "Levantamientos (mobile): agregar cola offline — corrige una simplificación apurada",
+      "description": "La usuaria preguntó por qué el módulo no tenía cola offline y cuestionó la decisión — al re-pensarlo, la razón original ('se completa en una sesión con señal') no aguantaba: un levantamiento se llena en el mismo tipo de terreno donde ya falla la señal para OS/viajes/mantención, sin ninguna razón real para tratarlo distinto. Se agregó el mismo patrón ya probado: intento directo primero, si falla o no hay señal se encola (services/sync/queue.ts) y se reintenta solo, con el guard anti-apilamiento ya arreglado esta sesión.",
+      "acceptance": [
+        "services/levantamientos.ts: encolarCompletarLevantamiento (PATCH sin archivo, sin riesgo de duplicar — es un update) y encolarFotoLevantamiento (multipart, misma cola que las demás fotos)",
+        "queue.ts: 'Foto de levantamiento' sumada a ES_SUBIDA_DE_FOTO (se procesa al final, nunca bloquea otras acciones)",
+        "LevantamientoDetalleScreen: guardar() y agregarFoto() intentan online primero, encolan si falla/sin señal, con los mismos mensajes ('Se reintentará solo'/'Guardado sin conexión') que ya usa Mantención",
+        "Fotos en cola se muestran como placeholder (ícono de sync o de error) hasta que suben de verdad",
+        "tsc mobile limpio, ./verificar.sh verde"
+      ],
+      "status": "done"
     }
   ]
 }

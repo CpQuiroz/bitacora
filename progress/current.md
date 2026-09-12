@@ -518,3 +518,26 @@ acciones llamando la API directo (mismo resultado, sin volver a
 disparar el diálogo).
 
 `./verificar.sh` verde. Datos de prueba limpiados de dev.
+
+## 2026-09-12: tarea 17 — Levantamientos gana cola offline
+
+La usuaria cuestionó la decisión de no tener cola ("¿por qué no? ¿la
+agregamos o no la ves necesaria?"). Al re-pensarlo en voz alta, la
+razón original no aguantaba: un levantamiento se completa exactamente
+en el mismo tipo de terreno donde ya falla la señal para OS/viajes/
+mantención — no había ninguna base real para tratarlo distinto, fue
+una simplificación mía apurada al escribir el Paso 3 original.
+
+Agregado con el mismo patrón ya probado: `encolarCompletarLevantamiento`
+(PATCH sin archivo — sin riesgo de duplicar, es un update, no un
+alta), `encolarFotoLevantamiento` (multipart, sumada a
+`ES_SUBIDA_DE_FOTO` en `queue.ts` para que nunca bloquee otra cosa).
+`LevantamientoDetalleScreen` intenta online primero y encola si falla
+o no hay señal, mismos mensajes que ya usa Mantención. Fotos en cola
+se ven como placeholder (sync/error) hasta que suben de verdad.
+
+`./verificar.sh` verde. No se pudo probar el camino "sin señal" en
+vivo (Chrome MCP es para web, no simula mobile offline) — se apoya en
+que reutiliza exactamente la misma infraestructura de cola ya
+verificada esta sesión para Mantención/Viajes/OS, no un mecanismo
+nuevo.

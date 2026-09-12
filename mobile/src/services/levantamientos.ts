@@ -1,14 +1,18 @@
 // ============================================================
 // BITÁCORA — Módulo Levantamientos, lado mobile (técnico/chofer).
 // El técnico solo completa en terreno (descripción + materiales + fotos)
-// — cotizar y aprobar/rechazar es exclusivo de la web (Admin). Sin cola
-// offline a propósito (a diferencia de OS/viajes/mantención): el técnico
-// completa un levantamiento en una sola sesión con señal, no es un
-// formulario que se llena en el momento del check-in en terreno sin
-// conexión — simplificación aceptada, ver progress/current.md.
+// — cotizar y aprobar/rechazar es exclusivo de la web (Admin).
+//
+// CON cola offline (agregada 2026-09-12, corrigiendo una simplificación
+// apurada del alta original): un levantamiento se llena exactamente en
+// el mismo tipo de terreno donde ya falla la señal para OS/viajes/
+// mantención — no había ninguna razón real para tratarlo distinto.
+// Mismo patrón: intento directo primero; si falla o no hay señal, se
+// encola (services/sync/queue.ts) y se reintenta solo.
 // ============================================================
 import type { CatalogoItem, EstadoLevantamiento } from "@bitacora/shared";
 import { apiFetch, apiJson, TIMEOUT_MULTIPART_MS } from "./api";
+import { encolar } from "./sync/queue";
 
 // Sin filtro de tipo: el técnico puede indicar tanto productos como
 // servicios como material del levantamiento.
@@ -55,15 +59,31 @@ export async function obtenerDetalleLevantamiento(id: string): Promise<{ detalle
   return { detalle: res.data, error: null };
 }
 
+export type DatosCompletar = { descripcion_tecnico: string; materiales: { catalogo_item_id: string; cantidad: number }[] };
+
 // Reemplaza descripción + materiales completos (no incremental) y pasa
-// el levantamiento a "completado_tecnico".
+// el levantamiento a "completado_tecnico". Intento directo — si falla
+// por red/servidor, el caller decide encolar (ver encolarCompletar).
 export async function completarLevantamiento(
   id: string,
-  datos: { descripcion_tecnico: string; materiales: { catalogo_item_id: string; cantidad: number }[] }
-): Promise<{ ok: true } | { ok: false; error: string }> {
+  datos: DatosCompletar
+): Promise<{ ok: true } | { ok: false; error: string; reintentable: boolean }> {
   const res = await apiJson(`/api/levantamientos/${id}/completar`, { method: "PATCH", body: JSON.stringify(datos) });
-  if (!res.ok) return { ok: false, error: res.error ?? "No se pudo guardar" };
+  if (!res.ok) return { ok: false, error: res.error ?? "No se pudo guardar", reintentable: res.status >= 500 || res.status === 0 };
   return { ok: true };
+}
+
+// Sin señal (o la subida directa falló): la acción es un PATCH sin
+// archivo, se reintenta sola sin apilar nada especial — no hay riesgo
+// de duplicar un registro (a diferencia de "crear"), es solo un update.
+export function encolarCompletarLevantamiento(id: string, datos: DatosCompletar): Promise<void> {
+  return encolar({
+    etiqueta: "Levantamiento completado",
+    recurso: `levantamiento:${id}`,
+    path: `/api/levantamientos/${id}/completar`,
+    method: "PATCH",
+    body: datos,
+  });
 }
 
 export async function subirFotoLevantamiento(
@@ -82,4 +102,16 @@ export async function subirFotoLevantamiento(
   } catch {
     return { ok: false, error: "Sin conexión" };
   }
+}
+
+// "Foto de levantamiento" — sumada a ES_SUBIDA_DE_FOTO en queue.ts para
+// que se procese al final del lote (nunca bloquea check-in/firma/etc).
+export function encolarFotoLevantamiento(id: string, foto: { uri: string; name?: string; type?: string }): Promise<void> {
+  return encolar({
+    etiqueta: "Foto de levantamiento",
+    recurso: `levantamiento:${id}`,
+    path: `/api/levantamientos/${id}/fotos`,
+    method: "POST",
+    archivo: { uri: foto.uri, name: foto.name ?? "foto.jpg", type: foto.type ?? "image/jpeg", campo: "foto" },
+  });
 }

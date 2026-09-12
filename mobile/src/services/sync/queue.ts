@@ -8,7 +8,7 @@ import { preferencias } from "../../lib/preferencias";
 // procesan al final y, si el archivo ya no está, se marcan fallidas sin
 // reintentar para siempre.
 const ES_SUBIDA_DE_FOTO = (a: { etiqueta: string }) =>
-  a.etiqueta === "Foto" || a.etiqueta === "Foto de la guía" || a.etiqueta === "Foto de viaje";
+  a.etiqueta === "Foto" || a.etiqueta === "Foto de la guía" || a.etiqueta === "Foto de viaje" || a.etiqueta === "Foto de levantamiento";
 
 // Cola de acciones pendientes. Toda mutación desde el campo (check-in/out,
 // guardar datos, firma, foto, finalizar, registrar viaje) se encola,

@@ -6,8 +6,11 @@ import type { CatalogoItem, EstadoLevantamiento } from "@bitacora/shared";
 import { useTema } from "../../theme";
 import { Button, ErrorState, Input, LoadingScreen, Text } from "../../components/ui";
 import { elegirFotos } from "../../lib/imagen";
+import { useRed } from "../../services/sync/NetworkProvider";
 import {
   completarLevantamiento,
+  encolarCompletarLevantamiento,
+  encolarFotoLevantamiento,
   listarCatalogo,
   obtenerDetalleLevantamiento,
   subirFotoLevantamiento,
@@ -32,7 +35,9 @@ type MaterialLocal = { catalogo_item_id: string; cantidad: number; nombre: strin
 // (Admin) — acá no hay esos botones, a propósito.
 export function LevantamientoDetalleScreen({ route }: NativeStackScreenProps<MasStackParamList, "LevantamientoDetalle">) {
   const t = useTema();
+  const { enLinea, pendientes } = useRed();
   const { id } = route.params;
+  const fotosEnCola = pendientes.filter((a) => a.recurso === `levantamiento:${id}` && a.etiqueta === "Foto de levantamiento");
   const [detalle, setDetalle] = useState<DetalleLevantamiento | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [descripcion, setDescripcion] = useState("");
@@ -65,6 +70,12 @@ export function LevantamientoDetalleScreen({ route }: NativeStackScreenProps<Mas
     void cargar();
   }, [cargar]);
 
+  // Cuando una foto sale de la cola (se subió o falló para siempre),
+  // recargamos para reemplazar el placeholder por la real o quitarlo.
+  useEffect(() => {
+    void cargar();
+  }, [fotosEnCola.length, cargar]);
+
   const editable = detalle != null && detalle.estado !== "aprobado" && detalle.estado !== "rechazado";
 
   async function abrirPicker() {
@@ -93,30 +104,45 @@ export function LevantamientoDetalleScreen({ route }: NativeStackScreenProps<Mas
 
   async function guardar() {
     setGuardando(true);
-    const res = await completarLevantamiento(id, {
+    const datos = {
       descripcion_tecnico: descripcion,
       materiales: materiales.map((m) => ({ catalogo_item_id: m.catalogo_item_id, cantidad: m.cantidad })),
-    });
-    setGuardando(false);
-    if (!res.ok) {
-      Alert.alert("No se pudo guardar", res.error);
-      return;
+    };
+
+    if (enLinea) {
+      const res = await completarLevantamiento(id, datos);
+      if (res.ok) {
+        setGuardando(false);
+        Alert.alert("Guardado", "El levantamiento quedó completado.", [{ text: "Listo" }]);
+        return void cargar();
+      }
+      if (!res.reintentable) {
+        setGuardando(false);
+        return Alert.alert("No se pudo guardar", res.error);
+      }
     }
-    Alert.alert("Guardado", "El levantamiento quedó completado.");
-    await cargar();
+
+    await encolarCompletarLevantamiento(id, datos);
+    setGuardando(false);
+    Alert.alert(
+      enLinea ? "Se reintentará solo" : "Guardado sin conexión",
+      "Quedó guardado en el teléfono y se envía a la oficina cuando haya señal.",
+      [{ text: "Listo" }]
+    );
   }
 
   async function agregarFoto() {
     const [elegida] = await elegirFotos();
     if (!elegida) return;
-    setSubiendoFoto(true);
-    const res = await subirFotoLevantamiento(id, elegida);
-    setSubiendoFoto(false);
-    if (!res.ok) {
-      Alert.alert("No se pudo subir la foto", res.error);
-      return;
+
+    if (enLinea) {
+      setSubiendoFoto(true);
+      const res = await subirFotoLevantamiento(id, elegida);
+      setSubiendoFoto(false);
+      if (res.ok) return void cargar();
     }
-    await cargar();
+
+    await encolarFotoLevantamiento(id, elegida);
   }
 
   if (!detalle && !error) return <LoadingScreen />;
@@ -214,7 +240,7 @@ export function LevantamientoDetalleScreen({ route }: NativeStackScreenProps<Mas
             <Button titulo="Agregar" variante="secundario" tamano="md" icono={<Ionicons name="camera-outline" size={16} color={t.colores.brand} />} cargando={subiendoFoto} onPress={agregarFoto} />
           ) : null}
         </View>
-        {detalle.fotos.length === 0 ? (
+        {detalle.fotos.length === 0 && fotosEnCola.length === 0 ? (
           <Text variante="caption" tono="muted">
             Sin fotos todavía.
           </Text>
@@ -222,6 +248,23 @@ export function LevantamientoDetalleScreen({ route }: NativeStackScreenProps<Mas
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: t.espacio(2) }}>
             {detalle.fotos.map((f) => (
               <Image key={f.id} source={{ uri: f.url }} style={{ width: 88, height: 88, borderRadius: t.radio.md, backgroundColor: t.colores.surfaceAlt }} />
+            ))}
+            {fotosEnCola.map((a) => (
+              <View
+                key={a.id}
+                style={{
+                  width: 88,
+                  height: 88,
+                  borderRadius: t.radio.md,
+                  backgroundColor: t.colores.surfaceAlt,
+                  borderWidth: 1,
+                  borderColor: t.colores.border,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Ionicons name={a.fallida ? "alert-circle-outline" : "sync"} size={20} color={a.fallida ? t.colores.danger : t.colores.accent} />
+              </View>
             ))}
           </View>
         )}
