@@ -1,0 +1,40 @@
+name: Verificar (Nivel 0)
+
+# Corre ./verificar.sh completo: tsc de los 4 paquetes + mobile, tests de
+# packages/shared y packages/design-tokens, lint de web, audit:tenant y
+# chequeo de numeración de migraciones. Es el mismo gate que el arnés le
+# exige al agente antes de cerrar cualquier tarea (docs/harness/
+# verificacion.md, "Nivel 0") — este workflow solo lo hace obligatorio
+# también en CI, no depende de que alguien lo corra a mano.
+#
+# No necesita secrets: todo el chequeo es local al checkout (sin tocar
+# Supabase de dev ni de prod).
+
+on:
+  push:
+    branches: [main]
+  pull_request: {}
+  workflow_dispatch: {}
+
+concurrency:
+  group: verificar-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      # El postinstall de mobile ya corre "build:packages" (packages/shared
+      # y packages/design-tokens) — sin esto tsc de backend/web/mobile no
+      # resuelve @bitacora/shared ni @bitacora/design-tokens (ambos
+      # publican solo dist/, gitignoreado).
+      - run: npm ci
+
+      - run: ./verificar.sh

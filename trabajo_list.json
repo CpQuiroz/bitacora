@@ -32,7 +32,8 @@
         "Usa la misma lógica que ./verificar.sh (idealmente lo invoca directo)",
         "Pasa en verde sobre el estado actual de main"
       ],
-      "status": "pending"
+      "resolution": "`.github/workflows/verificar.yml`: checkout + setup-node@22 (cache npm) + `npm ci` + `./verificar.sh` directo (sin --rapido), en push a main y en pull_request. Sin secrets — todo el chequeo es local al checkout. Antes de escribirlo, simulé un `npm ci` desde CERO (node_modules y dist/ borrados) para no asumir que main pasaba en limpio — encontró 2 problemas reales que un entorno 'tibio' venía tapando: (1) tsc de mobile revienta con 'RangeError: Maximum call stack size exceeded' con el stack default de V8 — no es error de tipos (confirmado con --stack-size=8000, pasa limpio); causa probable: el mapped type Database.Tables creció con las 100 migraciones (incluido Levantamientos). Fix real en verificar.sh: tsc_check invoca `node --stack-size=8000 ./node_modules/typescript/bin/tsc` en vez de `npx tsc` (--stack-size es flag de V8, no pasa por NODE_OPTIONS). (2) el 'hallazgo' de 11590 problemas de eslint era un falso positivo de mi propio método de prueba (una carpeta node_modules.bak.* que dejé al mover node_modules para simular el ci limpio, y que eslint linteó al no matchear el ignore de 'node_modules/') — descartado, no es un bug del repo. Con el fix de stack-size, ./verificar.sh corre verde de punta a punta desde un npm ci 100% limpio (~85s total). docs/harness/verificacion.md actualizado (baseline audit:tenant 0, ya no dice 'WARN por tarea #1', menciona el CI nuevo).",
+      "status": "done"
     },
     {
       "id": 3,

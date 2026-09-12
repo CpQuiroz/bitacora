@@ -4,7 +4,7 @@
   11 — fix_sync_cola_apilamiento (insuficiente, ver tarea 12), 12 — fix_sync_reintentar_bloqueado,
   13 — galeria_y_eliminar_fotos_mobile, 6 — regenerar_contexto_proyecto,
   14 — levantamientos_paso0, 15 — levantamientos_paso1_5, 16 — levantamientos_admin_editar,
-  17 — levantamientos_cola_offline, 1 — eslint_web_next16
+  17 — levantamientos_cola_offline, 1 — eslint_web_next16, 2 — ci_verificar
 - **En curso ahora:** tarea 5 (e2e_mantencion_pdf_prod) — esperando que la usuaria
   inicie sesión en prod en el navegador (no toco credenciales); ver política.
 - **Pausada:** 8 — sistema_diseno (pending, no abandonada — retomar cuando la
@@ -599,3 +599,52 @@ ya innecesario — ninguno bloqueaba antes de esta tarea, no se tocaron).
 Exit 0 confirmado. `./verificar.sh` paso 6 → `[OK]` sin el WARN
 especial. `./verificar.sh` completo verde (tsc x6, tests, audit:tenant
 0, 100 migraciones).
+
+## 2026-09-12: tarea 2 — CI corre verificar.sh en push/PR
+
+`.github/workflows/verificar.yml`: checkout + `setup-node@22` (cache
+npm) + `npm ci` + `./verificar.sh` (completo, sin `--rapido`), en push
+a `main` y en `pull_request`. Sin secrets — a diferencia de
+`check-migraciones-prod.yml`, todo lo que corre `verificar.sh` es
+local al checkout (nada de Supabase real).
+
+**Antes de escribirlo**, simulé un `npm ci` desde CERO (borré
+`node_modules` de raíz/web/mobile y `dist/` de `packages/shared`,
+`packages/design-tokens`, `backend`) para no asumir que `main` pasaba
+en limpio solo porque mi entorno de trabajo (ya "tibio", con dist/
+viejo y node_modules acumulado) daba verde. Encontré 2 problemas
+reales que ese entorno tibio venía tapando:
+
+1. **`tsc mobile` revienta** con `RangeError: Maximum call stack size
+   exceeded` (stack trace dentro de `getTypeAtFlowNode`/
+   `getTypeAtFlowCondition` de TS) con el stack default de V8 en un
+   `node_modules` recién instalado. Confirmé que NO es un error de
+   tipos real: con `node --stack-size=8000 ./node_modules/typescript/
+   bin/tsc -p mobile/tsconfig.json --noEmit` pasa limpio. Causa
+   probable: el mapped type `Database.Tables` (packages/shared) creció
+   con las 100 migraciones (Levantamientos incluido) y el chequeo de
+   flujo de TS sobre mobile ya no entra en el stack default sin
+   `.tsbuildinfo`/dist previos que lo "amortiguaran". Fix real (no
+   solo para CI) en `verificar.sh`: `tsc_check()` ahora invoca
+   `node --stack-size=8000 ./node_modules/typescript/bin/tsc` en vez
+   de `npx tsc` — `--stack-size` es flag de V8, no se puede pasar por
+   `NODE_OPTIONS`.
+2. **Falso positivo de mi propio método de prueba**: al mover
+   `node_modules` a `node_modules.bak.<pid>` para simular el estado
+   limpio, ESLint linteó esa carpeta igual (no matchea el ignore
+   implícito de `node_modules/`, el nombre es distinto) — 11590
+   "problemas" que eran código de React/Next de terceros, no del
+   repo. Descartado como hallazgo real; limpiado (`rm -rf
+   *.bak.<pid>`) antes de seguir.
+
+Con el fix de `--stack-size`, `./verificar.sh` corre verde de punta a
+punta desde un `npm ci` 100% limpio (~57s el install + ~25s el
+script). `docs/harness/verificacion.md` actualizado (ya no dice
+"baseline 6" de `audit:tenant` ni "lint WARN por tarea #1" — ambos
+resueltos esta sesión — y menciona el CI nuevo).
+
+No pude correr el workflow en un runner real de GitHub Actions desde
+acá (sin pedir push todavía) — la validación es: YAML parseado sin
+error, y los mismos 3 pasos (`npm ci` limpio → `./verificar.sh`)
+reproducidos a mano en este entorno con resultado verde real, no
+asumido.

@@ -5,9 +5,12 @@
 
 ## Nivel 0 — `./verificar.sh` (obligatorio siempre)
 
-Corre: tsc de los 4 paquetes, tests de `packages/shared`, `audit:tenant`
-(baseline 6), lint de web (WARN hoy, ver tarea #1), y chequeo de numeración
-de migraciones. Verde obligatorio antes de cerrar cualquier tarea.
+Corre: tsc de los 4 paquetes + mobile, tests de `packages/shared` y
+`packages/design-tokens`, lint de web, `audit:tenant` (baseline 0) y
+chequeo de numeración de migraciones. Verde obligatorio antes de cerrar
+cualquier tarea. Desde 2026-09-12 también corre en CI en cada push a
+`main` y cada PR (`.github/workflows/verificar.yml`, tarea #2) — no
+depende solo de que el agente lo corra a mano.
 
 `./verificar.sh --rapido` saltea mobile-tsc y tests para iterar; el cierre
 usa la versión completa.

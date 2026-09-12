@@ -62,7 +62,14 @@ echo ""
 echo "── 4. Type-check (tsc --noEmit) ───────────────────────"
 tsc_check() {
   local nombre="$1" proj="$2"
-  if npx tsc -p "$proj" --noEmit >/tmp/harness_tsc_$nombre.log 2>&1; then
+  # --stack-size más grande que el default de V8: con node_modules recién
+  # instalado (npm ci limpio, sin .tsbuildinfo viejo) el chequeo de flujo
+  # de tsc sobre mobile (Database.Tables ya con 100 migraciones) revienta
+  # con "RangeError: Maximum call stack size exceeded" — no es un error de
+  # tipos real (confirmado: con más stack pasa limpio). --stack-size es un
+  # flag de V8, no se puede pasar por NODE_OPTIONS, así que se invoca tsc
+  # como script de node en vez de vía npx/bin.
+  if node --stack-size=8000 ./node_modules/typescript/bin/tsc -p "$proj" --noEmit >/tmp/harness_tsc_$nombre.log 2>&1; then
     ok "tsc $nombre"
   else
     fail "tsc $nombre — ver /tmp/harness_tsc_$nombre.log"
