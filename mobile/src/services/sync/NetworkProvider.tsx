@@ -43,8 +43,20 @@ export function NetworkProvider({ children }: { children: ReactNode }) {
     pendientes().then(setCola);
     const desuscribir = suscribir(setCola);
 
+    // Solo `isConnected` (el radio WiFi/datos está prendido) — NO
+    // `isInternetReachable`. Bug real reportado 13-sep: con 4 barras de
+    // 5G reales, la app mostraba "Sin conexión" y encolaba fotos que en
+    // realidad SÍ subían solas al toque (confirmado: la foto terminaba
+    // subida, solo que el aviso decía lo contrario todo el tiempo que
+    // duró el chequeo). `isInternetReachable` es un probe de mejor
+    // esfuerzo (ping/DNS) documentado como propenso a falsos negativos
+    // en Android — que WiFi/datos esté prendido ya es la señal
+    // confiable; si igual no hay internet de verdad, el intento real
+    // de `procesar()` va a fallar y ESO sí queda reflejado (la acción
+    // pasa a "fallida", visible en el banner y en Perfil) sin necesitar
+    // adivinar de antemano con un probe que no es confiable.
     const offNet = NetInfo.addEventListener((estado) => {
-      const conectado = Boolean(estado.isConnected) && estado.isInternetReachable !== false;
+      const conectado = Boolean(estado.isConnected);
       setEnLinea(conectado);
       if (conectado) void procesar();
     });

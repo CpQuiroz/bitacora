@@ -195,9 +195,15 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
   async function finalizar() {
     setFinalizando(true);
     await encolarFinalizar(trabajoId);
-    Alert.alert("Trabajo finalizado", "Quedó cerrado. Si estás sin conexión, se enviará a la oficina apenas vuelvas a tener señal.", [
-      { text: "Listo", onPress: () => navigation.goBack() },
-    ]);
+    // Bug real (13-sep): este mensaje era SIEMPRE el mismo, sin mirar
+    // `enLinea` — decía "si estás sin conexión..." incluso con señal
+    // perfecta, mismo hallazgo que motivó sacar isInternetReachable de
+    // NetworkProvider.tsx. Mismo patrón que ya usa guardarDatos() arriba.
+    Alert.alert(
+      "Trabajo finalizado",
+      enLinea ? "Quedó cerrado." : "Quedó cerrado. Se enviará a la oficina apenas vuelvas a tener señal.",
+      [{ text: "Listo", onPress: () => navigation.goBack() }]
+    );
   }
 
   return (

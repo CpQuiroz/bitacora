@@ -1040,3 +1040,49 @@ contra el backend real (`GET .../plantilla?tipo=diario|programa`) que
 devuelve exactamente el contenido acordado, ítem por ítem.
 
 `./verificar.sh` completo verde.
+
+## 2026-09-13: tarea 20 — bug real de conectividad ("Sin conexión" con 4 barras de 5G)
+
+La usuaria reportó: crea una OS bien, pero al agregar una foto la app
+dice que se enviará "apenas tenga señal" con 4 barras de 5G reales.
+Primero descarté una hipótesis mía (el toggle "Subir fotos solo con
+WiFi" en Perfil) — probó con el toggle activado/desactivado y con
+WiFi conectado/desconectado, **fallaba en las 4 combinaciones**, así
+que no era eso.
+
+Encontré y descarté una segunda hipótesis (el mensaje incondicional
+de `finalizar()` en `TrabajoDetalleScreen.tsx` — real, lo corregí de
+paso, pero no era LA causa: la usuaria confirmó que el mensaje
+aparece "apenas toco la cámara/galería", no al finalizar).
+
+**Diagnóstico real, con 2 preguntas dirigidas en vez de seguir
+adivinando**: (1) ¿aparece una barra "Sin conexión" arriba de la
+pantalla? → Sí. (2) ¿la foto termina subida sola si esperás o volvés
+a entrar? → Sí. Esto confirma que **no hay pérdida de datos** — el
+problema es pura detección de conectividad: `NetworkProvider.tsx`
+calculaba `enLinea` con `Boolean(estado.isConnected) &&
+estado.isInternetReachable !== false`. `isInternetReachable` es un
+probe de mejor esfuerzo (ping/DNS) de `@react-native-community/
+netinfo`, documentado como propenso a falsos negativos en Android
+—independiente de si el radio WiFi/datos está realmente conectado—,
+y en el teléfono de la usuaria está dando falso negativo de forma
+sostenida.
+
+**Fix**: `enLinea` ahora se calcula solo con `isConnected` (el radio
+está prendido — la señal real, no un probe de red poco confiable). Si
+alguna vez SÍ falta internet de verdad, el intento real de `procesar()`
+va a fallar solo, y esa falla ya queda reflejada por el mecanismo
+existente (acción pasa a "fallida", visible en el banner/Perfil) — no
+hace falta adivinar de antemano con un chequeo que no es confiable.
+De paso corregí el bug relacionado de `finalizar()` (mensaje de señal
+siempre igual, sin mirar `enLinea` — mismo patrón que ya usa
+`guardarDatos()` en el mismo archivo).
+
+Confirmado por separado (vía API directa contra dev, no solo lectura
+de código) que la subida de fotos en sí YA funcionaba bien contra el
+backend real — el bug nunca fue del lado del servidor.
+
+`tsc mobile` limpio, `./verificar.sh` completo verde. **Bloqueada en
+que la usuaria pruebe en un APK nuevo sobre su teléfono real** — un
+bug de `NetInfo`/conectividad real no se puede verificar desde esta
+sesión, solo en el dispositivo donde se reprodujo.
