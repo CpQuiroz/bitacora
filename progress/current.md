@@ -2175,3 +2175,9 @@ se ven y funcionan como el boceto aprobado.
 verde. Baseline de colores literales bajó de 10 a 9 (Agenda tenía un
 hex hardcodeado que se sacó al usar tokens). Pendiente: build APK +
 prueba real de la usuaria.
+
+Build APK 1.9.23 verificado y entregado: BUILD SUCCESSFUL (con
+-Xmx1024m -Pandroid.aapt2ThreadPoolSize=1 por memoria baja de la Mac —
+falló 2 veces antes con daemons de AAPT2 muriendo), 0 refs dev / prod
+presente, copiado a ~/Desktop/bitacora-builds/bitacora-1.9.23.apk. .env
+restaurado a dev.
