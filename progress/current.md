@@ -2354,3 +2354,18 @@ archivos de contenido de reportes/gráficos) quedó fuera de esta pasada — dec
 propia, hay que avisarle explícitamente al reportar el cierre.
 
 Sigue: commit(s), bump de versión en `mobile/app.json`, build del APK, entrega.
+
+## 2026-09-14 (10): tareas 28 y 30 CONFIRMADAS por la usuaria en dispositivo real
+
+Tras probar el APK 1.10.0 en su teléfono, la usuaria confirmó: "ya probe la app
+y esta ok de momeno... la firma esta ok ahora, si me gusta. agenda y cliente ok."
+
+- Tarea 28 (firma rota / folio de OS en Hoy / naming Trabajo→OS): CERRADA. El
+  lienzo a pantalla completa (react-native-signature-canvas) resuelve el
+  problema real de conflicto de gestos que tenía el lienzo chico inline.
+- Tarea 30 (Agenda/Clientes v2 + color_secundario + Portal + Asistente):
+  CERRADA. Confirmado visualmente en el teléfono, no solo en la simulación web.
+
+Con esto, del backlog abierto de esta sesión solo queda pendiente la tarea 5
+(E2E en prod: Mantención de flota + rediseño de PDF de OS) — vieja, sin tocar
+hoy, sin resolución todavía.
