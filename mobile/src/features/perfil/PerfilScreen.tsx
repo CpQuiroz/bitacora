@@ -170,17 +170,18 @@ export function PerfilScreen() {
                 {a.creadoEn ? new Date(a.creadoEn).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : ""}
                 {a.archivo || a.archivos?.length ? " · con foto adjunta" : ""}
               </Text>
-              {/* Sin esto, un intento que se reintenta solo (lento pero real,
-                  o repetidamente fallido sin llegar aún a MAX_INTENTOS) se ve
-                  IDÉNTICO a uno realmente colgado — "0 intentos" y "3
-                  intentos fallidos" mostraban el mismo texto. Bug real
-                  (14-sep-2026): dificultó diagnosticar "queda en la cola,
-                  reintentar no hace nada" porque no había forma de distinguir
-                  "todavía no lo intentó de nuevo" de "lleva varios intentos
-                  fallidos silenciosos". */}
-              {a.intentos > 0 ? (
+              {/* Bug real (14-sep-2026): esto mostraba el error solo si
+                  a.intentos > 0 — pero un error normal de red (no timeout,
+                  ver queue.ts) NUNCA incrementa intentos a propósito (para
+                  no gastar los 6 intentos por un simple "sin señal"), así
+                  que un error real y persistente (ej. el de FormDataPart
+                  encontrado hoy) quedaba invisible para siempre, con
+                  intentos en 0. Ahora se muestra el error si existe,
+                  independientemente de intentos. */}
+              {a.ultimoError ? (
                 <Text variante="caption" tono="danger">
-                  Intento {a.intentos} de {MAX_INTENTOS}{a.ultimoError ? ` — ${a.ultimoError}` : ""}
+                  {a.intentos > 0 ? `Intento ${a.intentos} de ${MAX_INTENTOS} — ` : ""}
+                  {a.ultimoError}
                 </Text>
               ) : null}
             </View>

@@ -2016,3 +2016,49 @@ interrupciones previas por memoria baja de la Mac — se resolvió
 bajando el heap del build a -Xmx1536m), 0 refs dev / prod presente,
 copiado a ~/Desktop/bitacora-builds/bitacora-1.9.21.apk. .env
 restaurado a dev. Trae el botón "Diagnóstico de red (foto)" en Perfil.
+
+## 2026-09-14 (4): CAUSA RAÍZ REAL encontrada — "Unsupported FormDataPart implementation"
+
+El botón de diagnóstico (Perfil → "Diagnóstico de red (foto)") dio la
+respuesta definitiva: tanto un archivo chico de prueba COMO la foto
+real fallaron en 1-9 ms (nada de cuelgue) con el mismo error exacto:
+
+> Unsupported FormDataPart implementation
+
+Ese error viene de `node_modules/expo/src/winter/fetch/
+convertFormData.ts` — el `fetch` propio de Expo, que está activo ahora
+reemplazando el `fetch` global de React Native. Ya NO acepta el
+objeto `{uri, name, type}` (la convención vieja de RN) para adjuntar
+un archivo a un `FormData` — exige un `Blob`/`File` real (algo con
+`.bytes()` o `instanceof Blob`). TODO el código de la app armaba el
+adjunto con `fd.append(campo, {uri,name,type} as unknown as Blob)` —
+roto para CUALQUIER subida multipart (viajes, mantención, gastos,
+levantamientos, trabajos — todo pasa por el mismo `ejecutar()` de
+`queue.ts`).
+
+**Por qué parecía un "cuelgue" (0 intentos para siempre) en vez de un
+error instantáneo**: un SEGUNDO bug real, en el `catch` de
+`procesar()` (`queue.ts`) — solo incrementa `intentos` en la rama de
+timeout; la rama de error genérico (no-timeout) solo guarda
+`ultimoError`, a propósito, para no gastar los 6 intentos por un
+simple "sin señal". Como "Unsupported FormDataPart implementation" no
+es un `AbortError`, caía en esa rama — `intentos` se quedaba en 0 para
+siempre aunque SÍ había un error real guardado en `ultimoError`,
+invisible porque la UI de Perfil (agregada hoy mismo, ANTES de este
+hallazgo) solo mostraba el error cuando `intentos > 0`.
+
+**Fix, 3 partes**:
+1. `queue.ts` (`ejecutar()`) y `mantencion.ts` (`formDataDe`,
+   `subirFotoARegistro`): `fd.append(campo, new File(uri))` en vez de
+   `{uri,name,type} as unknown as Blob` — `File` (expo-file-system) SÍ
+   implementa `Blob` (`.bytes()`, `.type`/`.name` derivados del
+   archivo real). Corrige TODAS las subidas multipart de la app de una
+   sola vez.
+2. `PerfilScreen.tsx`: la línea de error ahora se muestra si
+   `a.ultimoError` existe, no solo si `a.intentos > 0`.
+3. `diagnosticoRed.ts` actualizado con el mismo fix, para poder
+   re-verificar.
+
+`tsc mobile` limpio, `./verificar.sh` completo verde. Esta vez con
+alta confianza — es un hallazgo confirmado con el mensaje de error
+exacto, no una hipótesis más. Pendiente: build + prueba real.

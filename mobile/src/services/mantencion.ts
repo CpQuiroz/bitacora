@@ -4,6 +4,7 @@ import type {
   RespuestaChecklistMantencion,
   TipoRegistroMantencion,
 } from "@bitacora/shared";
+import { File } from "expo-file-system";
 import { apiFetch, apiJson, TIMEOUT_MULTIPART_MS } from "./api";
 import { encolar } from "./sync/queue";
 import { guardarCache, leerCache } from "./sync/cache";
@@ -167,7 +168,9 @@ function formDataDe(b: BorradorMantencion): FormData {
   for (const [k, v] of Object.entries(camposTexto(b))) if (v !== "") fd.append(k, v);
   fd.append("fotos_items", JSON.stringify((b.fotos ?? []).map((f) => f.item)));
   for (const a of archivosDe(b)) {
-    fd.append("fotos", { uri: a.uri, name: a.name, type: a.type } as unknown as Blob);
+    // {uri,name,type} ya no es válido para FormData — ver el comentario
+    // largo en services/sync/queue.ts (ejecutar()) para el detalle.
+    fd.append("fotos", new File(a.uri));
   }
   return fd;
 }
@@ -279,7 +282,9 @@ export async function subirFotoARegistro(
 ): Promise<{ ok: true; foto: FotoRegistro } | { ok: false; error: string }> {
   const fd = new FormData();
   if (item) fd.append("item", item);
-  fd.append("foto", { uri: foto.uri, name: foto.name ?? "foto.jpg", type: foto.type ?? "image/jpeg" } as unknown as Blob);
+  // {uri,name,type} ya no es válido para FormData — ver el comentario
+  // largo en services/sync/queue.ts (ejecutar()) para el detalle.
+  fd.append("foto", new File(foto.uri));
   try {
     const res = await apiFetch(`/api/equipos/${equipoId}/registros-mantencion/${registroId}/fotos`, { method: "POST", body: fd }, TIMEOUT_MULTIPART_MS);
     if (!res.ok) {

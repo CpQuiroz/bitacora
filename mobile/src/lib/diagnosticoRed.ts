@@ -40,7 +40,7 @@ export async function diagnosticarSubida(path: string, campo: string, fotoUriRea
     resultados.push(
       await medir("Archivo chico (mismo endpoint)", () => {
         const fd = new FormData();
-        fd.append(campo, { uri: archivoChico.uri, name: "prueba.jpg", type: "image/jpeg" } as unknown as Blob);
+        fd.append(campo, new File(archivoChico.uri));
         return apiFetch(path, { method: "POST", body: fd }, TIMEOUT_PRUEBA_MS);
       })
     );
@@ -56,7 +56,7 @@ export async function diagnosticarSubida(path: string, campo: string, fotoUriRea
     resultados.push(
       await medir("Foto real atorada", () => {
         const fd = new FormData();
-        fd.append(campo, { uri: fotoUriReal, name: "real.jpg", type: "image/jpeg" } as unknown as Blob);
+        fd.append(campo, new File(fotoUriReal));
         return apiFetch(path, { method: "POST", body: fd }, TIMEOUT_PRUEBA_MS);
       })
     );

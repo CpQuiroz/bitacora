@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import NetInfo from "@react-native-community/netinfo";
+import { File } from "expo-file-system";
 import { apiFetch, TIMEOUT_MULTIPART_MS } from "../api";
 import { borrarFoto, fotoExiste } from "../../lib/fotoCola";
 import { preferencias } from "../../lib/preferencias";
@@ -155,7 +156,22 @@ async function ejecutar(a: AccionPendiente): Promise<Response> {
   if (archivos.length > 0) {
     const fd = new FormData();
     for (const f of archivos) {
-      fd.append(f.campo, { uri: f.uri, name: f.name, type: f.type } as unknown as Blob);
+      // Causa REAL encontrada (14-sep-2026, tarea 20/29, diagnosticada con
+      // un botón de prueba en Perfil): el objeto {uri,name,type} —
+      // convención vieja de React Native para FormData — ya NO es válido.
+      // El fetch propio de Expo (activo ahora, reemplaza el fetch global
+      // — ver node_modules/expo/src/winter/fetch/convertFormData.ts)
+      // exige un Blob/File real (algo con .bytes() o instanceof Blob) y
+      // rechaza ese objeto con "Unsupported FormDataPart implementation"
+      // — un error SÍNCRONO, casi instantáneo (1-9ms), NO un cuelgue.
+      // Por qué se veía como "cuelgue" / "0 intentos para siempre": el
+      // catch de más abajo solo incrementa `intentos` en la rama de
+      // timeout — un error normal (no-timeout) cae en la rama que solo
+      // guarda `ultimoError` sin tocar `intentos` (ver más abajo, mismo
+      // archivo) — indistinguible en la UI de "nunca se intentó".
+      // `File` (expo-file-system) SÍ implementa Blob (.bytes(), .type,
+      // .name derivados del archivo real) — pasa la validación nueva.
+      fd.append(f.campo, new File(f.uri));
     }
     if (a.body && typeof a.body === "object") {
       for (const [k, v] of Object.entries(a.body as Record<string, unknown>)) {
