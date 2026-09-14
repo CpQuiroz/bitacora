@@ -1928,3 +1928,7 @@ APK, prueba de la usuaria en el teléfono con datos móviles (no wifi)
 creando un viaje y un registro de mantención con foto, y confirmar en
 los logs de Render (dashboard, o pegando el output acá) que ambas fotos
 llegan.
+
+Build APK 1.9.17 verificado y entregado: BUILD SUCCESSFUL, 0 refs dev /
+prod presente, copiado a ~/Desktop/bitacora-builds/bitacora-1.9.17.apk.
+.env restaurado a dev.
