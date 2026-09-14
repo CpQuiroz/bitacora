@@ -195,6 +195,20 @@ function programarAutoReintento() {
   }, espera);
 }
 
+// Diagnóstico (14-sep-2026): "Reintentar ahora" no mostraba NUNCA ningún
+// efecto en un caso real reportado, ni siquiera un error — ni para una
+// foto nueva ni para dos acciones sin foto (JSON puro) que llevaban
+// >15 h en la cola con 0 intentos. Cualquier error que escape del try
+// principal de procesar() (no el catch por-acción, que ya existía) se
+// convertía en una promesa rechazada sin capturar — en un build de
+// release, React Native se la traga en silencio, sin log ni Alert ni
+// nada visible. Este catch la registra para poder mostrarla desde
+// Perfil/NetworkProvider en vez de perderla.
+let ultimoErrorProcesar: string | null = null;
+export function ultimoErrorGlobal(): string | null {
+  return ultimoErrorProcesar;
+}
+
 /** Intenta vaciar la cola. Se llama al encolar, al reconectar y al foreground. */
 export async function procesar(): Promise<void> {
   await asegurarCargada();
@@ -328,6 +342,13 @@ export async function procesar(): Promise<void> {
         break;
       }
     }
+    ultimoErrorProcesar = null; // pasada completa sin excepciones — limpio el diagnóstico
+  } catch (e) {
+    // Ver el comentario sobre ultimoErrorProcesar más arriba — sin esto,
+    // un error que escape de la lógica de esta función (no el catch
+    // por-acción de más arriba) desaparecía sin dejar rastro.
+    ultimoErrorProcesar = e instanceof Error ? `${e.name}: ${e.message}` : String(e);
+    throw e;
   } finally {
     procesando = false;
     procesandoDesde = null;

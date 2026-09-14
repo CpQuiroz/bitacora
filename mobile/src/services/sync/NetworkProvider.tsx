@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { AppState } from "react-native";
+import { Alert, AppState } from "react-native";
 import NetInfo from "@react-native-community/netinfo";
 import {
   activas,
@@ -78,7 +78,20 @@ export function NetworkProvider({ children }: { children: ReactNode }) {
       cola,
       pendientes: activas(cola),
       fallidas: fallidas(cola),
-      sincronizarAhora: () => void procesar(),
+      // A diferencia de los triggers automáticos (encolar, reconectar,
+      // foreground — esos siguen en "void", silenciosos a propósito), el
+      // botón manual SÍ muestra el error si procesar() rechaza — ver el
+      // comentario sobre ultimoErrorProcesar en queue.ts. Diagnóstico
+      // 14-sep-2026: sin esto, un error real quedaba invisible para
+      // siempre, indistinguible de "no hay nada para enviar".
+      sincronizarAhora: () => {
+        procesar().catch((e) => {
+          Alert.alert(
+            "No se pudo sincronizar",
+            `Hubo un error inesperado al reintentar:\n\n${e instanceof Error ? e.message : String(e)}`
+          );
+        });
+      },
       reintentar: (id) => void reintentar(id),
       descartar: (id) => void descartar(id),
       descartarTodo: () => void descartarTodo(),

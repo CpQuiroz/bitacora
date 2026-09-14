@@ -6,7 +6,7 @@ import { useTema } from "../../theme";
 import { Button, Card, Screen, Text } from "../../components/ui";
 import { useAuth } from "../auth/AuthContext";
 import { useRed } from "../../services/sync/NetworkProvider";
-import { MAX_INTENTOS } from "../../services/sync/queue";
+import { MAX_INTENTOS, ultimoErrorGlobal } from "../../services/sync/queue";
 import { apiFetch, apiJson } from "../../services/api";
 import { biometriaActivada, biometriaDisponible, nombreBiometria, pedirBiometria, setBiometriaActivada } from "../../lib/biometria";
 import { preferencias, setPreferencia, suscribirPreferencias, type Preferencias } from "../../lib/preferencias";
@@ -114,6 +114,22 @@ export function PerfilScreen() {
         {u.zona ? <Fila etiqueta="Zona" valor={u.zona} /> : null}
         <Fila etiqueta="Conexión" valor={enLinea ? "En línea" : "Sin conexión"} />
       </Card>
+
+      {/* Diagnóstico (14-sep-2026): un error que escapa de procesar() sin
+          que nadie lo capture desaparecía sin dejar rastro — "Reintentar
+          ahora" no mostraba nada. Esto expone el último de esos errores
+          aunque haya pasado en un reintento automático, no solo al tocar
+          el botón. */}
+      {ultimoErrorGlobal() ? (
+        <Card style={{ borderColor: t.colores.danger }} plano>
+          <Text variante="caption" weight="semibold" style={{ color: t.colores.danger, marginBottom: t.espacio(1) }}>
+            Error inesperado al sincronizar
+          </Text>
+          <Text variante="caption" tono="muted">
+            {ultimoErrorGlobal()}
+          </Text>
+        </Card>
+      ) : null}
 
       {/* Cola de sincronización detallada */}
       {pendientes.length > 0 && (
