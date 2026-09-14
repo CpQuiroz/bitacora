@@ -1167,6 +1167,73 @@ pidió como herramienta permanente — si la usuaria quiere un
 `/dev/ui` mobile de verdad para esto, es una decisión aparte).
 
 `tsc` de `packages/ui`/mobile/web limpio, `./verificar.sh` completo
-verde. Sigue en curso: falta que la usuaria confirme si avanzamos con
-el piloto real de `Más` (Paso 3, tocando la pantalla de verdad esta
-vez).
+verde.
+
+## 2026-09-13: tarea 21 — Paso 3 (piloto real de "Más")
+
+La usuaria confirmó "sí, seguí con Más". Refactor real de
+`MasScreen.tsx` (ya no lista plana con `Ionicons`/`useTema()`) usando
+las primitivas del Paso 2: `ScreenHeader` (título "Más", sin
+antetítulo — es una pantalla de menú, no de detalle), 3 grupos de
+`ListRow`/`ListRowGrupo` (antes 4: Terreno/Dinero/Análisis/Dispositivo)
+y `AsistenteButton` flotante reemplazando el ítem "Asistente IA" que
+antes vivía en la lista (mismo destino, `navigation.navigate
+("Asistente")`, gateado igual por `visibles.includes("asistente")` —
+solo cambió el punto de entrada, no la función).
+
+**Mapeo de los 3 grupos**: el prompt de referencia da un ejemplo de
+solo 6 ítems (Operación: Trabajos/Viajes; Administración:
+Cobros/Gastos/Informes; Cuenta: Perfil) pero la pantalla real tiene
+más funciones que ese ejemplo no nombra — se ubicaron por afinidad,
+sin sacar nada: Mantención de vehículo y Levantamientos son trabajo de
+terreno → Operación; Servicios y packs (catálogo/precios) es
+configuración de negocio → Administración; Cola de sincronización es
+estado del dispositivo, igual que Perfil → Cuenta (mismo grupo donde
+ya vivía junto a Perfil en la versión vieja, como "Dispositivo").
+100% de la lógica de gating (`visibles`/`acciones`/`deshabilitados`/
+`veLevantamientos`/fetch de cobros vencidos/badge de cola pendiente)
+se preservó sin tocar — solo cambió cómo se pinta.
+
+**`AppTabs.tsx` también migrado en este mismo commit** (decisión ya
+anticipada en el reporte del Paso 0: "resolver junto con el piloto de
+Más porque el ícono de la propia pestaña Más vive ahí"): las 4
+pestañas cambian de Ionicons a Lucide (`Sun`/`CalendarClock`/`User`/
+`Ellipsis`) y de `t.colores.*` (paleta Faena) a `useMarca()`/
+`tokens.color.*` **juntas, no una por una** — la tab bar es una sola
+fila visual comparada de un vistazo, dejar 1 ícono nuevo al lado de 3
+viejos se vería peor que no tocar ninguno.
+
+**Verificado visualmente de nuevo, mismo método ya probado** (la
+usuaria sigue sin credenciales a mano): reinstalé
+`react-native-web`+`react-dom` temporalmente, repetí el bypass de
+`RootNavigator`/`AppTabs` (2 líneas comentadas, sin fingir usuario),
+`expo start --web`, Chrome MCP. Confirmado: tab bar con los 4 íconos
+Lucide y tinte terracota activo; "Más" con `ScreenHeader` +
+"OPERACIÓN"/"CUENTA" en el estilo antetítulo + `ListRowGrupo`
+redondeado con divisores solo entre filas — "Administración" no
+renderizó porque con el bypass todos los `visibles`/`acciones` quedan
+vacíos (esperado, no es un bug: es la misma lógica de permisos de
+siempre, sin sesión real no hay módulos habilitados). Forcé
+`veAsistente = true` momentáneamente (revertido enseguida) solo para
+confirmar el botón flotante en contexto real (no solo en el playground
+aislado del Paso 2) — se ve bien sobre el contenido y la tab bar, y al
+tocarlo navega a "Asistente" correctamente.
+
+**Revertido todo lo temporal otra vez antes de comitear** (bypass de
+`RootNavigator`/`AppTabs`, `veAsistente` forzado,
+`react-native-web`/`react-dom` de `package.json`/`package-lock.json`
+raíz) — confirmado con `git status`/`git diff --stat` que solo quedan
+los 3 archivos reales del cambio: `MasScreen.tsx`, `AppTabs.tsx`,
+`MasStack.tsx` (este último solo para apagar el header nativo
+duplicado en la ruta `MasInicio`, ya que `MasScreen` ahora dibuja su
+propio `ScreenHeader`).
+
+`tsc` de ui/mobile/web limpio, `./verificar.sh` completo verde.
+
+**Único ítem de aceptación de la tarea #21 que sigue pendiente**:
+"probado en un build antes de distribuir (no EAS, APK local)" — no
+armé el APK todavía porque cada build anterior de esta sesión fue a
+pedido explícito de la usuaria (~20 min de build); pregunté si lo
+arma ahora o si sigue con las próximas pantallas (Hoy/detalle OS/
+ficha cliente) primero y se batchean los builds después. Tarea sigue
+`in_progress` hasta esa respuesta.

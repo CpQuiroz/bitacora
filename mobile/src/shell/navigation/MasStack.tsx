@@ -33,7 +33,10 @@ export function MasStack() {
         contentStyle: { backgroundColor: t.colores.bg },
       }}
     >
-      <Stack.Screen name="MasInicio" component={MasScreen} options={{ title: "Más" }} />
+      {/* MasScreen dibuja su propio ScreenHeader (sistema visual v2) — el header
+          nativo del stack se apaga acá para no duplicarlo. Las demás pantallas
+          de este stack todavía no migran, siguen con el header nativo de arriba. */}
+      <Stack.Screen name="MasInicio" component={MasScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Catalogo" component={CatalogoScreen} options={{ title: "Servicios y packs" }} />
       <Stack.Screen name="MantencionVehiculo" component={MantencionVehiculoScreen} options={{ title: "Mantención" }} />
       <Stack.Screen name="ChecklistMantencion" component={ChecklistMantencionScreen} options={{ title: "Mantención" }} />

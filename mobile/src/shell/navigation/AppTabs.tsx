@@ -1,8 +1,9 @@
 import { useEffect } from "react";
 import { View } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { Ionicons } from "@expo/vector-icons";
-import { useTema } from "../../theme";
+import { CalendarClock, Ellipsis, Sun, User, type LucideIcon } from "lucide-react-native";
+import { tokens } from "@bitacora/design-tokens";
+import { useMarca } from "@bitacora/ui/native";
 import { useAuth } from "../../features/auth/AuthContext";
 import { useRed } from "../../services/sync/NetworkProvider";
 import { preferencias } from "../../lib/preferencias";
@@ -17,15 +18,21 @@ const Tab = createBottomTabNavigator();
 
 // Barra IDÉNTICA para todos los roles. El rol cambia el CONTENIDO de
 // cada pestaña (sobre todo "Hoy"), no qué pestañas existen.
-const TABS: { key: TabKey; label: string; icono: keyof typeof Ionicons.glyphMap; componente: React.ComponentType }[] = [
-  { key: "Hoy", label: "Hoy", icono: "today-outline", componente: HoyStack },
-  { key: "Agenda", label: "Agenda", icono: "calendar-outline", componente: AgendaStack },
-  { key: "Clientes", label: "Clientes", icono: "people-outline", componente: ClientesStack },
-  { key: "Mas", label: "Más", icono: "ellipsis-horizontal", componente: MasStack },
+//
+// Íconos Lucide + colores del sistema visual nuevo (sistema visual
+// móvil v2, 13-sep-2026, tarea #21) — antes Ionicons + paleta Faena.
+// Se cambian las 4 pestañas juntas a propósito: la tab bar es una sola
+// fila visual, no tiene sentido dejar un ícono nuevo al lado de 3
+// viejos mientras el resto de "Más" se pilotea con contenido real.
+const TABS: { key: TabKey; label: string; Icono: LucideIcon; componente: React.ComponentType }[] = [
+  { key: "Hoy", label: "Hoy", Icono: Sun, componente: HoyStack },
+  { key: "Agenda", label: "Agenda", Icono: CalendarClock, componente: AgendaStack },
+  { key: "Clientes", label: "Clientes", Icono: User, componente: ClientesStack },
+  { key: "Mas", label: "Más", Icono: Ellipsis, componente: MasStack },
 ];
 
 export function AppTabs() {
-  const t = useTema();
+  const marca = useMarca();
   const auth = useAuth();
   const { pendientes } = useRed();
 
@@ -43,9 +50,9 @@ export function AppTabs() {
       initialRouteName="Hoy"
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: t.colores.brand,
-        tabBarInactiveTintColor: t.colores.faint,
-        tabBarStyle: { backgroundColor: t.colores.surface, borderTopColor: t.colores.border },
+        tabBarActiveTintColor: marca.base,
+        tabBarInactiveTintColor: `${tokens.color.text}99`,
+        tabBarStyle: { backgroundColor: tokens.color.surface, borderTopColor: tokens.color.divider },
       }}
     >
       {TABS.map((tab) => (
@@ -57,7 +64,7 @@ export function AppTabs() {
             tabBarLabel: tab.label,
             tabBarIcon: ({ color, size }) => (
               <View>
-                <Ionicons name={tab.icono} size={size} color={color} />
+                <tab.Icono size={size} strokeWidth={2.75} color={color} />
                 {tab.key === "Mas" && pendientes.length > 0 ? (
                   <View
                     style={{
@@ -67,7 +74,7 @@ export function AppTabs() {
                       width: 8,
                       height: 8,
                       borderRadius: 4,
-                      backgroundColor: t.colores.accent,
+                      backgroundColor: tokens.color.accent,
                     }}
                   />
                 ) : null}
