@@ -1844,3 +1844,7 @@ pero ahora el `SignatureView` vive dentro de un `Modal` grande
 `tsc mobile` limpio, `./verificar.sh` completo verde. Pendiente: build
 1.9.16 y prueba real en el teléfono (sigue siendo un cambio de gestos
 táctiles, sin camino de verificación en react-native-web).
+
+Build APK 1.9.16 verificado y entregado: BUILD SUCCESSFUL, 0 refs dev /
+prod presente, copiado a ~/Desktop/bitacora-builds/bitacora-1.9.16.apk.
+.env restaurado a dev.
