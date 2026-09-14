@@ -84,6 +84,7 @@ export function ClienteDetalleScreen({ route, navigation }: NativeStackScreenPro
       telefono: cliente.telefono ?? "",
       correo: cliente.correo ?? "",
       notas: cliente.notas ?? "",
+      contacto_nombre: cliente.contacto_nombre ?? "",
       activo: !cliente.activo,
     });
     setOcupado(false);
@@ -135,6 +136,14 @@ export function ClienteDetalleScreen({ route, navigation }: NativeStackScreenPro
     <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
       <ScreenHeader antetitulo={cliente.rut ?? undefined} titulo={cliente.nombre} accion={volver} />
       <ScrollView contentContainerStyle={{ padding: tokens.space["6"], gap: tokens.space["4"], paddingBottom: tokens.space["8"] * 3 }}>
+        {/* Persona de contacto — solo si tiene valor, mismo criterio que
+            el resto del sistema (estado real, no texto decorativo). */}
+        {cliente.contacto_nombre ? (
+          <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
+            Contacto: {cliente.contacto_nombre}
+          </Texto>
+        ) : null}
+
         {!cliente.activo ? (
           <View style={{ alignSelf: "flex-start" }}>
             <StatusBadge estado="inactivo" />

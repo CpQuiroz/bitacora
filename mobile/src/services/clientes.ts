@@ -65,6 +65,7 @@ export type BorradorCliente = {
   telefono: string;
   correo: string;
   notas: string;
+  contacto_nombre: string;
 };
 
 type Resultado = { ok: true; cliente: Cliente } | { ok: false; error: string };
@@ -91,5 +92,6 @@ function cuerpo(b: BorradorCliente) {
     telefono: b.telefono.trim() || null,
     correo: b.correo.trim() || null,
     notas: b.notas.trim() || null,
+    contacto_nombre: b.contacto_nombre.trim() || null,
   };
 }

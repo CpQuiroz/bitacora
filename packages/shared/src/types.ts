@@ -761,6 +761,10 @@ export type Cliente = {
   telefono: string | null;
   correo: string | null;
   notas: string | null;
+  // Persona de contacto/responsable cuando el cliente es una empresa
+  // (nombre sigue siendo lo que se muestra en todos lados — esto es
+  // dato adicional, no un reemplazo). Vacío para persona natural.
+  contacto_nombre: string | null;
   activo: boolean;
   // Opcional — usado para la felicitación automática de cumpleaños
   // (ver cumpleanosClientes.ts). Solo se usa mes/día, el año queda

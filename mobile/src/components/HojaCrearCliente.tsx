@@ -47,7 +47,7 @@ export function HojaCrearCliente({
       return;
     }
     setGuardando(true);
-    const r = await crearCliente({ nombre: nombre.trim(), telefono: telefono.trim(), rut: rut.trim(), correo: correo.trim(), direccion: "", comuna: "", notas: "" });
+    const r = await crearCliente({ nombre: nombre.trim(), telefono: telefono.trim(), rut: rut.trim(), correo: correo.trim(), direccion: "", comuna: "", notas: "", contacto_nombre: "" });
     setGuardando(false);
     if (!r.ok) {
       Alert.alert("No se pudo crear el cliente", r.error);

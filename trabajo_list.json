@@ -377,6 +377,25 @@
       ],
       "status": "blocked",
       "resolution": "ClienteDetalleScreen.tsx migrada completa (no solo la capa v2): Button/Card/ErrorState/LoadingState/Skeleton/StatusBadge/Texto de @bitacora/ui/native, Ionicons->Lucide, t.colores.brand->marca.base, successSoft->accent2Ramp. Primitivas v2: ScreenHeader (antetitulo=rut+titulo=nombre+accion=volver) y el historial de OS/cobros migrado de Pressable a mano a ListRow/ListRowGrupo (a diferencia de Hoy, estas filas no tienen columna de hora compitiendo con el icono, calza sin forzar). Deliberadamente sin AsistenteButton (accion primaria fija abajo, mismo criterio que detalle OS). Baseline de colores bajo de 12 a 10 (2 rgba sueltos eliminados por la migracion) -- actualizado scripts/check-colores.mjs.\n\nVerificado visualmente con el mismo metodo (bypass de auth + mock temporal de obtenerClienteDetalle + initialRouteName/initialParams, todo revertido). tsc limpio, ./verificar.sh completo verde. Bloqueada igual que las anteriores: falta armar el build y que la usuaria lo pruebe en su telefono -- esta es la ULTIMA pantalla del rollout v2 (Mas/Hoy/detalle OS/ficha cliente completos)."
+    },
+    {
+      "id": 26,
+      "name": "clientes_persona_contacto",
+      "title": "Persona de contacto en Clientes (contacto_nombre)",
+      "description": "Prompt separado de la usuaria (14-sep) -- entrega distinta del sistema visual movil, no se mezcla en el mismo release. Campo nuevo, opcional, contacto_nombre en clientes (persona de contacto/responsable cuando el cliente es una empresa) -- nombre sigue siendo lo que se muestra en todos lados, sin cambio de significado.",
+      "acceptance": [
+        "Migracion 102 aditiva (contacto_nombre nullable, sin default) aplicada primero en dev -- HECHO",
+        "packages/shared Cliente + backend POST/PATCH clientes.ts (mismo patron que notas) -- HECHO",
+        "Mobile: BorradorCliente + cuerpo() + ClienteFormScreen (componentes viejos, sin migrar el resto del formulario) + ClienteDetalleScreen (mostrar solo si tiene valor) -- HECHO",
+        "Web: formulario de edicion + vista de detalle (solo si tiene valor) en ficha de cliente -- HECHO",
+        "trabajos_del_dia() y matching de facturas por nombre sin tocar -- confirmado que no lo necesitan",
+        "PDFs (cotizacion/OS) sin tocar -- fuera de alcance explicito",
+        "Verificado en vivo contra dev (POST/PATCH/GET reales, no solo tsc)",
+        "./verificar.sh verde",
+        "Migracion a prod la corre la usuaria (regla dura del proyecto)"
+      ],
+      "status": "blocked",
+      "resolution": "Paso 0 completo (Cliente/types coincide 1:1, trabajos_del_dia() y matching de facturas por nombre confirmados sin necesidad de tocarse, alta rapida sin necesidad del campo, PDFs fuera de alcance confirmado). Migracion 102 (aditiva, contacto_nombre text nullable) aplicada en dev via db query -f. Backend (shared type + POST/PATCH clientes.ts, mismo patron que notas), mobile (BorradorCliente/cuerpo()/ClienteFormScreen con los componentes viejos que ya usa ese archivo, sin migrar el resto -- HojaCrearCliente/ClienteDetalleScreen actualizados), web (formulario de edicion + vista solo-lectura condicional en la ficha) -- todo completo.\n\nVerificado en vivo contra dev (no solo tsc): token real via magiclink, POST/PATCH/GET reales contra el backend en localhost:8080 -- ciclo completo confirmado (crea, persiste, actualiza, borra a null con string vacio). Dato de prueba limpiado.\n\ntsc de los 4 paquetes limpio, ./verificar.sh completo verde.\n\nBloqueada en lo que corresponde a la usuaria por regla dura del proyecto: aplicar la migracion 102 en PROD (yo solo tengo lectura ahi) y hacer push a main para desplegar backend+web. El codigo mobile no necesita un APK nuevo salvo que la usuaria quiera probarlo en el telefono -- no armado todavia, a pedido."
     }
   ]
 }

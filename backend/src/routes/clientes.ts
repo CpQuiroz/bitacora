@@ -142,7 +142,7 @@ clientesRouter.get(
 clientesRouter.post(
   "/",
   ah<RequestConEmpresa>(async (req, res) => {
-    const { nombre, rut, direccion, comuna, telefono, correo, notas, fecha_nacimiento } = req.body ?? {};
+    const { nombre, rut, direccion, comuna, telefono, correo, notas, contacto_nombre, fecha_nacimiento } = req.body ?? {};
 
     if (typeof nombre !== "string" || !nombre.trim()) {
       res.status(400).json({ error: "Falta nombre" });
@@ -174,6 +174,7 @@ clientesRouter.post(
         telefono: telefono?.trim() || null,
         correo: correo?.trim() || null,
         notas: notas?.trim() || null,
+        contacto_nombre: contacto_nombre?.trim() || null,
         fecha_nacimiento: fecha_nacimiento || null,
       })
       .select()
@@ -190,7 +191,7 @@ clientesRouter.post(
 clientesRouter.patch(
   "/:id",
   ah<RequestConEmpresa>(async (req, res) => {
-    const { nombre, rut, direccion, comuna, telefono, correo, notas, activo, fecha_nacimiento } = req.body ?? {};
+    const { nombre, rut, direccion, comuna, telefono, correo, notas, contacto_nombre, activo, fecha_nacimiento } = req.body ?? {};
     const cambios: Partial<Cliente> = {};
     let reGeocodificar = false;
 
@@ -220,6 +221,7 @@ clientesRouter.patch(
     if (telefono !== undefined) cambios.telefono = telefono?.trim() || null;
     if (correo !== undefined) cambios.correo = correo?.trim() || null;
     if (notas !== undefined) cambios.notas = notas?.trim() || null;
+    if (contacto_nombre !== undefined) cambios.contacto_nombre = contacto_nombre?.trim() || null;
     if (activo !== undefined) cambios.activo = Boolean(activo);
     if (fecha_nacimiento !== undefined) cambios.fecha_nacimiento = fecha_nacimiento || null;
 

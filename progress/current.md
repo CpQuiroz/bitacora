@@ -1486,3 +1486,64 @@ tocar una fila de OS navega correcto al detalle (cross-tab, vía
 `getParent()`).
 
 `tsc mobile` limpio, `./verificar.sh` completo verde.
+
+## 2026-09-14: tarea 26 — persona de contacto en Clientes (contacto_nombre)
+
+Prompt separado de la usuaria, explícitamente distinto del sistema
+visual móvil ("no las mezcles en el mismo release ni en la misma
+sesión de trabajo") — llegó a mitad de la auditoría del piloto de
+ficha de cliente, así que primero se cerró y desplegó (build) ese
+trabajo antes de tocar esto.
+
+**Paso 0 (auditoría)**: `Cliente` (types.ts:752) coincide 1:1 con las
+columnas reales de `clientes.ts`. `trabajos_del_dia()` (migración 74)
+y el matching de facturas por nombre exacto (`clientes.ts:116`) solo
+usan `nombre`/`dirección`/`lat`/`lng` — confirmado que no necesitan
+tocarse. Alta rápida (`SelectorCliente`+`HojaCrearCliente` mobile,
+`ComboboxCliente` web) solo pide nombre — no necesita el campo nuevo.
+`ClienteFormScreen.tsx` (mobile, formulario completo) sigue en
+`components/ui` viejo, **no** migrado al sistema visual v2 (a
+diferencia de `ClienteDetalleScreen.tsx`, migrada hoy mismo en la
+otra entrega) — se agregó el campo con los MISMOS componentes viejos
+que ya usa ese archivo (mismo patrón que `notas`), sin migrar el
+resto del formulario: hacerlo hubiera mezclado las dos entregas.
+Ficha de cliente web (`[id]/page.tsx`) ya está en `@bitacora/ui/web`
+— patrón replicado de RUT/Correo/Teléfono. PDFs (`generarPdfOS.ts`/
+`generarPdfCotizacion.ts`) confirmado que reciben datos aplanados sin
+ningún campo de contacto — no se tocan, coincide con "fuera de
+alcance" del prompt.
+
+**Migración 102** (aditiva, `alter table clientes add column
+contacto_nombre text`, nullable sin default) aplicada primero en
+dev vía `db query -f` (mismo método documentado para lecturas a
+prod, acá usado para escribir en dev — permitido). **A prod la corre
+la usuaria** (regla dura del proyecto).
+
+**Backend**: `Cliente` (shared) + POST/PATCH de `clientes.ts`, mismo
+patrón exacto que `notas` (`campo?.trim() || null`, sin validación
+de formato).
+
+**Mobile**: `BorradorCliente`/`cuerpo()` en `services/clientes.ts`,
+`ClienteFormScreen.tsx` (campo nuevo justo después de "Nombre"),
+`HojaCrearCliente.tsx` (alta rápida — solo necesitaba satisfacer el
+tipo, no expone el campo), `ClienteDetalleScreen.tsx` (se muestra
+como línea "Contacto: X" solo si tiene valor, y el `alternarActivo()`
+que reconstruye el body a mano también necesitó el campo).
+
+**Web**: estado + carga + PATCH + `<Input>` en el formulario de
+edición, y bloque de solo-lectura condicional (`cliente.contacto_nombre
+? ... : null` — a diferencia de RUT/Correo que siempre muestran con
+fallback "—", este campo se pide oculto del todo si está vacío, tal
+como pidió el prompt).
+
+**Verificado en vivo contra dev, no solo `tsc`**: token real vía
+magiclink (usuario dev `prueba@bitacora.app`) contra el backend real
+corriendo en `localhost:8080` — `POST /api/clientes` con
+`contacto_nombre` → persiste; `PATCH` con string vacío → vuelve a
+`null`; `PATCH` con valor nuevo → lo actualiza; `GET` del detalle →
+lo devuelve. Ciclo completo confirmado. Dato de prueba borrado de
+dev al terminar.
+
+`tsc` de los 4 paquetes limpio (`shared` reconstruido — backend/mobile
+resuelven el tipo vía `dist/`, no `src/`), `./verificar.sh` completo
+verde.

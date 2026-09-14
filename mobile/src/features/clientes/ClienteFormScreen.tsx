@@ -7,7 +7,7 @@ import { useRed } from "../../services/sync/NetworkProvider";
 import { crearCliente, editarCliente, obtenerCliente, type BorradorCliente } from "../../services/clientes";
 import type { ClientesStackParamList } from "../../shell/navigation/types";
 
-const VACIO: BorradorCliente = { nombre: "", rut: "", direccion: "", comuna: "", telefono: "", correo: "" , notas: "" };
+const VACIO: BorradorCliente = { nombre: "", rut: "", direccion: "", comuna: "", telefono: "", correo: "", notas: "", contacto_nombre: "" };
 
 export function ClienteFormScreen({ navigation, route }: NativeStackScreenProps<ClientesStackParamList, "ClienteForm">) {
   const t = useTema();
@@ -35,6 +35,7 @@ export function ClienteFormScreen({ navigation, route }: NativeStackScreenProps<
           telefono: c.telefono ?? "",
           correo: c.correo ?? "",
           notas: c.notas ?? "",
+          contacto_nombre: c.contacto_nombre ?? "",
         })
       )
       .catch((e) => Alert.alert("No se pudo cargar", e instanceof Error ? e.message : "Intenta de nuevo"))
@@ -64,6 +65,11 @@ export function ClienteFormScreen({ navigation, route }: NativeStackScreenProps<
       keyboardShouldPersistTaps="handled"
     >
       <Input etiqueta="Nombre" value={b.nombre} onChangeText={(v) => set("nombre", v)} />
+      <Input
+        etiqueta="Persona de contacto (opcional)"
+        value={b.contacto_nombre}
+        onChangeText={(v) => set("contacto_nombre", v)}
+      />
       <Input etiqueta="RUT (opcional)" value={b.rut} onChangeText={(v) => set("rut", v)} autoCapitalize="characters" />
       <Input etiqueta="Dirección" value={b.direccion} onChangeText={(v) => set("direccion", v)} />
       <Input etiqueta="Comuna (opcional)" value={b.comuna} onChangeText={(v) => set("comuna", v)} />

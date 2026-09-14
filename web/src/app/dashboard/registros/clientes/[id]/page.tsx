@@ -56,6 +56,7 @@ export default function ClienteDetallePage() {
   const [rut, setRut] = useState("");
   const [telefono, setTelefono] = useState("");
   const [correo, setCorreo] = useState("");
+  const [contactoNombre, setContactoNombre] = useState("");
   const [direccion, setDireccion] = useState("");
   const [comuna, setComuna] = useState("");
   const [fechaNacimiento, setFechaNacimiento] = useState("");
@@ -113,6 +114,7 @@ export default function ClienteDetallePage() {
     setRut(c.rut ?? "");
     setTelefono(c.telefono ?? "");
     setCorreo(c.correo ?? "");
+    setContactoNombre(c.contacto_nombre ?? "");
     setDireccion(c.direccion);
     setComuna(c.comuna ?? "");
     setFechaNacimiento(c.fecha_nacimiento ?? "");
@@ -133,7 +135,16 @@ export default function ClienteDetallePage() {
     setGuardando(true);
     const res = await apiFetch(`/api/clientes/${params.id}`, {
       method: "PATCH",
-      body: JSON.stringify({ nombre, rut: rut.trim() ? formatearRut(rut) : null, telefono, correo, direccion, comuna, fecha_nacimiento: fechaNacimiento || null }),
+      body: JSON.stringify({
+        nombre,
+        rut: rut.trim() ? formatearRut(rut) : null,
+        telefono,
+        correo,
+        contacto_nombre: contactoNombre,
+        direccion,
+        comuna,
+        fecha_nacimiento: fechaNacimiento || null,
+      }),
     });
     setGuardando(false);
     if (!res.ok) {
@@ -258,6 +269,7 @@ export default function ClienteDetallePage() {
                   <Input etiqueta="RUT (habilita el login al Portal de Cliente)" placeholder="12.345.678-9" valor={rut} onCambio={setRut} />
                   <Input etiqueta="Teléfono (para WhatsApp, puedes escribirlo con +56 9…)" placeholder="+56 9 1234 5678" valor={telefono} onCambio={setTelefono} />
                   <Input etiqueta="Correo" tipo="email" valor={correo} onCambio={setCorreo} />
+                  <Input etiqueta="Persona de contacto (si el cliente es una empresa)" valor={contactoNombre} onCambio={setContactoNombre} />
                   <Input etiqueta="Dirección" valor={direccion} onCambio={setDireccion} />
                   <Input etiqueta="Comuna" valor={comuna} onCambio={setComuna} />
                   <FechaCampo etiqueta="Fecha de cumpleaños (opcional)" valor={fechaNacimiento} onCambio={setFechaNacimiento} />
@@ -304,6 +316,12 @@ export default function ClienteDetallePage() {
                   <p className="font-ds-body text-ds-caption text-ds-text/60">Correo</p>
                   <p className="font-ds-body text-ds-small text-ds-text">{cliente.correo ?? "—"}</p>
                 </div>
+                {cliente.contacto_nombre ? (
+                  <div>
+                    <p className="font-ds-body text-ds-caption text-ds-text/60">Contacto</p>
+                    <p className="font-ds-body text-ds-small text-ds-text">{cliente.contacto_nombre}</p>
+                  </div>
+                ) : null}
                 <div>
                   <p className="font-ds-body text-ds-caption text-ds-text/60">Ubicación</p>
                   {cliente.lat != null ? (
