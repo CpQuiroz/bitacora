@@ -53,9 +53,9 @@ export default function PortalHomePage() {
       return;
     }
     (async () => {
-      const cfg = await obtenerConfigPortal();
-      setConfig(cfg);
-      if (!cfg.ordenes) {
+      const { secciones } = await obtenerConfigPortal();
+      setConfig(secciones);
+      if (!secciones.ordenes) {
         setVisitas([]);
         return;
       }

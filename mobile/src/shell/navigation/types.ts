@@ -33,6 +33,7 @@ export type AgendaStackParamList = {
   AgendaLista: undefined;
   TareaDetalle: { tareaId: string; titulo?: string };
   NuevaCita: { tareaId?: string; fecha?: string } | undefined;
+  Asistente: undefined;
 };
 
 export type ClientesStackParamList = {
@@ -40,6 +41,7 @@ export type ClientesStackParamList = {
   ClienteForm: { clienteId?: string } | undefined;
   ClienteDetalle: { clienteId: string };
   RegistrarVenta: RegistrarVentaParams;
+  Asistente: undefined;
 };
 
 // "Más" absorbe la vieja pestaña Gestión (Cobros, Gasto, Informes,

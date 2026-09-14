@@ -1,5 +1,5 @@
 import { createContext, useContext, useMemo, type ReactNode } from "react";
-import { oscurecerOklch, tokens } from "@bitacora/design-tokens";
+import { oscurecerOklch, tinteSuave, tokens, tonoFuerte } from "@bitacora/design-tokens";
 
 /** Marca del tenant, resuelta: base + estados derivados en OKLab. */
 export type Marca = {
@@ -7,6 +7,11 @@ export type Marca = {
   hover: string;
   pressed: string;
   foreground: string;
+  /** empresas.color_secundario (14-sep-2026), ya derivado a un par
+   *  tinte-suave/tono-fuerte listo para tags/badges — nunca el
+   *  accentRamp fijo del sistema. Ver Tag.tsx (tono "accent2"). */
+  secundarioSuave: string;
+  secundarioFuerte: string;
 };
 
 const RE_HEX = /^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
@@ -18,7 +23,11 @@ function luminancia(hex: string): number {
   return (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
 }
 
-export function resolverMarca(colorPrimario?: string | null, colorForeground?: string | null): Marca {
+export function resolverMarca(
+  colorPrimario?: string | null,
+  colorForeground?: string | null,
+  colorSecundario?: string | null
+): Marca {
   const base = colorPrimario && RE_HEX.test(colorPrimario.trim()) ? colorPrimario.trim() : tokens.color.accent;
   const foreground =
     colorForeground && RE_HEX.test(colorForeground.trim())
@@ -26,7 +35,15 @@ export function resolverMarca(colorPrimario?: string | null, colorForeground?: s
       : luminancia(base) > 0.6
         ? "#111111"
         : "#ffffff";
-  return { base, hover: oscurecerOklch(base, 0.05), pressed: oscurecerOklch(base, 0.11), foreground };
+  const baseSecundario = colorSecundario && RE_HEX.test(colorSecundario.trim()) ? colorSecundario.trim() : tokens.color.accent2;
+  return {
+    base,
+    hover: oscurecerOklch(base, 0.05),
+    pressed: oscurecerOklch(base, 0.11),
+    foreground,
+    secundarioSuave: tinteSuave(baseSecundario),
+    secundarioFuerte: tonoFuerte(baseSecundario),
+  };
 }
 
 const MarcaContext = createContext<Marca>(resolverMarca());
@@ -34,13 +51,18 @@ const MarcaContext = createContext<Marca>(resolverMarca());
 export function ProveedorMarca({
   colorPrimario,
   colorForeground,
+  colorSecundario,
   children,
 }: {
   colorPrimario?: string | null;
   colorForeground?: string | null;
+  colorSecundario?: string | null;
   children: ReactNode;
 }) {
-  const marca = useMemo(() => resolverMarca(colorPrimario, colorForeground), [colorPrimario, colorForeground]);
+  const marca = useMemo(
+    () => resolverMarca(colorPrimario, colorForeground, colorSecundario),
+    [colorPrimario, colorForeground, colorSecundario]
+  );
   return <MarcaContext.Provider value={marca}>{children}</MarcaContext.Provider>;
 }
 

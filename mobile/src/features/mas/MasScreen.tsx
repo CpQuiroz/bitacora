@@ -17,7 +17,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { tokens } from "@bitacora/design-tokens";
 import { FUNCIONES_LEVANTAMIENTOS } from "@bitacora/shared";
-import { ScreenHeader, ListRow, ListRowGrupo, AsistenteButton, Texto, Tag } from "@bitacora/ui/native";
+import { ScreenHeader, ListRow, ListRowGrupo, AsistenteButton, ESPACIO_ASISTENTE_FLOTANTE, Texto, Tag } from "@bitacora/ui/native";
 import { pesos } from "../../lib/plata";
 import { useAuth } from "../auth/AuthContext";
 import { useRed } from "../../services/sync/NetworkProvider";
@@ -143,7 +143,7 @@ export function MasScreen({ navigation }: NativeStackScreenProps<MasStackParamLi
 
   return (
     <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
-      <ScrollView contentContainerStyle={{ gap: tokens.space["6"], paddingTop: tokens.space["3"], paddingBottom: 140 }}>
+      <ScrollView contentContainerStyle={{ gap: tokens.space["6"], paddingTop: tokens.space["3"], paddingBottom: ESPACIO_ASISTENTE_FLOTANTE }}>
         <ScreenHeader titulo="Más" />
         {grupos.map((g) => (
           <View key={g.titulo} style={{ paddingHorizontal: tokens.space["4"], gap: tokens.space["2"] }}>

@@ -2095,3 +2095,83 @@ investigó más a fondo hoy — si sigue el 15-sep, retomar con el
 Queda el botón "Diagnóstico de red (foto)" en Perfil (agregado hoy) —
 se deja como herramienta de diagnóstico permanente, de bajo costo
 (solo aparece si hay una foto pendiente en la cola), no se removió.
+
+## 2026-09-14 (6): tarea 30 — Agenda/Clientes migradas, color_secundario, gap del Portal
+
+Pedido explícito de la usuaria tras revisar capturas + un boceto
+(artifact) aprobado con los colores reales de Transportes Itineris.
+Todo en un solo fix, verificado visualmente antes de cerrar.
+
+**1. Botón Asistente ya no tapa contenido** — `AsistenteButton.tsx`
+exporta `ESPACIO_ASISTENTE_FLOTANTE` (110 offset + 48 alto + margen,
+antes cada pantalla adivinaba un paddingBottom a mano — Hoy con 35px,
+Más con 140 hardcodeado, los dos insuficientes). Hoy y Más ahora lo
+usan; Agenda y Clientes migradas lo usan desde el arranque.
+
+**2. Agenda y Clientes migradas al sistema visual v2** (ScreenHeader +
+ListRow/ListRowGrupo + tokens ds-, mismo patrón de Hoy/Más/detalle-OS/
+ficha-cliente). Viajes queda fuera de este fix a propósito (no se pidió).
+- Clientes: búsqueda + filtros (Todos/Con saldo/Con pack, ahora en el
+  `filtros` de ScreenHeader) + "+ Cliente" (antes FAB flotante, ahora
+  botón de ancho completo — el flotante ya lo ocupa el Asistente) +
+  ListRowGrupo con iniciales como ícono + tag "Con pack" (color
+  secundario) + monto.
+- Agenda: la lógica de fechas/calendario (mes/semana/día, scroll a la
+  hora actual, math de posicionamiento) se preservó 100% intacta — solo
+  se recolorearon las referencias (`t.colores.*` Faena → `tokens.color.*`
+  + `useMarca()`) y se reemplazó el header nativo + fila de navegación
+  por ScreenHeader (título + chips Mes/Sem/Día) + una fila propia debajo
+  para el navegador de período (‹ Septiembre 2026 ›), que ScreenHeader no
+  puede alojar (solo admite texto plano en el título). El FAB de "nueva
+  cita" se movió a la izquierda (la derecha ya es del Asistente).
+  `colorEstado()` de las citas migrado a los 4 tonos ya usados por el
+  sistema v2 (accent/accent2/neutral — nunca rojo/verde semáforo,
+  siguiendo la convención ya establecida en StatusBadge).
+
+**3. color_secundario conectado de punta a punta** (antes: guardado en
+la BD y visible solo en la vista previa aislada de Configuración >
+Empresa, sin pintar nada real):
+- `packages/design-tokens/src/mezcla.ts` (nuevo): `mezclarHex`/
+  `tinteSuave`/`tonoFuerte` — mezcla en sRGB (no OKLab: subir L
+  manteniendo croma se sale de gamut para tonos reales como un teal,
+  probado). Calibrado contra el ramp accent2 real existente.
+  `mobile`: `useMarca()` (packages/ui/src/native/marca.tsx) ahora
+  resuelve `secundarioSuave`/`secundarioFuerte` desde
+  `empresas.color_secundario` (fallback: `tokens.color.accent2`, igual
+  criterio que el primario). `Tag.tsx` (tono "accent2") los usa en vez
+  del `accent2Ramp` fijo. `App.tsx` pasa `empresa.color_secundario` a
+  `ProveedorMarca` (ya venía en `/api/me`, sin cambios de backend
+  necesarios ahí).
+  `web`: `--ds-accent2` + derivados `--ds-accent2-soft/strong` (CSS
+  `color-mix`, mismo criterio) agregados a `tokens.css`/`build.ts` —
+  a propósito NO se pisó el `accent2Ramp` completo (100-900) que ya usan
+  decenas de pantallas existentes con el tono fijo; es un par nuevo y
+  angosto para lo que se agregue de ahora en más. `DashboardShell.tsx`
+  pisa `--ds-accent2` con `usuario.colorSecundario` (ya existía en el
+  tipo, sin usar).
+  `fuente` — NO se tocó, descartado explícitamente por la usuaria.
+
+**4. Gap del Portal del Cliente corregido** — `PortalShell.tsx` no
+recibía NINGÚN dato de marca (a diferencia de DashboardShell/
+SuperAdminShell), a pesar de que `docs/design-system.md` dice que
+debería. `backend/src/routes/portal.ts`: `/api/portal/config` ahora
+devuelve `{ secciones, marca }` (antes solo secciones) — mismas 3
+columnas que ya expone `/api/me`. `portalApi.ts`/`PortalShell.tsx`/
+`portal/page.tsx` actualizados. El tab activo del portal pasa de
+`text-brand` (navy fijo de Bitácora, sistema viejo) a `text-accent`
+(ya era el slot tenant-color del sistema viejo, ahora con el estilo
+real seteado vía `--accent`/`--ds-brand`).
+
+**Verificación visual real** (react-native-web + Chrome, con
+`react-native-web`/`react-dom` instalados temporalmente + un bypass de
+auth + mocks de `listarTareasRango`/`listarClientes` con datos de
+muestra — TODO revertido después, confirmado con `git status`/`git
+diff --stat` limpio): Agenda (mes/semana/día, el "+" y el Asistente sin
+pisarse, colores de estado correctos) y Clientes (header, filtros,
+tag "Con pack" en teal real de la empresa, botón "+ Cliente") — las dos
+se ven y funcionan como el boceto aprobado.
+
+`tsc` (mobile/web/backend/tokens/ui) limpio, `verificar.sh` completo
+verde. Baseline de colores literales bajó de 10 a 9 (Agenda tenía un
+hex hardcodeado que se sacó al usar tokens). Pendiente: build APK +
+prueba real de la usuaria.

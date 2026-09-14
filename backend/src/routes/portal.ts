@@ -36,17 +36,35 @@ const COLUMNA_SECCION: Record<SeccionPortal, string> = {
   cobros: "portal_muestra_cobros",
 };
 
-async function seccionesDeEmpresa(empresaId: string): Promise<Record<SeccionPortal, boolean>> {
+type MarcaPortal = { color_primario: string | null; color_primario_foreground: string | null; color_secundario: string | null };
+
+// Secciones visibles + marca del tenant en la misma consulta — el
+// Portal no tenía forma de pintar el color de la empresa (PortalShell
+// no recibía ningún dato de marca, a diferencia de DashboardShell/
+// SuperAdminShell) a pesar de que docs/design-system.md dice que
+// debería. Mismas 3 columnas que ya expone /api/me para el dashboard.
+async function configDeEmpresa(
+  empresaId: string
+): Promise<{ secciones: Record<SeccionPortal, boolean>; marca: MarcaPortal }> {
   const { data } = await supabase
     .from("empresas")
-    .select("portal_muestra_ordenes, portal_muestra_citas, portal_muestra_cotizaciones, portal_muestra_cobros")
+    .select(
+      "portal_muestra_ordenes, portal_muestra_citas, portal_muestra_cotizaciones, portal_muestra_cobros, color_primario, color_primario_foreground, color_secundario"
+    )
     .eq("id", empresaId)
     .maybeSingle();
   return {
-    ordenes: data?.portal_muestra_ordenes ?? true,
-    citas: data?.portal_muestra_citas ?? true,
-    cotizaciones: data?.portal_muestra_cotizaciones ?? true,
-    cobros: data?.portal_muestra_cobros ?? true,
+    secciones: {
+      ordenes: data?.portal_muestra_ordenes ?? true,
+      citas: data?.portal_muestra_citas ?? true,
+      cotizaciones: data?.portal_muestra_cotizaciones ?? true,
+      cobros: data?.portal_muestra_cobros ?? true,
+    },
+    marca: {
+      color_primario: data?.color_primario ?? null,
+      color_primario_foreground: data?.color_primario_foreground ?? null,
+      color_secundario: data?.color_secundario ?? null,
+    },
   };
 }
 
@@ -71,7 +89,7 @@ portalRouter.get(
   "/config",
   requierePortal,
   ah<RequestConPortal>(async (req, res) => {
-    res.json(await seccionesDeEmpresa(req.empresaId!));
+    res.json(await configDeEmpresa(req.empresaId!));
   })
 );
 

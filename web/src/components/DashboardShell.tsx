@@ -324,6 +324,11 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
             : {}),
         }
       : {}),
+    // Segundo color de la empresa (14-sep-2026) — hoy solo pinta
+    // bg-ds-accent2-soft/text-ds-accent2-strong (par angosto, ver
+    // tokens.css), no el ramp accent2-100..900 completo que ya usan
+    // decenas de pantallas con el tono fijo del sistema.
+    ...(usuario.colorSecundario ? { "--ds-accent2": usuario.colorSecundario } : {}),
     ...(usuario.fuente && usuario.fuente !== "sistema" ? { "--font-sans": fuenteInfo.pila } : {}),
   } as CSSProperties;
 

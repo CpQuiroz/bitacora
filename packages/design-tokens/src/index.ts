@@ -9,3 +9,4 @@
  */
 export { tokens, fontStackCss, type Tokens } from "./generated";
 export { oscurecerOklch } from "./oklch";
+export { mezclarHex, tinteSuave, tonoFuerte } from "./mezcla";

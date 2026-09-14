@@ -4,7 +4,7 @@ import { CalendarClock, Car, ClipboardList, Sun } from "lucide-react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { tokens } from "@bitacora/design-tokens";
-import { AsistenteButton, Card, EmptyState, ErrorState, LoadingState, ScreenHeader, Skeleton, StatusBadge, Texto, useMarca } from "@bitacora/ui/native";
+import { AsistenteButton, Card, EmptyState, ErrorState, ESPACIO_ASISTENTE_FLOTANTE, LoadingState, ScreenHeader, Skeleton, StatusBadge, Texto, useMarca } from "@bitacora/ui/native";
 import { OfflineBanner } from "../../components/OfflineBanner";
 import { formatearFechaLarga } from "../../lib/horario";
 import { useAuth } from "../auth/AuthContext";
@@ -144,7 +144,7 @@ export function HoyScreen({ navigation }: NativeStackScreenProps<HoyStackParamLi
         contentContainerStyle={{
           padding: tokens.space["4"],
           paddingTop: tokens.space["2"],
-          paddingBottom: tokens.space["8"],
+          paddingBottom: ESPACIO_ASISTENTE_FLOTANTE,
           gap: tokens.space["3"],
           flexGrow: 1,
         }}

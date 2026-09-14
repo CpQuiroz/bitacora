@@ -20,7 +20,7 @@ export { Texto } from "./Texto";
 export { ScreenHeader, type PropsScreenHeader, type OpcionFiltroHeader } from "./ScreenHeader";
 export { ListRow, ListRowGrupo, type PropsListRow } from "./ListRow";
 export { CardDetalle, type PropsCardDetalle, type MetadatoCardDetalle, type AccionCardDetalle } from "./CardDetalle";
-export { AsistenteButton, type PropsAsistenteButton } from "./AsistenteButton";
+export { AsistenteButton, ESPACIO_ASISTENTE_FLOTANTE, type PropsAsistenteButton } from "./AsistenteButton";
 export { AsistenteSheet, type PropsAsistenteSheet, type AtajoAsistente } from "./AsistenteSheet";
 export type {
   PropsBoton,

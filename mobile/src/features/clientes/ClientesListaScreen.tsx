@@ -1,10 +1,23 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FlatList, Pressable, RefreshControl, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { RefreshControl, ScrollView, View } from "react-native";
+import { Users } from "lucide-react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { useTema } from "../../theme";
-import { EmptyState, ErrorState, Input, LoadingScreen, Text } from "../../components/ui";
+import { tokens } from "@bitacora/design-tokens";
+import {
+  AsistenteButton,
+  Button,
+  EmptyState,
+  ErrorState,
+  ESPACIO_ASISTENTE_FLOTANTE,
+  Input,
+  ListRow,
+  ListRowGrupo,
+  LoadingState,
+  ScreenHeader,
+  Tag,
+  Texto,
+} from "@bitacora/ui/native";
 import { OfflineBanner } from "../../components/OfflineBanner";
 import { HojaCrearCliente } from "../../components/HojaCrearCliente";
 import { pesos } from "../../lib/plata";
@@ -23,10 +36,14 @@ function iniciales(nombre: string): string {
     .toUpperCase();
 }
 
+// Sistema visual móvil v2 (14-sep-2026) — ScreenHeader + ListRow, mismo
+// patrón que Hoy/Más/ficha de cliente. Antes de esto era el único de
+// los 4 tabs (Hoy/Agenda/Clientes/Más) que seguía con el header nativo
+// y filas sueltas del sistema viejo (Faena).
 export function ClientesListaScreen({ navigation }: NativeStackScreenProps<ClientesStackParamList, "ClientesLista">) {
-  const t = useTema();
   const auth = useAuth();
   const esGestion = auth.fase === "listo" && auth.usuario.rol !== "colaborador";
+  const veAsistente = auth.fase === "listo" && auth.modulosVisibles.includes("asistente");
   const [clientes, setClientes] = useState<ClienteConActividad[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refrescando, setRefrescando] = useState(false);
@@ -68,122 +85,90 @@ export function ClientesListaScreen({ navigation }: NativeStackScreenProps<Clien
     );
   }, [clientes, busqueda, filtro]);
 
-  if (clientes === null && !error) return <LoadingScreen />;
-  if (error && !clientes) return <ErrorState mensaje={error} onReintentar={cargar} />;
+  const filtros = {
+    opciones: [
+      { valor: "todos", etiqueta: "Todos" },
+      { valor: "saldo", etiqueta: "Con saldo" },
+      { valor: "pack", etiqueta: "Con pack" },
+    ],
+    valor: filtro,
+    onCambio: (v: string) => setFiltro(v as Filtro),
+  };
 
-  return (
-    <View style={{ flex: 1, backgroundColor: t.colores.bg }}>
-      <OfflineBanner guardadoEn={guardadoEn} />
-      <View style={{ padding: t.espacio(4), gap: t.espacio(3) }}>
-        <Input placeholder="Buscar por nombre, RUT o comuna" value={busqueda} onChangeText={setBusqueda} />
-        <View style={{ flexDirection: "row", gap: t.espacio(2) }}>
-          {(
-            [
-              { k: "todos", t: "Todos" },
-              { k: "saldo", t: "Con saldo" },
-              { k: "pack", t: "Con pack" },
-            ] as { k: Filtro; t: string }[]
-          ).map((f) => {
-            const activo = filtro === f.k;
-            return (
-              <Pressable
-                key={f.k}
-                onPress={() => setFiltro(f.k)}
-                style={{
-                  paddingHorizontal: t.espacio(3),
-                  paddingVertical: t.espacio(1.5),
-                  borderRadius: t.radio.full,
-                  borderWidth: 1,
-                  borderColor: activo ? t.colores.brand : t.colores.border,
-                  backgroundColor: activo ? t.colores.brand : t.colores.surface,
-                }}
-              >
-                <Text variante="caption" weight="semibold" tono={activo ? "inverso" : "muted"}>
-                  {f.t}
-                </Text>
-              </Pressable>
-            );
-          })}
+  if (clientes === null && !error) {
+    return (
+      <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+        <ScreenHeader antetitulo=" " titulo="Clientes" filtros={filtros} />
+        <View style={{ padding: tokens.space["4"] }}>
+          <LoadingState />
         </View>
       </View>
-      <FlatList
-        data={visibles}
-        keyExtractor={(c) => c.id}
-        contentContainerStyle={{ paddingBottom: t.espacio(16), flexGrow: 1 }}
-        refreshControl={<RefreshControl refreshing={refrescando} onRefresh={onRefresh} tintColor={t.colores.brand} />}
-        ListEmptyComponent={
-          <View style={{ padding: t.espacio(4) }}>
-            <EmptyState
-              icono={<Ionicons name="people-outline" size={40} color={t.colores.faint} />}
-              titulo={busqueda || filtro !== "todos" ? "Sin resultados" : "Sin clientes"}
-              mensaje={busqueda || filtro !== "todos" ? "Prueba con otro término o filtro." : "Crea el primero con el botón +."}
-            />
-          </View>
-        }
-        renderItem={({ item }) => {
-          const saldo = item.total_por_cobrar ?? 0;
-          const vencido = (item.total_vencido ?? 0) > 0;
-          const tono = saldo === 0 ? t.colores.faint : vencido ? t.colores.danger : t.colores.accent;
-          return (
-            <Pressable
-              onPress={() => navigation.navigate("ClienteDetalle", { clienteId: item.id })}
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                gap: t.espacio(3),
-                paddingHorizontal: t.espacio(4),
-                paddingVertical: t.espacio(3),
-                borderBottomWidth: 1,
-                borderBottomColor: t.colores.border,
-                opacity: item.activo ? 1 : 0.5,
-              }}
-            >
-              <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: t.colores.brandSoft, alignItems: "center", justifyContent: "center" }}>
-                <Text weight="bold" tono="brand" style={{ fontSize: 13 }}>
-                  {iniciales(item.nombre)}
-                </Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text weight="semibold" numberOfLines={1}>
-                  {item.nombre}
-                </Text>
-                {item.rut ? (
-                  <Text mono variante="caption" tono="muted">
-                    {item.rut}
-                  </Text>
-                ) : null}
-              </View>
-              <Text mono weight="semibold" style={{ color: tono }}>
-                {pesos(saldo)}
-              </Text>
-            </Pressable>
-          );
-        }}
-      />
+    );
+  }
+  if (error && !clientes) {
+    return (
+      <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+        <ScreenHeader antetitulo=" " titulo="Clientes" filtros={filtros} />
+        <ErrorState mensaje={error} onReintentar={cargar} />
+      </View>
+    );
+  }
 
-      {esGestion ? (
-        <Pressable
-          onPress={() => setCreando(true)}
-          style={{
-            position: "absolute",
-            right: t.espacio(5),
-            bottom: t.espacio(6),
-            height: 50,
-            paddingHorizontal: t.espacio(4),
-            borderRadius: 25,
-            backgroundColor: t.colores.brand,
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 6,
-            ...t.sombra.flotante,
-          }}
-        >
-          <Ionicons name="add" size={22} color={t.colores.brandForeground} />
-          <Text weight="bold" tono="inverso">
-            Cliente
-          </Text>
-        </Pressable>
-      ) : null}
+  return (
+    <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+      <ScreenHeader antetitulo={`${visibles.length} ${visibles.length === 1 ? "cliente" : "clientes"}`} titulo="Clientes" filtros={filtros} />
+      <OfflineBanner guardadoEn={guardadoEn} />
+      <View style={{ paddingHorizontal: tokens.space["4"], paddingTop: tokens.space["3"], gap: tokens.space["3"] }}>
+        <Input valor={busqueda} onCambio={setBusqueda} placeholder="Buscar por nombre, RUT o comuna" />
+        {esGestion ? <Button onPress={() => setCreando(true)}>+ Cliente</Button> : null}
+      </View>
+      <ScrollView
+        contentContainerStyle={{ padding: tokens.space["4"], paddingBottom: ESPACIO_ASISTENTE_FLOTANTE, flexGrow: 1 }}
+        refreshControl={<RefreshControl refreshing={refrescando} onRefresh={onRefresh} />}
+      >
+        {visibles.length === 0 ? (
+          <EmptyState
+            icono={<Users size={32} strokeWidth={2.75} color={tokens.color.accent2Ramp["800"]} />}
+            titulo={busqueda || filtro !== "todos" ? "Sin resultados" : "Sin clientes"}
+            mensaje={busqueda || filtro !== "todos" ? "Prueba con otro término o filtro." : "Crea el primero con el botón + Cliente."}
+          />
+        ) : (
+          <ListRowGrupo>
+            {visibles.map((item) => {
+              const saldo = item.total_por_cobrar ?? 0;
+              const vencido = (item.total_vencido ?? 0) > 0;
+              return (
+                <ListRow
+                  key={item.id}
+                  icono={
+                    <Texto tamano={13} peso="semibold" color={tokens.color.accentRamp["800"]}>
+                      {iniciales(item.nombre)}
+                    </Texto>
+                  }
+                  titulo={item.nombre}
+                  subtitulo={item.rut ?? undefined}
+                  trailing={
+                    <View style={{ alignItems: "flex-end", gap: 4 }}>
+                      {item.tiene_pack ? <Tag tono="accent2">Con pack</Tag> : null}
+                      <Texto
+                        peso="semibold"
+                        tamano={tokens.size.small}
+                        color={saldo === 0 ? `${tokens.color.text}99` : vencido ? tokens.color.accentRamp["700"] : tokens.color.text}
+                        style={{ fontVariant: ["tabular-nums"] }}
+                      >
+                        {pesos(saldo)}
+                      </Texto>
+                    </View>
+                  }
+                  onPress={() => navigation.navigate("ClienteDetalle", { clienteId: item.id })}
+                />
+              );
+            })}
+          </ListRowGrupo>
+        )}
+      </ScrollView>
+
+      <AsistenteButton visible={veAsistente} onPress={() => navigation.navigate("Asistente")} />
 
       <HojaCrearCliente
         visible={creando}

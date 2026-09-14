@@ -46,6 +46,16 @@
   --color-ds-brand-pressed: var(--ds-brand-pressed);
   --color-ds-brand-foreground: var(--ds-brand-foreground);
 
+  /* Segundo color del tenant (empresas.color_secundario, 14-sep-2026).
+     A propósito NO pisa --color-ds-accent2-*: ese ramp ya se usa en
+     decenas de pantallas existentes con el tono fijo del sistema, y
+     retocarlo de golpe las recolorearía todas sin haberlas revisado una
+     por una. Este es un par NUEVO y angosto (bg suave / texto fuerte),
+     pensado para lo que se agregue de acá en adelante — mismo criterio
+     que --ds-brand: variable de marca angosta, no todo el ramp. */
+  --color-ds-accent2-soft: var(--ds-accent2-soft);
+  --color-ds-accent2-strong: var(--ds-accent2-strong);
+
   --font-ds-heading: var(--font-caprasimo), "Caprasimo", ui-sans-serif, system-ui, sans-serif;
   --font-ds-body: var(--font-figtree), "Figtree", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 
@@ -85,6 +95,15 @@
   --ds-brand-hover: oklch(from var(--ds-brand) calc(l - 0.05) c h);
   --ds-brand-pressed: oklch(from var(--ds-brand) calc(l - 0.11) c h);
   --ds-brand-foreground: #ffffff;
+
+  /* Igual patrón que --ds-brand pero para empresas.color_secundario.
+     soft/strong con color-mix (no oklch: a diferencia de oscurecer una
+     marca ya elegida, aclarar un hex arbitrario hacia blanco en OKLCH
+     se sale de gamut para tonos como el teal — mezclar en sRGB con
+     color-mix se queda siempre dentro de gamut). */
+  --ds-accent2: #7a8a5e;
+  --ds-accent2-soft: color-mix(in srgb, var(--ds-accent2) 22%, white);
+  --ds-accent2-strong: color-mix(in srgb, var(--ds-accent2) 50%, black);
 
   --font-ds-heading-weight: 400;
 }

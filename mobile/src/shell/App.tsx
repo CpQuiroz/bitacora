@@ -31,7 +31,11 @@ function ConTema({ children }: { children: React.ReactNode }) {
           : null
       }
     >
-      <ProveedorMarca colorPrimario={empresa?.color_primario} colorForeground={empresa?.color_primario_foreground}>
+      <ProveedorMarca
+        colorPrimario={empresa?.color_primario}
+        colorForeground={empresa?.color_primario_foreground}
+        colorSecundario={empresa?.color_secundario}
+      >
         {children}
       </ProveedorMarca>
     </ThemeProvider>

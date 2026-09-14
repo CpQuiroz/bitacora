@@ -27,22 +27,27 @@ export async function portalFetch(path: string, options: RequestInit = {}) {
   return fetch(`${API_URL}${path}`, { ...options, headers });
 }
 
-// Qué secciones dejó visibles la empresa (migración 93). Se cachea a
-// nivel de módulo para no re-pedirlo en cada pantalla del portal.
+// Qué secciones dejó visibles la empresa (migración 93) + su marca
+// (color_primario/color_secundario) — mismo endpoint, para no duplicar
+// la ida y vuelta. Se cachea a nivel de módulo para no re-pedirlo en
+// cada pantalla del portal.
 export type SeccionPortal = "ordenes" | "citas" | "cotizaciones" | "cobros";
 export type ConfigPortal = Record<SeccionPortal, boolean>;
+export type MarcaPortal = { color_primario: string | null; color_primario_foreground: string | null; color_secundario: string | null };
+export type RespuestaConfigPortal = { secciones: ConfigPortal; marca: MarcaPortal };
 
 const TODO_VISIBLE: ConfigPortal = { ordenes: true, citas: true, cotizaciones: true, cobros: true };
-let configCache: ConfigPortal | null = null;
+const SIN_MARCA: MarcaPortal = { color_primario: null, color_primario_foreground: null, color_secundario: null };
+let configCache: RespuestaConfigPortal | null = null;
 
-export async function obtenerConfigPortal(): Promise<ConfigPortal> {
+export async function obtenerConfigPortal(): Promise<RespuestaConfigPortal> {
   if (configCache) return configCache;
   try {
     const res = await portalFetch("/api/portal/config");
-    if (!res.ok) return TODO_VISIBLE;
-    configCache = (await res.json()) as ConfigPortal;
+    if (!res.ok) return { secciones: TODO_VISIBLE, marca: SIN_MARCA };
+    configCache = (await res.json()) as RespuestaConfigPortal;
     return configCache;
   } catch {
-    return TODO_VISIBLE;
+    return { secciones: TODO_VISIBLE, marca: SIN_MARCA };
   }
 }

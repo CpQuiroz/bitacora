@@ -17,6 +17,17 @@ const TERRACOTA = tokens.color.accent;
 // en tokens.json, esto sigue eligiendo bien.
 const FOREGROUND = resolverMarca(TERRACOTA).foreground;
 
+// Huella real del botón en la variante "flotante" — distancia desde el
+// borde inferior de la pantalla (110) + su propio alto (48). Bug real
+// (14-sep-2026): Hoy y Más adivinaban un paddingBottom para su lista sin
+// este número (35 y 140 respectivamente, los dos insuficientes) y el
+// botón tapaba la última fila. Toda pantalla que use la variante
+// "flotante" debe sumar ESPACIO_ASISTENTE_FLOTANTE al padding inferior
+// de su contenido scrolleable — nunca adivinar un valor a mano.
+const OFFSET_ASISTENTE_FLOTANTE = 110;
+const ALTO_ASISTENTE_FLOTANTE = 48;
+export const ESPACIO_ASISTENTE_FLOTANTE = OFFSET_ASISTENTE_FLOTANTE + ALTO_ASISTENTE_FLOTANTE + tokens.space["4"]; // 110 + 48 + ~18 de aire
+
 export type PropsAsistenteButton = {
   /** El gating por rol lo resuelve quien consume el componente — este solo pinta o no pinta nada. */
   visible?: boolean;

@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { Logo } from "./Logo";
-import { cerrarSesionPortal, obtenerConfigPortal, type SeccionPortal } from "@/lib/portalApi";
+import { cerrarSesionPortal, obtenerConfigPortal, type MarcaPortal, type SeccionPortal } from "@/lib/portalApi";
 import { IconCalendar, IconClipboardCheck, IconHome, IconLogOut, IconReceipt, IconWallet } from "./icons";
 
 const NAV: { href: string; label: string; icon: typeof IconHome; seccion?: SeccionPortal }[] = [
@@ -23,10 +23,12 @@ export function PortalShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [oculto, setOculto] = useState<Set<SeccionPortal>>(new Set());
+  const [marca, setMarca] = useState<MarcaPortal | null>(null);
 
   useEffect(() => {
-    obtenerConfigPortal().then((cfg) => {
-      setOculto(new Set((Object.keys(cfg) as SeccionPortal[]).filter((s) => !cfg[s])));
+    obtenerConfigPortal().then(({ secciones, marca }) => {
+      setOculto(new Set((Object.keys(secciones) as SeccionPortal[]).filter((s) => !secciones[s])));
+      setMarca(marca);
     });
   }, []);
 
@@ -37,8 +39,20 @@ export function PortalShell({ children }: { children: ReactNode }) {
     router.replace("/portal/login");
   }
 
+  // Mismo mecanismo que DashboardShell/SuperAdminShell (empresas.
+  // color_primario) — antes PortalShell no recibía ningún dato de marca
+  // y el cliente nunca veía el color de SU empresa en su propio portal.
+  const marcaStyle: CSSProperties = marca?.color_primario
+    ? ({
+        "--accent": marca.color_primario,
+        "--ds-brand": marca.color_primario,
+        ...(marca.color_primario_foreground ? { "--ds-brand-foreground": marca.color_primario_foreground } : {}),
+        ...(marca.color_secundario ? { "--ds-accent2": marca.color_secundario } : {}),
+      } as CSSProperties)
+    : {};
+
   return (
-    <div className="flex min-h-screen flex-col bg-background">
+    <div className="flex min-h-screen flex-col bg-background" style={marcaStyle}>
       <header className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-surface px-4 py-3">
         <Link href="/portal" className="flex items-center gap-2">
           <Logo markClassName="h-7 w-7" />
@@ -61,7 +75,7 @@ export function PortalShell({ children }: { children: ReactNode }) {
                 key={item.href}
                 href={item.href}
                 className={`flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] transition-colors ${
-                  activo ? "font-semibold text-brand" : "font-medium text-muted"
+                  activo ? "font-semibold text-accent" : "font-medium text-muted"
                 }`}
               >
                 <item.icon className="h-5 w-5" />

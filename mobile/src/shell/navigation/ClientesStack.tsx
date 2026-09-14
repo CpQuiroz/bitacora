@@ -5,6 +5,7 @@ import { ClientesListaScreen } from "../../features/clientes/ClientesListaScreen
 import { ClienteFormScreen } from "../../features/clientes/ClienteFormScreen";
 import { ClienteDetalleScreen } from "../../features/clientes/ClienteDetalleScreen";
 import { RegistrarVentaScreen } from "../../features/ventas/RegistrarVentaScreen";
+import { AsistenteScreen } from "../../features/asistente/AsistenteScreen";
 
 const Stack = createNativeStackNavigator<ClientesStackParamList>();
 
@@ -20,12 +21,15 @@ export function ClientesStack() {
         contentStyle: { backgroundColor: t.colores.bg },
       }}
     >
-      <Stack.Screen name="ClientesLista" component={ClientesListaScreen} options={{ title: "Clientes" }} />
+      {/* ClientesListaScreen dibuja su propio ScreenHeader (sistema visual
+          v2) — el header nativo se apaga acá para no duplicarlo. */}
+      <Stack.Screen name="ClientesLista" component={ClientesListaScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ClienteForm" component={ClienteFormScreen} options={{ title: "Cliente" }} />
       {/* ClienteDetalleScreen dibuja su propio ScreenHeader (sistema visual
           v2, con su propio botón de volver) — el header nativo se apaga acá. */}
       <Stack.Screen name="ClienteDetalle" component={ClienteDetalleScreen} options={{ headerShown: false }} />
       <Stack.Screen name="RegistrarVenta" component={RegistrarVentaScreen} options={{ title: "Registrar venta" }} />
+      <Stack.Screen name="Asistente" component={AsistenteScreen} options={{ title: "Asistente" }} />
     </Stack.Navigator>
   );
 }
