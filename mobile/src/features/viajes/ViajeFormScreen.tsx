@@ -2,14 +2,13 @@ import { useEffect, useState } from "react";
 import { Alert, Image, Pressable, ScrollView, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import type { Cliente, Equipo } from "@bitacora/shared";
+import { CIUDADES_CHILE, type Cliente, type Equipo } from "@bitacora/shared";
 import { useTema } from "../../theme";
 import { Button, Card, Input, LoadingScreen, PickerBuscable, Text } from "../../components/ui";
 import { SelectorCliente } from "../../components/SelectorCliente";
 import { InputMonto } from "../../components/InputMonto";
 import { useRed } from "../../services/sync/NetworkProvider";
 import { elegirFotos } from "../../lib/imagen";
-import { CIUDADES_CHILE } from "../../lib/ciudadesChile";
 import {
   catalogoParaViaje,
   crearViaje,

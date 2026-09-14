@@ -3,7 +3,7 @@
 import { Fragment, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Truck } from "lucide-react";
-import type { Cliente, EstadoViaje, Usuario, Viaje } from "@bitacora/shared";
+import { CIUDADES_CHILE, type Cliente, type EstadoViaje, type Usuario, type Viaje } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
@@ -13,6 +13,7 @@ import { InputMonto } from "@/components/InputMonto";
 import { Modal } from "@/components/Modal";
 import { ComboboxCliente } from "@/components/ComboboxCliente";
 import { ComboboxResponsable } from "@/components/ComboboxResponsable";
+import { Combobox } from "@/components/Combobox";
 
 type ViajeConDatos = Viaje & {
   cliente_info: Pick<Cliente, "id" | "nombre"> | null;
@@ -65,6 +66,22 @@ export default function ViajesPage() {
   const [choferId, setChoferId] = useState("");
   const [origen, setOrigen] = useState("");
   const [destino, setDestino] = useState("");
+  // Ciudades escritas a mano (no están en CIUDADES_CHILE) — se agregan
+  // a las opciones para que el Combobox pueda mostrarlas seleccionadas
+  // (a diferencia de PickerBuscable en mobile, Combobox no tiene un
+  // fallback propio para "mostrar el texto aunque no matchee ningún
+  // id" — mismo criterio que ComboboxCliente usa para el cliente recién
+  // creado). Compartida entre alta y edición: una ciudad libre elegida
+  // en cualquiera de los dos lados queda disponible en el otro.
+  const [ciudadesLibres, setCiudadesLibres] = useState<string[]>([]);
+  const opcionesCiudad = useMemo(
+    () => [...CIUDADES_CHILE, ...ciudadesLibres].map((c) => ({ id: c, label: c })),
+    [ciudadesLibres]
+  );
+  function agregarCiudadLibre(texto: string) {
+    if (!texto || CIUDADES_CHILE.includes(texto)) return;
+    setCiudadesLibres((prev) => (prev.includes(texto) ? prev : [...prev, texto]));
+  }
   const [kmInicial, setKmInicial] = useState("");
   const [kmFinal, setKmFinal] = useState("");
   const [subtotal, setSubtotal] = useState("");
@@ -237,6 +254,11 @@ export default function ViajesPage() {
     setEditNumeroGuia(v.numero_guia);
     setEditOrigen(v.origen);
     setEditDestino(v.destino);
+    // Si el viaje ya tenía una ciudad libre (no está en CIUDADES_CHILE
+    // ni se agregó antes en esta sesión), hay que sumarla para que el
+    // Combobox la muestre seleccionada en vez de vacía.
+    agregarCiudadLibre(v.origen);
+    agregarCiudadLibre(v.destino);
     setEditClienteId(v.cliente_id ?? "");
     setEditChoferId(v.chofer_id ?? "");
     setEditKmInicial(v.km_inicial != null ? String(v.km_inicial) : "");
@@ -470,8 +492,34 @@ export default function ViajesPage() {
                   <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Chofer (opcional)</label>
                   <ComboboxResponsable value={choferId} onChange={setChoferId} equipo={choferes} opcionVacia="Sin asignar" placeholder="Sin asignar" />
                 </div>
-                <Input etiqueta="Origen" requerido valor={origen} onCambio={setOrigen} />
-                <Input etiqueta="Destino" requerido valor={destino} onCambio={setDestino} />
+                <div className="flex flex-col gap-ds-1">
+                  <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Origen</label>
+                  <Combobox
+                    value={origen}
+                    onChange={setOrigen}
+                    opciones={opcionesCiudad}
+                    placeholder="Elegir ciudad de origen"
+                    etiquetaCrear={(texto) => `Usar "${texto}" (no está en la lista)`}
+                    onCrear={(texto) => {
+                      agregarCiudadLibre(texto);
+                      setOrigen(texto);
+                    }}
+                  />
+                </div>
+                <div className="flex flex-col gap-ds-1">
+                  <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Destino</label>
+                  <Combobox
+                    value={destino}
+                    onChange={setDestino}
+                    opciones={opcionesCiudad}
+                    placeholder="Elegir ciudad de destino"
+                    etiquetaCrear={(texto) => `Usar "${texto}" (no está en la lista)`}
+                    onCrear={(texto) => {
+                      agregarCiudadLibre(texto);
+                      setDestino(texto);
+                    }}
+                  />
+                </div>
                 <Input etiqueta="Km inicial (opcional)" tipo="numero" valor={kmInicial} onCambio={setKmInicial} />
                 <Input etiqueta="Km final (opcional)" tipo="numero" valor={kmFinal} onCambio={setKmFinal} />
                 <div className="flex flex-col gap-ds-1">
@@ -645,10 +693,32 @@ export default function ViajesPage() {
                                 <Input etiqueta="Número de guía" valor={editNumeroGuia} onCambio={setEditNumeroGuia} />
                               </div>
                               <div className="min-w-[180px] flex-1">
-                                <Input etiqueta="Origen" valor={editOrigen} onCambio={setEditOrigen} />
+                                <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Origen</label>
+                                <Combobox
+                                  value={editOrigen}
+                                  onChange={setEditOrigen}
+                                  opciones={opcionesCiudad}
+                                  placeholder="Elegir ciudad de origen"
+                                  etiquetaCrear={(texto) => `Usar "${texto}" (no está en la lista)`}
+                                  onCrear={(texto) => {
+                                    agregarCiudadLibre(texto);
+                                    setEditOrigen(texto);
+                                  }}
+                                />
                               </div>
                               <div className="min-w-[180px] flex-1">
-                                <Input etiqueta="Destino" valor={editDestino} onCambio={setEditDestino} />
+                                <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Destino</label>
+                                <Combobox
+                                  value={editDestino}
+                                  onChange={setEditDestino}
+                                  opciones={opcionesCiudad}
+                                  placeholder="Elegir ciudad de destino"
+                                  etiquetaCrear={(texto) => `Usar "${texto}" (no está en la lista)`}
+                                  onCrear={(texto) => {
+                                    agregarCiudadLibre(texto);
+                                    setEditDestino(texto);
+                                  }}
+                                />
                               </div>
                             </div>
                             <div className="flex flex-wrap items-end gap-ds-3">

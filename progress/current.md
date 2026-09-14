@@ -1683,3 +1683,53 @@ seteando el input a mano vía JS — el valor volvió exacto
 formulario real, así que no quedó dato de prueba que limpiar.
 
 `tsc` de los 4 paquetes limpio, `./verificar.sh` completo verde.
+
+**La usuaria confirmó el deploy `live`** — seguí con Origen/Destino.
+
+## 2026-09-14: tarea 27, segunda parte — Origen/Destino (Viajes web)
+
+**Hallazgo aparte, no accionado**: ya existe `REGIONES_COMUNAS` en
+`packages/shared` (las 346 comunas, exhaustivo) — sin usar en ningún
+lado. No lo toqué: es una lista administrativa genérica, distinta del
+criterio curado de `CIUDADES_CHILE` (ciudades con movimiento de
+carga, orden norte-sur, pensado para rutas de transporte, no para
+direcciones genéricas). Lo dejo anotado, no es parte de este pedido.
+
+**Movido `CIUDADES_CHILE`** de `mobile/src/lib/ciudadesChile.ts` a
+`packages/shared/src/ciudadesChile.ts` (confirmado en el Paso 0 que
+no vivía ahí) — mobile ahora importa desde `@bitacora/shared`, el
+archivo local se borró.
+
+**Web**: en vez de crear un componente nuevo, reutilicé el `Combobox`
+genérico que ya existe (`@/components/Combobox`) — el mismo que usan
+`ComboboxCliente`/`ComboboxResponsable`, ya soporta búsqueda +
+"crear" (equivalente exacto a `permitirLibre` de `PickerBuscable` en
+mobile). Aplicado a los 4 campos de Origen/Destino en
+`viajes/page.tsx` (alta + fila de edición inline).
+
+**Bug real encontrado antes de que llegara a producción**: a
+diferencia de `PickerBuscable`, el `Combobox` genérico **no** tiene
+un fallback para mostrar el texto libre cuando no matchea ningún
+`id` de las opciones — si lo hubiera dejado tal cual, elegir "Usar
+'X' (no está en la lista)" habría dejado el campo **vacío** al
+cerrarse (el mismo bug de fondo que ya se vio con `ComboboxCliente`,
+resuelto ahí agregando el cliente recién creado a su propio arreglo).
+Fix: estado local `ciudadesLibres` (compartido entre alta y edición)
+que se completa tanto al elegir texto libre como al abrir la edición
+de un viaje que ya tenía una ciudad libre guardada — sin eso, editar
+un viaje viejo con una ciudad no listada también se hubiera visto
+vacío. `agregarCiudadLibre()` descarta duplicados y cualquier valor
+que YA esté en `CIUDADES_CHILE` (evita ids repetidos en las opciones,
+que rompería las `key` de React).
+
+**Verificado en vivo** (misma sesión real inyectada, sin
+credenciales): filtro de texto probado ("Con" → Concón/Rinconada/
+Constitución/Concepción/Contulmo), selección de una ciudad de la
+lista (Concón), y el camino de texto libre completo — escribí "Fundo
+El Retiro", elegí "Usar...", y confirmé con zoom que el campo mostró
+"Fundo El Retiro" correctamente al cerrar (no vacío). No se envió el
+formulario, sin dato de prueba que limpiar.
+
+`tsc` de los 4 paquetes limpio, `./verificar.sh` completo verde.
+Mobile no tuvo cambio de comportamiento (solo cambió de dónde importa
+la constante) — no se rearmó un APK para esto.
