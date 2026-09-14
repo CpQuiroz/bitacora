@@ -232,7 +232,7 @@ export function ClienteDetalleScreen({ route, navigation }: NativeStackScreenPro
                 <ListRow
                   key={tr.id}
                   icono={<HardHat size={22} strokeWidth={2.25} color={tokens.color.accentRamp["700"]} />}
-                  titulo={tr.orden?.folio != null ? `OS N° ${tr.orden.folio}` : tr.descripcion ?? "Trabajo"}
+                  titulo={tr.orden?.folio != null ? `OS N° ${tr.orden.folio}` : tr.descripcion ?? "Orden de servicio"}
                   subtitulo={tr.fecha}
                   trailing={
                     tr.orden?.estado_os ? (

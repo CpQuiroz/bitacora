@@ -1,17 +1,18 @@
 import { forwardRef, useImperativeHandle, useRef, useState } from "react";
-import { View, type GestureResponderEvent } from "react-native";
-import Svg, { Line, Path } from "react-native-svg";
-import { captureRef } from "react-native-view-shot";
+import { View } from "react-native";
+import SignatureView, { type SignatureViewRef } from "react-native-signature-canvas";
 import { useTema } from "../theme";
 import { Text } from "./ui";
 
-type Punto = { x: number; y: number };
-
-function trazoAPath(trazo: Punto[]): string {
-  if (trazo.length === 0) return "";
-  const [inicio, ...resto] = trazo;
-  return `M ${inicio.x},${inicio.y} ` + resto.map((p) => `L ${p.x},${p.y}`).join(" ");
-}
+// Oculta la barra propia de la librería (limpiar/descripción/confirmar) —
+// el lienzo se controla desde afuera (ver LienzoFirmaHandle), igual que
+// antes. Nombres de clase confirmados contra el HTML que empaqueta
+// react-native-signature-canvas (h5/html.js).
+const ESTILO_WEB = `
+  .m-signature-pad--footer { display: none; }
+  .m-signature-pad--body { border: none; }
+  body, html { background-color: transparent; }
+`;
 
 export type LienzoFirmaHandle = {
   vacio: () => boolean;
@@ -19,59 +20,61 @@ export type LienzoFirmaHandle = {
   limpiar: () => void;
 };
 
-// Lienzo de firma inline (170px) con línea de apoyo y "Limpiar" arriba a
-// la derecha. El padre captura el PNG en base64 vía ref al confirmar.
+// Bug real (14-sep-2026): el lienzo anterior usaba el Responder System
+// de RN a mano (onStartShouldSetResponder/onResponderMove + SVG) —
+// dentro del ScrollView de la pantalla, el scroll le ganaba el gesto al
+// trazo la mayoría de las veces ("no deja firmar"), un conflicto
+// conocido de esa API con contenedores scrolleables. react-native-
+// signature-canvas resuelve esto de raíz: el dibujo ocurre DENTRO de un
+// WebView (signature_pad.js sobre un <canvas> HTML real), completamente
+// aislado del sistema de gestos de RN — el touch nunca compite con el
+// ScrollView padre.
+//
+// Interfaz externa sin cambios (vacio/capturar/limpiar) — CierreFirma.tsx
+// y ChecklistMantencionScreen.tsx no se tocaron.
 export const LienzoFirma = forwardRef<LienzoFirmaHandle, { alto?: number }>(function LienzoFirma({ alto = 170 }, ref) {
   const t = useTema();
-  const lienzoRef = useRef<View>(null);
-  const [trazos, setTrazos] = useState<Punto[][]>([]);
-  const [trazoActual, setTrazoActual] = useState<Punto[]>([]);
-
-  const vacio = trazos.length === 0 && trazoActual.length === 0;
+  const sigRef = useRef<SignatureViewRef>(null);
+  const [vacio, setVacio] = useState(true);
+  // readSignature() es async vía callback (onOK/onEmpty) — se envuelve
+  // en una promesa para que capturar() siga devolviendo Promise<string|null>,
+  // igual que antes.
+  const resolverPendiente = useRef<((v: string | null) => void) | null>(null);
 
   useImperativeHandle(ref, () => ({
     vacio: () => vacio,
     limpiar: () => {
-      setTrazos([]);
-      setTrazoActual([]);
+      sigRef.current?.clearSignature();
+      setVacio(true);
     },
-    capturar: async () => {
-      if (vacio) return null;
-      try {
-        const base64 = await captureRef(lienzoRef, { format: "png", result: "base64", quality: 1 });
-        return base64 && base64.length > 100 ? base64 : null;
-      } catch {
-        return null;
-      }
-    },
+    capturar: () =>
+      new Promise<string | null>((resolve) => {
+        resolverPendiente.current = resolve;
+        sigRef.current?.readSignature();
+      }),
   }));
 
-  function onInicio(e: GestureResponderEvent) {
-    const { locationX, locationY } = e.nativeEvent;
-    setTrazoActual([{ x: locationX, y: locationY }]);
-  }
-  function onMover(e: GestureResponderEvent) {
-    const { locationX, locationY } = e.nativeEvent;
-    setTrazoActual((prev) => [...prev, { x: locationX, y: locationY }]);
-  }
-  function onFin() {
-    if (trazoActual.length > 0) {
-      setTrazos((prev) => [...prev, trazoActual]);
-      setTrazoActual([]);
-    }
+  function onOK(dataUrl: string) {
+    // "data:image/png;base64,AAAA..." -> "AAAA..." — el backend espera
+    // el base64 puro (Buffer.from(firma_base64, "base64")), mismo
+    // contrato que ya usaba captureRef() antes.
+    const base64 = dataUrl.replace(/^data:image\/\w+;base64,/, "");
+    resolverPendiente.current?.(base64 || null);
+    resolverPendiente.current = null;
   }
 
-  const linea = (d: string, key?: number) => (
-    <Path key={key} d={d} stroke="#111111" strokeWidth={3} fill="none" strokeLinecap="round" strokeLinejoin="round" />
-  );
+  function onEmpty() {
+    resolverPendiente.current?.(null);
+    resolverPendiente.current = null;
+  }
 
   return (
     <View style={{ gap: t.espacio(1.5) }}>
       <View style={{ flexDirection: "row", justifyContent: "flex-end" }}>
         <Text
           onPress={() => {
-            setTrazos([]);
-            setTrazoActual([]);
+            sigRef.current?.clearSignature();
+            setVacio(true);
           }}
           variante="etiqueta"
           tono="brand"
@@ -81,30 +84,30 @@ export const LienzoFirma = forwardRef<LienzoFirmaHandle, { alto?: number }>(func
         </Text>
       </View>
       <View
-        ref={lienzoRef}
-        collapsable={false}
         style={{
           height: alto,
           borderWidth: 1,
           borderColor: t.colores.borderStrong,
           borderRadius: t.radio.md,
-          backgroundColor: "#ffffff",
           overflow: "hidden",
+          backgroundColor: "#ffffff",
         }}
-        onStartShouldSetResponder={() => true}
-        onMoveShouldSetResponder={() => true}
-        onResponderGrant={onInicio}
-        onResponderMove={onMover}
-        onResponderRelease={onFin}
       >
-        <Svg style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}>
-          {/* línea de apoyo */}
-          <Line x1={16} y1={alto - 34} x2="92%" y2={alto - 34} stroke="#D3D8DD" strokeWidth={1} />
-          {trazos.map((tr, i) => linea(trazoAPath(tr), i))}
-          {trazoActual.length > 0 && linea(trazoAPath(trazoActual))}
-        </Svg>
+        <SignatureView
+          ref={sigRef}
+          onOK={onOK}
+          onEmpty={onEmpty}
+          onBegin={() => setVacio(false)}
+          onClear={() => setVacio(true)}
+          webStyle={ESTILO_WEB}
+          descriptionText=""
+          penColor="#111111"
+          backgroundColor="#ffffff"
+          autoClear={false}
+          webviewContainerStyle={{ backgroundColor: "transparent" }}
+        />
         {vacio ? (
-          <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+          <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
             <Text variante="cuerpo" tono="faint">
               Firma aquí
             </Text>

@@ -1737,3 +1737,64 @@ la constante) — no se rearmó un APK para esto.
 **Deploy confirmado `live` por la usuaria** — tarea 27 cerrada. Los 4
 tipos de campo (dinero/hora/fecha/origen-destino) quedaron resueltos
 en las 5 áreas pedidas, web y mobile.
+
+## 2026-09-14: tarea 28 — firma rota, folio invisible en Hoy, naming Trabajo→OS
+
+La usuaria probó el APK 1.9.14: **el bug de conectividad (#20) sigue
+igual** (queda abierto, ver más abajo — no se tocó nada nuevo ahí
+todavía, hace falta más diagnóstico antes de otro intento a ciegas) —
+y reportó 3 problemas más en la misma revisión.
+
+**Firma rota — causa real encontrada por código, no solo reportada**:
+`LienzoFirma.tsx` dibujaba a mano con el Responder System de RN
+(`onStartShouldSetResponder`/`onResponderMove` + `Svg`/`Path`) — y
+vive dentro del `ScrollView` de `TrabajoDetalleScreen`. Es el
+conflicto clásico y documentado de esa API con contenedores
+scrolleables: el `ScrollView` padre puede quedarse con el gesto antes
+de que el lienzo lo capture, así que el trazo no se dibuja o se
+dibuja a medias — coincide exacto con "no deja firmar".
+
+**Fix**: reemplazado por `react-native-signature-canvas` (WebView +
+`signature_pad.js` sobre un `<canvas>` HTML real) — el dibujo ocurre
+DENTRO del WebView, completamente aislado del sistema de gestos de
+RN, así que nunca compite con el scroll del padre. Interfaz externa
+sin cambios (`vacio()`/`capturar()`/`limpiar()`) — no se tocó
+`CierreFirma.tsx` ni `ChecklistMantencionScreen.tsx`, los 2 lugares
+que ya usaban `LienzoFirma`. Se oculta la barra propia de la librería
+(limpiar/confirmar) vía `webStyle` — el control sigue siendo externo,
+igual que antes. El `dataURL` que devuelve la librería trae el
+prefijo `data:image/png;base64,` — se lo saca antes de devolverlo,
+porque el backend espera el base64 puro (`Buffer.from(firma_base64,
+"base64")`, confirmado en `trabajos.ts`/`registrosMantencion.ts` —
+mismo contrato que ya cumplía `captureRef()`, cero cambios de
+backend necesarios).
+
+**Folio de OS invisible en "Hoy"**: ya se veía en "Todos los
+trabajos" y en el detalle, pero `services/hoy.ts` armaba el
+`subtitulo` de un ítem tipo "trabajo" solo con la ubicación —
+agregado `OS N° {folio}` delante.
+
+**Naming Trabajo→Orden de servicio (mobile)**: renombrados los
+textos visibles que coinciden con la entidad OS —
+`TrabajosStack.tsx` (título de la lista y del formulario nuevo),
+`TrabajoFormScreen.tsx` (título dinámico nuevo/editar),
+`TrabajosScreen.tsx` (EmptyState "Sin órdenes de servicio"),
+`TrabajoDetalleScreen.tsx` (fallback del `ScreenHeader` + las 2
+alertas/banner de "finalizado"), `MasScreen.tsx` ("Todas las órdenes
+de servicio"), `ClienteDetalleScreen.tsx` (fallback del ítem de
+historial). No se tocaron nombres de variables/tipos internos
+(`trabajoId`, `TrabajoLista`, etc.) ni menciones casuales genéricas
+de la palabra ("no tienes trabajos hoy", "trabajos pendientes" en el
+Asistente) — solo lo que un usuario reconoce como el nombre de la
+sección/pantalla.
+
+**Sin verificación visual esta vez**: `SignatureView` es un
+componente nativo respaldado por WebView — no tiene (ni tendría
+sentido que tuviera) un camino de prueba vía `react-native-web`, y la
+esencia del bug original es justamente cómo el sistema de gestos
+TÁCTIL real de Android negocia el touch con el scroll — algo que
+ningún preview de escritorio puede reproducir de verdad. Queda
+pendiente la prueba real en el teléfono, como con cualquier cambio de
+gestos táctiles.
+
+`tsc mobile` limpio, `./verificar.sh` completo verde.

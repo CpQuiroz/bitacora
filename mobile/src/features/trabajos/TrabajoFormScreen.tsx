@@ -56,7 +56,7 @@ export function TrabajoFormScreen({ navigation, route }: NativeStackScreenProps<
   const set = <K extends keyof BorradorTrabajo>(k: K, v: BorradorTrabajo[K]) => setB((p) => ({ ...p, [k]: v }));
 
   useEffect(() => {
-    navigation.setOptions({ title: editandoId ? "Editar trabajo" : "Nuevo trabajo" });
+    navigation.setOptions({ title: editandoId ? "Editar orden de servicio" : "Nueva orden de servicio" });
   }, [navigation, editandoId]);
 
   useEffect(() => {

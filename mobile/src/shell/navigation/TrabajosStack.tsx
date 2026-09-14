@@ -23,12 +23,12 @@ export function TrabajosStack() {
         contentStyle: { backgroundColor: tokens.color.bg },
       }}
     >
-      <Stack.Screen name="TrabajosLista" component={TrabajosScreen} options={{ title: "Trabajos" }} />
+      <Stack.Screen name="TrabajosLista" component={TrabajosScreen} options={{ title: "Órdenes de servicio" }} />
       {/* TrabajoDetalleScreen dibuja su propio ScreenHeader (sistema visual
           v2, con su propio botón de volver) — el header nativo se apaga
           acá para no duplicarlo, igual que MasInicio/HoyInicio. */}
       <Stack.Screen name="TrabajoDetalle" component={TrabajoDetalleScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="TrabajoForm" component={TrabajoFormScreen} options={{ title: "Nuevo trabajo", presentation: "modal" }} />
+      <Stack.Screen name="TrabajoForm" component={TrabajoFormScreen} options={{ title: "Nueva orden de servicio", presentation: "modal" }} />
       <Stack.Screen name="RegistrarVenta" component={RegistrarVentaScreen} options={{ title: "Registrar venta" }} />
     </Stack.Navigator>
   );

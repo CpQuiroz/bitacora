@@ -85,7 +85,7 @@ export function MasScreen({ navigation }: NativeStackScreenProps<MasStackParamLi
 
   // --- Operación ---
   const operacion: Item[] = [
-    { titulo: "Todos los trabajos", contexto: "El historial completo, no solo lo de hoy", icono: <HardHat size={22} strokeWidth={2.25} {...iconoTint} />, ir: () => navigation.navigate("Trabajos") },
+    { titulo: "Todas las órdenes de servicio", contexto: "El historial completo, no solo lo de hoy", icono: <HardHat size={22} strokeWidth={2.25} {...iconoTint} />, ir: () => navigation.navigate("Trabajos") },
   ];
   if (!deshabilitados.includes("viajes")) {
     operacion.push({ titulo: "Todos los viajes", contexto: "El historial completo de viajes", icono: <Route size={22} strokeWidth={2.25} {...iconoTint} />, ir: () => navigation.navigate("Viajes") });

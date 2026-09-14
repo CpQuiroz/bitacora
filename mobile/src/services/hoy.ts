@@ -60,7 +60,10 @@ export async function cargarHoy(equipo: boolean, incluirViajes: boolean): Promis
         id: tr.id,
         hora: hhmm(tr.hora_programada),
         titulo: tr.cliente,
-        subtitulo: tr.ubicacion ?? null,
+        // Bug real (14-sep-2026): no se veía el folio de la OS en "Hoy"
+        // (sí se ve en "Todos los trabajos" y en el detalle) — se agrega
+        // acá como parte del subtítulo.
+        subtitulo: tr.orden?.folio != null ? `OS N° ${tr.orden.folio}${tr.ubicacion ? ` · ${tr.ubicacion}` : ""}` : tr.ubicacion ?? null,
         estado: tr.orden?.estado_os ?? estadoOsDeTrabajo(tr.estado),
         lat: null,
         lng: null,

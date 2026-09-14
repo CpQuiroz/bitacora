@@ -140,7 +140,7 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
   if (!detalle && !error) {
     return (
       <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
-        <ScreenHeader titulo={tituloRuta ?? "Trabajo"} accion={volver} />
+        <ScreenHeader titulo={tituloRuta ?? "Orden de servicio"} accion={volver} />
         <View style={{ padding: tokens.space["4"], gap: tokens.space["3"] }}>
           <LoadingState>
             <Skeleton alto={120} radio={28} />
@@ -154,7 +154,7 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
   if (error && !detalle) {
     return (
       <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
-        <ScreenHeader titulo={tituloRuta ?? "Trabajo"} accion={volver} />
+        <ScreenHeader titulo={tituloRuta ?? "Orden de servicio"} accion={volver} />
         <ErrorState mensaje={error} onReintentar={cargar} />
       </View>
     );
@@ -222,7 +222,7 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
     // perfecta, mismo hallazgo que motivó sacar isInternetReachable de
     // NetworkProvider.tsx. Mismo patrón que ya usa guardarDatos() arriba.
     Alert.alert(
-      "Trabajo finalizado",
+      "Orden de servicio finalizada",
       enLinea ? "Quedó cerrado." : "Quedó cerrado. Se enviará a la oficina apenas vuelvas a tener señal.",
       [{ text: "Listo", onPress: () => navigation.goBack() }]
     );
@@ -323,7 +323,7 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
         {finalizada ? (
           <View style={{ backgroundColor: tokens.color.accent2Ramp["200"], borderRadius: tokens.radius.md, padding: tokens.space["3"] }}>
             <Texto tamano={tokens.size.small} color={tokens.color.accent2Ramp["800"]} peso="semibold">
-              Trabajo finalizado — ya no se puede editar
+              Orden de servicio finalizada — ya no se puede editar
             </Texto>
           </View>
         ) : null}

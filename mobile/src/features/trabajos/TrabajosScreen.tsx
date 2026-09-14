@@ -267,7 +267,7 @@ export function TrabajosScreen({ navigation }: NativeStackScreenProps<TrabajosSt
           <View style={{ padding: tokens.space["4"] }}>
             <EmptyState
               icono={<ClipboardList size={32} strokeWidth={2.75} color={tokens.color.accent2Ramp["800"]} />}
-              titulo="Sin trabajos"
+              titulo="Sin órdenes de servicio"
               mensaje={equipo ? "El equipo no tiene trabajos asignados." : "No tienes trabajos asignados."}
             />
           </View>
