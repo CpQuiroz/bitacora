@@ -2369,3 +2369,16 @@ y esta ok de momeno... la firma esta ok ahora, si me gusta. agenda y cliente ok.
 Con esto, del backlog abierto de esta sesión solo queda pendiente la tarea 5
 (E2E en prod: Mantención de flota + rediseño de PDF de OS) — vieja, sin tocar
 hoy, sin resolución todavía.
+
+## 2026-09-14 (11): tarea 5 CERRADA — E2E de OS con fotos+firma confirmado en prod
+
+Retomada a pedido de la usuaria. No tenía código pendiente: el rediseño del PDF
+de OS (Fase 1+2) ya estaba en producción desde antes; lo único bloqueado era el
+E2E real (cerrar una OS con fotos por categoría + firma técnico + firma
+cliente desde el celular), bloqueado por el bug de firma de la tarea 28. Se le
+mostró primero un PDF de muestra generado con la función real
+`generarPdfOS.ts` y datos ficticios (sin tocar prod) para explicar el alcance
+antes de que hiciera la prueba real. La usuaria probó el cierre real de una OS
+en su teléfono con el APK 1.10.0: "ya prbe y quedo ok".
+
+Con esto, `trabajo_list.json` queda con 0 tareas pendientes/bloqueadas/en curso.

@@ -78,7 +78,8 @@
         "Informe IA de negocio genera PDF con el formato nuevo — HECHO",
         "Hallazgos anotados en progress/history.md"
       ],
-      "status": "blocked"
+      "status": "done",
+      "resolution": "Retomada y cerrada (14-sep-2026): no habia codigo pendiente -- el rediseno del PDF de OS (Fase 1+2: cajas de datos, checklist, fotos por categoria, firma del tecnico + firma del cliente) ya estaba desplegado en prod desde antes. El unico punto bloqueado era el E2E real (cerrar una OS con fotos+firma desde el celular), bloqueado por el bug de firma de la tarea 28. Con la tarea 28 ya resuelta y confirmada, la usuaria probo el cierre real de una OS en su telefono con el APK 1.10.0 y confirmo: \"ya prbe y quedo ok\". Se le mostro antes un PDF de muestra generado con la funcion real generarPdfOS.ts y datos ficticios (sin tocar prod) para explicar el alcance antes de que ella hiciera la prueba real."
     },
     {
       "id": 6,
