@@ -1818,3 +1818,29 @@ gestos táctiles.
   apareciendo "Sin conexión" con buena señal?, ¿qué pasa ahora al tocar
   "Reintentar ahora" en Perfil (nada, error, se traba)?, ¿es constante o
   intermitente?, ¿en qué pantalla/acción aparece?
+
+### Ajuste tarea 28 (mismo día): firma vuelve a modal a pantalla completa
+
+La usuaria probó el APK 1.9.15 y no le gustó el lienzo chico inline
+("no se deja firmar bien con el dedo"), pidió volver al patrón de antes
+del refresco visual (commit `1acf839`, 3-sep): un botón "Firmar aquí"
+que abre un modal a pantalla completa.
+
+`LienzoFirma.tsx` reescrito otra vez — mantiene `react-native-signature-
+canvas` (WebView, el fix real del conflicto de gestos con el scroll)
+pero ahora el `SignatureView` vive dentro de un `Modal` grande
+(`animationType="slide"`), no inline en el ScrollView de la ficha:
+- Estado cerrado: si no hay firma, botón "Firmar aquí"; si ya hay firma
+  guardada, preview (`Image` con la data URL) + botón "Cambiar firma".
+- Modal: título "Firma", `SignatureView` a `flex:1` (grande), botones
+  "Borrar" (limpia el trazo en curso) / "Guardar firma" (dispara
+  `readSignature()` → `onOK` guarda el base64 en estado y cierra el
+  modal) / "Cancelar" (cierra sin guardar).
+- Contrato externo (`LienzoFirmaHandle`) sin cambios — `capturar()`
+  ahora solo devuelve lo que ya quedó guardado al cerrar el modal, no
+  dispara una captura nueva. `CierreFirma.tsx` y
+  `ChecklistMantencionScreen.tsx` no se tocaron.
+
+`tsc mobile` limpio, `./verificar.sh` completo verde. Pendiente: build
+1.9.16 y prueba real en el teléfono (sigue siendo un cambio de gestos
+táctiles, sin camino de verificación en react-native-web).
