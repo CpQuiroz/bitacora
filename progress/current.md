@@ -1932,3 +1932,66 @@ llegan.
 Build APK 1.9.17 verificado y entregado: BUILD SUCCESSFUL, 0 refs dev /
 prod presente, copiado a ~/Desktop/bitacora-builds/bitacora-1.9.17.apk.
 .env restaurado a dev.
+
+## 2026-09-14 (3): verificación real de tarea 29 → destapó la causa de fondo de la tarea 20
+
+Verificación en vivo: logueado en el dashboard de Render vía Chrome (la
+usuaria ya tenía sesión) para mirar logs en tiempo real, más queries de
+**solo lectura** contra prod (`npx supabase db query --linked
+--project-ref yjbskbskyadxjooxngjv`) para confirmar en la base si el
+viaje/registro de mantención de la prueba real llegaban.
+
+**Resultado de la prueba (datos móviles, APK 1.9.17):**
+- El viaje **sí se creó** en prod (`numero_guia` 167, confirmado en la
+  tabla `viajes`) — el POST JSON llegó bien.
+- La foto de la guía **nunca se subió** (`foto_guia_url` sigue `null`
+  varios minutos después).
+- El registro de mantención **ni siquiera se creó** — la tabla
+  `registros_mantencion_equipo` seguía con su fila más reciente de
+  horas antes de la prueba.
+- En el teléfono: la sección de sincronización de Perfil mostraba las
+  acciones pendientes, y **"Reintentar ahora" no tuvo ningún efecto
+  visible**, ni de inmediato ni varios minutos después, ni siquiera
+  tras cerrar la app del todo y volver a abrirla (lo que sí limpia
+  `procesando`/`procesandoDesde` en memoria — descartando que fuera el
+  mismo bug del watchdog, ya arreglado en 1.9.14).
+
+**Causa real, encontrada por lectura de código** (`mobile/src/services/
+api.ts`): `apiFetch()` llamaba a `supabase.auth.getSession()` **sin
+ningún timeout**, antes de toda la lógica de abort/timeout que ya
+existe más abajo en la misma función (AbortController para JSON, race
+manual para multipart). Si el access token está vencido, `getSession()`
+dispara un refresh contra el servidor de auth de Supabase — un fetch
+más, sin timeout propio — que en una conexión de datos móviles real y
+mala se puede colgar indefinidamente (nunca resuelve ni rechaza). Como
+pasa ANTES del resto de `apiFetch`, ningún timeout de más abajo llega a
+correr nunca: la función entera queda colgada para siempre.
+
+Esto explica de una sola vez:
+- Por qué "cero rastro" en los logs de Render (nunca se llega a llamar
+  `fetch()` para el request de negocio).
+- Por qué "Reintentar ahora" no hace nada visible, sin importar cuánto
+  se espere ni cuántas veces se intente (cada intento nuevo se cuelga
+  en el mismo lugar).
+- Por qué esto es EXCLUSIVO de dispositivo real con señal mala (en
+  simulador/wifi de escritorio, `getSession()`/su refresh resuelven
+  casi al toque).
+- Por qué dos intentos previos de la tarea 20 (quitar
+  `isInternetReachable`, watchdog de `procesando`) no alcanzaron — ninguno
+  tocaba este punto, que está ANTES de toda esa lógica.
+
+**Fix**: `getSession()` ahora corre contra un timeout manual de 8s
+(mismo idioma que ya usa la rama multipart de `apiFetch` un poco más
+abajo) — si se cuelga, `apiFetch` rechaza con `AbortError` (el mismo
+nombre que ya reconoce TODO el código de reintento existente en
+`apiJson`/`queue.ts`) en vez de colgarse para siempre.
+
+**No tocado** (anotado, no reportado como roto): `AuthContext.tsx`
+tiene otra llamada a `getSession()` sin timeout, al arrancar la app —
+mismo riesgo en teoría, pero tiene un segundo mecanismo
+(`onAuthStateChange`) que probablemente lo cubre en la práctica.
+
+`tsc mobile` limpio, `./verificar.sh` completo verde. Pendiente: build
+nuevo + que la usuaria pruebe de nuevo con la misma conexión mala que
+reprodujo el problema — esto es exactamente el tipo de bug que no se
+puede confirmar sin repetir la condición real.

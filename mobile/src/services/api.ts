@@ -36,6 +36,41 @@ export const TIMEOUT_MULTIPART_MS = 90000;
 
 const dormir = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+// Bug real (14-sep-2026, #20 — el mismo "reintentar ahora no hace nada,
+// sin ningún error" reportado y NO resuelto por dos intentos previos —
+// isInternetReachable y el watchdog de `procesando` en queue.ts):
+// `supabase.auth.getSession()` corría SIN NINGÚN timeout, antes de toda
+// la lógica de abort/timeout de acá abajo. Si el access token está
+// vencido, getSession() dispara un refresh contra el servidor de auth
+// de Supabase — un fetch más, sin AbortController ni timeout propio. En
+// una conexión de datos móviles real y mala, ese refresh se puede
+// colgar indefinidamente (nunca resuelve NI rechaza), y como pasa ANTES
+// del resto de apiFetch, ninguno de los timeouts de más abajo llega a
+// correr nunca: la función entera queda colgada para siempre, sin
+// ningún request de negocio saliendo jamás del teléfono (coincide con
+// "cero rastro en los logs" de Render) y sin que "Reintentar ahora"
+// tenga ningún efecto visible, sin importar cuánto se espere o cuántas
+// veces se reintente — porque cada intento nuevo vuelve a colgarse en
+// el mismo lugar. Fix: correr getSession() contra el mismo tipo de
+// timeout manual que ya usa la rama multipart más abajo — así, si se
+// cuelga, apiFetch SÍ rechaza (con AbortError, el mismo nombre que ya
+// reconoce todo el código de reintento existente) en vez de colgarse
+// para siempre.
+const TIMEOUT_SESION_MS = 8000;
+
+async function tokenConTimeout(): Promise<string | undefined> {
+  const sesion = supabase.auth.getSession();
+  const timeout = new Promise<never>((_, reject) => {
+    setTimeout(() => {
+      const err = new Error("No se pudo confirmar la sesión a tiempo");
+      err.name = "AbortError";
+      reject(err);
+    }, TIMEOUT_SESION_MS);
+  });
+  const { data } = await Promise.race([sesion, timeout]);
+  return data.session?.access_token;
+}
+
 export type TipoErrorApi = "red" | "timeout" | "servidor";
 
 export type ResultadoApi<T> =
@@ -48,8 +83,7 @@ export async function apiFetch(
   options: RequestInit = {},
   timeoutMs: number = TIMEOUT_MS
 ): Promise<Response> {
-  const { data } = await supabase.auth.getSession();
-  const token = data.session?.access_token;
+  const token = await tokenConTimeout();
 
   const esMultipart = options.body instanceof FormData;
 
