@@ -22,7 +22,7 @@ const ES_SUBIDA_DE_FOTO = (a: { etiqueta: string }) =>
 
 const STORAGE_KEY = "sync:cola:v3";
 const STORAGE_KEY_VIEJO = "sync:cola:v2";
-const MAX_INTENTOS = 6;
+export const MAX_INTENTOS = 6;
 // Una acción que lleva más de esto sin poder enviarse se marca fallida
 // (aunque los fallos hayan sido "sin señal") — así deja de aparecer como
 // "sin sincronizar" para siempre y el usuario la puede descartar.

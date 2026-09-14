@@ -6,6 +6,7 @@ import { useTema } from "../../theme";
 import { Button, Card, Screen, Text } from "../../components/ui";
 import { useAuth } from "../auth/AuthContext";
 import { useRed } from "../../services/sync/NetworkProvider";
+import { MAX_INTENTOS } from "../../services/sync/queue";
 import { apiFetch, apiJson } from "../../services/api";
 import { biometriaActivada, biometriaDisponible, nombreBiometria, pedirBiometria, setBiometriaActivada } from "../../lib/biometria";
 import { preferencias, setPreferencia, suscribirPreferencias, type Preferencias } from "../../lib/preferencias";
@@ -127,8 +128,21 @@ export function PerfilScreen() {
               </Text>
               <Text mono variante="caption" tono="muted">
                 {a.creadoEn ? new Date(a.creadoEn).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : ""}
-                {a.archivo ? " · con foto adjunta" : ""}
+                {a.archivo || a.archivos?.length ? " · con foto adjunta" : ""}
               </Text>
+              {/* Sin esto, un intento que se reintenta solo (lento pero real,
+                  o repetidamente fallido sin llegar aún a MAX_INTENTOS) se ve
+                  IDÉNTICO a uno realmente colgado — "0 intentos" y "3
+                  intentos fallidos" mostraban el mismo texto. Bug real
+                  (14-sep-2026): dificultó diagnosticar "queda en la cola,
+                  reintentar no hace nada" porque no había forma de distinguir
+                  "todavía no lo intentó de nuevo" de "lleva varios intentos
+                  fallidos silenciosos". */}
+              {a.intentos > 0 ? (
+                <Text variante="caption" tono="danger">
+                  Intento {a.intentos} de {MAX_INTENTOS}{a.ultimoError ? ` — ${a.ultimoError}` : ""}
+                </Text>
+              ) : null}
             </View>
           ))}
           <View style={{ flexDirection: "row", gap: t.espacio(2), marginTop: t.espacio(2) }}>
