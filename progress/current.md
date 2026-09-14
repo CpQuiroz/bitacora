@@ -1798,3 +1798,23 @@ pendiente la prueba real en el teléfono, como con cualquier cambio de
 gestos táctiles.
 
 `tsc mobile` limpio, `./verificar.sh` completo verde.
+
+### Cierre tarea 28 (commits + build)
+
+- Commits: `b4131f4` (firma + folio + naming) y `a14e0ef` (bump 1.9.15 /
+  versionCode 32). Pusheados a `main`.
+- `trabajo_list.json` tarea 28 → `blocked` (falta prueba en dispositivo
+  real, sobre todo la firma).
+- Build APK 1.9.15 corriendo en background (`gradlew assembleRelease`),
+  con `.env` sobreescrito a prod para el bundling. Falta: esperar
+  `BUILD SUCCESSFUL`, verificar con `strings` (0 refs dev, refs prod
+  presentes), copiar a `~/Desktop/bitacora-builds/bitacora-1.9.15.apk`,
+  restaurar `.env` desde `.env.backup-local`.
+- Tarea #20 (conexión) sigue sin tocarse en este segmento — la usuaria
+  reportó que el fix del watchdog de `procesando` (1.9.14) no resolvió
+  el síntoma. Dos intentos previos (quitar isInternetReachable, watchdog
+  de procesando) no funcionaron — hace falta diagnóstico nuevo antes de
+  un tercer intento a ciegas. Preguntas pendientes a la usuaria: ¿sigue
+  apareciendo "Sin conexión" con buena señal?, ¿qué pasa ahora al tocar
+  "Reintentar ahora" en Perfil (nada, error, se traba)?, ¿es constante o
+  intermitente?, ¿en qué pantalla/acción aparece?
