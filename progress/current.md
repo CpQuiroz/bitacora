@@ -2010,3 +2010,9 @@ Build APK 1.9.20 verificado y entregado: BUILD SUCCESSFUL, 0 refs dev /
 prod presente, copiado a ~/Desktop/bitacora-builds/bitacora-1.9.20.apk.
 .env restaurado a dev. Build de diagnóstico — no cierra ninguna tarea
 todavía; la usuaria va a seguir probando y enviando capturas.
+
+Build APK 1.9.21 verificado y entregado: BUILD SUCCESSFUL (tras 2
+interrupciones previas por memoria baja de la Mac — se resolvió
+bajando el heap del build a -Xmx1536m), 0 refs dev / prod presente,
+copiado a ~/Desktop/bitacora-builds/bitacora-1.9.21.apk. .env
+restaurado a dev. Trae el botón "Diagnóstico de red (foto)" en Perfil.
