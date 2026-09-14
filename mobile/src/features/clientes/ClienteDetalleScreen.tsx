@@ -2,10 +2,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, Linking, Pressable, ScrollView, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { Ionicons } from "@expo/vector-icons";
+import { ArrowLeft, Banknote, HardHat, Mail, MessageCircle, Phone, Receipt } from "lucide-react-native";
 import type { PaqueteSesionesConSaldo, VentaConLineas } from "@bitacora/shared";
-import { useTema } from "../../theme";
-import { Badge, Button, ErrorState, LoadingScreen, Text } from "../../components/ui";
+import { tokens } from "@bitacora/design-tokens";
+import { Button, Card, ErrorState, ListRow, ListRowGrupo, LoadingState, ScreenHeader, Skeleton, StatusBadge, Texto, useMarca } from "@bitacora/ui/native";
 import { useRed } from "../../services/sync/NetworkProvider";
 import { useAuth } from "../auth/AuthContext";
 import { editarCliente, obtenerClienteDetalle, saldoDeFacturas, type ClienteDetalle } from "../../services/clientes";
@@ -17,8 +17,30 @@ import type { ClientesStackParamList } from "../../shell/navigation/types";
 
 const soloDigitos = (s: string) => s.replace(/[^\d]/g, "");
 
+// Mismo mapa que ya usan Hoy/TrabajoDetalle (no extraído a un util
+// compartido — ninguna de las 2 pantallas lo hizo tampoco).
+const ETIQUETA_OS: Record<string, string> = {
+  pendiente: "Sin empezar",
+  enviada: "Sin empezar",
+  en_proceso: "En proceso",
+  completada: "Completado",
+  firmada: "Finalizado",
+  cancelada: "Cancelado",
+};
+
+// Sistema visual móvil v2 (14-sep-2026, tarea #21, piloto 4 — última
+// pantalla del rollout) — a diferencia de Hoy/detalle de OS, esta
+// pantalla NO estaba migrada al sistema de diseño base (seguía en
+// useTema()/Ionicons/paleta Faena, ver Paso 0). Se migra completa acá:
+// ScreenHeader (con `accion`=volver), Card para "Packs activos",
+// ListRow/ListRowGrupo para los historiales de OS y cobros (antes
+// filas de Pressable a mano) — a diferencia de "Hoy", estas filas NO
+// tienen una columna de hora compitiendo con el ícono, así que ListRow
+// calza bien sin forzarlo. Deliberadamente SIN AsistenteButton
+// flotante, mismo criterio que TrabajoDetalleScreen: hay una acción
+// primaria fija abajo ("Registrar venta").
 export function ClienteDetalleScreen({ route, navigation }: NativeStackScreenProps<ClientesStackParamList, "ClienteDetalle">) {
-  const t = useTema();
+  const marca = useMarca();
   const { clienteId } = route.params;
   const { enLinea } = useRed();
   const auth = useAuth();
@@ -69,8 +91,30 @@ export function ClienteDetalleScreen({ route, navigation }: NativeStackScreenPro
     cargar();
   }
 
-  if (!cliente && !error) return <LoadingScreen />;
-  if (error && !cliente) return <ErrorState mensaje={error} onReintentar={cargar} />;
+  const volver = { icono: <ArrowLeft size={20} strokeWidth={2.5} color={tokens.color.text} />, onPress: () => navigation.goBack(), etiquetaAccesible: "Volver" };
+
+  if (!cliente && !error) {
+    return (
+      <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+        <ScreenHeader titulo="Cliente" accion={volver} />
+        <View style={{ padding: tokens.space["4"], gap: tokens.space["3"] }}>
+          <LoadingState>
+            <Skeleton alto={120} radio={28} />
+            <Skeleton alto={44} radio={999} />
+            <Skeleton alto={200} radio={16} />
+          </LoadingState>
+        </View>
+      </View>
+    );
+  }
+  if (error && !cliente) {
+    return (
+      <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+        <ScreenHeader titulo="Cliente" accion={volver} />
+        <ErrorState mensaje={error} onReintentar={cargar} />
+      </View>
+    );
+  }
   if (!cliente) return null;
 
   const ultimoTrabajo = cliente.trabajos[0];
@@ -88,164 +132,173 @@ export function ClienteDetalleScreen({ route, navigation }: NativeStackScreenPro
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: t.colores.bg }}>
-      <ScrollView contentContainerStyle={{ padding: t.espacio(5), gap: t.espacio(4), paddingBottom: t.espacio(20) }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: t.espacio(3) }}>
-          <Text variante="titulo" style={{ flex: 1 }}>
-            {cliente.nombre}
-          </Text>
-          {!cliente.activo ? <Badge texto="inactivo" estado="cancelado" /> : null}
-        </View>
+    <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+      <ScreenHeader antetitulo={cliente.rut ?? undefined} titulo={cliente.nombre} accion={volver} />
+      <ScrollView contentContainerStyle={{ padding: tokens.space["6"], gap: tokens.space["4"], paddingBottom: tokens.space["8"] * 3 }}>
+        {!cliente.activo ? (
+          <View style={{ alignSelf: "flex-start" }}>
+            <StatusBadge estado="inactivo" />
+          </View>
+        ) : null}
 
-        {/* Bloque de foco navy — SALDO POR COBRAR */}
-        <View style={{ backgroundColor: t.colores.brand, borderRadius: t.radio.lg, padding: t.espacio(5), gap: t.espacio(3) }}>
-          <Text variante="caption" style={{ color: t.colores.brandSoft, letterSpacing: 1.2 }}>
+        {/* Bloque de foco — mismo patrón que el check-in de TrabajoDetalleScreen */}
+        <View style={{ backgroundColor: marca.base, borderRadius: 32, padding: tokens.space["6"], gap: tokens.space["3"] }}>
+          <Texto tamano={tokens.size.caption} color={`${marca.foreground}b3`} style={{ letterSpacing: 1.2 }}>
             SALDO POR COBRAR
-          </Text>
-          <Text variante="cifra" tono="inverso" style={{ fontSize: 30 }}>
+          </Texto>
+          <Texto tamano={30} color={marca.foreground} style={{ fontVariant: ["tabular-nums"] }}>
             {pesos(saldo.porCobrar)}
-          </Text>
-          <View style={{ borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.15)", paddingTop: t.espacio(3) }}>
-            <Text mono variante="caption" style={{ color: t.colores.brandSoft }}>
+          </Texto>
+          <View style={{ borderTopWidth: 1, borderTopColor: `${marca.foreground}26`, paddingTop: tokens.space["3"] }}>
+            <Texto tamano={tokens.size.caption} color={`${marca.foreground}b3`} style={{ fontVariant: ["tabular-nums"] }}>
               {saldo.vencido > 0 ? `${pesos(saldo.vencido)} vencido` : "Nada vencido"}
               {"  ·  "}
               {saldo.documentos} {saldo.documentos === 1 ? "documento" : "documentos"}
-            </Text>
+            </Texto>
           </View>
         </View>
 
         {/* Contacto */}
-        <View style={{ flexDirection: "row", gap: t.espacio(2) }}>
+        <View style={{ flexDirection: "row", gap: tokens.space["2"] }}>
           {cliente.telefono ? (
-            <Button titulo="Llamar" variante="secundario" style={{ flex: 1 }} icono={<Ionicons name="call-outline" size={16} color={t.colores.foreground} />} onPress={() => Linking.openURL(`tel:${cliente.telefono}`)} />
+            <Button variante="secundario" bloque iconoIzq={<Phone size={16} strokeWidth={2.5} color={tokens.color.text} />} onPress={() => Linking.openURL(`tel:${cliente.telefono}`)}>
+              Llamar
+            </Button>
           ) : null}
           {cliente.correo ? (
-            <Button titulo="Correo" variante="secundario" style={{ flex: 1 }} icono={<Ionicons name="mail-outline" size={16} color={t.colores.foreground} />} onPress={() => Linking.openURL(`mailto:${cliente.correo}`)} />
+            <Button variante="secundario" bloque iconoIzq={<Mail size={16} strokeWidth={2.5} color={tokens.color.text} />} onPress={() => Linking.openURL(`mailto:${cliente.correo}`)}>
+              Correo
+            </Button>
           ) : null}
           {cliente.telefono ? (
             <Button
-              titulo="WhatsApp"
               variante="secundario"
-              style={{ flex: 1 }}
-              icono={<Ionicons name="logo-whatsapp" size={16} color={t.colores.success} />}
+              bloque
+              iconoIzq={<MessageCircle size={16} strokeWidth={2.5} color={tokens.color.accent2Ramp["700"]} />}
               onPress={() => Linking.openURL(`https://wa.me/${soloDigitos(cliente.telefono!)}`)}
-            />
+            >
+              WhatsApp
+            </Button>
           ) : null}
         </View>
 
         {/* Packs activos */}
         {tieneAgendaPro && paquetes.length > 0
           ? paquetes.map((p) => (
-              <View key={p.id} style={{ backgroundColor: t.colores.successSoft, borderRadius: t.radio.md, padding: t.espacio(4), gap: t.espacio(2) }}>
-                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                  <Text weight="semibold" style={{ color: t.colores.success }}>
-                    {p.nombre}
-                  </Text>
-                  <Text mono weight="semibold" style={{ color: t.colores.success }}>
-                    quedan {p.saldo} de {p.cantidad_total}
-                  </Text>
+              <Card key={p.id}>
+                <View style={{ gap: tokens.space["2"] }}>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                    <Texto tamano={tokens.size.body} color={tokens.color.accent2Ramp["800"]} peso="semibold">
+                      {p.nombre}
+                    </Texto>
+                    <Texto tamano={tokens.size.body} color={tokens.color.accent2Ramp["800"]} peso="semibold" style={{ fontVariant: ["tabular-nums"] }}>
+                      quedan {p.saldo} de {p.cantidad_total}
+                    </Texto>
+                  </View>
+                  <View style={{ flexDirection: "row", gap: 3 }}>
+                    {Array.from({ length: p.cantidad_total }).map((_, i) => (
+                      <View key={i} style={{ flex: 1, height: 5, borderRadius: 2, backgroundColor: i < p.saldo ? tokens.color.accent2Ramp["700"] : tokens.color.accent2Ramp["200"] }} />
+                    ))}
+                  </View>
                 </View>
-                <View style={{ flexDirection: "row", gap: 3 }}>
-                  {Array.from({ length: p.cantidad_total }).map((_, i) => (
-                    <View key={i} style={{ flex: 1, height: 5, borderRadius: 2, backgroundColor: i < p.saldo ? t.colores.success : "rgba(20,102,60,0.25)" }} />
-                  ))}
-                </View>
-              </View>
+              </Card>
             ))
           : null}
         {tieneAgendaPro && esGestion ? (
           <Pressable onPress={() => setAsignando(true)}>
-            <Text variante="caption" weight="semibold" tono="brand">
+            <Texto tamano={tokens.size.small} color={marca.base} peso="semibold">
               ＋ Asignar pack
-            </Text>
+            </Texto>
           </Pressable>
         ) : null}
 
         {/* Historial de OS */}
         {cliente.trabajos.length > 0 ? (
-          <View style={{ gap: t.espacio(2) }}>
-            <Text variante="etiqueta" tono="muted" weight="semibold" style={{ textTransform: "uppercase" }}>
+          <View style={{ gap: tokens.space["2"] }}>
+            <Texto tamano={tokens.size.micro} color={tokens.color.accent2Ramp["800"]} peso="semibold" style={{ textTransform: "uppercase", letterSpacing: 1.3 }}>
               Órdenes de servicio
-            </Text>
-            {cliente.trabajos.slice(0, 8).map((tr) => (
-              <Pressable
-                key={tr.id}
-                onPress={() =>
-                  (navigation.getParent() as unknown as { navigate: (t: string, p: unknown) => void } | undefined)?.navigate("Hoy", {
-                    screen: "Trabajos",
-                    params: { screen: "TrabajoDetalle", params: { trabajoId: tr.id } },
-                  })
-                }
-                style={{ flexDirection: "row", alignItems: "center", gap: t.espacio(3), paddingVertical: t.espacio(2.5), borderBottomWidth: 1, borderBottomColor: t.colores.border }}
-              >
-                <Text mono variante="caption" tono="muted" style={{ width: 74 }}>
-                  {tr.fecha}
-                </Text>
-                <Text style={{ flex: 1 }} numberOfLines={1}>
-                  {tr.orden?.folio != null ? `OS N° ${tr.orden.folio}` : tr.descripcion ?? "Trabajo"}
-                </Text>
-                {tr.orden?.estado_os ? <Badge estado={tr.orden.estado_os} /> : null}
-              </Pressable>
-            ))}
+            </Texto>
+            <ListRowGrupo>
+              {cliente.trabajos.slice(0, 8).map((tr) => (
+                <ListRow
+                  key={tr.id}
+                  icono={<HardHat size={22} strokeWidth={2.25} color={tokens.color.accentRamp["700"]} />}
+                  titulo={tr.orden?.folio != null ? `OS N° ${tr.orden.folio}` : tr.descripcion ?? "Trabajo"}
+                  subtitulo={tr.fecha}
+                  trailing={
+                    tr.orden?.estado_os ? (
+                      <StatusBadge estado={tr.orden.estado_os} etiqueta={ETIQUETA_OS[tr.orden.estado_os] ?? tr.orden.estado_os} />
+                    ) : undefined
+                  }
+                  onPress={() =>
+                    (navigation.getParent() as unknown as { navigate: (t: string, p: unknown) => void } | undefined)?.navigate("Hoy", {
+                      screen: "Trabajos",
+                      params: { screen: "TrabajoDetalle", params: { trabajoId: tr.id } },
+                    })
+                  }
+                />
+              ))}
+            </ListRowGrupo>
           </View>
         ) : null}
 
         {/* Historial de cobros: facturas + ventas pagadas */}
         {cliente.facturas.length > 0 || ventas.length > 0 ? (
-          <View style={{ gap: t.espacio(2) }}>
-            <Text variante="etiqueta" tono="muted" weight="semibold" style={{ textTransform: "uppercase" }}>
+          <View style={{ gap: tokens.space["2"] }}>
+            <Texto tamano={tokens.size.micro} color={tokens.color.accent2Ramp["800"]} peso="semibold" style={{ textTransform: "uppercase", letterSpacing: 1.3 }}>
               Cobros
-            </Text>
-            {cliente.facturas.slice(0, 8).map((f) => (
-              <View key={f.id} style={{ flexDirection: "row", alignItems: "center", gap: t.espacio(3), paddingVertical: t.espacio(2.5), borderBottomWidth: 1, borderBottomColor: t.colores.border }}>
-                <Text mono variante="caption" tono="muted" style={{ width: 74 }}>
-                  {f.fecha_emision}
-                </Text>
-                <Text mono style={{ flex: 1 }}>
-                  {pesos(f.monto)}
-                </Text>
-                <Badge estado={f.estado} />
-              </View>
-            ))}
-            {ventas.map((v) => (
-              <View key={v.id} style={{ flexDirection: "row", alignItems: "center", gap: t.espacio(3), paddingVertical: t.espacio(2.5), borderBottomWidth: 1, borderBottomColor: t.colores.border }}>
-                <Text mono variante="caption" tono="muted" style={{ width: 74 }}>
-                  {v.pagada_en.slice(0, 10)}
-                </Text>
-                <Text mono style={{ flex: 1 }}>
-                  {pesos(v.total)}
-                </Text>
-                <Badge estado="pagada" texto="venta" />
-              </View>
-            ))}
+            </Texto>
+            <ListRowGrupo>
+              {cliente.facturas.slice(0, 8).map((f) => (
+                <ListRow
+                  key={f.id}
+                  icono={<Banknote size={22} strokeWidth={2.25} color={tokens.color.accentRamp["700"]} />}
+                  titulo={pesos(f.monto)}
+                  subtitulo={f.fecha_emision}
+                  trailing={<StatusBadge estado={f.estado} tonoForzado={f.estado === "pendiente" ? "en_progreso" : undefined} />}
+                />
+              ))}
+              {ventas.map((v) => (
+                <ListRow
+                  key={v.id}
+                  icono={<Receipt size={22} strokeWidth={2.25} color={tokens.color.accentRamp["700"]} />}
+                  titulo={pesos(v.total)}
+                  subtitulo={v.pagada_en.slice(0, 10)}
+                  trailing={<StatusBadge estado="pagada" etiqueta="Venta" />}
+                />
+              ))}
+            </ListRowGrupo>
           </View>
         ) : null}
 
         {cliente.notas ? (
-          <View style={{ backgroundColor: t.colores.surfaceAlt, borderRadius: t.radio.md, padding: t.espacio(4), gap: t.espacio(1) }}>
-            <Text variante="caption" tono="muted" weight="semibold" style={{ textTransform: "uppercase" }}>
+          <View style={{ backgroundColor: tokens.color.neutral["200"], borderRadius: tokens.radius.md, padding: tokens.space["4"], gap: tokens.space["1"] }}>
+            <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} peso="semibold" style={{ textTransform: "uppercase" }}>
               Notas
-            </Text>
-            <Text>{cliente.notas}</Text>
+            </Texto>
+            <Texto tamano={tokens.size.body} color={tokens.color.text}>
+              {cliente.notas}
+            </Texto>
           </View>
         ) : null}
 
         {esGestion ? (
-          <View style={{ gap: t.espacio(2), borderTopWidth: 1, borderTopColor: t.colores.border, paddingTop: t.espacio(4) }}>
-            <Button titulo="Editar ficha" variante="secundario" onPress={() => navigation.navigate("ClienteForm", { clienteId })} />
-            <Button
-              titulo={cliente.activo ? "Marcar como inactivo" : "Reactivar cliente"}
-              variante={cliente.activo ? "peligro" : "primario"}
-              onPress={alternarActivo}
-              cargando={ocupado}
-            />
+          <View style={{ gap: tokens.space["2"], borderTopWidth: 1, borderTopColor: tokens.color.divider, paddingTop: tokens.space["4"] }}>
+            <Button variante="secundario" bloque onPress={() => navigation.navigate("ClienteForm", { clienteId })}>
+              Editar ficha
+            </Button>
+            <Button variante={cliente.activo ? "peligro" : "primario"} bloque onPress={alternarActivo} cargando={ocupado}>
+              {cliente.activo ? "Marcar como inactivo" : "Reactivar cliente"}
+            </Button>
           </View>
         ) : null}
       </ScrollView>
 
       {/* Pie */}
-      <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, backgroundColor: t.colores.surface, borderTopWidth: 1, borderTopColor: t.colores.border, padding: t.espacio(4) }}>
-        <Button titulo="Registrar venta" onPress={registrarVenta} />
+      <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, backgroundColor: tokens.color.surface, borderTopWidth: 1, borderTopColor: tokens.color.divider, padding: tokens.space["4"] }}>
+        <Button bloque onPress={registrarVenta}>
+          Registrar venta
+        </Button>
       </View>
 
       <AsignarPackModal

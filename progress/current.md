@@ -1436,3 +1436,53 @@ documentado en la tarea 16).
 **Tarea 24 cerrada** — causa raíz real, fix mínimo y simétrico a un
 patrón ya existente, deploy confirmado por la usuaria, sin riesgo de
 desfase DB, síntoma original de fotos confirmado resuelto en vivo.
+
+## 2026-09-14: tarea 25 — piloto 4 (último) del sistema visual v2: ficha de cliente
+
+Última pantalla del rollout. A diferencia de Hoy/detalle de OS (que
+solo necesitaban la capa de primitivas v2 encima de una base YA
+migrada), `ClienteDetalleScreen.tsx` **no estaba migrada al sistema
+de diseño base en absoluto** — seguía en `useTema()`/`components/ui`
+(`Text`/`Badge`/`Button`/`LoadingScreen`)/Ionicons/paleta Faena,
+confirmado en el propio Paso 0. Se migró completa en este commit, no
+solo la capa de primitivas.
+
+**Migración base**: `Button`/`Card`/`ErrorState`/`LoadingState` +
+`Skeleton`/`StatusBadge`/`Texto` de `@bitacora/ui/native`, Ionicons →
+Lucide (`Phone`/`Mail`/`MessageCircle` para Llamar/Correo/WhatsApp,
+sin ícono de marca — Lucide no tiene logos, mismo criterio que el
+resto del sistema), `t.colores.brand` → `marca.base` (bloque de foco
+"Saldo por cobrar", mismo patrón ya establecido en el check-in de
+`TrabajoDetalleScreen`), `t.colores.successSoft`/`success` (packs
+activos) → `tokens.color.accent2Ramp` (mismo semantic ya usado para
+"completado"/positivo en el resto del sistema).
+
+**Primitivas v2**: `ScreenHeader` (antetítulo=RUT, título=nombre,
+`accion`=volver) + **el historial de OS y de cobros pasan de filas de
+`Pressable` a mano a `ListRow`/`ListRowGrupo`** — a diferencia de
+"Hoy" (que se quedó en `Card` porque cada fila tenía una columna de
+hora compitiendo con el ícono), estas filas no tienen esa complicación
+(solo fecha simple como subtítulo), así que `ListRow` calza sin
+forzarlo. Badges de estado reusan `StatusBadge` con `MAPA_ESTADO_TONO`
+ya existente (`pagada`→completado, `vencida`→cancelado); `pendiente`
+(ambiguo a propósito en el mapa) se fuerza a `en_progreso` con
+`tonoForzado`. Deliberadamente SIN `AsistenteButton`, mismo criterio
+que el detalle de OS: hay una acción primaria fija abajo ("Registrar
+venta").
+
+**Baseline de colores bajó de 12 a 10** (no subió) — la pantalla vieja
+tenía 2 literales `rgba(...)` sueltos (divisor del bloque de foco,
+barra de progreso de packs) que la migración a tokens eliminó.
+Actualizado `scripts/check-colores.mjs`.
+
+Verificado visualmente con el mismo método (react-native-web + bypass
+temporal de auth + mock temporal de `obtenerClienteDetalle` con datos
+realistas + `initialRouteName`/`initialParams` en `ClientesStack.tsx`
+para aterrizar directo, todo revertido después): antetítulo/título/
+volver, bloque de foco, botones de contacto, `ListRowGrupo` de OS y
+cobros con los tonos correctos (`En Proceso` naranja, `Finalizado`
+verde, `Pendiente` naranja, `Vencida` gris) — todo renderiza bien;
+tocar una fila de OS navega correcto al detalle (cross-tab, vía
+`getParent()`).
+
+`tsc mobile` limpio, `./verificar.sh` completo verde.

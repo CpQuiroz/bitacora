@@ -22,7 +22,9 @@ export function ClientesStack() {
     >
       <Stack.Screen name="ClientesLista" component={ClientesListaScreen} options={{ title: "Clientes" }} />
       <Stack.Screen name="ClienteForm" component={ClienteFormScreen} options={{ title: "Cliente" }} />
-      <Stack.Screen name="ClienteDetalle" component={ClienteDetalleScreen} options={{ title: "Cliente" }} />
+      {/* ClienteDetalleScreen dibuja su propio ScreenHeader (sistema visual
+          v2, con su propio botón de volver) — el header nativo se apaga acá. */}
+      <Stack.Screen name="ClienteDetalle" component={ClienteDetalleScreen} options={{ headerShown: false }} />
       <Stack.Screen name="RegistrarVenta" component={RegistrarVentaScreen} options={{ title: "Registrar venta" }} />
     </Stack.Navigator>
   );

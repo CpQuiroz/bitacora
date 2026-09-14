@@ -360,6 +360,23 @@
       ],
       "status": "done",
       "resolution": "Causa raiz confirmada reproduciendo el build de Docker localmente (docker build -f backend/Dockerfile .), no solo leyendo el log de Render: el commit 28c7f49 (10-sep, packages/design-tokens) cambio el postinstall de mobile de build:shared a build:packages, y npm prune --omit=dev (al reconciliar node_modules de workspaces) dispara ese postinstall dentro de la imagen del backend, que nunca copia packages/design-tokens/ ni packages/ui/ -- de ahi el \"No workspaces found\". Fix: npm prune --omit=dev --ignore-scripts (simetrico al npm ci --ignore-scripts que el mismo Dockerfile ya usaba arriba por el mismo motivo). Build de Docker local exitoso + contenedor real corriendo con GET /health 200, sin un segundo error en capas. Pusheado (f15ef9d..a039adf).\n\nLa usuaria confirmo el deploy live (\"ya desplego ok\") -- sin conexion MCP a Render en esta sesion para leerlo yo mismo, avisado explicitamente.\n\nPaso 1 (riesgo desfase DB/codigo): revisado el contenido real de las migraciones 99/100/101 -- ninguna agrega columna NOT NULL sin default a tabla existente (99=indices puros, 100=solo tablas nuevas, confirmado que existen en prod aunque schema_migrations no trackea la 100 -- mismo gotcha de tracking ya documentado para dev: 101=solo UPDATE de contenido). errores_backend (tabla de logs reales) con 0 filas entre el 9 y el 14-sep. Sin riesgo real.\n\nPaso 2 (reprobar subida de fotos): con la usuaria logueada en prod, cree un registro de mantencion real en Tracto Camion International 9200 con 3 fotos multipart + checklist completo -- guardo sin error, las 3 fotos persistieron en Storage (confirmado reabriendo el registro). DELETE de fotos tambien confirmado funcionando (limpie los 3 datos de prueba al terminar). Sintoma original de fotos confirmado resuelto en vivo contra el codigo ya desplegado."
+    },
+    {
+      "id": 25,
+      "name": "sistema_visual_movil_v2_ficha_cliente",
+      "title": "Sistema visual movil v2 -- piloto 4 (ultimo): ficha de cliente",
+      "description": "Ultima pantalla del rollout (la usuaria pidio retomarla tras cerrar la tarea 24 urgente). A diferencia de Hoy/detalle de OS, ClienteDetalleScreen NO estaba migrada al sistema de diseno base (useTema()/Ionicons/paleta Faena vieja) -- se migro completa: Button/Card/ErrorState/LoadingState/StatusBadge/Texto de @bitacora/ui/native + Lucide + tokens, mas las primitivas v2 (ScreenHeader con accion=volver, ListRow/ListRowGrupo para historial de OS y cobros).",
+      "acceptance": [
+        "ScreenHeader con antetitulo=rut + titulo=nombre + accion=volver",
+        "Historial de OS y de cobros migrados a ListRow/ListRowGrupo (antes filas de Pressable a mano)",
+        "Bloque de foco (saldo por cobrar) migrado al patron ya establecido en TrabajoDetalleScreen (marca.base)",
+        "Sin AsistenteButton (decision deliberada, mismo criterio que detalle de OS -- accion primaria fija abajo)",
+        "Logica de negocio (saldo, packs, ventas, activar/desactivar cliente) preservada sin tocar",
+        "./verificar.sh verde + verificado visualmente antes de comitear",
+        "probado en un build local antes de distribuir"
+      ],
+      "status": "blocked",
+      "resolution": "ClienteDetalleScreen.tsx migrada completa (no solo la capa v2): Button/Card/ErrorState/LoadingState/Skeleton/StatusBadge/Texto de @bitacora/ui/native, Ionicons->Lucide, t.colores.brand->marca.base, successSoft->accent2Ramp. Primitivas v2: ScreenHeader (antetitulo=rut+titulo=nombre+accion=volver) y el historial de OS/cobros migrado de Pressable a mano a ListRow/ListRowGrupo (a diferencia de Hoy, estas filas no tienen columna de hora compitiendo con el icono, calza sin forzar). Deliberadamente sin AsistenteButton (accion primaria fija abajo, mismo criterio que detalle OS). Baseline de colores bajo de 12 a 10 (2 rgba sueltos eliminados por la migracion) -- actualizado scripts/check-colores.mjs.\n\nVerificado visualmente con el mismo metodo (bypass de auth + mock temporal de obtenerClienteDetalle + initialRouteName/initialParams, todo revertido). tsc limpio, ./verificar.sh completo verde. Bloqueada igual que las anteriores: falta armar el build y que la usuaria lo pruebe en su telefono -- esta es la ULTIMA pantalla del rollout v2 (Mas/Hoy/detalle OS/ficha cliente completos)."
     }
   ]
 }
