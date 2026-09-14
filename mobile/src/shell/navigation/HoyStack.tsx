@@ -28,7 +28,9 @@ export function HoyStack() {
         contentStyle: { backgroundColor: tokens.color.bg },
       }}
     >
-      <Stack.Screen name="HoyInicio" component={HoyScreen} options={{ title: "Hoy" }} />
+      {/* HoyScreen dibuja su propio ScreenHeader (sistema visual v2) — el header
+          nativo del stack se apaga acá para no duplicarlo, igual que MasInicio. */}
+      <Stack.Screen name="HoyInicio" component={HoyScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Asistente" component={AsistenteScreen} options={{ title: "Asistente" }} />
       <Stack.Screen name="Trabajos" component={TrabajosStack} options={{ headerShown: false }} />
       <Stack.Screen name="Agenda" component={AgendaStack} options={{ headerShown: false }} />

@@ -1257,3 +1257,39 @@ Igual que la tarea #20: **mi parte queda completa (build + verificación
 de que apunta a prod), pero la prueba real en el dispositivo de la
 usuaria es un paso separado que no puedo hacer yo** — tarea marcada
 `blocked` hasta que confirme cómo se ve/funciona "Más" en el teléfono.
+
+**La usuaria probó el APK 1.9.10 y confirmó**: "ya lo probé, seguí con
+Hoy". Tarea 21 → `done`.
+
+## 2026-09-13: tarea 22 — piloto 2 del sistema visual v2: "Hoy"
+
+Segunda pantalla del rollout (una por release, como pide el prompt
+original). `HoyScreen.tsx` ya estaba migrada a `@bitacora/ui/native` +
+Lucide desde el Paso 6 del sistema de diseño, pero con header nativo +
+una fila de chips "Míos"/"Equipo" armada a mano + un ícono de
+Asistente (`Sparkles`) en `headerRight` **sin ningún gating por
+plan** — a diferencia de "Más", donde el acceso a Asistente sí estaba
+condicionado a `visibles.includes("asistente")`. Se corrige de paso,
+no es un cambio de alcance: el `AsistenteButton` nuevo expone `visible`
+justamente para que quien lo consume lo gatee, y dejarlo sin gating en
+una pantalla mientras sí se gatea en otra sería la inconsistencia real.
+
+**Cambios**: `ScreenHeader` con `antetitulo` = fecha del día
+(`formatearFechaLarga`, mismo cálculo de fecha local que ya usa
+`hoyISO()` en `services/hoy.ts` — no `toISOString()`, que corre en el
+día equivocado cerca de medianoche) + `titulo="Hoy"` + los chips
+Míos/Equipo pasados como `filtros` (antes una fila de `Pressable` a
+mano — el mismo patrón que `ScreenHeader` ya resuelve). El ícono
+`Sparkles` del header nativo se saca del todo; su lugar lo toma el
+`AsistenteButton` flotante, ahora sí gateado. La lista de ítems del
+día sigue en `Card` (no `ListRow`) a propósito: cada fila tiene una
+columna de hora + ícono a la izquierda que no entra en la forma fija
+de `ListRow` (mosaico de ícono + título/subtítulo/trailing) sin
+forzarla — mismo criterio que ya se usó para no reusar `Card` genérico
+en `CardDetalle`, pero al revés: aquí el componente que YA calzaba
+bien es `Card`, no hacía falta tocarlo.
+
+`HoyStack.tsx`: `headerShown: false` en `HoyInicio` (mismo patrón que
+`MasInicio`), ya que `HoyScreen` dibuja su propio `ScreenHeader`.
+
+`tsc mobile` limpio, `./verificar.sh` completo verde.

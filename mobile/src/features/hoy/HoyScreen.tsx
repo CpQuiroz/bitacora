@@ -1,11 +1,12 @@
-import { useCallback, useLayoutEffect, useState } from "react";
-import { FlatList, Pressable, RefreshControl, View } from "react-native";
-import { Sparkles, CalendarClock, Car, ClipboardList, Sun } from "lucide-react-native";
+import { useCallback, useState } from "react";
+import { FlatList, RefreshControl, View } from "react-native";
+import { CalendarClock, Car, ClipboardList, Sun } from "lucide-react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { tokens } from "@bitacora/design-tokens";
-import { Card, EmptyState, ErrorState, LoadingState, Skeleton, StatusBadge, Texto, useMarca } from "@bitacora/ui/native";
+import { AsistenteButton, Card, EmptyState, ErrorState, LoadingState, ScreenHeader, Skeleton, StatusBadge, Texto, useMarca } from "@bitacora/ui/native";
 import { OfflineBanner } from "../../components/OfflineBanner";
+import { formatearFechaLarga } from "../../lib/horario";
 import { useAuth } from "../auth/AuthContext";
 import { cargarHoy, type ItemHoy } from "../../services/hoy";
 import type { HoyStackParamList } from "../../shell/navigation/types";
@@ -31,33 +32,34 @@ const ETIQUETA_ESTADO: Record<string, string> = {
   facturado: "Facturado",
 };
 
-// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
+// "Hoy" siempre muestra la fecha del día como antetítulo del
+// ScreenHeader — misma fecha local que usa cargarHoy()/hoyISO(), no
+// UTC (toISOString se corre en día equivocado cerca de medianoche).
+function fechaDeHoy(): string {
+  const d = new Date();
+  const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return formatearFechaLarga(iso);
+}
+
+// Sistema visual móvil v2 (13-sep-2026, tarea #21, piloto 2) — antes
+// PASO 6 del sistema de diseño ya la había migrado a @bitacora/ui/native
+// + Lucide, pero con header nativo + fila de chips a mano. Ahora usa
+// ScreenHeader (con antetítulo=fecha y los chips Míos/Equipo como
+// `filtros`) y el Asistente se mueve del ícono del header al
+// AsistenteButton flotante, gateado igual que en "Más" (antes el ícono
+// del header no tenía ningún gating por plan — se corrige de paso).
 export function HoyScreen({ navigation }: NativeStackScreenProps<HoyStackParamList, "HoyInicio">) {
   const auth = useAuth();
   const marca = useMarca();
   const esGestion = auth.fase === "listo" && auth.usuario.rol !== "colaborador";
   const incluirViajes = auth.fase === "listo" && !auth.modulosDeshabilitados.includes("viajes");
+  const veAsistente = auth.fase === "listo" && auth.modulosVisibles.includes("asistente");
 
   const [equipo, setEquipo] = useState(false);
   const [items, setItems] = useState<ItemHoy[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refrescando, setRefrescando] = useState(false);
   const [guardadoEn, setGuardadoEn] = useState<number | undefined>();
-
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <Pressable
-          onPress={() => navigation.navigate("Asistente")}
-          hitSlop={10}
-          accessibilityLabel="Asistente IA"
-          style={{ paddingHorizontal: 4 }}
-        >
-          <Sparkles size={22} strokeWidth={2.75} color={marca.base} />
-        </Pressable>
-      ),
-    });
-  }, [navigation, marca.base]);
 
   const cargar = useCallback(async () => {
     setError(null);
@@ -92,64 +94,50 @@ export function HoyScreen({ navigation }: NativeStackScreenProps<HoyStackParamLi
     }
   }
 
+  const filtros = esGestion
+    ? {
+        opciones: [
+          { valor: "mios", etiqueta: "Míos" },
+          { valor: "equipo", etiqueta: "Equipo" },
+        ],
+        valor: equipo ? "equipo" : "mios",
+        onCambio: (v: string) => setEquipo(v === "equipo"),
+      }
+    : undefined;
+
   // Esqueletos con la forma real de las tarjetas de la lista — nunca un
-  // spinner de pantalla completa.
+  // spinner de pantalla completa. El ScreenHeader se muestra igual
+  // (misma fecha, mismos chips) para que la pantalla no "salte" al
+  // terminar de cargar.
   if (items === null && !error) {
     return (
-      <View style={{ flex: 1, backgroundColor: tokens.color.bg, padding: tokens.space["4"], gap: tokens.space["3"] }}>
-        <LoadingState>
-          <Skeleton alto={72} radio={32} />
-          <Skeleton alto={72} radio={32} />
-          <Skeleton alto={72} radio={32} />
-        </LoadingState>
+      <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+        <ScreenHeader antetitulo={fechaDeHoy()} titulo="Hoy" filtros={filtros} />
+        <View style={{ padding: tokens.space["4"], gap: tokens.space["3"] }}>
+          <LoadingState>
+            <Skeleton alto={72} radio={32} />
+            <Skeleton alto={72} radio={32} />
+            <Skeleton alto={72} radio={32} />
+          </LoadingState>
+        </View>
+        <AsistenteButton visible={veAsistente} onPress={() => navigation.navigate("Asistente")} />
       </View>
     );
   }
   if (error && !items) {
     return (
       <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+        <ScreenHeader antetitulo={fechaDeHoy()} titulo="Hoy" filtros={filtros} />
         <ErrorState mensaje={error} onReintentar={cargar} />
+        <AsistenteButton visible={veAsistente} onPress={() => navigation.navigate("Asistente")} />
       </View>
     );
   }
 
   return (
     <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+      <ScreenHeader antetitulo={fechaDeHoy()} titulo="Hoy" filtros={filtros} />
       <OfflineBanner guardadoEn={guardadoEn} />
-      {esGestion ? (
-        <View
-          style={{
-            flexDirection: "row",
-            gap: tokens.space["2"],
-            paddingHorizontal: tokens.space["4"],
-            paddingBottom: tokens.space["2"],
-          }}
-        >
-          {(["Míos", "Equipo"] as const).map((op, i) => {
-            const activo = (i === 1) === equipo;
-            return (
-              <Pressable
-                key={op}
-                onPress={() => setEquipo(i === 1)}
-                style={{
-                  flex: 1,
-                  minHeight: 40,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  borderRadius: tokens.radius.pill,
-                  backgroundColor: activo ? tokens.color.surface : "transparent",
-                  borderWidth: 1,
-                  borderColor: activo ? tokens.color.divider : "transparent",
-                }}
-              >
-                <Texto tamano={tokens.size.caption} color={activo ? tokens.color.text : `${tokens.color.text}99`} peso="semibold">
-                  {op}
-                </Texto>
-              </Pressable>
-            );
-          })}
-        </View>
-      ) : null}
       <FlatList
         data={items ?? []}
         keyExtractor={(item) => `${item.tipo}:${item.id}`}
@@ -197,6 +185,7 @@ export function HoyScreen({ navigation }: NativeStackScreenProps<HoyStackParamLi
           );
         }}
       />
+      <AsistenteButton visible={veAsistente} onPress={() => navigation.navigate("Asistente")} />
     </View>
   );
 }
