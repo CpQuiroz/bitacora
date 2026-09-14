@@ -8,7 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Button, Card, EmptyState, ErrorState, Input, LoadingState, Select, StatusBadge } from "@bitacora/ui/web";
+import { Button, Card, DatePicker, EmptyState, ErrorState, Input, LoadingState, Select, StatusBadge } from "@bitacora/ui/web";
 import { InputMonto } from "@/components/InputMonto";
 import { Modal } from "@/components/Modal";
 import { ComboboxCliente } from "@/components/ComboboxCliente";
@@ -454,7 +454,7 @@ export default function ViajesPage() {
             <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Nuevo viaje</p>
             <form onSubmit={onSubmit} className="flex flex-col gap-ds-4">
               <div className="grid gap-ds-4 sm:grid-cols-2 lg:grid-cols-3">
-                <FechaCampo etiqueta="Fecha" valor={fecha} onCambio={setFecha} />
+                <DatePicker etiqueta="Fecha" valor={aFecha(fecha)} onCambio={(f) => setFecha(aTexto(f))} />
                 <Input etiqueta="Número de guía" requerido valor={numeroGuia} onCambio={setNumeroGuia} />
                 <div className="flex flex-col gap-ds-1">
                   <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Cliente</label>
@@ -784,18 +784,17 @@ export default function ViajesPage() {
   );
 }
 
-// Input nativo type="date" — ver el mismo helper en rutas/nueva/page.tsx.
-function FechaCampo({ etiqueta, valor, onCambio }: { etiqueta: string; valor: string; onCambio: (v: string) => void }) {
-  return (
-    <div className="flex flex-col gap-ds-1">
-      <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">{etiqueta}</label>
-      <input
-        type="date"
-        required
-        value={valor}
-        onChange={(e) => onCambio(e.target.value)}
-        className="h-11 w-full rounded-ds-md border border-ds-divider bg-ds-surface px-ds-3 font-ds-body text-ds-body text-ds-text transition-colors hover:border-ds-text/30 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ds-brand)]"
-      />
-    </div>
-  );
+// DatePicker (packages/ui) trabaja con Date, el estado de este archivo
+// con texto ISO — mismo par de helpers que ya usa ordenes/page.tsx.
+function aFecha(texto: string): Date | null {
+  if (!texto) return null;
+  const [y, m, d] = texto.split("-").map(Number);
+  return new Date(y, (m || 1) - 1, d || 1);
+}
+function aTexto(fecha: Date | null): string {
+  if (!fecha) return "";
+  const y = fecha.getFullYear();
+  const m = String(fecha.getMonth() + 1).padStart(2, "0");
+  const d = String(fecha.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }

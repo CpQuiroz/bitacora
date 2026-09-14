@@ -10,7 +10,7 @@ import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { SelectCrear } from "@/components/SelectCrear";
-import { Button, Card, Cifra, EmptyState, ErrorState, Input, LoadingState, Select, StatusBadge, Table, type TonoEstado } from "@bitacora/ui/web";
+import { Button, Card, Cifra, DatePicker, EmptyState, ErrorState, Input, LoadingState, Select, StatusBadge, Table, type TonoEstado } from "@bitacora/ui/web";
 import { InputMonto } from "@/components/InputMonto";
 
 type GastoConDatos = Gasto & {
@@ -306,7 +306,7 @@ export default function GastosPage() {
                   onCambio={setTrabajoId}
                   opciones={[{ valor: "", etiqueta: "Sin vincular a una OS" }, ...trabajos.map((t) => ({ valor: t.id, etiqueta: `${t.fecha} — ${t.cliente}` }))]}
                 />
-                <FechaCampo etiqueta="Fecha" requerido valor={fecha} onCambio={setFecha} />
+                <DatePicker etiqueta="Fecha" valor={aFecha(fecha)} onCambio={(f) => setFecha(aTexto(f))} />
                 <Select
                   etiqueta="Estado"
                   valor={estado}
@@ -316,7 +316,7 @@ export default function GastosPage() {
                     { valor: "pagado", etiqueta: "Pagado" },
                   ]}
                 />
-                {estado === "pagado" && <FechaCampo etiqueta="Fecha de pago" requerido valor={fechaPago} onCambio={setFechaPago} />}
+                {estado === "pagado" && <DatePicker etiqueta="Fecha de pago" valor={aFecha(fechaPago)} onCambio={(f) => setFechaPago(aTexto(f))} />}
                 <div className="sm:col-span-2">
                   <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Comprobante / factura (opcional)</label>
                   <input
@@ -454,18 +454,17 @@ export default function GastosPage() {
   );
 }
 
-// Input nativo type="date" — ver el mismo helper en rutas/nueva/page.tsx.
-function FechaCampo({ etiqueta, valor, onCambio, requerido }: { etiqueta: string; valor: string; onCambio: (v: string) => void; requerido?: boolean }) {
-  return (
-    <div className="flex flex-col gap-ds-1">
-      <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">{etiqueta}</label>
-      <input
-        type="date"
-        required={requerido}
-        value={valor}
-        onChange={(e) => onCambio(e.target.value)}
-        className="h-11 w-full rounded-ds-md border border-ds-divider bg-ds-surface px-ds-3 font-ds-body text-ds-body text-ds-text transition-colors hover:border-ds-text/30 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ds-brand)]"
-      />
-    </div>
-  );
+// DatePicker (packages/ui) trabaja con Date, el estado de este archivo
+// con texto ISO — mismo par de helpers que ya usa ordenes/page.tsx.
+function aFecha(texto: string): Date | null {
+  if (!texto) return null;
+  const [y, m, d] = texto.split("-").map(Number);
+  return new Date(y, (m || 1) - 1, d || 1);
+}
+function aTexto(fecha: Date | null): string {
+  if (!fecha) return "";
+  const y = fecha.getFullYear();
+  const m = String(fecha.getMonth() + 1).padStart(2, "0");
+  const d = String(fecha.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }

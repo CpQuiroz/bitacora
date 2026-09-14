@@ -1629,6 +1629,57 @@ miniatura pendiente, además del `onLongPress` que ya existía.
 **APK 1.9.14 / versionCode 31** armado local (mismo procedimiento,
 15m25s) apuntando a producción — verificado con `strings` (0
 referencias a dev). Incluye los 2 fixes de esta sesión (watchdog de
-`procesando` + botón visible en fotos pendientes). Sigue `in_progress`
+`procesando` + botón visible en fotos pendientes). Pasa a `blocked`
 — falta que la usuaria confirme en su teléfono real (no se puede
 reproducir un fetch colgado desde esta sesión).
+
+## 2026-09-14: tarea 27 — estandarizar campos de dinero/ciudad/hora/fecha
+
+Prompt separado (explícitamente no toca la cola de sincronización).
+Alcance: Viajes (ya auditado por la usuaria), Gastos, Cotizaciones,
+Mantención de flota y Cobros — web y mobile, 4 tipos de campo.
+
+**Paso 0 — corrección real al audit que trajo la usuaria**: el audit
+de Viajes decía "Dinero web: sin confirmar, probablemente input
+plano ❌". Falso — `web/src/components/InputMonto.tsx` **ya existe**
+(espejo exacto del de mobile, mismos tokens `ds-`) y ya estaba
+aplicado en Gastos, Cotizaciones, Cobros **y Viajes**. Extendí la
+auditoría a las 4 áreas pedidas + Viajes, ambas plataformas, los 4
+tipos de campo — tabla completa reportada a la usuaria antes de tocar
+código. Resultado: **Dinero y Hora no tienen ningún trabajo
+pendiente** en este alcance (dinero ya cubierto en todos lados; hora
+no existe como campo en ninguna de estas 5 pantallas). El único gap
+real de Origen/Destino es Viajes web (queda para la próxima entrega).
+El gap real y más grande es **Fecha**: 6 archivos web con un
+`<input type="date">` duplicado a mano (encontré el mismo patrón
+repetido en 13 archivos en total — anotado, pero solo toqué los 6 de
+esta área). Mobile ya usa selectores tipo chip (no texto libre) en
+todos los formularios con fecha — sin gap real ahí.
+
+La usuaria eligió seguir con **Fecha** primero (no con dinero, dado
+que no había nada que hacer ahí).
+
+**Migración de Fecha** (6 archivos web: `gastos/page.tsx`,
+`cotizaciones/nueva/page.tsx`, `cotizaciones/[id]/page.tsx`,
+`cobros/page.tsx`, `cobros/[id]/page.tsx`, `viajes/page.tsx`,
+`equipos/[id]/RegistrosMantencion.tsx`): reemplacé cada
+`<input type="date">`/`FechaCampo` casero por `DatePicker` de
+`@bitacora/ui/web`, con el mismo par de helpers `aFecha`/`aTexto`
+(texto ISO ↔ `Date`) que ya usa `ordenes/page.tsx` — mismo patrón, no
+uno nuevo. `DatePicker` no tiene prop `requerido` (tampoco lo tiene
+en su uso ya existente en Órdenes de Servicio) — se pierde la
+validación nativa del navegador en los pocos campos que la tenían;
+no agregué una validación nueva a mano por no ser parte de este
+pedido, pero lo dejo anotado.
+
+**Verificado en vivo, no solo `tsc`**: inyecté una sesión real de
+dev (token vía magiclink de `prueba@bitacora.app`, mismo mecanismo ya
+usado para probar `contacto_nombre`) en `localStorage` de Chrome para
+no tener que pedir credenciales, y navegué las 6 pantallas contra
+`next dev` local. Confirmé visualmente el `DatePicker` en cada una y
+además probé el ciclo completo escritura→estado→re-render en Gastos
+seteando el input a mano vía JS — el valor volvió exacto
+("2026-09-20"), sin corrimiento de zona horaria. No se envió ningún
+formulario real, así que no quedó dato de prueba que limpiar.
+
+`tsc` de los 4 paquetes limpio, `./verificar.sh` completo verde.

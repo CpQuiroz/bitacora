@@ -8,7 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Button, Card, Input } from "@bitacora/ui/web";
+import { Button, Card, DatePicker, Input } from "@bitacora/ui/web";
 import { InputMonto } from "@/components/InputMonto";
 import { CatalogoSelectorModal, type ItemSeleccionadoCatalogo } from "@/components/CatalogoSelectorModal";
 import { ComboboxCliente } from "@/components/ComboboxCliente";
@@ -150,7 +150,7 @@ function NuevaCotizacionContenido() {
                 placeholder="Selecciona un cliente…"
               />
             </div>
-            <FechaCampo etiqueta="Fecha de vencimiento (opcional)" valor={fechaVencimiento} onCambio={setFechaVencimiento} />
+            <DatePicker etiqueta="Fecha de vencimiento (opcional)" valor={aFecha(fechaVencimiento)} onCambio={(f) => setFechaVencimiento(aTexto(f))} />
             <div className="sm:col-span-2">
               <Input etiqueta="Descripción (opcional)" valor={descripcion} onCambio={setDescripcion} placeholder="Ej: Mantención preventiva trimestral" />
             </div>
@@ -216,19 +216,19 @@ function NuevaCotizacionContenido() {
   );
 }
 
-// Input nativo type="date" — ver el mismo helper en rutas/nueva/page.tsx.
-function FechaCampo({ etiqueta, valor, onCambio }: { etiqueta: string; valor: string; onCambio: (v: string) => void }) {
-  return (
-    <div className="flex flex-col gap-ds-1">
-      <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">{etiqueta}</label>
-      <input
-        type="date"
-        value={valor}
-        onChange={(e) => onCambio(e.target.value)}
-        className="h-11 w-full rounded-ds-md border border-ds-divider bg-ds-surface px-ds-3 font-ds-body text-ds-body text-ds-text transition-colors hover:border-ds-text/30 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ds-brand)]"
-      />
-    </div>
-  );
+// DatePicker (packages/ui) trabaja con Date, el estado de este archivo
+// con texto ISO — mismo par de helpers que ya usa ordenes/page.tsx.
+function aFecha(texto: string): Date | null {
+  if (!texto) return null;
+  const [y, m, d] = texto.split("-").map(Number);
+  return new Date(y, (m || 1) - 1, d || 1);
+}
+function aTexto(fecha: Date | null): string {
+  if (!fecha) return "";
+  const y = fecha.getFullYear();
+  const m = String(fecha.getMonth() + 1).padStart(2, "0");
+  const d = String(fecha.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
 // useSearchParams() necesita un boundary de Suspense para el build de

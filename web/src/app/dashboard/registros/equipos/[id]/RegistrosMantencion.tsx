@@ -7,7 +7,7 @@ import { MANTENCION_EXIGE_FOTO_EN_NO } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
 import { comprimirImagen } from "@/lib/comprimirImagen";
 import { abrirPdfRegistroMantencion } from "@/lib/descargarPdf";
-import { Button, Cifra, EmptyState, ErrorState, LoadingState, Select, Textarea } from "@bitacora/ui/web";
+import { Button, Cifra, DatePicker, EmptyState, ErrorState, LoadingState, Select, Textarea } from "@bitacora/ui/web";
 import { Modal } from "@/components/Modal";
 import { SelectCrear } from "@/components/SelectCrear";
 
@@ -38,6 +38,21 @@ const fechaCL = (iso: string | null | undefined) => {
 };
 const tieneNovedad = (checklist: RegistroMantencionEquipo["checklist"]) =>
   Array.isArray(checklist) && checklist.some((c) => c.respuesta === "no");
+
+// DatePicker (packages/ui) trabaja con Date, el estado de este archivo
+// con texto ISO — mismo par de helpers que ya usa ordenes/page.tsx.
+function aFecha(texto: string): Date | null {
+  if (!texto) return null;
+  const [y, m, d] = texto.split("-").map(Number);
+  return new Date(y, (m || 1) - 1, d || 1);
+}
+function aTexto(fecha: Date | null): string {
+  if (!fecha) return "";
+  const y = fecha.getFullYear();
+  const m = String(fecha.getMonth() + 1).padStart(2, "0");
+  const d = String(fecha.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
 
 // PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 // ============================================================
@@ -93,24 +108,8 @@ export function RegistrosMantencion({ equipo, puedeGestionar }: { equipo: Equipo
         <div className="w-40">
           <Select etiqueta="Tipo" valor={tipo} onCambio={(v) => setTipo(v as FiltroTipo)} opciones={[{ valor: "", etiqueta: "Todos" }, { valor: "diario", etiqueta: "Checklist diario" }, { valor: "programa", etiqueta: "Mantención Flota" }]} />
         </div>
-        <div className="flex flex-col gap-ds-1">
-          <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Desde</label>
-          <input
-            type="date"
-            value={desde}
-            onChange={(e) => setDesde(e.target.value)}
-            className="h-10 rounded-ds-md border border-ds-divider bg-ds-surface px-ds-3 font-ds-body text-ds-small text-ds-text focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ds-brand)]"
-          />
-        </div>
-        <div className="flex flex-col gap-ds-1">
-          <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Hasta</label>
-          <input
-            type="date"
-            value={hasta}
-            onChange={(e) => setHasta(e.target.value)}
-            className="h-10 rounded-ds-md border border-ds-divider bg-ds-surface px-ds-3 font-ds-body text-ds-small text-ds-text focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ds-brand)]"
-          />
-        </div>
+        <DatePicker etiqueta="Desde" valor={aFecha(desde)} onCambio={(f) => setDesde(aTexto(f))} />
+        <DatePicker etiqueta="Hasta" valor={aFecha(hasta)} onCambio={(f) => setHasta(aTexto(f))} />
         <span className="ml-auto self-center font-ds-body text-[11px] uppercase tracking-[0.1em] text-ds-text/60">
           {registros ? `${registros.length} registro${registros.length === 1 ? "" : "s"}` : "…"}
         </span>
@@ -628,19 +627,7 @@ function ModalNuevoRegistro({ equipo, onListo }: { equipo: Equipo; onListo: () =
             placeholder="6120"
           />
         </div>
-        <div>
-          <label htmlFor="rm-fecha" className="mb-ds-1 block font-ds-body text-[13px] font-semibold text-ds-text">
-            Fecha
-          </label>
-          <input
-            id="rm-fecha"
-            type="date"
-            max={new Date().toISOString().slice(0, 10)}
-            value={fecha}
-            onChange={(e) => setFecha(e.target.value)}
-            className="h-10 w-full rounded-ds-md border border-ds-divider bg-ds-surface px-ds-3 font-ds-body text-ds-small text-ds-text focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ds-brand)]"
-          />
-        </div>
+        <DatePicker etiqueta="Fecha" valor={aFecha(fecha)} onCambio={(f) => setFecha(aTexto(f))} maximo={new Date()} />
       </div>
 
       {/* 4. Taller (solo Programa) */}

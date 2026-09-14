@@ -9,7 +9,7 @@ import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Button, Card, Input, Select, StatusBadge, Textarea, type TonoEstado } from "@bitacora/ui/web";
+import { Button, Card, DatePicker, Input, Select, StatusBadge, Textarea, type TonoEstado } from "@bitacora/ui/web";
 import { InputMonto } from "@/components/InputMonto";
 import { Modal } from "@/components/Modal";
 import { PanelAcciones } from "@/components/PanelAcciones";
@@ -272,7 +272,7 @@ export default function CobroDetallePage() {
             <p className="font-ds-body text-ds-caption font-medium text-ds-text/70">Valor original del cobro</p>
             <p className="font-ds-body text-ds-small text-ds-text">{formatMoneda(cobro.monto, usuario.moneda)}</p>
           </div>
-          <FechaCampo etiqueta="Fecha del pago" requerido valor={fechaPago} onCambio={setFechaPago} />
+          <DatePicker etiqueta="Fecha del pago" valor={aFecha(fechaPago)} onCambio={(f) => setFechaPago(aTexto(f))} />
           <div className="flex flex-col gap-ds-1">
             <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Valor recibido</label>
             <InputMonto required value={valorRecibido} onChange={setValorRecibido} moneda={usuario.moneda} />
@@ -294,18 +294,17 @@ export default function CobroDetallePage() {
   );
 }
 
-// Input nativo type="date" — ver el mismo helper en rutas/nueva/page.tsx.
-function FechaCampo({ etiqueta, valor, onCambio, requerido }: { etiqueta: string; valor: string; onCambio: (v: string) => void; requerido?: boolean }) {
-  return (
-    <div className="flex flex-col gap-ds-1">
-      <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">{etiqueta}</label>
-      <input
-        type="date"
-        required={requerido}
-        value={valor}
-        onChange={(e) => onCambio(e.target.value)}
-        className="h-11 w-full rounded-ds-md border border-ds-divider bg-ds-surface px-ds-3 font-ds-body text-ds-body text-ds-text transition-colors hover:border-ds-text/30 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ds-brand)]"
-      />
-    </div>
-  );
+// DatePicker (packages/ui) trabaja con Date, el estado de este archivo
+// con texto ISO — mismo par de helpers que ya usa ordenes/page.tsx.
+function aFecha(texto: string): Date | null {
+  if (!texto) return null;
+  const [y, m, d] = texto.split("-").map(Number);
+  return new Date(y, (m || 1) - 1, d || 1);
+}
+function aTexto(fecha: Date | null): string {
+  if (!fecha) return "";
+  const y = fecha.getFullYear();
+  const m = String(fecha.getMonth() + 1).padStart(2, "0");
+  const d = String(fecha.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }

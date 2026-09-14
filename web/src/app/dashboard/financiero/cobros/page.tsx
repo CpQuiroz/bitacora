@@ -9,7 +9,7 @@ import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Button, Card, Cifra, EmptyState, ErrorState, Input, LoadingState, Select, StatusBadge, type TonoEstado } from "@bitacora/ui/web";
+import { Button, Card, Cifra, DatePicker, EmptyState, ErrorState, Input, LoadingState, Select, StatusBadge, type TonoEstado } from "@bitacora/ui/web";
 import { InputMonto } from "@/components/InputMonto";
 import { ComboboxCliente } from "@/components/ComboboxCliente";
 import { Combobox } from "@/components/Combobox";
@@ -272,8 +272,8 @@ function CobrosContenido() {
                     <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Monto</label>
                     <InputMonto required value={monto} onChange={setMonto} moneda={usuario.moneda} />
                   </div>
-                  <FechaCampo etiqueta="Fecha de emisión" requerido valor={fechaEmision} onCambio={setFechaEmision} />
-                  <FechaCampo etiqueta="Fecha de vencimiento" requerido valor={fechaVencimiento} onCambio={setFechaVencimiento} />
+                  <DatePicker etiqueta="Fecha de emisión" valor={aFecha(fechaEmision)} onCambio={(f) => setFechaEmision(aTexto(f))} />
+                  <DatePicker etiqueta="Fecha de vencimiento" valor={aFecha(fechaVencimiento)} onCambio={(f) => setFechaVencimiento(aTexto(f))} />
                   <Select
                     etiqueta="Medio de pago (opcional)"
                     valor={medioPago}
@@ -357,8 +357,8 @@ function CobrosContenido() {
                   placeholder="Todos"
                 />
               </div>
-              <FechaCampo etiqueta="Desde" valor={filtroDesde} onCambio={setFiltroDesde} />
-              <FechaCampo etiqueta="Hasta" valor={filtroHasta} onCambio={setFiltroHasta} />
+              <DatePicker etiqueta="Desde" valor={aFecha(filtroDesde)} onCambio={(f) => setFiltroDesde(aTexto(f))} />
+              <DatePicker etiqueta="Hasta" valor={aFecha(filtroHasta)} onCambio={(f) => setFiltroHasta(aTexto(f))} />
             </div>
           </Card>
         </div>
@@ -460,20 +460,19 @@ function CobrosContenido() {
   );
 }
 
-// Input nativo type="date" — ver el mismo helper en rutas/nueva/page.tsx.
-function FechaCampo({ etiqueta, valor, onCambio, requerido }: { etiqueta: string; valor: string; onCambio: (v: string) => void; requerido?: boolean }) {
-  return (
-    <div className="flex flex-col gap-ds-1">
-      <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">{etiqueta}</label>
-      <input
-        type="date"
-        required={requerido}
-        value={valor}
-        onChange={(e) => onCambio(e.target.value)}
-        className="h-11 w-full rounded-ds-md border border-ds-divider bg-ds-surface px-ds-3 font-ds-body text-ds-body text-ds-text transition-colors hover:border-ds-text/30 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ds-brand)]"
-      />
-    </div>
-  );
+// DatePicker (packages/ui) trabaja con Date, el estado de este archivo
+// con texto ISO — mismo par de helpers que ya usa ordenes/page.tsx.
+function aFecha(texto: string): Date | null {
+  if (!texto) return null;
+  const [y, m, d] = texto.split("-").map(Number);
+  return new Date(y, (m || 1) - 1, d || 1);
+}
+function aTexto(fecha: Date | null): string {
+  if (!fecha) return "";
+  const y = fecha.getFullYear();
+  const m = String(fecha.getMonth() + 1).padStart(2, "0");
+  const d = String(fecha.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
 // useSearchParams() necesita un boundary de Suspense para el build de
