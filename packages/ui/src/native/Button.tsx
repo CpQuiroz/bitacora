@@ -20,9 +20,11 @@ export function Button({
   iconoIzq,
   iconoDer,
   etiquetaAccesible,
+  forma = "pill",
 }: PropsBoton) {
   const marca = useMarca();
   const inhabilitado = deshabilitado || cargando;
+  const circular = forma === "circular";
 
   const fondoPorVariante: Record<VarianteBoton, string> = {
     primario: marca.base,
@@ -60,9 +62,12 @@ export function Button({
         borderWidth: variante === "secundario" ? 1 : 0,
         borderColor: tokens.color.divider,
         borderRadius: RADIO_PILL,
-        minHeight: ALTURA_NATIVE[tamano],
-        paddingHorizontal: PAD_H[tamano],
-        alignSelf: bloque ? "stretch" : "flex-start",
+        // Circular: cuadrado fijo (ALTURA_NATIVE.lg = 52, coincide con el
+        // mínimo táctil que ya pedía el sistema visual v2) — ignora
+        // `tamano`/`bloque`, que solo aplican a la forma pill normal.
+        ...(circular
+          ? { width: ALTURA_NATIVE.lg, height: ALTURA_NATIVE.lg, paddingHorizontal: 0 }
+          : { minHeight: ALTURA_NATIVE[tamano], paddingHorizontal: PAD_H[tamano], alignSelf: bloque ? "stretch" : "flex-start" }),
         opacity: inhabilitado ? 0.45 : pressed ? 0.85 : 1,
       })}
     >
@@ -71,16 +76,20 @@ export function Button({
       ) : (
         iconoIzq && <View>{iconoIzq}</View>
       )}
-      <Text
-        style={{
-          fontFamily,
-          fontSize: TEXTO_TAMANO[tamano],
-          color: textoPorVariante[variante],
-        }}
-      >
-        {children}
-      </Text>
-      {!cargando && iconoDer ? <View>{iconoDer}</View> : null}
+      {/* Circular es solo ícono — el texto de `children` no se renderiza
+          (la forma cuadrada no tiene espacio pensado para él). */}
+      {!circular ? (
+        <Text
+          style={{
+            fontFamily,
+            fontSize: TEXTO_TAMANO[tamano],
+            color: textoPorVariante[variante],
+          }}
+        >
+          {children}
+        </Text>
+      ) : null}
+      {!circular && !cargando && iconoDer ? <View>{iconoDer}</View> : null}
     </Pressable>
   );
 }

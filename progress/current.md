@@ -1094,3 +1094,79 @@ assembleRelease`, 19m49s) apuntando a **producción**. Verificado con
 `~/Desktop/bitacora-builds/bitacora-1.9.9.apk` y entregado. `.env`
 restaurado a dev y `mobile/package.json` revertido (prebuild los
 pisa). Sigue `blocked` hasta que la usuaria confirme en su teléfono.
+
+El archivo pesa 89MB — el límite de envío por chat es 30MB, así que no
+se pudo mandar por acá. Como la sesión corre en la Mac de la usuaria,
+el archivo ya estaba en su Desktop; se lo señalé por ruta en vez de
+adjuntarlo.
+
+## 2026-09-13: tarea 21 — Sistema visual móvil v2 (Paso 0 + Paso 2)
+
+Prompt estructurado de la usuaria: homogeneizar la ejecución visual en
+mobile (`ScreenHeader`, `ListRow`, extensión de `Button`, `CardDetalle`,
+botón de Asistente persistente) sobre lo que ya existe, sin tocar
+paleta/tipografía/tabs, sin backend nuevo. Metodología explícita en el
+propio prompt: Paso 0 (auditoría, sin código) → Paso 2 (primitivas,
+aisladas) → piloto único (`Más`) → resto de pantallas, una por una,
+en releases separados.
+
+**Paso 0 — hallazgo real, no solo "está todo migrado"**: de las 6
+pantallas auditadas (Hoy/Agenda/Más/ClientesLista/ClienteDetalle/
+TrabajoDetalle) + `AppTabs.tsx`, solo **2** (Hoy, detalle de OS) están
+100% en `@bitacora/ui/native` + Lucide + tokens nuevos. Las otras 4 +
+la tab bar misma siguen en Ionicons + `useTema()` — que resolví que
+lee de `mobile/src/theme/tokens.ts`, una paleta Faena (navy/naranja)
+**hardcodeada, coexistiendo a propósito** con el sistema nuevo
+(`docs/design-system.md` ya lo documenta como transición deliberada,
+no un descuido). `CONTEXTO_PROYECTO.md` decía "Lucide ya reemplazó a
+Ionicons en todo lo migrado" — cierto pero engañoso si se lee como
+"mobile ya está migrado". No encontré `Sistema Movil.dc.html` en el
+repo (la usuaria lo mencionó como referencia). Decisión de iconos:
+repasé las 15 metáforas + 8 auxiliares contra Lucide — las 23 tienen
+equivalente directo, cero excepciones custom necesarias.
+
+**Paso 2 — primitivas nuevas, ninguna pantalla real tocada todavía**:
+- `Button`: nuevo `forma?: "pill" | "circular"` en `PropsBoton`
+  (tipos.ts, compartido con web pero opcional — cero riesgo, web
+  simplemente no lo usa) — circular = 52×52 fijo, solo ícono.
+- `ScreenHeader`, `ListRow` + `ListRowGrupo` (mosaico de ícono +
+  divisor que arranca exactamente a 77px — verificado con zoom, no
+  solo calculado), `CardDetalle` (deliberadamente un componente
+  **nuevo y distinto** del `Card` genérico existente — ese no soporta
+  folio/badge/metadatos/acciones, extenderlo lo hubiera sobrecargado
+  para web también).
+- `AsistenteButton` (terracota **fija**, no el color de marca del
+  tenant — es identidad de plataforma, no algo tenant-brandable; si
+  no era la intención, se cambia en una línea) + `AsistenteSheet`
+  (bottom sheet propio, no el `Dialog` genérico — el contenido con
+  avatar+antetítulo es realmente distinto, no un simple cambio de
+  texto; reusa `ListRow`/`ListRowGrupo` para los atajos).
+- Valores que no coinciden con la escala de tokens (radio 22 en 2
+  componentes, título 30/17/14) quedaron como constantes locales
+  documentadas — mismo criterio ya establecido en `RADIO_CARD` del
+  `Card` web. Nada de paleta/tipografía/`radius.pill`/tokens.json
+  tocado.
+
+**Verificado visualmente de verdad, no solo `tsc`**: instalé
+`react-native-web`+`react-dom` temporalmente, armé una pantalla de
+prueba con las 5 piezas + datos realistas, la conecté momentáneamente
+donde va `MasScreen`, y bypaseé el gate de auth (2 líneas comentadas,
+sin fingir ningún usuario) para llegar ahí sin login real — la
+usuaria no tenía credenciales a mano en ese momento. Corrí `expo start
+--web` y revisé con Chrome MCP: cabecera con antetítulo/título
+Caprasimo/chip activo terracota, `CardDetalle` completo, `ListRowGrupo`
+con el divisor exactamente a 77px (confirmado con zoom), botón
+circular junto al primario, Asistente flotante, y el `AsistenteSheet`
+abriéndose con avatar+atajos+campo+micrófono — todo se vio correcto,
+sin bugs visuales.
+
+**Revertido TODO lo temporal antes de comitear**: los 3 bypass de
+navegación (`RootNavigator`/`AppTabs`/`MasStack`), el archivo de
+prueba, y `react-native-web`/`react-dom` del `package.json` (no se
+pidió como herramienta permanente — si la usuaria quiere un
+`/dev/ui` mobile de verdad para esto, es una decisión aparte).
+
+`tsc` de `packages/ui`/mobile/web limpio, `./verificar.sh` completo
+verde. Sigue en curso: falta que la usuaria confirme si avanzamos con
+el piloto real de `Más` (Paso 3, tocando la pantalla de verdad esta
+vez).

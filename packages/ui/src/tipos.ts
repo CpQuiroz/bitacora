@@ -25,6 +25,15 @@ export type PropsBoton = {
   tipo?: "button" | "submit";
   /** Etiqueta accesible si el contenido no es texto. */
   etiquetaAccesible?: string;
+  /**
+   * "circular": cuadrado 52×52 fijo (mínimo táctil), sin texto — solo
+   * `iconoIzq`, centrado. Pensado para un botón de ícono suelto (ej. el
+   * Asistente junto a una barra de acción fija). Default "pill" =
+   * comportamiento actual, sin cambios. Solo implementado en native por
+   * ahora (sistema visual móvil v2, 13-sep) — web ignora el campo si no
+   * lo usa, es un prop opcional más.
+   */
+  forma?: "pill" | "circular";
 };
 
 // ── Alturas por tamaño (px) ───────────────────────────────────────
