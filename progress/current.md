@@ -1554,3 +1554,64 @@ la key del deploy hook y con credenciales) y le dejé las 2 opciones
 (SQL Editor o `db push --include-all`). La aplicó y confirmó. Push
 hecho (`3363433..821976c`) — dispara el deploy normal de
 backend+web. Tarea 26 cerrada.
+
+## 2026-09-14: tarea 20 retomada — el fix de conectividad no alcanzó, causa real distinta
+
+La usuaria probó los APKs recientes y reportó, todo junto: "sigue
+fallando" (conectividad), "sigue fallando" (cerrar OS #5), y un bug
+nuevo — no aparece la opción de eliminar una foto en una OS abierta
+sin firmar. Antes de asumir que son 3 bugs sueltos, seguí la cadena:
+me contó que hizo el check-in pero nunca encontró "Registrar salida y
+firmar" — esa pista fue la que abrió la investigación real.
+
+**Descarte por código, no por suposición**: revisé el gate de
+"Eliminar foto" (`FotosSection.tsx`) — es exactamente `editable &&
+onEliminar`, sin ninguna otra condición oculta, y `onEliminar` siempre
+viaja definido desde `TrabajoDetalleScreen`. `editable={!finalizada}`.
+Confirmé con la usuaria que la OS está abierta y sin firmar — así que
+en teoría `finalizada` debería ser `false` y el botón debería
+aparecer. Reviso el resto de la cadena en `queue.ts` en vez de asumir.
+
+**Bug real encontrado** (`queue.ts`): `procesando` es una bandera a
+nivel de módulo que solo se limpia en el `finally` de `procesar()`.
+Si el `await` de `ejecutar(a)` alguna vez se cuelga sin resolver NI
+rechazar (un fetch de verdad trabado — el `AbortController` de
+`api.ts` debería evitarlo para JSON, pero el propio código ya
+documenta que en RN esto no es 100% confiable para multipart, y no
+hay garantía absoluta tampoco para JSON en todos los dispositivos/
+versiones de Android), ese `finally` nunca corre y `procesando` queda
+`true` **para siempre**. A partir de ahí, CUALQUIER llamada futura a
+`procesar()` — "Reintentar ahora" manual, reconectar, volver al
+foreground — entra al primer `if (procesando) return;` y no hace
+absolutamente nada, sin ningún error visible. Coincide exacto con lo
+que describió la usuaria ("el reintentar falla, sale como botón pero
+no hace nada ni permite presionarlo").
+
+Esto también explica el check-in "que funcionó" (el update optimista
+local sí corre) pero nunca se reflejó en el servidor: si `procesando`
+ya estaba trancado de antes, `encolarCheckin()` encola la acción pero
+`procesar()` nunca llega a intentarla de verdad — se queda ahí para
+siempre, invisible salvo por la cola en Perfil. Mismo mecanismo
+probablemente detrás de que las fotos tampoco suban.
+
+**Fix**: `procesandoDesde` (timestamp de cuándo arrancó el
+`procesando = true` actual) + `PROCESANDO_MAX_MS` (techo de
+seguridad = timeout de multipart + margen). Pasado ese techo, un
+`procesando` viejo se considera trancado y NO bloquea un intento
+nuevo — se sigue igual, aceptando el mismo riesgo ya documentado de
+una posible ejecución en paralelo (mismo criterio que ya toleran los
+comentarios existentes sobre multipart) antes que quedar bloqueado
+para siempre sin ningún aviso.
+
+**Lo de "no aparece eliminar" sigue sin explicación de código** — con
+`finalizada` genuinamente `false` (OS abierta sin firmar), el botón
+debería mostrarse. Puede ser el mismo síntoma de fondo (si el detalle
+se está sirviendo desde cache stale por el mismo problema de red) o
+un bug distinto — pendiente de que la usuaria confirme si el aviso
+"Trabajo finalizado — ya no se puede editar" aparece en esa pantalla
+(si aparece, confirma que `finalizada` sí está en `true` por algún
+motivo que hay que seguir cazando; si no aparece, es otra causa).
+
+`tsc mobile` limpio, `./verificar.sh` completo verde. Sigue `in_progress`
+— falta build nuevo + que la usuaria confirme en su teléfono real (no
+se puede reproducir un fetch colgado desde esta sesión).

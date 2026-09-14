@@ -73,6 +73,22 @@ type Listener = (cola: AccionPendiente[]) => void;
 let cola: AccionPendiente[] = [];
 let cargada = false;
 let procesando = false;
+// Cuándo arrancó el `procesando = true` actual. Bug real (14-sep-2026):
+// "Reintentar ahora" aparecía pero no hacía nada, sin error visible —
+// causa real: `procesando` es una bandera module-level que solo se
+// limpia en el `finally` de este mismo procesar(); si el `await` de
+// `ejecutar(a)` se cuelga sin resolver NI rechazar nunca (un fetch de
+// verdad "colgado" — plausible en algunos dispositivos/Android aunque
+// el AbortController debería evitarlo, ver api.ts), ese `finally` nunca
+// corre y `procesando` queda en `true` para siempre: cualquier llamada
+// futura a procesar() (reintentar manual, reconectar, foreground) entra
+// al primer `if (procesando) return;` y no hace absolutamente nada,
+// sin ningún aviso. Techo de seguridad: pasado este tiempo, un
+// `procesando` viejo se considera trancado y NO bloquea un intento
+// nuevo — ningún fetch real (multipart incluido) debería tardar más
+// que esto.
+let procesandoDesde: number | null = null;
+const PROCESANDO_MAX_MS = TIMEOUT_MULTIPART_MS + 30000;
 const listeners = new Set<Listener>();
 
 async function persistir() {
@@ -182,13 +198,23 @@ function programarAutoReintento() {
 /** Intenta vaciar la cola. Se llama al encolar, al reconectar y al foreground. */
 export async function procesar(): Promise<void> {
   await asegurarCargada();
-  if (procesando) return;
+  if (procesando) {
+    const trancado = procesandoDesde != null && Date.now() - procesandoDesde > PROCESANDO_MAX_MS;
+    if (!trancado) return;
+    // Se pasó del techo — algo quedó colgado de verdad. No lo dejamos
+    // bloqueado para siempre: seguimos igual, como si no hubiera nada
+    // en curso. Si el fetch viejo total sigue viajando en el fondo, en
+    // el peor caso corre en paralelo con este intento nuevo (mismo
+    // riesgo que ya existe documentado para multipart) — preferible a
+    // "Reintentar ahora" sin ningún efecto para siempre.
+  }
   const cola0 = cola.filter((a) => !a.fallida);
   if (cola0.length === 0) {
     cancelarAutoReintento();
     return;
   }
   procesando = true;
+  procesandoDesde = Date.now();
   try {
     // "Subir fotos solo con WiFi": en datos móviles se saltan las
     // subidas de foto (quedan en la cola para el próximo pase con WiFi).
@@ -304,6 +330,7 @@ export async function procesar(): Promise<void> {
     }
   } finally {
     procesando = false;
+    procesandoDesde = null;
     // Si quedan acciones activas (por señal o cold start), que la cola
     // se reintente sola en vez de quedarse esperando un evento externo.
     if (cola.some((a) => !a.fallida)) programarAutoReintento();
