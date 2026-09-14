@@ -4,9 +4,9 @@ import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { EstadoTrabajo, ItemChecklist } from "@bitacora/shared";
 import { estadoOsDeTrabajo } from "@bitacora/shared";
-import { ChevronRight, Navigation, Phone, type LucideIcon } from "lucide-react-native";
+import { ArrowLeft, ChevronRight, Navigation, Phone, type LucideIcon } from "lucide-react-native";
 import { tokens } from "@bitacora/design-tokens";
-import { Button, ErrorState, LoadingState, Skeleton, StatusBadge, Texto, useMarca } from "@bitacora/ui/native";
+import { Button, ErrorState, LoadingState, ScreenHeader, Skeleton, StatusBadge, Texto, useMarca } from "@bitacora/ui/native";
 import { OfflineBanner } from "../../components/OfflineBanner";
 import { useRed } from "../../services/sync/NetworkProvider";
 import { useAuth } from "../auth/AuthContext";
@@ -69,9 +69,25 @@ function Fila({ etiqueta, valor, onPress, Icono }: { etiqueta: string; valor: st
   );
 }
 
-// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
+// Sistema visual móvil v2 (13-sep-2026, tarea #21, piloto 3) — antes
+// PASO 6 del sistema de diseño ya la había migrado a @bitacora/ui/native
+// + Lucide, pero con el header nativo del stack + un bloque de
+// cabecera armado a mano. Ahora usa ScreenHeader (antetítulo="OS N°
+// X", título=cliente, `accion`="volver" — el único caso real de
+// pantalla de detalle en este rollout, para el que se diseñó esa prop
+// en el Paso 2) y el header nativo se apaga en TrabajosStack.tsx.
+// StatusBadge/fecha/"Editar datos" no entran en el contrato de
+// ScreenHeader (no tiene lugar para un badge ni una segunda línea) —
+// se quedan como su propio bloque debajo, mismo criterio que ya se
+// usó en "Hoy" para no forzar contenido que no calza.
+//
+// Deliberadamente SIN AsistenteButton flotante acá: esta es una
+// pantalla de trabajo activo con sus propios botones primarios fijos
+// abajo (Check-out/Registrar venta) — un botón flotante en la misma
+// esquina competiría por el mismo espacio. Si se quiere de todos
+// modos, es agregar 2 líneas.
 export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenProps<TrabajosStackParamList, "TrabajoDetalle">) {
-  const { trabajoId } = route.params;
+  const { trabajoId, titulo: tituloRuta } = route.params;
   const auth = useAuth();
   const marca = useMarca();
   const esGestion = auth.fase === "listo" && auth.usuario.rol !== "colaborador";
@@ -119,20 +135,26 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
     return () => clearInterval(id);
   }, [hayFotoProcesando, cargar]);
 
+  const volver = { icono: <ArrowLeft size={20} strokeWidth={2.5} color={tokens.color.text} />, onPress: () => navigation.goBack(), etiquetaAccesible: "Volver" };
+
   if (!detalle && !error) {
     return (
-      <View style={{ flex: 1, backgroundColor: tokens.color.bg, padding: tokens.space["4"], gap: tokens.space["3"] }}>
-        <LoadingState>
-          <Skeleton alto={120} radio={28} />
-          <Skeleton alto={44} radio={999} />
-          <Skeleton alto={200} radio={16} />
-        </LoadingState>
+      <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+        <ScreenHeader titulo={tituloRuta ?? "Trabajo"} accion={volver} />
+        <View style={{ padding: tokens.space["4"], gap: tokens.space["3"] }}>
+          <LoadingState>
+            <Skeleton alto={120} radio={28} />
+            <Skeleton alto={44} radio={999} />
+            <Skeleton alto={200} radio={16} />
+          </LoadingState>
+        </View>
       </View>
     );
   }
   if (error && !detalle) {
     return (
       <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+        <ScreenHeader titulo={tituloRuta ?? "Trabajo"} accion={volver} />
         <ErrorState mensaje={error} onReintentar={cargar} />
       </View>
     );
@@ -208,25 +230,19 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
 
   return (
     <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+      <ScreenHeader antetitulo={orden?.folio != null ? `OS N° ${orden.folio}` : undefined} titulo={cli?.nombre ?? trabajo.cliente} accion={volver} />
       <OfflineBanner guardadoEn={detalle.desdeCache ? detalle.guardadoEn : undefined} />
       <ScrollView contentContainerStyle={{ padding: tokens.space["6"], gap: tokens.space["4"], paddingBottom: tokens.space["8"] * 3 }}>
-        {/* Cabecera: folio + cliente */}
+        {/* Estado + fecha + editar — no entran en ScreenHeader (sin lugar
+            para badge ni segunda línea), quedan como su propio bloque. */}
         <View style={{ gap: tokens.space["1"] }}>
-          {orden?.folio != null ? (
-            <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} style={{ fontVariant: ["tabular-nums"] }}>
-              OS N° {orden.folio}
-            </Texto>
-          ) : null}
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: tokens.space["2"] }}>
-            <Texto tamano={tokens.size.h4} color={tokens.color.text} style={{ flex: 1 }}>
-              {cli?.nombre ?? trabajo.cliente}
+            <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} style={{ fontVariant: ["tabular-nums"] }}>
+              {trabajo.fecha}
+              {trabajo.hora_programada ? ` · ${trabajo.hora_programada.slice(0, 5)}` : ""}
             </Texto>
             <StatusBadge estado={estadoOsEfectivo} etiqueta={estadoMostrar} />
           </View>
-          <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} style={{ fontVariant: ["tabular-nums"] }}>
-            {trabajo.fecha}
-            {trabajo.hora_programada ? ` · ${trabajo.hora_programada.slice(0, 5)}` : ""}
-          </Texto>
           {esGestion ? (
             <Pressable onPress={() => navigation.navigate("TrabajoForm", { trabajoId })} style={{ marginTop: tokens.space["1"] }}>
               <Texto tamano={tokens.size.small} color={marca.base} peso="semibold">

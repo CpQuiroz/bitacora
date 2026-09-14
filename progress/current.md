@@ -1293,3 +1293,53 @@ bien es `Card`, no hacía falta tocarlo.
 `MasInicio`), ya que `HoyScreen` dibuja su propio `ScreenHeader`.
 
 `tsc mobile` limpio, `./verificar.sh` completo verde.
+
+**La usuaria probó el APK 1.9.11 y confirmó**: "ya lo probé, seguí con
+el detalle de OS". Tarea 22 → `done`.
+
+## 2026-09-14: tarea 23 — piloto 3 del sistema visual v2: detalle de OS
+
+Tercera pantalla. `TrabajoDetalleScreen.tsx` es el primer caso real de
+**pantalla de detalle** en este rollout (Más/Hoy eran pantallas de
+lista/menú) — usa por primera vez la prop `accion` de `ScreenHeader`
+(el botón circular de "volver", diseñada para esto exacto desde el
+Paso 2 pero nunca probada en una pantalla real hasta ahora).
+
+**Mapeo**: antetítulo = `OS N° {folio}`, título = nombre del cliente
+— el bloque de cabecera viejo ("folio + cliente + badge + fecha +
+editar") tenía más densidad de la que `ScreenHeader` soporta (sin
+lugar para un badge junto al título ni una segunda línea de fecha) —
+se dividió: antetítulo/título/volver van al `ScreenHeader`, y
+`StatusBadge` + fecha + el link "Editar datos" quedan como su propio
+bloque chico debajo, mismo criterio que ya se usó en "Hoy" para no
+forzar contenido que no calza en un componente unificado.
+
+**Decisión deliberada, documentada en el código**: esta pantalla NO
+lleva `AsistenteButton` flotante. Ya tiene sus propios botones
+primarios fijos abajo ("Registrar salida y firmar" / "Registrar
+venta") en la misma esquina donde viviría el botón flotante — sumarlo
+competiría por el mismo espacio en una pantalla de trabajo activo,
+donde la prioridad son esas acciones, no un acceso rápido al asistente.
+Reversible en 2 líneas si la usuaria prefiere tenerlo igual.
+
+El header nativo se apaga en `TrabajosStack.tsx` (mismo patrón que
+`MasInicio`/`HoyInicio`) — solo para la ruta `TrabajoDetalle`, las
+demás rutas de este stack (`TrabajosLista`, etc.) no se tocaron.
+
+**Verificado visualmente, incluyendo la cabecera con datos reales**
+(no solo loading/error, que es lo único que se pudo verificar de este
+tipo de pantalla anteriormente en el Paso 6): además del bypass de
+auth ya conocido, agregué temporalmente un `initialRouteName`+
+`initialParams` en `TrabajosStack.tsx` para aterrizar directo en el
+detalle sin pasar por una lista que tampoco carga sin sesión real, y
+un atajo temporal en `obtenerDetalle()` (`trabajoId === "qa-test"` →
+datos de prueba fijos) para ver la cabecera con `folio`/`cliente`
+reales en vez de solo el estado de error. Confirmé: antetítulo "OS N°
+142" + título "Cliente QA" + botón de volver (navega bien a "Más"),
+bloque de estado/fecha debajo, y el resto de la pantalla (bloque de
+foco, filas, fotos, firma) sin roturas. Todo lo temporal revertido
+(bypass de auth, `react-native-web`/`react-dom`, los 2 atajos de
+`TrabajosStack.tsx`/`trabajos.ts`) — confirmado con `git status`/`git
+diff --stat` que solo quedan los 2 archivos reales del cambio.
+
+`tsc mobile` limpio, `./verificar.sh` completo verde.
