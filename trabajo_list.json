@@ -344,6 +344,22 @@
       ],
       "status": "blocked",
       "resolution": "TrabajoDetalleScreen.tsx: ScreenHeader (antetitulo=OS N folio + titulo=cliente + accion=volver -- primer caso real de pantalla de detalle en el rollout, prueba real de esa prop) reemplazando el header nativo + el bloque de cabecera a mano. StatusBadge/fecha/editar quedan como bloque propio debajo (no entran en el contrato de ScreenHeader). Deliberadamente SIN AsistenteButton -- competiria con los botones primarios fijos del pie (Check-out/Registrar venta), documentado y reversible en 2 lineas. TrabajosStack.tsx: headerShown:false solo en TrabajoDetalle.\n\nVerificado visualmente con el mismo metodo + 2 atajos temporales extra (initialRouteName/initialParams para aterrizar directo sin lista real, y un branch temporal en obtenerDetalle() para ver la cabecera con folio/cliente reales, no solo el estado de error) -- todo revertido, confirmado con git status/diff --stat que solo quedan los 2 archivos reales. Antetitulo+titulo+volver+bloque de estado renderizan bien, resto de la pantalla (foco/filas/fotos/firma) sin roturas, boton volver navega correcto.\n\ntsc de mobile limpio, ./verificar.sh completo verde. Bloqueada igual que las tareas 20/21/22: falta armar el build y que la usuaria lo pruebe en su telefono."
+    },
+    {
+      "id": 24,
+      "name": "fix_deploy_render_roto",
+      "title": "URGENTE: reparar deploy de Render roto desde el 9-sep",
+      "description": "Todos los deploys de Render fallan desde el commit 28c7f49 (10-sep, agrego packages/design-tokens y cambio el postinstall de mobile de build:shared a build:packages). npm prune --omit=dev en el Dockerfile del backend dispara ese postinstall (mobile es workspace de la raiz) y npm no encuentra packages/design-tokens porque esa carpeta nunca se copia a la imagen del backend. Produccion sirve codigo de hace 5 dias.",
+      "acceptance": [
+        "Causa raiz confirmada reproduciendo el build de Docker localmente, no solo leyendo el log de Render -- HECHO",
+        "Fix: --ignore-scripts en npm prune (simetrico al npm ci de arriba en el mismo Dockerfile), sin sacar npm prune --omit=dev -- HECHO",
+        "Build de Docker local exitoso + contenedor real corriendo y respondiendo /health 200 -- HECHO",
+        "Push a main + deploy en Render confirmado live (no solo build exitoso)",
+        "Revisar riesgo de desfase DB/codigo por migraciones 99/100 aplicadas durante los 5 dias sin deploy",
+        "Reprobar la subida de fotos (sintoma original) con el codigo ya desplegado"
+      ],
+      "status": "in_progress",
+      "resolution": null
     }
   ]
 }

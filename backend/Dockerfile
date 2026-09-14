@@ -26,11 +26,12 @@ COPY backend/package.json ./backend/
 COPY web/package.json ./web/
 COPY mobile/package.json ./mobile/
 # --ignore-scripts: `mobile` tiene un postinstall (`cd .. && npm run
-# build:shared`, para los builds de EAS) que acá se dispararía durante
+# build:packages`, para los builds de EAS) que acá se dispararía durante
 # `npm ci` y fallaría — todavía no copiamos packages/shared/tsconfig.json
-# ni src/. El shared se compila explícito más abajo, cuando el código ya
-# está. El backend no tiene dependencias nativas, así que saltear los
-# scripts de install es seguro.
+# ni src/, y packages/design-tokens ni packages/ui se copian NUNCA a
+# esta imagen (el backend no los necesita en runtime). El shared se compila
+# explícito más abajo, cuando el código ya está. El backend no tiene
+# dependencias nativas, así que saltear los scripts de install es seguro.
 RUN npm ci --ignore-scripts
 
 # --- código + build ---
@@ -43,7 +44,22 @@ RUN npm run build:shared && npm run build:backend
 
 # Deja node_modules solo con dependencias de producción (quita
 # typescript, tsx, @types/*, etc.) antes de copiarlo a la imagen final.
-RUN npm prune --omit=dev
+#
+# --ignore-scripts (mismo motivo que el `npm ci` de arriba): `npm
+# prune` reconcilia el árbol de node_modules y eso vuelve a disparar el
+# postinstall de `mobile` (`cd .. && npm run build:packages` ->
+# `npm run build -w packages/design-tokens`) — pero esta imagen JAMÁS
+# copia packages/design-tokens ni packages/ui (el backend no los usa en
+# runtime), así que ese workspace no existe en el filesystem del build
+# y npm revienta con "No workspaces found: --workspace=packages/
+# design-tokens". Bug real (14-sep-2026): esto rompió TODOS los
+# deploys desde el commit que agregó packages/design-tokens y cambió
+# el postinstall de mobile de build:shared a build:packages
+# (28c7f49, 10-sep) — nadie lo notó porque verificar.sh no construye
+# la imagen Docker. Prune sigue quitando devDependencies igual que
+# antes; --ignore-scripts solo evita que dispare scripts que no hacen
+# falta para eso.
+RUN npm prune --omit=dev --ignore-scripts
 
 # --- imagen final, liviana ---
 FROM node:22-slim

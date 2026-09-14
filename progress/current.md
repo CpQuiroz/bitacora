@@ -1343,3 +1343,61 @@ foco, filas, fotos, firma) sin roturas. Todo lo temporal revertido
 diff --stat` que solo quedan los 2 archivos reales del cambio.
 
 `tsc mobile` limpio, `./verificar.sh` completo verde.
+
+## 2026-09-14: tarea 24 — URGENTE, deploy de Render roto desde el 9-sep
+
+La usuaria interrumpió el rollout visual con evidencia ya confirmada
+de su lado: el servicio `bitacora` en Render no completa un deploy
+exitoso desde el 9-sep 18:20 UTC (commit `fbe7e1b`) — ~40 commits
+después, todos `build_failed`, mismo error de `npm prune --omit=dev`
+("No workspaces found: --workspace=packages/design-tokens"). Prod
+sirve código de hace 5 días; nada de lo trabajado desde entonces
+llegó a desplegarse.
+
+**Paso 0 (auditoría, siguiendo el orden que pidió la usuaria)**:
+- `workspaces` de `package.json` raíz: `["web","mobile","backend",
+  "packages/*"]` — sin cambios en todo el historial del archivo (un
+  solo commit, el de creación). **No es la causa.**
+- `git log -p` sobre `mobile/package.json` sí muestra el cambio real:
+  el `postinstall` pasó de `"cd .. && npm run build:shared"` a
+  `"cd .. && npm run build:packages"` en el commit **`28c7f49`**
+  (10-sep, "Paso 0-1 sistema de diseño — packages/design-tokens") —
+  **el primer commit después del último deploy exitoso** (`git log
+  --oneline fbe7e1b..28c7f49` da exactamente 1 resultado: ese mismo
+  commit). `build:packages` (raíz) = `build:tokens && build:shared`;
+  `build:tokens` = `npm run build -w packages/design-tokens`.
+- **Mecanismo real**: `npm prune --omit=dev`, al reconciliar el árbol
+  de `node_modules` de un monorepo con workspaces, vuelve a disparar
+  el `postinstall` de `mobile` (es un workspace de la raíz). El
+  Dockerfile del backend **nunca copia** `packages/design-tokens/` ni
+  `packages/ui/` a la imagen (el backend no los necesita en runtime,
+  por diseño) — así que cuando el postinstall de mobile intenta
+  `npm run build -w packages/design-tokens` dentro de la imagen, ese
+  workspace no existe en el filesystem y npm revienta.
+- Sin segundo error en capas: reproduje el build completo con Docker
+  local (`docker build -f backend/Dockerfile .`) ANTES de tocar nada
+  y reproduje el error exacto, línea por línea, del log de Render.
+
+**Fix** (aditivo, sin sacar `npm prune --omit=dev` como pidió la
+usuaria explícitamente): `RUN npm prune --omit=dev --ignore-scripts`
+— simétrico al `npm ci --ignore-scripts` que el mismo Dockerfile ya
+usa 20 líneas arriba, por el mismo motivo exacto (ya estaba anticipado
+para `npm ci`, nadie lo replicó para `npm prune` cuando se agregó
+`packages/design-tokens`). Prune sigue sacando devDependencies igual
+que siempre; `--ignore-scripts` solo evita que dispare scripts que no
+hacen falta para eso. Comentario del Dockerfile actualizado (estaba
+desactualizado, decía `build:shared` cuando ya era `build:packages`).
+
+**Verificación — no solo `verificar.sh`, siguiendo la regla nueva de
+la usuaria**: rebuild de Docker local con el fix → build completo
+exitoso, sin ningún segundo error. Corrí el contenedor real resultante
+(`docker run`, con env vars dummy tipo smoke-test, mismo criterio que
+`backend/src/server.smoke.test.ts`) y confirmé `GET /health` → 200 en
+un proceso Node real escuchando, no solo "la imagen se construyó".
+`./verificar.sh` completo también sigue verde (no lo hubiera
+detectado solo — no construye la imagen Docker, gap real que explica
+por qué esto pasó inadvertido desde el 10-sep).
+
+Sigue pendiente: push a `main` + confirmar en Render que el deploy
+real llega a `live` (no solo que el build local pasa) — la usuaria
+pidió el `id` del deploy y su estado antes de dar esto por cerrado.
