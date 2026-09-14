@@ -1,8 +1,7 @@
 import type { Cliente, Equipo, Viaje } from "@bitacora/shared";
-import { apiFetch, apiJson, TIMEOUT_MULTIPART_MS } from "./api";
+import { apiFetch, apiJson } from "./api";
 import { encolar } from "./sync/queue";
 import { guardarCache, leerCache } from "./sync/cache";
-import { borrarFoto } from "../lib/fotoCola";
 
 export type ViajeConDatos = Viaje & {
   cliente_info?: Pick<Cliente, "id" | "nombre"> | null;
@@ -125,8 +124,29 @@ export type ResultadoCrearViaje =
  * Clave: los datos del viaje van como **JSON** (rápido, con reintentos,
  * aguanta el arranque en frío de Render). La foto de la guía se sube
  * **aparte**, contra el viaje ya creado — así el viaje nunca se pierde
- * aunque la foto falle o no haya señal. Si la subida de la foto falla,
- * queda en la cola (`fotoPendiente: true`) y se reintenta sola.
+ * aunque la foto falle o no haya señal.
+ *
+ * La foto SIEMPRE va por la cola (`fotoPendiente` siempre `true` si hay
+ * foto), nunca se intenta subir inline contra el viaje recién creado.
+ * Bug real (14-sep-2026): había un intento inline (`subirFotoGuia`,
+ * eliminado) antes de encolar como respaldo — un multipart que
+ * "timeoutea" en el celular NO se puede cancelar de verdad en RN (ver
+ * TIMEOUT_MULTIPART_MS en api.ts: el fetch real sigue viajando aunque el
+ * cliente ya se rindió). Si ESE mismo intento fallaba y encolábamos la
+ * foto como respaldo, quedaban DOS subidas de la MISMA foto viajando a
+ * la vez por la conexión real del celular — en una señal de datos móviles
+ * mala, ninguna de las dos termina nunca (compiten por el mismo ancho de
+ * banda) y el backend no recibe ni un byte completo de ninguna, por eso
+ * cero rastro en los logs de Render. El guard `intentoEnVuelo` de
+ * services/sync/queue.ts protege reintentos DENTRO de la cola, pero no
+ * veía este intento inline porque nunca pasaba por la cola. Reproducible
+ * solo en dispositivo real (necesita una conexión real que de verdad
+ * tarde >90s) — en simulador con wifi de sobra casi nunca se dispara.
+ * Trabajos nunca tuvo este bug porque `encolarFoto()` (trabajos.ts)
+ * jamás intenta subir inline — siempre va directo a la cola; este mismo
+ * archivo ya hace lo mismo para las fotos extra de viaje
+ * (`encolarFotoViaje`, sin intento inline). Este fix alinea la foto de
+ * la guía con ese mismo patrón, que ya funciona.
  *
  * Si la creación misma falla por señal/servidor → `reintentable: true` y
  * la pantalla manda TODO (viaje + foto) a la cola como respaldo.
@@ -149,26 +169,10 @@ export async function crearViaje(b: BorradorViaje, foto?: Foto): Promise<Resulta
 
   let fotoPendiente = false;
   if (foto) {
-    const okFoto = await subirFotoGuia(res.data.id, foto);
-    if (!okFoto) {
-      await encolarFotoGuia(res.data.id, foto);
-      fotoPendiente = true;
-    }
+    await encolarFotoGuia(res.data.id, foto);
+    fotoPendiente = true;
   }
   return { ok: true, viaje: res.data, fotoPendiente };
-}
-
-/** Sube la foto de la guía a un viaje existente. `true` si quedó guardada. */
-export async function subirFotoGuia(viajeId: string, foto: Foto): Promise<boolean> {
-  const fd = new FormData();
-  fd.append("foto", { uri: foto.uri, name: foto.name, type: foto.type } as unknown as Blob);
-  try {
-    const res = await apiFetch(`/api/mis-viajes/${viajeId}/foto-guia`, { method: "POST", body: fd }, TIMEOUT_MULTIPART_MS);
-    if (res.ok) borrarFoto(foto.uri);
-    return res.ok;
-  } catch {
-    return false;
-  }
 }
 
 export function encolarFotoGuia(viajeId: string, foto: Foto) {
@@ -182,19 +186,8 @@ export function encolarFotoGuia(viajeId: string, foto: Foto) {
   });
 }
 
-/** Sube una foto extra del viaje. `true` si quedó guardada. */
-export async function subirFotoViaje(viajeId: string, foto: Foto): Promise<boolean> {
-  const fd = new FormData();
-  fd.append("foto", { uri: foto.uri, name: foto.name, type: foto.type } as unknown as Blob);
-  try {
-    const res = await apiFetch(`/api/mis-viajes/${viajeId}/fotos`, { method: "POST", body: fd }, TIMEOUT_MULTIPART_MS);
-    if (res.ok) borrarFoto(foto.uri);
-    return res.ok;
-  } catch {
-    return false;
-  }
-}
-
+// (No hay "subirFotoViaje" inline — la foto extra de viaje siempre va
+// directo a la cola, por la misma razón que la foto de la guía arriba.)
 export function encolarFotoViaje(viajeId: string, foto: Foto) {
   return encolar({
     etiqueta: "Foto de viaje",

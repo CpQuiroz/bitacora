@@ -1848,3 +1848,83 @@ táctiles, sin camino de verificación en react-native-web).
 Build APK 1.9.16 verificado y entregado: BUILD SUCCESSFUL, 0 refs dev /
 prod presente, copiado a ~/Desktop/bitacora-builds/bitacora-1.9.16.apk.
 .env restaurado a dev.
+
+## 2026-09-14 (2): tarea 29 — fotos de viaje y mantención atoradas en la cola
+
+Prompt separado del de la firma. Contexto ya cerrado (no reabrir): Render
+deploy está arreglado y confirmado live. Logs del backend en el período
+exacto de una prueba real (viaje + mantención con fotos): cero requests
+llegando al servidor — 100% del lado del cliente.
+
+**Paso 0, primero lo primero (pista de la tarea anterior):** ¿Viaje y
+Mantención usan `comprimirImagen()`→`persistirFoto()` (persistencia en
+`document/fotos-cola/`, el fix de Trabajos)? Confirmado con lectura
+fresca: SÍ, ambos ya lo usan (`elegirFotos()` en `lib/imagen.ts` es el
+único selector de fotos de toda la app). La pista de cache/persistencia
+NO explica el síntoma — descartada con evidencia antes de seguir, tal
+como pedía el prompt.
+
+**Paso 0, auditoría del camino completo:** rastreado foto→`queue.ts` en
+los 4 servicios que suben fotos (`viajes.ts`, `mantencion.ts`,
+`gastos.ts`, `levantamientos.ts`), comparado contra el que YA funciona
+(`trabajos.ts`, confirmado en tarea 24).
+
+**Causa real encontrada** (evidencia de código, no hipótesis a ciegas):
+los 4 servicios tenían un intento **inline** (fuera de la cola) de subir
+la foto contra el recurso ya creado, y solo si ESE intento fallaba,
+encolaban la MISMA foto como respaldo (`subirFotoGuia`+`encolarFotoGuia`
+en viajes.ts, `crearRegistroMantencion`+`encolarRegistroMantencion` en
+mantención, `subirComprobante`+`encolarComprobante` en gastos,
+`subirFotoLevantamiento`+`encolarFotoLevantamiento` en levantamientos).
+`api.ts` documenta que un multipart que "timeoutea" en RN **no se puede
+cancelar de verdad** — el fetch real sigue viajando en el fondo aunque
+el cliente ya se rindió. Si eso pasa (típico de una conexión de datos
+móviles real y mala — nunca en simulador con wifi de escritorio) y el
+código igual encola la foto como respaldo, quedan **dos subidas del
+mismo archivo compitiendo por la misma conexión real del celular**: en
+señal mala ninguna de las dos termina nunca, y como ninguna se
+completa, no queda rastro en los logs del backend — coincide exacto con
+lo reportado. El guard `intentoEnVuelo`/`ultimoIntentoEn` de queue.ts
+(fix anterior, 2026-09-11) protege reintentos DENTRO de la cola, pero
+nunca veía estos intentos inline porque no pasaban por queue.ts.
+Trabajos nunca tuvo este bug porque `encolarFoto()` (trabajos.ts) jamás
+intenta subir inline — siempre va directo a la cola, único camino
+posible para esa foto.
+
+**Fix** (replicando el patrón de Trabajos en los 4 servicios, sin
+inventar uno nuevo — foto/comprobante SIEMPRE a la cola, nunca inline):
+- `viajes.ts`: `crearViaje()` ya no llama a `subirFotoGuia` inline —
+  encola directo vía `encolarFotoGuia`. `subirFotoGuia` y
+  `subirFotoViaje` (esta última ya sin caller antes del fix, mismo
+  antipatrón) eliminadas.
+- `mantencion.ts`/`ChecklistMantencionScreen.tsx`: con fotos, `guardar()`
+  salta directo a `encolarRegistroMantencion` sin llamar a
+  `crearRegistroMantencion` inline. Sin fotos, sigue intentando inline
+  primero — ahí sí es seguro porque el envío es JSON puro con
+  AbortController real (sí cancela de verdad).
+- `gastos.ts`: mismo fix (`crearGasto` ya no llama a `subirComprobante`
+  inline, eliminada) — encontrado por evidencia indirecta: el propio
+  comentario del archivo decía "mismo patrón que viajes.ts", y en efecto
+  tenía el mismo bug.
+- `levantamientos.ts`/`LevantamientoDetalleScreen.tsx`: `agregarFoto()`
+  ya no llama a `subirFotoLevantamiento` inline (eliminada) — siempre
+  `encolarFotoLevantamiento`. Estado `subiendoFoto` (ligado al intento
+  inline) también eliminado; el placeholder de `fotosEnCola` ya da
+  feedback inmediato.
+
+`ES_SUBIDA_DE_FOTO` en queue.ts: revisado, dejado sin cambios a
+propósito — "Registrar viaje"/"Registro de mantención" crean el
+recurso, no son "solo sube una foto"; clasificarlos ahí bloquearía
+datos reales del checklist/viaje detrás de la preferencia "fotos solo
+con WiFi" (pensada solo para fotos sueltas).
+
+`tsc mobile` limpio, `./verificar.sh` completo verde.
+
+**Pendiente — no puedo cerrar esto solo:** no tengo sesión abierta en el
+dashboard de Render en este entorno para confirmar en los logs, y el
+síntoma en sí (timeout genuino de un multipart) necesita una conexión
+de celular real y mala — no reproducible en simulador. Falta: build
+APK, prueba de la usuaria en el teléfono con datos móviles (no wifi)
+creando un viaje y un registro de mantención con foto, y confirmar en
+los logs de Render (dashboard, o pegando el output acá) que ambas fotos
+llegan.

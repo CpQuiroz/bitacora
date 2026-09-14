@@ -13,7 +13,6 @@ import {
   encolarFotoLevantamiento,
   listarCatalogo,
   obtenerDetalleLevantamiento,
-  subirFotoLevantamiento,
   type DetalleLevantamiento,
 } from "../../services/levantamientos";
 import type { MasStackParamList } from "../../shell/navigation/types";
@@ -43,7 +42,6 @@ export function LevantamientoDetalleScreen({ route }: NativeStackScreenProps<Mas
   const [descripcion, setDescripcion] = useState("");
   const [materiales, setMateriales] = useState<MaterialLocal[]>([]);
   const [guardando, setGuardando] = useState(false);
-  const [subiendoFoto, setSubiendoFoto] = useState(false);
   const [pickerAbierto, setPickerAbierto] = useState(false);
   const [catalogo, setCatalogo] = useState<CatalogoItem[] | null>(null);
 
@@ -131,17 +129,16 @@ export function LevantamientoDetalleScreen({ route }: NativeStackScreenProps<Mas
     );
   }
 
+  // Siempre por la cola, nunca un intento inline antes — mismo bug real
+  // (14-sep-2026) encontrado y corregido en services/viajes.ts
+  // (crearViaje): un intento inline con la foto que "timeoutea" en el
+  // celular no se puede cancelar de verdad en RN, y si igual la
+  // encolábamos como respaldo quedaban dos subidas de la MISMA foto
+  // viajando a la vez. El placeholder en `fotosEnCola` ya da feedback
+  // inmediato — no hace falta el intento inline para que se sienta rápido.
   async function agregarFoto() {
     const [elegida] = await elegirFotos();
     if (!elegida) return;
-
-    if (enLinea) {
-      setSubiendoFoto(true);
-      const res = await subirFotoLevantamiento(id, elegida);
-      setSubiendoFoto(false);
-      if (res.ok) return void cargar();
-    }
-
     await encolarFotoLevantamiento(id, elegida);
   }
 
@@ -237,7 +234,7 @@ export function LevantamientoDetalleScreen({ route }: NativeStackScreenProps<Mas
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
           <Text weight="semibold">Fotos</Text>
           {editable ? (
-            <Button titulo="Agregar" variante="secundario" tamano="md" icono={<Ionicons name="camera-outline" size={16} color={t.colores.brand} />} cargando={subiendoFoto} onPress={agregarFoto} />
+            <Button titulo="Agregar" variante="secundario" tamano="md" icono={<Ionicons name="camera-outline" size={16} color={t.colores.brand} />} onPress={agregarFoto} />
           ) : null}
         </View>
         {detalle.fotos.length === 0 && fotosEnCola.length === 0 ? (

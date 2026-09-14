@@ -144,7 +144,18 @@ export function ChecklistMantencionScreen({ route, navigation }: NativeStackScre
 
     const volver = () => navigation.navigate("MantencionVehiculo");
 
-    if (enLinea) {
+    // Con fotos, NUNCA se intenta inline — va directo a la cola. Bug real
+    // (14-sep-2026): el intento inline (multipart, texto+fotos juntos) se
+    // hacía primero y, si fallaba, se encolaba TODO como respaldo — pero
+    // un multipart que "timeoutea" en el celular no se puede cancelar de
+    // verdad en RN (TIMEOUT_MULTIPART_MS en api.ts), así que el intento
+    // original seguía viajando mientras la cola mandaba una segunda copia
+    // de las MISMAS fotos: dos subidas del mismo archivo compitiendo por
+    // la misma conexión real de celular, y en señal mala ninguna termina
+    // nunca (cero rastro en los logs del backend). Sin fotos, el envío es
+    // JSON puro con AbortController real (sí cancela de verdad) — ahí
+    // sigue siendo seguro intentar inline primero.
+    if (enLinea && (borrador.fotos ?? []).length === 0) {
       const r = await crearRegistroMantencion(borrador);
       if (r.ok) {
         setGuardando(false);
@@ -158,9 +169,15 @@ export function ChecklistMantencionScreen({ route, navigation }: NativeStackScre
 
     await encolarRegistroMantencion(borrador);
     setGuardando(false);
+    // Con fotos y buena señal el registro se manda solo, sin que haya
+    // habido ningún fallo — no es un "reintento". Mismo texto que usa
+    // Viaje para la foto de la guía, que va por el mismo camino.
+    const conFotos = (borrador.fotos ?? []).length > 0;
     Alert.alert(
-      enLinea ? "Se reintentará solo" : "Guardado sin conexión",
-      "El chequeo en curso quedó guardado en el teléfono y se envía a la oficina cuando haya señal.",
+      !enLinea ? "Guardado sin conexión" : conFotos ? "Registro guardado" : "Se reintentará solo",
+      !enLinea || !conFotos
+        ? "El chequeo en curso quedó guardado en el teléfono y se envía a la oficina cuando haya señal."
+        : "Quedó en la oficina. Las fotos se están subiendo y se reintentan solas si falla.",
       [{ text: "Listo", onPress: volver }]
     );
   }

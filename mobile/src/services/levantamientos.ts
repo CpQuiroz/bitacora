@@ -8,10 +8,15 @@
 // el mismo tipo de terreno donde ya falla la señal para OS/viajes/
 // mantención — no había ninguna razón real para tratarlo distinto.
 // Mismo patrón: intento directo primero; si falla o no hay señal, se
-// encola (services/sync/queue.ts) y se reintenta solo.
+// encola (services/sync/queue.ts) y se reintenta solo. Excepción: las
+// fotos (ver más abajo) van SIEMPRE directo a la cola, nunca con un
+// intento directo antes — un multipart no se puede cancelar de verdad
+// en RN, así que un intento directo + un respaldo encolado de la MISMA
+// foto pueden competir entre sí y no terminar nunca (bug real,
+// 14-sep-2026, ver detalle en crearViaje de services/viajes.ts).
 // ============================================================
 import type { CatalogoItem, EstadoLevantamiento } from "@bitacora/shared";
-import { apiFetch, apiJson, TIMEOUT_MULTIPART_MS } from "./api";
+import { apiJson } from "./api";
 import { encolar } from "./sync/queue";
 
 // Sin filtro de tipo: el técnico puede indicar tanto productos como
@@ -86,24 +91,12 @@ export function encolarCompletarLevantamiento(id: string, datos: DatosCompletar)
   });
 }
 
-export async function subirFotoLevantamiento(
-  id: string,
-  foto: { uri: string; name?: string; type?: string }
-): Promise<{ ok: true; foto: FotoLevantamiento } | { ok: false; error: string }> {
-  const fd = new FormData();
-  fd.append("foto", { uri: foto.uri, name: foto.name ?? "foto.jpg", type: foto.type ?? "image/jpeg" } as unknown as Blob);
-  try {
-    const res = await apiFetch(`/api/levantamientos/${id}/fotos`, { method: "POST", body: fd }, TIMEOUT_MULTIPART_MS);
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      return { ok: false, error: (body as { error?: string }).error ?? `Error ${res.status}` };
-    }
-    return { ok: true, foto: await res.json() };
-  } catch {
-    return { ok: false, error: "Sin conexión" };
-  }
-}
-
+// (No hay intento inline de subida — la foto de levantamiento siempre va
+// directo a la cola. Bug real, 14-sep-2026: había un intento inline
+// aquí, `subirFotoLevantamiento`, eliminado — ver el comentario largo
+// en crearViaje, services/viajes.ts, para el detalle completo de por
+// qué un intento inline + un respaldo encolado de la MISMA foto podían
+// dejar dos subidas viajando a la vez sin que ninguna terminara nunca.)
 // "Foto de levantamiento" — sumada a ES_SUBIDA_DE_FOTO en queue.ts para
 // que se procese al final del lote (nunca bloquea check-in/firma/etc).
 export function encolarFotoLevantamiento(id: string, foto: { uri: string; name?: string; type?: string }): Promise<void> {

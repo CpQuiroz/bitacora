@@ -1,5 +1,5 @@
 import type { CategoriaGasto, CentroCosto, EstadoGasto, Gasto, Proveedor } from "@bitacora/shared";
-import { apiFetch, apiJson } from "./api";
+import { apiJson } from "./api";
 import { encolar } from "./sync/queue";
 import { guardarCache, leerCache } from "./sync/cache";
 
@@ -67,9 +67,20 @@ export type ResultadoCrearGasto =
 
 /**
  * Crea el gasto (JSON, con reintentos) y, si hay foto del comprobante,
- * la sube aparte contra el gasto ya creado — mismo patrón que
- * services/viajes.ts (crearViaje + subirFotoGuia): el gasto nunca se
- * pierde aunque la foto falle.
+ * la encola aparte contra el gasto ya creado — el gasto nunca se pierde
+ * aunque la foto falle o no haya señal.
+ *
+ * El comprobante SIEMPRE va por la cola (`comprobantePendiente` siempre
+ * `true` si hay foto), nunca se intenta subir inline. Mismo bug real
+ * (14-sep-2026) encontrado y corregido en services/viajes.ts
+ * (crearViaje): había un intento inline (`subirComprobante`, eliminado)
+ * antes de encolar como respaldo — un multipart que "timeoutea" en el
+ * celular NO se puede cancelar de verdad en RN (ver TIMEOUT_MULTIPART_MS
+ * en api.ts), así que si ese intento fallaba y encolábamos la foto como
+ * respaldo, quedaban DOS subidas del MISMO comprobante viajando a la vez
+ * por la conexión real del celular — en señal mala ninguna termina
+ * nunca. Ver el comentario largo en crearViaje (viajes.ts) para el
+ * detalle completo.
  */
 export async function crearGasto(b: BorradorGasto, foto?: Foto): Promise<ResultadoCrearGasto> {
   const res = await apiJson<Gasto>("/api/gastos", { method: "POST", body: JSON.stringify(cuerpoGasto(b)) });
@@ -84,25 +95,10 @@ export async function crearGasto(b: BorradorGasto, foto?: Foto): Promise<Resulta
 
   let comprobantePendiente = false;
   if (foto) {
-    const okFoto = await subirComprobante(res.data.id, foto);
-    if (!okFoto) {
-      await encolarComprobante(res.data.id, foto);
-      comprobantePendiente = true;
-    }
+    await encolarComprobante(res.data.id, foto);
+    comprobantePendiente = true;
   }
   return { ok: true, gasto: res.data, comprobantePendiente };
-}
-
-/** Sube el comprobante a un gasto ya creado. `true` si quedó guardado. */
-export async function subirComprobante(gastoId: string, foto: Foto): Promise<boolean> {
-  const fd = new FormData();
-  fd.append("comprobante", { uri: foto.uri, name: foto.name, type: foto.type } as unknown as Blob);
-  try {
-    const res = await apiFetch(`/api/gastos/${gastoId}`, { method: "PATCH", body: fd }, 45000);
-    return res.ok;
-  } catch {
-    return false;
-  }
 }
 
 export function encolarComprobante(gastoId: string, foto: Foto) {
