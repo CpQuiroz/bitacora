@@ -2005,3 +2005,8 @@ prod presente, copiado a ~/Desktop/bitacora-builds/bitacora-1.9.19.apk.
 .env restaurado a dev. Es un build de diagnóstico (visibilidad de
 intentos/error en Perfil) para seguir investigando la tarea 20/29 —
 no se considera cerrado ninguno de los dos todavía.
+
+Build APK 1.9.20 verificado y entregado: BUILD SUCCESSFUL, 0 refs dev /
+prod presente, copiado a ~/Desktop/bitacora-builds/bitacora-1.9.20.apk.
+.env restaurado a dev. Build de diagnóstico — no cierra ninguna tarea
+todavía; la usuaria va a seguir probando y enviando capturas.
