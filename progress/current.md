@@ -1230,10 +1230,30 @@ propio `ScreenHeader`).
 
 `tsc` de ui/mobile/web limpio, `./verificar.sh` completo verde.
 
-**Único ítem de aceptación de la tarea #21 que sigue pendiente**:
-"probado en un build antes de distribuir (no EAS, APK local)" — no
-armé el APK todavía porque cada build anterior de esta sesión fue a
-pedido explícito de la usuaria (~20 min de build); pregunté si lo
-arma ahora o si sigue con las próximas pantallas (Hoy/detalle OS/
-ficha cliente) primero y se batchean los builds después. Tarea sigue
-`in_progress` hasta esa respuesta.
+**Único ítem de aceptación de la tarea #21 que seguía pendiente**:
+"probado en un build antes de distribuir (no EAS, APK local)" — la
+usuaria eligió armarlo ahora y pushear los 4 commits acumulados
+(#20 fix conectividad, bump 1.9.9, Paso 0+2, Paso 3). Push hecho
+(`3c5b7e3..461b044`, dispara auto-deploy Vercel/Render + CI real de
+`verificar.yml`).
+
+**APK 1.9.10 / versionCode 27** armado local (mismo procedimiento de
+siempre: JDK17 + Android SDK vía brew, `.env` sobreescrito con los
+valores de `eas.json > build.preview.env` antes del build, restaurado
+después; `expo prebuild` + `gradlew assembleRelease
+-PreactNativeArchitectures=arm64-v8a`, 8m7s — más rápido que builds
+anteriores por el flag de arquitectura única, 38MB en vez de ~85MB).
+Verificado con `strings`: 1 referencia a `bitacora-cgt7.onrender.com`
++ 1 a `yjbskbskyadxjooxngjv` (prod), **0** a `pruwvpnlvrvgtmpetlsr`
+(dev); las 4 menciones de "localhost" que aparecen son strings de
+ayuda del bundler de Metro (código muerto en release, guardado detrás
+de `__DEV__`), no configuración real — confirmado leyendo el contexto
+de cada una, no descartado a ciegas. Copiado a
+`~/Desktop/bitacora-builds/bitacora-1.9.10.apk`. `.env` restaurado a
+dev, `mobile/package.json`/`android/` (gitignored) sin rastro —
+`git status` limpio en `mobile/` al terminar.
+
+Igual que la tarea #20: **mi parte queda completa (build + verificación
+de que apunta a prod), pero la prueba real en el dispositivo de la
+usuaria es un paso separado que no puedo hacer yo** — tarea marcada
+`blocked` hasta que confirme cómo se ve/funciona "Más" en el teléfono.
