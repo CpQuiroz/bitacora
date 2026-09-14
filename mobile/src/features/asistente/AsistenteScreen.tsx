@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ActivityIndicator, Alert, FlatList, KeyboardAvoidingView, Platform, Pressable, TextInput, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { ArrowUp, Sparkles, Trash2 } from "lucide-react-native";
 import type { NativeStackNavigationOptions } from "@react-navigation/native-stack";
 import type { MensajeAsistente } from "@bitacora/shared";
-import { useTema } from "../../theme";
-import { EmptyState, ErrorState, LoadingScreen, Text } from "../../components/ui";
+import { tokens } from "@bitacora/design-tokens";
+import { EmptyState, ErrorState, LoadingState, Texto, useMarca } from "@bitacora/ui/native";
 import { borrarHistorialAsistente, enviarAlAsistente, historialAsistente } from "../../services/asistente";
 
 // Se entra desde el botón de la cabecera de "Hoy" y desde "Más" → solo
@@ -19,8 +19,19 @@ const SUGERENCIAS = [
   "Resumen de viajes del mes",
 ];
 
+// Sistema visual móvil v2 (tarea 31) — esta pantalla es el DESTINO del
+// AsistenteButton flotante de las 4 raíces de tab (Hoy/Agenda/Clientes/
+// Más), así que NO lleva uno propio (sería circular). Es genérica a 4
+// Stacks distintos (NavConOpciones, sin ParamList concreto) y ninguno de
+// esos Stacks apaga su header nativo para ella — se mantiene el header
+// nativo (con el botón de borrar historial via setOptions.headerRight,
+// igual que antes) y se migra solo fondo/tipografía/burbujas a tokens +
+// Texto/useMarca de @bitacora/ui/native. La estructura de layout de chat
+// (FlatList invertido a mano con scroll al final, burbujas, input
+// flotante abajo) se preserva tal cual — no tiene equivalente directo en
+// los primitivos v2.
 export function AsistenteScreen({ navigation }: { navigation: NavConOpciones }) {
-  const t = useTema();
+  const marca = useMarca();
   const listaRef = useRef<FlatList<Fila>>(null);
   const [mensajes, setMensajes] = useState<MensajeAsistente[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -61,12 +72,12 @@ export function AsistenteScreen({ navigation }: { navigation: NavConOpciones }) 
       headerRight: () =>
         mensajes && mensajes.length > 0 ? (
           <Pressable onPress={limpiar} hitSlop={10}>
-            <Ionicons name="trash-outline" size={20} color={t.colores.muted} />
+            <Trash2 size={20} color={`${tokens.color.text}99`} />
           </Pressable>
         ) : null,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [navigation, mensajes, t]);
+  }, [navigation, mensajes]);
 
   async function enviar(contenido: string) {
     const txt = contenido.trim();
@@ -100,8 +111,20 @@ export function AsistenteScreen({ navigation }: { navigation: NavConOpciones }) 
     setTimeout(() => listaRef.current?.scrollToEnd({ animated: true }), 50);
   }
 
-  if (mensajes === null && !error) return <LoadingScreen />;
-  if (error && !mensajes) return <ErrorState mensaje={error} onReintentar={cargar} />;
+  if (mensajes === null && !error) {
+    return (
+      <View style={{ flex: 1, backgroundColor: tokens.color.bg, padding: tokens.space["4"] }}>
+        <LoadingState />
+      </View>
+    );
+  }
+  if (error && !mensajes) {
+    return (
+      <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+        <ErrorState mensaje={error} onReintentar={cargar} />
+      </View>
+    );
+  }
 
   const filas: Fila[] = [
     ...(mensajes ?? []),
@@ -110,7 +133,7 @@ export function AsistenteScreen({ navigation }: { navigation: NavConOpciones }) 
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: t.colores.bg }}
+      style={{ flex: 1, backgroundColor: tokens.color.bg }}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={90}
     >
@@ -118,30 +141,30 @@ export function AsistenteScreen({ navigation }: { navigation: NavConOpciones }) 
         ref={listaRef}
         data={filas}
         keyExtractor={(f) => f.id}
-        contentContainerStyle={{ padding: t.espacio(4), gap: t.espacio(2.5), flexGrow: 1 }}
+        contentContainerStyle={{ padding: tokens.space["4"], gap: tokens.space["3"], flexGrow: 1 }}
         onContentSizeChange={() => listaRef.current?.scrollToEnd({ animated: false })}
         ListEmptyComponent={
-          <View style={{ flex: 1, justifyContent: "center", gap: t.espacio(4) }}>
+          <View style={{ flex: 1, justifyContent: "center", gap: tokens.space["4"] }}>
             <EmptyState
-              icono={<Ionicons name="sparkles-outline" size={40} color={t.colores.faint} />}
+              icono={<Sparkles size={32} strokeWidth={2.75} color={tokens.color.accent2Ramp["800"]} />}
               titulo="Pregúntale al asistente"
               mensaje="Puede consultar trabajos, viajes, clientes y cobros de tu empresa."
             />
-            <View style={{ gap: t.espacio(2) }}>
+            <View style={{ gap: tokens.space["2"] }}>
               {SUGERENCIAS.map((s) => (
                 <Pressable
                   key={s}
                   onPress={() => enviar(s)}
                   style={{
                     borderWidth: 1,
-                    borderColor: t.colores.border,
-                    borderRadius: t.radio.md,
-                    padding: t.espacio(3),
+                    borderColor: tokens.color.divider,
+                    borderRadius: tokens.radius.md,
+                    padding: tokens.space["3"],
                   }}
                 >
-                  <Text variante="etiqueta" tono="brand">
+                  <Texto tamano={tokens.size.small} color={marca.base} peso="semibold">
                     {s}
-                  </Text>
+                  </Texto>
                 </Pressable>
               ))}
             </View>
@@ -151,11 +174,11 @@ export function AsistenteScreen({ navigation }: { navigation: NavConOpciones }) 
           const esUsuario = item.rol === "user";
           if (item.contenido === "__pensando__") {
             return (
-              <View style={{ flexDirection: "row", alignItems: "center", gap: t.espacio(2), alignSelf: "flex-start" }}>
-                <ActivityIndicator size="small" color={t.colores.muted} />
-                <Text variante="caption" tono="muted">
+              <View style={{ flexDirection: "row", alignItems: "center", gap: tokens.space["2"], alignSelf: "flex-start" }}>
+                <ActivityIndicator size="small" color={`${tokens.color.text}99`} />
+                <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
                   Pensando…
-                </Text>
+                </Texto>
               </View>
             );
           }
@@ -164,56 +187,60 @@ export function AsistenteScreen({ navigation }: { navigation: NavConOpciones }) 
               style={{
                 alignSelf: esUsuario ? "flex-end" : "flex-start",
                 maxWidth: "85%",
-                backgroundColor: esUsuario ? t.colores.brand : t.colores.surfaceAlt,
-                borderRadius: t.radio.md,
-                paddingHorizontal: t.espacio(3),
-                paddingVertical: t.espacio(2.5),
+                backgroundColor: esUsuario ? marca.base : tokens.color.neutral["200"],
+                borderRadius: tokens.radius.md,
+                paddingHorizontal: tokens.space["3"],
+                paddingVertical: tokens.space["3"],
               }}
             >
-              <Text variante="cuerpo" style={{ color: esUsuario ? t.colores.brandForeground : t.colores.foreground }}>
+              <Texto tamano={tokens.size.body} color={esUsuario ? marca.foreground : tokens.color.text}>
                 {item.contenido}
-              </Text>
+              </Texto>
             </View>
           );
         }}
       />
 
       {aviso ? (
-        <Text variante="caption" tono="muted" style={{ textAlign: "center", paddingHorizontal: t.espacio(4), paddingBottom: t.espacio(1) }}>
+        <Texto
+          tamano={tokens.size.caption}
+          color={`${tokens.color.text}99`}
+          style={{ textAlign: "center", paddingHorizontal: tokens.space["4"], paddingBottom: tokens.space["1"] }}
+        >
           {aviso}
-        </Text>
+        </Texto>
       ) : null}
 
       <View
         style={{
           flexDirection: "row",
           alignItems: "flex-end",
-          gap: t.espacio(2),
-          padding: t.espacio(3),
+          gap: tokens.space["2"],
+          padding: tokens.space["3"],
           borderTopWidth: 1,
-          borderTopColor: t.colores.border,
-          backgroundColor: t.colores.surface,
+          borderTopColor: tokens.color.divider,
+          backgroundColor: tokens.color.surface,
         }}
       >
         <TextInput
           value={texto}
           onChangeText={setTexto}
           placeholder="Escribe tu pregunta…"
-          placeholderTextColor={t.colores.faint}
+          placeholderTextColor={`${tokens.color.text}66`}
           multiline
           editable={!enviando}
           style={{
             flex: 1,
             maxHeight: 120,
             minHeight: 42,
-            color: t.colores.foreground,
-            backgroundColor: t.colores.bg,
-            borderRadius: t.radio.md,
+            color: tokens.color.text,
+            backgroundColor: tokens.color.bg,
+            borderRadius: tokens.radius.md,
             borderWidth: 1,
-            borderColor: t.colores.border,
-            paddingHorizontal: t.espacio(3),
-            paddingTop: t.espacio(2.5),
-            paddingBottom: t.espacio(2.5),
+            borderColor: tokens.color.divider,
+            paddingHorizontal: tokens.space["3"],
+            paddingTop: tokens.space["3"],
+            paddingBottom: tokens.space["3"],
           }}
         />
         <Pressable
@@ -225,14 +252,10 @@ export function AsistenteScreen({ navigation }: { navigation: NavConOpciones }) 
             borderRadius: 21,
             alignItems: "center",
             justifyContent: "center",
-            backgroundColor: enviando || !texto.trim() ? t.colores.surfaceAlt : t.colores.brand,
+            backgroundColor: enviando || !texto.trim() ? tokens.color.neutral["200"] : marca.base,
           }}
         >
-          <Ionicons
-            name="arrow-up"
-            size={20}
-            color={enviando || !texto.trim() ? t.colores.faint : t.colores.brandForeground}
-          />
+          <ArrowUp size={20} color={enviando || !texto.trim() ? `${tokens.color.text}66` : marca.foreground} />
         </Pressable>
       </View>
     </KeyboardAvoidingView>

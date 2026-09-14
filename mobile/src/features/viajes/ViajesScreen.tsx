@@ -1,11 +1,22 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FlatList, Pressable, RefreshControl, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Pressable, RefreshControl, ScrollView, View } from "react-native";
+import { Car, CloudUpload } from "lucide-react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { useTema } from "../../theme";
+import { tokens } from "@bitacora/design-tokens";
+import {
+  Button,
+  EmptyState,
+  ErrorState,
+  ListRow,
+  ListRowGrupo,
+  LoadingState,
+  ScreenHeader,
+  StatusBadge,
+  Texto,
+  useMarca,
+} from "@bitacora/ui/native";
 import { pesos } from "../../lib/plata";
-import { Badge, Button, Card, EmptyState, ErrorState, LoadingScreen, Text } from "../../components/ui";
 import { OfflineBanner } from "../../components/OfflineBanner";
 import { useRed } from "../../services/sync/NetworkProvider";
 import { useAuth } from "../auth/AuthContext";
@@ -14,10 +25,19 @@ import type { ViajesStackParamList } from "../../shell/navigation/types";
 
 type Periodo = "semana" | "mes" | "todos";
 const PERIODOS: { clave: Periodo; label: string }[] = [
-  { clave: "semana", label: "Esta semana" },
-  { clave: "mes", label: "Este mes" },
+  { clave: "semana", label: "Semana" },
+  { clave: "mes", label: "Mes" },
   { clave: "todos", label: "Todos" },
 ];
+
+// Mismo mapeo que usaba <Badge> (components/ui) — "borrador"/"confirmado"/
+// "facturado" no son ninguno de los 4 estados de MAPA_ESTADO_TONO (esos
+// son de OS), así que se fuerza el tono a mano.
+const TONO_VIAJE: Record<string, "en_progreso" | "completado" | "cerrado"> = {
+  borrador: "en_progreso",
+  confirmado: "completado",
+  facturado: "cerrado",
+};
 
 function desdeDe(periodo: Periodo): string {
   if (periodo === "todos") return "";
@@ -25,20 +45,20 @@ function desdeDe(periodo: Periodo): string {
   if (periodo === "mes") {
     return `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}-01`;
   }
-  // Semana: desde el lunes.
-  const dia = hoy.getDay(); // 0 = domingo
+  const dia = hoy.getDay();
   const lunes = new Date(hoy);
   lunes.setDate(hoy.getDate() - ((dia + 6) % 7));
   return lunes.toISOString().slice(0, 10);
 }
 
+// Sistema visual móvil v2 (14-sep-2026) — ScreenHeader (chips de período,
+// mismo patrón que Mes/Sem/Día en Agenda) + ListRow/ListRowGrupo. Antes
+// era el único stack de los 4 tabs sin ninguna pantalla migrada.
 export function ViajesScreen({ navigation }: NativeStackScreenProps<ViajesStackParamList, "ViajesLista">) {
-  const t = useTema();
+  const marca = useMarca();
   const red = useRed();
   const auth = useAuth();
   const esGestion = auth.fase === "listo" && auth.usuario.rol !== "colaborador";
-  // "Registrar viaje" = la creación completa; "Foto de la guía" = solo la
-  // imagen de un viaje que ya se guardó (no bloquea nada).
   const esCreacion = (a: (typeof red.pendientes)[number]) => a.recurso === "viajes" && a.etiqueta === "Registrar viaje";
   const creacionesPendientes = red.pendientes.filter(esCreacion);
   const creacionesFallidas = red.fallidas.filter(esCreacion);
@@ -84,16 +104,39 @@ export function ViajesScreen({ navigation }: NativeStackScreenProps<ViajesStackP
     setRefrescando(false);
   }
 
-  if (viajes === null && !error) return <LoadingScreen />;
-  if (error && !viajes) return <ErrorState mensaje={error} onReintentar={cargar} />;
+  const filtros = {
+    opciones: PERIODOS.map((p) => ({ valor: p.clave, etiqueta: p.label })),
+    valor: periodo,
+    onCambio: (v: string) => setPeriodo(v as Periodo),
+  };
+
+  if (viajes === null && !error) {
+    return (
+      <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+        <ScreenHeader antetitulo=" " titulo="Viajes" filtros={filtros} />
+        <View style={{ padding: tokens.space["4"] }}>
+          <LoadingState />
+        </View>
+      </View>
+    );
+  }
+  if (error && !viajes) {
+    return (
+      <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+        <ScreenHeader antetitulo=" " titulo="Viajes" filtros={filtros} />
+        <ErrorState mensaje={error} onReintentar={cargar} />
+      </View>
+    );
+  }
 
   return (
-    <View style={{ flex: 1, backgroundColor: t.colores.bg }}>
+    <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+      <ScreenHeader antetitulo={`${visibles.length} ${visibles.length === 1 ? "viaje" : "viajes"} · ${pesos(totalPeriodo)}`} titulo="Viajes" filtros={filtros} />
       <OfflineBanner guardadoEn={guardadoEn} />
-      <View style={{ padding: t.espacio(4), gap: t.espacio(3) }}>
-        <Button titulo="Nuevo viaje" onPress={() => navigation.navigate("ViajeForm")} />
+      <View style={{ paddingHorizontal: tokens.space["4"], paddingTop: tokens.space["3"], gap: tokens.space["3"] }}>
+        <Button onPress={() => navigation.navigate("ViajeForm")}>+ Nuevo viaje</Button>
         {esGestion ? (
-          <View style={{ flexDirection: "row", gap: t.espacio(2) }}>
+          <View style={{ flexDirection: "row", gap: tokens.space["2"] }}>
             {[
               { v: false, label: "Míos" },
               { v: true, label: "Del equipo" },
@@ -107,14 +150,14 @@ export function ViajesScreen({ navigation }: NativeStackScreenProps<ViajesStackP
                   style={{
                     flex: 1,
                     alignItems: "center",
-                    paddingVertical: t.espacio(2),
-                    borderRadius: t.radio.md,
-                    backgroundColor: activo ? t.colores.brand : t.colores.surfaceAlt,
+                    paddingVertical: tokens.space["2"],
+                    borderRadius: tokens.radius.md,
+                    backgroundColor: activo ? marca.base : tokens.color.surface,
                   }}
                 >
-                  <Text variante="etiqueta" weight="semibold" style={{ color: activo ? t.colores.brandForeground : t.colores.muted }}>
+                  <Texto tamano={tokens.size.small} peso="semibold" color={activo ? marca.foreground : tokens.color.text + "99"}>
                     {o.label}
-                  </Text>
+                  </Texto>
                 </Pressable>
               );
             })}
@@ -123,130 +166,93 @@ export function ViajesScreen({ navigation }: NativeStackScreenProps<ViajesStackP
         {creacionesPendientes.map((a) => {
           const { guia, ruta } = guiaDe(a);
           return (
-            <Card key={a.id} plano style={{ backgroundColor: t.colores.surfaceAlt, borderColor: "transparent", gap: t.espacio(1) }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: t.espacio(2) }}>
-                <Ionicons name="cloud-upload-outline" size={16} color={t.colores.muted} />
-                <Text variante="etiqueta" weight="semibold" style={{ flex: 1 }}>
+            <View key={a.id} style={{ backgroundColor: tokens.color.surface, borderRadius: tokens.radius.md, padding: tokens.space["3"], gap: tokens.space["1"] }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: tokens.space["2"] }}>
+                <CloudUpload size={16} color={tokens.color.text + "99"} />
+                <Texto tamano={tokens.size.small} peso="semibold" color={tokens.color.text} style={{ flex: 1 }}>
                   Guía {guia}
-                </Text>
-                <Text variante="caption" tono="muted">
+                </Texto>
+                <Texto tamano={tokens.size.caption} color={tokens.color.text + "99"}>
                   Enviando…
-                </Text>
+                </Texto>
               </View>
               {ruta ? (
-                <Text variante="caption" tono="muted">
+                <Texto tamano={tokens.size.caption} color={tokens.color.text + "99"}>
                   {ruta}
-                </Text>
+                </Texto>
               ) : null}
-              <Text variante="caption" tono="muted">
+              <Texto tamano={tokens.size.caption} color={tokens.color.text + "99"}>
                 Sin enviar todavía — se reintenta solo. No lo registres de nuevo.
-              </Text>
-            </Card>
+              </Texto>
+            </View>
           );
         })}
         {creacionesFallidas.map((a) => {
           const { guia, ruta } = guiaDe(a);
           return (
-            <Card key={a.id} plano style={{ backgroundColor: t.colores.dangerSoft, borderColor: "transparent", gap: t.espacio(1.5) }}>
-              <Text variante="etiqueta" weight="semibold" style={{ color: t.colores.danger }}>
+            <View key={a.id} style={{ backgroundColor: tokens.color.accentRamp["200"], borderRadius: tokens.radius.md, padding: tokens.space["3"], gap: tokens.space["2"] }}>
+              <Texto tamano={tokens.size.small} peso="semibold" color={tokens.color.accentRamp["800"]}>
                 Guía {guia} — no se pudo enviar
-              </Text>
+              </Texto>
               {ruta ? (
-                <Text variante="caption" tono="muted">
+                <Texto tamano={tokens.size.caption} color={tokens.color.text + "99"}>
                   {ruta}
-                </Text>
+                </Texto>
               ) : null}
               {a.ultimoError ? (
-                <Text variante="caption" tono="danger">
+                <Texto tamano={tokens.size.caption} color={tokens.color.accentRamp["800"]}>
                   {a.ultimoError}
-                </Text>
+                </Texto>
               ) : null}
-              <View style={{ flexDirection: "row", gap: t.espacio(2) }}>
-                <Button titulo="Reintentar" variante="secundario" onPress={() => red.reintentar(a.id)} />
-                <Button titulo="Descartar" variante="ghost" onPress={() => red.descartar(a.id)} />
+              <View style={{ flexDirection: "row", gap: tokens.space["2"] }}>
+                <Button variante="secundario" onPress={() => red.reintentar(a.id)}>
+                  Reintentar
+                </Button>
+                <Button variante="ghost" onPress={() => red.descartar(a.id)}>
+                  Descartar
+                </Button>
               </View>
-            </Card>
+            </View>
           );
         })}
         {fotosPendientes > 0 ? (
-          <Text variante="caption" tono="muted">
+          <Texto tamano={tokens.size.caption} color={tokens.color.text + "99"}>
             {fotosPendientes} foto{fotosPendientes === 1 ? "" : "s"} de guía subiéndose — el viaje ya quedó guardado
-          </Text>
-        ) : null}
-        <View style={{ flexDirection: "row", gap: t.espacio(2) }}>
-          {PERIODOS.map((p) => {
-            const activo = p.clave === periodo;
-            return (
-              <Pressable
-                key={p.clave}
-                onPress={() => setPeriodo(p.clave)}
-                hitSlop={6}
-                style={{
-                  paddingHorizontal: t.espacio(3),
-                  paddingVertical: t.espacio(1.5),
-                  borderRadius: t.radio.md,
-                  backgroundColor: activo ? t.colores.brand : t.colores.surfaceAlt,
-                }}
-              >
-                <Text variante="caption" weight="semibold" style={{ color: activo ? t.colores.brandForeground : t.colores.muted }}>
-                  {p.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-        {viajes && viajes.length > 0 ? (
-          <Text variante="caption" tono="muted">
-            {visibles.length} viaje{visibles.length === 1 ? "" : "s"} · {pesos(totalPeriodo)}
-          </Text>
+          </Texto>
         ) : null}
       </View>
-      <FlatList
-        data={visibles}
-        keyExtractor={(v) => v.id}
-        contentContainerStyle={{ padding: t.espacio(4), paddingTop: 0, paddingBottom: t.espacio(10), gap: t.espacio(3), flexGrow: 1 }}
-        refreshControl={<RefreshControl refreshing={refrescando} onRefresh={onRefresh} tintColor={t.colores.brand} />}
-        ListEmptyComponent={
+      <ScrollView
+        contentContainerStyle={{ padding: tokens.space["4"], flexGrow: 1 }}
+        refreshControl={<RefreshControl refreshing={refrescando} onRefresh={onRefresh} />}
+      >
+        {visibles.length === 0 ? (
           <EmptyState
-            icono={<Ionicons name="car-outline" size={40} color={t.colores.faint} />}
+            icono={<Car size={32} strokeWidth={2.75} color={tokens.color.accent2Ramp["800"]} />}
             titulo={viajes && viajes.length > 0 ? "Sin viajes en este período" : "Sin viajes"}
-            mensaje={
-              viajes && viajes.length > 0
-                ? "Prueba con otro período o registra uno nuevo."
-                : "Registra tu primer viaje con el botón de arriba."
-            }
+            mensaje={viajes && viajes.length > 0 ? "Prueba con otro período o registra uno nuevo." : "Registra tu primer viaje con el botón de arriba."}
           />
-        }
-        renderItem={({ item }) => (
-          <Card
-            onPress={() => navigation.navigate("ViajeDetalle", { viajeId: item.id })}
-            style={item.estado === "borrador" ? { borderLeftWidth: 4, borderLeftColor: t.colores.accent } : undefined}
-          >
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: t.espacio(3) }}>
-              <View style={{ flex: 1, gap: 2 }}>
-                <Text variante="subtitulo">{item.cliente_info?.nombre ?? item.cliente}</Text>
-                <Text mono variante="etiqueta" tono="muted">
-                  {item.fecha} · Guía {item.numero_guia}
-                </Text>
-                <Text variante="caption" tono="muted">
-                  {item.origen} → {item.destino}
-                </Text>
-                {equipo && item.chofer?.nombre ? (
-                  <Text variante="caption" tono="muted">
-                    {item.chofer.nombre}
-                  </Text>
-                ) : null}
-              </View>
-              <View style={{ alignItems: "flex-end", gap: 4 }}>
-                <Badge estado={item.estado} />
-                <Text variante="etiqueta" weight="semibold">
-                  {pesos(item.total)}
-                </Text>
-              </View>
-            </View>
-          </Card>
+        ) : (
+          <ListRowGrupo>
+            {visibles.map((item) => (
+              <ListRow
+                key={item.id}
+                icono={<Car size={20} strokeWidth={2.25} color={tokens.color.accentRamp["700"]} />}
+                titulo={item.cliente_info?.nombre ?? item.cliente}
+                subtitulo={`${item.fecha} · Guía ${item.numero_guia} · ${item.origen} → ${item.destino}${equipo && item.chofer?.nombre ? ` · ${item.chofer.nombre}` : ""}`}
+                trailing={
+                  <View style={{ alignItems: "flex-end", gap: 4 }}>
+                    <StatusBadge estado={item.estado} etiqueta={item.estado} tonoForzado={TONO_VIAJE[item.estado]} />
+                    <Texto tamano={tokens.size.small} peso="semibold" color={tokens.color.text} style={{ fontVariant: ["tabular-nums"] }}>
+                      {pesos(item.total)}
+                    </Texto>
+                  </View>
+                }
+                onPress={() => navigation.navigate("ViajeDetalle", { viajeId: item.id })}
+              />
+            ))}
+          </ListRowGrupo>
         )}
-      />
+      </ScrollView>
     </View>
   );
 }

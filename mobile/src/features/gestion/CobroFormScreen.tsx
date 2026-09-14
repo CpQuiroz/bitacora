@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Alert, Pressable, ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { Cliente, MedioPago } from "@bitacora/shared";
-import { useTema } from "../../theme";
-import { Button, LoadingScreen, Text } from "../../components/ui";
+import { tokens } from "@bitacora/design-tokens";
+import { Button, LoadingState, Texto, useMarca } from "@bitacora/ui/native";
 import { InputMonto } from "../../components/InputMonto";
 import { SelectorCliente } from "../../components/SelectorCliente";
 import { useRed } from "../../services/sync/NetworkProvider";
@@ -37,8 +37,11 @@ const VENC_OPCIONES = [
   { dias: 60, label: "60 días" },
 ];
 
+// Sistema visual móvil v2 — pantalla MODAL: el header nativo del Stack
+// ya queda bien con tokens (se resuelve a nivel de navigator), así que
+// acá solo se recolorea el contenido. Sin ScreenHeader propio.
 export function CobroFormScreen({ navigation }: NativeStackScreenProps<MasStackParamList, "CobroForm">) {
-  const t = useTema();
+  const marca = useMarca();
   const { enLinea } = useRed();
   const [clientes, setClientes] = useState<Cliente[] | null>(null);
   const [guardando, setGuardando] = useState(false);
@@ -75,14 +78,22 @@ export function CobroFormScreen({ navigation }: NativeStackScreenProps<MasStackP
     Alert.alert("Cobro creado", "Quedó como pendiente.", [{ text: "Listo", onPress: () => navigation.goBack() }]);
   }
 
-  if (clientes === null) return <LoadingScreen />;
+  if (clientes === null) {
+    return (
+      <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+        <View style={{ padding: tokens.space["4"] }}>
+          <LoadingState />
+        </View>
+      </View>
+    );
+  }
 
   const vencDiasActual = Math.round((new Date(b.fecha_vencimiento).getTime() - new Date(b.fecha_emision).getTime()) / 86400000);
 
   return (
-    <View style={{ flex: 1, backgroundColor: t.colores.bg }}>
+    <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
       <ScrollView
-        contentContainerStyle={{ padding: t.espacio(5), gap: t.espacio(4), paddingBottom: t.espacio(8) }}
+        contentContainerStyle={{ padding: tokens.space["6"], gap: tokens.space["4"], paddingBottom: tokens.space["8"] }}
         keyboardShouldPersistTaps="handled"
       >
         <SelectorCliente
@@ -94,11 +105,11 @@ export function CobroFormScreen({ navigation }: NativeStackScreenProps<MasStackP
 
         <InputMonto valor={b.monto} onChangeText={(v) => set("monto", v)} />
 
-        <View style={{ gap: t.espacio(1.5) }}>
-          <Text variante="etiqueta" tono="muted">
+        <View style={{ gap: tokens.space["1"] }}>
+          <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
             Vence en
-          </Text>
-          <View style={{ flexDirection: "row", gap: t.espacio(2) }}>
+          </Texto>
+          <View style={{ flexDirection: "row", gap: tokens.space["2"] }}>
             {VENC_OPCIONES.map((o) => {
               const activo = o.dias === vencDiasActual;
               return (
@@ -110,29 +121,29 @@ export function CobroFormScreen({ navigation }: NativeStackScreenProps<MasStackP
                     minHeight: 44,
                     alignItems: "center",
                     justifyContent: "center",
-                    borderRadius: t.radio.md,
-                    backgroundColor: activo ? t.colores.brand : t.colores.surface,
+                    borderRadius: tokens.radius.md,
+                    backgroundColor: activo ? marca.base : tokens.color.surface,
                     borderWidth: 1,
-                    borderColor: activo ? t.colores.brand : t.colores.border,
+                    borderColor: activo ? marca.base : tokens.color.divider,
                   }}
                 >
-                  <Text variante="caption" weight="semibold" tono={activo ? "inverso" : "muted"}>
+                  <Texto tamano={tokens.size.caption} peso="semibold" color={activo ? marca.foreground : `${tokens.color.text}99`}>
                     {o.label}
-                  </Text>
+                  </Texto>
                 </Pressable>
               );
             })}
           </View>
-          <Text variante="caption" tono="muted">
+          <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
             Vence el {fechaLarga(b.fecha_vencimiento)}
-          </Text>
+          </Texto>
         </View>
 
-        <View style={{ gap: t.espacio(1.5) }}>
-          <Text variante="etiqueta" tono="muted">
+        <View style={{ gap: tokens.space["1"] }}>
+          <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
             Medio de pago previsto (opcional)
-          </Text>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: t.espacio(2) }}>
+          </Texto>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: tokens.space["2"] }}>
             {MEDIOS.map((m) => {
               const activo = b.medio_pago === m.v;
               return (
@@ -142,14 +153,14 @@ export function CobroFormScreen({ navigation }: NativeStackScreenProps<MasStackP
                   style={{
                     minHeight: 40,
                     justifyContent: "center",
-                    paddingHorizontal: t.espacio(3.5),
-                    borderRadius: t.radio.md,
-                    backgroundColor: activo ? t.colores.brand : t.colores.surfaceAlt,
+                    paddingHorizontal: tokens.space["3"],
+                    borderRadius: tokens.radius.md,
+                    backgroundColor: activo ? marca.base : tokens.color.surface,
                   }}
                 >
-                  <Text variante="caption" weight="semibold" tono={activo ? "inverso" : "muted"}>
+                  <Texto tamano={tokens.size.caption} peso="semibold" color={activo ? marca.foreground : `${tokens.color.text}99`}>
                     {m.label}
-                  </Text>
+                  </Texto>
                 </Pressable>
               );
             })}
@@ -159,14 +170,16 @@ export function CobroFormScreen({ navigation }: NativeStackScreenProps<MasStackP
 
       <View
         style={{
-          padding: t.espacio(4),
-          paddingBottom: t.espacio(6),
+          padding: tokens.space["4"],
+          paddingBottom: tokens.space["6"],
           borderTopWidth: 1,
-          borderTopColor: t.colores.border,
-          backgroundColor: t.colores.surface,
+          borderTopColor: tokens.color.divider,
+          backgroundColor: tokens.color.surface,
         }}
       >
-        <Button titulo="Crear cobro" tamano="lg" onPress={guardar} cargando={guardando} />
+        <Button tamano="lg" bloque onPress={guardar} cargando={guardando}>
+          Crear cobro
+        </Button>
       </View>
     </View>
   );

@@ -2,11 +2,11 @@ import { useCallback, useEffect, useState } from "react";
 import { Alert, Linking, Pressable, ScrollView, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { Ionicons } from "@expo/vector-icons";
+import { ArrowLeft, ExternalLink } from "lucide-react-native";
 import type { MedioPago } from "@bitacora/shared";
-import { useTema } from "../../theme";
+import { tokens } from "@bitacora/design-tokens";
+import { Button, Card, ErrorState, LoadingState, ScreenHeader, StatusBadge, Textarea, Texto, useMarca } from "@bitacora/ui/native";
 import { pesos } from "../../lib/plata";
-import { Badge, Button, Card, ErrorState, Input, LoadingScreen, Text } from "../../components/ui";
 import { InputMonto } from "../../components/InputMonto";
 import { useRed } from "../../services/sync/NetworkProvider";
 import { estaVencido, marcarPagado, obtenerCobro, reabrirCobro, type CobroConCliente } from "../../services/cobros";
@@ -23,8 +23,12 @@ const MEDIOS: { v: MedioPago; label: string }[] = [
   { v: "otro", label: "Otro" },
 ];
 
-export function CobroDetalleScreen({ route }: NativeStackScreenProps<MasStackParamList, "CobroDetalle">) {
-  const t = useTema();
+// Sistema visual móvil v2 — pantalla push de detalle, mismo patrón que
+// ClienteDetalleScreen: ScreenHeader propio con `accion` de volver
+// (antetítulo = cliente, título = monto), Card genérico para agrupar
+// filas de datos y para la sección de "registrar pago".
+export function CobroDetalleScreen({ route, navigation }: NativeStackScreenProps<MasStackParamList, "CobroDetalle">) {
+  const marca = useMarca();
   const { cobroId } = route.params;
   const { enLinea } = useRed();
   const [cobro, setCobro] = useState<CobroConCliente | null>(null);
@@ -83,97 +87,126 @@ export function CobroDetalleScreen({ route }: NativeStackScreenProps<MasStackPar
     ]);
   }
 
-  if (!cobro && !error) return <LoadingScreen />;
-  if (error && !cobro) return <ErrorState mensaje={error} onReintentar={cargar} />;
+  const volver = { icono: <ArrowLeft size={20} strokeWidth={2.5} color={tokens.color.text} />, onPress: () => navigation.goBack(), etiquetaAccesible: "Volver" };
+
+  if (!cobro && !error) {
+    return (
+      <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+        <ScreenHeader titulo="Cobro" accion={volver} />
+        <View style={{ padding: tokens.space["4"] }}>
+          <LoadingState />
+        </View>
+      </View>
+    );
+  }
+  if (error && !cobro) {
+    return (
+      <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+        <ScreenHeader titulo="Cobro" accion={volver} />
+        <ErrorState mensaje={error} onReintentar={cargar} />
+      </View>
+    );
+  }
   if (!cobro) return null;
 
   const vencido = estaVencido(cobro);
+  const estadoMostrado = vencido ? "vencida" : cobro.estado;
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: t.colores.bg }} contentContainerStyle={{ padding: t.espacio(5), gap: t.espacio(4), paddingBottom: t.espacio(16) }}>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: t.espacio(3) }}>
-        <View style={{ flex: 1, gap: 2 }}>
-          <Text variante="titulo">{pesos(cobro.monto)}</Text>
-          <Text variante="etiqueta" tono="muted">
-            {cobro.cliente_info?.nombre ?? cobro.cliente}
-          </Text>
+    <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+      <ScreenHeader antetitulo={cobro.cliente_info?.nombre ?? cobro.cliente} titulo={pesos(cobro.monto)} accion={volver} />
+      <ScrollView contentContainerStyle={{ padding: tokens.space["6"], gap: tokens.space["4"], paddingBottom: tokens.space["8"] * 2 }}>
+        <View style={{ alignSelf: "flex-start" }}>
+          <StatusBadge estado={estadoMostrado} tonoForzado={estadoMostrado === "pendiente" ? "en_progreso" : undefined} />
         </View>
-        <Badge texto={vencido ? "vencida" : cobro.estado} estado={vencido ? "vencida" : cobro.estado} />
-      </View>
 
-      <Card plano style={{ gap: t.espacio(2) }}>
-        <Fila etiqueta="Emitida" valor={cobro.fecha_emision} />
-        <Fila etiqueta="Vence" valor={cobro.fecha_vencimiento} />
-        {cobro.fecha_pago ? <Fila etiqueta="Pagada" valor={cobro.fecha_pago} /> : null}
-        {cobro.medio_pago ? <Fila etiqueta="Medio de pago" valor={cobro.medio_pago} /> : null}
-        {cobro.valor_recibido != null ? <Fila etiqueta="Valor recibido" valor={pesos(cobro.valor_recibido)} /> : null}
-        {cobro.observaciones_pago ? <Fila etiqueta="Observaciones" valor={cobro.observaciones_pago} /> : null}
-      </Card>
+        <Card>
+          <View style={{ gap: tokens.space["2"] }}>
+            <Fila etiqueta="Emitida" valor={cobro.fecha_emision} />
+            <Fila etiqueta="Vence" valor={cobro.fecha_vencimiento} />
+            {cobro.fecha_pago ? <Fila etiqueta="Pagada" valor={cobro.fecha_pago} /> : null}
+            {cobro.medio_pago ? <Fila etiqueta="Medio de pago" valor={cobro.medio_pago} /> : null}
+            {cobro.valor_recibido != null ? <Fila etiqueta="Valor recibido" valor={pesos(cobro.valor_recibido)} /> : null}
+            {cobro.observaciones_pago ? <Fila etiqueta="Observaciones" valor={cobro.observaciones_pago} /> : null}
+          </View>
+        </Card>
 
-      {cobro.link_pago ? (
-        <Button
-          titulo="Abrir link de pago"
-          variante="secundario"
-          icono={<Ionicons name="open-outline" size={16} color={t.colores.foreground} />}
-          onPress={() => Linking.openURL(cobro.link_pago!)}
-        />
-      ) : null}
+        {cobro.link_pago ? (
+          <Button
+            variante="secundario"
+            bloque
+            iconoIzq={<ExternalLink size={16} strokeWidth={2.5} color={tokens.color.text} />}
+            onPress={() => Linking.openURL(cobro.link_pago!)}
+          >
+            Abrir link de pago
+          </Button>
+        ) : null}
 
-      {cobro.estado !== "pagada" ? (
-        pagando ? (
-          <Card plano style={{ gap: t.espacio(3) }}>
-            <Text variante="etiqueta" weight="semibold">
-              Registrar pago
-            </Text>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: t.espacio(2) }}>
-              {MEDIOS.map((m) => {
-                const activo = medio === m.v;
-                return (
-                  <Pressable
-                    key={m.v}
-                    onPress={() => setMedio(activo ? "" : m.v)}
-                    style={{
-                      minHeight: 36,
-                      justifyContent: "center",
-                      paddingHorizontal: t.espacio(3),
-                      borderRadius: t.radio.md,
-                      backgroundColor: activo ? t.colores.brand : t.colores.surfaceAlt,
-                    }}
-                  >
-                    <Text variante="caption" weight="semibold" tono={activo ? "inverso" : "muted"}>
-                      {m.label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-            <InputMonto etiqueta="Valor recibido (opcional)" valor={valorRecibido} onChangeText={setValorRecibido} />
-            <Input etiqueta="Observaciones (opcional)" multiline value={obs} onChangeText={setObs} />
-            <View style={{ flexDirection: "row", gap: t.espacio(2.5) }}>
-              <Button titulo="Confirmar pago" onPress={confirmarPago} cargando={ocupado} />
-              <Button titulo="Cancelar" variante="ghost" onPress={() => setPagando(false)} />
-            </View>
-          </Card>
+        {cobro.estado !== "pagada" ? (
+          pagando ? (
+            <Card>
+              <View style={{ gap: tokens.space["3"] }}>
+                <Texto tamano={tokens.size.small} color={tokens.color.text} peso="semibold">
+                  Registrar pago
+                </Texto>
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: tokens.space["2"] }}>
+                  {MEDIOS.map((m) => {
+                    const activo = medio === m.v;
+                    return (
+                      <Pressable
+                        key={m.v}
+                        onPress={() => setMedio(activo ? "" : m.v)}
+                        style={{
+                          minHeight: 36,
+                          justifyContent: "center",
+                          paddingHorizontal: tokens.space["3"],
+                          borderRadius: tokens.radius.md,
+                          backgroundColor: activo ? marca.base : tokens.color.surface,
+                        }}
+                      >
+                        <Texto tamano={tokens.size.caption} peso="semibold" color={activo ? marca.foreground : `${tokens.color.text}99`}>
+                          {m.label}
+                        </Texto>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+                <InputMonto etiqueta="Valor recibido (opcional)" valor={valorRecibido} onChangeText={setValorRecibido} />
+                <Textarea etiqueta="Observaciones (opcional)" valor={obs} onCambio={setObs} filas={3} />
+                <View style={{ flexDirection: "row", gap: tokens.space["2"] }}>
+                  <Button onPress={confirmarPago} cargando={ocupado}>
+                    Confirmar pago
+                  </Button>
+                  <Button variante="ghost" onPress={() => setPagando(false)}>
+                    Cancelar
+                  </Button>
+                </View>
+              </View>
+            </Card>
+          ) : (
+            <Button tamano="lg" bloque onPress={() => setPagando(true)}>
+              Marcar como pagado
+            </Button>
+          )
         ) : (
-          <Button titulo="Marcar como pagado" tamano="lg" onPress={() => setPagando(true)} />
-        )
-      ) : (
-        <Button titulo="Reabrir cobro" variante="peligro" onPress={reabrir} cargando={ocupado} />
-      )}
-    </ScrollView>
+          <Button variante="peligro" bloque onPress={reabrir} cargando={ocupado}>
+            Reabrir cobro
+          </Button>
+        )}
+      </ScrollView>
+    </View>
   );
 }
 
 function Fila({ etiqueta, valor }: { etiqueta: string; valor: string }) {
-  const t = useTema();
   return (
-    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: t.espacio(3) }}>
-      <Text variante="etiqueta" tono="muted">
+    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: tokens.space["3"] }}>
+      <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
         {etiqueta}
-      </Text>
-      <Text variante="etiqueta" weight="medium" style={{ flexShrink: 1, textAlign: "right", textTransform: "capitalize" }}>
+      </Texto>
+      <Texto tamano={tokens.size.small} peso="medium" color={tokens.color.text} style={{ flexShrink: 1, textAlign: "right", textTransform: "capitalize" }}>
         {valor}
-      </Text>
+      </Texto>
     </View>
   );
 }

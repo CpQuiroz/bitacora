@@ -2,11 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, Linking, Platform, ScrollView, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { Ionicons } from "@expo/vector-icons";
+import { ArrowLeft, MapPin, MessageCircle, Navigation, Pencil, Phone } from "lucide-react-native";
 import type { EstadoTarea } from "@bitacora/shared";
 import { ETIQUETA_ESTADO_TAREA } from "@bitacora/shared";
-import { useTema } from "../../theme";
-import { Badge, Button, Card, ErrorState, LoadingScreen, Text } from "../../components/ui";
+import { tokens } from "@bitacora/design-tokens";
+import { Button, Card, ErrorState, LoadingState, ScreenHeader, StatusBadge, Texto } from "@bitacora/ui/native";
 import { OfflineBanner } from "../../components/OfflineBanner";
 import { useRed } from "../../services/sync/NetworkProvider";
 import { useAuth } from "../auth/AuthContext";
@@ -27,8 +27,14 @@ function soloDigitos(tel: string): string {
 
 const ACTIVA = new Set(["pendiente", "confirmada"]);
 
+// Sistema visual móvil v2 (14-sep-2026) — ScreenHeader propio con
+// `accion`=volver (antetítulo = fecha/hora, título = tarea.titulo);
+// StatusBadge en vez del <Badge> viejo (estado "pendiente" no cae en
+// ninguno de los 4 tonos de MAPA_ESTADO_TONO, se fuerza a "en_progreso"
+// — es el que necesita acción, mismo criterio que ya usa AgendaScreen
+// con `marca.base` para ese mismo estado en el calendario). El header
+// nativo del stack se apaga en AgendaStack.tsx para esta ruta.
 export function TareaDetalleScreen({ route, navigation }: NativeStackScreenProps<AgendaStackParamList, "TareaDetalle">) {
-  const t = useTema();
   const { tareaId } = route.params;
   const { pendientes, enLinea } = useRed();
   const auth = useAuth();
@@ -55,8 +61,26 @@ export function TareaDetalleScreen({ route, navigation }: NativeStackScreenProps
   }, [cargar]);
   useFocusEffect(useCallback(() => void cargar(), [cargar]));
 
-  if (!detalle && !error) return <LoadingScreen />;
-  if (error && !detalle) return <ErrorState mensaje={error} onReintentar={cargar} />;
+  const volver = { icono: <ArrowLeft size={20} strokeWidth={2.5} color={tokens.color.text} />, onPress: () => navigation.goBack(), etiquetaAccesible: "Volver" };
+
+  if (!detalle && !error) {
+    return (
+      <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+        <ScreenHeader titulo="Cita" accion={volver} />
+        <View style={{ padding: tokens.space["4"] }}>
+          <LoadingState />
+        </View>
+      </View>
+    );
+  }
+  if (error && !detalle) {
+    return (
+      <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+        <ScreenHeader titulo="Cita" accion={volver} />
+        <ErrorState mensaje={error} onReintentar={cargar} />
+      </View>
+    );
+  }
   if (!detalle) return null;
 
   const { tarea } = detalle;
@@ -167,99 +191,110 @@ export function TareaDetalleScreen({ route, navigation }: NativeStackScreenProps
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: t.colores.bg }}>
+    <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+      <ScreenHeader
+        antetitulo={`${tarea.fecha}${tarea.hora ? ` · ${tarea.hora.slice(0, 5)}` : ""}`}
+        titulo={tarea.titulo}
+        accion={volver}
+      />
       <OfflineBanner guardadoEn={detalle.desdeCache ? detalle.guardadoEn : undefined} />
-      <ScrollView contentContainerStyle={{ padding: t.espacio(5), gap: t.espacio(4), paddingBottom: t.espacio(24) }}>
-        <View style={{ gap: t.espacio(1.5) }}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: t.espacio(2) }}>
-            <Text variante="titulo" style={{ flex: 1 }}>
-              {tarea.titulo}
-            </Text>
-            <Badge texto={ETIQUETA_ESTADO_TAREA[estado] ?? estado} estado={estado} />
-          </View>
-          <Text variante="etiqueta" tono="muted">
-            {tarea.fecha}
-            {tarea.hora ? ` · ${tarea.hora.slice(0, 5)}` : ""}
-          </Text>
+      <ScrollView contentContainerStyle={{ padding: tokens.space["6"], gap: tokens.space["4"], paddingBottom: tokens.space["8"] * 3 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: tokens.space["2"], flexWrap: "wrap" }}>
+          <StatusBadge estado={estado} etiqueta={ETIQUETA_ESTADO_TAREA[estado] ?? estado} tonoForzado={estado === "pendiente" ? "en_progreso" : undefined} />
           {tarea.prioridad === "alta" && ACTIVA.has(estado) ? (
-            <Text variante="etiqueta" weight="semibold" tono="danger">
+            <Texto tamano={tokens.size.small} peso="semibold" color={tokens.color.accentRamp["700"]}>
               Prioridad alta
-            </Text>
+            </Texto>
           ) : null}
         </View>
 
         {tarea.descripcion ? (
-          <Card plano>
-            <Text variante="etiqueta">{tarea.descripcion}</Text>
+          <Card>
+            <Texto tamano={tokens.size.small} color={tokens.color.text}>
+              {tarea.descripcion}
+            </Texto>
           </Card>
         ) : null}
 
         {(direccion || cli?.telefono || cli?.nombre) && (
-          <Card plano style={{ gap: t.espacio(2.5) }}>
-            {cli?.nombre ? <Text variante="subtitulo">{cli.nombre}</Text> : null}
-            {direccion ? (
-              <View style={{ flexDirection: "row", gap: t.espacio(2), alignItems: "flex-start" }}>
-                <Ionicons name="location-outline" size={18} color={t.colores.muted} style={{ marginTop: 1 }} />
-                <Text variante="etiqueta" style={{ flex: 1 }}>
-                  {direccion}
-                </Text>
-              </View>
-            ) : null}
-            <View style={{ flexDirection: "row", gap: t.espacio(2.5) }}>
+          <Card>
+            <View style={{ gap: tokens.space["2"] * 1.25 }}>
+              {cli?.nombre ? (
+                <Texto tamano={tokens.size.h5} peso="semibold" color={tokens.color.text}>
+                  {cli.nombre}
+                </Texto>
+              ) : null}
               {direccion ? (
-                <Button
-                  titulo="Cómo llegar"
-                  variante="secundario"
-                  icono={<Ionicons name="navigate-outline" size={16} color={t.colores.foreground} />}
-                  onPress={abrirMapa}
-                />
+                <View style={{ flexDirection: "row", gap: tokens.space["2"], alignItems: "flex-start" }}>
+                  <MapPin size={18} strokeWidth={2.25} color={`${tokens.color.text}99`} style={{ marginTop: 1 }} />
+                  <Texto tamano={tokens.size.small} color={tokens.color.text} style={{ flex: 1 }}>
+                    {direccion}
+                  </Texto>
+                </View>
               ) : null}
-              {cli?.telefono ? (
-                <Button
-                  titulo="Llamar"
-                  variante="secundario"
-                  icono={<Ionicons name="call-outline" size={16} color={t.colores.foreground} />}
-                  onPress={() => Linking.openURL(`tel:${cli.telefono}`)}
-                />
-              ) : null}
-              {cli?.telefono ? (
-                <Button
-                  titulo="WhatsApp"
-                  variante="secundario"
-                  icono={<Ionicons name="logo-whatsapp" size={16} color={t.colores.foreground} />}
-                  onPress={() => Linking.openURL(`https://wa.me/${soloDigitos(cli.telefono!)}`)}
-                />
-              ) : null}
+              <View style={{ flexDirection: "row", gap: tokens.space["2"] * 1.25, flexWrap: "wrap" }}>
+                {direccion ? (
+                  <Button
+                    variante="secundario"
+                    iconoIzq={<Navigation size={16} strokeWidth={2.5} color={tokens.color.text} />}
+                    onPress={abrirMapa}
+                  >
+                    Cómo llegar
+                  </Button>
+                ) : null}
+                {cli?.telefono ? (
+                  <Button
+                    variante="secundario"
+                    iconoIzq={<Phone size={16} strokeWidth={2.5} color={tokens.color.text} />}
+                    onPress={() => Linking.openURL(`tel:${cli.telefono}`)}
+                  >
+                    Llamar
+                  </Button>
+                ) : null}
+                {cli?.telefono ? (
+                  <Button
+                    variante="secundario"
+                    iconoIzq={<MessageCircle size={16} strokeWidth={2.5} color={tokens.color.accent2Ramp["700"]} />}
+                    onPress={() => Linking.openURL(`https://wa.me/${soloDigitos(cli.telefono!)}`)}
+                  >
+                    WhatsApp
+                  </Button>
+                ) : null}
+              </View>
             </View>
           </Card>
         )}
 
         {tarea.paquete_id ? (
-          <Card plano style={{ backgroundColor: t.colores.brandSoft, borderColor: "transparent" }}>
-            <Text variante="etiqueta" style={{ color: t.colores.brand }}>
+          <View style={{ backgroundColor: tokens.color.accent2Ramp["200"], borderRadius: tokens.radius.lg, padding: tokens.space["4"] }}>
+            <Texto tamano={tokens.size.small} color={tokens.color.accent2Ramp["800"]}>
               Esta cita es parte de un paquete de sesiones. Al marcar Asistió o No asistió se descuenta 1 sesión.
-            </Text>
-          </Card>
+            </Texto>
+          </View>
         ) : null}
 
         {tarea.trabajo_id ? (
-          <Card plano>
-            <Text variante="caption" tono="muted">
+          <Card>
+            <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
               Tiene una orden de trabajo asociada — revísala en la pestaña Trabajos.
-            </Text>
+            </Texto>
           </Card>
         ) : null}
 
         {accionesAqui.length > 0 && (
-          <Card plano style={{ backgroundColor: t.colores.warningSoft, borderColor: "transparent" }}>
-            <Text variante="caption" weight="semibold" style={{ color: t.colores.warning }}>
+          <View style={{ backgroundColor: tokens.color.accentRamp["200"], borderRadius: tokens.radius.lg, padding: tokens.space["4"] }}>
+            <Texto tamano={tokens.size.caption} peso="semibold" color={tokens.color.accentRamp["800"]}>
               Cambio sin sincronizar — se enviará cuando haya señal.
-            </Text>
-          </Card>
+            </Texto>
+          </View>
         )}
 
-        <View style={{ gap: t.espacio(3), marginTop: t.espacio(1) }}>
-          {activa ? <Button titulo="Marcar Asistió" tamano="lg" onPress={() => cambiar("completada")} cargando={enviando} /> : null}
+        <View style={{ gap: tokens.space["3"], marginTop: tokens.space["1"] }}>
+          {activa ? (
+            <Button tamano="lg" bloque onPress={() => cambiar("completada")} cargando={enviando}>
+              Marcar Asistió
+            </Button>
+          ) : null}
           <EstadoCitaRiel
             estado={estado}
             activa={activa}
@@ -271,25 +306,28 @@ export function TareaDetalleScreen({ route, navigation }: NativeStackScreenProps
         </View>
 
         {!activa && accionesAqui.length > 0 && (
-          <Card plano style={{ backgroundColor: t.colores.surfaceAlt, borderColor: "transparent" }}>
-            <Text variante="etiqueta" tono="muted">
+          <View style={{ backgroundColor: tokens.color.neutral["200"], borderRadius: tokens.radius.md, padding: tokens.space["4"] }}>
+            <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
               Esperando a que se sincronice el último cambio.
-            </Text>
-          </Card>
+            </Texto>
+          </View>
         )}
 
         {esGestion ? (
-          <View style={{ gap: t.espacio(2.5), marginTop: t.espacio(2), borderTopWidth: 1, borderTopColor: t.colores.border, paddingTop: t.espacio(4) }}>
-            <Text variante="caption" tono="muted" weight="semibold" style={{ textTransform: "uppercase" }}>
+          <View style={{ gap: tokens.space["2"] * 1.25, marginTop: tokens.space["2"], borderTopWidth: 1, borderTopColor: tokens.color.divider, paddingTop: tokens.space["4"] }}>
+            <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} peso="semibold" style={{ textTransform: "uppercase" }}>
               Gestión
-            </Text>
+            </Texto>
             <Button
-              titulo="Editar / reprogramar"
               variante="secundario"
-              icono={<Ionicons name="create-outline" size={16} color={t.colores.foreground} />}
+              iconoIzq={<Pencil size={16} strokeWidth={2.5} color={tokens.color.text} />}
               onPress={() => navigation.navigate("NuevaCita", { tareaId })}
-            />
-            <Button titulo="Eliminar cita" variante="peligro" onPress={eliminar} cargando={eliminando} />
+            >
+              Editar / reprogramar
+            </Button>
+            <Button variante="peligro" onPress={eliminar} cargando={eliminando}>
+              Eliminar cita
+            </Button>
           </View>
         ) : null}
       </ScrollView>

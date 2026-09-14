@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
-import { Alert, FlatList, Image, Modal, Pressable, ScrollView, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Alert, FlatList, Image, Pressable, ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { AlertCircle, ArrowLeft, Camera, Minus, Plus, RefreshCw, X } from "lucide-react-native";
 import type { CatalogoItem, EstadoLevantamiento } from "@bitacora/shared";
-import { useTema } from "../../theme";
-import { Button, ErrorState, Input, LoadingScreen, Text } from "../../components/ui";
+import { tokens } from "@bitacora/design-tokens";
+import { Button, Dialog, ErrorState, LoadingState, ScreenHeader, Textarea, Texto, useMarca } from "@bitacora/ui/native";
 import { elegirFotos } from "../../lib/imagen";
 import { useRed } from "../../services/sync/NetworkProvider";
 import {
@@ -29,11 +29,17 @@ const ETIQUETA_ESTADO: Record<EstadoLevantamiento, string> = {
 
 type MaterialLocal = { catalogo_item_id: string; cantidad: number; nombre: string; unidad: string };
 
-// El técnico completa lo observado en terreno + materiales + fotos.
-// Cotizar (fuera de Bitácora) y aprobar/rechazar es exclusivo de la web
-// (Admin) — acá no hay esos botones, a propósito.
-export function LevantamientoDetalleScreen({ route }: NativeStackScreenProps<MasStackParamList, "LevantamientoDetalle">) {
-  const t = useTema();
+// Sistema visual móvil v2 (14-sep-2026) — migración del sistema viejo
+// (useTema/Ionicons/components-ui) al nuevo: ScreenHeader propio con
+// `accion`=volver (mismo criterio que LevantamientosListScreen, ya
+// migrada), Textarea en vez de Input multiline (el contrato nuevo de
+// Input no tiene esa prop), Dialog (bottom sheet) en vez del Modal a
+// mano para el picker de catálogo. El técnico completa lo observado en
+// terreno + materiales + fotos. Cotizar (fuera de Bitácora) y aprobar/
+// rechazar es exclusivo de la web (Admin) — acá no hay esos botones, a
+// propósito.
+export function LevantamientoDetalleScreen({ route, navigation }: NativeStackScreenProps<MasStackParamList, "LevantamientoDetalle">) {
+  const marca = useMarca();
   const { enLinea, pendientes } = useRed();
   const { id } = route.params;
   const fotosEnCola = pendientes.filter((a) => a.recurso === `levantamiento:${id}` && a.etiqueta === "Foto de levantamiento");
@@ -142,172 +148,205 @@ export function LevantamientoDetalleScreen({ route }: NativeStackScreenProps<Mas
     await encolarFotoLevantamiento(id, elegida);
   }
 
-  if (!detalle && !error) return <LoadingScreen />;
-  if (error && !detalle) return <ErrorState mensaje={error} onReintentar={() => void cargar()} />;
+  const volver = { icono: <ArrowLeft size={20} strokeWidth={2.5} color={tokens.color.text} />, onPress: () => navigation.goBack(), etiquetaAccesible: "Volver" };
+
+  if (!detalle && !error) {
+    return (
+      <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+        <ScreenHeader titulo="Levantamiento" accion={volver} />
+        <View style={{ padding: tokens.space["4"] }}>
+          <LoadingState />
+        </View>
+      </View>
+    );
+  }
+  if (error && !detalle) {
+    return (
+      <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+        <ScreenHeader titulo="Levantamiento" accion={volver} />
+        <ErrorState mensaje={error} onReintentar={() => void cargar()} />
+      </View>
+    );
+  }
   if (!detalle) return null;
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: t.colores.bg }} contentContainerStyle={{ padding: t.espacio(4), gap: t.espacio(4), paddingBottom: t.espacio(10) }}>
-      <View style={{ gap: 4 }}>
-        <Text weight="semibold" variante="subtitulo">
-          {detalle.cliente?.nombre ?? "Cliente"}
-        </Text>
-        <Text variante="caption" tono="muted">
-          {ETIQUETA_ESTADO[detalle.estado]}
-        </Text>
-      </View>
+    <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+      <ScreenHeader antetitulo={ETIQUETA_ESTADO[detalle.estado]} titulo={detalle.cliente?.nombre ?? "Cliente"} accion={volver} />
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: tokens.space["4"], gap: tokens.space["4"], paddingBottom: tokens.space["8"] * 2 }}>
+        {detalle.descripcion_requerimiento ? (
+          <View style={{ gap: 4 }}>
+            <Texto tamano={tokens.size.micro} color={tokens.color.accent2Ramp["800"]} peso="semibold" style={{ textTransform: "uppercase", letterSpacing: 1.3 }}>
+              Qué pidió evaluar la oficina
+            </Texto>
+            <Texto tamano={tokens.size.body} color={tokens.color.text}>
+              {detalle.descripcion_requerimiento}
+            </Texto>
+          </View>
+        ) : null}
 
-      {detalle.descripcion_requerimiento ? (
-        <View style={{ gap: 4 }}>
-          <Text variante="etiqueta" tono="muted" weight="semibold" style={{ textTransform: "uppercase" }}>
-            Qué pidió evaluar la oficina
-          </Text>
-          <Text variante="cuerpo">{detalle.descripcion_requerimiento}</Text>
-        </View>
-      ) : null}
+        <Textarea
+          etiqueta="Lo que observaste en terreno"
+          valor={descripcion}
+          onCambio={setDescripcion}
+          deshabilitado={!editable}
+          filas={5}
+          placeholder="Ej.: instalación en mal estado, requiere cambiar cableado y 2 enchufes…"
+        />
 
-      <Input
-        etiqueta="Lo que observaste en terreno"
-        value={descripcion}
-        onChangeText={setDescripcion}
-        editable={editable}
-        multiline
-        style={{ minHeight: 96 }}
-        placeholder="Ej.: instalación en mal estado, requiere cambiar cableado y 2 enchufes…"
-      />
-
-      <View style={{ gap: t.espacio(2) }}>
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-          <Text weight="semibold">Materiales</Text>
-          {editable ? (
-            <Pressable onPress={abrirPicker} hitSlop={8} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-              <Ionicons name="add-circle-outline" size={18} color={t.colores.brand} />
-              <Text variante="caption" weight="bold" style={{ color: t.colores.brand }}>
-                Agregar
-              </Text>
-            </Pressable>
-          ) : null}
-        </View>
-        {materiales.length === 0 ? (
-          <Text variante="caption" tono="muted">
-            Sin materiales indicados todavía.
-          </Text>
-        ) : (
-          materiales.map((m) => (
-            <View
-              key={m.catalogo_item_id}
-              style={{ flexDirection: "row", alignItems: "center", gap: t.espacio(2), borderWidth: 1, borderColor: t.colores.border, borderRadius: t.radio.md, padding: t.espacio(2.5) }}
-            >
-              <Text style={{ flex: 1 }} numberOfLines={1}>
-                {m.nombre}
-              </Text>
-              {editable ? (
-                <View style={{ flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: t.colores.border, borderRadius: t.radio.sm }}>
-                  <Pressable onPress={() => cambiarCantidad(m.catalogo_item_id, -1)} style={{ width: 32, height: 32, alignItems: "center", justifyContent: "center" }}>
-                    <Ionicons name="remove" size={15} color={t.colores.foreground} />
-                  </Pressable>
-                  <Text mono weight="semibold" style={{ width: 32, textAlign: "center" }}>
-                    {m.cantidad}
-                  </Text>
-                  <Pressable onPress={() => cambiarCantidad(m.catalogo_item_id, 1)} style={{ width: 32, height: 32, alignItems: "center", justifyContent: "center" }}>
-                    <Ionicons name="add" size={15} color={t.colores.foreground} />
-                  </Pressable>
-                </View>
-              ) : (
-                <Text mono variante="caption" tono="muted">
-                  {m.cantidad} {m.unidad}
-                </Text>
-              )}
-              {editable ? (
-                <Pressable onPress={() => quitarMaterial(m.catalogo_item_id)} hitSlop={8}>
-                  <Ionicons name="close" size={18} color={t.colores.faint} />
-                </Pressable>
-              ) : null}
-            </View>
-          ))
-        )}
-      </View>
-
-      {editable ? <Button titulo="Guardar levantamiento" tamano="lg" onPress={guardar} cargando={guardando} /> : null}
-
-      <View style={{ gap: t.espacio(2) }}>
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-          <Text weight="semibold">Fotos</Text>
-          {editable ? (
-            <Button titulo="Agregar" variante="secundario" tamano="md" icono={<Ionicons name="camera-outline" size={16} color={t.colores.brand} />} onPress={agregarFoto} />
-          ) : null}
-        </View>
-        {detalle.fotos.length === 0 && fotosEnCola.length === 0 ? (
-          <Text variante="caption" tono="muted">
-            Sin fotos todavía.
-          </Text>
-        ) : (
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: t.espacio(2) }}>
-            {detalle.fotos.map((f) => (
-              <Image key={f.id} source={{ uri: f.url }} style={{ width: 88, height: 88, borderRadius: t.radio.md, backgroundColor: t.colores.surfaceAlt }} />
-            ))}
-            {fotosEnCola.map((a) => (
+        <View style={{ gap: tokens.space["2"] }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+            <Texto tamano={tokens.size.body} color={tokens.color.text} peso="semibold">
+              Materiales
+            </Texto>
+            {editable ? (
+              <Pressable onPress={abrirPicker} hitSlop={8} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                <Plus size={16} strokeWidth={2.5} color={marca.base} />
+                <Texto tamano={tokens.size.caption} color={marca.base} peso="semibold">
+                  Agregar
+                </Texto>
+              </Pressable>
+            ) : null}
+          </View>
+          {materiales.length === 0 ? (
+            <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
+              Sin materiales indicados todavía.
+            </Texto>
+          ) : (
+            materiales.map((m) => (
               <View
-                key={a.id}
+                key={m.catalogo_item_id}
                 style={{
-                  width: 88,
-                  height: 88,
-                  borderRadius: t.radio.md,
-                  backgroundColor: t.colores.surfaceAlt,
-                  borderWidth: 1,
-                  borderColor: t.colores.border,
+                  flexDirection: "row",
                   alignItems: "center",
-                  justifyContent: "center",
+                  gap: tokens.space["2"],
+                  borderWidth: 1,
+                  borderColor: tokens.color.divider,
+                  borderRadius: tokens.radius.md,
+                  padding: tokens.space["3"],
                 }}
               >
-                <Ionicons name={a.fallida ? "alert-circle-outline" : "sync"} size={20} color={a.fallida ? t.colores.danger : t.colores.accent} />
+                <Texto tamano={tokens.size.body} color={tokens.color.text} style={{ flex: 1 }} numberOfLines={1}>
+                  {m.nombre}
+                </Texto>
+                {editable ? (
+                  <View style={{ flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: tokens.color.divider, borderRadius: tokens.radius.sm }}>
+                    <Pressable onPress={() => cambiarCantidad(m.catalogo_item_id, -1)} style={{ width: 32, height: 32, alignItems: "center", justifyContent: "center" }}>
+                      <Minus size={15} strokeWidth={2.5} color={tokens.color.text} />
+                    </Pressable>
+                    <Texto tamano={tokens.size.small} color={tokens.color.text} peso="semibold" style={{ width: 32, textAlign: "center", fontVariant: ["tabular-nums"] }}>
+                      {m.cantidad}
+                    </Texto>
+                    <Pressable onPress={() => cambiarCantidad(m.catalogo_item_id, 1)} style={{ width: 32, height: 32, alignItems: "center", justifyContent: "center" }}>
+                      <Plus size={15} strokeWidth={2.5} color={tokens.color.text} />
+                    </Pressable>
+                  </View>
+                ) : (
+                  <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} style={{ fontVariant: ["tabular-nums"] }}>
+                    {m.cantidad} {m.unidad}
+                  </Texto>
+                )}
+                {editable ? (
+                  <Pressable onPress={() => quitarMaterial(m.catalogo_item_id)} hitSlop={8}>
+                    <X size={18} strokeWidth={2.5} color={`${tokens.color.text}66`} />
+                  </Pressable>
+                ) : null}
               </View>
-            ))}
+            ))
+          )}
+        </View>
+
+        {editable ? (
+          <Button tamano="lg" bloque onPress={guardar} cargando={guardando}>
+            Guardar levantamiento
+          </Button>
+        ) : null}
+
+        <View style={{ gap: tokens.space["2"] }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+            <Texto tamano={tokens.size.body} color={tokens.color.text} peso="semibold">
+              Fotos
+            </Texto>
+            {editable ? (
+              <Button variante="secundario" iconoIzq={<Camera size={16} strokeWidth={2.5} color={tokens.color.text} />} onPress={agregarFoto}>
+                Agregar
+              </Button>
+            ) : null}
+          </View>
+          {detalle.fotos.length === 0 && fotosEnCola.length === 0 ? (
+            <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
+              Sin fotos todavía.
+            </Texto>
+          ) : (
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: tokens.space["2"] }}>
+              {detalle.fotos.map((f) => (
+                <Image key={f.id} source={{ uri: f.url }} style={{ width: 88, height: 88, borderRadius: tokens.radius.md, backgroundColor: tokens.color.neutral["200"] }} />
+              ))}
+              {fotosEnCola.map((a) => (
+                <View
+                  key={a.id}
+                  style={{
+                    width: 88,
+                    height: 88,
+                    borderRadius: tokens.radius.md,
+                    backgroundColor: tokens.color.neutral["200"],
+                    borderWidth: 1,
+                    borderColor: tokens.color.divider,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  {a.fallida ? (
+                    <AlertCircle size={20} strokeWidth={2.5} color={tokens.color.accentRamp["700"]} />
+                  ) : (
+                    <RefreshCw size={20} strokeWidth={2.5} color={marca.base} />
+                  )}
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
+
+        {detalle.referencia_externa ? (
+          <View style={{ gap: 4 }}>
+            <Texto tamano={tokens.size.micro} color={tokens.color.accent2Ramp["800"]} peso="semibold" style={{ textTransform: "uppercase", letterSpacing: 1.3 }}>
+              Referencia de la cotización
+            </Texto>
+            <Texto tamano={tokens.size.body} color={tokens.color.text}>
+              {detalle.referencia_externa}
+            </Texto>
+          </View>
+        ) : null}
+      </ScrollView>
+
+      <Dialog abierto={pickerAbierto} onCerrar={() => setPickerAbierto(false)} titulo="Elegir del catálogo">
+        {catalogo === null ? (
+          <LoadingState />
+        ) : (
+          <View style={{ maxHeight: 420 }}>
+            <FlatList
+              data={catalogo}
+              keyExtractor={(it) => it.id}
+              ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: tokens.color.divider }} />}
+              ListEmptyComponent={
+                <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
+                  Sin ítems en el catálogo.
+                </Texto>
+              }
+              renderItem={({ item }) => (
+                <Pressable onPress={() => agregarMaterial(item)} style={{ paddingVertical: tokens.space["3"] }}>
+                  <Texto tamano={tokens.size.body} color={tokens.color.text}>
+                    {item.nombre}
+                  </Texto>
+                  <Texto tamano={tokens.size.caption} color={`${tokens.color.text}66`}>
+                    {item.unidad}
+                  </Texto>
+                </Pressable>
+              )}
+            />
           </View>
         )}
-      </View>
-
-      {detalle.referencia_externa ? (
-        <View style={{ gap: 4 }}>
-          <Text variante="etiqueta" tono="muted" weight="semibold" style={{ textTransform: "uppercase" }}>
-            Referencia de la cotización
-          </Text>
-          <Text variante="cuerpo">{detalle.referencia_externa}</Text>
-        </View>
-      ) : null}
-
-      <Modal visible={pickerAbierto} transparent animationType="slide" onRequestClose={() => setPickerAbierto(false)}>
-        <View style={{ flex: 1, backgroundColor: t.colores.overlay, justifyContent: "flex-end" }}>
-          <View style={{ backgroundColor: t.colores.surface, borderTopLeftRadius: 14, borderTopRightRadius: 14, maxHeight: "70%", padding: t.espacio(5) }}>
-            <Text variante="subtitulo" style={{ marginBottom: t.espacio(3) }}>
-              Elegir del catálogo
-            </Text>
-            {catalogo === null ? (
-              <LoadingScreen />
-            ) : (
-              <FlatList
-                data={catalogo}
-                keyExtractor={(it) => it.id}
-                ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: t.colores.border }} />}
-                ListEmptyComponent={
-                  <Text variante="caption" tono="muted">
-                    Sin ítems en el catálogo.
-                  </Text>
-                }
-                renderItem={({ item }) => (
-                  <Pressable onPress={() => agregarMaterial(item)} style={{ paddingVertical: t.espacio(3) }}>
-                    <Text>{item.nombre}</Text>
-                    <Text variante="caption" tono="faint">
-                      {item.unidad}
-                    </Text>
-                  </Pressable>
-                )}
-              />
-            )}
-            <Button titulo="Cerrar" variante="secundario" onPress={() => setPickerAbierto(false)} style={{ marginTop: t.espacio(3) }} />
-          </View>
-        </View>
-      </Modal>
-    </ScrollView>
+      </Dialog>
+    </View>
   );
 }

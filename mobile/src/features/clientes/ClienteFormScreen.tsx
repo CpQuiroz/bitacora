@@ -1,16 +1,22 @@
 import { useEffect, useState } from "react";
-import { Alert, ScrollView } from "react-native";
+import { Alert, ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { useTema } from "../../theme";
-import { Button, Input, LoadingScreen } from "../../components/ui";
+import { ArrowLeft } from "lucide-react-native";
+import { tokens } from "@bitacora/design-tokens";
+import { Button, Input, LoadingState, ScreenHeader, Textarea } from "@bitacora/ui/native";
 import { useRed } from "../../services/sync/NetworkProvider";
 import { crearCliente, editarCliente, obtenerCliente, type BorradorCliente } from "../../services/clientes";
 import type { ClientesStackParamList } from "../../shell/navigation/types";
 
 const VACIO: BorradorCliente = { nombre: "", rut: "", direccion: "", comuna: "", telefono: "", correo: "", notas: "", contacto_nombre: "" };
 
+// Sistema visual móvil v2 (tarea 31) — pantalla PUSH (ClientesStack la
+// registra sin `presentation: "modal"`), mismo patrón que
+// ClienteDetalleScreen: ScreenHeader propio con `accion` de volver, header
+// nativo apagado en ClientesStack.tsx. El título ya no se fija con
+// navigation.setOptions (eso era para el header nativo que ya no se usa
+// acá) — ahora es un valor calculado que se le pasa directo a ScreenHeader.
 export function ClienteFormScreen({ navigation, route }: NativeStackScreenProps<ClientesStackParamList, "ClienteForm">) {
-  const t = useTema();
   const { enLinea } = useRed();
   const editandoId = route.params?.clienteId ?? null;
 
@@ -18,10 +24,6 @@ export function ClienteFormScreen({ navigation, route }: NativeStackScreenProps<
   const [cargando, setCargando] = useState(Boolean(editandoId));
   const [guardando, setGuardando] = useState(false);
   const set = <K extends keyof BorradorCliente>(k: K, v: BorradorCliente[K]) => setB((p) => ({ ...p, [k]: v }));
-
-  useEffect(() => {
-    navigation.setOptions({ title: editandoId ? "Editar cliente" : "Nuevo cliente" });
-  }, [navigation, editandoId]);
 
   useEffect(() => {
     if (!editandoId) return;
@@ -56,34 +58,40 @@ export function ClienteFormScreen({ navigation, route }: NativeStackScreenProps<
     ]);
   }
 
-  if (cargando) return <LoadingScreen />;
+  const titulo = editandoId ? "Editar cliente" : "Nuevo cliente";
+  const volver = { icono: <ArrowLeft size={20} strokeWidth={2.5} color={tokens.color.text} />, onPress: () => navigation.goBack(), etiquetaAccesible: "Volver" };
+
+  if (cargando) {
+    return (
+      <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+        <ScreenHeader titulo={titulo} accion={volver} />
+        <View style={{ padding: tokens.space["4"] }}>
+          <LoadingState />
+        </View>
+      </View>
+    );
+  }
 
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: t.colores.bg }}
-      contentContainerStyle={{ padding: t.espacio(5), gap: t.espacio(4), paddingBottom: t.espacio(12) }}
-      keyboardShouldPersistTaps="handled"
-    >
-      <Input etiqueta="Nombre" value={b.nombre} onChangeText={(v) => set("nombre", v)} />
-      <Input
-        etiqueta="Persona de contacto (opcional)"
-        value={b.contacto_nombre}
-        onChangeText={(v) => set("contacto_nombre", v)}
-      />
-      <Input etiqueta="RUT (opcional)" value={b.rut} onChangeText={(v) => set("rut", v)} autoCapitalize="characters" />
-      <Input etiqueta="Dirección" value={b.direccion} onChangeText={(v) => set("direccion", v)} />
-      <Input etiqueta="Comuna (opcional)" value={b.comuna} onChangeText={(v) => set("comuna", v)} />
-      <Input etiqueta="Teléfono (opcional)" keyboardType="phone-pad" value={b.telefono} onChangeText={(v) => set("telefono", v)} />
-      <Input etiqueta="Correo (opcional)" keyboardType="email-address" autoCapitalize="none" value={b.correo} onChangeText={(v) => set("correo", v)} />
-      <Input etiqueta="Notas (opcional)" multiline value={b.notas} onChangeText={(v) => set("notas", v)} />
+    <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+      <ScreenHeader titulo={titulo} accion={volver} />
+      <ScrollView
+        contentContainerStyle={{ padding: tokens.space["6"], gap: tokens.space["4"], paddingBottom: tokens.space["8"] * 2 }}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Input etiqueta="Nombre" valor={b.nombre} onCambio={(v) => set("nombre", v)} />
+        <Input etiqueta="Persona de contacto (opcional)" valor={b.contacto_nombre} onCambio={(v) => set("contacto_nombre", v)} />
+        <Input etiqueta="RUT (opcional)" valor={b.rut} onCambio={(v) => set("rut", v)} autoCapitalizar={false} />
+        <Input etiqueta="Dirección" valor={b.direccion} onCambio={(v) => set("direccion", v)} />
+        <Input etiqueta="Comuna (opcional)" valor={b.comuna} onCambio={(v) => set("comuna", v)} />
+        <Input etiqueta="Teléfono (opcional)" tipo="tel" valor={b.telefono} onCambio={(v) => set("telefono", v)} />
+        <Input etiqueta="Correo (opcional)" tipo="email" autoCapitalizar={false} valor={b.correo} onCambio={(v) => set("correo", v)} />
+        <Textarea etiqueta="Notas (opcional)" valor={b.notas} onCambio={(v) => set("notas", v)} />
 
-      <Button
-        titulo={editandoId ? "Guardar cambios" : "Crear cliente"}
-        tamano="lg"
-        onPress={guardar}
-        cargando={guardando}
-        style={{ marginTop: t.espacio(2) }}
-      />
-    </ScrollView>
+        <Button bloque tamano="lg" onPress={guardar} cargando={guardando}>
+          {editandoId ? "Guardar cambios" : "Crear cliente"}
+        </Button>
+      </ScrollView>
+    </View>
   );
 }

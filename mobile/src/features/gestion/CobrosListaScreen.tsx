@@ -1,15 +1,25 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FlatList, Pressable, RefreshControl, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { RefreshControl, ScrollView, View } from "react-native";
+import { ArrowLeft, Banknote } from "lucide-react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { useTema } from "../../theme";
+import { tokens } from "@bitacora/design-tokens";
+import {
+  Button,
+  EmptyState,
+  ErrorState,
+  ESPACIO_ASISTENTE_FLOTANTE,
+  ListRow,
+  ListRowGrupo,
+  LoadingState,
+  ScreenHeader,
+  StatusBadge,
+  Texto,
+} from "@bitacora/ui/native";
 import { pesos } from "../../lib/plata";
-import { Badge, Button, Card, EmptyState, ErrorState, LoadingScreen, Text } from "../../components/ui";
 import { OfflineBanner } from "../../components/OfflineBanner";
 import { estaVencido, listarCobros, type CobroConCliente } from "../../services/cobros";
 import type { MasStackParamList } from "../../shell/navigation/types";
-
 
 type Filtro = "pendientes" | "vencidas" | "pagadas" | "todas";
 const FILTROS: { clave: Filtro; label: string }[] = [
@@ -19,8 +29,13 @@ const FILTROS: { clave: Filtro; label: string }[] = [
   { clave: "todas", label: "Todas" },
 ];
 
+// Sistema visual móvil v2 — pantalla push (no es raíz de tab, por eso
+// ScreenHeader lleva `accion` de volver, mismo patrón que
+// ClienteDetalleScreen). Filtros de estado como chips del propio
+// ScreenHeader (mismo mecanismo que Mes/Sem/Día en Agenda), lista con
+// ListRow/ListRowGrupo en vez de Card+FlatList (mismo criterio que
+// ClientesListaScreen: nada virtualizado, listas cortas).
 export function CobrosListaScreen({ navigation }: NativeStackScreenProps<MasStackParamList, "CobrosLista">) {
-  const t = useTema();
   const [cobros, setCobros] = useState<CobroConCliente[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refrescando, setRefrescando] = useState(false);
@@ -59,77 +74,83 @@ export function CobrosListaScreen({ navigation }: NativeStackScreenProps<MasStac
 
   const totalVisible = useMemo(() => visibles.reduce((s, c) => s + (c.monto ?? 0), 0), [visibles]);
 
-  if (cobros === null && !error) return <LoadingScreen />;
-  if (error && !cobros) return <ErrorState mensaje={error} onReintentar={cargar} />;
+  const volver = { icono: <ArrowLeft size={20} strokeWidth={2.5} color={tokens.color.text} />, onPress: () => navigation.goBack(), etiquetaAccesible: "Volver" };
+
+  const filtros = {
+    opciones: FILTROS.map((f) => ({ valor: f.clave, etiqueta: f.label })),
+    valor: filtro,
+    onCambio: (v: string) => setFiltro(v as Filtro),
+  };
+
+  if (cobros === null && !error) {
+    return (
+      <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+        <ScreenHeader titulo="Cobros" accion={volver} filtros={filtros} />
+        <View style={{ padding: tokens.space["4"] }}>
+          <LoadingState />
+        </View>
+      </View>
+    );
+  }
+  if (error && !cobros) {
+    return (
+      <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+        <ScreenHeader titulo="Cobros" accion={volver} filtros={filtros} />
+        <ErrorState mensaje={error} onReintentar={cargar} />
+      </View>
+    );
+  }
 
   return (
-    <View style={{ flex: 1, backgroundColor: t.colores.bg }}>
+    <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+      <ScreenHeader titulo="Cobros" accion={volver} filtros={filtros} />
       <OfflineBanner guardadoEn={guardadoEn} />
-      <View style={{ padding: t.espacio(4), gap: t.espacio(3) }}>
-        <Button titulo="Nuevo cobro" onPress={() => navigation.navigate("CobroForm")} />
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: t.espacio(2) }}>
-          {FILTROS.map((f) => {
-            const activo = f.clave === filtro;
-            return (
-              <Pressable
-                key={f.clave}
-                onPress={() => setFiltro(f.clave)}
-                hitSlop={6}
-                style={{
-                  minHeight: 36,
-                  justifyContent: "center",
-                  paddingHorizontal: t.espacio(3),
-                  borderRadius: t.radio.md,
-                  backgroundColor: activo ? t.colores.brand : t.colores.surfaceAlt,
-                }}
-              >
-                <Text variante="caption" weight="semibold" tono={activo ? "inverso" : "muted"}>
-                  {f.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
+      <View style={{ paddingHorizontal: tokens.space["4"], paddingTop: tokens.space["3"], gap: tokens.space["2"] }}>
+        <Button bloque onPress={() => navigation.navigate("CobroForm")}>
+          Nuevo cobro
+        </Button>
         {visibles.length > 0 ? (
-          <Text variante="caption" tono="muted">
+          <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
             {visibles.length} {visibles.length === 1 ? "cobro" : "cobros"} · {pesos(totalVisible)}
-          </Text>
+          </Texto>
         ) : null}
       </View>
-      <FlatList
-        data={visibles}
-        keyExtractor={(c) => c.id}
-        contentContainerStyle={{ padding: t.espacio(4), paddingTop: 0, paddingBottom: t.espacio(10), gap: t.espacio(3), flexGrow: 1 }}
-        refreshControl={<RefreshControl refreshing={refrescando} onRefresh={onRefresh} tintColor={t.colores.brand} />}
-        ListEmptyComponent={
+      <ScrollView
+        contentContainerStyle={{ padding: tokens.space["4"], paddingBottom: ESPACIO_ASISTENTE_FLOTANTE, flexGrow: 1 }}
+        refreshControl={<RefreshControl refreshing={refrescando} onRefresh={onRefresh} />}
+      >
+        {visibles.length === 0 ? (
           <EmptyState
-            icono={<Ionicons name="cash-outline" size={40} color={t.colores.faint} />}
+            icono={<Banknote size={32} strokeWidth={2.75} color={tokens.color.accent2Ramp["800"]} />}
             titulo="Sin cobros"
             mensaje="No hay cobros en este filtro."
           />
-        }
-        renderItem={({ item }) => {
-          const vencido = estaVencido(item);
-          return (
-            <Card onPress={() => navigation.navigate("CobroDetalle", { cobroId: item.id })}>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: t.espacio(3) }}>
-                <View style={{ flex: 1, gap: 2 }}>
-                  <Text variante="subtitulo">{item.cliente_info?.nombre ?? item.cliente}</Text>
-                  <Text variante="caption" tono="muted">
-                    Vence {item.fecha_vencimiento}
-                  </Text>
-                </View>
-                <View style={{ alignItems: "flex-end", gap: 4 }}>
-                  <Text variante="subtitulo" weight="semibold" style={{ fontVariant: ["tabular-nums"] }}>
-                    {pesos(item.monto)}
-                  </Text>
-                  <Badge texto={vencido ? "vencida" : item.estado} estado={vencido ? "vencida" : item.estado} />
-                </View>
-              </View>
-            </Card>
-          );
-        }}
-      />
+        ) : (
+          <ListRowGrupo>
+            {visibles.map((item) => {
+              const vencido = estaVencido(item);
+              const estadoMostrado = vencido ? "vencida" : item.estado;
+              return (
+                <ListRow
+                  key={item.id}
+                  icono={<Banknote size={22} strokeWidth={2.25} color={tokens.color.accentRamp["700"]} />}
+                  titulo={item.cliente_info?.nombre ?? item.cliente}
+                  subtitulo={`Vence ${item.fecha_vencimiento}`}
+                  trailing={
+                    <View style={{ alignItems: "flex-end", gap: 4 }}>
+                      <Texto tamano={tokens.size.small} peso="semibold" color={tokens.color.text} style={{ fontVariant: ["tabular-nums"] }}>
+                        {pesos(item.monto)}
+                      </Texto>
+                      <StatusBadge estado={estadoMostrado} tonoForzado={estadoMostrado === "pendiente" ? "en_progreso" : undefined} />
+                    </View>
+                  }
+                  onPress={() => navigation.navigate("CobroDetalle", { cobroId: item.id })}
+                />
+              );
+            })}
+          </ListRowGrupo>
+        )}
+      </ScrollView>
     </View>
   );
 }

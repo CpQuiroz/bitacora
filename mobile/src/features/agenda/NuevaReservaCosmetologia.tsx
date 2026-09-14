@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { Alert, Pressable, ScrollView, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { ArrowLeft, X } from "lucide-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { Cliente, PaqueteSesionesConSaldo, Servicio, Usuario } from "@bitacora/shared";
-import { useTema } from "../../theme";
-import { Button, Input, Text } from "../../components/ui";
+import { tokens } from "@bitacora/design-tokens";
+import { Button, Input, LoadingState, ScreenHeader, Textarea, Texto, useMarca } from "@bitacora/ui/native";
 import { InputMonto } from "../../components/InputMonto";
 import { SelectorCliente } from "../../components/SelectorCliente";
 import { useRed } from "../../services/sync/NetworkProvider";
@@ -26,39 +26,45 @@ function clave(d: Date): string {
 }
 
 function Chip({ etiqueta, activo, onPress }: { etiqueta: string; activo: boolean; onPress: () => void }) {
-  const t = useTema();
+  const marca = useMarca();
   return (
     <Pressable
       onPress={onPress}
       style={{
         minHeight: 40,
         justifyContent: "center",
-        paddingHorizontal: t.espacio(3.5),
-        borderRadius: t.radio.md,
-        backgroundColor: activo ? t.colores.brand : t.colores.surface,
+        paddingHorizontal: tokens.space["3"],
+        borderRadius: tokens.radius.md,
+        backgroundColor: activo ? marca.base : tokens.color.surface,
         borderWidth: 1,
-        borderColor: activo ? t.colores.brand : t.colores.border,
+        borderColor: activo ? marca.base : tokens.color.divider,
       }}
     >
-      <Text variante="etiqueta" weight="semibold" tono={activo ? "inverso" : "normal"}>
+      <Texto tamano={tokens.size.small} peso="semibold" color={activo ? marca.foreground : tokens.color.text}>
         {etiqueta}
-      </Text>
+      </Texto>
     </Pressable>
   );
 }
 
 function Filete() {
-  const t = useTema();
-  return <View style={{ height: 1, backgroundColor: t.colores.border }} />;
+  return <View style={{ height: 1, backgroundColor: tokens.color.divider }} />;
 }
 
 /**
  * Nueva reserva — tema "Vino y eucalipto" (cosmetología). Reemplaza
  * NuevaCitaScreen SOLO para este rubro y solo para creación (editar una
  * cita existente sigue usando el formulario genérico).
+ *
+ * Sistema visual móvil v2 (14-sep-2026) — ScreenHeader propio con
+ * `accion`=volver: como esta pantalla se renderiza DENTRO de la misma
+ * ruta "NuevaCita" (ver NuevaCitaScreen), el header nativo del stack
+ * (que sigue activo para el formulario genérico) se apaga a mano acá
+ * con `navigation.setOptions({ headerShown: false })` — mismo mecanismo
+ * que ya usaba este archivo para poner el título dinámico.
  */
 export function NuevaReservaCosmetologia({ navigation, route }: NativeStackScreenProps<AgendaStackParamList, "NuevaCita">) {
-  const t = useTema();
+  const marca = useMarca();
   const { enLinea } = useRed();
   const fechaInicial = route.params?.fecha ?? clave(new Date());
 
@@ -89,8 +95,10 @@ export function NuevaReservaCosmetologia({ navigation, route }: NativeStackScree
   // "Valor agregado": extras que se suman al precio del servicio.
   const [adicionales, setAdicionales] = useState<{ concepto: string; monto: string }[]>([]);
 
+  const volver = { icono: <ArrowLeft size={20} strokeWidth={2.5} color={tokens.color.text} />, onPress: () => navigation.goBack(), etiquetaAccesible: "Volver" };
+
   useEffect(() => {
-    navigation.setOptions({ title: "Nueva reserva" });
+    navigation.setOptions({ title: "Nueva reserva", headerShown: false });
   }, [navigation]);
 
   useEffect(() => {
@@ -183,7 +191,16 @@ export function NuevaReservaCosmetologia({ navigation, route }: NativeStackScree
     Alert.alert("Reserva agendada", "Listo.", [{ text: "Listo", onPress: () => navigation.goBack() }]);
   }
 
-  if (clientes === null) return null;
+  if (clientes === null) {
+    return (
+      <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+        <ScreenHeader titulo="Nueva reserva" accion={volver} />
+        <View style={{ padding: tokens.space["4"] }}>
+          <LoadingState />
+        </View>
+      </View>
+    );
+  }
 
   const responsableNombre = equipo.find((u) => u.id === responsableId)?.nombre ?? "sin asignar";
   const horaFin = hora ? sumarMinutos(hora, duracionMin) : null;
@@ -195,8 +212,9 @@ export function NuevaReservaCosmetologia({ navigation, route }: NativeStackScree
   }${totalReserva > 0 ? ` · total ${formatearMoneda(totalReserva)}` : ""}`;
 
   return (
-    <View style={{ flex: 1, backgroundColor: t.colores.bg }}>
-      <ScrollView contentContainerStyle={{ padding: t.espacio(5), gap: t.espacio(4), paddingBottom: t.espacio(8) }} keyboardShouldPersistTaps="handled">
+    <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+      <ScreenHeader titulo="Nueva reserva" accion={volver} />
+      <ScrollView contentContainerStyle={{ padding: tokens.space["6"], gap: tokens.space["4"], paddingBottom: tokens.space["8"] }} keyboardShouldPersistTaps="handled">
         {/* Cliente */}
         <SelectorCliente
           etiqueta="Cliente"
@@ -208,26 +226,28 @@ export function NuevaReservaCosmetologia({ navigation, route }: NativeStackScree
         <Filete />
 
         {/* Servicio */}
-        <View style={{ gap: t.espacio(2) }}>
-          <Text variante="etiqueta" tono="muted">
+        <View style={{ gap: tokens.space["2"] }}>
+          <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
             Servicio
-          </Text>
+          </Texto>
           {servicios === null ? (
-            <Text variante="caption" tono="muted">
+            <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
               Cargando servicios…
-            </Text>
+            </Texto>
           ) : servicios.length === 0 ? (
-            <View style={{ backgroundColor: t.colores.surfaceAlt, borderRadius: t.radio.md, padding: t.espacio(3), gap: t.espacio(2) }}>
-              <Text variante="etiqueta" weight="semibold">
+            <View style={{ backgroundColor: tokens.color.neutral["200"], borderRadius: tokens.radius.md, padding: tokens.space["3"], gap: tokens.space["2"] }}>
+              <Texto tamano={tokens.size.small} peso="semibold" color={tokens.color.text}>
                 Todavía no hay servicios en el catálogo
-              </Text>
-              <Text variante="caption" tono="muted">
+              </Texto>
+              <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
                 Créalos acá o desde la web (Configuración → Agenda Pro → Servicios).
-              </Text>
-              <Button titulo="＋ Nuevo servicio" variante="secundario" onPress={() => setNuevoServicioAbierto(true)} />
+              </Texto>
+              <Button variante="secundario" onPress={() => setNuevoServicioAbierto(true)}>
+                ＋ Nuevo servicio
+              </Button>
             </View>
           ) : (
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: t.espacio(2) }}>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: tokens.space["2"] }}>
               {servicios.map((s) => (
                 <Chip key={s.id} etiqueta={s.nombre} activo={s.id === servicioId} onPress={() => elegirServicio(s.id)} />
               ))}
@@ -237,24 +257,24 @@ export function NuevaReservaCosmetologia({ navigation, route }: NativeStackScree
         </View>
 
         {paqueteDetectado ? (
-          <View style={{ backgroundColor: t.colores.successSoft, borderRadius: t.radio.lg, padding: t.espacio(4), gap: t.espacio(1) }}>
-            <Text tono="success" weight="bold">
+          <View style={{ backgroundColor: tokens.color.accent2Ramp["200"], borderRadius: tokens.radius.lg, padding: tokens.space["4"], gap: tokens.space["1"] }}>
+            <Texto tamano={tokens.size.body} color={tokens.color.accent2Ramp["800"]} peso="semibold">
               {paqueteDetectado.nombre} — quedan {paqueteDetectado.saldo} de {paqueteDetectado.cantidad_total}
-            </Text>
-            <Text variante="caption" tono="success">
+            </Texto>
+            <Texto tamano={tokens.size.caption} color={tokens.color.accent2Ramp["700"]}>
               {paqueteDetectado.vence_el ? `Vence el ${formatearFechaCompleta(paqueteDetectado.vence_el)}` : "Sin vencimiento"} · se
               usa automáticamente para esta reserva
-            </Text>
+            </Texto>
           </View>
         ) : null}
         <Filete />
 
         {/* Atiende */}
-        <View style={{ gap: t.espacio(2) }}>
-          <Text variante="etiqueta" tono="muted">
+        <View style={{ gap: tokens.space["2"] }}>
+          <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
             Atiende
-          </Text>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: t.espacio(2) }}>
+          </Texto>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: tokens.space["2"] }}>
             {equipo.map((u) => (
               <Chip key={u.id} etiqueta={u.nombre} activo={u.id === responsableId} onPress={() => setResponsableId(u.id)} />
             ))}
@@ -279,11 +299,11 @@ export function NuevaReservaCosmetologia({ navigation, route }: NativeStackScree
         <Filete />
 
         {/* Duración */}
-        <View style={{ gap: t.espacio(2) }}>
-          <Text variante="etiqueta" tono="muted">
+        <View style={{ gap: tokens.space["2"] }}>
+          <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
             Duración
-          </Text>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: t.espacio(2) }}>
+          </Texto>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: tokens.space["2"] }}>
             {DURACIONES.map((min) => (
               <Chip
                 key={min}
@@ -299,10 +319,10 @@ export function NuevaReservaCosmetologia({ navigation, route }: NativeStackScree
           </View>
           {duracionLibre ? (
             <Input
-              keyboardType="numeric"
+              tipo="numero"
               placeholder="Minutos"
-              value={String(duracionMin)}
-              onChangeText={(v) => setDuracionMin(Math.max(1, Number(v.replace(/\D/g, "")) || 1))}
+              valor={String(duracionMin)}
+              onCambio={(v) => setDuracionMin(Math.max(1, Number(v.replace(/\D/g, "")) || 1))}
             />
           ) : null}
         </View>
@@ -313,30 +333,30 @@ export function NuevaReservaCosmetologia({ navigation, route }: NativeStackScree
         <Filete />
 
         {/* Adicionales — "valor agregado" */}
-        <View style={{ gap: t.espacio(2) }}>
+        <View style={{ gap: tokens.space["2"] }}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-            <Text variante="etiqueta" tono="muted">
+            <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
               Adicionales
-            </Text>
+            </Texto>
             <Pressable onPress={() => setAdicionales((prev) => [...prev, { concepto: "", monto: "" }])} hitSlop={8}>
-              <Text variante="caption" weight="semibold" tono="brand">
+              <Texto tamano={tokens.size.caption} peso="semibold" color={marca.base}>
                 ＋ Agregar
-              </Text>
+              </Texto>
             </Pressable>
           </View>
           {adicionales.length === 0 ? (
-            <Text variante="caption" tono="muted">
+            <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
               Productos o extras que se cobran encima del servicio.
-            </Text>
+            </Texto>
           ) : (
             adicionales.map((a, i) => (
-              <View key={i} style={{ flexDirection: "row", gap: t.espacio(2), alignItems: "flex-end" }}>
+              <View key={i} style={{ flexDirection: "row", gap: tokens.space["2"], alignItems: "flex-end" }}>
                 <View style={{ flex: 2 }}>
                   <Input
                     etiqueta="Concepto"
                     placeholder="Producto o extra"
-                    value={a.concepto}
-                    onChangeText={(v) =>
+                    valor={a.concepto}
+                    onCambio={(v) =>
                       setAdicionales((prev) => prev.map((x, j) => (j === i ? { ...x, concepto: v } : x)))
                     }
                   />
@@ -351,27 +371,27 @@ export function NuevaReservaCosmetologia({ navigation, route }: NativeStackScree
                 <Pressable
                   onPress={() => setAdicionales((prev) => prev.filter((_, j) => j !== i))}
                   hitSlop={8}
-                  style={{ marginBottom: t.espacio(2.5) }}
+                  style={{ marginBottom: tokens.space["2"] * 1.25 }}
                 >
-                  <Ionicons name="close-circle" size={22} color={t.colores.muted} />
+                  <X size={22} color={`${tokens.color.text}99`} />
                 </Pressable>
               </View>
             ))
           )}
           {totalAdicionales > 0 ? (
-            <Text variante="caption" tono="muted">
+            <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
               Total reserva: {formatearMoneda(totalReserva)} (servicio {formatearMoneda(Number(precio.replace(/\D/g, "")) || 0)} + adicionales {formatearMoneda(totalAdicionales)})
-            </Text>
+            </Texto>
           ) : null}
         </View>
         <Filete />
 
         {/* Estado inicial */}
-        <View style={{ gap: t.espacio(2) }}>
-          <Text variante="etiqueta" tono="muted">
+        <View style={{ gap: tokens.space["2"] }}>
+          <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
             Estado inicial
-          </Text>
-          <View style={{ flexDirection: "row", gap: t.espacio(2) }}>
+          </Texto>
+          <View style={{ flexDirection: "row", gap: tokens.space["2"] }}>
             <Chip etiqueta="Reservado" activo={estadoInicial === "pendiente"} onPress={() => setEstadoInicial("pendiente")} />
             <Chip etiqueta="Confirmado" activo={estadoInicial === "confirmada"} onPress={() => setEstadoInicial("confirmada")} />
           </View>
@@ -383,50 +403,52 @@ export function NuevaReservaCosmetologia({ navigation, route }: NativeStackScree
           onPress={() => setAvisarWhatsapp((v) => !v)}
           style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
         >
-          <Text variante="cuerpo">Avisar por WhatsApp</Text>
+          <Texto tamano={tokens.size.body} color={tokens.color.text}>
+            Avisar por WhatsApp
+          </Texto>
           <View
             style={{
               width: 44,
               height: 26,
-              borderRadius: 999,
+              borderRadius: tokens.radius.pill,
               padding: 2,
-              backgroundColor: avisarWhatsapp ? t.colores.success : t.colores.border,
+              backgroundColor: avisarWhatsapp ? tokens.color.accent2Ramp["700"] : tokens.color.divider,
               alignItems: avisarWhatsapp ? "flex-end" : "flex-start",
             }}
           >
-            <View style={{ width: 22, height: 22, borderRadius: 999, backgroundColor: "#fff" }} />
+            <View style={{ width: 22, height: 22, borderRadius: tokens.radius.pill, backgroundColor: tokens.color.neutral["100"] }} />
           </View>
         </Pressable>
         <Filete />
 
         {/* Notas */}
-        <Input
+        <Textarea
           etiqueta="Nota para el cliente (opcional)"
           placeholder="Va en el correo/portal del cliente"
-          multiline
-          value={notaCliente}
-          onChangeText={setNotaCliente}
+          valor={notaCliente}
+          onCambio={setNotaCliente}
         />
-        <View style={{ backgroundColor: t.colores.surfaceAlt, borderRadius: t.radio.md, padding: t.espacio(3) }}>
-          <Input
+        <View style={{ backgroundColor: tokens.color.neutral["200"], borderRadius: tokens.radius.md, padding: tokens.space["3"] }}>
+          <Textarea
             etiqueta="Nota interna (opcional)"
             placeholder="No la ve el cliente"
-            multiline
-            value={notaInterna}
-            onChangeText={setNotaInterna}
+            valor={notaInterna}
+            onCambio={setNotaInterna}
           />
-          <Text variante="caption" tono="muted" style={{ marginTop: t.espacio(1) }}>
+          <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} style={{ marginTop: tokens.space["1"] }}>
             No la ve el cliente.
-          </Text>
+          </Texto>
         </View>
       </ScrollView>
 
       {/* Pie fijo */}
-      <View style={{ padding: t.espacio(4), paddingBottom: t.espacio(6), borderTopWidth: 1, borderTopColor: t.colores.border, backgroundColor: t.colores.surface, gap: t.espacio(1.5) }}>
-        <Button titulo="Agendar" tamano="lg" onPress={guardar} cargando={guardando} />
-        <Text variante="caption" tono="muted" style={{ textAlign: "center" }}>
+      <View style={{ padding: tokens.space["4"], paddingBottom: tokens.space["6"], borderTopWidth: 1, borderTopColor: tokens.color.divider, backgroundColor: tokens.color.surface, gap: tokens.space["1"] * 1.5 }}>
+        <Button tamano="lg" bloque onPress={guardar} cargando={guardando}>
+          Agendar
+        </Button>
+        <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} style={{ textAlign: "center" }}>
           {resumen}
-        </Text>
+        </Texto>
       </View>
 
       <NuevoServicioModal

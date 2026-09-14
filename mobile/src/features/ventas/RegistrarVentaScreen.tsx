@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { Alert, FlatList, Modal, Pressable, ScrollView, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { ArrowLeft, Minus, Plus, X } from "lucide-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { CatalogoItem, MedioPagoVenta, Servicio, TipoLineaVenta, TipoPack } from "@bitacora/shared";
-import { useTema } from "../../theme";
-import { Button, Text } from "../../components/ui";
+import { tokens } from "@bitacora/design-tokens";
+import { Button, ScreenHeader, Tag, Texto, type TonoTag, useMarca } from "@bitacora/ui/native";
 import { pesos } from "../../lib/plata";
 import type { TrabajosStackParamList } from "../../shell/navigation/types";
 import { useAuth } from "../auth/AuthContext";
@@ -14,10 +14,10 @@ import { crearVenta, listarProductos, type LineaBorrador } from "../../services/
 
 const IVA_TASA = 0.19;
 
-const ETIQUETA_TIPO: Record<TipoLineaVenta, { texto: string; caja: "agendado" | "enProceso" | "firmada" }> = {
-  servicio: { texto: "SERVICIO", caja: "agendado" },
-  producto: { texto: "PRODUCTO", caja: "enProceso" },
-  pack: { texto: "PACK", caja: "firmada" },
+const ETIQUETA_TIPO: Record<TipoLineaVenta, { texto: string; tono: TonoTag }> = {
+  servicio: { texto: "SERVICIO", tono: "accent" },
+  producto: { texto: "PRODUCTO", tono: "neutral" },
+  pack: { texto: "PACK", tono: "accent2" },
 };
 
 const MEDIOS: { k: MedioPagoVenta; t: string }[] = [
@@ -28,8 +28,13 @@ const MEDIOS: { k: MedioPagoVenta; t: string }[] = [
 
 type LineaLocal = LineaBorrador & { detalle?: string; maxCantidad?: number };
 
+// Sistema visual móvil v2 (tarea 31) — pantalla PUSH (Stack la registra
+// sin `presentation: "modal"`), mismo patrón que ClienteDetalleScreen:
+// ScreenHeader propio con `accion` de volver (header nativo apagado en
+// ClientesStack.tsx/TrabajosStack.tsx) + pie fijo con el botón primario.
+// Sin AsistenteButton (es un formulario, no una raíz de tab).
 export function RegistrarVentaScreen({ route, navigation }: NativeStackScreenProps<TrabajosStackParamList, "RegistrarVenta">) {
-  const t = useTema();
+  const marca = useMarca();
   const auth = useAuth();
   const puedeEditarPrecio = auth.fase === "listo" && auth.acciones.includes("facturar");
 
@@ -130,75 +135,77 @@ export function RegistrarVentaScreen({ route, navigation }: NativeStackScreenPro
     .join("")
     .toUpperCase();
 
+  const volver = { icono: <ArrowLeft size={20} strokeWidth={2.5} color={tokens.color.text} />, onPress: () => navigation.goBack(), etiquetaAccesible: "Volver" };
+
   return (
-    <View style={{ flex: 1, backgroundColor: t.colores.bg }}>
-      <ScrollView contentContainerStyle={{ padding: t.espacio(5), gap: t.espacio(4), paddingBottom: 220 }}>
-        <View style={{ gap: t.espacio(2) }}>
-          <Text mono variante="caption" tono="muted">
+    <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+      <ScreenHeader titulo="Registrar venta" accion={volver} />
+      <ScrollView contentContainerStyle={{ padding: tokens.space["6"], gap: tokens.space["4"], paddingBottom: 220 }}>
+        <View style={{ gap: tokens.space["2"] }}>
+          <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
             {origenTipo === "os" ? `Desde OS N° ${folio ?? "—"}` : "Desde una cita"}
-          </Text>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: t.espacio(3) }}>
-            <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: t.colores.brandSoft, alignItems: "center", justifyContent: "center" }}>
-              <Text weight="bold" tono="brand">
+          </Texto>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: tokens.space["3"] }}>
+            <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: tokens.color.accent2Ramp["200"], alignItems: "center", justifyContent: "center" }}>
+              <Texto tamano={tokens.size.small} color={tokens.color.accent2Ramp["800"]} peso="semibold">
                 {iniciales}
-              </Text>
+              </Texto>
             </View>
             <View style={{ flex: 1 }}>
-              <Text weight="semibold">{clienteNombre}</Text>
+              <Texto tamano={tokens.size.body} color={tokens.color.text} peso="semibold">
+                {clienteNombre}
+              </Texto>
               {clienteRut ? (
-                <Text mono variante="caption" tono="muted">
+                <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
                   {clienteRut}
-                </Text>
+                </Texto>
               ) : null}
             </View>
           </View>
         </View>
 
         {/* Líneas */}
-        <View style={{ gap: t.espacio(3) }}>
+        <View style={{ gap: tokens.space["3"] }}>
           {lineas.map((l, i) => {
             const et = ETIQUETA_TIPO[l.tipo];
-            const caja = t.estado[et.caja];
             return (
-              <View key={i} style={{ borderWidth: 1, borderColor: t.colores.border, borderRadius: t.radio.md, padding: t.espacio(3), gap: t.espacio(2) }}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: t.espacio(2) }}>
-                  <Text mono weight="bold" style={{ fontSize: 9.5, letterSpacing: 0.5, color: caja.fg, backgroundColor: caja.bg, paddingHorizontal: 4, paddingVertical: 2, borderRadius: 3 }}>
-                    {et.texto}
-                  </Text>
-                  <Text weight="semibold" style={{ flex: 1 }} numberOfLines={1}>
+              <View key={i} style={{ borderWidth: 1, borderColor: tokens.color.divider, borderRadius: tokens.radius.md, padding: tokens.space["3"], gap: tokens.space["2"] }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: tokens.space["2"] }}>
+                  <Tag tono={et.tono}>{et.texto}</Tag>
+                  <Texto tamano={tokens.size.body} color={tokens.color.text} peso="semibold" style={{ flex: 1 }} numberOfLines={1}>
                     {l.nombre}
-                  </Text>
+                  </Texto>
                   <Pressable onPress={() => quitar(i)} hitSlop={8}>
-                    <Ionicons name="close" size={18} color={t.colores.faint} />
+                    <X size={18} color={`${tokens.color.text}66`} />
                   </Pressable>
                 </View>
 
-                <View style={{ flexDirection: "row", alignItems: "center", gap: t.espacio(2) }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: tokens.space["2"] }}>
                   {l.tipo !== "pack" ? (
-                    <View style={{ flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: t.colores.border, borderRadius: t.radio.sm }}>
+                    <View style={{ flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: tokens.color.divider, borderRadius: tokens.radius.sm }}>
                       <Pressable onPress={() => setCantidad(i, -1)} style={{ width: 34, height: 34, alignItems: "center", justifyContent: "center" }}>
-                        <Ionicons name="remove" size={16} color={t.colores.foreground} />
+                        <Minus size={16} color={tokens.color.text} />
                       </Pressable>
-                      <Text mono weight="semibold" style={{ width: 28, textAlign: "center" }}>
+                      <Texto tamano={tokens.size.body} color={tokens.color.text} peso="semibold" style={{ width: 28, textAlign: "center", fontVariant: ["tabular-nums"] }}>
                         {l.cantidad}
-                      </Text>
+                      </Texto>
                       <Pressable onPress={() => setCantidad(i, 1)} style={{ width: 34, height: 34, alignItems: "center", justifyContent: "center" }}>
-                        <Ionicons name="add" size={16} color={t.colores.foreground} />
+                        <Plus size={16} color={tokens.color.text} />
                       </Pressable>
                     </View>
                   ) : null}
-                  <Text mono variante="caption" tono="muted" style={{ flex: 1 }}>
+                  <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} style={{ flex: 1, fontVariant: ["tabular-nums"] }}>
                     × {pesos(l.precio_unitario)}
-                  </Text>
-                  <Text mono weight="semibold">
+                  </Texto>
+                  <Texto tamano={tokens.size.body} color={tokens.color.text} peso="semibold" style={{ fontVariant: ["tabular-nums"] }}>
                     {pesos(l.precio_unitario * l.cantidad)}
-                  </Text>
+                  </Texto>
                 </View>
 
                 {l.detalle ? (
-                  <Text variante="caption" tono="faint">
+                  <Texto tamano={tokens.size.caption} color={`${tokens.color.text}66`}>
                     {l.detalle}
-                  </Text>
+                  </Texto>
                 ) : null}
               </View>
             );
@@ -206,7 +213,7 @@ export function RegistrarVentaScreen({ route, navigation }: NativeStackScreenPro
         </View>
 
         {/* Agregar */}
-        <View style={{ flexDirection: "row", gap: t.espacio(2) }}>
+        <View style={{ flexDirection: "row", gap: tokens.space["2"] }}>
           {(["servicio", "producto", "pack"] as TipoLineaVenta[]).map((tp) => (
             <Pressable
               key={tp}
@@ -216,34 +223,34 @@ export function RegistrarVentaScreen({ route, navigation }: NativeStackScreenPro
                 minHeight: 44,
                 borderWidth: 1.5,
                 borderStyle: "dashed",
-                borderColor: t.colores.borderStrong,
-                borderRadius: t.radio.md,
+                borderColor: tokens.color.divider,
+                borderRadius: tokens.radius.md,
                 alignItems: "center",
                 justifyContent: "center",
                 flexDirection: "row",
                 gap: 4,
               }}
             >
-              <Ionicons name="add" size={14} color={t.colores.muted} />
-              <Text variante="caption" weight="semibold" tono="muted">
+              <Plus size={14} color={`${tokens.color.text}99`} />
+              <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} peso="semibold">
                 {ETIQUETA_TIPO[tp].texto[0] + ETIQUETA_TIPO[tp].texto.slice(1).toLowerCase()}
-              </Text>
+              </Texto>
             </Pressable>
           ))}
         </View>
 
         {!puedeEditarPrecio ? (
-          <Text variante="caption" tono="faint">
+          <Texto tamano={tokens.size.caption} color={`${tokens.color.text}66`}>
             Los precios vienen del catálogo. Solo un perfil de administración puede editarlos.
-          </Text>
+          </Texto>
         ) : null}
 
         {/* Medio de pago */}
-        <View style={{ gap: t.espacio(2) }}>
-          <Text variante="etiqueta" tono="muted" weight="semibold" style={{ textTransform: "uppercase" }}>
+        <View style={{ gap: tokens.space["2"] }}>
+          <Texto tamano={tokens.size.micro} color={`${tokens.color.text}99`} peso="semibold" style={{ textTransform: "uppercase", letterSpacing: 1 }}>
             Medio de pago
-          </Text>
-          <View style={{ flexDirection: "row", gap: t.espacio(2) }}>
+          </Texto>
+          <View style={{ flexDirection: "row", gap: tokens.space["2"] }}>
             {MEDIOS.map((m) => {
               const activo = medio === m.k;
               return (
@@ -255,15 +262,15 @@ export function RegistrarVentaScreen({ route, navigation }: NativeStackScreenPro
                     minHeight: 44,
                     alignItems: "center",
                     justifyContent: "center",
-                    borderRadius: t.radio.md,
-                    backgroundColor: activo ? t.colores.brand : t.colores.surface,
+                    borderRadius: tokens.radius.md,
+                    backgroundColor: activo ? marca.base : tokens.color.surface,
                     borderWidth: 1,
-                    borderColor: activo ? t.colores.brand : t.colores.border,
+                    borderColor: activo ? marca.base : tokens.color.divider,
                   }}
                 >
-                  <Text variante="caption" weight="semibold" tono={activo ? "inverso" : "muted"}>
+                  <Texto tamano={tokens.size.caption} color={activo ? marca.foreground : `${tokens.color.text}99`} peso="semibold">
                     {m.t}
-                  </Text>
+                  </Texto>
                 </Pressable>
               );
             })}
@@ -278,75 +285,85 @@ export function RegistrarVentaScreen({ route, navigation }: NativeStackScreenPro
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundColor: t.colores.surface,
+          backgroundColor: tokens.color.surface,
           borderTopWidth: 1,
-          borderTopColor: t.colores.border,
-          padding: t.espacio(5),
-          gap: t.espacio(2),
+          borderTopColor: tokens.color.divider,
+          padding: tokens.space["4"],
+          gap: tokens.space["2"],
         }}
       >
         <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-          <Text variante="caption" tono="muted">
+          <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
             Neto
-          </Text>
-          <Text mono variante="caption">
+          </Texto>
+          <Texto tamano={tokens.size.caption} color={tokens.color.text} style={{ fontVariant: ["tabular-nums"] }}>
             {pesos(neto)}
-          </Text>
+          </Texto>
         </View>
         <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-          <Text variante="caption" tono="muted">
+          <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
             IVA 19%
-          </Text>
-          <Text mono variante="caption">
+          </Texto>
+          <Texto tamano={tokens.size.caption} color={tokens.color.text} style={{ fontVariant: ["tabular-nums"] }}>
             {pesos(iva)}
-          </Text>
+          </Texto>
         </View>
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", borderTopWidth: 1, borderTopColor: t.colores.border, paddingTop: t.espacio(2) }}>
-          <Text weight="semibold">Total</Text>
-          <Text mono weight="semibold" style={{ fontSize: 26 }}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", borderTopWidth: 1, borderTopColor: tokens.color.divider, paddingTop: tokens.space["2"] }}>
+          <Texto tamano={tokens.size.body} color={tokens.color.text} peso="semibold">
+            Total
+          </Texto>
+          <Texto tamano={26} color={tokens.color.text} peso="semibold" style={{ fontVariant: ["tabular-nums"] }}>
             {pesos(total)}
-          </Text>
+          </Texto>
         </View>
-        <Button titulo="Cobrar y marcar pagada" tamano="lg" onPress={confirmar} cargando={guardando} />
+        <Button bloque tamano="lg" onPress={confirmar} cargando={guardando}>
+          Cobrar y marcar pagada
+        </Button>
       </View>
 
       {/* Picker */}
       <Modal visible={picker != null} transparent animationType="slide" onRequestClose={() => setPicker(null)}>
-        <View style={{ flex: 1, backgroundColor: t.colores.overlay, justifyContent: "flex-end" }}>
-          <View style={{ backgroundColor: t.colores.surface, borderTopLeftRadius: 14, borderTopRightRadius: 14, maxHeight: "70%", padding: t.espacio(5) }}>
-            <Text variante="subtitulo" style={{ marginBottom: t.espacio(3) }}>
+        <View style={{ flex: 1, backgroundColor: `${tokens.color.neutral["900"]}66`, justifyContent: "flex-end" }}>
+          <View style={{ backgroundColor: tokens.color.surface, borderTopLeftRadius: tokens.radius.lg, borderTopRightRadius: tokens.radius.lg, maxHeight: "70%", padding: tokens.space["6"] }}>
+            <Texto tamano={tokens.size.h5} color={tokens.color.text} peso="semibold" style={{ marginBottom: tokens.space["3"] }}>
               {picker ? ETIQUETA_TIPO[picker].texto[0] + ETIQUETA_TIPO[picker].texto.slice(1).toLowerCase() : ""}
-            </Text>
+            </Texto>
             <FlatList
               data={opcionesPicker}
               keyExtractor={(it) => it.id}
-              ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: t.colores.border }} />}
+              ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: tokens.color.divider }} />}
               ListEmptyComponent={
-                <Text variante="caption" tono="muted">
+                <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
                   Nada en el catálogo para agregar.
-                </Text>
+                </Texto>
               }
               renderItem={({ item }) => {
                 const precio = picker === "producto" ? (item as CatalogoItem).precio_base : (item as Servicio | TipoPack).precio ?? 0;
                 const sub = picker === "producto" ? `Stock ${(item as CatalogoItem).stock_actual ?? 0}` : picker === "pack" ? `${(item as TipoPack).cantidad_sesiones} sesiones` : null;
                 return (
-                  <Pressable onPress={() => agregarDesdePicker(item)} style={{ paddingVertical: t.espacio(3), flexDirection: "row", justifyContent: "space-between", gap: t.espacio(3) }}>
+                  <Pressable onPress={() => agregarDesdePicker(item)} style={{ paddingVertical: tokens.space["3"], flexDirection: "row", justifyContent: "space-between", gap: tokens.space["3"] }}>
                     <View style={{ flex: 1 }}>
-                      <Text>{item.nombre}</Text>
+                      <Texto tamano={tokens.size.body} color={tokens.color.text}>
+                        {item.nombre}
+                      </Texto>
                       {sub ? (
-                        <Text variante="caption" tono="faint">
+                        <Texto tamano={tokens.size.caption} color={`${tokens.color.text}66`}>
                           {sub}
-                        </Text>
+                        </Texto>
                       ) : null}
                     </View>
-                    <Text mono tono="muted">
+                    <Texto tamano={tokens.size.body} color={`${tokens.color.text}99`} style={{ fontVariant: ["tabular-nums"] }}>
                       {pesos(precio)}
-                    </Text>
+                    </Texto>
                   </Pressable>
                 );
               }}
             />
-            <Button titulo="Cerrar" variante="secundario" onPress={() => setPicker(null)} style={{ marginTop: t.espacio(3) }} />
+            <View style={{ marginTop: tokens.space["3"] }}>
+              <Button variante="secundario" bloque onPress={() => setPicker(null)}>
+                Cerrar
+              </Button>
+            </View>
           </View>
         </View>
       </Modal>

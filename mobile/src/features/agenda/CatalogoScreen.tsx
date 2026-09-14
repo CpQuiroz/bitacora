@@ -1,22 +1,30 @@
 import { useCallback, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { ArrowLeft, ChevronRight, Layers, Tags } from "lucide-react-native";
 import { useFocusEffect } from "@react-navigation/native";
+import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { Servicio, TipoPack } from "@bitacora/shared";
-import { useTema } from "../../theme";
-import { Button, Card, EmptyState, LoadingScreen, Text } from "../../components/ui";
+import { tokens } from "@bitacora/design-tokens";
+import { Button, EmptyState, ListRow, ListRowGrupo, LoadingState, ScreenHeader, Tag, Texto, useMarca } from "@bitacora/ui/native";
 import { useAuth } from "../auth/AuthContext";
 import { formatearMoneda } from "../../lib/plata";
 import { listarServicios } from "../../services/servicios";
 import { listarTiposPack } from "../../services/tiposPack";
 import { NuevoServicioModal } from "./NuevoServicioModal";
 import { TipoPackModal } from "./TipoPackModal";
+import type { MasStackParamList } from "../../shell/navigation/types";
 
 // "Servicios y packs" (pestaña Más) — administra el catálogo de Agenda
 // Pro desde la app: crear y editar servicios (precio, duración) y tipos
 // de pack (precio, sesiones, vigencia). Antes solo se hacía en la web.
-export function CatalogoScreen() {
-  const t = useTema();
+//
+// Sistema visual móvil v2 (14-sep-2026) — migrada al sistema nuevo:
+// ScreenHeader propio con `accion`=volver (es una pantalla push, no
+// raíz de tab) + ListRow/ListRowGrupo para cada sección, mismo patrón
+// que "Más" (que ya usa Tags/Layers como íconos afines). Lógica de
+// negocio (carga, modales de alta/edición) intacta.
+export function CatalogoScreen({ navigation }: NativeStackScreenProps<MasStackParamList, "Catalogo">) {
+  const marca = useMarca();
   const auth = useAuth();
   const moneda = auth.fase === "listo" ? auth.usuario.empresa.moneda : "CLP";
 
@@ -33,92 +41,106 @@ export function CatalogoScreen() {
 
   useFocusEffect(useCallback(() => cargar(), [cargar]));
 
-  if (servicios === null || packs === null) return <LoadingScreen />;
+  const volver = { icono: <ArrowLeft size={20} strokeWidth={2.5} color={tokens.color.text} />, onPress: () => navigation.goBack(), etiquetaAccesible: "Volver" };
+
+  if (servicios === null || packs === null) {
+    return (
+      <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+        <ScreenHeader titulo="Servicios y packs" accion={volver} />
+        <View style={{ padding: tokens.space["4"] }}>
+          <LoadingState />
+        </View>
+      </View>
+    );
+  }
 
   return (
-    <>
-      <ScrollView contentContainerStyle={{ padding: t.espacio(5), gap: t.espacio(5) }}>
+    <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+      <ScreenHeader titulo="Servicios y packs" accion={volver} />
+      <ScrollView contentContainerStyle={{ padding: tokens.space["4"], gap: tokens.space["4"] }}>
         {/* Servicios */}
-        <View style={{ gap: t.espacio(2) }}>
+        <View style={{ gap: tokens.space["2"] }}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-            <Text variante="subtitulo">Servicios ({servicios.length})</Text>
+            <Texto tamano={tokens.size.micro} color={tokens.color.accent2Ramp["800"]} peso="semibold" style={{ textTransform: "uppercase", letterSpacing: 1.3 }}>
+              Servicios ({servicios.length})
+            </Texto>
             <Pressable onPress={() => setServicioModal({ abierto: true, servicio: null })} hitSlop={8}>
-              <Text variante="caption" weight="semibold" tono="brand">
+              <Texto tamano={tokens.size.small} color={marca.base} peso="semibold">
                 ＋ Nuevo
-              </Text>
+              </Texto>
             </Pressable>
           </View>
           {servicios.length === 0 ? (
-            <Text variante="caption" tono="muted">
+            <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
               Todavía no hay servicios. Creá el primero para poder elegirlo en una reserva.
-            </Text>
+            </Texto>
           ) : (
-            servicios.map((s) => (
-              <Card key={s.id} onPress={() => setServicioModal({ abierto: true, servicio: s })}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: t.espacio(3) }}>
-                  <View style={{ flex: 1, gap: 2 }}>
-                    <Text variante="etiqueta" weight="medium">
-                      {s.nombre} {!s.activo ? <Text variante="caption" tono="muted">· inactivo</Text> : null}
-                    </Text>
-                    <Text variante="caption" tono="muted">
-                      {formatearMoneda(s.precio, moneda)} · {s.duracion_sugerida_min} min
-                    </Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={18} color={t.colores.faint} />
-                </View>
-              </Card>
-            ))
+            <ListRowGrupo>
+              {servicios.map((s) => (
+                <ListRow
+                  key={s.id}
+                  icono={<Tags size={22} strokeWidth={2.25} color={tokens.color.accentRamp["700"]} />}
+                  titulo={s.nombre}
+                  subtitulo={`${formatearMoneda(s.precio, moneda)} · ${s.duracion_sugerida_min} min`}
+                  trailing={!s.activo ? <Tag tono="neutral">Inactivo</Tag> : <ChevronRight size={18} strokeWidth={2.25} color={`${tokens.color.text}66`} />}
+                  onPress={() => setServicioModal({ abierto: true, servicio: s })}
+                />
+              ))}
+            </ListRowGrupo>
           )}
         </View>
 
         {/* Packs */}
-        <View style={{ gap: t.espacio(2) }}>
+        <View style={{ gap: tokens.space["2"] }}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-            <Text variante="subtitulo">Packs de sesiones ({packs.length})</Text>
+            <Texto tamano={tokens.size.micro} color={tokens.color.accent2Ramp["800"]} peso="semibold" style={{ textTransform: "uppercase", letterSpacing: 1.3 }}>
+              Packs de sesiones ({packs.length})
+            </Texto>
             <Pressable onPress={() => setPackModal({ abierto: true, pack: null })} hitSlop={8}>
-              <Text variante="caption" weight="semibold" tono="brand">
+              <Texto tamano={tokens.size.small} color={marca.base} peso="semibold">
                 ＋ Nuevo
-              </Text>
+              </Texto>
             </Pressable>
           </View>
           {packs.length === 0 ? (
-            <Text variante="caption" tono="muted">
+            <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
               Sin packs. Un pack es una plantilla (X sesiones a un precio) que después le vendés a un cliente.
-            </Text>
+            </Texto>
           ) : (
-            packs.map((p) => {
-              const servicio = servicios.find((s) => s.id === p.servicio_id);
-              return (
-                <Card key={p.id} onPress={() => setPackModal({ abierto: true, pack: p })}>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: t.espacio(3) }}>
-                    <View style={{ flex: 1, gap: 2 }}>
-                      <Text variante="etiqueta" weight="medium">
-                        {p.nombre} {!p.activo ? <Text variante="caption" tono="muted">· inactivo</Text> : null}
-                      </Text>
-                      <Text variante="caption" tono="muted">
-                        {p.cantidad_sesiones} sesiones · {p.precio != null ? formatearMoneda(p.precio, moneda) : "sin precio"}
-                        {servicio ? ` · ${servicio.nombre}` : ""}
-                        {p.vigencia_dias != null ? ` · vence a los ${p.vigencia_dias} días` : " · no vence"}
-                      </Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={18} color={t.colores.faint} />
-                  </View>
-                </Card>
-              );
-            })
+            <ListRowGrupo>
+              {packs.map((p) => {
+                const servicio = servicios.find((s) => s.id === p.servicio_id);
+                return (
+                  <ListRow
+                    key={p.id}
+                    icono={<Layers size={22} strokeWidth={2.25} color={tokens.color.accentRamp["700"]} />}
+                    titulo={p.nombre}
+                    subtitulo={`${p.cantidad_sesiones} sesiones · ${p.precio != null ? formatearMoneda(p.precio, moneda) : "sin precio"}${servicio ? ` · ${servicio.nombre}` : ""}${p.vigencia_dias != null ? ` · vence a los ${p.vigencia_dias} días` : " · no vence"}`}
+                    trailing={!p.activo ? <Tag tono="neutral">Inactivo</Tag> : <ChevronRight size={18} strokeWidth={2.25} color={`${tokens.color.text}66`} />}
+                    onPress={() => setPackModal({ abierto: true, pack: p })}
+                  />
+                );
+              })}
+            </ListRowGrupo>
           )}
         </View>
 
         {servicios.length === 0 && packs.length === 0 ? (
           <EmptyState
-            icono={<Ionicons name="pricetags-outline" size={40} color={t.colores.faint} />}
+            icono={<Tags size={32} strokeWidth={2.75} color={tokens.color.accent2Ramp["800"]} />}
             titulo="Catálogo vacío"
-            mensaje="Creá tus servicios y packs con el botón «＋ Nuevo» de cada sección."
+            mensaje="Creá tus servicios y packs con «＋ Nuevo» en cada sección."
           />
         ) : null}
 
-        <Button titulo="Nuevo servicio" variante="secundario" onPress={() => setServicioModal({ abierto: true, servicio: null })} />
-        <Button titulo="Nuevo pack" variante="secundario" onPress={() => setPackModal({ abierto: true, pack: null })} />
+        <View style={{ gap: tokens.space["2"] }}>
+          <Button variante="secundario" bloque onPress={() => setServicioModal({ abierto: true, servicio: null })}>
+            Nuevo servicio
+          </Button>
+          <Button variante="secundario" bloque onPress={() => setPackModal({ abierto: true, pack: null })}>
+            Nuevo pack
+          </Button>
+        </View>
       </ScrollView>
 
       <NuevoServicioModal
@@ -142,6 +164,6 @@ export function CatalogoScreen() {
           cargar();
         }}
       />
-    </>
+    </View>
   );
 }

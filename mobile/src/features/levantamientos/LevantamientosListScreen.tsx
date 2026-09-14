@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
-import { FlatList, Pressable, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { ScrollView, View } from "react-native";
+import { ArrowLeft, Search } from "lucide-react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { EstadoLevantamiento } from "@bitacora/shared";
-import { useTema } from "../../theme";
-import { LoadingScreen, Text } from "../../components/ui";
+import { tokens } from "@bitacora/design-tokens";
+import { EmptyState, ListRow, ListRowGrupo, LoadingState, ScreenHeader, StatusBadge, Texto, type TonoEstado } from "@bitacora/ui/native";
 import { listarMisLevantamientos, type LevantamientoResumen } from "../../services/levantamientos";
 import type { MasStackParamList } from "../../shell/navigation/types";
 
@@ -19,11 +19,27 @@ const ETIQUETA_ESTADO: Record<EstadoLevantamiento, string> = {
   rechazado: "Rechazado",
 };
 
+// Los 3 estados que necesitan que el técnico haga algo van a
+// "en_progreso" (mismo acento que antes usaba t.colores.accent); los 2
+// que esperan a la oficina/al cliente externo van a "cerrado" (mismo
+// gris muted que antes); aprobado/rechazado ya caen bien en el mapa
+// global (completado/cancelado) pero se fuerzan igual acá para no
+// depender del fallback implícito.
+function tonoDe(estado: EstadoLevantamiento): TonoEstado {
+  if (estado === "creado" || estado === "asignado" || estado === "en_terreno") return "en_progreso";
+  if (estado === "completado_tecnico" || estado === "cotizado_externo") return "cerrado";
+  if (estado === "aprobado") return "completado";
+  return "cancelado"; // rechazado
+}
+
 // El técnico solo ve los suyos (el backend ya los filtra) — nada que
 // completar además de descripción + materiales + fotos. Cotizar y
 // aprobar/rechazar es exclusivo de la web (Admin).
+//
+// Sistema visual móvil v2 (14-sep-2026) — ScreenHeader propio con
+// `accion`=volver (pantalla push desde "Más", no raíz de tab) +
+// ListRow/ListRowGrupo en vez de las tarjetas con borde a mano.
 export function LevantamientosListScreen({ navigation }: NativeStackScreenProps<MasStackParamList, "Levantamientos">) {
-  const t = useTema();
   const [lista, setLista] = useState<LevantamientoResumen[] | null>(null);
 
   const cargar = useCallback(async () => {
@@ -35,63 +51,51 @@ export function LevantamientosListScreen({ navigation }: NativeStackScreenProps<
   }, [cargar]);
   useFocusEffect(useCallback(() => void cargar(), [cargar]));
 
-  if (lista === null) return <LoadingScreen />;
+  const volver = { icono: <ArrowLeft size={20} strokeWidth={2.5} color={tokens.color.text} />, onPress: () => navigation.goBack(), etiquetaAccesible: "Volver" };
+
+  if (lista === null) {
+    return (
+      <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+        <ScreenHeader titulo="Levantamientos" accion={volver} />
+        <View style={{ padding: tokens.space["4"] }}>
+          <LoadingState />
+        </View>
+      </View>
+    );
+  }
 
   return (
-    <View style={{ flex: 1, backgroundColor: t.colores.bg }}>
-      <FlatList
-        data={lista}
-        keyExtractor={(l) => l.id}
-        contentContainerStyle={{ padding: t.espacio(4), gap: t.espacio(2.5) }}
-        ListEmptyComponent={
-          <View style={{ paddingTop: t.espacio(10), alignItems: "center", gap: t.espacio(2) }}>
-            <Ionicons name="search-outline" size={32} color={t.colores.faint} />
-            <Text tono="muted">Sin levantamientos asignados.</Text>
-          </View>
-        }
-        renderItem={({ item }) => {
-          const pendiente = item.estado === "asignado" || item.estado === "en_terreno" || item.estado === "creado";
-          return (
-            <Pressable
-              onPress={() => navigation.navigate("LevantamientoDetalle", { id: item.id })}
-              style={{
-                borderWidth: 1,
-                borderColor: t.colores.border,
-                borderRadius: t.radio.md,
-                padding: t.espacio(3.5),
-                gap: t.espacio(1),
-                backgroundColor: t.colores.surface,
-              }}
-            >
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                <Text weight="semibold" style={{ flex: 1 }} numberOfLines={1}>
-                  {item.cliente?.nombre ?? "Cliente"}
-                </Text>
-                <View
-                  style={{
-                    paddingHorizontal: t.espacio(2),
-                    paddingVertical: 3,
-                    borderRadius: 999,
-                    backgroundColor: pendiente ? t.colores.accentSoft : t.colores.surfaceAlt,
-                  }}
-                >
-                  <Text variante="caption" weight="bold" style={{ color: pendiente ? t.colores.accent : t.colores.muted }}>
-                    {ETIQUETA_ESTADO[item.estado]}
-                  </Text>
-                </View>
-              </View>
-              {item.descripcion_requerimiento ? (
-                <Text variante="caption" tono="muted" numberOfLines={2}>
-                  {item.descripcion_requerimiento}
-                </Text>
-              ) : null}
-              <Text mono variante="caption" tono="faint">
-                {new Date(item.creado_en).toLocaleDateString("es-CL")}
-              </Text>
-            </Pressable>
-          );
-        }}
-      />
+    <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+      <ScreenHeader titulo="Levantamientos" accion={volver} />
+      <ScrollView contentContainerStyle={{ padding: tokens.space["4"], flexGrow: 1 }}>
+        {lista.length === 0 ? (
+          <EmptyState
+            icono={<Search size={32} strokeWidth={2.75} color={tokens.color.accent2Ramp["800"]} />}
+            titulo="Sin levantamientos"
+            mensaje="No tenés ninguno asignado por ahora."
+          />
+        ) : (
+          <ListRowGrupo>
+            {lista.map((item) => (
+              <ListRow
+                key={item.id}
+                icono={<Search size={22} strokeWidth={2.25} color={tokens.color.accentRamp["700"]} />}
+                titulo={item.cliente?.nombre ?? "Cliente"}
+                subtitulo={item.descripcion_requerimiento ?? undefined}
+                onPress={() => navigation.navigate("LevantamientoDetalle", { id: item.id })}
+                trailing={
+                  <View style={{ alignItems: "flex-end", gap: 4 }}>
+                    <StatusBadge estado={item.estado} etiqueta={ETIQUETA_ESTADO[item.estado]} tonoForzado={tonoDe(item.estado)} />
+                    <Texto tamano={tokens.size.caption} color={`${tokens.color.text}66`} style={{ fontVariant: ["tabular-nums"] }}>
+                      {new Date(item.creado_en).toLocaleDateString("es-CL")}
+                    </Texto>
+                  </View>
+                }
+              />
+            ))}
+          </ListRowGrupo>
+        )}
+      </ScrollView>
     </View>
   );
 }

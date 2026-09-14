@@ -2,8 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { Alert, Pressable, ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { Cliente, PaqueteSesionesConSaldo, Prioridad, TipoPack, Usuario } from "@bitacora/shared";
-import { useTema } from "../../theme";
-import { Button, Card, Input, LoadingScreen, PickerBuscable, SelectorHora, Text } from "../../components/ui";
+import { tokens } from "@bitacora/design-tokens";
+import { Button, Input, LoadingState, Textarea, Texto, useMarca } from "@bitacora/ui/native";
+import { PickerBuscable, SelectorHora } from "../../components/ui";
 import { SelectorCliente } from "../../components/SelectorCliente";
 import { SelectorResponsable } from "../../components/SelectorResponsable";
 import { useRed } from "../../services/sync/NetworkProvider";
@@ -28,7 +29,7 @@ const PRIORIDADES: { valor: Prioridad; label: string }[] = [
 ];
 
 export function NuevaCitaScreen({ navigation, route }: NativeStackScreenProps<AgendaStackParamList, "NuevaCita">) {
-  const t = useTema();
+  const marca = useMarca();
   const { enLinea } = useRed();
   const auth = useAuth();
   const esGestion = auth.fase === "listo" && auth.usuario.rol !== "colaborador";
@@ -150,239 +151,245 @@ export function NuevaCitaScreen({ navigation, route }: NativeStackScreenProps<Ag
     ]);
   }
 
-  if (clientes === null || cargandoCita) return <LoadingScreen />;
-
-  return (
-    <View style={{ flex: 1, backgroundColor: t.colores.bg }}>
-      <ScrollView
-        contentContainerStyle={{ padding: t.espacio(5), gap: t.espacio(4), paddingBottom: t.espacio(8) }}
-        keyboardShouldPersistTaps="handled"
-      >
-      <Input etiqueta="Título" placeholder="Ej. Manicure + esmaltado" value={b.titulo} onChangeText={(v) => set("titulo", v)} />
-
-      <View style={{ gap: t.espacio(1.5) }}>
-        <Text variante="etiqueta" tono="muted">
-          Fecha
-        </Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: t.espacio(2) }}>
-          {dias.map((d) => {
-            const k = clave(d);
-            const activo = k === b.fecha;
-            return (
-              <Pressable
-                key={k}
-                onPress={() => set("fecha", k)}
-                style={{
-                  minWidth: 56,
-                  minHeight: 60,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  borderRadius: t.radio.md,
-                  paddingHorizontal: t.espacio(2),
-                  backgroundColor: activo ? t.colores.brand : t.colores.surface,
-                  borderWidth: 1,
-                  borderColor: activo ? t.colores.brand : t.colores.border,
-                }}
-              >
-                <Text variante="caption" tono={activo ? "inverso" : "muted"}>
-                  {DIAS[d.getDay()]}
-                </Text>
-                <Text variante="subtitulo" tono={activo ? "inverso" : "normal"}>
-                  {d.getDate()}
-                </Text>
-                <Text variante="caption" tono={activo ? "inverso" : "faint"}>
-                  {MESES[d.getMonth()]}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-      </View>
-
-      <SelectorHora etiqueta="Hora (opcional)" valor={b.hora} onCambiar={(v) => set("hora", v)} />
-
-      {b.hora ? (
-        <Input
-          etiqueta="Duración en minutos (opcional)"
-          placeholder="Ej. 60"
-          keyboardType="numeric"
-          value={b.duracion_min}
-          onChangeText={(v) => set("duracion_min", v.replace(/\D/g, ""))}
-        />
-      ) : null}
-
-      <SelectorCliente
-        etiqueta="Cliente (opcional)"
-        valor={b.cliente_id}
-        onElegir={(id) => set("cliente_id", id)}
-        clientes={clientes}
-        onClienteCreado={(c) => setClientes((prev) => [...(prev ?? []), c])}
-      />
-
-      {agendaPro && b.cliente_id ? (
-        <Card plano style={{ gap: t.espacio(3) }}>
-          <Text variante="etiqueta" weight="semibold">
-            Paquete de sesiones (Agenda Pro)
-          </Text>
-          <PickerBuscable
-            etiqueta="Paquete"
-            placeholder="Sin paquete — cita suelta"
-            opcionVacia="Sin paquete — cita suelta"
-            valor={b.paquete_id}
-            opciones={paquetes.map((p) => ({
-              id: p.id,
-              label: p.nombre,
-              sublabel: `${p.saldo}/${p.cantidad_total} sesiones disponibles`,
-            }))}
-            onElegir={(id) => set("paquete_id", id)}
-          />
-          {b.paquete_id ? (
-            <Input
-              etiqueta="Sesiones que descuenta esta cita"
-              keyboardType="numeric"
-              value={String(b.sesiones_consumidas)}
-              onChangeText={(v) => set("sesiones_consumidas", Math.max(1, Number(v.replace(/\D/g, "")) || 1))}
-            />
-          ) : null}
-
-          {nuevoPaqueteAbierto ? (
-            <View style={{ gap: t.espacio(2.5), borderTopWidth: 1, borderTopColor: t.colores.border, paddingTop: t.espacio(3) }}>
-              {tiposPack.length > 0 ? (
-                <PickerBuscable
-                  etiqueta="Tipo de pack (opcional)"
-                  placeholder="Personalizado"
-                  opcionVacia="Personalizado — completar a mano"
-                  valor={tipoPackId}
-                  opciones={tiposPack.map((tp) => ({ id: tp.id, label: tp.nombre, sublabel: `${tp.cantidad_sesiones} sesiones` }))}
-                  onElegir={(id) => {
-                    setTipoPackId(id);
-                    const tipo = tiposPack.find((tp) => tp.id === id);
-                    if (tipo) {
-                      setNombrePaquete(tipo.nombre);
-                      setCantidadPaquete(String(tipo.cantidad_sesiones));
-                    }
-                  }}
-                />
-              ) : null}
-              <Input etiqueta="Nombre del paquete" placeholder="Ej. Pack 10 sesiones" value={nombrePaquete} onChangeText={setNombrePaquete} />
-              <Input etiqueta="Cantidad de sesiones" keyboardType="numeric" value={cantidadPaquete} onChangeText={(v) => setCantidadPaquete(v.replace(/\D/g, ""))} />
-              <View style={{ flexDirection: "row", gap: t.espacio(2) }}>
-                <Button
-                  titulo="Crear paquete"
-                  cargando={creandoPaquete}
-                  onPress={async () => {
-                    const cant = Number(cantidadPaquete) || 0;
-                    if (!nombrePaquete.trim() || cant <= 0) {
-                      Alert.alert("Faltan datos", "Ponle un nombre y una cantidad de sesiones.");
-                      return;
-                    }
-                    setCreandoPaquete(true);
-                    const r = await crearPaquete({
-                      cliente_id: b.cliente_id,
-                      tipo_pack_id: tipoPackId || undefined,
-                      nombre: nombrePaquete,
-                      cantidad_total: cant,
-                    });
-                    setCreandoPaquete(false);
-                    if (!r.ok) {
-                      Alert.alert("No se pudo crear el paquete", r.error);
-                      return;
-                    }
-                    const ps = await listarPaquetesCliente(b.cliente_id);
-                    setPaquetes(ps);
-                    setB((p) => ({ ...p, paquete_id: r.paquete.id }));
-                    setNuevoPaqueteAbierto(false);
-                    setTipoPackId("");
-                    setNombrePaquete("");
-                    setCantidadPaquete("10");
-                  }}
-                />
-                <Button
-                  titulo="Cancelar"
-                  variante="ghost"
-                  onPress={() => {
-                    setNuevoPaqueteAbierto(false);
-                    setTipoPackId("");
-                  }}
-                />
-              </View>
-            </View>
-          ) : (
-            <Pressable onPress={() => setNuevoPaqueteAbierto(true)} hitSlop={6}>
-              <Text variante="caption" weight="semibold" tono="brand">
-                ＋ Crear paquete nuevo para este cliente
-              </Text>
-            </Pressable>
-          )}
-        </Card>
-      ) : null}
-
-      {esGestion ? (
-        <SelectorResponsable
-          etiqueta="Atiende (opcional)"
-          valor={b.responsable_id}
-          onElegir={(id) => set("responsable_id", id)}
-          equipo={equipo}
-          opcionVacia="Sin asignar"
-          permitirInvitar={auth.fase === "listo" && auth.modulosVisibles.includes("gestion_control")}
-        />
-      ) : null}
-
-      <View style={{ gap: t.espacio(1.5) }}>
-        <Text variante="etiqueta" tono="muted">
-          Prioridad
-        </Text>
-        <View style={{ flexDirection: "row", gap: t.espacio(2) }}>
-          {PRIORIDADES.map((p) => {
-            const activo = b.prioridad === p.valor;
-            return (
-              <Pressable
-                key={p.valor}
-                onPress={() => set("prioridad", p.valor)}
-                style={{
-                  flex: 1,
-                  minHeight: 44,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  borderRadius: t.radio.md,
-                  backgroundColor: activo ? t.colores.brand : t.colores.surface,
-                  borderWidth: 1,
-                  borderColor: activo ? t.colores.brand : t.colores.border,
-                }}
-              >
-                <Text variante="etiqueta" weight="semibold" tono={activo ? "inverso" : "muted"}>
-                  {p.label}
-                </Text>
-              </Pressable>
-            );
-          })}
+  if (clientes === null || cargandoCita) {
+    return (
+      <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+        <View style={{ padding: tokens.space["4"] }}>
+          <LoadingState />
         </View>
       </View>
+    );
+  }
 
-      <Input
-        etiqueta="Notas (opcional)"
-        placeholder="Detalle de la cita"
-        multiline
-        value={b.descripcion}
-        onChangeText={(v) => set("descripcion", v)}
-      />
+  return (
+    <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+      <ScrollView
+        contentContainerStyle={{ padding: tokens.space["6"], gap: tokens.space["4"], paddingBottom: tokens.space["8"] }}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Input etiqueta="Título" placeholder="Ej. Manicure + esmaltado" valor={b.titulo} onCambio={(v) => set("titulo", v)} />
+
+        <View style={{ gap: tokens.space["1"] }}>
+          <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
+            Fecha
+          </Texto>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: tokens.space["2"] }}>
+            {dias.map((d) => {
+              const k = clave(d);
+              const activo = k === b.fecha;
+              return (
+                <Pressable
+                  key={k}
+                  onPress={() => set("fecha", k)}
+                  style={{
+                    minWidth: 56,
+                    minHeight: 60,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: tokens.radius.md,
+                    paddingHorizontal: tokens.space["2"],
+                    backgroundColor: activo ? marca.base : tokens.color.surface,
+                    borderWidth: 1,
+                    borderColor: activo ? marca.base : tokens.color.divider,
+                  }}
+                >
+                  <Texto tamano={tokens.size.caption} color={activo ? marca.foreground : `${tokens.color.text}99`}>
+                    {DIAS[d.getDay()]}
+                  </Texto>
+                  <Texto tamano={tokens.size.h5} peso="semibold" color={activo ? marca.foreground : tokens.color.text} style={{ fontVariant: ["tabular-nums"] }}>
+                    {d.getDate()}
+                  </Texto>
+                  <Texto tamano={tokens.size.caption} color={activo ? marca.foreground : `${tokens.color.text}66`}>
+                    {MESES[d.getMonth()]}
+                  </Texto>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
+
+        <SelectorHora etiqueta="Hora (opcional)" valor={b.hora} onCambiar={(v) => set("hora", v)} />
+
+        {b.hora ? (
+          <Input
+            etiqueta="Duración en minutos (opcional)"
+            placeholder="Ej. 60"
+            tipo="numero"
+            valor={b.duracion_min}
+            onCambio={(v) => set("duracion_min", v.replace(/\D/g, ""))}
+          />
+        ) : null}
+
+        <SelectorCliente
+          etiqueta="Cliente (opcional)"
+          valor={b.cliente_id}
+          onElegir={(id) => set("cliente_id", id)}
+          clientes={clientes}
+          onClienteCreado={(c) => setClientes((prev) => [...(prev ?? []), c])}
+        />
+
+        {agendaPro && b.cliente_id ? (
+          <View style={{ backgroundColor: tokens.color.surface, borderRadius: tokens.radius.md, borderWidth: 1, borderColor: tokens.color.divider, padding: tokens.space["4"], gap: tokens.space["3"] }}>
+            <Texto tamano={tokens.size.small} peso="semibold" color={tokens.color.text}>
+              Paquete de sesiones (Agenda Pro)
+            </Texto>
+            <PickerBuscable
+              etiqueta="Paquete"
+              placeholder="Sin paquete — cita suelta"
+              opcionVacia="Sin paquete — cita suelta"
+              valor={b.paquete_id}
+              opciones={paquetes.map((p) => ({
+                id: p.id,
+                label: p.nombre,
+                sublabel: `${p.saldo}/${p.cantidad_total} sesiones disponibles`,
+              }))}
+              onElegir={(id) => set("paquete_id", id)}
+            />
+            {b.paquete_id ? (
+              <Input
+                etiqueta="Sesiones que descuenta esta cita"
+                tipo="numero"
+                valor={String(b.sesiones_consumidas)}
+                onCambio={(v) => set("sesiones_consumidas", Math.max(1, Number(v.replace(/\D/g, "")) || 1))}
+              />
+            ) : null}
+
+            {nuevoPaqueteAbierto ? (
+              <View style={{ gap: tokens.space["2"], borderTopWidth: 1, borderTopColor: tokens.color.divider, paddingTop: tokens.space["3"] }}>
+                {tiposPack.length > 0 ? (
+                  <PickerBuscable
+                    etiqueta="Tipo de pack (opcional)"
+                    placeholder="Personalizado"
+                    opcionVacia="Personalizado — completar a mano"
+                    valor={tipoPackId}
+                    opciones={tiposPack.map((tp) => ({ id: tp.id, label: tp.nombre, sublabel: `${tp.cantidad_sesiones} sesiones` }))}
+                    onElegir={(id) => {
+                      setTipoPackId(id);
+                      const tipo = tiposPack.find((tp) => tp.id === id);
+                      if (tipo) {
+                        setNombrePaquete(tipo.nombre);
+                        setCantidadPaquete(String(tipo.cantidad_sesiones));
+                      }
+                    }}
+                  />
+                ) : null}
+                <Input etiqueta="Nombre del paquete" placeholder="Ej. Pack 10 sesiones" valor={nombrePaquete} onCambio={setNombrePaquete} />
+                <Input etiqueta="Cantidad de sesiones" tipo="numero" valor={cantidadPaquete} onCambio={(v) => setCantidadPaquete(v.replace(/\D/g, ""))} />
+                <View style={{ flexDirection: "row", gap: tokens.space["2"] }}>
+                  <Button
+                    cargando={creandoPaquete}
+                    onPress={async () => {
+                      const cant = Number(cantidadPaquete) || 0;
+                      if (!nombrePaquete.trim() || cant <= 0) {
+                        Alert.alert("Faltan datos", "Ponle un nombre y una cantidad de sesiones.");
+                        return;
+                      }
+                      setCreandoPaquete(true);
+                      const r = await crearPaquete({
+                        cliente_id: b.cliente_id,
+                        tipo_pack_id: tipoPackId || undefined,
+                        nombre: nombrePaquete,
+                        cantidad_total: cant,
+                      });
+                      setCreandoPaquete(false);
+                      if (!r.ok) {
+                        Alert.alert("No se pudo crear el paquete", r.error);
+                        return;
+                      }
+                      const ps = await listarPaquetesCliente(b.cliente_id);
+                      setPaquetes(ps);
+                      setB((p) => ({ ...p, paquete_id: r.paquete.id }));
+                      setNuevoPaqueteAbierto(false);
+                      setTipoPackId("");
+                      setNombrePaquete("");
+                      setCantidadPaquete("10");
+                    }}
+                  >
+                    Crear paquete
+                  </Button>
+                  <Button
+                    variante="ghost"
+                    onPress={() => {
+                      setNuevoPaqueteAbierto(false);
+                      setTipoPackId("");
+                    }}
+                  >
+                    Cancelar
+                  </Button>
+                </View>
+              </View>
+            ) : (
+              <Pressable onPress={() => setNuevoPaqueteAbierto(true)} hitSlop={6}>
+                <Texto tamano={tokens.size.caption} peso="semibold" color={marca.base}>
+                  ＋ Crear paquete nuevo para este cliente
+                </Texto>
+              </Pressable>
+            )}
+          </View>
+        ) : null}
+
+        {esGestion ? (
+          <SelectorResponsable
+            etiqueta="Atiende (opcional)"
+            valor={b.responsable_id}
+            onElegir={(id) => set("responsable_id", id)}
+            equipo={equipo}
+            opcionVacia="Sin asignar"
+            permitirInvitar={auth.fase === "listo" && auth.modulosVisibles.includes("gestion_control")}
+          />
+        ) : null}
+
+        <View style={{ gap: tokens.space["1"] }}>
+          <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
+            Prioridad
+          </Texto>
+          <View style={{ flexDirection: "row", gap: tokens.space["2"] }}>
+            {PRIORIDADES.map((p) => {
+              const activo = b.prioridad === p.valor;
+              return (
+                <Pressable
+                  key={p.valor}
+                  onPress={() => set("prioridad", p.valor)}
+                  style={{
+                    flex: 1,
+                    minHeight: 44,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: tokens.radius.md,
+                    backgroundColor: activo ? marca.base : tokens.color.surface,
+                    borderWidth: 1,
+                    borderColor: activo ? marca.base : tokens.color.divider,
+                  }}
+                >
+                  <Texto tamano={tokens.size.small} peso="semibold" color={activo ? marca.foreground : `${tokens.color.text}99`}>
+                    {p.label}
+                  </Texto>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+
+        <Textarea
+          etiqueta="Notas (opcional)"
+          placeholder="Detalle de la cita"
+          valor={b.descripcion}
+          onCambio={(v) => set("descripcion", v)}
+        />
       </ScrollView>
 
       <View
         style={{
-          padding: t.espacio(4),
-          paddingBottom: t.espacio(6),
+          padding: tokens.space["4"],
+          paddingBottom: tokens.space["6"],
           borderTopWidth: 1,
-          borderTopColor: t.colores.border,
-          backgroundColor: t.colores.surface,
+          borderTopColor: tokens.color.divider,
+          backgroundColor: tokens.color.surface,
         }}
       >
-        <Button
-          titulo={editandoId ? "Guardar cambios" : "Agendar cita"}
-          tamano="lg"
-          onPress={guardar}
-          cargando={guardando}
-        />
+        <Button tamano="lg" bloque onPress={guardar} cargando={guardando}>
+          {editandoId ? "Guardar cambios" : "Agendar cita"}
+        </Button>
       </View>
     </View>
   );

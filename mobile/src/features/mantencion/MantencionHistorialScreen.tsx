@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useLayoutEffect, useState } from "react";
-import { Pressable, ScrollView, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { useCallback, useEffect, useState } from "react";
+import { ScrollView, View } from "react-native";
+import { ArrowLeft, CheckCheck, Wrench } from "lucide-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { useTema } from "../../theme";
-import { EmptyState, ErrorState, LoadingScreen, Text } from "../../components/ui";
+import { tokens } from "@bitacora/design-tokens";
+import { EmptyState, ErrorState, ListRow, ListRowGrupo, LoadingState, ScreenHeader, StatusBadge } from "@bitacora/ui/native";
 import type { MasStackParamList } from "../../shell/navigation/types";
 import { obtenerHistorialEquipo, type MantencionResumen } from "../../services/mantencion";
 
@@ -13,15 +13,17 @@ const fechaCorta = (iso: string) => {
   return d && m ? `${d} ${meses[m - 1]} ${y}` : iso;
 };
 
+// Sistema visual móvil v2 (14-sep-2026) — migración del sistema viejo
+// (useTema/Ionicons/filas de Pressable a mano) al nuevo: ScreenHeader
+// propio con volver, ListRow/ListRowGrupo para el historial (antes filas
+// sueltas), StatusBadge para "Con novedades"/"Sin novedades" (mismo
+// mapa en_progreso/completado que ya usa el resto del sistema — nunca
+// rojo/verde literal). El título ya no lo pone el header nativo
+// (navigation.setOptions): ahora lo dibuja el propio ScreenHeader.
 export function MantencionHistorialScreen({ route, navigation }: NativeStackScreenProps<MasStackParamList, "MantencionHistorial">) {
-  const t = useTema();
   const { equipoId, patente } = route.params;
   const [registros, setRegistros] = useState<MantencionResumen[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  useLayoutEffect(() => {
-    navigation.setOptions({ title: patente ? `Mantención · ${patente}` : "Historial" });
-  }, [navigation, patente]);
 
   const cargar = useCallback(async () => {
     setError(null);
@@ -38,59 +40,69 @@ export function MantencionHistorialScreen({ route, navigation }: NativeStackScre
     void cargar();
   }, [cargar]);
 
-  if (registros === null && !error) return <LoadingScreen />;
-  if (error) return <ErrorState mensaje={error} onReintentar={() => void cargar()} />;
+  const volver = { icono: <ArrowLeft size={20} strokeWidth={2.5} color={tokens.color.text} />, onPress: () => navigation.goBack(), etiquetaAccesible: "Volver" };
+  const titulo = patente ? `Mantención · ${patente}` : "Historial";
+
+  if (registros === null && !error) {
+    return (
+      <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+        <ScreenHeader titulo={titulo} accion={volver} />
+        <View style={{ padding: tokens.space["4"] }}>
+          <LoadingState />
+        </View>
+      </View>
+    );
+  }
+  if (error) {
+    return (
+      <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+        <ScreenHeader titulo={titulo} accion={volver} />
+        <ErrorState mensaje={error} onReintentar={() => void cargar()} />
+      </View>
+    );
+  }
   if (registros && registros.length === 0) {
     return (
-      <EmptyState
-        icono={<Ionicons name="construct-outline" size={40} color={t.colores.faint} />}
-        titulo="Sin registros de mantención"
-        mensaje="Este camión todavía no tiene mantenciones registradas."
-      />
+      <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+        <ScreenHeader titulo={titulo} accion={volver} />
+        <EmptyState
+          icono={<Wrench size={32} strokeWidth={2.75} color={tokens.color.accent2Ramp["800"]} />}
+          titulo="Sin registros de mantención"
+          mensaje="Este camión todavía no tiene mantenciones registradas."
+        />
+      </View>
     );
   }
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: t.colores.bg }} contentContainerStyle={{ padding: t.espacio(4) }}>
-      <View style={{ borderTopWidth: 1, borderTopColor: t.colores.border }}>
-        {(registros ?? []).map((r) => (
-          <Pressable
-            key={r.id}
-            onPress={() => navigation.navigate("MantencionDetalle", { equipoId, registroId: r.id })}
-            style={{
-              paddingVertical: t.espacio(3),
-              borderBottomWidth: 1,
-              borderBottomColor: t.colores.border,
-              gap: 4,
-            }}
-          >
-            <View style={{ flexDirection: "row", alignItems: "center", gap: t.espacio(2) }}>
-              <Text mono variante="caption" tono="muted" style={{ flex: 1 }}>
-                {fechaCorta(r.fecha)}
-                {r.folio != null ? ` · N° ${String(r.folio).padStart(4, "0")}` : ""}
-              </Text>
-              <View
-                style={{
-                  paddingHorizontal: t.espacio(2),
-                  paddingVertical: 2,
-                  borderRadius: 999,
-                  backgroundColor: r.con_novedades ? t.colores.dangerSoft : t.colores.successSoft,
-                }}
-              >
-                <Text variante="caption" weight="bold" style={{ color: r.con_novedades ? t.colores.danger : t.colores.success }}>
-                  {r.con_novedades ? "Con novedades" : "Sin novedades"}
-                </Text>
-              </View>
-            </View>
-            <Text weight="semibold">{r.tipo === "programa" ? "Mantención Flota" : "Checklist diario"}</Text>
-            <Text variante="caption" tono="muted">
-              {r.origen === "externo" ? "Taller externo" : "Interno"}
-              {r.realizado_por_nombre ? ` · ${r.realizado_por_nombre}` : ""}
-              {r.kilometraje != null ? ` · ${r.kilometraje.toLocaleString("es-CL")} km` : ""}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
-    </ScrollView>
+    <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+      <ScreenHeader titulo={titulo} accion={volver} />
+      <ScrollView contentContainerStyle={{ padding: tokens.space["4"] }}>
+        <ListRowGrupo>
+          {(registros ?? []).map((r) => (
+            <ListRow
+              key={r.id}
+              icono={
+                r.tipo === "programa" ? (
+                  <Wrench size={22} strokeWidth={2.25} color={tokens.color.accentRamp["700"]} />
+                ) : (
+                  <CheckCheck size={22} strokeWidth={2.25} color={tokens.color.accentRamp["700"]} />
+                )
+              }
+              titulo={r.tipo === "programa" ? "Mantención Flota" : "Checklist diario"}
+              subtitulo={`${fechaCorta(r.fecha)}${r.folio != null ? ` · N° ${String(r.folio).padStart(4, "0")}` : ""} · ${r.origen === "externo" ? "Taller externo" : "Interno"}${r.realizado_por_nombre ? ` · ${r.realizado_por_nombre}` : ""}${r.kilometraje != null ? ` · ${r.kilometraje.toLocaleString("es-CL")} km` : ""}`}
+              trailing={
+                r.con_novedades ? (
+                  <StatusBadge estado="con_novedades" etiqueta="Con novedades" tonoForzado="en_progreso" />
+                ) : (
+                  <StatusBadge estado="ok" etiqueta="Sin novedades" tonoForzado="completado" />
+                )
+              }
+              onPress={() => navigation.navigate("MantencionDetalle", { equipoId, registroId: r.id })}
+            />
+          ))}
+        </ListRowGrupo>
+      </ScrollView>
+    </View>
   );
 }

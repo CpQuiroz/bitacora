@@ -9,9 +9,10 @@ import { RegistrarVentaScreen } from "../../features/ventas/RegistrarVentaScreen
 
 const Stack = createNativeStackNavigator<TrabajosStackParamList>();
 
-// PASO 6 (sistema de diseño) — migrado a tokens ds-. Solo el header;
-// TrabajoForm/RegistrarVenta no forman parte de este bucket, su
-// contenido sigue Faena por ahora (seam conocido).
+// Sistema visual móvil v2 (14-sep-2026) — tarea 31: las 3 pantallas de
+// este stack ya dibujan su propio ScreenHeader o son modal (TrabajoForm,
+// sin ScreenHeader por convención de modal) — no queda ninguna con el
+// header nativo del stack.
 export function TrabajosStack() {
   return (
     <Stack.Navigator
@@ -23,13 +24,17 @@ export function TrabajosStack() {
         contentStyle: { backgroundColor: tokens.color.bg },
       }}
     >
-      <Stack.Screen name="TrabajosLista" component={TrabajosScreen} options={{ title: "Órdenes de servicio" }} />
+      {/* TrabajosScreen dibuja su propio ScreenHeader (sistema visual v2,
+          con filtros Lista/Mapa) — el header nativo se apaga acá. */}
+      <Stack.Screen name="TrabajosLista" component={TrabajosScreen} options={{ headerShown: false }} />
       {/* TrabajoDetalleScreen dibuja su propio ScreenHeader (sistema visual
           v2, con su propio botón de volver) — el header nativo se apaga
           acá para no duplicarlo, igual que MasInicio/HoyInicio. */}
       <Stack.Screen name="TrabajoDetalle" component={TrabajoDetalleScreen} options={{ headerShown: false }} />
       <Stack.Screen name="TrabajoForm" component={TrabajoFormScreen} options={{ title: "Nueva orden de servicio", presentation: "modal" }} />
-      <Stack.Screen name="RegistrarVenta" component={RegistrarVentaScreen} options={{ title: "Registrar venta" }} />
+      {/* RegistrarVentaScreen dibuja su propio ScreenHeader (sistema visual
+          v2, con su propio botón de volver) — el header nativo se apaga acá. */}
+      <Stack.Screen name="RegistrarVenta" component={RegistrarVentaScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 }

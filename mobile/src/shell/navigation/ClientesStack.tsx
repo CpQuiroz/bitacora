@@ -1,5 +1,6 @@
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { useTema } from "../../theme";
+import { tokens } from "@bitacora/design-tokens";
+import { FUENTE_NATIVE } from "@bitacora/ui/native";
 import type { ClientesStackParamList } from "./types";
 import { ClientesListaScreen } from "../../features/clientes/ClientesListaScreen";
 import { ClienteFormScreen } from "../../features/clientes/ClienteFormScreen";
@@ -10,25 +11,28 @@ import { AsistenteScreen } from "../../features/asistente/AsistenteScreen";
 const Stack = createNativeStackNavigator<ClientesStackParamList>();
 
 export function ClientesStack() {
-  const t = useTema();
   return (
     <Stack.Navigator
       screenOptions={{
-        headerStyle: { backgroundColor: t.colores.surface },
-        headerTintColor: t.colores.foreground,
-        headerTitleStyle: { fontWeight: "600" },
+        headerStyle: { backgroundColor: tokens.color.surface },
+        headerTintColor: tokens.color.text,
+        headerTitleStyle: { fontFamily: FUENTE_NATIVE.heading, fontWeight: "400" },
         headerShadowVisible: false,
-        contentStyle: { backgroundColor: t.colores.bg },
+        contentStyle: { backgroundColor: tokens.color.bg },
       }}
     >
       {/* ClientesListaScreen dibuja su propio ScreenHeader (sistema visual
           v2) — el header nativo se apaga acá para no duplicarlo. */}
       <Stack.Screen name="ClientesLista" component={ClientesListaScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="ClienteForm" component={ClienteFormScreen} options={{ title: "Cliente" }} />
+      {/* ClienteFormScreen dibuja su propio ScreenHeader (sistema visual v2,
+          con su propio botón de volver) — el header nativo se apaga acá. */}
+      <Stack.Screen name="ClienteForm" component={ClienteFormScreen} options={{ headerShown: false }} />
       {/* ClienteDetalleScreen dibuja su propio ScreenHeader (sistema visual
           v2, con su propio botón de volver) — el header nativo se apaga acá. */}
       <Stack.Screen name="ClienteDetalle" component={ClienteDetalleScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="RegistrarVenta" component={RegistrarVentaScreen} options={{ title: "Registrar venta" }} />
+      {/* RegistrarVentaScreen dibuja su propio ScreenHeader (sistema visual
+          v2, con su propio botón de volver) — el header nativo se apaga acá. */}
+      <Stack.Screen name="RegistrarVenta" component={RegistrarVentaScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Asistente" component={AsistenteScreen} options={{ title: "Asistente" }} />
     </Stack.Navigator>
   );

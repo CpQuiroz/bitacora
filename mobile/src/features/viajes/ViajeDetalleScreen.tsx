@@ -2,11 +2,11 @@ import { useCallback, useEffect, useState } from "react";
 import { Alert, Image, Linking, Pressable, ScrollView, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { Ionicons } from "@expo/vector-icons";
+import { ArrowLeft, Camera, Map, Navigation, Pencil, RefreshCw, X } from "lucide-react-native";
 import type { EstadoViaje } from "@bitacora/shared";
-import { useTema } from "../../theme";
+import { tokens } from "@bitacora/design-tokens";
+import { Button, Card, ErrorState, LoadingState, ScreenHeader, Skeleton, StatusBadge, Texto } from "@bitacora/ui/native";
 import { pesos } from "../../lib/plata";
-import { Badge, Button, Card, ErrorState, LoadingScreen, Text } from "../../components/ui";
 import { OfflineBanner } from "../../components/OfflineBanner";
 import { useRed } from "../../services/sync/NetworkProvider";
 import { useAuth } from "../auth/AuthContext";
@@ -20,6 +20,13 @@ const NOTA_ESTADO: Record<EstadoViaje, string> = {
   facturado: "Facturado al cliente.",
 };
 
+// Mismo mapeo que ViajesScreen.tsx — "borrador"/"confirmado"/"facturado"
+// no son de los 4 tonos default de StatusBadge, se fuerza a mano.
+const TONO_VIAJE: Record<string, "en_progreso" | "completado" | "cerrado"> = {
+  borrador: "en_progreso",
+  confirmado: "completado",
+  facturado: "cerrado",
+};
 
 function abrirEnMapa(app: "google" | "waze", origen: string, destino: string) {
   const o = encodeURIComponent(origen);
@@ -31,8 +38,9 @@ function abrirEnMapa(app: "google" | "waze", origen: string, destino: string) {
   Linking.openURL(url).catch(() => Alert.alert("No se pudo abrir", "Revisa que tengas la app instalada."));
 }
 
+// Sistema visual móvil v2 (14-sep-2026) — ScreenHeader propio (volver) +
+// tokens/Texto/Card/StatusBadge en vez de useTema()/components-ui viejo.
 export function ViajeDetalleScreen({ route, navigation }: NativeStackScreenProps<ViajesStackParamList, "ViajeDetalle">) {
-  const t = useTema();
   const { viajeId } = route.params;
   const { enLinea, pendientes } = useRed();
   const auth = useAuth();
@@ -118,82 +126,97 @@ export function ViajeDetalleScreen({ route, navigation }: NativeStackScreenProps
     ]);
   }
 
-  if (!viaje && !error) return <LoadingScreen />;
-  if (error && !viaje) return <ErrorState mensaje={error} onReintentar={cargar} />;
+  const volver = { icono: <ArrowLeft size={20} strokeWidth={2.5} color={tokens.color.text} />, onPress: () => navigation.goBack(), etiquetaAccesible: "Volver" };
+
+  if (!viaje && !error) {
+    return (
+      <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+        <ScreenHeader titulo="Viaje" accion={volver} />
+        <View style={{ padding: tokens.space["4"], gap: tokens.space["3"] }}>
+          <LoadingState>
+            <Skeleton alto={80} radio={16} />
+            <Skeleton alto={140} radio={16} />
+          </LoadingState>
+        </View>
+      </View>
+    );
+  }
+  if (error && !viaje) {
+    return (
+      <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+        <ScreenHeader titulo="Viaje" accion={volver} />
+        <ErrorState mensaje={error} onReintentar={cargar} />
+      </View>
+    );
+  }
   if (!viaje) return null;
 
   const kmRecorridos =
     viaje.km_inicial != null && viaje.km_final != null ? viaje.km_final - viaje.km_inicial : null;
 
   return (
-    <View style={{ flex: 1, backgroundColor: t.colores.bg }}>
+    <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+      <ScreenHeader antetitulo={`${viaje.fecha} · Guía ${viaje.numero_guia}`} titulo={viaje.cliente_info?.nombre ?? viaje.cliente} accion={volver} />
       <OfflineBanner guardadoEn={guardadoEn} />
-      <ScrollView contentContainerStyle={{ padding: t.espacio(5), gap: t.espacio(4), paddingBottom: t.espacio(16) }}>
-        <View
-          style={{
-            gap: t.espacio(1.5),
-            ...(viaje.estado === "borrador" ? { borderLeftWidth: 4, borderLeftColor: t.colores.accent, paddingLeft: t.espacio(3) } : {}),
-          }}
-        >
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: t.espacio(3) }}>
-            <Text variante="titulo" style={{ flex: 1 }}>
-              {viaje.cliente_info?.nombre ?? viaje.cliente}
-            </Text>
-            <Badge estado={viaje.estado} />
-          </View>
-          <Text variante="etiqueta" tono="muted">
-            {viaje.fecha} · Guía {viaje.numero_guia}
-          </Text>
-          {esGestion && viaje.chofer?.nombre ? (
-            <Text variante="etiqueta" tono="muted">
-              Chofer: {viaje.chofer.nombre}
-            </Text>
-          ) : null}
-          <Text variante="caption" tono="muted">
-            {NOTA_ESTADO[viaje.estado]}
-          </Text>
+      <ScrollView contentContainerStyle={{ padding: tokens.space["4"], gap: tokens.space["4"], paddingBottom: tokens.space["8"] * 2 }}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: tokens.space["3"] }}>
+          <StatusBadge estado={viaje.estado} etiqueta={viaje.estado} tonoForzado={TONO_VIAJE[viaje.estado]} />
         </View>
+        <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
+          {esGestion && viaje.chofer?.nombre ? `Chofer: ${viaje.chofer.nombre} · ` : ""}
+          {NOTA_ESTADO[viaje.estado]}
+        </Texto>
 
-        <Card plano style={{ gap: t.espacio(2) }}>
-          <Fila etiqueta="Origen" valor={viaje.origen} />
-          <Fila etiqueta="Destino" valor={viaje.destino} />
-          {viaje.equipo_info ? (
-            <Fila
-              etiqueta="Vehículo"
-              valor={`${viaje.equipo_info.nombre}${viaje.equipo_info.patente ? ` · ${viaje.equipo_info.patente}` : ""}`}
-            />
-          ) : null}
-          {viaje.km_inicial != null ? <Fila etiqueta="Km inicial" valor={String(viaje.km_inicial)} /> : null}
-          {viaje.km_final != null ? <Fila etiqueta="Km final" valor={String(viaje.km_final)} /> : null}
-          {kmRecorridos != null ? <Fila etiqueta="Km recorridos" valor={String(kmRecorridos)} /> : null}
-          <View style={{ flexDirection: "row", gap: t.espacio(2.5), marginTop: t.espacio(1) }}>
-            <Button
-              titulo="Google Maps"
-              variante="secundario"
-              icono={<Ionicons name="map-outline" size={16} color={t.colores.foreground} />}
-              onPress={() => abrirEnMapa("google", viaje.origen, viaje.destino)}
-            />
-            <Button
-              titulo="Waze"
-              variante="secundario"
-              icono={<Ionicons name="navigate-outline" size={16} color={t.colores.foreground} />}
-              onPress={() => abrirEnMapa("waze", viaje.origen, viaje.destino)}
-            />
+        <Card>
+          <View style={{ gap: tokens.space["2"] }}>
+            <Fila etiqueta="Origen" valor={viaje.origen} />
+            <Fila etiqueta="Destino" valor={viaje.destino} />
+            {viaje.equipo_info ? (
+              <Fila
+                etiqueta="Vehículo"
+                valor={`${viaje.equipo_info.nombre}${viaje.equipo_info.patente ? ` · ${viaje.equipo_info.patente}` : ""}`}
+              />
+            ) : null}
+            {viaje.km_inicial != null ? <Fila etiqueta="Km inicial" valor={String(viaje.km_inicial)} /> : null}
+            {viaje.km_final != null ? <Fila etiqueta="Km final" valor={String(viaje.km_final)} /> : null}
+            {kmRecorridos != null ? <Fila etiqueta="Km recorridos" valor={String(kmRecorridos)} /> : null}
+            <View style={{ flexDirection: "row", gap: tokens.space["2"], marginTop: tokens.space["1"] }}>
+              <Button
+                variante="secundario"
+                iconoIzq={<Map size={16} strokeWidth={2.25} color={tokens.color.text} />}
+                onPress={() => abrirEnMapa("google", viaje.origen, viaje.destino)}
+              >
+                Google Maps
+              </Button>
+              <Button
+                variante="secundario"
+                iconoIzq={<Navigation size={16} strokeWidth={2.25} color={tokens.color.text} />}
+                onPress={() => abrirEnMapa("waze", viaje.origen, viaje.destino)}
+              >
+                Waze
+              </Button>
+            </View>
           </View>
         </Card>
 
-        <Card plano style={{ gap: t.espacio(2) }}>
-          <Fila etiqueta="Monto (sin IVA)" valor={pesos(viaje.subtotal)} />
-          {viaje.aplica_iva ? <Fila etiqueta="IVA (19%)" valor={pesos(viaje.iva)} /> : null}
-          <Fila etiqueta="Total" valor={pesos(viaje.total)} destacado />
+        <Card>
+          <View style={{ gap: tokens.space["2"] }}>
+            <Fila etiqueta="Monto (sin IVA)" valor={pesos(viaje.subtotal)} />
+            {viaje.aplica_iva ? <Fila etiqueta="IVA (19%)" valor={pesos(viaje.iva)} /> : null}
+            <Fila etiqueta="Total" valor={pesos(viaje.total)} destacado />
+          </View>
         </Card>
 
         {viaje.comentarios ? (
-          <Card plano style={{ gap: t.espacio(1.5) }}>
-            <Text variante="etiqueta" tono="muted" weight="semibold" style={{ textTransform: "uppercase" }}>
-              Comentarios de la oficina
-            </Text>
-            <Text variante="cuerpo">{viaje.comentarios}</Text>
+          <Card>
+            <View style={{ gap: tokens.space["2"] }}>
+              <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} peso="semibold" style={{ textTransform: "uppercase", letterSpacing: 1 }}>
+                Comentarios de la oficina
+              </Texto>
+              <Texto tamano={tokens.size.body} color={tokens.color.text}>
+                {viaje.comentarios}
+              </Texto>
+            </View>
           </Card>
         ) : null}
 
@@ -205,86 +228,94 @@ export function ViajeDetalleScreen({ route, navigation }: NativeStackScreenProps
           ];
           const total = subidas.length + fotosEnCola.length;
           return (
-            <Card plano style={{ gap: t.espacio(2.5) }}>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                <Text variante="etiqueta" tono="muted" weight="semibold" style={{ textTransform: "uppercase" }}>
-                  Fotos del viaje
-                </Text>
-                {total > 0 ? (
-                  <Text mono variante="caption" tono="faint">
-                    {subidas.length} subida{subidas.length === 1 ? "" : "s"}
-                    {fotosEnCola.length ? ` · ${fotosEnCola.length} en cola` : ""}
-                  </Text>
+            <Card>
+              <View style={{ gap: tokens.space["3"] }}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                  <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} peso="semibold" style={{ textTransform: "uppercase", letterSpacing: 1 }}>
+                    Fotos del viaje
+                  </Texto>
+                  {total > 0 ? (
+                    <Texto tamano={tokens.size.caption} color={`${tokens.color.text}66`} style={{ fontVariant: ["tabular-nums"] }}>
+                      {subidas.length} subida{subidas.length === 1 ? "" : "s"}
+                      {fotosEnCola.length ? ` · ${fotosEnCola.length} en cola` : ""}
+                    </Texto>
+                  ) : null}
+                </View>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: tokens.space["2"] }}>
+                  {subidas.map((f) => (
+                    <View key={f.id} style={{ width: 78, height: 78 }}>
+                      <Image source={{ uri: f.url }} style={{ width: 78, height: 78, borderRadius: tokens.radius.sm, borderWidth: 1, borderColor: tokens.color.divider }} />
+                      {f.id !== "guia" && viaje.estado !== "facturado" ? (
+                        <Pressable
+                          onPress={() => confirmarEliminarFoto(f.id)}
+                          disabled={eliminandoFotoId === f.id}
+                          hitSlop={8}
+                          style={{
+                            position: "absolute",
+                            right: -6,
+                            top: -6,
+                            width: 22,
+                            height: 22,
+                            borderRadius: 11,
+                            backgroundColor: tokens.color.accentRamp["700"],
+                            alignItems: "center",
+                            justifyContent: "center",
+                            opacity: eliminandoFotoId === f.id ? 0.6 : 1,
+                          }}
+                        >
+                          <X size={13} strokeWidth={2.5} color="#ffffff" />
+                        </Pressable>
+                      ) : null}
+                    </View>
+                  ))}
+                  {fotosEnCola.map((a) => (
+                    <View key={a.id} style={{ width: 78, height: 78, borderRadius: tokens.radius.sm, backgroundColor: tokens.color.neutral["200"], borderWidth: 1, borderColor: tokens.color.divider, alignItems: "center", justifyContent: "center" }}>
+                      <RefreshCw size={16} strokeWidth={2.25} color={tokens.color.accent} />
+                    </View>
+                  ))}
+                  {viaje.estado !== "facturado" ? (
+                    <Pressable
+                      onPress={agregarFoto}
+                      style={{ width: 78, height: 78, borderRadius: tokens.radius.sm, borderWidth: 1.5, borderStyle: "dashed", borderColor: `${tokens.color.text}33`, alignItems: "center", justifyContent: "center" }}
+                    >
+                      <Camera size={22} strokeWidth={2} color={`${tokens.color.text}66`} />
+                    </Pressable>
+                  ) : null}
+                </ScrollView>
+                {total === 0 ? (
+                  <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
+                    Sin fotos todavía.
+                  </Texto>
                 ) : null}
               </View>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: t.espacio(2) }}>
-                {subidas.map((f) => (
-                  <View key={f.id} style={{ width: 78, height: 78 }}>
-                    <Image source={{ uri: f.url }} style={{ width: 78, height: 78, borderRadius: t.radio.sm, borderWidth: 1, borderColor: t.colores.border }} />
-                    {f.id !== "guia" && viaje.estado !== "facturado" ? (
-                      <Pressable
-                        onPress={() => confirmarEliminarFoto(f.id)}
-                        disabled={eliminandoFotoId === f.id}
-                        hitSlop={8}
-                        style={{
-                          position: "absolute",
-                          right: -6,
-                          top: -6,
-                          width: 22,
-                          height: 22,
-                          borderRadius: 11,
-                          backgroundColor: t.colores.danger,
-                          alignItems: "center",
-                          justifyContent: "center",
-                          opacity: eliminandoFotoId === f.id ? 0.6 : 1,
-                        }}
-                      >
-                        <Ionicons name="close" size={13} color={t.colores.brandForeground} />
-                      </Pressable>
-                    ) : null}
-                  </View>
-                ))}
-                {fotosEnCola.map((a) => (
-                  <View key={a.id} style={{ width: 78, height: 78, borderRadius: t.radio.sm, backgroundColor: t.colores.surfaceAlt, borderWidth: 1, borderColor: t.colores.border, alignItems: "center", justifyContent: "center" }}>
-                    <Ionicons name="sync" size={16} color={t.colores.accent} />
-                  </View>
-                ))}
-                {viaje.estado !== "facturado" ? (
-                  <Pressable
-                    onPress={agregarFoto}
-                    style={{ width: 78, height: 78, borderRadius: t.radio.sm, borderWidth: 1.5, borderStyle: "dashed", borderColor: t.colores.borderStrong, alignItems: "center", justifyContent: "center" }}
-                  >
-                    <Ionicons name="camera-outline" size={22} color={t.colores.muted} />
-                  </Pressable>
-                ) : null}
-              </ScrollView>
-              {total === 0 ? (
-                <Text variante="caption" tono="muted">
-                  Sin fotos todavía.
-                </Text>
-              ) : null}
             </Card>
           );
         })()}
 
         {viaje.estado !== "facturado" ? (
-          <View style={{ gap: t.espacio(2.5), marginTop: t.espacio(1), borderTopWidth: 1, borderTopColor: t.colores.border, paddingTop: t.espacio(4) }}>
+          <View style={{ gap: tokens.space["3"], marginTop: tokens.space["1"], borderTopWidth: 1, borderTopColor: tokens.color.divider, paddingTop: tokens.space["4"] }}>
             {esGestion ? (
-              <Text variante="caption" tono="muted" weight="semibold" style={{ textTransform: "uppercase" }}>
+              <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} peso="semibold" style={{ textTransform: "uppercase", letterSpacing: 1 }}>
                 Gestión
-              </Text>
+              </Texto>
             ) : null}
             {esGestion && viaje.estado === "borrador" ? (
-              <Button titulo="Aprobar viaje" tamano="lg" onPress={aprobar} cargando={ocupado} />
+              <Button tamano="lg" bloque onPress={aprobar} cargando={ocupado}>
+                Aprobar viaje
+              </Button>
             ) : null}
             <Button
-              titulo="Editar"
               variante="secundario"
-              icono={<Ionicons name="create-outline" size={16} color={t.colores.foreground} />}
+              bloque
+              iconoIzq={<Pencil size={16} strokeWidth={2.25} color={tokens.color.text} />}
               onPress={() => navigation.navigate("ViajeForm", { viajeId })}
-            />
+            >
+              Editar
+            </Button>
             {esGestion && viaje.estado === "borrador" ? (
-              <Button titulo="Rechazar viaje" variante="peligro" onPress={rechazar} cargando={ocupado} />
+              <Button variante="peligro" bloque onPress={rechazar} cargando={ocupado}>
+                Rechazar viaje
+              </Button>
             ) : null}
           </View>
         ) : null}
@@ -294,15 +325,19 @@ export function ViajeDetalleScreen({ route, navigation }: NativeStackScreenProps
 }
 
 function Fila({ etiqueta, valor, destacado }: { etiqueta: string; valor: string; destacado?: boolean }) {
-  const t = useTema();
   return (
-    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: t.espacio(3) }}>
-      <Text variante="etiqueta" tono="muted">
+    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: tokens.space["3"] }}>
+      <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
         {etiqueta}
-      </Text>
-      <Text variante={destacado ? "subtitulo" : "etiqueta"} weight={destacado ? "semibold" : "medium"} style={{ flexShrink: 1, textAlign: "right" }}>
+      </Texto>
+      <Texto
+        tamano={destacado ? tokens.size.h5 : tokens.size.small}
+        peso={destacado ? "semibold" : "medium"}
+        color={tokens.color.text}
+        style={{ flexShrink: 1, textAlign: "right", fontVariant: ["tabular-nums"] }}
+      >
         {valor}
-      </Text>
+      </Texto>
     </View>
   );
 }

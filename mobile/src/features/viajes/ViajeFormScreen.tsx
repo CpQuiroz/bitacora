@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { Alert, Image, Pressable, ScrollView, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { ArrowLeft, Check, Square } from "lucide-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { CIUDADES_CHILE, type Cliente, type Equipo } from "@bitacora/shared";
-import { useTema } from "../../theme";
-import { Button, Card, Input, LoadingScreen, PickerBuscable, Text } from "../../components/ui";
+import { tokens } from "@bitacora/design-tokens";
+import { Button, Card, Input, LoadingState, ScreenHeader, Skeleton, Texto, useMarca } from "@bitacora/ui/native";
+import { PickerBuscable } from "../../components/ui";
 import { SelectorCliente } from "../../components/SelectorCliente";
 import { InputMonto } from "../../components/InputMonto";
 import { useRed } from "../../services/sync/NetworkProvider";
@@ -31,8 +32,12 @@ const VACIO: BorradorViaje = {
   aplica_iva: true,
 };
 
+// Sistema visual móvil v2 (14-sep-2026) — ScreenHeader propio (volver) +
+// tokens/Texto/Button en vez de useTema()/components-ui viejo. Se
+// mantienen SelectorCliente/PickerBuscable/InputMonto tal cual (sin
+// equivalente v2, mismo criterio que NuevaCitaScreen/CobroFormScreen).
 export function ViajeFormScreen({ navigation, route }: NativeStackScreenProps<ViajesStackParamList, "ViajeForm">) {
-  const t = useTema();
+  const marca = useMarca();
   const { enLinea } = useRed();
   const editandoId = route.params?.viajeId ?? null;
   const [clientes, setClientes] = useState<Cliente[] | null>(null);
@@ -41,10 +46,6 @@ export function ViajeFormScreen({ navigation, route }: NativeStackScreenProps<Vi
   const [foto, setFoto] = useState<{ uri: string; name: string; type: string } | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [cargandoViaje, setCargandoViaje] = useState(Boolean(editandoId));
-
-  useEffect(() => {
-    navigation.setOptions({ title: editandoId ? "Editar viaje" : "Nuevo viaje" });
-  }, [navigation, editandoId]);
 
   useEffect(() => {
     catalogoParaViaje().then(({ clientes, equipos }) => {
@@ -92,7 +93,7 @@ export function ViajeFormScreen({ navigation, route }: NativeStackScreenProps<Vi
     }
 
     const borrador = { ...b, subtotal: b.subtotal.replace(/\D/g, "") };
-    const volver = () => navigation.goBack();
+    const volverForm = () => navigation.goBack();
     setGuardando(true);
 
     if (editandoId) {
@@ -112,7 +113,7 @@ export function ViajeFormScreen({ navigation, route }: NativeStackScreenProps<Vi
       });
       setGuardando(false);
       if (!r.ok) return Alert.alert("No se pudo guardar", r.error);
-      Alert.alert("Viaje actualizado", "Listo.", [{ text: "Listo", onPress: volver }]);
+      Alert.alert("Viaje actualizado", "Listo.", [{ text: "Listo", onPress: volverForm }]);
       return;
     }
 
@@ -125,7 +126,7 @@ export function ViajeFormScreen({ navigation, route }: NativeStackScreenProps<Vi
           r.fotoPendiente
             ? "Llegó a la oficina. La foto de la guía se está subiendo y se reintenta sola si falla."
             : "Llegó a la oficina. Queda pendiente de aprobación.",
-          [{ text: "Listo", onPress: volver }]
+          [{ text: "Listo", onPress: volverForm }]
         );
         return;
       }
@@ -140,7 +141,7 @@ export function ViajeFormScreen({ navigation, route }: NativeStackScreenProps<Vi
       Alert.alert(
         "Se reintentará solo",
         "No se pudo enviar ahora (conexión o servidor). Lo guardamos y se reenvía cuando haya señal — lo ves en la lista de Viajes.",
-        [{ text: "Listo", onPress: volver }]
+        [{ text: "Listo", onPress: volverForm }]
       );
       return;
     }
@@ -148,116 +149,147 @@ export function ViajeFormScreen({ navigation, route }: NativeStackScreenProps<Vi
     await encolarViaje(borrador, foto ?? undefined);
     setGuardando(false);
     Alert.alert("Guardado sin conexión", "Se enviará a la oficina cuando vuelvas a tener señal.", [
-      { text: "Listo", onPress: volver },
+      { text: "Listo", onPress: volverForm },
     ]);
   }
 
-  if (clientes === null || cargandoViaje) return <LoadingScreen />;
+  const volver = { icono: <ArrowLeft size={20} strokeWidth={2.5} color={tokens.color.text} />, onPress: () => navigation.goBack(), etiquetaAccesible: "Volver" };
+  const titulo = editandoId ? "Editar viaje" : "Nuevo viaje";
 
-  return (
-    <View style={{ flex: 1, backgroundColor: t.colores.bg }}>
-      <ScrollView
-        contentContainerStyle={{ padding: t.espacio(5), gap: t.espacio(4), paddingBottom: t.espacio(8) }}
-        keyboardShouldPersistTaps="handled"
-      >
-      <SelectorCliente
-        valor={b.cliente_id}
-        onElegir={(id) => set("cliente_id", id)}
-        clientes={clientes}
-        onClienteCreado={(c) => setClientes((prev) => [...(prev ?? []), c])}
-      />
-
-      <Input etiqueta="Número de guía" value={b.numero_guia} onChangeText={(v) => set("numero_guia", v)} />
-
-      {!editandoId ? (
-        <Card plano style={{ gap: t.espacio(2) }}>
-          <Text variante="etiqueta" tono="muted">
-            Foto de la guía
-          </Text>
-          {foto ? (
-            <View style={{ flexDirection: "row", gap: t.espacio(3), alignItems: "center" }}>
-              <Image source={{ uri: foto.uri }} style={{ width: 72, height: 72, borderRadius: t.radio.md, backgroundColor: t.colores.surfaceAlt }} />
-              <View style={{ flex: 1, gap: t.espacio(2) }}>
-                <Button titulo="Cambiar" variante="secundario" onPress={adjuntarFoto} />
-                <Button titulo="Quitar" variante="peligro" onPress={() => setFoto(null)} />
-              </View>
-            </View>
-          ) : (
-            <Button titulo="Adjuntar foto de la guía" variante="primario" onPress={adjuntarFoto} />
-          )}
-        </Card>
-      ) : null}
-
-      <PickerBuscable
-        etiqueta="Origen"
-        placeholder="Elegir ciudad de origen"
-        valor={b.origen}
-        opciones={CIUDADES_CHILE.map((c) => ({ id: c, label: c }))}
-        onElegir={(v) => set("origen", v)}
-        permitirLibre
-        textoLibre={(texto) => `Usar "${texto}" (no está en la lista)`}
-      />
-      <PickerBuscable
-        etiqueta="Destino"
-        placeholder="Elegir ciudad de destino"
-        valor={b.destino}
-        opciones={CIUDADES_CHILE.map((c) => ({ id: c, label: c }))}
-        onElegir={(v) => set("destino", v)}
-        permitirLibre
-        textoLibre={(texto) => `Usar "${texto}" (no está en la lista)`}
-      />
-
-      {equipos.length > 0 ? (
-        <PickerBuscable
-          etiqueta="Vehículo (opcional)"
-          valor={b.equipo_id ?? ""}
-          opcionVacia="Ninguno"
-          opciones={equipos.map((e) => ({ id: e.id, label: e.nombre, sublabel: e.patente ?? undefined }))}
-          onElegir={(id) => set("equipo_id", id)}
-        />
-      ) : null}
-
-      <View style={{ flexDirection: "row", gap: t.espacio(3) }}>
-        <View style={{ flex: 1 }}>
-          <Input etiqueta="Km inicial" keyboardType="numeric" value={b.km_inicial} onChangeText={(v) => set("km_inicial", v)} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Input etiqueta="Km final" keyboardType="numeric" value={b.km_final} onChangeText={(v) => set("km_final", v)} />
+  if (clientes === null || cargandoViaje) {
+    return (
+      <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+        <ScreenHeader titulo={titulo} accion={volver} />
+        <View style={{ padding: tokens.space["4"], gap: tokens.space["3"] }}>
+          <LoadingState>
+            <Skeleton alto={44} radio={999} />
+            <Skeleton alto={44} radio={999} />
+            <Skeleton alto={120} radio={16} />
+          </LoadingState>
         </View>
       </View>
+    );
+  }
 
-      <InputMonto etiqueta="Monto del viaje (sin IVA)" valor={b.subtotal} onChangeText={(v) => set("subtotal", v)} />
-
-      <Pressable
-        onPress={() => set("aplica_iva", !b.aplica_iva)}
-        hitSlop={8}
-        style={({ pressed }) => ({
-          flexDirection: "row",
-          alignItems: "center",
-          gap: t.espacio(2.5),
-          minHeight: 44,
-          opacity: pressed ? 0.7 : 1,
-        })}
+  return (
+    <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+      <ScreenHeader titulo={titulo} accion={volver} />
+      <ScrollView
+        contentContainerStyle={{ padding: tokens.space["4"], gap: tokens.space["4"], paddingBottom: tokens.space["8"] }}
+        keyboardShouldPersistTaps="handled"
       >
-        <Ionicons
-          name={b.aplica_iva ? "checkbox" : "square-outline"}
-          size={24}
-          color={b.aplica_iva ? t.colores.brand : t.colores.muted}
+        <SelectorCliente
+          valor={b.cliente_id}
+          onElegir={(id) => set("cliente_id", id)}
+          clientes={clientes}
+          onClienteCreado={(c) => setClientes((prev) => [...(prev ?? []), c])}
         />
-        <Text variante="cuerpo">Aplicar IVA (19%)</Text>
-      </Pressable>
+
+        <Input etiqueta="Número de guía" valor={b.numero_guia} onCambio={(v) => set("numero_guia", v)} />
+
+        {!editandoId ? (
+          <Card>
+            <View style={{ gap: tokens.space["2"] }}>
+              <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} style={{ letterSpacing: 1 }}>
+                FOTO DE LA GUÍA
+              </Texto>
+              {foto ? (
+                <View style={{ flexDirection: "row", gap: tokens.space["3"], alignItems: "center" }}>
+                  <Image source={{ uri: foto.uri }} style={{ width: 72, height: 72, borderRadius: tokens.radius.md, backgroundColor: tokens.color.neutral["200"] }} />
+                  <View style={{ flex: 1, gap: tokens.space["2"] }}>
+                    <Button variante="secundario" bloque onPress={adjuntarFoto}>
+                      Cambiar
+                    </Button>
+                    <Button variante="peligro" bloque onPress={() => setFoto(null)}>
+                      Quitar
+                    </Button>
+                  </View>
+                </View>
+              ) : (
+                <Button variante="primario" bloque onPress={adjuntarFoto}>
+                  Adjuntar foto de la guía
+                </Button>
+              )}
+            </View>
+          </Card>
+        ) : null}
+
+        <PickerBuscable
+          etiqueta="Origen"
+          placeholder="Elegir ciudad de origen"
+          valor={b.origen}
+          opciones={CIUDADES_CHILE.map((c) => ({ id: c, label: c }))}
+          onElegir={(v) => set("origen", v)}
+          permitirLibre
+          textoLibre={(texto) => `Usar "${texto}" (no está en la lista)`}
+        />
+        <PickerBuscable
+          etiqueta="Destino"
+          placeholder="Elegir ciudad de destino"
+          valor={b.destino}
+          opciones={CIUDADES_CHILE.map((c) => ({ id: c, label: c }))}
+          onElegir={(v) => set("destino", v)}
+          permitirLibre
+          textoLibre={(texto) => `Usar "${texto}" (no está en la lista)`}
+        />
+
+        {equipos.length > 0 ? (
+          <PickerBuscable
+            etiqueta="Vehículo (opcional)"
+            valor={b.equipo_id ?? ""}
+            opcionVacia="Ninguno"
+            opciones={equipos.map((e) => ({ id: e.id, label: e.nombre, sublabel: e.patente ?? undefined }))}
+            onElegir={(id) => set("equipo_id", id)}
+          />
+        ) : null}
+
+        <View style={{ flexDirection: "row", gap: tokens.space["3"] }}>
+          <View style={{ flex: 1 }}>
+            <Input etiqueta="Km inicial" tipo="numero" valor={b.km_inicial ?? ""} onCambio={(v) => set("km_inicial", v)} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Input etiqueta="Km final" tipo="numero" valor={b.km_final ?? ""} onCambio={(v) => set("km_final", v)} />
+          </View>
+        </View>
+
+        <InputMonto etiqueta="Monto del viaje (sin IVA)" valor={b.subtotal} onChangeText={(v) => set("subtotal", v)} />
+
+        <Pressable
+          onPress={() => set("aplica_iva", !b.aplica_iva)}
+          hitSlop={8}
+          style={({ pressed }) => ({
+            flexDirection: "row",
+            alignItems: "center",
+            gap: tokens.space["3"],
+            minHeight: 44,
+            opacity: pressed ? 0.7 : 1,
+          })}
+        >
+          {b.aplica_iva ? (
+            <View style={{ width: 24, height: 24, borderRadius: tokens.radius.sm, backgroundColor: marca.base, alignItems: "center", justifyContent: "center" }}>
+              <Check size={16} strokeWidth={3} color={marca.foreground} />
+            </View>
+          ) : (
+            <Square size={24} strokeWidth={2} color={`${tokens.color.text}66`} />
+          )}
+          <Texto tamano={tokens.size.body} color={tokens.color.text}>
+            Aplicar IVA (19%)
+          </Texto>
+        </Pressable>
       </ScrollView>
 
       <View
         style={{
-          padding: t.espacio(4),
-          paddingBottom: t.espacio(6),
+          padding: tokens.space["4"],
+          paddingBottom: tokens.space["6"],
           borderTopWidth: 1,
-          borderTopColor: t.colores.border,
-          backgroundColor: t.colores.surface,
+          borderTopColor: tokens.color.divider,
+          backgroundColor: tokens.color.surface,
         }}
       >
-        <Button titulo={editandoId ? "Guardar cambios" : "Registrar viaje"} tamano="lg" onPress={guardar} cargando={guardando} />
+        <Button tamano="lg" bloque onPress={guardar} cargando={guardando}>
+          {editandoId ? "Guardar cambios" : "Registrar viaje"}
+        </Button>
       </View>
     </View>
   );

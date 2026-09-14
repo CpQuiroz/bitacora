@@ -1,7 +1,9 @@
 import { useMemo, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
-import { useTema } from "../../theme";
-import { Text } from "../../components/ui";
+import { ArrowLeft } from "lucide-react-native";
+import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { tokens } from "@bitacora/design-tokens";
+import { ScreenHeader, Texto, useMarca } from "@bitacora/ui/native";
 import { useAuth } from "../auth/AuthContext";
 import { PERIODOS, resolverPeriodo, type PeriodoValor } from "../../lib/periodo";
 import { VisionGeneral } from "./secciones/VisionGeneral";
@@ -11,6 +13,7 @@ import { Operaciones } from "./secciones/Operaciones";
 import { Servicios } from "./secciones/Servicios";
 import { ClientesInforme } from "./secciones/ClientesInforme";
 import { GastosInformeSeccion } from "./secciones/GastosInformeSeccion";
+import type { MasStackParamList } from "../../shell/navigation/types";
 
 type Seccion = "vision-general" | "financiero" | "ventas" | "operaciones" | "servicios" | "clientes" | "gastos";
 
@@ -24,10 +27,14 @@ const SECCIONES: { valor: Seccion; etiqueta: string }[] = [
   { valor: "gastos", etiqueta: "Gastos" },
 ];
 
-function Chips<T extends string>({ opciones, valor, onElegir }: { opciones: { valor: T; etiqueta: string }[]; valor: T; onElegir: (v: T) => void }) {
-  const t = useTema();
+// Chips del selector de período — mismo aspecto visual que la fila de
+// `filtros` de ScreenHeader (pill, marca.base cuando está activo), pero
+// dibujados aparte: ScreenHeader solo admite UNA fila de chips y esa la
+// ocupa el selector de sección (Ventas/Financiero/etc).
+function ChipsPeriodo<T extends string>({ opciones, valor, onElegir }: { opciones: { valor: T; etiqueta: string }[]; valor: T; onElegir: (v: T) => void }) {
+  const marca = useMarca();
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: t.espacio(2), paddingHorizontal: t.espacio(4) }}>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: tokens.space["2"], paddingHorizontal: tokens.space["4"] }}>
       {opciones.map((o) => {
         const activo = o.valor === valor;
         return (
@@ -37,14 +44,14 @@ function Chips<T extends string>({ opciones, valor, onElegir }: { opciones: { va
             style={{
               minHeight: 36,
               justifyContent: "center",
-              paddingHorizontal: t.espacio(3.5),
-              borderRadius: t.radio.md,
-              backgroundColor: activo ? t.colores.brand : t.colores.surfaceAlt,
+              paddingHorizontal: tokens.space["3"],
+              borderRadius: tokens.radius.pill,
+              backgroundColor: activo ? marca.base : tokens.color.surface,
             }}
           >
-            <Text variante="caption" weight="semibold" tono={activo ? "inverso" : "muted"}>
+            <Texto tamano={tokens.size.caption} peso="semibold" color={activo ? marca.foreground : tokens.color.text}>
               {o.etiqueta}
-            </Text>
+            </Texto>
           </Pressable>
         );
       })}
@@ -52,8 +59,14 @@ function Chips<T extends string>({ opciones, valor, onElegir }: { opciones: { va
   );
 }
 
-export function InformesScreen() {
-  const t = useTema();
+// Sistema visual móvil v2 — shell migrado: ScreenHeader (con `accion`
+// de volver, esta pantalla es push desde "Más") + la fila de chips de
+// sección pasa a ser el `filtros` del propio ScreenHeader. El selector
+// de período queda como una fila de chips propia debajo, mismo patrón
+// que la navegación de período de AgendaScreen. Las secciones
+// (Ventas/Financiero/etc, en ./secciones/*) NO se migran acá — quedan
+// con su propio look, es un gap conocido para otra pasada.
+export function InformesScreen({ navigation }: NativeStackScreenProps<MasStackParamList, "Informes">) {
   const auth = useAuth();
   const [periodo, setPeriodo] = useState<PeriodoValor>("este_mes");
   const [seccion, setSeccion] = useState<Seccion>("vision-general");
@@ -62,17 +75,28 @@ export function InformesScreen() {
   const moneda = auth.fase === "listo" ? auth.usuario.empresa.moneda : "CLP";
   const periodoActual = PERIODOS.find((p) => p.valor === periodo);
 
+  const filtrosSeccion = {
+    opciones: SECCIONES,
+    valor: seccion,
+    onCambio: (v: string) => setSeccion(v as Seccion),
+  };
+
   return (
-    <View style={{ flex: 1, backgroundColor: t.colores.bg }}>
-      <View style={{ paddingTop: t.espacio(4), gap: t.espacio(3) }}>
-        <Chips opciones={PERIODOS} valor={periodo} onElegir={setPeriodo} />
-        <Chips opciones={SECCIONES} valor={seccion} onElegir={setSeccion} />
+    <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+      <ScreenHeader
+        titulo="Informes"
+        accion={{ icono: <ArrowLeft size={20} strokeWidth={2.5} color={tokens.color.text} />, onPress: () => navigation.goBack(), etiquetaAccesible: "Volver" }}
+        filtros={filtrosSeccion}
+      />
+
+      <View style={{ paddingTop: tokens.space["3"] }}>
+        <ChipsPeriodo opciones={PERIODOS} valor={periodo} onElegir={setPeriodo} />
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: t.espacio(4), gap: t.espacio(4), paddingBottom: t.espacio(10) }}>
-        <Text variante="caption" tono="muted">
+      <ScrollView contentContainerStyle={{ padding: tokens.space["4"], gap: tokens.space["4"], paddingBottom: tokens.space["8"] * 2 }}>
+        <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
           {periodoActual?.etiqueta} · {desde} a {hasta}
-        </Text>
+        </Texto>
 
         {seccion === "vision-general" && <VisionGeneral desde={desde} hasta={hasta} moneda={moneda} />}
         {seccion === "financiero" && <Financiero desde={desde} hasta={hasta} moneda={moneda} />}

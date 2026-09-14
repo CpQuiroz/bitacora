@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Image, Pressable, ScrollView, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { ArrowLeft, Camera, ChevronDown, ChevronUp, X } from "lucide-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { Proveedor, RespuestaChecklistMantencion } from "@bitacora/shared";
 import { MANTENCION_EXIGE_FOTO_EN_NO } from "@bitacora/shared";
-import { useTema } from "../../theme";
-import { Button, Input, LoadingScreen, PickerBuscable, Text } from "../../components/ui";
+import { tokens } from "@bitacora/design-tokens";
+import { Button, Input, LoadingState, ScreenHeader, Textarea, Texto, useMarca } from "@bitacora/ui/native";
+import { PickerBuscable } from "../../components/ui";
 import { LienzoFirma, type LienzoFirmaHandle } from "../../components/LienzoFirma";
 import { useRed } from "../../services/sync/NetworkProvider";
 import { elegirFotos } from "../../lib/imagen";
@@ -40,8 +41,19 @@ function etiquetaFecha(iso: string): string {
 
 type FotoLocal = { uri: string; item: string | null };
 
+// Sistema visual móvil v2 (14-sep-2026) — migración del sistema viejo
+// (useTema/Ionicons/components-ui) al nuevo: ScreenHeader propio con
+// `accion`=volver (antes el título nativo del stack, vía
+// navigation.setOptions) + tokens/Texto/Button/Input/Textarea de
+// @bitacora/ui/native. `PickerBuscable` (taller) y `LienzoFirma`
+// (firma) se mantienen tal cual — sin equivalente v2, mismo criterio
+// que NuevoGastoScreen/NuevaCitaScreen. La barra fija de progreso+fecha
+// y la barra fija inferior de guardar no tienen equivalente de
+// primitivo v2 (son específicas de este formulario) — quedan como
+// View+tokens planos, mismo criterio que las banners de cola de
+// ViajesScreen.
 export function ChecklistMantencionScreen({ route, navigation }: NativeStackScreenProps<MasStackParamList, "ChecklistMantencion">) {
-  const t = useTema();
+  const marca = useMarca();
   const { enLinea } = useRed();
   const { equipoId, tipo, patente } = route.params;
 
@@ -57,10 +69,6 @@ export function ChecklistMantencionScreen({ route, navigation }: NativeStackScre
   const [abierta, setAbierta] = useState(0);
   const [guardando, setGuardando] = useState(false);
   const lienzo = useRef<LienzoFirmaHandle>(null);
-
-  useEffect(() => {
-    navigation.setOptions({ title: tipo === "diario" ? "Checklist diario" : "Mantención Flota" });
-  }, [navigation, tipo]);
 
   useEffect(() => {
     void obtenerPlantillaMantencion(tipo).then(setPlantilla);
@@ -142,7 +150,7 @@ export function ChecklistMantencionScreen({ route, navigation }: NativeStackScre
       fotos: fotos.map((f, i) => ({ item: f.item, uri: f.uri, name: `mantencion-${i}.jpg`, type: "image/jpeg" })),
     };
 
-    const volver = () => navigation.navigate("MantencionVehiculo");
+    const volverALista = () => navigation.navigate("MantencionVehiculo");
 
     // Con fotos, NUNCA se intenta inline — va directo a la cola. Bug real
     // (14-sep-2026): el intento inline (multipart, texto+fotos juntos) se
@@ -159,7 +167,7 @@ export function ChecklistMantencionScreen({ route, navigation }: NativeStackScre
       const r = await crearRegistroMantencion(borrador);
       if (r.ok) {
         setGuardando(false);
-        return Alert.alert("Registro guardado", "Quedó en la oficina.", [{ text: "Listo", onPress: volver }]);
+        return Alert.alert("Registro guardado", "Quedó en la oficina.", [{ text: "Listo", onPress: volverALista }]);
       }
       if (!r.reintentable) {
         setGuardando(false);
@@ -178,11 +186,23 @@ export function ChecklistMantencionScreen({ route, navigation }: NativeStackScre
       !enLinea || !conFotos
         ? "El chequeo en curso quedó guardado en el teléfono y se envía a la oficina cuando haya señal."
         : "Quedó en la oficina. Las fotos se están subiendo y se reintentan solas si falla.",
-      [{ text: "Listo", onPress: volver }]
+      [{ text: "Listo", onPress: volverALista }]
     );
   }
 
-  if (!plantilla) return <LoadingScreen />;
+  const volver = { icono: <ArrowLeft size={20} strokeWidth={2.5} color={tokens.color.text} />, onPress: () => navigation.goBack(), etiquetaAccesible: "Volver" };
+  const tituloPantalla = tipo === "diario" ? "Checklist diario" : "Mantención Flota";
+
+  if (!plantilla) {
+    return (
+      <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+        <ScreenHeader titulo={tituloPantalla} accion={volver} />
+        <View style={{ padding: tokens.space["4"] }}>
+          <LoadingState />
+        </View>
+      </View>
+    );
+  }
 
   const progreso = totalItems > 0 ? respondidos / totalItems : 0;
   const chips = [
@@ -192,39 +212,61 @@ export function ChecklistMantencionScreen({ route, navigation }: NativeStackScre
   ];
 
   return (
-    <View style={{ flex: 1, backgroundColor: t.colores.bg }}>
-      {/* Header fijo: contexto + progreso + chips de fecha */}
-      <View style={{ backgroundColor: t.colores.surface, borderBottomWidth: 1, borderBottomColor: t.colores.border, paddingHorizontal: t.espacio(4), paddingTop: t.espacio(2), paddingBottom: t.espacio(3), gap: t.espacio(2) }}>
+    <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+      <ScreenHeader titulo={tituloPantalla} accion={volver} />
+
+      {/* Barra fija: contexto + progreso + chips de fecha */}
+      <View
+        style={{
+          backgroundColor: tokens.color.surface,
+          borderBottomWidth: 1,
+          borderBottomColor: tokens.color.divider,
+          paddingHorizontal: tokens.space["4"],
+          paddingTop: tokens.space["2"],
+          paddingBottom: tokens.space["3"],
+          gap: tokens.space["2"],
+        }}
+      >
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-          <Text variante="caption" tono="muted" numberOfLines={1} style={{ flex: 1 }}>
+          <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} numberOfLines={1} style={{ flex: 1 }}>
             {patente ?? "Vehículo asignado"}
-          </Text>
-          <Text mono variante="caption" tono="muted">
+          </Texto>
+          <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} style={{ fontVariant: ["tabular-nums"] }}>
             {respondidos}/{totalItems}
-          </Text>
+          </Texto>
         </View>
-        <View style={{ height: 3, borderRadius: 3, backgroundColor: t.colores.border, overflow: "hidden" }}>
-          <View style={{ width: `${Math.round(progreso * 100)}%`, height: 3, backgroundColor: t.colores.brand }} />
+        <View style={{ height: 3, borderRadius: 3, backgroundColor: tokens.color.divider, overflow: "hidden" }}>
+          <View style={{ width: `${Math.round(progreso * 100)}%`, height: 3, backgroundColor: marca.base }} />
         </View>
-        <View style={{ flexDirection: "row", gap: t.espacio(2) }}>
+        <View style={{ flexDirection: "row", gap: tokens.space["2"] }}>
           {chips.map((c) => {
             const sel = fecha === c.iso;
             return (
               <Pressable
                 key={c.iso}
                 onPress={() => setFecha(c.iso)}
-                style={{ minHeight: 46, flex: 1, borderRadius: t.radio.md, borderWidth: 1, borderColor: sel ? t.colores.brand : t.colores.border, backgroundColor: sel ? t.colores.brandSoft : t.colores.surface, alignItems: "center", justifyContent: "center", paddingHorizontal: t.espacio(1) }}
+                style={{
+                  minHeight: 46,
+                  flex: 1,
+                  borderRadius: tokens.radius.md,
+                  borderWidth: 1,
+                  borderColor: sel ? marca.base : tokens.color.divider,
+                  backgroundColor: sel ? `${marca.base}1f` : tokens.color.surface,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  paddingHorizontal: tokens.space["1"],
+                }}
               >
-                <Text variante="caption" weight={sel ? "bold" : "medium"} style={{ color: sel ? t.colores.brand : t.colores.muted }} numberOfLines={1}>
+                <Texto tamano={tokens.size.caption} color={sel ? marca.base : `${tokens.color.text}99`} peso={sel ? "semibold" : "medium"} numberOfLines={1}>
                   {c.label}
-                </Text>
+                </Texto>
               </Pressable>
             );
           })}
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: t.espacio(4), gap: t.espacio(3), paddingBottom: t.espacio(8) }} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={{ padding: tokens.space["4"], gap: tokens.space["3"], paddingBottom: tokens.space["8"] }} keyboardShouldPersistTaps="handled">
         {tipo === "programa" && (
           <PickerBuscable
             etiqueta="Taller / lubricentro"
@@ -235,12 +277,12 @@ export function ChecklistMantencionScreen({ route, navigation }: NativeStackScre
           />
         )}
 
-        <View style={{ flexDirection: "row", gap: t.espacio(3) }}>
+        <View style={{ flexDirection: "row", gap: tokens.space["3"] }}>
           <View style={{ flex: 1 }}>
-            <Input etiqueta="Kilometraje" keyboardType="numeric" value={km} onChangeText={(v) => setKm(v.replace(/[^\d]/g, ""))} />
+            <Input etiqueta="Kilometraje" tipo="numero" valor={km} onCambio={(v) => setKm(v.replace(/[^\d]/g, ""))} />
           </View>
           <View style={{ flex: 1 }}>
-            <Input etiqueta="Horas motor" keyboardType="numeric" value={horas} onChangeText={(v) => setHoras(v.replace(/[^\d]/g, ""))} />
+            <Input etiqueta="Horas motor" tipo="numero" valor={horas} onCambio={(v) => setHoras(v.replace(/[^\d]/g, ""))} />
           </View>
         </View>
 
@@ -249,65 +291,94 @@ export function ChecklistMantencionScreen({ route, navigation }: NativeStackScre
           const enSeccion = sec.preguntas.filter((p) => respuestas[clave(sec.nombre, p.texto)]).length;
           const completa = enSeccion === sec.preguntas.length;
           return (
-            <View key={sec.nombre} style={{ borderWidth: 1, borderColor: t.colores.border, borderRadius: t.radio.md, overflow: "hidden", backgroundColor: t.colores.surface }}>
+            <View key={sec.nombre} style={{ borderWidth: 1, borderColor: tokens.color.divider, borderRadius: tokens.radius.md, overflow: "hidden", backgroundColor: tokens.color.surface }}>
               <Pressable
                 onPress={() => setAbierta(open ? -1 : idx)}
-                style={{ flexDirection: "row", alignItems: "center", gap: t.espacio(2.5), padding: t.espacio(3), minHeight: 56 }}
+                style={{ flexDirection: "row", alignItems: "center", gap: tokens.space["3"], padding: tokens.space["3"], minHeight: 56 }}
               >
-                <View style={{ width: 22, height: 22, borderRadius: t.radio.sm, backgroundColor: completa ? t.colores.successSoft : t.colores.brand, alignItems: "center", justifyContent: "center" }}>
-                  <Text mono variante="caption" weight="bold" style={{ color: completa ? t.colores.success : "#fff" }}>{idx + 1}</Text>
+                <View style={{ width: 22, height: 22, borderRadius: tokens.radius.sm, backgroundColor: completa ? tokens.color.accent2Ramp["200"] : marca.base, alignItems: "center", justifyContent: "center" }}>
+                  <Texto tamano={tokens.size.caption} peso="semibold" color={completa ? tokens.color.accent2Ramp["800"] : marca.foreground} style={{ fontVariant: ["tabular-nums"] }}>
+                    {idx + 1}
+                  </Texto>
                 </View>
-                <Text weight="semibold" style={{ flex: 1 }}>{sec.nombre}</Text>
-                <View style={{ paddingHorizontal: t.espacio(2), paddingVertical: 2, borderRadius: 999, backgroundColor: completa ? t.colores.successSoft : t.colores.surfaceAlt }}>
-                  <Text variante="caption" weight="bold" style={{ color: completa ? t.colores.success : t.colores.muted }}>
+                <Texto tamano={tokens.size.body} color={tokens.color.text} peso="semibold" style={{ flex: 1 }}>
+                  {sec.nombre}
+                </Texto>
+                <View style={{ paddingHorizontal: tokens.space["2"], paddingVertical: 2, borderRadius: 999, backgroundColor: completa ? tokens.color.accent2Ramp["200"] : tokens.color.neutral["200"] }}>
+                  <Texto tamano={tokens.size.caption} peso="semibold" color={completa ? tokens.color.accent2Ramp["800"] : `${tokens.color.text}99`} style={{ fontVariant: ["tabular-nums"] }}>
                     {enSeccion}/{sec.preguntas.length}
-                  </Text>
+                  </Texto>
                 </View>
-                <Ionicons name={open ? "chevron-up" : "chevron-down"} size={18} color={t.colores.faint} />
+                {open ? (
+                  <ChevronUp size={18} strokeWidth={2.5} color={`${tokens.color.text}66`} />
+                ) : (
+                  <ChevronDown size={18} strokeWidth={2.5} color={`${tokens.color.text}66`} />
+                )}
               </Pressable>
 
               {open && (
-                <View style={{ paddingHorizontal: t.espacio(3), paddingBottom: t.espacio(2) }}>
+                <View style={{ paddingHorizontal: tokens.space["3"], paddingBottom: tokens.space["2"] }}>
                   {sec.preguntas.map((p) => {
                     const actual = respuestas[clave(sec.nombre, p.texto)];
                     const nFotos = fotos.filter((f) => f.item === p.texto).length;
                     const necesitaFoto = MANTENCION_EXIGE_FOTO_EN_NO && actual === "no" && nFotos === 0;
                     return (
-                      <View key={p.texto} style={{ paddingVertical: t.espacio(2.5), borderTopWidth: 1, borderTopColor: t.colores.border }}>
-                        <View style={{ flexDirection: "row", alignItems: "center", gap: t.espacio(2), marginBottom: t.espacio(2) }}>
-                          <Text variante="cuerpo" style={{ flex: 1 }}>{p.texto}</Text>
+                      <View key={p.texto} style={{ paddingVertical: tokens.space["3"], borderTopWidth: 1, borderTopColor: tokens.color.divider }}>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: tokens.space["2"], marginBottom: tokens.space["2"] }}>
+                          <Texto tamano={tokens.size.body} color={tokens.color.text} style={{ flex: 1 }}>
+                            {p.texto}
+                          </Texto>
                           {actual === "no" && (
                             <Pressable
                               onPress={() => tomarFoto(p.texto)}
                               hitSlop={8}
-                              style={{ minHeight: 32, paddingHorizontal: t.espacio(2), borderRadius: t.radio.sm, borderWidth: 1, borderColor: necesitaFoto ? t.colores.danger : t.colores.border, alignItems: "center", justifyContent: "center" }}
+                              style={{
+                                minHeight: 32,
+                                paddingHorizontal: tokens.space["2"],
+                                borderRadius: tokens.radius.sm,
+                                borderWidth: 1,
+                                borderColor: necesitaFoto ? tokens.color.accentRamp["700"] : tokens.color.divider,
+                                alignItems: "center",
+                                justifyContent: "center",
+                              }}
                             >
-                              <Text variante="caption" weight="bold" style={{ color: necesitaFoto ? t.colores.danger : t.colores.brand }}>
+                              <Texto tamano={tokens.size.caption} peso="semibold" color={necesitaFoto ? tokens.color.accentRamp["700"] : marca.base}>
                                 {nFotos ? `Foto (${nFotos})` : "+ Foto"}
-                              </Text>
+                              </Texto>
                             </Pressable>
                           )}
                         </View>
-                        <View style={{ flexDirection: "row", gap: t.espacio(2) }}>
+                        <View style={{ flexDirection: "row", gap: tokens.space["2"] }}>
                           {OPCIONES.map((op) => {
                             const sel = actual === op.valor;
                             const bg = sel
                               ? op.valor === "si"
-                                ? t.colores.success
+                                ? tokens.color.accent2Ramp["700"]
                                 : op.valor === "no"
-                                  ? t.colores.danger
-                                  : t.colores.brandSoft
-                              : t.colores.surface;
-                            const fg = sel && op.valor !== "na" ? "#fff" : sel ? t.colores.brand : t.colores.muted;
+                                  ? tokens.color.accentRamp["700"]
+                                  : marca.base
+                              : tokens.color.surface;
+                            const fg = sel ? (op.valor === "na" ? marca.foreground : tokens.color.neutral["100"]) : `${tokens.color.text}99`;
                             return (
                               <Pressable
                                 key={op.valor}
                                 onPress={() => responder(sec.nombre, p.texto, op.valor)}
                                 accessibilityRole="radio"
                                 accessibilityState={{ selected: sel }}
-                                style={{ flex: 1, minHeight: 46, borderRadius: t.radio.md, borderWidth: 1, borderColor: sel ? bg : t.colores.borderStrong, backgroundColor: bg, alignItems: "center", justifyContent: "center" }}
+                                style={{
+                                  flex: 1,
+                                  minHeight: 46,
+                                  borderRadius: tokens.radius.md,
+                                  borderWidth: 1,
+                                  borderColor: sel ? bg : tokens.color.divider,
+                                  backgroundColor: bg,
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                }}
                               >
-                                <Text weight="bold" style={{ color: fg }}>{op.texto}</Text>
+                                <Texto tamano={tokens.size.body} peso="semibold" color={fg}>
+                                  {op.texto}
+                                </Texto>
                               </Pressable>
                             );
                           })}
@@ -322,38 +393,39 @@ export function ChecklistMantencionScreen({ route, navigation }: NativeStackScre
         })}
 
         {tipo === "programa" && (
-          <View style={{ gap: t.espacio(1) }}>
-            <Text variante="etiqueta" tono="muted" weight="semibold" style={{ textTransform: "uppercase" }}>
+          <View style={{ gap: tokens.space["1"] }}>
+            <Texto tamano={tokens.size.micro} color={`${tokens.color.text}99`} peso="semibold" style={{ textTransform: "uppercase" }}>
               Firma del responsable
-            </Text>
+            </Texto>
             <LienzoFirma ref={lienzo} />
           </View>
         )}
 
-        <View style={{ gap: t.espacio(2) }}>
+        <View style={{ gap: tokens.space["2"] }}>
           <Button
-            titulo={fotos.length ? `Fotos adjuntas (${fotos.length})` : "Adjuntar foto general"}
             variante="secundario"
-            icono={<Ionicons name="camera-outline" size={18} color={t.colores.brand} />}
+            iconoIzq={<Camera size={18} strokeWidth={2.5} color={tokens.color.text} />}
             onPress={() => tomarFoto(null)}
-          />
+          >
+            {fotos.length ? `Fotos adjuntas (${fotos.length})` : "Adjuntar foto general"}
+          </Button>
           {fotos.length > 0 && (
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: t.espacio(2.5) }}>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: tokens.space["2"] }}>
               {fotos.map((f, i) => (
                 <View key={`${f.uri}-${i}`} style={{ width: 84, height: 84 }}>
-                  <Image source={{ uri: f.uri }} style={{ width: 84, height: 84, borderRadius: t.radio.md, backgroundColor: t.colores.surfaceAlt }} />
+                  <Image source={{ uri: f.uri }} style={{ width: 84, height: 84, borderRadius: tokens.radius.md, backgroundColor: tokens.color.neutral["200"] }} />
                   <Pressable
                     onPress={() => quitarFoto(i)}
                     hitSlop={8}
-                    style={{ position: "absolute", right: -6, top: -6, width: 24, height: 24, borderRadius: 12, backgroundColor: t.colores.danger, alignItems: "center", justifyContent: "center" }}
+                    style={{ position: "absolute", right: -6, top: -6, width: 24, height: 24, borderRadius: 12, backgroundColor: tokens.color.accentRamp["700"], alignItems: "center", justifyContent: "center" }}
                   >
-                    <Ionicons name="close" size={14} color={t.colores.brandForeground} />
+                    <X size={14} strokeWidth={2.5} color={tokens.color.neutral["100"]} />
                   </Pressable>
                   {f.item ? (
-                    <View style={{ position: "absolute", bottom: 2, left: 2, right: 2, backgroundColor: t.colores.overlay, borderRadius: t.radio.sm, paddingHorizontal: 4, paddingVertical: 1 }}>
-                      <Text numberOfLines={1} style={{ fontSize: 10, lineHeight: 13, color: t.colores.brandForeground }}>
+                    <View style={{ position: "absolute", bottom: 2, left: 2, right: 2, backgroundColor: `${tokens.color.neutral["900"]}b3`, borderRadius: tokens.radius.sm, paddingHorizontal: 4, paddingVertical: 1 }}>
+                      <Texto tamano={10} color={tokens.color.neutral["100"]} numberOfLines={1} style={{ lineHeight: 13 }}>
                         {f.item}
-                      </Text>
+                      </Texto>
                     </View>
                   ) : null}
                 </View>
@@ -362,21 +434,25 @@ export function ChecklistMantencionScreen({ route, navigation }: NativeStackScre
           )}
         </View>
 
-        <Input etiqueta="Observaciones" value={observaciones} onChangeText={setObservaciones} multiline style={{ minHeight: 72 }} />
+        <Textarea etiqueta="Observaciones" valor={observaciones} onCambio={setObservaciones} filas={3} />
 
         {!enLinea && (
-          <View style={{ flexDirection: "row", alignItems: "center", gap: t.espacio(2), backgroundColor: t.colores.accentSoft, borderRadius: t.radio.md, padding: t.espacio(3) }}>
-            <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: t.colores.accent }} />
-            <Text variante="caption" style={{ color: t.colores.warning, flex: 1 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: tokens.space["2"], backgroundColor: tokens.color.accentRamp["200"], borderRadius: tokens.radius.md, padding: tokens.space["3"] }}>
+            <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: tokens.color.accentRamp["700"] }} />
+            <Texto tamano={tokens.size.caption} color={tokens.color.accentRamp["800"]} style={{ flex: 1 }}>
               Sin conexión — el chequeo se guarda en el teléfono y se envía al recuperar señal.
-            </Text>
+            </Texto>
           </View>
         )}
       </ScrollView>
 
-      <View style={{ paddingHorizontal: t.espacio(4), paddingTop: t.espacio(2), paddingBottom: t.espacio(6), borderTopWidth: 1, borderTopColor: t.colores.border, backgroundColor: t.colores.surface, gap: t.espacio(2) }}>
-        <Text variante="caption" tono="muted">{ayuda}</Text>
-        <Button titulo="Guardar chequeo" tamano="lg" onPress={guardar} cargando={guardando} disabled={bloqueado} />
+      <View style={{ paddingHorizontal: tokens.space["4"], paddingTop: tokens.space["2"], paddingBottom: tokens.space["6"], borderTopWidth: 1, borderTopColor: tokens.color.divider, backgroundColor: tokens.color.surface, gap: tokens.space["2"] }}>
+        <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
+          {ayuda}
+        </Texto>
+        <Button tamano="lg" bloque onPress={guardar} cargando={guardando} deshabilitado={bloqueado}>
+          Guardar chequeo
+        </Button>
       </View>
     </View>
   );

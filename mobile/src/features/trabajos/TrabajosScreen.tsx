@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Linking, Platform, Pressable, RefreshControl, SectionList, View } from "react-native";
-import { List, Map as MapIcon, Navigation, ClipboardList } from "lucide-react-native";
+import { Navigation, ClipboardList } from "lucide-react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { EstadoOS, EstadoTrabajo } from "@bitacora/shared";
 import { estadoOsDeTrabajo } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
-import { Button, Card, EmptyState, ErrorState, LoadingState, Skeleton, StatusBadge, Texto, useMarca } from "@bitacora/ui/native";
+import { Button, Card, EmptyState, ErrorState, LoadingState, ScreenHeader, Skeleton, StatusBadge, Texto, useMarca } from "@bitacora/ui/native";
 import { OfflineBanner } from "../../components/OfflineBanner";
 import { useAuth } from "../auth/AuthContext";
 import { listarTrabajos, type TrabajoLista } from "../../services/trabajos";
@@ -127,42 +127,19 @@ export function TrabajosScreen({ navigation }: NativeStackScreenProps<TrabajosSt
     return { pendientes, listas };
   }, [trabajos]);
 
-  const toggleVista = (
-    <View style={{ flexDirection: "row", gap: tokens.space["2"], padding: tokens.space["4"], paddingBottom: tokens.space["2"] }}>
-      {(["lista", "mapa"] as const).map((v) => {
-        const activo = vista === v;
-        const Icono = v === "lista" ? List : MapIcon;
-        return (
-          <Pressable
-            key={v}
-            onPress={() => setVista(v)}
-            style={{
-              flex: 1,
-              minHeight: 44,
-              alignItems: "center",
-              justifyContent: "center",
-              flexDirection: "row",
-              gap: tokens.space["2"],
-              borderRadius: tokens.radius.pill,
-              backgroundColor: activo ? marca.base : tokens.color.surface,
-              borderWidth: 1,
-              borderColor: activo ? marca.base : tokens.color.divider,
-            }}
-          >
-            <Icono size={16} strokeWidth={2.75} color={activo ? marca.foreground : `${tokens.color.text}99`} />
-            <Texto tamano={tokens.size.caption} color={activo ? marca.foreground : `${tokens.color.text}99`} peso="semibold">
-              {v === "lista" ? "Lista" : "Mapa"}
-            </Texto>
-          </Pressable>
-        );
-      })}
-    </View>
-  );
+  const filtrosVista = {
+    opciones: [
+      { valor: "lista", etiqueta: "Lista" },
+      { valor: "mapa", etiqueta: "Mapa" },
+    ],
+    valor: vista,
+    onCambio: (v: string) => setVista(v as "lista" | "mapa"),
+  };
 
   if (vista === "mapa") {
     return (
       <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
-        {toggleVista}
+        <ScreenHeader antetitulo=" " titulo="Trabajos" filtros={filtrosVista} />
         <TrabajosMapa onVerOS={(trabajoId) => navigation.navigate("TrabajoDetalle", { trabajoId })} />
       </View>
     );
@@ -203,7 +180,7 @@ export function TrabajosScreen({ navigation }: NativeStackScreenProps<TrabajosSt
   if (trabajos === null && !error)
     return (
       <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
-        {toggleVista}
+        <ScreenHeader antetitulo=" " titulo="Trabajos" filtros={filtrosVista} />
         <View style={{ padding: tokens.space["4"], gap: tokens.space["3"] }}>
           <LoadingState>
             <Skeleton alto={72} radio={32} />
@@ -215,15 +192,15 @@ export function TrabajosScreen({ navigation }: NativeStackScreenProps<TrabajosSt
   if (error && !trabajos)
     return (
       <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
-        {toggleVista}
+        <ScreenHeader antetitulo=" " titulo="Trabajos" filtros={filtrosVista} />
         <ErrorState mensaje={error} onReintentar={cargar} />
       </View>
     );
 
   return (
     <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+      <ScreenHeader antetitulo={`${contadores.pendientes} pendientes · ${contadores.listas} listas`} titulo="Trabajos" filtros={filtrosVista} />
       <OfflineBanner guardadoEn={guardadoEn} />
-      {toggleVista}
       {esGestion ? (
         <View style={{ paddingHorizontal: tokens.space["4"], paddingBottom: tokens.space["2"], gap: tokens.space["2"] }}>
           <Button bloque onPress={() => navigation.navigate("TrabajoForm")}>

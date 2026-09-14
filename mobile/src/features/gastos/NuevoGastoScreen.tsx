@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { Alert, Image, Pressable, ScrollView, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Camera } from "lucide-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { CategoriaGasto, CentroCosto, EstadoGasto, Proveedor, Trabajo } from "@bitacora/shared";
-import { useTema } from "../../theme";
-import { Button, Input, LoadingScreen, PickerBuscable, Text } from "../../components/ui";
+import { tokens } from "@bitacora/design-tokens";
+import { Button, Input, LoadingState, Texto, useMarca } from "@bitacora/ui/native";
+import { PickerBuscable } from "../../components/ui";
 import { InputMonto } from "../../components/InputMonto";
 import { useRed } from "../../services/sync/NetworkProvider";
 import { elegirFotos } from "../../lib/imagen";
@@ -45,7 +46,7 @@ const VACIO: BorradorGasto = {
 };
 
 function DiasChips({ valor, onElegir }: { valor: string; onElegir: (k: string) => void }) {
-  const t = useTema();
+  const marca = useMarca();
   const dias = useMemo(() => {
     const hoy = new Date();
     const base =
@@ -54,7 +55,7 @@ function DiasChips({ valor, onElegir }: { valor: string; onElegir: (k: string) =
   }, [valor]);
 
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: t.espacio(2) }}>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: tokens.space["2"] }}>
       {dias.map((d) => {
         const k = clave(d);
         const activo = k === valor;
@@ -67,22 +68,22 @@ function DiasChips({ valor, onElegir }: { valor: string; onElegir: (k: string) =
               minHeight: 60,
               alignItems: "center",
               justifyContent: "center",
-              borderRadius: t.radio.md,
-              paddingHorizontal: t.espacio(2),
-              backgroundColor: activo ? t.colores.brand : t.colores.surface,
+              borderRadius: tokens.radius.md,
+              paddingHorizontal: tokens.space["2"],
+              backgroundColor: activo ? marca.base : tokens.color.surface,
               borderWidth: 1,
-              borderColor: activo ? t.colores.brand : t.colores.border,
+              borderColor: activo ? marca.base : tokens.color.divider,
             }}
           >
-            <Text variante="caption" tono={activo ? "inverso" : "muted"}>
+            <Texto tamano={tokens.size.caption} color={activo ? marca.foreground : `${tokens.color.text}99`}>
               {DIAS[d.getDay()]}
-            </Text>
-            <Text variante="subtitulo" tono={activo ? "inverso" : "normal"}>
+            </Texto>
+            <Texto tamano={tokens.size.h5} peso="semibold" color={activo ? marca.foreground : tokens.color.text}>
               {d.getDate()}
-            </Text>
-            <Text variante="caption" tono={activo ? "inverso" : "muted"}>
+            </Texto>
+            <Texto tamano={tokens.size.caption} color={activo ? marca.foreground : `${tokens.color.text}99`}>
               {MESES[d.getMonth()]}
-            </Text>
+            </Texto>
           </Pressable>
         );
       })}
@@ -90,8 +91,12 @@ function DiasChips({ valor, onElegir }: { valor: string; onElegir: (k: string) =
   );
 }
 
+// Sistema visual móvil v2 — pantalla MODAL: sin ScreenHeader propio (el
+// título nativo del stack, "Nuevo gasto", ya lo pone MasStack), solo se
+// recolorea el contenido. `InputMonto` y `PickerBuscable` no tienen
+// todavía equivalente v2 — quedan tal cual (gap conocido), el resto del
+// contenido pasa a tokens/Texto/Button/Input de @bitacora/ui/native.
 export function NuevoGastoScreen({ navigation }: NativeStackScreenProps<MasStackParamList, "GastoForm">) {
-  const t = useTema();
   const { enLinea } = useRed();
   const [categorias, setCategorias] = useState<CategoriaGasto[] | null>(null);
   const [centros, setCentros] = useState<CentroCosto[]>([]);
@@ -158,24 +163,34 @@ export function NuevoGastoScreen({ navigation }: NativeStackScreenProps<MasStack
     Alert.alert("Guardado sin conexión", "Se enviará cuando vuelvas a tener señal.", [{ text: "Listo", onPress: volver }]);
   }
 
-  if (categorias === null) return <LoadingScreen />;
+  if (categorias === null) {
+    return (
+      <View style={{ flex: 1, backgroundColor: tokens.color.bg, padding: tokens.space["4"] }}>
+        <LoadingState />
+      </View>
+    );
+  }
 
   return (
-    <View style={{ flex: 1, backgroundColor: t.colores.bg }}>
+    <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
       <ScrollView
-        contentContainerStyle={{ padding: t.espacio(5), gap: t.espacio(4), paddingBottom: t.espacio(8) }}
+        contentContainerStyle={{ padding: tokens.space["4"], gap: tokens.space["4"], paddingBottom: tokens.space["8"] }}
         keyboardShouldPersistTaps="handled"
       >
         {/* La foto de la boleta arriba, grande */}
         {foto ? (
-          <View style={{ gap: t.espacio(2) }}>
-            <Image source={{ uri: foto.uri }} style={{ width: "100%", height: 220, borderRadius: t.radio.md, backgroundColor: t.colores.surfaceAlt }} resizeMode="cover" />
-            <View style={{ flexDirection: "row", gap: t.espacio(2) }}>
+          <View style={{ gap: tokens.space["2"] }}>
+            <Image source={{ uri: foto.uri }} style={{ width: "100%", height: 220, borderRadius: tokens.radius.md, backgroundColor: tokens.color.surface }} resizeMode="cover" />
+            <View style={{ flexDirection: "row", gap: tokens.space["2"] }}>
               <View style={{ flex: 1 }}>
-                <Button titulo="Cambiar" variante="secundario" onPress={adjuntarFoto} />
+                <Button variante="secundario" bloque onPress={adjuntarFoto}>
+                  Cambiar
+                </Button>
               </View>
               <View style={{ flex: 1 }}>
-                <Button titulo="Quitar" variante="peligro" onPress={() => setFoto(null)} />
+                <Button variante="peligro" bloque onPress={() => setFoto(null)}>
+                  Quitar
+                </Button>
               </View>
             </View>
           </View>
@@ -184,19 +199,19 @@ export function NuevoGastoScreen({ navigation }: NativeStackScreenProps<MasStack
             onPress={adjuntarFoto}
             style={{
               height: 160,
-              borderRadius: t.radio.md,
+              borderRadius: tokens.radius.md,
               borderWidth: 1.5,
               borderStyle: "dashed",
-              borderColor: t.colores.borderStrong,
+              borderColor: tokens.color.divider,
               alignItems: "center",
               justifyContent: "center",
-              gap: t.espacio(2),
+              gap: tokens.space["2"],
             }}
           >
-            <Ionicons name="camera-outline" size={28} color={t.colores.muted} />
-            <Text variante="etiqueta" tono="muted" weight="semibold">
+            <Camera size={28} strokeWidth={2} color={`${tokens.color.text}99`} />
+            <Texto tamano={tokens.size.small} peso="semibold" color={`${tokens.color.text}99`}>
               Foto de la boleta
-            </Text>
+            </Texto>
           </Pressable>
         )}
 
@@ -246,53 +261,36 @@ export function NuevoGastoScreen({ navigation }: NativeStackScreenProps<MasStack
         <Input
           etiqueta="Descripción (opcional)"
           placeholder="Ej. Bencina camión 3"
-          value={b.descripcion}
-          onChangeText={(v) => set("descripcion", v)}
+          valor={b.descripcion}
+          onCambio={(v) => set("descripcion", v)}
         />
 
-        <View style={{ gap: t.espacio(1.5) }}>
-          <Text variante="etiqueta" tono="muted">
+        <View style={{ gap: tokens.space["1"] * 1.5 }}>
+          <Texto tamano={tokens.size.small} peso="medium" color={`${tokens.color.text}99`}>
             Fecha
-          </Text>
+          </Texto>
           <DiasChips valor={b.fecha} onElegir={(k) => set("fecha", k)} />
         </View>
 
-        <View style={{ gap: t.espacio(1.5) }}>
-          <Text variante="etiqueta" tono="muted">
+        <View style={{ gap: tokens.space["1"] * 1.5 }}>
+          <Texto tamano={tokens.size.small} peso="medium" color={`${tokens.color.text}99`}>
             Estado
-          </Text>
-          <View style={{ flexDirection: "row", gap: t.espacio(2) }}>
+          </Texto>
+          <View style={{ flexDirection: "row", gap: tokens.space["2"] }}>
             {ESTADOS.map((e) => {
               const activo = e.valor === b.estado;
               return (
-                <Pressable
-                  key={e.valor}
-                  onPress={() => set("estado", e.valor)}
-                  style={{
-                    flex: 1,
-                    minHeight: 44,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    borderRadius: t.radio.md,
-                    backgroundColor: activo ? t.colores.brand : t.colores.surface,
-                    borderWidth: 1,
-                    borderColor: activo ? t.colores.brand : t.colores.border,
-                  }}
-                >
-                  <Text variante="caption" weight="semibold" tono={activo ? "inverso" : "muted"}>
-                    {e.label}
-                  </Text>
-                </Pressable>
+                <EstadoChip key={e.valor} activo={activo} label={e.label} onPress={() => set("estado", e.valor)} />
               );
             })}
           </View>
         </View>
 
         {b.estado === "pagado" ? (
-          <View style={{ gap: t.espacio(1.5) }}>
-            <Text variante="etiqueta" tono="muted">
+          <View style={{ gap: tokens.space["1"] * 1.5 }}>
+            <Texto tamano={tokens.size.small} peso="medium" color={`${tokens.color.text}99`}>
               Fecha de pago
-            </Text>
+            </Texto>
             <DiasChips valor={b.fecha_pago} onElegir={(k) => set("fecha_pago", k)} />
           </View>
         ) : null}
@@ -301,15 +299,39 @@ export function NuevoGastoScreen({ navigation }: NativeStackScreenProps<MasStack
 
       <View
         style={{
-          padding: t.espacio(4),
-          paddingBottom: t.espacio(6),
+          padding: tokens.space["4"],
           borderTopWidth: 1,
-          borderTopColor: t.colores.border,
-          backgroundColor: t.colores.surface,
+          borderTopColor: tokens.color.divider,
+          backgroundColor: tokens.color.surface,
         }}
       >
-        <Button titulo="Registrar gasto" tamano="lg" onPress={guardar} cargando={guardando} />
+        <Button tamano="lg" bloque onPress={guardar} cargando={guardando}>
+          Registrar gasto
+        </Button>
       </View>
     </View>
+  );
+}
+
+function EstadoChip({ activo, label, onPress }: { activo: boolean; label: string; onPress: () => void }) {
+  const marca = useMarca();
+  return (
+    <Pressable
+      onPress={onPress}
+      style={{
+        flex: 1,
+        minHeight: 44,
+        alignItems: "center",
+        justifyContent: "center",
+        borderRadius: tokens.radius.md,
+        backgroundColor: activo ? marca.base : tokens.color.surface,
+        borderWidth: 1,
+        borderColor: activo ? marca.base : tokens.color.divider,
+      }}
+    >
+      <Texto tamano={tokens.size.caption} peso="semibold" color={activo ? marca.foreground : `${tokens.color.text}99`}>
+        {label}
+      </Texto>
+    </Pressable>
   );
 }

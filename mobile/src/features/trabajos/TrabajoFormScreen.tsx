@@ -2,8 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { Alert, Pressable, ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { Cliente, EstadoTrabajo, Usuario } from "@bitacora/shared";
-import { useTema } from "../../theme";
-import { Button, Input, LoadingScreen, PickerBuscable, Text } from "../../components/ui";
+import { tokens } from "@bitacora/design-tokens";
+import { Button, Input, LoadingState, Skeleton, Texto, useMarca } from "@bitacora/ui/native";
+import { PickerBuscable } from "../../components/ui";
 import { SelectorCliente } from "../../components/SelectorCliente";
 import { InputMonto } from "../../components/InputMonto";
 import { useRed } from "../../services/sync/NetworkProvider";
@@ -43,8 +44,13 @@ const VACIO: BorradorTrabajo = {
   estado: "completado",
 };
 
+// Sistema visual móvil v2 (14-sep-2026) — pantalla MODAL (`presentation:
+// "modal"` en TrabajosStack.tsx): sin ScreenHeader propio, solo se
+// recolorea el contenido (mismo criterio que CobroFormScreen.tsx). Se
+// mantiene el header nativo con título dinámico vía `setOptions`, y
+// SelectorCliente/PickerBuscable/InputMonto tal cual (sin equivalente v2).
 export function TrabajoFormScreen({ navigation, route }: NativeStackScreenProps<TrabajosStackParamList, "TrabajoForm">) {
-  const t = useTema();
+  const marca = useMarca();
   const { enLinea } = useRed();
   const editandoId = route.params?.trabajoId ?? null;
   const [clientes, setClientes] = useState<Cliente[] | null>(null);
@@ -141,122 +147,134 @@ export function TrabajoFormScreen({ navigation, route }: NativeStackScreenProps<
     Alert.alert("Guardado sin conexión", "Se enviará cuando vuelvas a tener señal.", [{ text: "Listo", onPress: volver }]);
   }
 
-  if (clientes === null || cargando) return <LoadingScreen />;
+  if (clientes === null || cargando) {
+    return (
+      <View style={{ flex: 1, backgroundColor: tokens.color.bg, padding: tokens.space["4"], gap: tokens.space["3"] }}>
+        <LoadingState>
+          <Skeleton alto={44} radio={999} />
+          <Skeleton alto={44} radio={999} />
+          <Skeleton alto={120} radio={16} />
+        </LoadingState>
+      </View>
+    );
+  }
 
   return (
-    <View style={{ flex: 1, backgroundColor: t.colores.bg }}>
+    <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
       <ScrollView
-        contentContainerStyle={{ padding: t.espacio(5), gap: t.espacio(4), paddingBottom: t.espacio(8) }}
+        contentContainerStyle={{ padding: tokens.space["4"], gap: tokens.space["4"], paddingBottom: tokens.space["8"] }}
         keyboardShouldPersistTaps="handled"
       >
-      <SelectorCliente
-        etiqueta="Cliente guardado (opcional)"
-        valor={b.cliente_id}
-        onElegir={elegirClienteGuardado}
-        clientes={clientes}
-        onClienteCreado={(c) => {
-          setClientes((prev) => [...(prev ?? []), c]);
-          setB((p) => ({ ...p, cliente_id: c.id, cliente: c.nombre, ubicacion: c.direccion || p.ubicacion }));
-        }}
-      />
-
-      <Input etiqueta="Cliente (nombre a mostrar / facturar)" value={b.cliente} onChangeText={(v) => set("cliente", v)} />
-
-      {equipo.length > 0 ? (
-        <PickerBuscable
-          etiqueta="Responsable"
-          placeholder="Elegir responsable"
-          valor={b.responsable_id}
-          opciones={equipo.map((u) => ({ id: u.id, label: u.nombre }))}
-          onElegir={(id) => set("responsable_id", id)}
+        <SelectorCliente
+          etiqueta="Cliente guardado (opcional)"
+          valor={b.cliente_id}
+          onElegir={elegirClienteGuardado}
+          clientes={clientes}
+          onClienteCreado={(c) => {
+            setClientes((prev) => [...(prev ?? []), c]);
+            setB((p) => ({ ...p, cliente_id: c.id, cliente: c.nombre, ubicacion: c.direccion || p.ubicacion }));
+          }}
         />
-      ) : null}
 
-      <View style={{ gap: t.espacio(1.5) }}>
-        <Text variante="etiqueta" tono="muted">
-          Fecha
-        </Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: t.espacio(2) }}>
-          {dias.map((d) => {
-            const k = clave(d);
-            const activo = k === b.fecha;
-            return (
-              <Pressable
-                key={k}
-                onPress={() => set("fecha", k)}
-                style={{
-                  minWidth: 56,
-                  minHeight: 60,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  borderRadius: t.radio.md,
-                  paddingHorizontal: t.espacio(2),
-                  backgroundColor: activo ? t.colores.brand : t.colores.surface,
-                  borderWidth: 1,
-                  borderColor: activo ? t.colores.brand : t.colores.border,
-                }}
-              >
-                <Text variante="caption" tono={activo ? "inverso" : "muted"}>
-                  {DIAS[d.getDay()]}
-                </Text>
-                <Text variante="subtitulo" tono={activo ? "inverso" : "normal"}>
-                  {d.getDate()}
-                </Text>
-                <Text variante="caption" tono={activo ? "inverso" : "muted"}>
-                  {MESES[d.getMonth()]}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-      </View>
+        <Input etiqueta="Cliente (nombre a mostrar / facturar)" valor={b.cliente} onCambio={(v) => set("cliente", v)} />
 
-      <InputMonto valor={b.monto} onChangeText={(v) => set("monto", v)} />
-      <Input etiqueta="Código / n° guía" value={b.codigo} onChangeText={(v) => set("codigo", v)} />
-      <Input etiqueta="Ubicación" value={b.ubicacion} onChangeText={(v) => set("ubicacion", v)} />
+        {equipo.length > 0 ? (
+          <PickerBuscable
+            etiqueta="Responsable"
+            placeholder="Elegir responsable"
+            valor={b.responsable_id}
+            opciones={equipo.map((u) => ({ id: u.id, label: u.nombre }))}
+            onElegir={(id) => set("responsable_id", id)}
+          />
+        ) : null}
 
-      <View style={{ gap: t.espacio(1.5) }}>
-        <Text variante="etiqueta" tono="muted">
-          Estado
-        </Text>
-        <View style={{ flexDirection: "row", gap: t.espacio(2) }}>
-          {ESTADOS.map((e) => {
-            const activo = e.valor === b.estado;
-            return (
-              <Pressable
-                key={e.valor}
-                onPress={() => set("estado", e.valor)}
-                style={{
-                  flex: 1,
-                  minHeight: 44,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  borderRadius: t.radio.md,
-                  backgroundColor: activo ? t.colores.brand : t.colores.surface,
-                  borderWidth: 1,
-                  borderColor: activo ? t.colores.brand : t.colores.border,
-                }}
-              >
-                <Text variante="caption" weight="semibold" tono={activo ? "inverso" : "muted"}>
-                  {e.label}
-                </Text>
-              </Pressable>
-            );
-          })}
+        <View style={{ gap: tokens.space["2"] }}>
+          <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
+            Fecha
+          </Texto>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: tokens.space["2"] }}>
+            {dias.map((d) => {
+              const k = clave(d);
+              const activo = k === b.fecha;
+              return (
+                <Pressable
+                  key={k}
+                  onPress={() => set("fecha", k)}
+                  style={{
+                    minWidth: 56,
+                    minHeight: 60,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: tokens.radius.md,
+                    paddingHorizontal: tokens.space["2"],
+                    backgroundColor: activo ? marca.base : tokens.color.surface,
+                    borderWidth: 1,
+                    borderColor: activo ? marca.base : tokens.color.divider,
+                  }}
+                >
+                  <Texto tamano={tokens.size.caption} color={activo ? marca.foreground : `${tokens.color.text}99`}>
+                    {DIAS[d.getDay()]}
+                  </Texto>
+                  <Texto tamano={tokens.size.h5} color={activo ? marca.foreground : tokens.color.text}>
+                    {d.getDate()}
+                  </Texto>
+                  <Texto tamano={tokens.size.caption} color={activo ? marca.foreground : `${tokens.color.text}99`}>
+                    {MESES[d.getMonth()]}
+                  </Texto>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
         </View>
-      </View>
+
+        <InputMonto valor={b.monto} onChangeText={(v) => set("monto", v)} />
+        <Input etiqueta="Código / n° guía" valor={b.codigo} onCambio={(v) => set("codigo", v)} />
+        <Input etiqueta="Ubicación" valor={b.ubicacion} onCambio={(v) => set("ubicacion", v)} />
+
+        <View style={{ gap: tokens.space["2"] }}>
+          <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
+            Estado
+          </Texto>
+          <View style={{ flexDirection: "row", gap: tokens.space["2"] }}>
+            {ESTADOS.map((e) => {
+              const activo = e.valor === b.estado;
+              return (
+                <Pressable
+                  key={e.valor}
+                  onPress={() => set("estado", e.valor)}
+                  style={{
+                    flex: 1,
+                    minHeight: 44,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: tokens.radius.md,
+                    backgroundColor: activo ? marca.base : tokens.color.surface,
+                    borderWidth: 1,
+                    borderColor: activo ? marca.base : tokens.color.divider,
+                  }}
+                >
+                  <Texto tamano={tokens.size.caption} peso="semibold" color={activo ? marca.foreground : `${tokens.color.text}99`}>
+                    {e.label}
+                  </Texto>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
       </ScrollView>
 
       <View
         style={{
-          padding: t.espacio(4),
-          paddingBottom: t.espacio(6),
+          padding: tokens.space["4"],
+          paddingBottom: tokens.space["6"],
           borderTopWidth: 1,
-          borderTopColor: t.colores.border,
-          backgroundColor: t.colores.surface,
+          borderTopColor: tokens.color.divider,
+          backgroundColor: tokens.color.surface,
         }}
       >
-        <Button titulo={editandoId ? "Guardar cambios" : "Crear trabajo"} tamano="lg" onPress={guardar} cargando={guardando} />
+        <Button tamano="lg" bloque onPress={guardar} cargando={guardando}>
+          {editandoId ? "Guardar cambios" : "Crear trabajo"}
+        </Button>
       </View>
     </View>
   );
