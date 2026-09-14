@@ -1401,3 +1401,38 @@ por qué esto pasó inadvertido desde el 10-sep).
 Sigue pendiente: push a `main` + confirmar en Render que el deploy
 real llega a `live` (no solo que el build local pasa) — la usuaria
 pidió el `id` del deploy y su estado antes de dar esto por cerrado.
+
+**La usuaria confirmó "ya desplegó ok"** — no tengo conexión MCP a
+Render en esta sesión para leer el `id`/estado yo mismo, así que quedó
+en su palabra (avisado explícitamente, no asumido en silencio).
+
+**Paso 1 post-deploy — riesgo de desfase DB/código**: revisé el
+contenido real de las 3 migraciones del período (99, 100, 101), no
+solo si estaban aplicadas — ninguna agrega una columna `NOT NULL` sin
+default a una tabla EXISTENTE: 99 es pura `CREATE INDEX IF NOT EXISTS`
+(cero cambio de esquema), 100 solo `CREATE TABLE` de 3 tablas
+nuevas (`levantamientos`/`levantamiento_materiales`/
+`levantamiento_fotos` — confirmado que existen en prod aunque
+`schema_migrations` no trackea la 100, mismo gotcha de tracking ya
+documentado para dev), 101 son puros `UPDATE` de contenido JSON. Sin
+riesgo real de que código viejo (los 5 días sin deploy) haya dejado
+filas inconsistentes. Confirmé además contra `errores_backend` (tabla
+de logs reales) — **0 filas** entre el 9 y el 14 de septiembre.
+
+**Paso 2 post-deploy — reprobar subida de fotos**: con la usuaria
+logueada en prod (mismo protocolo de siempre, sin tocar credenciales),
+armé un registro de mantención real en "Tracto Camion International
+9200" con 3 fotos adjuntas (multipart real, no simulado) + los 13
+ítems del checklist — **guardó sin ningún error**, "7 registros" en
+la lista, y al reabrir el registro las 3 fotos seguían ahí (servidas
+desde Storage, no solo el preview local) — confirma que el flujo
+completo (crear + subir fotos + persistir) funciona de punta a punta
+contra el backend ya desplegado. De paso confirmé que también
+`DELETE` de fotos funciona (usé el mismo camino para limpiar los 3
+datos de prueba al terminar — un `window.confirm()` nativo bloqueó la
+automatización una vez, la usuaria lo aceptó a mano, mismo límite ya
+documentado en la tarea 16).
+
+**Tarea 24 cerrada** — causa raíz real, fix mínimo y simétrico a un
+patrón ya existente, deploy confirmado por la usuaria, sin riesgo de
+desfase DB, síntoma original de fotos confirmado resuelto en vivo.

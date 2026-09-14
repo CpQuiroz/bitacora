@@ -358,8 +358,8 @@
         "Revisar riesgo de desfase DB/codigo por migraciones 99/100 aplicadas durante los 5 dias sin deploy",
         "Reprobar la subida de fotos (sintoma original) con el codigo ya desplegado"
       ],
-      "status": "in_progress",
-      "resolution": null
+      "status": "done",
+      "resolution": "Causa raiz confirmada reproduciendo el build de Docker localmente (docker build -f backend/Dockerfile .), no solo leyendo el log de Render: el commit 28c7f49 (10-sep, packages/design-tokens) cambio el postinstall de mobile de build:shared a build:packages, y npm prune --omit=dev (al reconciliar node_modules de workspaces) dispara ese postinstall dentro de la imagen del backend, que nunca copia packages/design-tokens/ ni packages/ui/ -- de ahi el \"No workspaces found\". Fix: npm prune --omit=dev --ignore-scripts (simetrico al npm ci --ignore-scripts que el mismo Dockerfile ya usaba arriba por el mismo motivo). Build de Docker local exitoso + contenedor real corriendo con GET /health 200, sin un segundo error en capas. Pusheado (f15ef9d..a039adf).\n\nLa usuaria confirmo el deploy live (\"ya desplego ok\") -- sin conexion MCP a Render en esta sesion para leerlo yo mismo, avisado explicitamente.\n\nPaso 1 (riesgo desfase DB/codigo): revisado el contenido real de las migraciones 99/100/101 -- ninguna agrega columna NOT NULL sin default a tabla existente (99=indices puros, 100=solo tablas nuevas, confirmado que existen en prod aunque schema_migrations no trackea la 100 -- mismo gotcha de tracking ya documentado para dev: 101=solo UPDATE de contenido). errores_backend (tabla de logs reales) con 0 filas entre el 9 y el 14-sep. Sin riesgo real.\n\nPaso 2 (reprobar subida de fotos): con la usuaria logueada en prod, cree un registro de mantencion real en Tracto Camion International 9200 con 3 fotos multipart + checklist completo -- guardo sin error, las 3 fotos persistieron en Storage (confirmado reabriendo el registro). DELETE de fotos tambien confirmado funcionando (limpie los 3 datos de prueba al terminar). Sintoma original de fotos confirmado resuelto en vivo contra el codigo ya desplegado."
     }
   ]
 }
