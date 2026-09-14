@@ -2068,3 +2068,30 @@ prod presente, copiado a ~/Desktop/bitacora-builds/bitacora-1.9.22.apk.
 .env restaurado a dev. Este build trae el fix real (new File(uri) en
 vez de {uri,name,type}) — alta confianza de que arregla la subida de
 fotos en toda la app.
+
+## 2026-09-14 (5): tareas 20 y 29 CERRADAS — confirmado en prod
+
+La usuaria probó el APK 1.9.22 en real: "ahora si llego la imagen"
+(viaje) y confirmó que mantención con foto también llegó. Verificado
+con queries de solo lectura a prod:
+- Viaje nuevo (id `9eced69a`, guía 546000): `foto_guia_url` poblado.
+- Registro de mantención nuevo (id `bb683233`, 19:17:47): su foto en
+  `registro_mantencion_fotos` (19:17:48, un segundo después).
+- El viaje viejo que había quedado atorado ANTES del fix (guía 3566)
+  también terminó subiendo su foto solo, sin intervención — confirma
+  que el fix resuelve tanto casos nuevos como lo que había quedado
+  pendiente en la cola.
+
+Tareas 20 (bug de conexión) y 29 (fotos atoradas) → `done`.
+
+Queda un cabo suelto, NO parte de esta tarea: 2 acciones "Registro de
+mantención" SIN foto, de ayer (13/9 23:03/23:05), siguen en la cola
+(no son multipart — no las tocó este fix). Con la UI de errores ahora
+visible (`ultimoError` siempre se muestra), la próxima vez que se
+reintenten debería verse por qué fallan específicamente. No se
+investigó más a fondo hoy — si sigue el 15-sep, retomar con el
+`ultimoError` que muestre Perfil.
+
+Queda el botón "Diagnóstico de red (foto)" en Perfil (agregado hoy) —
+se deja como herramienta de diagnóstico permanente, de bajo costo
+(solo aparece si hay una foto pendiente en la cola), no se removió.
