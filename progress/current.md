@@ -1999,3 +1999,9 @@ puede confirmar sin repetir la condición real.
 Build APK 1.9.18 verificado y entregado: BUILD SUCCESSFUL, 0 refs dev /
 prod presente, copiado a ~/Desktop/bitacora-builds/bitacora-1.9.18.apk.
 .env restaurado a dev.
+
+Build APK 1.9.19 verificado y entregado: BUILD SUCCESSFUL, 0 refs dev /
+prod presente, copiado a ~/Desktop/bitacora-builds/bitacora-1.9.19.apk.
+.env restaurado a dev. Es un build de diagnóstico (visibilidad de
+intentos/error en Perfil) para seguir investigando la tarea 20/29 —
+no se considera cerrado ninguno de los dos todavía.
