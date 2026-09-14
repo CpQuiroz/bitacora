@@ -1086,3 +1086,11 @@ backend real — el bug nunca fue del lado del servidor.
 que la usuaria pruebe en un APK nuevo sobre su teléfono real** — un
 bug de `NetInfo`/conectividad real no se puede verificar desde esta
 sesión, solo en el dispositivo donde se reprodujo.
+
+**APK 1.9.9 / versionCode 26** armado local (mismo procedimiento de
+siempre: JDK17 + Android SDK vía brew, `expo prebuild` + `gradlew
+assembleRelease`, 19m49s) apuntando a **producción**. Verificado con
+`strings` — 0 referencias a dev/localhost, 2 a prod. Copiado a
+`~/Desktop/bitacora-builds/bitacora-1.9.9.apk` y entregado. `.env`
+restaurado a dev y `mobile/package.json` revertido (prebuild los
+pisa). Sigue `blocked` hasta que la usuaria confirme en su teléfono.
