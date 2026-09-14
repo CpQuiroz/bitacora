@@ -10,6 +10,7 @@ import { MAX_INTENTOS, ultimoErrorGlobal } from "../../services/sync/queue";
 import { apiFetch, apiJson } from "../../services/api";
 import { biometriaActivada, biometriaDisponible, nombreBiometria, pedirBiometria, setBiometriaActivada } from "../../lib/biometria";
 import { preferencias, setPreferencia, suscribirPreferencias, type Preferencias } from "../../lib/preferencias";
+import { diagnosticarSubida, resumenDiagnostico } from "../../lib/diagnosticoRed";
 
 const WEB_URL = "https://app.transportesitineris.cl";
 
@@ -40,6 +41,29 @@ export function PerfilScreen() {
   const [bioActiva, setBioActiva] = useState(false);
   const [consentPend, setConsentPend] = useState(auth.fase === "listo" ? auth.consentimientoPendiente : false);
   const [ocupado, setOcupado] = useState(false);
+  const [diagnosticando, setDiagnosticando] = useState(false);
+
+  // Diagnóstico puntual (tarea 20/29) — compara un archivo chico de
+  // prueba contra la foto real atorada, mismo endpoint, para aislar si
+  // el problema es el mecanismo multipart en sí o algo específico del
+  // archivo real. Se borra junto con el resto del diagnóstico cuando se
+  // cierre esta investigación.
+  async function correrDiagnostico() {
+    const accion = pendientes.find((a) => a.archivo);
+    if (!accion || !accion.archivo) {
+      Alert.alert("Nada para probar", "No hay ninguna acción pendiente con foto en la cola ahora.");
+      return;
+    }
+    setDiagnosticando(true);
+    try {
+      const resultados = await diagnosticarSubida(accion.path, accion.archivo.campo, accion.archivo.uri);
+      Alert.alert("Diagnóstico de red", resumenDiagnostico(resultados));
+    } catch (e) {
+      Alert.alert("Diagnóstico de red — error", e instanceof Error ? e.message : String(e));
+    } finally {
+      setDiagnosticando(false);
+    }
+  }
 
   async function aceptarConsentimiento() {
     setOcupado(true);
@@ -174,6 +198,14 @@ export function PerfilScreen() {
               }
             />
           </View>
+          {pendientes.some((a) => a.archivo) ? (
+            <Button
+              titulo="Diagnóstico de red (foto)"
+              variante="ghost"
+              onPress={correrDiagnostico}
+              cargando={diagnosticando}
+            />
+          ) : null}
         </View>
       )}
 
