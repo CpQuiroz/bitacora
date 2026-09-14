@@ -1612,6 +1612,23 @@ un bug distinto — pendiente de que la usuaria confirme si el aviso
 (si aparece, confirma que `finalizada` sí está en `true` por algún
 motivo que hay que seguir cazando; si no aparece, es otra causa).
 
-`tsc mobile` limpio, `./verificar.sh` completo verde. Sigue `in_progress`
-— falta build nuevo + que la usuaria confirme en su teléfono real (no
-se puede reproducir un fetch colgado desde esta sesión).
+`tsc mobile` limpio, `./verificar.sh` completo verde.
+
+**Segunda vuelta — "no aparece eliminar" tenía causa real distinta**:
+la usuaria confirmó que el banner "Trabajo finalizado" NO aparece en
+esa pantalla — descarta que `finalizada` esté atascado en `true`.
+Releí `FotosSection.tsx` completo: las fotos **pendientes** (en cola,
+sin subir todavía — el caso casi seguro, dado el bug de arriba) solo
+se podían quitar con un **long-press**, sin ningún ícono ni pista
+visual — indistinguible de "no se puede". Fix: botón visible (`X`,
+mismo lugar/patrón que "Eliminar foto" de una ya subida) en la
+miniatura pendiente, además del `onLongPress` que ya existía.
+
+`tsc mobile` limpio de nuevo, `./verificar.sh` completo verde.
+
+**APK 1.9.14 / versionCode 31** armado local (mismo procedimiento,
+15m25s) apuntando a producción — verificado con `strings` (0
+referencias a dev). Incluye los 2 fixes de esta sesión (watchdog de
+`procesando` + botón visible en fotos pendientes). Sigue `in_progress`
+— falta que la usuaria confirme en su teléfono real (no se puede
+reproducir un fetch colgado desde esta sesión).

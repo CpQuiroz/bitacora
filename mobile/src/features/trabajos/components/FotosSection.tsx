@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ActivityIndicator, Alert, Image, Modal, Pressable, ScrollView, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
-import { AlertCircle, AlertTriangle, Camera, RefreshCw, Trash2 } from "lucide-react-native";
+import { AlertCircle, AlertTriangle, Camera, RefreshCw, Trash2, X } from "lucide-react-native";
 import { CATEGORIAS_FOTO_OS, ETIQUETA_CATEGORIA_FOTO_OS, type CategoriaFotoOS } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
 import { Texto, useMarca } from "@bitacora/ui/native";
@@ -136,18 +136,39 @@ export function FotosSection({
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: tokens.space["2"] }}>
         {pendientes.map((p) => (
-          <Pressable key={p.id} onLongPress={() => onQuitarPendiente?.(p.id)}>
-            <View style={[cuadro, { overflow: "hidden", borderWidth: 1, borderColor: tokens.color.divider }]}>
-              {p.uri ? <Image source={{ uri: p.uri }} style={{ width: "100%", height: "100%", opacity: 0.6 }} /> : null}
-              <View style={{ position: "absolute", right: 3, top: 3 }}>
-                {p.fallida ? (
-                  <AlertCircle size={16} strokeWidth={2.75} color={tokens.color.accentRamp["700"]} />
-                ) : (
-                  <RefreshCw size={15} strokeWidth={2.75} color={marca.base} />
-                )}
-              </View>
+          <View key={p.id} style={[cuadro, { overflow: "hidden", borderWidth: 1, borderColor: tokens.color.divider }]}>
+            {p.uri ? <Image source={{ uri: p.uri }} style={{ width: "100%", height: "100%", opacity: 0.6 }} /> : null}
+            <View style={{ position: "absolute", left: 3, bottom: 3 }}>
+              {p.fallida ? (
+                <AlertCircle size={16} strokeWidth={2.75} color={tokens.color.accentRamp["700"]} />
+              ) : (
+                <RefreshCw size={15} strokeWidth={2.75} color={marca.base} />
+              )}
             </View>
-          </Pressable>
+            {/* Bug real (14-sep-2026): antes solo se podía quitar una foto
+                pendiente con un long-press sin ningún ícono ni pista visual
+                — indistinguible de "no se puede". Botón visible, mismo
+                lugar que el "Eliminar foto" de una foto ya subida. */}
+            {onQuitarPendiente ? (
+              <Pressable
+                onPress={() => onQuitarPendiente(p.id)}
+                hitSlop={6}
+                style={{
+                  position: "absolute",
+                  right: 3,
+                  top: 3,
+                  width: 20,
+                  height: 20,
+                  borderRadius: 10,
+                  backgroundColor: `${tokens.color.neutral["900"]}b3`,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <X size={13} strokeWidth={3} color={tokens.color.neutral["100"]} />
+              </Pressable>
+            ) : null}
+          </View>
         ))}
         {fotos.map((f) => (
           <Pressable key={f.id} onPress={() => setAbierta(f)}>
