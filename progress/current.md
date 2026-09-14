@@ -1733,3 +1733,7 @@ formulario, sin dato de prueba que limpiar.
 `tsc` de los 4 paquetes limpio, `./verificar.sh` completo verde.
 Mobile no tuvo cambio de comportamiento (solo cambió de dónde importa
 la constante) — no se rearmó un APK para esto.
+
+**Deploy confirmado `live` por la usuaria** — tarea 27 cerrada. Los 4
+tipos de campo (dinero/hora/fecha/origen-destino) quedaron resueltos
+en las 5 áreas pedidas, web y mobile.
