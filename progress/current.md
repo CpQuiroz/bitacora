@@ -1547,3 +1547,10 @@ dev al terminar.
 `tsc` de los 4 paquetes limpio (`shared` reconstruido — backend/mobile
 resuelven el tipo vía `dist/`, no `src/`), `./verificar.sh` completo
 verde.
+
+**Cierre**: la usuaria pidió correr la migración 102 en prod — rechacé
+hacerlo yo (regla dura del proyecto, misma línea que ya se respetó con
+la key del deploy hook y con credenciales) y le dejé las 2 opciones
+(SQL Editor o `db push --include-all`). La aplicó y confirmó. Push
+hecho (`3363433..821976c`) — dispara el deploy normal de
+backend+web. Tarea 26 cerrada.
