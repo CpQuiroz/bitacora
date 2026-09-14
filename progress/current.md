@@ -2062,3 +2062,9 @@ hallazgo) solo mostraba el error cuando `intentos > 0`.
 `tsc mobile` limpio, `./verificar.sh` completo verde. Esta vez con
 alta confianza — es un hallazgo confirmado con el mensaje de error
 exacto, no una hipótesis más. Pendiente: build + prueba real.
+
+Build APK 1.9.22 verificado y entregado: BUILD SUCCESSFUL, 0 refs dev /
+prod presente, copiado a ~/Desktop/bitacora-builds/bitacora-1.9.22.apk.
+.env restaurado a dev. Este build trae el fix real (new File(uri) en
+vez de {uri,name,type}) — alta confianza de que arregla la subida de
+fotos en toda la app.
