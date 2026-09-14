@@ -1995,3 +1995,7 @@ mismo riesgo en teoría, pero tiene un segundo mecanismo
 nuevo + que la usuaria pruebe de nuevo con la misma conexión mala que
 reprodujo el problema — esto es exactamente el tipo de bug que no se
 puede confirmar sin repetir la condición real.
+
+Build APK 1.9.18 verificado y entregado: BUILD SUCCESSFUL, 0 refs dev /
+prod presente, copiado a ~/Desktop/bitacora-builds/bitacora-1.9.18.apk.
+.env restaurado a dev.
