@@ -2503,3 +2503,17 @@ estructural de numeración (documentado en la tarea 32) se repite igual.
 
 Confirmado leyendo `pg_proc` que `mover_stock_inventario` existe en prod.
 Push del backend a main. Tarea 33 cerrada.
+
+## 2026-09-14 (16): fix #3 de la revisión de rendimiento — cobros en batch
+
+`revisarCobrosCliente` (cobros.ts) hacía 1 consulta a
+`notificaciones_cliente_log` por factura pendiente, en un loop secuencial,
+cada vez que se abre la lista de Cobros. Cambiado a 1 sola consulta con
+`.in("entidad_id", [...])` para todas las facturas candidatas de una vez,
+resuelto en memoria con un `Set`. Sin migración — código de aplicación.
+
+Validado con un JOIN de solo lectura contra prod real (Transportes
+Itineris): misma lógica, resultados coherentes (1 factura con notificación
+ya registrada, 2 sin notificar). `tsc` + `verificar.sh` verde. Tarea 34
+cerrada. Con esto quedan resueltos los 3 hallazgos del backend de la
+revisión de rendimiento pedida por la usuaria.

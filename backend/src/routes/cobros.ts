@@ -24,27 +24,41 @@ async function revisarCobrosCliente(empresaId: string) {
     .eq("empresa_id", empresaId)
     .eq("estado", "pendiente");
 
-  const { data: empresa } = await supabase.from("empresas").select("nombre").eq("id", empresaId).single();
+  // Candidatas reales (con correo y cliente) — sobre esto se filtra
+  // "ya enviado" y se pide el nombre de la empresa, evitando trabajo
+  // si no hay ninguna.
+  const candidatas = (facturas ?? []).filter((f) => {
+    const clienteInfo = (f as unknown as { cliente_info: { correo: string | null } | null }).cliente_info;
+    return Boolean(clienteInfo?.correo && f.cliente_id);
+  });
+  if (candidatas.length === 0) return;
 
-  for (const f of facturas ?? []) {
-    const clienteInfo = (f as unknown as { cliente_info: { nombre: string; correo: string | null } | null }).cliente_info;
-    if (!clienteInfo?.correo || !f.cliente_id) continue;
-
-    const tipo: TipoNotificacionCliente = f.fecha_vencimiento < hoy ? "cobro_vencido" : "cobro_pendiente";
-
-    const { data: yaEnviado } = await supabase
+  // Antes: 1 consulta a notificaciones_cliente_log POR factura pendiente,
+  // en un loop secuencial — con 100 facturas pendientes son 100 idas y
+  // vueltas de más, repetidas cada vez que alguien abre la lista de
+  // Cobros. Ahora: 1 sola consulta con `in(entidad_id, [...])`, y el
+  // "ya se envió este tipo" se resuelve en memoria contra un Set.
+  const [{ data: empresa }, { data: yaEnviadas }] = await Promise.all([
+    supabase.from("empresas").select("nombre").eq("id", empresaId).single(),
+    supabase
       .from("notificaciones_cliente_log")
-      .select("id")
+      .select("entidad_id, tipo")
       .eq("empresa_id", empresaId)
-      .eq("tipo", tipo)
-      .eq("entidad_id", f.id)
       .eq("exito", true)
-      .limit(1)
-      .maybeSingle();
-    if (yaEnviado) continue;
+      .in(
+        "entidad_id",
+        candidatas.map((f) => f.id)
+      ),
+  ]);
+  const enviadas = new Set((yaEnviadas ?? []).map((n) => `${n.entidad_id}:${n.tipo}`));
+
+  for (const f of candidatas) {
+    const clienteInfo = (f as unknown as { cliente_info: { nombre: string; correo: string } }).cliente_info;
+    const tipo: TipoNotificacionCliente = f.fecha_vencimiento < hoy ? "cobro_vencido" : "cobro_pendiente";
+    if (enviadas.has(`${f.id}:${tipo}`)) continue;
 
     await notificarCliente(empresaId, tipo, clienteInfo.correo, {
-      clienteId: f.cliente_id,
+      clienteId: f.cliente_id!,
       entidadTipo: "factura",
       entidadId: f.id,
       variables: {
