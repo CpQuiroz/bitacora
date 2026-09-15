@@ -543,6 +543,19 @@
       ],
       "status": "done",
       "resolution": "Implementado y verificado estaticamente (tsc, eslint, verificar.sh verdes). Sin verificacion visual real -- avisar a la usuaria que revise visualmente que los logos, fotos de evidencia y firmas se vean bien tras el deploy (riesgo bajo: cambio puramente presentacional, siguiendo el patron oficial de Next 16 al pie de la letra)."
+    },
+    {
+      "id": 36,
+      "name": "documentar_numeracion_migraciones",
+      "title": "Documentar el problema estructural de numeracion de migraciones (sin renumerar)",
+      "description": "Retomado tras cerrar la revision de rendimiento: el problema de fondo detras del error de 'db push' con las migraciones 103/104 (documentado suelto en progress/current.md) es mas amplio de lo que parecia -- CUALQUIER migracion de 2 digitos (10-99, no solo 9X) ordena como texto DESPUES de cualquier migracion de 3 digitos (100+), asi que TODA migracion nueva >=100 va a chocar con el mismo error mientras el historial de prod tenga alguna version de 2 digitos -- para siempre, no fue un glitch puntual. Se le presento a la usuaria la opcion de arreglarlo de raiz (renumerar los ~104 archivos + remapear el historial de migraciones en prod) vs. dejarlo documentado y seguir con el workaround manual de 2 pasos ya probado (db query -f + migration repair). Eligio la segunda por ser de riesgo cero -- la primera implica cirugia directa sobre el historial de migraciones de produccion, con riesgo real de que un desalineamiento haga que `db push` intente re-aplicar migraciones viejas.",
+      "acceptance": [
+        "docs/harness/convenciones.md documenta el problema y el procedimiento de 2 pasos para toda migracion nueva -- HECHO",
+        "No se toco ningun archivo de migracion existente ni el historial de prod -- confirmado",
+        "verificar.sh completo en verde -- HECHO"
+      ],
+      "status": "done",
+      "resolution": "Documentado en docs/harness/convenciones.md, seccion 'Migraciones', con el procedimiento exacto (db query -f + migration repair) a seguir para toda migracion nueva de aqui en adelante. Decision explicita de la usuaria: no renumerar (riesgo real vs. beneficio bajo, dado que el workaround ya funciona)."
     }
   ]
 }

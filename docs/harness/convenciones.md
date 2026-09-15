@@ -42,6 +42,36 @@
   `supabase migration repair --status applied NN --linked`. El CI
   `check-migraciones-prod` queda rojo hasta entonces.
 
+### ⚠️ `supabase db push --linked` NO funciona para NN ≥ 100
+
+`db push` compara las versiones como **texto**, no como número. Como el
+historial de prod tiene decenas de migraciones de 2 dígitos (10-99) y esas
+comparan como texto MAYOR que cualquier "10X"/"11X" (ej. `"15" > "104"`,
+compara carácter por carácter), **cualquier migración nueva de 3 dígitos
+siempre va a tirar** `Found local migration files to be inserted before the
+last migration on remote database`. No es un glitch puntual de la 103/104
+(ver `progress/current.md`, 2026-09-14) — va a pasar con cada migración
+nueva mientras el historial tenga alguna versión de 2 dígitos. **No usar
+`--include-all`** (re-ejecutaría migraciones viejas ya aplicadas).
+
+Se evaluó renumerar todo con ceros a la izquierda (fix permanente) vs.
+seguir con un workaround manual — la usuaria eligió el workaround por ser
+de riesgo cero (renumerar exige tocar ~104 archivos locales Y el historial
+de migraciones ya grabado en prod; un desalineamiento ahí puede hacer que
+`db push` intente re-aplicar migraciones viejas). Procedimiento para **cada
+migración nueva** (el humano la corre, ver arriba):
+
+```bash
+# en vez de `supabase db push --linked`:
+npx supabase db query --linked --project-ref <ref> -f supabase/migrations/NNN_descripcion.sql
+npx supabase migration repair --status applied --linked NNN
+```
+
+El primer comando aplica el archivo directo (funciona para cualquier SQL,
+no solo funciones — para DDL no-idempotente como `create table`, confirmar
+antes que no se haya aplicado ya). El segundo es solo bookkeeping, no
+ejecuta nada.
+
 ## Mobile
 
 - Bump `mobile/app.json` `version` + `android.versionCode` en cada build EAS.

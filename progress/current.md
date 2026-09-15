@@ -2557,3 +2557,27 @@ usuaria que revise visualmente tras el deploy.
 
 Con esto quedan resueltos los 4 hallazgos de la revisión de rendimiento
 pedida por la usuaria (3 de backend + este de web).
+
+## 2026-09-14 (18): documentado el problema de numeración de migraciones
+
+Retomado el hallazgo #3 de la lista de pendientes (la 5ta cosa pendiente
+tras cerrar la revisión de rendimiento). Investigando más a fondo, el
+alcance real es más grande que "9X vs 10X": **cualquier migración de 2
+dígitos (10-99) ordena como texto DESPUÉS de cualquier migración de 3
+dígitos**, no solo las que empiezan con 9 — así que el error de `db push`
+va a repetirse con TODA migración nueva ≥100, para siempre, mientras el
+historial de prod tenga alguna versión de 2 dígitos.
+
+Se le presentaron 2 caminos a la usuaria vía `AskUserQuestion`:
+1. Documentar y seguir con el workaround manual (riesgo cero).
+2. Renumerar todo con ceros a la izquierda (fix permanente, pero exige
+   renombrar ~104 archivos Y remapear el historial de migraciones ya
+   grabado en prod — riesgo real de dejar `db push` peor de lo que está,
+   o de que intente re-aplicar migraciones viejas si algo queda
+   desalineado).
+
+Eligió la opción 1. Documentado en `docs/harness/convenciones.md` §
+Migraciones, con el procedimiento exacto de 2 pasos (`db query -f` +
+`migration repair`) para toda migración nueva de aquí en adelante. No se
+tocó ningún archivo de migración existente ni el historial de prod.
+`verificar.sh` completo en verde. Tarea 36 cerrada.
