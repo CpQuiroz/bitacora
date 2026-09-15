@@ -587,8 +587,8 @@
         "tsc + verificar.sh completo en verde, auditoria estatica sin hallazgos -- HECHO",
         "Migracion validada con BEGIN/ROLLBACK real contra prod (columna se crea bien, rollback confirmado con lectura fresca) -- HECHO"
       ],
-      "status": "blocked",
-      "resolution": "Codigo listo y verificado (tsc, verificar.sh, logica de la migracion probada con BEGIN/ROLLBACK real contra prod sin dejar cambios). BLOQUEADA: falta que la usuaria aplique la migracion 105 en prod. Mismo camino que las anteriores (>=100): `supabase db query -f supabase/migrations/105_campo_foto_tipo_trabajo.sql` + `migration repair --status applied 105` -- NO usar `db push`, va a fallar por el problema de numeracion ya documentado (tarea 32)."
+      "status": "done",
+      "resolution": "Codigo listo y verificado (tsc, verificar.sh, logica de la migracion probada con BEGIN/ROLLBACK real contra prod sin dejar cambios). BLOQUEADA: falta que la usuaria aplique la migracion 105 en prod. Mismo camino que las anteriores (>=100): `supabase db query -f supabase/migrations/105_campo_foto_tipo_trabajo.sql` + `migration repair --status applied 105` -- NO usar `db push`, va a fallar por el problema de numeracion ya documentado (tarea 32).\n\nMigración 105 aplicada en prod (confirmado leyendo information_schema). Backend/web pusheados a main."
     }
   ]
 }

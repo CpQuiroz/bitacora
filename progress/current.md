@@ -2662,3 +2662,9 @@ Tarea 38 creada, `blocked` — falta que la usuaria aplique la migración 105
 (mismo camino ya establecido: `db query -f` + `migration repair`, no `db
 push`). Sigue: parte B (configuración de qué secciones muestra el informe
 de OS).
+
+## 2026-09-14 (22): migración 105 aplicada en prod + parte A desplegada
+
+Confirmado leyendo `information_schema.columns` que `analisis_fotos.campo_clave`
+existe en prod. Push del backend/web a main. Tarea 38 cerrada. Sigue: parte B
+(configuración de qué secciones muestra el informe de OS).
