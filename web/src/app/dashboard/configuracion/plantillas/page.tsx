@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Image from "next/image";
 import type { PlantillaDocumento, PosicionLogo, TipoPlantilla, VariablePlantilla } from "@bitacora/shared";
 import { VARIABLES_COBRANZA, VARIABLES_COTIZACION, VARIABLES_OS, sustituirVariables } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
@@ -281,8 +282,7 @@ export default function PlantillasPage() {
                 {mostrarLogo && (
                   <div className={`mb-3 flex ${justify}`}>
                     {usuario.empresa.logo_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={usuario.empresa.logo_url} alt="" className="h-10 w-10 rounded object-cover" />
+                      <Image src={usuario.empresa.logo_url} alt="" width={40} height={40} className="h-10 w-10 rounded object-cover" />
                     ) : (
                       <div className="h-10 w-10 rounded" style={{ background: colorPrimario }} />
                     )}

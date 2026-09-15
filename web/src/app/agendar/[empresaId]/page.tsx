@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { useParams } from "next/navigation";
 import { Button, ErrorText, Input, Label, Textarea } from "@/components/ui";
 import { EstadoCargando } from "@/components/estados";
@@ -107,8 +108,7 @@ export default function ReservaPublicaPage() {
     <div className="mx-auto flex min-h-screen max-w-md flex-col gap-6 px-4 py-8">
       <div className="flex flex-col items-center gap-2 text-center">
         {info.logo_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={info.logo_url} alt={info.nombre} className="h-14 w-14 rounded-xl object-contain" />
+          <Image src={info.logo_url} alt={info.nombre} width={56} height={56} className="h-14 w-14 rounded-xl object-contain" />
         ) : (
           <div
             className="flex h-14 w-14 items-center justify-center rounded-xl text-lg font-semibold text-white"

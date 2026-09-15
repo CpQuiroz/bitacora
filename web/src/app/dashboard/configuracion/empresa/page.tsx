@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, type CSSProperties, type DragEvent } from "react";
+import Image from "next/image";
 import { Briefcase, ClipboardCheck, Home, MapPin, Sparkle, Wallet } from "lucide-react";
 import type { TipoCuenta } from "@bitacora/shared";
 import { comunasDeRegion, formatearRut, REGIONES, validarRut } from "@bitacora/shared";
@@ -333,10 +334,11 @@ export default function EmpresaPage() {
             </p>
             <div className="flex items-center gap-ds-4">
               {usuario.empresa.logo_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
+                <Image
                   src={usuario.empresa.logo_url}
                   alt={`Logo de ${usuario.empresa.nombre}`}
+                  width={64}
+                  height={64}
                   className="h-16 w-16 rounded-ds-lg border border-ds-divider object-cover"
                 />
               ) : (
@@ -421,8 +423,7 @@ export default function EmpresaPage() {
               <div className="flex w-36 flex-col gap-1 border-r border-border bg-surface p-2">
                 <div className="mb-2 flex items-center gap-1.5 px-1">
                   {usuario.empresa.logo_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={usuario.empresa.logo_url} alt="" className="h-5 w-5 rounded object-cover" />
+                    <Image src={usuario.empresa.logo_url} alt="" width={20} height={20} className="h-5 w-5 rounded object-cover" />
                   ) : (
                     <div className="h-5 w-5 rounded bg-brand" />
                   )}

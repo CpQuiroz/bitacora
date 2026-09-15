@@ -529,6 +529,20 @@
       ],
       "status": "done",
       "resolution": "Implementado, validado de solo lectura contra prod, tsc+verificar.sh verde. Sin migracion. Pusheado a main."
+    },
+    {
+      "id": 35,
+      "name": "optimizar_web_next_image",
+      "title": "Hallazgo menor de la revision de rendimiento -- <img> a next/image en todo el web",
+      "description": "Hallazgo menor de la revision de rendimiento pedida por la usuaria: 16 usos de <img> plano en web/src (0 uso de next/image en todo el proyecto), cada uno con eslint-disable @next/next/no-img-element. Migrados todos a next/image, distinguiendo 2 casos: (1) logos/avatares -- URL publica de Supabase Storage, sin vencer -- optimizacion completa (width/height fijos); (2) fotos de evidencia (trabajos/OS/viajes/levantamientos/mantencion) y firmas -- URL FIRMADA con vencimiento (15 min, urlFirmada()) -- prop `unoptimized` (Next no puede cachear/re-pedir algo que puede vencer), pero conservando lazy-load y prevencion de layout shift. Las de ancho fluido (w-full) usan `fill` dentro de un wrapper `relative` nuevo. next.config.ts: agregado images.remotePatterns para *.supabase.co (necesario para las publicas, sin efecto en las unoptimized).",
+      "acceptance": [
+        "0 usos de <img> en web/src, 0 eslint-disable no-img-element restantes -- HECHO",
+        "next.config.ts con remotePatterns para *.supabase.co -- HECHO",
+        "tsc + eslint + verificar.sh completo en verde -- HECHO",
+        "Sin verificacion visual real esta vez (requeria auth+datos reales, cambio de bajo riesgo/puramente presentacional, patron 1:1 con la documentacion oficial de Next 16) -- pedirle a la usuaria que revise visualmente logos/fotos/firmas tras el deploy"
+      ],
+      "status": "done",
+      "resolution": "Implementado y verificado estaticamente (tsc, eslint, verificar.sh verdes). Sin verificacion visual real -- avisar a la usuaria que revise visualmente que los logos, fotos de evidencia y firmas se vean bien tras el deploy (riesgo bajo: cambio puramente presentacional, siguiendo el patron oficial de Next 16 al pie de la letra)."
     }
   ]
 }

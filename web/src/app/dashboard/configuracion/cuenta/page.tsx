@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { Bell, User } from "lucide-react";
 import type { NotificacionPreferencia, TipoNotificacion } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
@@ -213,8 +214,7 @@ export default function CuentaPage() {
           />
           <label htmlFor="input-foto-perfil" onClick={() => inputFotoRef.current?.click()} className="cursor-pointer">
             {usuario.foto_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={usuario.foto_url} alt={usuario.nombre} className="h-16 w-16 rounded-ds-pill border border-ds-divider object-cover" />
+              <Image src={usuario.foto_url} alt={usuario.nombre} width={64} height={64} className="h-16 w-16 rounded-ds-pill border border-ds-divider object-cover" />
             ) : (
               <div className="flex h-16 w-16 items-center justify-center rounded-ds-pill bg-ds-brand text-lg font-semibold text-ds-brand-foreground">
                 {iniciales(usuario.nombre)}

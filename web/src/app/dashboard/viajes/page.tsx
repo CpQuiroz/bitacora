@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useEffect, useMemo, useState, type FormEvent } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Plus, Truck } from "lucide-react";
 import { CIUDADES_CHILE, type Cliente, type EstadoViaje, type Usuario, type Viaje } from "@bitacora/shared";
@@ -797,9 +798,9 @@ export default function ViajesPage() {
             {fotosViaje.guiaUrl && (
               <div>
                 <p className="mb-ds-2 font-ds-body text-ds-caption font-medium text-ds-text/70">Foto de la guía</p>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <a href={fotosViaje.guiaUrl} target="_blank" rel="noopener noreferrer">
-                  <img src={fotosViaje.guiaUrl} alt="Foto de la guía" className="aspect-square w-40 rounded-ds-md border border-ds-divider object-cover" />
+                  {/* URL firmada (vence) — sin optimizer, con lazy-load igual. */}
+                  <Image src={fotosViaje.guiaUrl} alt="Foto de la guía" width={160} height={160} unoptimized className="aspect-square w-40 rounded-ds-md border border-ds-divider object-cover" />
                 </a>
               </div>
             )}
@@ -809,9 +810,9 @@ export default function ViajesPage() {
                 <div className="grid grid-cols-2 gap-ds-3 sm:grid-cols-3">
                   {fotosViaje.fotos.map((f) => (
                     <div key={f.id} className="group relative">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <a href={f.url} target="_blank" rel="noopener noreferrer">
-                        <img src={f.url} alt="Foto del viaje" className="aspect-square w-full rounded-ds-md border border-ds-divider object-cover" />
+                      <a href={f.url} target="_blank" rel="noopener noreferrer" className="relative block aspect-square w-full">
+                        {/* URL firmada (vence) — sin optimizer, con lazy-load igual. */}
+                        <Image src={f.url} alt="Foto del viaje" fill unoptimized className="rounded-ds-md border border-ds-divider object-cover" />
                       </a>
                       <button
                         type="button"

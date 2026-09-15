@@ -2517,3 +2517,43 @@ Itineris): misma lógica, resultados coherentes (1 factura con notificación
 ya registrada, 2 sin notificar). `tsc` + `verificar.sh` verde. Tarea 34
 cerrada. Con esto quedan resueltos los 3 hallazgos del backend de la
 revisión de rendimiento pedida por la usuaria.
+
+## 2026-09-14 (17): hallazgo menor de la revisión de rendimiento — next/image
+
+16 usos de `<img>` plano en `web/src` (0 uso de `next/image` en todo el
+proyecto), cada uno con `eslint-disable @next/next/no-img-element`. Migrados
+todos, distinguiendo 2 casos:
+
+1. **Logos/avatares** (empresa, usuario) — URL pública de Supabase Storage,
+   sin vencer (`storage.ts`: `subirLogo`/`subirFotoPerfil` devuelven
+   `/storage/v1/object/public/...`) → `next/image` completo, con `width`/
+   `height` fijos. 7 instancias (`configuracion/empresa` x2, `plantillas`,
+   `cuenta`, `agendar/[empresaId]`, `DashboardShell` x2).
+2. **Fotos de evidencia y firmas** (trabajos/OS/viajes/levantamientos/
+   mantención) — URL **firmada, con vencimiento** (`urlFirmada()`, 15 min) →
+   prop `unoptimized` (Next no puede cachear/re-pedir algo que puede vencer
+   antes de que el optimizer lo necesite de nuevo), pero conservando
+   lazy-load y prevención de layout shift. Las de ancho fluido (`w-full`)
+   pasaron a `fill` dentro de un wrapper `relative` nuevo (documentado en la
+   guía oficial de Next 16: "el elemento padre debe tener position:relative").
+   9 instancias (`RegistrosMantencion` x2 — una de ellas un blob: local de
+   preview antes de subir, `trabajos/[id]` x2, `ordenes/[id]` x2,
+   `levantamientos`, `viajes` x2).
+
+`next.config.ts`: agregado `images.remotePatterns` para `*.supabase.co`
+(necesario para las públicas; sin efecto en las `unoptimized`).
+
+Verificado con la documentación oficial embebida de Next 16
+(`node_modules/next/dist/docs`, ver `web/AGENTS.md`: "esta versión tiene
+cambios que rompen compatibilidad") antes de escribir nada — confirmado el
+patrón exacto de `remotePatterns`, `fill` + wrapper `relative`, y
+`width`/`height` + `style`/className para tamaño fijo con URL remota.
+
+`tsc` + `eslint` + `./verificar.sh` completo en verde, 0 usos de `<img>`
+restantes, 0 `eslint-disable no-img-element` restantes. **Sin verificación
+visual real** (requeriría auth + datos reales; cambio de bajo riesgo,
+puramente presentacional, 1:1 con la documentación oficial) — pedirle a la
+usuaria que revise visualmente tras el deploy.
+
+Con esto quedan resueltos los 4 hallazgos de la revisión de rendimiento
+pedida por la usuaria (3 de backend + este de web).

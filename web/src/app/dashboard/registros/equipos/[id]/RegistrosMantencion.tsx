@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import { ChevronDown, Camera, Eye, Plus, Receipt, Truck, X } from "lucide-react";
 import type { Equipo, Proveedor, RegistroMantencionEquipo, RespuestaChecklistMantencion } from "@bitacora/shared";
 import { MANTENCION_EXIGE_FOTO_EN_NO } from "@bitacora/shared";
@@ -370,9 +371,9 @@ function DetalleRegistro({ equipoId, registroId, onCambio }: { equipoId: string;
           <div className="grid grid-cols-3 gap-ds-3 sm:grid-cols-4">
             {datos.fotos.map((f) => (
               <div key={f.id} className="group relative">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <a href={f.url} target="_blank" rel="noopener noreferrer">
-                  <img src={f.url} alt={f.item ?? "Foto de respaldo"} className="aspect-square w-full rounded-ds-md border border-ds-divider object-cover" />
+                <a href={f.url} target="_blank" rel="noopener noreferrer" className="relative block aspect-square w-full">
+                  {/* URL firmada (vence) — sin optimizer de Next, pero con lazy-load y sin layout shift igual. */}
+                  <Image src={f.url} alt={f.item ?? "Foto de respaldo"} fill unoptimized className="rounded-ds-md border border-ds-divider object-cover" />
                 </a>
                 {f.item && <span className="absolute inset-x-0 bottom-0 truncate rounded-b-ds-md bg-ds-text/[0.7] px-1.5 py-0.5 text-[10px] text-white">{f.item}</span>}
                 <button
@@ -781,8 +782,8 @@ function ModalNuevoRegistro({ equipo, onListo }: { equipo: Equipo; onListo: () =
             {fotos.map((f, i) => (
               <li key={i} className="relative">
                 <div className="flex h-[66px] w-[88px] items-center justify-center overflow-hidden rounded-ds-sm border border-ds-divider bg-ds-surface">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={URL.createObjectURL(f.file)} alt={f.item ?? "Foto general"} className="h-full w-full object-cover" />
+                  {/* blob: local (preview antes de subir) — el optimizer de Next no puede leerlo. */}
+                  <Image src={URL.createObjectURL(f.file)} alt={f.item ?? "Foto general"} width={88} height={66} unoptimized className="h-full w-full object-cover" />
                 </div>
                 {f.item && (
                   <span className="absolute inset-x-0 bottom-0 truncate bg-ds-text/[0.7] px-1 text-[9px] text-white">{f.item}</span>

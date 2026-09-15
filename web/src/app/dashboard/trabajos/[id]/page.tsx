@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import type { AnalisisFoto, Anexo, ItemChecklist, OrdenServicio, Trabajo, TipoTrabajo } from "@bitacora/shared";
@@ -170,11 +171,14 @@ export default function TrabajoDetallePage() {
                   <div>
                     <p className="text-xs text-muted">Firma del cliente</p>
                     {orden?.firma_url_firmada ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
+                      // URL firmada (vence) — sin optimizer, con lazy-load igual.
+                      <Image
                         src={orden.firma_url_firmada}
                         alt="Firma del cliente"
-                        className="mt-1 h-10 rounded border border-border bg-white"
+                        width={160}
+                        height={40}
+                        unoptimized
+                        className="mt-1 h-10 w-auto rounded border border-border bg-white"
                       />
                     ) : (
                       <p className="text-sm font-medium text-muted">Pendiente</p>
@@ -224,8 +228,10 @@ export default function TrabajoDetallePage() {
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 {fotos.map((f) => (
                   <div key={f.id} className="overflow-hidden rounded-xl border border-border">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={f.url} alt={f.resumen ?? "Foto del trabajo"} className="h-48 w-full object-cover" />
+                    <div className="relative h-48 w-full">
+                      {/* URL firmada (vence) — sin optimizer, con lazy-load igual. */}
+                      <Image src={f.url} alt={f.resumen ?? "Foto del trabajo"} fill unoptimized className="object-cover" />
+                    </div>
                     <div className="p-3">
                       {f.alerta && <p className="mb-1 text-sm font-medium text-danger">⚠ {f.detalle_alerta}</p>}
                       <p className="text-sm text-muted">

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import type { Modulo, Rol } from "@bitacora/shared";
@@ -504,8 +505,7 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
       >
         <Link href="/dashboard" className="flex min-w-0 items-center gap-2 border-b border-ds-divider px-4 py-4">
           {usuario.empresaLogoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={usuario.empresaLogoUrl} alt={usuario.empresaNombre} className="h-8 w-8 shrink-0 rounded-lg object-cover" />
+            <Image src={usuario.empresaLogoUrl} alt={usuario.empresaNombre} width={32} height={32} className="h-8 w-8 shrink-0 rounded-lg object-cover" />
           ) : (
             <Logo markClassName="h-8 w-8 shrink-0" />
           )}
@@ -531,8 +531,7 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
           <aside className="absolute inset-y-0 left-0 flex w-72 flex-col bg-ds-surface shadow-ds-lg">
             <Link href="/dashboard" onClick={() => setMenuMovilAbierto(false)} className="flex items-center gap-2 border-b border-ds-divider px-4 py-4">
               {usuario.empresaLogoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={usuario.empresaLogoUrl} alt={usuario.empresaNombre} className="h-8 w-8 rounded-lg object-cover" />
+                <Image src={usuario.empresaLogoUrl} alt={usuario.empresaNombre} width={32} height={32} className="h-8 w-8 rounded-lg object-cover" />
               ) : (
                 <Logo markClassName="h-8 w-8" />
               )}

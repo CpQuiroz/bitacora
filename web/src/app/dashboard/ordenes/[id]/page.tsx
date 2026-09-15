@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { Camera, ChevronLeft, ClipboardCheck, Mail, Plus } from "lucide-react";
@@ -499,9 +500,11 @@ export default function DetalleOrdenServicioPage() {
                 </p>
                 <div className="grid gap-ds-4 sm:grid-cols-2 lg:grid-cols-3">
                   {detalle.fotos.map((f) => (
-                    // eslint-disable-next-line @next/next/no-img-element
                     <div key={f.id} className="overflow-hidden rounded-ds-md border border-ds-divider">
-                      <img src={f.url} alt={f.resumen ?? "Foto de la OS"} className="h-40 w-full object-cover" />
+                      <div className="relative h-40 w-full">
+                        {/* URL firmada (vence) — sin optimizer, con lazy-load igual. */}
+                        <Image src={f.url} alt={f.resumen ?? "Foto de la OS"} fill unoptimized className="object-cover" />
+                      </div>
                       {f.resumen ? <p className="p-ds-2 font-ds-body text-ds-caption text-ds-text/60">{f.resumen}</p> : null}
                     </div>
                   ))}
@@ -550,10 +553,13 @@ export default function DetalleOrdenServicioPage() {
               <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Firma de conformidad</p>
               {detalle.orden?.firma_url_firmada ? (
                 <div className="flex flex-col gap-ds-3 sm:flex-row sm:items-center sm:gap-ds-6">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  {/* URL firmada (vence) — sin optimizer, con lazy-load igual. */}
+                  <Image
                     src={detalle.orden.firma_url_firmada}
                     alt="Firma"
+                    width={192}
+                    height={96}
+                    unoptimized
                     className="h-24 w-48 rounded-ds-sm border border-ds-divider bg-white object-contain"
                   />
                   <div className="font-ds-body text-ds-small">

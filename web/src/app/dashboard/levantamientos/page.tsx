@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Camera, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import type { Cliente, EstadoLevantamiento, Usuario } from "@bitacora/shared";
@@ -463,9 +464,9 @@ export default function LevantamientosPage() {
                 <div className="mt-1 flex flex-wrap gap-ds-2">
                   {detalle.fotos.map((f) => (
                     <div key={f.id} className="group relative">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <a href={f.url} target="_blank" rel="noopener noreferrer">
-                        <img src={f.url} alt="" className="h-24 w-24 rounded-ds-md border border-ds-divider object-cover" />
+                        {/* URL firmada (vence) — sin optimizer, con lazy-load igual. */}
+                        <Image src={f.url} alt="" width={96} height={96} unoptimized className="h-24 w-24 rounded-ds-md border border-ds-divider object-cover" />
                       </a>
                       {puedeEditar ? (
                         <button
