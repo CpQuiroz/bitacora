@@ -116,28 +116,22 @@ export async function aplicarDescuentoInventarioSiCorresponde(
   const cantidadPorProducto = await productosADescontar(empresaId, trabajoId);
   if (cantidadPorProducto.size === 0) return [];
 
-  const ids = [...cantidadPorProducto.keys()];
-  const { data: productos } = await supabase.from("catalogo_items").select("id, nombre, stock_actual").eq("empresa_id", empresaId).in("id", ids);
+  const motivo = `OS N° ${folio ?? trabajoId.slice(0, 8)} — descuento automático (${nuevoEstadoOs})`;
+  // Una sola llamada atómica: descuenta stock (relativo, sin lost update
+  // entre OS concurrentes) y registra los movimientos, para todos los
+  // productos de la OS a la vez — ver migración 104.
+  const { data: movidos } = await supabase.rpc("mover_stock_inventario", {
+    p_empresa_id: empresaId,
+    p_items: [...cantidadPorProducto].map(([catalogo_item_id, cantidad]) => ({ catalogo_item_id, cantidad })),
+    p_signo: -1,
+    p_motivo: motivo,
+  });
 
   const advertencias: string[] = [];
-  const motivo = `OS N° ${folio ?? trabajoId.slice(0, 8)} — descuento automático (${nuevoEstadoOs})`;
-  for (const producto of productos ?? []) {
-    const cantidad = cantidadPorProducto.get(producto.id)!;
-    const stockActual = producto.stock_actual ?? 0;
-    const stockResultante = stockActual - cantidad;
-    if (stockResultante < 0 && !config.permitirNegativo) {
-      advertencias.push(`Stock insuficiente de "${producto.nombre}": quedó en ${stockResultante}.`);
+  if (!config.permitirNegativo) {
+    for (const p of movidos ?? []) {
+      if (p.stock_resultante < 0) advertencias.push(`Stock insuficiente de "${p.nombre}": quedó en ${p.stock_resultante}.`);
     }
-    await supabase.from("catalogo_items").update({ stock_actual: stockResultante }).eq("empresa_id", empresaId).eq("id", producto.id);
-    await supabase.from("inventario_movimientos").insert({
-      empresa_id: empresaId,
-      catalogo_item_id: producto.id,
-      tipo: "salida",
-      cantidad,
-      stock_resultante: stockResultante,
-      motivo,
-      origen: "automatico",
-    });
   }
 
   await supabase.from("ordenes_servicio").update({ stock_descontado: true }).eq("id", ordenId);
@@ -159,24 +153,13 @@ export async function revertirStockPorOS(empresaId: string, ordenId: string, tra
     return;
   }
 
-  const ids = [...cantidadPorProducto.keys()];
-  const { data: productos } = await supabase.from("catalogo_items").select("id, stock_actual").eq("empresa_id", empresaId).in("id", ids);
-
   const motivo = `OS N° ${folio ?? trabajoId.slice(0, 8)} — reversión por cancelación`;
-  for (const producto of productos ?? []) {
-    const cantidad = cantidadPorProducto.get(producto.id)!;
-    const stockResultante = (producto.stock_actual ?? 0) + cantidad;
-    await supabase.from("catalogo_items").update({ stock_actual: stockResultante }).eq("empresa_id", empresaId).eq("id", producto.id);
-    await supabase.from("inventario_movimientos").insert({
-      empresa_id: empresaId,
-      catalogo_item_id: producto.id,
-      tipo: "entrada",
-      cantidad,
-      stock_resultante: stockResultante,
-      motivo,
-      origen: "automatico",
-    });
-  }
+  await supabase.rpc("mover_stock_inventario", {
+    p_empresa_id: empresaId,
+    p_items: [...cantidadPorProducto].map(([catalogo_item_id, cantidad]) => ({ catalogo_item_id, cantidad })),
+    p_signo: 1,
+    p_motivo: motivo,
+  });
 
   await supabase.from("ordenes_servicio").update({ stock_descontado: false }).eq("id", ordenId);
 }

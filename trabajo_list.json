@@ -501,6 +501,21 @@
       ],
       "status": "done",
       "resolution": "Migracion 103 aplicada en prod. Hallazgo real en el camino: el historial de migraciones de la CLI (supabase_migrations.schema_migrations) estaba desincronizado -- las migraciones 99-102 ya estaban aplicadas en el esquema real (confirmado leyendo las tablas) pero nunca quedaron registradas en el historial de la CLI (probablemente se pegaron a mano en el SQL Editor en su momento). Ademas, un problema estructural de fondo: la numeracion de migraciones (enteros sin padding) rompe la comparacion alfabetica de `supabase db push` al pasar de 2 a 3 digitos -- '99' ordena DESPUES de '100'/'101'/etc como texto, asi que cualquier migracion >=100 siempre se va a topar con el mismo error mientras exista un '9X' en el historial. No se corrigio la numeracion del proyecto (cambio grande, fuera de alcance de esta tarea) -- se documenta aca para la proxima vez que pase. Solucion aplicada: 1) `migration repair --status applied 99 100 101 102` para sincronizar el historial; 2) igual persistia el error por el problema de fondo, asi que se aplico el archivo de la 103 directo con `supabase db query -f <archivo>` (CREATE OR REPLACE FUNCTION, seguro de re-ejecutar) en vez de `db push`; 3) `migration repair --status applied 103` para que quede prolijo. Funcion probada end-to-end en prod real (misma salida que el SELECT manual validado antes). Backend pusheado a main -- Render lo despliega solo."
+    },
+    {
+      "id": 33,
+      "name": "optimizar_inventario_descuento_rpc",
+      "title": "Optimizar #2 de la revision de rendimiento -- descuento/reversion de stock en 1 RPC atomica",
+      "description": "Fix #2 de la revision de rendimiento pedida por la usuaria. aplicarDescuentoInventarioSiCorresponde() y revertirStockPorOS() (backend/src/inventario.ts) hacian, por cada producto de la OS, 2 round-trips SECUENCIALES (update catalogo_items + insert inventario_movimientos) dentro de un for, bloqueando el cierre de cada OS con control de stock activado. Ademas tenian una carrera real: leian stock_actual y escribian un valor absoluto calculado en Node -- dos OS que tocan el mismo producto casi al mismo tiempo pueden perderse un descuento (lost update). Fix: nueva funcion SQL mover_stock_inventario() (migracion 104) que hace el UPDATE relativo (stock_actual = stock_actual + signo*cantidad, sin carrera) y el INSERT de movimientos para TODOS los productos en una sola llamada atomica. Mismo patron que la tarea 32 (clientes_resumen).",
+      "acceptance": [
+        "Migracion 104_mover_stock_inventario_rpc.sql creada -- BLOQUEADA, falta que la usuaria la corra en prod",
+        "backend/src/inventario.ts usa supabase.rpc('mover_stock_inventario', ...) en ambas funciones (descuento y reversion) -- HECHO",
+        "packages/shared/src/types.ts tipa la funcion nueva -- HECHO",
+        "Logica validada con una transaccion BEGIN/ROLLBACK de verdad contra un producto real de prod (Transportes Itineris, 'Cremas') -- HECHO: escritura correcta dentro de la transaccion (-4.01 -> -6.01, 1 movimiento insertado), y ROLLBACK confirmado con una lectura fresca aparte (stock volvio a -4.01, 0 movimientos, funcion no quedo creada)",
+        "tsc + verificar.sh completo en verde -- HECHO"
+      ],
+      "status": "blocked",
+      "resolution": "Codigo y migracion listos y verificados (tsc limpio, verificar.sh verde, logica probada con BEGIN/ROLLBACK de verdad contra prod real sin dejar ningun cambio). BLOQUEADA: falta que la usuaria aplique la migracion 104 en prod. Dado el problema estructural de numeracion ya documentado en la tarea 32 (String '9X' > '1XX' en la comparacion de `supabase db push`), usar directamente el mismo camino que funciono para la 103: `supabase db query -f supabase/migrations/104_mover_stock_inventario_rpc.sql` + `migration repair --status applied 104` -- NO intentar `db push` primero, va a fallar con el mismo error."
     }
   ]
 }

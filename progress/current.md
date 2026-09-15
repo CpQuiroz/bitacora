@@ -2468,3 +2468,33 @@ esta vez (cambio grande, fuera de alcance) — documentado acá para la próxima
 
 Con la función ya en prod, se hizo push del backend a `main` (commit
 `dad4263`, ya comiteado antes) — Render lo despliega solo. Tarea 32 cerrada.
+
+## 2026-09-14 (14): fix #2 de la revisión de rendimiento — descuento de inventario
+
+`aplicarDescuentoInventarioSiCorresponde`/`revertirStockPorOS` (inventario.ts)
+hacían 2 round-trips secuenciales por producto (update + insert), bloqueando
+el cierre de cada OS con stock activado — y además tenían una carrera real:
+leían `stock_actual` y escribían un valor absoluto calculado en Node, así que
+dos OS tocando el mismo producto casi al mismo tiempo podían perderse un
+descuento (lost update).
+
+Fix: **migración 104** — `mover_stock_inventario(p_empresa_id, p_items jsonb,
+p_signo, p_motivo)`. Un solo `UPDATE ... FROM jsonb_to_recordset(...) ...
+RETURNING` (relativo: `stock_actual = stock_actual + signo*cantidad`, sin
+carrera — Postgres serializa la fila) + un `INSERT ... SELECT` que reutiliza
+el mismo resultado, para TODOS los productos de la OS en una sola llamada.
+`aplicarDescuentoInventarioSiCorresponde` usa `p_signo=-1`, `revertirStockPorOS`
+usa `p_signo=1` — misma función para ambos sentidos.
+
+**Validado con una transacción real `BEGIN`/`ROLLBACK` contra prod** (producto
+real "Cremas" de Transportes Itineris, stock -4.01): la escritura DENTRO de la
+transacción fue correcta (-4.01 → -6.01, 1 movimiento insertado, verificado
+con un statement separado para que la visibilidad entre statements de la
+misma transacción sea real y no un espejismo de snapshot de una sola query
+con CTEs). Después del `ROLLBACK`, una lectura fresca aparte confirmó: stock
+de vuelta en -4.01, 0 movimientos de prueba, la función ni quedó creada.
+
+`tsc` + `./verificar.sh` completo en verde. Tarea 33 creada, `blocked` —
+falta que la usuaria aplique la migración 104. Mismo camino que la 103 (evitar
+`db push`, usar `db query -f` + `migration repair`) porque el problema
+estructural de numeración (documentado en la tarea 32) se repite igual.

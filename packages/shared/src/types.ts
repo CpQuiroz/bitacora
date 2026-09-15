@@ -1827,6 +1827,19 @@ export type Database = {
           tiene_pack: boolean;
         }[];
       };
+      mover_stock_inventario: {
+        Args: {
+          p_empresa_id: string;
+          p_items: { catalogo_item_id: string; cantidad: number }[];
+          p_signo: number;
+          p_motivo: string;
+        };
+        Returns: {
+          catalogo_item_id: string;
+          nombre: string;
+          stock_resultante: number;
+        }[];
+      };
     };
   };
 };
