@@ -1019,6 +1019,14 @@ trabajosRouter.post(
       ? (req.body.categoria as CategoriaFotoOS)
       : null;
 
+    // Clave del campo tipo "foto" al que pertenece (migración 105) — si
+    // viene, la foto queda asociada a ESE campo del formulario del tipo
+    // de trabajo en vez de la galería general. Mismo formato de clave
+    // que usa la config de Tipos de trabajo (slugificar(): minúsculas,
+    // números y guión bajo).
+    const campoClave =
+      typeof req.body?.campo_clave === "string" && /^[a-z0-9_]+$/.test(req.body.campo_clave) ? req.body.campo_clave : null;
+
     // Con la IA apagada la foto queda "listo" al toque, sin resumen.
     const estadoInicial = env.ANALISIS_FOTOS_IA_ACTIVO ? "procesando" : "listo";
 
@@ -1030,6 +1038,7 @@ trabajosRouter.post(
         orden_servicio_id: orden.id,
         foto_url: key,
         categoria,
+        campo_clave: campoClave,
         subida_por: req.userId!,
         estado: estadoInicial,
       })
@@ -1424,12 +1433,21 @@ export async function armarDatosPdf(empresaId: string, trabajoId: string) {
 
   const { data: fotos } = await supabase
     .from("analisis_fotos")
-    .select("foto_url, categoria")
+    .select("foto_url, categoria, campo_clave")
     .eq("orden_servicio_id", orden.id)
     .order("creado_en", { ascending: true });
 
+  // Fotos de un campo tipo "foto" (migración 105) se sacan de la
+  // galería general — van dentro del formulario, no en "Fotos".
+  const fotosGaleria = (fotos ?? []).filter((f) => !f.campo_clave);
+  const fotosPorCampo = new Map<string, string[]>();
+  for (const f of fotos ?? []) {
+    if (!f.campo_clave) continue;
+    fotosPorCampo.set(f.campo_clave, [...(fotosPorCampo.get(f.campo_clave) ?? []), f.foto_url]);
+  }
+
   const fotosPdf = await Promise.all(
-    (fotos ?? []).map(async (f) => ({
+    fotosGaleria.map(async (f) => ({
       url: await urlFirmada(f.foto_url, 15),
       categoria: (f.categoria as CategoriaFotoOS | null) ?? null,
     }))
@@ -1440,6 +1458,16 @@ export async function armarDatosPdf(empresaId: string, trabajoId: string) {
   const colaboradorNombre = (trabajo as unknown as { responsable: { nombre: string } | null }).responsable?.nombre ?? "—";
   const tipoTrabajo = (trabajo as unknown as { tipo_trabajo: { nombre: string; campos: CampoTipoTrabajo[] } | null }).tipo_trabajo;
   const camposPersonalizados = mapearCamposPersonalizados(tipoTrabajo?.campos, trabajo.datos as Record<string, unknown>);
+  // Campos tipo "foto" del formulario (migración 105) — se pasan aparte
+  // porque su valor son fotos reales, no texto (mapearCamposPersonalizados
+  // los excluye a propósito). Orden preservado: el mismo de tipos_trabajo.campos.
+  const camposFotoBrutos = (tipoTrabajo?.campos ?? []).filter((c) => c.tipo === "foto");
+  const camposFoto = await Promise.all(
+    camposFotoBrutos.map(async (c) => ({
+      etiqueta: c.etiqueta,
+      fotos: await Promise.all((fotosPorCampo.get(c.clave) ?? []).map((key) => urlFirmada(key, 15))),
+    }))
+  );
   const checklist = ((orden.checklist ?? []) as ItemChecklist[]).map((c) => ({
     item: c.item,
     hecho: Boolean(c.hecho),
@@ -1476,6 +1504,7 @@ export async function armarDatosPdf(empresaId: string, trabajoId: string) {
     tipoTrabajoNombre: tipoTrabajo?.nombre ?? null,
     descripcion: trabajo.descripcion,
     camposPersonalizados,
+    camposFoto,
     checklist,
     checkInAt: orden.check_in_at ?? null,
     checkOutAt: orden.check_out_at ?? null,

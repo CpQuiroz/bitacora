@@ -11,6 +11,10 @@ const TIPOS_CAMPO: { valor: CampoTipoTrabajo["tipo"]; etiqueta: string }[] = [
   { valor: "numero", etiqueta: "Número" },
   { valor: "fecha", etiqueta: "Fecha" },
   { valor: "booleano", etiqueta: "Sí/No" },
+  // Migración 105 — el técnico sube la foto en el móvil, en el punto
+  // exacto del formulario donde quedó este campo (no en la galería
+  // general de fotos de la OS).
+  { valor: "foto", etiqueta: "Foto" },
 ];
 
 function slugificar(texto: string) {

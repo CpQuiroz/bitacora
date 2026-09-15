@@ -156,7 +156,11 @@ export function encolarDatos(trabajoId: string, datos: Record<string, string>) {
 export function encolarFoto(
   trabajoId: string,
   archivo: { uri: string; name: string; type: string },
-  categoria?: string | null
+  categoria?: string | null,
+  // Clave de un campo tipo "foto" del tipo de trabajo (migración 105) —
+  // si viene, la foto queda asociada a ESE campo del formulario en vez
+  // de la galería general.
+  campoClave?: string | null
 ) {
   return encolar({
     etiqueta: "Foto",
@@ -165,7 +169,7 @@ export function encolarFoto(
     method: "POST",
     // foto_id estable: si un reintento tras timeout vuelve a subir la
     // misma foto, el backend devuelve la que ya existe (nunca duplica).
-    body: { foto_id: Crypto.randomUUID(), ...(categoria ? { categoria } : {}) },
+    body: { foto_id: Crypto.randomUUID(), ...(categoria ? { categoria } : {}), ...(campoClave ? { campo_clave: campoClave } : {}) },
     archivo: { ...archivo, campo: "foto" },
   });
 }

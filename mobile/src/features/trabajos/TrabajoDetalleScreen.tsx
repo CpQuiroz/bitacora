@@ -92,20 +92,39 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
   const marca = useMarca();
   const esGestion = auth.fase === "listo" && auth.usuario.rol !== "colaborador";
   const { pendientes, fallidas, enLinea, descartar } = useRed();
-  const fotosPendientes = useMemo(() => {
+  // Clave del campo tipo "foto" al que apunta una acción encolada de
+  // foto (migración 105) — undefined = galería general.
+  const campoClaveDe = (a: { body?: unknown }) => (a.body as { campo_clave?: string } | undefined)?.campo_clave;
+  const fotosPendientesTodas = useMemo(() => {
     const esFotoDeAca = (a: (typeof pendientes)[number]) => a.recurso === `trabajo:${trabajoId}` && a.etiqueta === "Foto";
     return [
-      ...pendientes.filter(esFotoDeAca).map((a) => ({ id: a.id, uri: a.archivo?.uri ?? "", fallida: false, error: a.ultimoError })),
-      ...fallidas.filter(esFotoDeAca).map((a) => ({ id: a.id, uri: a.archivo?.uri ?? "", fallida: true, error: a.ultimoError })),
+      ...pendientes.filter(esFotoDeAca).map((a) => ({ id: a.id, uri: a.archivo?.uri ?? "", fallida: false, error: a.ultimoError, campoClave: campoClaveDe(a) })),
+      ...fallidas.filter(esFotoDeAca).map((a) => ({ id: a.id, uri: a.archivo?.uri ?? "", fallida: true, error: a.ultimoError, campoClave: campoClaveDe(a) })),
     ];
   }, [pendientes, fallidas, trabajoId]);
-
+  const fotosPendientes = useMemo(() => fotosPendientesTodas.filter((f) => !f.campoClave), [fotosPendientesTodas]);
+  const fotosPendientesPorCampo = useMemo(() => {
+    const mapa: Record<string, typeof fotosPendientesTodas> = {};
+    for (const f of fotosPendientesTodas) {
+      if (!f.campoClave) continue;
+      mapa[f.campoClave] = [...(mapa[f.campoClave] ?? []), f];
+    }
+    return mapa;
+  }, [fotosPendientesTodas]);
   const [detalle, setDetalle] = useState<DetalleTrabajo | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [datosForm, setDatosForm] = useState<Record<string, string>>({});
   const [guardandoDatos, setGuardandoDatos] = useState(false);
   const [marcando, setMarcando] = useState<"Check-in" | "Check-out" | null>(null);
   const [finalizando, setFinalizando] = useState(false);
+  const fotosPorCampo = useMemo(() => {
+    const mapa: Record<string, DetalleTrabajo["fotos"]> = {};
+    for (const f of detalle?.fotos ?? []) {
+      if (!f.campo_clave) continue;
+      mapa[f.campo_clave] = [...(mapa[f.campo_clave] ?? []), f];
+    }
+    return mapa;
+  }, [detalle]);
 
   const cargar = useCallback(async () => {
     setError(null);
@@ -161,7 +180,10 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
   }
   if (!detalle) return null;
 
-  const { trabajo, orden, fotos } = detalle;
+  const { trabajo, orden, fotos: fotosTodas } = detalle;
+  // Fotos de un campo tipo "foto" (migración 105) se sacan de la
+  // galería general — se muestran junto al campo en CamposDinamicos.
+  const fotos = fotosTodas.filter((f) => !f.campo_clave);
   const cli = trabajo.cliente_info;
   const finalizada = Boolean(orden?.finalizada_en) || finalizando;
   const checklist: ItemChecklist[] = orden?.checklist ?? [];
@@ -337,6 +359,18 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
             onGuardar={guardarDatos}
             guardando={guardandoDatos}
             editable={!finalizada}
+            fotosPorCampo={fotosPorCampo}
+            fotosPendientesPorCampo={fotosPendientesPorCampo}
+            onAgregarFoto={(clave, archivo) => void encolarFoto(trabajoId, archivo, null, clave)}
+            onQuitarFotoPendiente={descartar}
+            onEliminarFoto={async (fotoId) => {
+              const res = await eliminarFoto(trabajoId, fotoId);
+              if (!res.ok) {
+                Alert.alert("No se pudo eliminar", res.error);
+                return;
+              }
+              void cargar();
+            }}
           />
         ) : null}
 

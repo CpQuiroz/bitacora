@@ -449,30 +449,38 @@ export type NotificacionPreferencia = {
 export type CampoTipoTrabajo = {
   clave: string;
   etiqueta: string;
-  tipo: "texto" | "numero" | "fecha" | "booleano";
+  // "foto": el valor NO vive en trabajo.datos — son filas de
+  // analisis_fotos con campo_clave = esta clave (migración 105). Se
+  // muestran como su propio bloque de fotos, en el lugar del
+  // formulario donde la empresa las puso (mismo criterio que el
+  // informe de referencia de 2Workers/Hidroservi, 14-sep-2026).
+  tipo: "texto" | "numero" | "fecha" | "booleano" | "foto";
 };
 
 // Cruza los campos definidos por el tipo de trabajo contra los valores
 // guardados en `trabajo.datos` y devuelve pares etiqueta/valor listos
 // para mostrar. Único punto de verdad del formateo (Sí/No para booleano,
 // "—" para ausente) — lo usan el informe con IA y el PDF de la OS.
+// Los campos tipo "foto" se excluyen (su valor no es texto — ver arriba).
 export function mapearCamposPersonalizados(
   campos: CampoTipoTrabajo[] | null | undefined,
   datos: Record<string, unknown> | null | undefined
 ): { etiqueta: string; valor: string }[] {
   const d = datos ?? {};
-  return (campos ?? []).map((c) => {
-    const bruto = d[c.clave];
-    let valor: string;
-    if (bruto === undefined || bruto === null || bruto === "") {
-      valor = "—";
-    } else if (c.tipo === "booleano") {
-      valor = bruto === true || bruto === "true" || bruto === 1 ? "Sí" : "No";
-    } else {
-      valor = String(bruto);
-    }
-    return { etiqueta: c.etiqueta, valor };
-  });
+  return (campos ?? [])
+    .filter((c) => c.tipo !== "foto")
+    .map((c) => {
+      const bruto = d[c.clave];
+      let valor: string;
+      if (bruto === undefined || bruto === null || bruto === "") {
+        valor = "—";
+      } else if (c.tipo === "booleano") {
+        valor = bruto === true || bruto === "true" || bruto === 1 ? "Sí" : "No";
+      } else {
+        valor = String(bruto);
+      }
+      return { etiqueta: c.etiqueta, valor };
+    });
 }
 
 export type TipoTrabajo = {
@@ -1606,6 +1614,10 @@ export type AnalisisFoto = {
   orden_servicio_id: string | null;
   foto_url: string;
   categoria: string | null;
+  // Migración 105 — si viene de un campo tipo "foto" del formulario del
+  // tipo de trabajo, la clave de ese campo (matchea CampoTipoTrabajo.clave).
+  // null = foto de la galería general (como antes).
+  campo_clave: string | null;
   subida_por: string | null;
   estado: EstadoAnalisisFoto;
   resumen: string | null;

@@ -1,0 +1,12 @@
+-- BITÁCORA — Campo tipo "foto" en Tipos de trabajo (packages/shared/src/
+-- types.ts: CampoTipoTrabajo.tipo). Aditiva y reversible, sin backfill.
+--
+-- Antes, CampoTipoTrabajo solo admitía texto/número/fecha/booleano — un
+-- campo tipo "foto" necesita fotos reales, que ya viven en
+-- analisis_fotos (no en trabajo.datos, que es solo texto/número/jsonb
+-- escalar). Se etiqueta cada foto con la clave del campo al que
+-- pertenece, igual que ya se hace con `categoria` (migración 98) para
+-- la galería general del PDF — null = foto de la galería general
+-- (como hasta ahora), no-null = foto de un campo "foto" puntual del
+-- formulario del tipo de trabajo.
+alter table analisis_fotos add column campo_clave text;

@@ -40,6 +40,12 @@ export type DatosOSPdf = {
   tipoTrabajoNombre: string | null;
   descripcion: string | null;
   camposPersonalizados: { etiqueta: string; valor: string }[];
+  // Campos tipo "foto" del formulario del tipo de trabajo (migración
+  // 105) — se imprimen aparte, justo después de la grilla de campos,
+  // uno a uno con su propio título (el mismo criterio que el informe de
+  // referencia de Hidroservi/2Workers: la foto va en el punto exacto
+  // del formulario donde la empresa la puso, no en una galería aparte).
+  camposFoto: { etiqueta: string; fotos: string[] }[];
   checklist: { item: string; hecho: boolean; hora: string | null }[];
   checkInAt: string | null;
   checkOutAt: string | null;
@@ -89,12 +95,20 @@ async function descargar(url: string): Promise<Buffer | null> {
 }
 
 export async function generarPdfOS(datos: DatosOSPdf): Promise<Buffer> {
-  const [logoBuffer, firmaBuffer, firmaTecnicoBuffer, ...fotoBuffers] = await Promise.all([
+  // Fotos de los campos tipo "foto" del formulario — aplanadas para
+  // descargarlas todas junto con el resto, después se reagrupan por
+  // campo (mismo índice que datos.camposFoto).
+  const camposFotoUrls = datos.camposFoto.flatMap((c) => c.fotos);
+
+  const [logoBuffer, firmaBuffer, firmaTecnicoBuffer, ...resto] = await Promise.all([
     datos.empresaLogoUrl ? descargar(datos.empresaLogoUrl) : Promise.resolve(null),
     datos.firmaUrl ? descargar(datos.firmaUrl) : Promise.resolve(null),
     datos.firmaTecnicoUrl ? descargar(datos.firmaTecnicoUrl) : Promise.resolve(null),
     ...datos.fotos.map((f) => descargar(f.url)),
+    ...camposFotoUrls.map((url) => descargar(url)),
   ]);
+  const fotoBuffers = resto.slice(0, datos.fotos.length);
+  const camposFotoBuffers = resto.slice(datos.fotos.length);
   const colorMarca = datos.colorPrimario ?? PDF.marca;
 
   // Fotos agrupadas por categoría, en el orden equipo → antes → durante
@@ -103,6 +117,16 @@ export async function generarPdfOS(datos: DatosOSPdf): Promise<Buffer> {
   const fotosPorCategoria = fotoBuffers
     .map((buf, i) => ({ buf, categoria: datos.fotos[i]?.categoria ?? null }))
     .filter((f): f is { buf: Buffer; categoria: CategoriaFotoOS | null } => f.buf !== null);
+
+  // Reagrupa camposFotoBuffers (plano) por campo, preservando el orden.
+  const camposFotoConBuffers: { etiqueta: string; buffers: Buffer[] }[] = [];
+  {
+    let i = 0;
+    for (const c of datos.camposFoto) {
+      const buffers = c.fotos.map(() => camposFotoBuffers[i++]).filter((b): b is Buffer => b !== null);
+      camposFotoConBuffers.push({ etiqueta: c.etiqueta, buffers });
+    }
+  }
 
   const doc = new PDFDocument({ size: "A4", margin: 50 });
   const chunks: Buffer[] = [];
@@ -173,6 +197,47 @@ export async function generarPdfOS(datos: DatosOSPdf): Promise<Buffer> {
   // --- Campos del tipo de trabajo (numerados, en grilla) ---
   if (datos.camposPersonalizados.length > 0) {
     cajaGrilla(doc, "Campos del tipo de trabajo", datos.camposPersonalizados, colorMarca, { numerada: true });
+  }
+
+  // --- Campos tipo "foto" del formulario — cada uno con su propio
+  // título, justo después de la grilla (mismo lugar donde la empresa
+  // los puso al armar el tipo de trabajo). ---
+  for (const c of camposFotoConBuffers) {
+    if (doc.y > 640) doc.addPage();
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(7.5)
+      .fillColor(PDF.muted)
+      .text(c.etiqueta.toUpperCase(), M_IZQ, doc.y, { characterSpacing: 0.6, width: ANCHO });
+    doc.moveDown(0.3);
+    if (c.buffers.length === 0) {
+      doc.font("Helvetica").fontSize(9).fillColor(PDF.faint).text("Sin foto todavía.", M_IZQ, doc.y, { width: ANCHO });
+      doc.fillColor(PDF.tinta);
+      doc.moveDown(0.8);
+      continue;
+    }
+    let x = M_IZQ;
+    let filaY = doc.y;
+    const anchoFoto = 155;
+    for (const buf of c.buffers) {
+      if (x + anchoFoto > 545) {
+        x = M_IZQ;
+        filaY += 120;
+      }
+      if (filaY > 640) {
+        doc.addPage();
+        filaY = doc.y;
+        x = M_IZQ;
+      }
+      try {
+        doc.image(buf, x, filaY, { width: anchoFoto, height: 110, fit: [anchoFoto, 110] });
+      } catch {
+        // foto corrupta o formato no soportado — se omite
+      }
+      x += anchoFoto + 15;
+    }
+    doc.y = filaY + 120;
+    doc.moveDown(0.4);
   }
 
   if (datos.observacionesCierre) {

@@ -570,6 +570,25 @@
       ],
       "status": "done",
       "resolution": "Migrados los 8 archivos. Verificado con tsc, verificar.sh, auditoria estatica, y verificacion visual real via react-native-web+Chrome con datos ficticios de los 7 reportes (revertido 100% despues, confirmado con git status/diff limpio). Con esto se cierra el ultimo gap conocido de la homologacion visual v2 del mobile -- toda la app mobile queda en el sistema visual v2."
+    },
+    {
+      "id": 38,
+      "name": "campo_foto_tipo_trabajo",
+      "title": "Parte A -- tipo de campo 'foto' en Tipos de trabajo (fotos incrustadas en el formulario de OS)",
+      "description": "Pedido de la usuaria tras revisar un informe de referencia de 2Workers (competidor que usa Hidroservi) -- ese informe tiene un formulario numerado con fotos incrustadas en el punto exacto del formulario (no en una galeria aparte). Bitacora ya tenia casi toda la estructura del informe (cliente, tarea, campos personalizados, checklist, firmas tecnico+cliente) pero CampoTipoTrabajo.tipo solo admitia texto/numero/fecha/booleano -- sin tipo 'foto'. Agregado de punta a punta: tipo nuevo, columna analisis_fotos.campo_clave (migracion 105, aditiva), endpoint POST fotos acepta campo_clave, armarDatosPdf agrupa fotos por campo y las saca de la galeria general, generarPdfOS.ts las imprime justo despues de la grilla de campos personalizados (con su propio titulo), config web de Tipos de trabajo permite elegir 'Foto' como tipo, mobile (CamposDinamicos.tsx) renderiza una mini-galeria de camara/galeria por cada campo foto dentro del formulario de la OS. Web (ordenes/[id]/page.tsx) excluye los campos foto de su vista/edicion de texto (no hay camara en desktop) -- se ven en el PDF y en el celular.",
+      "acceptance": [
+        "CampoTipoTrabajo.tipo incluye 'foto'; mapearCamposPersonalizados los excluye (su valor no es texto) -- HECHO",
+        "Migracion 105 (analisis_fotos.campo_clave) -- BLOQUEADA, falta que la usuaria la aplique en prod",
+        "POST /:id/fotos acepta campo_clave (validado con regex de slug) -- HECHO",
+        "armarDatosPdf separa fotos de galeria general vs. por campo, generarPdfOS.ts las imprime en el lugar del formulario -- HECHO",
+        "Config web de Tipos de trabajo permite elegir tipo 'Foto' -- HECHO",
+        "web/ordenes/[id] excluye campos foto de su vista/edicion (sin camara en desktop) -- HECHO",
+        "Mobile CamposDinamicos.tsx renderiza mini-galeria (camara/galeria) por campo foto, con estado pendiente/fallido igual que la galeria general -- HECHO",
+        "tsc + verificar.sh completo en verde, auditoria estatica sin hallazgos -- HECHO",
+        "Migracion validada con BEGIN/ROLLBACK real contra prod (columna se crea bien, rollback confirmado con lectura fresca) -- HECHO"
+      ],
+      "status": "blocked",
+      "resolution": "Codigo listo y verificado (tsc, verificar.sh, logica de la migracion probada con BEGIN/ROLLBACK real contra prod sin dejar cambios). BLOQUEADA: falta que la usuaria aplique la migracion 105 en prod. Mismo camino que las anteriores (>=100): `supabase db query -f supabase/migrations/105_campo_foto_tipo_trabajo.sql` + `migration repair --status applied 105` -- NO usar `db push`, va a fallar por el problema de numeracion ya documentado (tarea 32)."
     }
   ]
 }

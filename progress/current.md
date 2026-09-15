@@ -2620,3 +2620,45 @@ v2 del mobile — toda la app mobile está en el sistema visual v2.** Falta
 solo: commit, y un build de APK si la usuaria lo quiere para probarlo en
 el teléfono (no es obligatorio para este cambio, es contenido de reportes
 que se puede validar en el próximo build normal).
+
+## 2026-09-14 (21): parte A — tipo de campo "foto" en Tipos de trabajo
+
+Pedido tras revisar un informe de referencia de 2Workers (competidor que usa
+Hidroservi, vía el link que pasó la usuaria) — ese informe tiene un
+formulario numerado con fotos incrustadas en el punto exacto donde la
+empresa las puso (no en una galería aparte al final). Bitácora ya tenía casi
+toda la estructura (cliente, tarea, campos personalizados, checklist,
+firmas técnico+cliente) — faltaba el tipo de campo "foto".
+
+Implementado de punta a punta:
+- `packages/shared/src/types.ts`: `CampoTipoTrabajo.tipo` +"foto";
+  `mapearCamposPersonalizados` los excluye (su valor son fotos reales, no
+  texto); `AnalisisFoto.campo_clave` nuevo.
+- **Migración 105**: `analisis_fotos.campo_clave text` — aditiva, null =
+  galería general (como antes), no-null = campo puntual del formulario.
+  Mismo patrón exacto que `categoria` (migración 98).
+- `backend/src/routes/trabajos.ts`: `POST /:id/fotos` acepta `campo_clave`
+  (validado con regex de slug); `armarDatosPdf` separa las fotos de la
+  galería general de las de un campo foto (agrupadas por clave, en el
+  orden de `tipos_trabajo.campos`).
+- `backend/src/generarPdfOS.ts`: nuevo campo `camposFoto` en `DatosOSPdf`
+  — se imprime justo después de la grilla de "Campos del tipo de trabajo",
+  cada uno con su propio título, mismo estilo que la galería general.
+- Web `configuracion/tipos-trabajo`: "Foto" como opción de tipo de campo.
+- Web `ordenes/[id]`: los campos foto se excluyen de la vista/edición de
+  texto (no hay cámara en desktop) — se ven en el PDF y en el celular.
+- Mobile `CamposDinamicos.tsx`: nuevo sub-componente `CampoFoto` — mini
+  galería de cámara/galería por campo foto, con el mismo mecanismo de
+  pendiente/fallido que la galería general (`TrabajoDetalleScreen.tsx`
+  ahora separa `fotosPendientesTodas` en generales vs. por campo, leyendo
+  `body.campo_clave` de la acción encolada).
+
+**Validado con una transacción real `BEGIN`/`ROLLBACK` contra prod**: la
+columna se crea bien (`data_type: text`), y una lectura fresca aparte tras
+el rollback confirma 0 rastro.
+
+`tsc` + `verificar.sh` completo en verde, auditoría estática sin hallazgos.
+Tarea 38 creada, `blocked` — falta que la usuaria aplique la migración 105
+(mismo camino ya establecido: `db query -f` + `migration repair`, no `db
+push`). Sigue: parte B (configuración de qué secciones muestra el informe
+de OS).
