@@ -2498,3 +2498,8 @@ de vuelta en -4.01, 0 movimientos de prueba, la función ni quedó creada.
 falta que la usuaria aplique la migración 104. Mismo camino que la 103 (evitar
 `db push`, usar `db query -f` + `migration repair`) porque el problema
 estructural de numeración (documentado en la tarea 32) se repite igual.
+
+## 2026-09-14 (15): migración 104 aplicada en prod + backend desplegado
+
+Confirmado leyendo `pg_proc` que `mover_stock_inventario` existe en prod.
+Push del backend a main. Tarea 33 cerrada.

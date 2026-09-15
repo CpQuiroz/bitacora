@@ -514,8 +514,8 @@
         "Logica validada con una transaccion BEGIN/ROLLBACK de verdad contra un producto real de prod (Transportes Itineris, 'Cremas') -- HECHO: escritura correcta dentro de la transaccion (-4.01 -> -6.01, 1 movimiento insertado), y ROLLBACK confirmado con una lectura fresca aparte (stock volvio a -4.01, 0 movimientos, funcion no quedo creada)",
         "tsc + verificar.sh completo en verde -- HECHO"
       ],
-      "status": "blocked",
-      "resolution": "Codigo y migracion listos y verificados (tsc limpio, verificar.sh verde, logica probada con BEGIN/ROLLBACK de verdad contra prod real sin dejar ningun cambio). BLOQUEADA: falta que la usuaria aplique la migracion 104 en prod. Dado el problema estructural de numeracion ya documentado en la tarea 32 (String '9X' > '1XX' en la comparacion de `supabase db push`), usar directamente el mismo camino que funciono para la 103: `supabase db query -f supabase/migrations/104_mover_stock_inventario_rpc.sql` + `migration repair --status applied 104` -- NO intentar `db push` primero, va a fallar con el mismo error."
+      "status": "done",
+      "resolution": "Codigo y migracion listos y verificados (tsc limpio, verificar.sh verde, logica probada con BEGIN/ROLLBACK de verdad contra prod real sin dejar ningun cambio). BLOQUEADA: falta que la usuaria aplique la migracion 104 en prod. Dado el problema estructural de numeracion ya documentado en la tarea 32 (String '9X' > '1XX' en la comparacion de `supabase db push`), usar directamente el mismo camino que funciono para la 103: `supabase db query -f supabase/migrations/104_mover_stock_inventario_rpc.sql` + `migration repair --status applied 104` -- NO intentar `db push` primero, va a fallar con el mismo error.\n\nMigración 104 aplicada en prod (confirmado leyendo pg_proc) y backend pusheado a main."
     }
   ]
 }
