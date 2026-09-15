@@ -11,57 +11,40 @@ export const clientesRouter = Router();
 clientesRouter.get(
   "/",
   ah<RequestConEmpresa>(async (req, res) => {
-    const [{ data: clientes, error }, { data: trabajos }, { data: presupuestos }, { data: facturas }, { data: packs }] = await Promise.all([
+    // Los indicadores por cliente (cantidad de OS, última actividad,
+    // saldo por cobrar/vencido, cotizaciones, packs) se calculan en SQL
+    // vía RPC (GROUP BY sobre índices por cliente_id) — no se traen las
+    // filas de trabajos/facturas a Node como antes, algo que crecía sin
+    // techo con el historial de la empresa. Ver migración 103.
+    const [{ data: clientes, error }, { data: resumen, error: errorResumen }] = await Promise.all([
       supabase.from("clientes").select("*").eq("empresa_id", req.empresaId!).order("nombre"),
-      supabase.from("trabajos").select("cliente_id, fecha").eq("empresa_id", req.empresaId!),
-      supabase.from("presupuestos").select("cliente_id").eq("empresa_id", req.empresaId!),
-      supabase.from("facturas").select("cliente_id, monto, estado, fecha_vencimiento").eq("empresa_id", req.empresaId!),
-      supabase.from("paquetes_sesiones").select("cliente_id").eq("empresa_id", req.empresaId!),
+      supabase.rpc("clientes_resumen", { p_empresa_id: req.empresaId! }),
     ]);
 
     if (error) {
       res.status(500).json({ error: error.message });
       return;
     }
+    if (errorResumen) {
+      res.status(500).json({ error: errorResumen.message });
+      return;
+    }
 
-    // Saldo por cobrar del cliente = facturas ni pagadas ni anuladas.
-    const hoyStr = new Date().toISOString().slice(0, 10);
-    const porCobrarPorCliente = new Map<string, number>();
-    const vencidoPorCliente = new Map<string, number>();
-    for (const f of facturas ?? []) {
-      if (!f.cliente_id || f.estado === "pagada") continue;
-      const monto = Number(f.monto) || 0;
-      porCobrarPorCliente.set(f.cliente_id, (porCobrarPorCliente.get(f.cliente_id) ?? 0) + monto);
-      if (f.fecha_vencimiento && f.fecha_vencimiento < hoyStr) {
-        vencidoPorCliente.set(f.cliente_id, (vencidoPorCliente.get(f.cliente_id) ?? 0) + monto);
-      }
-    }
-    const conPack = new Set((packs ?? []).map((p) => p.cliente_id).filter(Boolean));
-
-    const osPorCliente = new Map<string, number>();
-    const ultimaActividadPorCliente = new Map<string, string>();
-    for (const t of trabajos ?? []) {
-      if (!t.cliente_id) continue;
-      osPorCliente.set(t.cliente_id, (osPorCliente.get(t.cliente_id) ?? 0) + 1);
-      const actual = ultimaActividadPorCliente.get(t.cliente_id);
-      if (!actual || t.fecha > actual) ultimaActividadPorCliente.set(t.cliente_id, t.fecha);
-    }
-    const cotizacionesPorCliente = new Map<string, number>();
-    for (const p of presupuestos ?? []) {
-      if (!p.cliente_id) continue;
-      cotizacionesPorCliente.set(p.cliente_id, (cotizacionesPorCliente.get(p.cliente_id) ?? 0) + 1);
-    }
+    const resumenPorCliente = new Map((resumen ?? []).map((r) => [r.cliente_id, r]));
 
     res.json(
-      (clientes ?? []).map((c) => ({
-        ...c,
-        cantidad_os: osPorCliente.get(c.id) ?? 0,
-        cantidad_cotizaciones: cotizacionesPorCliente.get(c.id) ?? 0,
-        ultima_actividad: ultimaActividadPorCliente.get(c.id) ?? null,
-        total_por_cobrar: porCobrarPorCliente.get(c.id) ?? 0,
-        total_vencido: vencidoPorCliente.get(c.id) ?? 0,
-        tiene_pack: conPack.has(c.id),
-      }))
+      (clientes ?? []).map((c) => {
+        const r = resumenPorCliente.get(c.id);
+        return {
+          ...c,
+          cantidad_os: r?.cantidad_os ?? 0,
+          cantidad_cotizaciones: r?.cantidad_cotizaciones ?? 0,
+          ultima_actividad: r?.ultima_actividad ?? null,
+          total_por_cobrar: r?.total_por_cobrar ?? 0,
+          total_vencido: r?.total_vencido ?? 0,
+          tiene_pack: r?.tiene_pack ?? false,
+        };
+      })
     );
   })
 );

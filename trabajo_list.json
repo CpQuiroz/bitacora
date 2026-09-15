@@ -486,6 +486,21 @@
       ],
       "status": "done",
       "resolution": "Migradas las 21 pantallas de stack + ViajesStack completo (3 pantallas + wrapper) + TrabajosScreen/TrabajoFormScreen + PerfilScreen al sistema visual v2 (ScreenHeader/ListRow-ListRowGrupo/Texto/StatusBadge/Card/Button/Input de @bitacora/ui/native, tokens en vez de useTema()). Trabajo dividido en 9 subagentes en paralelo + 4 archivos propios (ViajesStack completo, Trabajos, Perfil) + pase final de integracion de los 5 Stack.tsx (headerShown:false por pantalla migrada, screenOptions en tokens). 8 de los 9 subagentes murieron por limite de gasto mensual de la cuenta a mitad de camino (dejaron trabajo parcial pero valido en disco); se relanzaron 3 agentes mas chicos con los 9 archivos que realmente faltaban y los 3 terminaron ok. Bug real encontrado y corregido de paso (no pedido, hallado migrando): MasStack.tsx nunca se habia actualizado a headerShown:false para varias pantallas que ya tenian ScreenHeader propio de sesiones anteriores (MantencionVehiculo/Historial, Levantamientos-lista, CobroDetalle) -- quedaban con doble header. Corregido junto con esta tarea. Verificacion: tsc --noEmit -p mobile limpio, ./verificar.sh completo en verde (baseline de colores literales bajo de 9 a 3), auditoria estatica de los 2 errores de migracion mas comunes de la sesion (props invalidas de Texto, ListRowGrupo envuelto por item en vez de una vez por lista) sin hallazgos, y verificacion visual real via react-native-web+Chrome (mock temporal de useAuth()/apiJson(), revertido completo despues) sobre una muestra representativa (Viajes lista+form, Trabajos lista+form, Perfil, Catalogo) sin errores de consola ni de layout. Gap conocido, NO confirmado con la usuaria: los 7 archivos de informes/secciones/*.tsx (contenido de reportes/graficos) quedaron fuera de esta pasada -- fue decision propia, no un pedido explicito de excluirlos. Pendiente: bump de version + build de APK + entrega."
+    },
+    {
+      "id": 32,
+      "name": "optimizar_clientes_resumen_sql",
+      "title": "Optimizar GET /api/clientes -- mover agregados a SQL (RPC clientes_resumen)",
+      "description": "Pedido de la usuaria tras una revision de rendimiento del codigo: GET /api/clientes traia TODAS las filas historicas de trabajos y facturas de la empresa (sin filtro de fecha ni limite) para calcular en Node (con un for) cantidad de OS/ultima actividad/saldo por cobrar por cliente. Crecia sin techo con el historial -- la pantalla mas visitada de la app (Clientes) se vuelve mas pesada para siempre a medida que la empresa opera. Fix: nueva funcion SQL clientes_resumen(p_empresa_id) (migracion 103, GROUP BY sobre los indices por cliente_id que ya existian -- migraciones 82 y 99) que hace todo el calculo en Postgres; el backend solo hace 2 queries (clientes + RPC) y junta los resultados, ya agregados, en memoria.",
+      "acceptance": [
+        "Migracion 103_clientes_resumen_rpc.sql creada -- BLOQUEADA, falta que la usuaria la corra en prod",
+        "backend/src/routes/clientes.ts usa supabase.rpc('clientes_resumen', ...) en vez de traer trabajos/facturas completos -- HECHO",
+        "packages/shared/src/types.ts tipa la funcion (Functions.clientes_resumen) para el .rpc() type-safe -- HECHO",
+        "Query validada con EXPLAIN ANALYZE de solo lectura contra prod (Transportes Itineris) -- HECHO: 5.4ms, resultados verificados fila por fila contra datos reales",
+        "tsc + verificar.sh completo en verde -- HECHO"
+      ],
+      "status": "blocked",
+      "resolution": "Codigo y migracion listos y verificados (tsc limpio, verificar.sh verde, EXPLAIN ANALYZE de solo lectura contra prod real: 5.4ms, filas comparadas contra datos reales de Transportes Itineris). BLOQUEADA: falta que la usuaria corra la migracion 103 en prod (regla del proyecto -- las migraciones a prod las corre ella) antes de desplegar este cambio de backend a main, porque el codigo nuevo llama a una funcion SQL que todavia no existe en produccion."
     }
   ]
 }

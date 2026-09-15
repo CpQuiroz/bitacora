@@ -2382,3 +2382,51 @@ antes de que hiciera la prueba real. La usuaria probó el cierre real de una OS
 en su teléfono con el APK 1.10.0: "ya prbe y quedo ok".
 
 Con esto, `trabajo_list.json` queda con 0 tareas pendientes/bloqueadas/en curso.
+
+## 2026-09-14 (12): revisión de rendimiento + fix #1 (GET /api/clientes)
+
+Pedido de la usuaria: "revisa el codigo y analiza que puede mejorar para que
+funcione mas rapido y obtimizado". Encontré 3 problemas reales en el backend
+(evidencia concreta, no genérica) + 1 menor en web:
+
+1. **`GET /api/clientes`** (clientes.ts) — traía TODAS las filas históricas de
+   `trabajos`/`facturas` de la empresa (sin filtro de fecha ni límite) para
+   calcular en Node cantidad de OS/última actividad/saldo por cobrar por
+   cliente. Crece sin techo con el historial — la pantalla más visitada.
+2. `aplicarDescuentoInventarioSiCorresponde` (inventario.ts) — 2 round-trips
+   secuenciales (no paralelos, no batch) por producto, bloqueando el cierre
+   de cada OS con control de stock activado.
+3. `revisarCobrosCliente` (cobros.ts) — 1 query por factura pendiente en un
+   loop secuencial, en cada carga de la lista de Cobros (fire-and-forget, no
+   bloquea la respuesta, pero desperdicia carga repetida).
+4. Menor: 13 usos de `<img>` plano en web, cero uso de `next/image` en todo
+   el proyecto (lazy loading/responsive gratis si se migrara).
+
+La usuaria pidió arreglar el #1. Implementado:
+
+- **Migración 103** (`103_clientes_resumen_rpc.sql`): función SQL
+  `clientes_resumen(p_empresa_id)` — mueve todo el cálculo (cantidad de OS,
+  última actividad, cotizaciones, saldo por cobrar/vencido, tiene_pack) a un
+  `GROUP BY` en Postgres sobre los índices por `cliente_id` que ya existían
+  (migraciones 82 y 99). Mismo patrón que `trabajos_del_dia()` (05_rutas.sql)
+  y `superadmin_metricas_calcular()` (60_superadmin_metricas.sql) — función
+  SQL plana, security invoker (el backend ya usa service role, bypassa RLS).
+- `backend/src/routes/clientes.ts`: el endpoint ahora hace 2 queries
+  (`clientes` + `rpc("clientes_resumen")`) y solo junta filas YA agregadas —
+  ya no trae ninguna fila cruda de trabajos/facturas.
+- `packages/shared/src/types.ts`: tipado de la función nueva en el bloque
+  `Functions` (mismo lugar que `trabajos_del_dia`) para que el `.rpc()` sea
+  type-safe. Requirió `npm run build` en `packages/shared` (el backend
+  importa el paquete compilado, no el source — mismo gotcha de siempre).
+
+**Validado con EXPLAIN ANALYZE de SOLO LECTURA contra prod real** (Transportes
+Itineris, sin crear la función, corriendo el SELECT equivalente a mano):
+5.4ms, filas comparadas una por una contra datos reales (incluida la OS que
+la usuaria cerró hoy mismo, "Marco Antonio" con fecha 2026-09-14) — coinciden.
+
+`tsc` + `./verificar.sh` completo en verde.
+
+**BLOQUEADA para desplegar**: la migración 103 la tiene que correr la usuaria
+en prod (regla del proyecto) ANTES de que este cambio de backend llegue a
+main — el código nuevo llama a una función SQL que todavía no existe ahí.
+Tarea 32 creada en `trabajo_list.json`, status `blocked`.

@@ -1815,6 +1815,18 @@ export type Database = {
           lng: number | null;
         }[];
       };
+      clientes_resumen: {
+        Args: { p_empresa_id: string };
+        Returns: {
+          cliente_id: string;
+          cantidad_os: number;
+          ultima_actividad: string | null;
+          cantidad_cotizaciones: number;
+          total_por_cobrar: number;
+          total_vencido: number;
+          tiene_pack: boolean;
+        }[];
+      };
     };
   };
 };
