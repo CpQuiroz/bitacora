@@ -2581,3 +2581,9 @@ Migraciones, con el procedimiento exacto de 2 pasos (`db query -f` +
 `migration repair`) para toda migración nueva de aquí en adelante. No se
 tocó ningún archivo de migración existente ni el historial de prod.
 `verificar.sh` completo en verde. Tarea 36 cerrada.
+
+## 2026-09-14 (19): confirmado deploy de Vercel — next/image OK
+
+La usuaria confirmó: "esta ok el deploy de vercel". Con esto se cierra el
+último punto pendiente de la migración de `<img>` a `next/image` (tarea 35).
+No quedan pendientes abiertos salvo la decisión sobre `informes/secciones/*.tsx`.

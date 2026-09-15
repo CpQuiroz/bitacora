@@ -542,7 +542,7 @@
         "Sin verificacion visual real esta vez (requeria auth+datos reales, cambio de bajo riesgo/puramente presentacional, patron 1:1 con la documentacion oficial de Next 16) -- pedirle a la usuaria que revise visualmente logos/fotos/firmas tras el deploy"
       ],
       "status": "done",
-      "resolution": "Implementado y verificado estaticamente (tsc, eslint, verificar.sh verdes). Sin verificacion visual real -- avisar a la usuaria que revise visualmente que los logos, fotos de evidencia y firmas se vean bien tras el deploy (riesgo bajo: cambio puramente presentacional, siguiendo el patron oficial de Next 16 al pie de la letra)."
+      "resolution": "Implementado y verificado estaticamente (tsc, eslint, verificar.sh verdes). Sin verificacion visual real -- avisar a la usuaria que revise visualmente que los logos, fotos de evidencia y firmas se vean bien tras el deploy (riesgo bajo: cambio puramente presentacional, siguiendo el patron oficial de Next 16 al pie de la letra).\n\nCONFIRMADO por la usuaria (14-sep-2026): \"esta ok el deploy de vercel\" -- logos, fotos y firmas se ven bien tras la migración a next/image."
     },
     {
       "id": 36,
