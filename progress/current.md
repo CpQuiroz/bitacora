@@ -2430,3 +2430,41 @@ la usuaria cerró hoy mismo, "Marco Antonio" con fecha 2026-09-14) — coinciden
 en prod (regla del proyecto) ANTES de que este cambio de backend llegue a
 main — el código nuevo llama a una función SQL que todavía no existe ahí.
 Tarea 32 creada en `trabajo_list.json`, status `blocked`.
+
+## 2026-09-14 (13): migración 103 aplicada en prod + hallazgo del historial de migraciones
+
+Al correr `supabase db push --linked` para la migración 103
+(`clientes_resumen`), la CLI tiraba "Found local migration files to be
+inserted before the last migration on remote database" incluso después de
+reparar el historial para 99-102.
+
+**Causa raíz real (vale la pena recordarla)**: `supabase_migrations.schema_migrations`
+en prod solo tenía registro hasta la versión 98 — las migraciones 99, 100, 101
+y 102 SÍ estaban aplicadas en el esquema real (confirmado leyendo las tablas:
+`levantamientos`/`levantamiento_materiales`/`levantamiento_fotos` existen,
+`clientes.contacto_nombre` existe), pero nunca quedaron registradas en el
+historial de la CLI — probablemente se aplicaron pegando el SQL a mano en el
+dashboard en algún momento, no con `db push`.
+
+Reparado el historial (`migration repair --status applied 99 100 101 102`),
+pero el error de `db push` PERSISTÍA — y ahí apareció el problema de fondo:
+**la numeración de migraciones (enteros sin padding: 96, 97... 103) rompe la
+comparación alfabética que usa `db push`.** Al pasar de 2 a 3 dígitos, "99"
+ordena DESPUÉS de "100"/"101"/"102"/"103" como texto (compara carácter por
+carácter: '9' > '1'). Esto significa que CUALQUIER migración ≥100 se va a
+topar con este mismo error mientras el historial tenga algún "9X" — no fue
+un glitch puntual, es estructural. No se corrigió la numeración del proyecto
+esta vez (cambio grande, fuera de alcance) — documentado acá para la próxima.
+
+**Solución usada** (evita `db push` para esta migración, sigue siendo CLI):
+1. `supabase db query --linked -f supabase/migrations/103_clientes_resumen_rpc.sql`
+   — aplica el archivo directo (es un `CREATE OR REPLACE FUNCTION`, seguro
+   de re-ejecutar), sin pasar por el mecanismo de comparación de versiones.
+2. Verificado leyendo `pg_proc` que la función quedó creada, y LLAMÁNDOLA de
+   verdad (`select * from clientes_resumen(...)`) contra Transportes
+   Itineris real — misma salida que el SELECT manual validado antes.
+3. `migration repair --status applied 103` para que el historial quede
+   prolijo (no ejecuta nada, solo bookkeeping).
+
+Con la función ya en prod, se hizo push del backend a `main` (commit
+`dad4263`, ya comiteado antes) — Render lo despliega solo. Tarea 32 cerrada.
