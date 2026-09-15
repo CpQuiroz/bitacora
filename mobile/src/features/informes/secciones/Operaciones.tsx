@@ -1,7 +1,8 @@
 import { View } from "react-native";
-import { useTema } from "../../../theme";
+import { tokens } from "@bitacora/design-tokens";
+import { ErrorState, LoadingState } from "@bitacora/ui/native";
 import { obtenerOperaciones } from "../../../services/informes";
-import { Bloque, CargandoSeccion, ErrorSeccion, FilaTabla, GrillaMetricas, Metrica, SinDatos, useInformeFetch } from "../componentes";
+import { Bloque, FilaTabla, GrillaMetricas, Metrica, SinDatos, useInformeFetch } from "../componentes";
 
 const ETIQUETA_ESTADO: Record<string, string> = {
   agendado: "Agendado",
@@ -11,16 +12,15 @@ const ETIQUETA_ESTADO: Record<string, string> = {
 };
 
 export function Operaciones({ desde, hasta }: { desde: string; hasta: string }) {
-  const t = useTema();
   const { datos, error, reintentar } = useInformeFetch(() => obtenerOperaciones(desde, hasta), [desde, hasta]);
 
-  if (error) return <ErrorSeccion mensaje={error} onReintentar={reintentar} />;
-  if (!datos) return <CargandoSeccion />;
+  if (error) return <ErrorState mensaje={error} onReintentar={reintentar} />;
+  if (!datos) return <LoadingState />;
 
   const { kpis, distribucion_estado: distribucion, os_por_mes: porMes, tiempo_promedio_conclusion: tiempos } = datos;
 
   return (
-    <View style={{ gap: t.espacio(4) }}>
+    <View style={{ gap: tokens.space["4"] }}>
       <GrillaMetricas>
         <Metrica etiqueta="Total de OS" valor={String(kpis.total_os)} />
         <Metrica etiqueta="Completadas" valor={String(kpis.completadas)} nota={`${kpis.pct_conclusion.toFixed(0)}% de conclusión`} />

@@ -556,6 +556,20 @@
       ],
       "status": "done",
       "resolution": "Documentado en docs/harness/convenciones.md, seccion 'Migraciones', con el procedimiento exacto (db query -f + migration repair) a seguir para toda migracion nueva de aqui en adelante. Decision explicita de la usuaria: no renumerar (riesgo real vs. beneficio bajo, dado que el workaround ya funciona)."
+    },
+    {
+      "id": 37,
+      "name": "migrar_informes_secciones_v2",
+      "title": "Migrar informes/secciones/*.tsx y componentes.tsx al sistema visual v2",
+      "description": "Cierra el gap conocido dejado por la tarea 31 (homologacion mobile v2): el CONTENIDO de los 7 reportes (Vision general, Financiero, Ventas, Operaciones, Servicios, Clientes, Gastos, en informes/secciones/*.tsx) y sus bloques compartidos (informes/componentes.tsx: Metrica, GrillaMetricas, Bloque, FilaTabla, SinDatos, CargandoSeccion/ErrorSeccion) seguian en el sistema viejo (useTema(), Text/Card viejo) -- el shell (InformesScreen.tsx, ScreenHeader+filtros de seccion+periodo) ya estaba migrado desde la tarea 31. CargandoSeccion/ErrorSeccion se eliminaron (equivalentes exactos ya existian: LoadingState/ErrorState de @bitacora/ui/native) -- los 7 archivos de secciones ahora los importan directo en vez de duplicarlos localmente.",
+      "acceptance": [
+        "8 archivos migrados (componentes.tsx + 7 secciones) a tokens/Texto/Card/useMarca de @bitacora/ui/native -- HECHO",
+        "CargandoSeccion/ErrorSeccion eliminados, reemplazados por LoadingState/ErrorState reales -- HECHO",
+        "tsc + verificar.sh completo en verde, auditoria estatica de los 2 errores tipicos de la sesion sin hallazgos -- HECHO",
+        "Verificacion visual real (react-native-web + Chrome, mocks temporales de datos de los 7 reportes + bypass de auth, revertido completo despues) de Vision general, Gastos (con el selector de agrupacion) y Servicios (con insights de texto) -- HECHO, sin errores de consola ni de layout"
+      ],
+      "status": "done",
+      "resolution": "Migrados los 8 archivos. Verificado con tsc, verificar.sh, auditoria estatica, y verificacion visual real via react-native-web+Chrome con datos ficticios de los 7 reportes (revertido 100% despues, confirmado con git status/diff limpio). Con esto se cierra el ultimo gap conocido de la homologacion visual v2 del mobile -- toda la app mobile queda en el sistema visual v2."
     }
   ]
 }

@@ -1,47 +1,29 @@
-import { useEffect, useState, type ReactNode } from "react";
-import { ActivityIndicator, View } from "react-native";
-import { useTema } from "../../theme";
-import { Button, Card, Text } from "../../components/ui";
+import { type ReactNode, useEffect, useState } from "react";
+import { View } from "react-native";
+import { tokens } from "@bitacora/design-tokens";
+import { Card, Texto } from "@bitacora/ui/native";
 
-/** Spinner centrado para el contenido de una pestaña — LoadingScreen es
- * a pantalla completa (flex:1), acá el padre ya tiene sus propios chips
- * arriba, así que solo el bloque de abajo debe mostrar "cargando". */
-export function CargandoSeccion() {
-  const t = useTema();
-  return (
-    <View style={{ alignItems: "center", justifyContent: "center", paddingVertical: t.espacio(12) }}>
-      <ActivityIndicator color={t.colores.brand} />
-    </View>
-  );
-}
-
-export function ErrorSeccion({ mensaje, onReintentar }: { mensaje: string; onReintentar: () => void }) {
-  const t = useTema();
-  return (
-    <View style={{ alignItems: "center", gap: t.espacio(3), paddingVertical: t.espacio(8) }}>
-      <Text variante="cuerpo" tono="muted" style={{ textAlign: "center" }}>
-        {mensaje}
-      </Text>
-      <Button titulo="Reintentar" variante="secundario" fullWidth={false} onPress={onReintentar} />
-    </View>
-  );
-}
+// Sistema visual móvil v2 (14-sep-2026) — bloques compartidos de todas
+// las secciones de Informes (Ventas/Financiero/Operaciones/Servicios/
+// Clientes/Gastos, en ./secciones/*.tsx). `CargandoSeccion`/`ErrorSeccion`
+// se eliminaron: los call-sites usan directamente `LoadingState`/
+// `ErrorState` de @bitacora/ui/native (equivalentes exactos, sin
+// necesidad de un wrapper local).
 
 /** Tarjeta de KPI — mismo dato que el <Stat> de la web, en layout de grilla 2 columnas. */
 export function Metrica({ etiqueta, valor, nota }: { etiqueta: string; valor: string; nota?: string }) {
-  const t = useTema();
   return (
-    <View style={{ width: "48%", borderWidth: 1, borderColor: t.colores.border, borderRadius: t.radio.md, padding: t.espacio(3), gap: 2 }}>
-      <Text variante="caption" tono="muted" numberOfLines={1}>
+    <View style={{ width: "48%", borderWidth: 1, borderColor: tokens.color.divider, borderRadius: tokens.radius.md, padding: tokens.space["3"], gap: 2 }}>
+      <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} numberOfLines={1}>
         {etiqueta}
-      </Text>
-      <Text variante="subtitulo" weight="semibold" style={{ fontVariant: ["tabular-nums"] }} numberOfLines={1}>
+      </Texto>
+      <Texto tamano={tokens.size.h5} peso="semibold" color={tokens.color.text} style={{ fontVariant: ["tabular-nums"] }} numberOfLines={1}>
         {valor}
-      </Text>
+      </Texto>
       {nota ? (
-        <Text variante="caption" tono="muted" numberOfLines={1}>
+        <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} numberOfLines={1}>
           {nota}
-        </Text>
+        </Texto>
       ) : null}
     </View>
   );
@@ -49,56 +31,55 @@ export function Metrica({ etiqueta, valor, nota }: { etiqueta: string; valor: st
 
 /** Grilla de Metrica — envuelve en filas de 2. */
 export function GrillaMetricas({ children }: { children: ReactNode }) {
-  const t = useTema();
-  return <View style={{ flexDirection: "row", flexWrap: "wrap", gap: t.espacio(2.5) }}>{children}</View>;
+  return <View style={{ flexDirection: "row", flexWrap: "wrap", gap: tokens.space["2"] }}>{children}</View>;
 }
 
 /** Sección con título — envoltorio consistente para cada bloque del informe. */
 export function Bloque({ titulo, children }: { titulo: string; children: ReactNode }) {
-  const t = useTema();
   return (
-    <Card plano style={{ gap: t.espacio(2.5) }}>
-      <Text variante="etiqueta" weight="semibold">
-        {titulo}
-      </Text>
-      {children}
+    <Card>
+      <View style={{ gap: tokens.space["2"] }}>
+        <Texto tamano={tokens.size.small} peso="semibold" color={tokens.color.text}>
+          {titulo}
+        </Texto>
+        {children}
+      </View>
     </Card>
   );
 }
 
 /** Fila de una tabla simple: etiqueta a la izquierda, 1-2 valores a la derecha. */
 export function FilaTabla({ label, sub, valor, valorSecundario }: { label: string; sub?: string; valor: string; valorSecundario?: string }) {
-  const t = useTema();
   return (
     <View
       style={{
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
-        gap: t.espacio(3),
-        paddingVertical: t.espacio(2),
+        gap: tokens.space["3"],
+        paddingVertical: tokens.space["2"],
         borderBottomWidth: 1,
-        borderBottomColor: t.colores.border,
+        borderBottomColor: tokens.color.divider,
       }}
     >
       <View style={{ flex: 1 }}>
-        <Text variante="etiqueta" numberOfLines={1}>
+        <Texto tamano={tokens.size.small} color={tokens.color.text} numberOfLines={1}>
           {label}
-        </Text>
+        </Texto>
         {sub ? (
-          <Text variante="caption" tono="muted" numberOfLines={1}>
+          <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} numberOfLines={1}>
             {sub}
-          </Text>
+          </Texto>
         ) : null}
       </View>
       <View style={{ alignItems: "flex-end" }}>
-        <Text variante="etiqueta" weight="semibold" style={{ fontVariant: ["tabular-nums"] }}>
+        <Texto tamano={tokens.size.small} peso="semibold" color={tokens.color.text} style={{ fontVariant: ["tabular-nums"] }}>
           {valor}
-        </Text>
+        </Texto>
         {valorSecundario ? (
-          <Text variante="caption" tono="muted" style={{ fontVariant: ["tabular-nums"] }}>
+          <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} style={{ fontVariant: ["tabular-nums"] }}>
             {valorSecundario}
-          </Text>
+          </Texto>
         ) : null}
       </View>
     </View>
@@ -135,8 +116,8 @@ export function useInformeFetch<T>(fetcher: () => Promise<T>, deps: unknown[]): 
 
 export function SinDatos({ mensaje }: { mensaje: string }) {
   return (
-    <Text variante="caption" tono="muted">
+    <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
       {mensaje}
-    </Text>
+    </Texto>
   );
 }

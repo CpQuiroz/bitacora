@@ -2587,3 +2587,36 @@ tocó ningún archivo de migración existente ni el historial de prod.
 La usuaria confirmó: "esta ok el deploy de vercel". Con esto se cierra el
 último punto pendiente de la migración de `<img>` a `next/image` (tarea 35).
 No quedan pendientes abiertos salvo la decisión sobre `informes/secciones/*.tsx`.
+
+## 2026-09-14 (20): informes/secciones/*.tsx migradas al sistema visual v2 — último gap cerrado
+
+Migrados los 8 archivos (`componentes.tsx` + las 7 secciones: VisionGeneral,
+Financiero, Ventas, Operaciones, Servicios, ClientesInforme,
+GastosInformeSeccion). Cambio mecánico y consistente en los 7: quitar
+`useTema()`, `t.espacio(N)` → `tokens.space["N"]`, `Text` viejo → `Texto`.
+`CargandoSeccion`/`ErrorSeccion` locales se ELIMINARON de `componentes.tsx` —
+tenían equivalentes exactos ya existentes (`LoadingState`/`ErrorState` de
+`@bitacora/ui/native`), así que los 7 archivos ahora los importan directo.
+`Metrica`/`GrillaMetricas`/`Bloque`/`FilaTabla`/`SinDatos` se mantuvieron
+como componentes locales (sin equivalente v2 1:1 para el layout de
+grilla-KPI/tabla-de-reporte) pero con el interior migrado a tokens/Texto/
+Card. `GastosInformeSeccion` además tenía su propio toggle de agrupación
+(Pressable a mano) — migrado a `marca.base`/tokens, mismo patrón que el
+resto de la app.
+
+Verificación visual real (react-native-web + Chrome, mocks temporales de
+los 7 tipos de informe con datos ficticios realistas + bypass de auth,
+revertido 100% después — confirmado con `git status`/`diff` limpio):
+recorrí Visión general (grilla KPI + Bloques + FilaTabla), Gastos (con el
+selector de agrupación Por categoría/Centro de costo/OS, cambia el tono
+igual que cualquier otro toggle de la app) y Servicios (con los insights de
+texto con viñetas). Todo renderiza limpio, sin errores de consola, visual
+consistente con el resto de la app ya migrada.
+
+`tsc` + `verificar.sh` completo en verde. Tarea 37 cerrada.
+
+**Con esto queda cerrado el último gap conocido de la homologación visual
+v2 del mobile — toda la app mobile está en el sistema visual v2.** Falta
+solo: commit, y un build de APK si la usuaria lo quiere para probarlo en
+el teléfono (no es obligatorio para este cambio, es contenido de reportes
+que se puede validar en el próximo build normal).

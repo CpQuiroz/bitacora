@@ -1,8 +1,9 @@
 import { View } from "react-native";
-import { useTema } from "../../../theme";
+import { tokens } from "@bitacora/design-tokens";
+import { ErrorState, LoadingState } from "@bitacora/ui/native";
 import { formatearMoneda } from "../../../lib/plata";
 import { obtenerFinanciero } from "../../../services/informes";
-import { Bloque, CargandoSeccion, ErrorSeccion, FilaTabla, GrillaMetricas, Metrica, SinDatos, useInformeFetch } from "../componentes";
+import { Bloque, FilaTabla, GrillaMetricas, Metrica, SinDatos, useInformeFetch } from "../componentes";
 
 const ETIQUETA_MEDIO: Record<string, string> = {
   webpay: "Webpay",
@@ -17,16 +18,15 @@ const ETIQUETA_MEDIO: Record<string, string> = {
 const pct = (parte: number, total: number) => (total > 0 ? `${((parte / total) * 100).toFixed(0)}% del total` : undefined);
 
 export function Financiero({ desde, hasta, moneda }: { desde: string; hasta: string; moneda: string }) {
-  const t = useTema();
   const { datos, error, reintentar } = useInformeFetch(() => obtenerFinanciero(desde, hasta), [desde, hasta]);
 
-  if (error) return <ErrorSeccion mensaje={error} onReintentar={reintentar} />;
-  if (!datos) return <CargandoSeccion />;
+  if (error) return <ErrorState mensaje={error} onReintentar={reintentar} />;
+  if (!datos) return <LoadingState />;
 
   const { resumen_financiero: r, ingresos_por_mes: porMes, por_forma_pago: formaPago, mejores_clientes: clientes } = datos;
 
   return (
-    <View style={{ gap: t.espacio(4) }}>
+    <View style={{ gap: tokens.space["4"] }}>
       <GrillaMetricas>
         <Metrica etiqueta="Ingreso total" valor={formatearMoneda(r.total, moneda)} />
         <Metrica etiqueta="Total recibido" valor={formatearMoneda(r.recibido, moneda)} nota={pct(r.recibido, r.total)} />

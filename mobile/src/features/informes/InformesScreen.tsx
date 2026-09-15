@@ -64,8 +64,8 @@ function ChipsPeriodo<T extends string>({ opciones, valor, onElegir }: { opcione
 // sección pasa a ser el `filtros` del propio ScreenHeader. El selector
 // de período queda como una fila de chips propia debajo, mismo patrón
 // que la navegación de período de AgendaScreen. Las secciones
-// (Ventas/Financiero/etc, en ./secciones/*) NO se migran acá — quedan
-// con su propio look, es un gap conocido para otra pasada.
+// (Ventas/Financiero/etc, en ./secciones/*) y sus bloques compartidos
+// (./componentes.tsx) también migradas (14-sep-2026).
 export function InformesScreen({ navigation }: NativeStackScreenProps<MasStackParamList, "Informes">) {
   const auth = useAuth();
   const [periodo, setPeriodo] = useState<PeriodoValor>("este_mes");

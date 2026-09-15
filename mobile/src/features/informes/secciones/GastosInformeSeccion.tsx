@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { Pressable, View } from "react-native";
-import { useTema } from "../../../theme";
-import { Text } from "../../../components/ui";
+import { tokens } from "@bitacora/design-tokens";
+import { ErrorState, LoadingState, Texto, useMarca } from "@bitacora/ui/native";
 import { formatearMoneda } from "../../../lib/plata";
 import { obtenerGastosInforme, type AgrupacionGastos } from "../../../services/informes";
-import { Bloque, CargandoSeccion, ErrorSeccion, FilaTabla, GrillaMetricas, Metrica, SinDatos, useInformeFetch } from "../componentes";
+import { Bloque, FilaTabla, GrillaMetricas, Metrica, SinDatos, useInformeFetch } from "../componentes";
 
 const AGRUPACIONES: { valor: AgrupacionGastos; etiqueta: string; dimension: string; dimensionPlural: string }[] = [
   { valor: "categoria", etiqueta: "Por categoría", dimension: "Categoría", dimensionPlural: "Categorías" },
@@ -13,14 +13,14 @@ const AGRUPACIONES: { valor: AgrupacionGastos; etiqueta: string; dimension: stri
 ];
 
 export function GastosInformeSeccion({ desde, hasta, moneda }: { desde: string; hasta: string; moneda: string }) {
-  const t = useTema();
+  const marca = useMarca();
   const [agrupacion, setAgrupacion] = useState<AgrupacionGastos>("categoria");
   const config = AGRUPACIONES.find((a) => a.valor === agrupacion)!;
   const { datos, error, reintentar } = useInformeFetch(() => obtenerGastosInforme(desde, hasta, agrupacion), [desde, hasta, agrupacion]);
 
   return (
-    <View style={{ gap: t.espacio(4) }}>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: t.espacio(2) }}>
+    <View style={{ gap: tokens.space["4"] }}>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: tokens.space["2"] }}>
         {AGRUPACIONES.map((a) => {
           const activo = a.valor === agrupacion;
           return (
@@ -30,23 +30,23 @@ export function GastosInformeSeccion({ desde, hasta, moneda }: { desde: string; 
               style={{
                 minHeight: 36,
                 justifyContent: "center",
-                paddingHorizontal: t.espacio(3),
-                borderRadius: t.radio.md,
-                backgroundColor: activo ? t.colores.brand : t.colores.surfaceAlt,
+                paddingHorizontal: tokens.space["3"],
+                borderRadius: tokens.radius.md,
+                backgroundColor: activo ? marca.base : tokens.color.surface,
               }}
             >
-              <Text variante="caption" weight="semibold" tono={activo ? "inverso" : "muted"}>
+              <Texto tamano={tokens.size.caption} peso="semibold" color={activo ? marca.foreground : `${tokens.color.text}99`}>
                 {a.etiqueta}
-              </Text>
+              </Texto>
             </Pressable>
           );
         })}
       </View>
 
       {error ? (
-        <ErrorSeccion mensaje={error} onReintentar={reintentar} />
+        <ErrorState mensaje={error} onReintentar={reintentar} />
       ) : !datos ? (
-        <CargandoSeccion />
+        <LoadingState />
       ) : (
         <>
           <GrillaMetricas>

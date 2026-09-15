@@ -1,12 +1,11 @@
 import { useMemo } from "react";
 import { View } from "react-native";
-import { useTema } from "../../../theme";
-import { Text } from "../../../components/ui";
+import { tokens } from "@bitacora/design-tokens";
+import { ErrorState, LoadingState, Texto } from "@bitacora/ui/native";
 import { obtenerServicios } from "../../../services/informes";
-import { Bloque, CargandoSeccion, ErrorSeccion, FilaTabla, GrillaMetricas, Metrica, SinDatos, useInformeFetch } from "../componentes";
+import { Bloque, FilaTabla, GrillaMetricas, Metrica, SinDatos, useInformeFetch } from "../componentes";
 
 export function Servicios({ desde, hasta }: { desde: string; hasta: string }) {
-  const t = useTema();
   const { datos, error, reintentar } = useInformeFetch(() => obtenerServicios(desde, hasta), [desde, hasta]);
 
   // Mismos 3 insights que ya arma la web a partir de los mismos datos —
@@ -28,13 +27,13 @@ export function Servicios({ desde, hasta }: { desde: string; hasta: string }) {
     return lista;
   }, [datos]);
 
-  if (error) return <ErrorSeccion mensaje={error} onReintentar={reintentar} />;
-  if (!datos) return <CargandoSeccion />;
+  if (error) return <ErrorState mensaje={error} onReintentar={reintentar} />;
+  if (!datos) return <LoadingState />;
 
   const { kpis, distribucion_tipo: distribucion, ranking_tipos: ranking, top_clientes_por_tipo: topClientes } = datos;
 
   return (
-    <View style={{ gap: t.espacio(4) }}>
+    <View style={{ gap: tokens.space["4"] }}>
       <GrillaMetricas>
         <Metrica etiqueta="Total de OS" valor={String(kpis.total_os)} />
         <Metrica etiqueta="Completadas" valor={String(kpis.completadas)} />
@@ -70,11 +69,11 @@ export function Servicios({ desde, hasta }: { desde: string; hasta: string }) {
         {insights.length === 0 ? (
           <SinDatos mensaje="Sin observaciones todavía — clasifica tus OS por Tipo de OS para verlas acá." />
         ) : (
-          <View style={{ gap: t.espacio(1.5) }}>
+          <View style={{ gap: tokens.space["1"] }}>
             {insights.map((texto, i) => (
-              <Text key={i} variante="cuerpo">
+              <Texto key={i} tamano={tokens.size.small} color={tokens.color.text}>
                 • {texto}
-              </Text>
+              </Texto>
             ))}
           </View>
         )}
