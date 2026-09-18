@@ -3020,3 +3020,42 @@ Pendiente explícito: Catálogo, Equipos y Proveedores solo tienen
 Exportar por ahora — Importar sigue mostrando el `alert()` hasta que se
 haga esa segunda pasada (mismo componente `ImportarCsvModal`, un
 endpoint `/importar` nuevo por entidad).
+
+## 2026-09-18 (5): parche de seguridad — Next.js 16.3.2 → 16.3.5 (RCE crítica)
+
+Pedido explícito: "revisa aparte" la vulnerabilidad crítica que quedó
+avisada en el pedido anterior. Investigué antes de tocar nada:
+
+- **GHSA-p293-qw3h-jr36** (RCE no autenticada, servidores Windows) — no
+  aplica a donde corre prod (Vercel/Render son Linux), pero sí a
+  cualquier máquina de desarrollo con Windows.
+- **GHSA-2xp9-vwfh-vxw4** (RCE en la Image Optimization API con
+  archivos AVIF) — esta SÍ es relevante para Bitácora, sin importar el
+  SO: la app usa `next/image` con `remotePatterns` hacia Supabase
+  Storage (foto de perfil, logo, evidencia de OS/viajes/mantención —
+  ver el hallazgo de performance de esta misma sesión), es decir la
+  Image Optimization API está activa y procesa archivos que vienen de
+  fuera.
+- Fix: `next@16.3.5` (parche, mismo minor — 3 versiones patch por
+  delante de la 16.3.2, sin cambios de breaking). Al subir next, su
+  `sharp` opcional también sube de `^0.35.3` a `^0.35.4`, que de paso
+  cierra la vulnerabilidad alta de `sharp`/libheif que había quedado
+  avisada — un solo bump resuelve las dos.
+- De paso encontré una duplicación: `next` estaba declarado TANTO en
+  `web/package.json` como en el `package.json` raíz (ninguna razón
+  real — nada en los scripts de la raíz corre next directo, todo
+  delega con `-w web`). Actualicé los dos para que quede una sola
+  versión resuelta (antes había dos copias en el árbol, una vieja).
+
+Verificado: `tsc` + `verificar.sh` completo en verde, `npm run dev`
+bootea limpio en Next 16.3.5, `/login` responde 200.
+
+**Lo que NO toqué** (fuera de lo pedido, mucho más grande/riesgoso):
+`npm audit` en la raíz (todo el monorepo, no solo web) muestra otras
+19 vulnerabilidades (17 moderadas, 2 altas) — todas en el árbol de
+`expo`/`@react-navigation`/`express`/`multer`/etc. de mobile y backend,
+NO en next. La mayoría de esas rutas de dependencia son herramientas de
+build/CLI (expo-cli, eslint), no código que corre en producción — y
+tocar la versión de Expo específicamente está marcada como frágil en
+`mobile/AGENTS.md` ("Expo HAS CHANGED — leer la doc oficial antes").
+Si querés que las revise también, es un pedido aparte.
