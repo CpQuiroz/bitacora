@@ -1,0 +1,11 @@
+-- BITÁCORA — Parte B: qué secciones muestra el informe/PDF de OS,
+-- configurable por empresa (packages/shared/src/types.ts: SECCIONES_PDF_OS).
+-- Aditiva y reversible, sin backfill: plantillas viejas quedan en null
+-- (generarPdfOS.ts trata ausencia = mostrar, mismo criterio que la
+-- migración 98 con `categoria`).
+--
+-- Solo aplica a plantillas_documento.tipo = 'orden_servicio' — para los
+-- otros 3 tipos (cotizacion/cobranza/terminos_aceptacion) la columna
+-- queda sin usar, no vale la pena una tabla nueva para 10 booleanos que
+-- solo aplican a un tipo de documento de los 4.
+alter table plantillas_documento add column secciones_pdf jsonb;

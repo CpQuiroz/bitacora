@@ -11,7 +11,7 @@
 // Todo el layout sale de helpers genéricos de pdfEstilo.ts.
 // ============================================================
 import PDFDocument from "pdfkit";
-import type { CategoriaFotoOS } from "@bitacora/shared";
+import type { CategoriaFotoOS, SeccionPdfOS } from "@bitacora/shared";
 import { ETIQUETA_CATEGORIA_FOTO_OS } from "@bitacora/shared";
 import { ANCHO, M_DER, M_IZQ, PDF, abrirCaja, cajaGrilla, cajaLista, cerrarCaja, regla, tituloBarra, tituloSeccion } from "./pdfEstilo";
 
@@ -46,6 +46,10 @@ export type DatosOSPdf = {
   // referencia de Hidroservi/2Workers: la foto va en el punto exacto
   // del formulario donde la empresa la puso, no en una galería aparte).
   camposFoto: { etiqueta: string; fotos: string[] }[];
+  // Qué secciones muestra el PDF (migración 106, Configuración >
+  // Plantillas > Orden de servicio). Siempre completo (armarDatosPdf en
+  // trabajos.ts ya rellena las claves ausentes con `true`).
+  seccionesVisibles: Record<SeccionPdfOS, boolean>;
   checklist: { item: string; hecho: boolean; hora: string | null }[];
   checkInAt: string | null;
   checkOutAt: string | null;
@@ -159,18 +163,20 @@ export async function generarPdfOS(datos: DatosOSPdf): Promise<Buffer> {
   }
 
   // --- Informaciones del cliente ---
-  cajaGrilla(
-    doc,
-    "Informaciones del cliente",
-    [
-      { etiqueta: "Cliente", valor: datos.clienteNombre },
-      { etiqueta: "RUT", valor: datos.clienteRut },
-      { etiqueta: "Teléfono", valor: datos.clienteTelefono },
-      { etiqueta: "Correo", valor: datos.clienteCorreo },
-      { etiqueta: "Dirección", valor: datos.clienteDireccion ?? datos.direccion },
-    ],
-    colorMarca
-  );
+  if (datos.seccionesVisibles.cliente) {
+    cajaGrilla(
+      doc,
+      "Informaciones del cliente",
+      [
+        { etiqueta: "Cliente", valor: datos.clienteNombre },
+        { etiqueta: "RUT", valor: datos.clienteRut },
+        { etiqueta: "Teléfono", valor: datos.clienteTelefono },
+        { etiqueta: "Correo", valor: datos.clienteCorreo },
+        { etiqueta: "Dirección", valor: datos.clienteDireccion ?? datos.direccion },
+      ],
+      colorMarca
+    );
+  }
 
   // --- Datos de la tarea ---
   cajaGrilla(
@@ -188,71 +194,73 @@ export async function generarPdfOS(datos: DatosOSPdf): Promise<Buffer> {
     colorMarca
   );
 
-  if (datos.descripcion) {
+  if (datos.seccionesVisibles.descripcion && datos.descripcion) {
     tituloSeccion(doc, "Descripción del servicio", colorMarca, M_IZQ);
     doc.font("Helvetica").fontSize(10).fillColor(PDF.tinta).text(datos.descripcion, M_IZQ, doc.y, { width: ANCHO });
     doc.moveDown(1);
   }
 
-  // --- Campos del tipo de trabajo (numerados, en grilla) ---
-  if (datos.camposPersonalizados.length > 0) {
-    cajaGrilla(doc, "Campos del tipo de trabajo", datos.camposPersonalizados, colorMarca, { numerada: true });
+  // --- Campos del tipo de trabajo (numerados, en grilla) + campos foto ---
+  if (datos.seccionesVisibles.campos) {
+    if (datos.camposPersonalizados.length > 0) {
+      cajaGrilla(doc, "Campos del tipo de trabajo", datos.camposPersonalizados, colorMarca, { numerada: true });
+    }
+
+    // Campos tipo "foto" del formulario — cada uno con su propio
+    // título, justo después de la grilla (mismo lugar donde la empresa
+    // los puso al armar el tipo de trabajo).
+    for (const c of camposFotoConBuffers) {
+      if (doc.y > 640) doc.addPage();
+      doc
+        .font("Helvetica-Bold")
+        .fontSize(7.5)
+        .fillColor(PDF.muted)
+        .text(c.etiqueta.toUpperCase(), M_IZQ, doc.y, { characterSpacing: 0.6, width: ANCHO });
+      doc.moveDown(0.3);
+      if (c.buffers.length === 0) {
+        doc.font("Helvetica").fontSize(9).fillColor(PDF.faint).text("Sin foto todavía.", M_IZQ, doc.y, { width: ANCHO });
+        doc.fillColor(PDF.tinta);
+        doc.moveDown(0.8);
+        continue;
+      }
+      let x = M_IZQ;
+      let filaY = doc.y;
+      const anchoFoto = 155;
+      for (const buf of c.buffers) {
+        if (x + anchoFoto > 545) {
+          x = M_IZQ;
+          filaY += 120;
+        }
+        if (filaY > 640) {
+          doc.addPage();
+          filaY = doc.y;
+          x = M_IZQ;
+        }
+        try {
+          doc.image(buf, x, filaY, { width: anchoFoto, height: 110, fit: [anchoFoto, 110] });
+        } catch {
+          // foto corrupta o formato no soportado — se omite
+        }
+        x += anchoFoto + 15;
+      }
+      doc.y = filaY + 120;
+      doc.moveDown(0.4);
+    }
   }
 
-  // --- Campos tipo "foto" del formulario — cada uno con su propio
-  // título, justo después de la grilla (mismo lugar donde la empresa
-  // los puso al armar el tipo de trabajo). ---
-  for (const c of camposFotoConBuffers) {
-    if (doc.y > 640) doc.addPage();
-    doc
-      .font("Helvetica-Bold")
-      .fontSize(7.5)
-      .fillColor(PDF.muted)
-      .text(c.etiqueta.toUpperCase(), M_IZQ, doc.y, { characterSpacing: 0.6, width: ANCHO });
-    doc.moveDown(0.3);
-    if (c.buffers.length === 0) {
-      doc.font("Helvetica").fontSize(9).fillColor(PDF.faint).text("Sin foto todavía.", M_IZQ, doc.y, { width: ANCHO });
-      doc.fillColor(PDF.tinta);
-      doc.moveDown(0.8);
-      continue;
-    }
-    let x = M_IZQ;
-    let filaY = doc.y;
-    const anchoFoto = 155;
-    for (const buf of c.buffers) {
-      if (x + anchoFoto > 545) {
-        x = M_IZQ;
-        filaY += 120;
-      }
-      if (filaY > 640) {
-        doc.addPage();
-        filaY = doc.y;
-        x = M_IZQ;
-      }
-      try {
-        doc.image(buf, x, filaY, { width: anchoFoto, height: 110, fit: [anchoFoto, 110] });
-      } catch {
-        // foto corrupta o formato no soportado — se omite
-      }
-      x += anchoFoto + 15;
-    }
-    doc.y = filaY + 120;
-    doc.moveDown(0.4);
-  }
-
-  if (datos.observacionesCierre) {
+  if (datos.seccionesVisibles.observaciones && datos.observacionesCierre) {
     tituloSeccion(doc, "Observaciones de cierre", colorMarca, M_IZQ);
     doc.font("Helvetica").fontSize(10).fillColor(PDF.tinta).text(datos.observacionesCierre, M_IZQ, doc.y, { width: ANCHO });
     doc.moveDown(1);
   }
-  if (datos.informeIA) {
+  if (datos.seccionesVisibles.informe_ia && datos.informeIA) {
     tituloSeccion(doc, "Informe técnico", colorMarca, M_IZQ);
     doc.font("Helvetica").fontSize(10).fillColor(PDF.tinta).text(datos.informeIA, M_IZQ, doc.y, { width: ANCHO });
     doc.moveDown(1);
   }
 
   // --- Tabla de ítems ---
-  if (datos.items.length > 0) {
+  if (datos.seccionesVisibles.items && datos.items.length > 0) {
     if (doc.y > 680) doc.addPage();
     doc.moveDown(0.5);
     const top = doc.y;
@@ -284,7 +292,7 @@ export async function generarPdfOS(datos: DatosOSPdf): Promise<Buffer> {
   }
 
   // --- Checklist ---
-  if (datos.checklist.length > 0) {
+  if (datos.seccionesVisibles.checklist && datos.checklist.length > 0) {
     cajaLista(
       doc,
       "Checklist de la visita",
@@ -298,7 +306,7 @@ export async function generarPdfOS(datos: DatosOSPdf): Promise<Buffer> {
   }
 
   // --- Fotos, agrupadas por categoría ---
-  if (fotosPorCategoria.length > 0) {
+  if (datos.seccionesVisibles.fotos && fotosPorCategoria.length > 0) {
     if (doc.y > 600) doc.addPage();
     tituloBarra(doc, `Fotos (${fotosPorCategoria.length})`, colorMarca);
     doc.moveDown(0.3);
@@ -339,7 +347,7 @@ export async function generarPdfOS(datos: DatosOSPdf): Promise<Buffer> {
   }
 
   // --- Firmas: técnico (si hay) y cliente ---
-  if (datos.firmaTecnicoUrl || datos.tecnicoFirmanteNombre) {
+  if (datos.seccionesVisibles.firma_tecnico && (datos.firmaTecnicoUrl || datos.tecnicoFirmanteNombre)) {
     bloqueFirma(doc, colorMarca, {
       titulo: "Firma del técnico responsable",
       imagen: firmaTecnicoBuffer,
@@ -347,12 +355,14 @@ export async function generarPdfOS(datos: DatosOSPdf): Promise<Buffer> {
       documento: datos.tecnicoFirmanteDocumento,
     });
   }
-  bloqueFirma(doc, colorMarca, {
-    titulo: "Firma de conformidad del cliente",
-    imagen: firmaBuffer,
-    nombre: datos.firmanteNombre,
-    documento: datos.firmanteDocumento,
-  });
+  if (datos.seccionesVisibles.firma_cliente) {
+    bloqueFirma(doc, colorMarca, {
+      titulo: "Firma de conformidad del cliente",
+      imagen: firmaBuffer,
+      nombre: datos.firmanteNombre,
+      documento: datos.firmanteDocumento,
+    });
+  }
 
   if (datos.textoPie) {
     doc.moveDown(1);

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import type { PlantillaDocumento, PosicionLogo, TipoPlantilla } from "@bitacora/shared";
+import { SECCIONES_PDF_OS, type PlantillaDocumento, type PosicionLogo, type SeccionPdfOS, type TipoPlantilla } from "@bitacora/shared";
 import { supabase } from "../supabase";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
@@ -77,6 +77,7 @@ plantillasRouter.patch(
       mensaje_predeterminado,
       terminos_condiciones,
       mostrar_firma,
+      secciones_pdf,
     } = req.body ?? {};
     const cambios: Partial<PlantillaDocumento> = {};
 
@@ -107,6 +108,24 @@ plantillasRouter.patch(
     if (mensaje_predeterminado !== undefined) cambios.mensaje_predeterminado = mensaje_predeterminado?.trim() || null;
     if (terminos_condiciones !== undefined) cambios.terminos_condiciones = terminos_condiciones?.trim() || null;
     if (mostrar_firma !== undefined) cambios.mostrar_firma = Boolean(mostrar_firma);
+    if (secciones_pdf !== undefined) {
+      if (secciones_pdf !== null && (typeof secciones_pdf !== "object" || Array.isArray(secciones_pdf))) {
+        res.status(400).json({ error: "secciones_pdf debe ser un objeto {clave: boolean}" });
+        return;
+      }
+      if (secciones_pdf) {
+        const claves = Object.keys(secciones_pdf);
+        if (claves.some((k) => !(SECCIONES_PDF_OS as readonly string[]).includes(k))) {
+          res.status(400).json({ error: `secciones_pdf solo admite: ${SECCIONES_PDF_OS.join(", ")}` });
+          return;
+        }
+        if (claves.some((k) => typeof secciones_pdf[k as SeccionPdfOS] !== "boolean")) {
+          res.status(400).json({ error: "cada valor de secciones_pdf debe ser boolean" });
+          return;
+        }
+      }
+      cambios.secciones_pdf = secciones_pdf;
+    }
 
     const { data, error } = await supabase
       .from("plantillas_documento")

@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
-import type { PlantillaDocumento, PosicionLogo, TipoPlantilla, VariablePlantilla } from "@bitacora/shared";
-import { VARIABLES_COBRANZA, VARIABLES_COTIZACION, VARIABLES_OS, sustituirVariables } from "@bitacora/shared";
+import type { PlantillaDocumento, PosicionLogo, SeccionPdfOS, TipoPlantilla, VariablePlantilla } from "@bitacora/shared";
+import { ETIQUETA_SECCION_PDF_OS, SECCIONES_PDF_OS, VARIABLES_COBRANZA, VARIABLES_COTIZACION, VARIABLES_OS, sustituirVariables } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
 import { Button, Card, Input, LoadingState, Select, Textarea } from "@bitacora/ui/web";
 import { useConfiguracion } from "../ConfiguracionContext";
@@ -84,6 +84,11 @@ export default function PlantillasPage() {
   const [mensajePredeterminado, setMensajePredeterminado] = useState("");
   const [terminosCondiciones, setTerminosCondiciones] = useState("");
   const [mostrarFirma, setMostrarFirma] = useState(true);
+  // Migración 106 — solo aplica al tab "Orden de Servicio". Ausente en
+  // el objeto guardado = mostrar (default seguro).
+  const [seccionesPdf, setSeccionesPdf] = useState<Partial<Record<SeccionPdfOS, boolean>>>({});
+  const seccionActiva = (s: SeccionPdfOS) => seccionesPdf[s] !== false;
+  const alternarSeccion = (s: SeccionPdfOS) => setSeccionesPdf((prev) => ({ ...prev, [s]: !seccionActiva(s) }));
 
   const [guardando, setGuardando] = useState(false);
   const [restaurando, setRestaurando] = useState(false);
@@ -110,6 +115,7 @@ export default function PlantillasPage() {
     setMensajePredeterminado(p.mensaje_predeterminado ?? "");
     setTerminosCondiciones(p.terminos_condiciones ?? "");
     setMostrarFirma(p.mostrar_firma);
+    setSeccionesPdf(p.secciones_pdf ?? {});
   }, [usuario.empresa.color_primario, usuario.empresa.color_secundario]);
 
   useEffect(() => {
@@ -133,6 +139,7 @@ export default function PlantillasPage() {
         mensaje_predeterminado: mensajePredeterminado,
         terminos_condiciones: terminosCondiciones,
         mostrar_firma: mostrarFirma,
+        ...(tab === "orden_servicio" ? { secciones_pdf: seccionesPdf } : {}),
       }),
     });
     setGuardando(false);
@@ -263,6 +270,23 @@ export default function PlantillasPage() {
                   </label>
                 </div>
               </Card>
+
+              {tab === "orden_servicio" ? (
+                <Card>
+                  <p className="mb-ds-1 font-ds-body text-ds-small font-semibold text-ds-text">Secciones del informe de OS</p>
+                  <p className="mb-ds-4 font-ds-body text-ds-caption text-ds-text/60">
+                    Elegí qué secciones se muestran en el PDF/informe que recibe el cliente.
+                  </p>
+                  <div className="grid gap-ds-3 sm:grid-cols-3">
+                    {SECCIONES_PDF_OS.map((s) => (
+                      <label key={s} className="flex items-center gap-ds-2 font-ds-body text-ds-small text-ds-text">
+                        <input type="checkbox" checked={seccionActiva(s)} onChange={() => alternarSeccion(s)} className="accent-[var(--ds-brand)]" />
+                        {ETIQUETA_SECCION_PDF_OS[s]}
+                      </label>
+                    ))}
+                  </div>
+                </Card>
+              ) : null}
 
               {error ? <p className="font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
               {aviso ? <p className="font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}

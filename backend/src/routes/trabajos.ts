@@ -1,7 +1,7 @@
 import { Router } from "express";
 import multer from "multer";
-import type { Anexo, CampoTipoTrabajo, CategoriaFotoOS, EstadoOS, EstadoTrabajo, ItemChecklist, OrdenServicio, Prioridad, TipoCheckin, TipoTrabajo, Trabajo } from "@bitacora/shared";
-import { CATEGORIAS_FOTO_OS, mapearCamposPersonalizados, sustituirVariables } from "@bitacora/shared";
+import type { Anexo, CampoTipoTrabajo, CategoriaFotoOS, EstadoOS, EstadoTrabajo, ItemChecklist, OrdenServicio, Prioridad, SeccionPdfOS, TipoCheckin, TipoTrabajo, Trabajo } from "@bitacora/shared";
+import { CATEGORIAS_FOTO_OS, SECCIONES_PDF_OS, mapearCamposPersonalizados, sustituirVariables } from "@bitacora/shared";
 import { supabase } from "../supabase";
 import { subirFirma, subirFoto, urlFirmada, subirPdfOS, descargarPdfOS, descargarFoto, borrarFoto, subirAnexo, urlFirmadaAnexo } from "../storage";
 import { analizarFoto, generarInformeOS, type ImagenInforme } from "../claude";
@@ -1419,10 +1419,17 @@ export async function armarDatosPdf(empresaId: string, trabajoId: string) {
 
   const { data: plantilla } = await supabase
     .from("plantillas_documento")
-    .select("texto_encabezado, texto_pie, color_primario")
+    .select("texto_encabezado, texto_pie, color_primario, mostrar_logo, secciones_pdf")
     .eq("empresa_id", empresaId)
     .eq("tipo", "orden_servicio")
     .maybeSingle();
+
+  // Qué secciones muestra el PDF (migración 106) — ausente/null = mostrar
+  // (default seguro, no rompe plantillas ya guardadas antes de esta tarea).
+  const seccionesGuardadas = (plantilla?.secciones_pdf ?? {}) as Partial<Record<SeccionPdfOS, boolean>>;
+  const seccionesVisibles = Object.fromEntries(
+    SECCIONES_PDF_OS.map((s) => [s, seccionesGuardadas[s] !== false])
+  ) as Record<SeccionPdfOS, boolean>;
 
   const { data: items } = await supabase
     .from("os_items")
@@ -1486,7 +1493,11 @@ export async function armarDatosPdf(empresaId: string, trabajoId: string) {
 
   return {
     empresaNombre: empresa?.nombre ?? "",
-    empresaLogoUrl: empresa?.logo_url ?? null,
+    // mostrar_logo (migración 14) nunca se leía en ningún generador de
+    // PDF — quedaba guardado en Configuración > Plantillas sin ningún
+    // efecto. Se conecta acá de paso, junto con seccionesVisibles.
+    empresaLogoUrl: plantilla?.mostrar_logo === false ? null : empresa?.logo_url ?? null,
+    seccionesVisibles,
     colorPrimario: plantilla?.color_primario ?? empresa?.color_primario ?? null,
     textoEncabezado: plantilla?.texto_encabezado ? sustituirVariables(plantilla.texto_encabezado, variables) : null,
     textoPie: plantilla?.texto_pie ? sustituirVariables(plantilla.texto_pie, variables) : null,

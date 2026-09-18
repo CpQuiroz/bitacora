@@ -2668,3 +2668,38 @@ de OS).
 Confirmado leyendo `information_schema.columns` que `analisis_fotos.campo_clave`
 existe en prod. Push del backend/web a main. Tarea 38 cerrada. Sigue: parte B
 (configuración de qué secciones muestra el informe de OS).
+
+## 2026-09-17: parte B — qué secciones muestra el informe/PDF de OS
+
+Segunda mitad del pedido inspirado en el informe de referencia de
+2Workers ("OS Digital"). 10 secciones toggleables por empresa: cliente,
+descripción, campos del formulario (incluye las fotos incrustadas de la
+parte A), checklist, fotos, observaciones, informe IA, ítems, firma
+técnico, firma cliente.
+
+- **Migración 106**: `plantillas_documento.secciones_pdf jsonb` — solo
+  aplica a `tipo='orden_servicio'`; ausente/null = mostrar (default
+  seguro, sin backfill, mismo criterio que `categoria` en migración 98).
+- `packages/shared/src/types.ts`: `SECCIONES_PDF_OS`/`ETIQUETA_SECCION_PDF_OS`
+  (10 claves) + `PlantillaDocumento.secciones_pdf`.
+- `backend/src/routes/plantillas.ts`: `PATCH /:tipo` valida y guarda
+  `secciones_pdf` (objeto con solo esas 10 claves, valores boolean).
+- `backend/src/routes/trabajos.ts` (`armarDatosPdf`): calcula
+  `seccionesVisibles` completo (rellena ausentes con `true`). **Bug real
+  encontrado de paso**: `mostrar_logo` (migración 14, Configuración >
+  Plantillas) se guardaba hace tiempo pero NINGÚN generador de PDF lo
+  leía — quedaba sin ningún efecto. Se conectó junto con esta tarea.
+- `backend/src/generarPdfOS.ts`: las 10 secciones ahora respetan
+  `datos.seccionesVisibles.*` antes de imprimirse.
+- Web `configuracion/plantillas`: nueva tarjeta "Secciones del informe
+  de OS" (solo visible en el tab "Orden de Servicio") con las 10
+  casillas, mismo patrón visual que el checklist "OS Digital" del
+  ejemplo.
+
+**Validado con `BEGIN`/`ROLLBACK` real contra prod**: columna se crea
+bien (`jsonb`), rollback confirmado con lectura fresca aparte (0 rastro).
+
+`tsc` + `verificar.sh` completo en verde. Tarea 39 creada, `blocked` —
+falta que la usuaria aplique la migración 106 (mismo camino: `db query
+-f` + `migration repair`). Con esto se completa el pedido completo
+inspirado en el informe de 2Workers (parte A + parte B).

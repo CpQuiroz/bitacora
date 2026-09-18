@@ -589,6 +589,23 @@
       ],
       "status": "done",
       "resolution": "Codigo listo y verificado (tsc, verificar.sh, logica de la migracion probada con BEGIN/ROLLBACK real contra prod sin dejar cambios). BLOQUEADA: falta que la usuaria aplique la migracion 105 en prod. Mismo camino que las anteriores (>=100): `supabase db query -f supabase/migrations/105_campo_foto_tipo_trabajo.sql` + `migration repair --status applied 105` -- NO usar `db push`, va a fallar por el problema de numeracion ya documentado (tarea 32).\n\nMigración 105 aplicada en prod (confirmado leyendo information_schema). Backend/web pusheados a main."
+    },
+    {
+      "id": 39,
+      "name": "secciones_visibles_pdf_os",
+      "title": "Parte B -- que secciones muestra el informe/PDF de OS (configurable por empresa)",
+      "description": "Segunda mitad del pedido inspirado en el informe de referencia de 2Workers (checklist 'OS Digital'). 10 secciones toggleables (cliente, descripcion, campos del formulario, checklist, fotos, observaciones, informe IA, items, firma tecnico, firma cliente), guardadas en plantillas_documento.secciones_pdf (migracion 106, jsonb, solo aplica a tipo='orden_servicio'). Ausente/null = mostrar (default seguro). De paso se encontro y conecto un bug real preexistente: mostrar_logo (migracion 14) se guardaba desde Configuracion > Plantillas pero NINGUN generador de PDF lo leia -- quedaba sin efecto. Se conecto en generarPdfOS.ts junto con secciones_pdf.",
+      "acceptance": [
+        "Migracion 106 (plantillas_documento.secciones_pdf) -- BLOQUEADA, falta que la usuaria la aplique en prod",
+        "PATCH /plantillas/:tipo acepta y valida secciones_pdf -- HECHO",
+        "armarDatosPdf calcula seccionesVisibles (default true) y conecta mostrar_logo (bug preexistente sin efecto) -- HECHO",
+        "generarPdfOS.ts respeta seccionesVisibles en las 10 secciones -- HECHO",
+        "Web: checklist de 10 secciones en Configuracion > Plantillas > Orden de Servicio -- HECHO",
+        "tsc + verificar.sh completo en verde -- HECHO",
+        "Migracion validada con BEGIN/ROLLBACK real contra prod -- HECHO"
+      ],
+      "status": "blocked",
+      "resolution": "Codigo listo y verificado. BLOQUEADA: falta que la usuaria aplique la migracion 106 en prod. Mismo camino ya establecido (>=100): `supabase db query -f supabase/migrations/106_secciones_pdf_os.sql` + `migration repair --status applied 106` -- NO usar `db push`."
     }
   ]
 }

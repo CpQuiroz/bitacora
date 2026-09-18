@@ -1437,6 +1437,36 @@ export type MensajeAsistente = {
   creado_en: string;
 };
 
+// Secciones del PDF/informe de OS que se pueden ocultar (migración 106
+// — plantillas_documento.secciones_pdf, solo aplica a tipo
+// "orden_servicio"). null o clave ausente = mostrar (default seguro,
+// sin backfill: las plantillas viejas quedan como estaban).
+export const SECCIONES_PDF_OS = [
+  "cliente",
+  "descripcion",
+  "campos",
+  "checklist",
+  "fotos",
+  "observaciones",
+  "informe_ia",
+  "items",
+  "firma_tecnico",
+  "firma_cliente",
+] as const;
+export type SeccionPdfOS = (typeof SECCIONES_PDF_OS)[number];
+export const ETIQUETA_SECCION_PDF_OS: Record<SeccionPdfOS, string> = {
+  cliente: "Datos del cliente",
+  descripcion: "Descripción del servicio",
+  campos: "Campos del formulario",
+  checklist: "Checklist de la visita",
+  fotos: "Fotos",
+  observaciones: "Observaciones de cierre",
+  informe_ia: "Informe técnico (IA)",
+  items: "Ítems y materiales",
+  firma_tecnico: "Firma del técnico",
+  firma_cliente: "Firma del cliente",
+};
+
 export type PlantillaDocumento = {
   id: string;
   empresa_id: string;
@@ -1450,6 +1480,7 @@ export type PlantillaDocumento = {
   mensaje_predeterminado: string | null;
   terminos_condiciones: string | null;
   mostrar_firma: boolean;
+  secciones_pdf: Partial<Record<SeccionPdfOS, boolean>> | null;
   actualizado_en: string;
 };
 
