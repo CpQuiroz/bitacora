@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Modal, Platform, Pressable, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import DateTimePicker, { type DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { tokens } from "@bitacora/design-tokens";
 import type { PropsDatePicker } from "../tipos";
@@ -15,6 +16,7 @@ function formatear(f: Date): string {
 // Mismo patrón que components/ui/SelectorHora.tsx: Android es un diálogo
 // nativo que se cierra solo; iOS queda en nuestro modal con Listo/Cancelar.
 export function DatePicker({ etiqueta, error, ayuda, deshabilitado, valor, onCambio, placeholder, minimo, maximo }: PropsDatePicker) {
+  const insets = useSafeAreaInsets();
   const [abierto, setAbierto] = useState(false);
   const [borrador, setBorrador] = useState<Date>(valor ?? new Date());
 
@@ -62,7 +64,9 @@ export function DatePicker({ etiqueta, error, ayuda, deshabilitado, valor, onCam
                 backgroundColor: tokens.color.surface,
                 borderTopLeftRadius: tokens.radius.lg,
                 borderTopRightRadius: tokens.radius.lg,
-                padding: tokens.space["4"],
+                paddingHorizontal: tokens.space["4"],
+                paddingTop: tokens.space["4"],
+                paddingBottom: tokens.space["4"] + insets.bottom,
                 gap: tokens.space["3"],
               }}
             >

@@ -3059,3 +3059,43 @@ build/CLI (expo-cli, eslint), no código que corre en producción — y
 tocar la versión de Expo específicamente está marcada como frágil en
 `mobile/AGENTS.md` ("Expo HAS CHANGED — leer la doc oficial antes").
 Si querés que las revise también, es un pedido aparte.
+
+## 2026-09-18 (6): bug real — bottom sheets tapados por la barra de gestos
+
+Reporte de la usuaria con screenshot: al abrir "Elegir del catálogo"
+(Levantamientos > Materiales > Agregar) el contenido queda tapado por
+la barra de navegación/gestos de Android, no se ve completo. Sospechaba
+que pasa en otras secciones también — tenía razón.
+
+Causa: `Dialog` (`packages/ui/src/native/Dialog.tsx`), el bottom sheet
+genérico del sistema visual v2, nunca usó `useSafeAreaInsets()` — su
+padding inferior es un valor fijo (`tokens.space["4"]`), que no alcanza
+para despejar la barra de gestos de Android ni el home indicator de
+iOS. El proyecto YA tiene el patrón correcto en varios lugares
+(`AsignarPackModal`, `PickerBuscable`, `SelectorResponsable`,
+`HojaCrearCliente`, `TipoPackModal` — todos con
+`insets.bottom` sumado al padding) — `Dialog` se armó sin copiarlo.
+
+Reviso el resto de los bottom sheets **compartidos** de
+`packages/ui/src/native` (los que se reusan en más de un lugar, a
+diferencia de los `Modal` ad-hoc de cada pantalla) y encontré el mismo
+bug en 2 más:
+- `Select.tsx` — usado en 7 pantallas, incluida `CamposDinamicos.tsx`
+  (el campo tipo "selección" agregado hoy mismo).
+- `AsistenteSheet.tsx` — sin uso todavía en ninguna pantalla, pero
+  corregido igual (se va a usar).
+- `DatePicker.tsx` — mismo bug, solo en iOS (Android usa el diálogo
+  nativo del sistema, que ya maneja sus propios insets).
+
+Fix: los 4 ganan `useSafeAreaInsets()` y sumar `insets.bottom` al
+padding inferior del sheet — mismo patrón ya probado en el resto del
+proyecto, sin inventar uno nuevo. `react-native-safe-area-context` ya
+era dependencia (`mobile/package.json`), no hizo falta agregar nada.
+
+**No es un bug nuevo de hoy** — viene desde que se creó `Dialog.tsx`
+(sistema visual v2, 13-sep-2026) y ya estaba en el APK que se acaba de
+entregar (1.10.1). Necesita un APK nuevo para que se vea corregido en
+los celulares.
+
+`tsc` (ui + mobile) + `verificar.sh` completo en verde. Sin backend, sin
+migración — 4 archivos de `packages/ui/src/native`.

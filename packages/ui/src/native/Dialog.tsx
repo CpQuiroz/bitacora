@@ -1,4 +1,5 @@
 import { Modal, Pressable, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { X } from "lucide-react-native";
 import { tokens } from "@bitacora/design-tokens";
 import type { PropsDialog } from "../tipos";
@@ -8,7 +9,15 @@ import { Texto } from "./Texto";
 // En mobile el "Dialog" es siempre un bottom sheet (no hay variante
 // centrada) — misma paleta que el web: backdrop neutral.900 @ 50%,
 // contenedor con el radio de Card (radius.lg × 1.15) y sombra lg.
+//
+// Bug real (18-sep-2026): el contenido quedaba tapado por la barra de
+// gestos/navegación de Android (o el home indicator de iOS) — le
+// faltaba el inset inferior que otros bottom sheets del proyecto
+// (AsignarPackModal, PickerBuscable, etc.) ya aplican con
+// useSafeAreaInsets(). Mismo bug en Select.tsx y AsistenteSheet.tsx,
+// corregido junto con este.
 export function Dialog({ abierto, onCerrar, titulo, children }: PropsDialog) {
+  const insets = useSafeAreaInsets();
   return (
     <Modal visible={abierto} transparent animationType="fade" onRequestClose={onCerrar}>
       <Pressable
@@ -46,7 +55,9 @@ export function Dialog({ abierto, onCerrar, titulo, children }: PropsDialog) {
               <X size={18} strokeWidth={2.75} color={`${tokens.color.text}99`} />
             </Pressable>
           </View>
-          <View style={{ paddingHorizontal: tokens.space["6"], paddingVertical: tokens.space["4"] }}>{children}</View>
+          <View style={{ paddingHorizontal: tokens.space["6"], paddingTop: tokens.space["4"], paddingBottom: tokens.space["4"] + insets.bottom }}>
+            {children}
+          </View>
         </Pressable>
       </Pressable>
     </Modal>

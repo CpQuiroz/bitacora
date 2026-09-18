@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Modal, Pressable, TextInput, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Mic, Sparkles } from "lucide-react-native";
 import { tokens } from "@bitacora/design-tokens";
 import { Texto } from "./Texto";
@@ -29,6 +30,7 @@ export type PropsAsistenteSheet = {
 };
 
 export function AsistenteSheet({ abierto, onCerrar, atajos, mensaje, onCambiarMensaje, onEnviar, onMicrofono }: PropsAsistenteSheet) {
+  const insets = useSafeAreaInsets();
   return (
     <Modal visible={abierto} transparent animationType="fade" onRequestClose={onCerrar}>
       <Pressable
@@ -43,7 +45,7 @@ export function AsistenteSheet({ abierto, onCerrar, atajos, mensaje, onCambiarMe
             maxHeight: "85%",
             paddingHorizontal: tokens.space["4"],
             paddingTop: tokens.space["4"],
-            paddingBottom: tokens.space["6"],
+            paddingBottom: tokens.space["6"] + insets.bottom,
             gap: tokens.space["4"],
           }}
         >

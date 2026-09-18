@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Modal, Pressable, ScrollView, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ChevronDown } from "lucide-react-native";
 import { tokens } from "@bitacora/design-tokens";
 import type { PropsSelect } from "../tipos";
@@ -11,6 +12,7 @@ import { Texto } from "./Texto";
 // app, ej. PickerBuscable). Esta es la primitiva base del sistema nuevo.
 export function Select({ etiqueta, error, ayuda, deshabilitado, valor, onCambio, opciones, placeholder }: PropsSelect) {
   const marca = useMarca();
+  const insets = useSafeAreaInsets();
   const [abierto, setAbierto] = useState(false);
   const seleccionada = opciones.find((o) => o.valor === valor);
 
@@ -49,7 +51,8 @@ export function Select({ etiqueta, error, ayuda, deshabilitado, valor, onCambio,
               borderTopLeftRadius: tokens.radius.lg,
               borderTopRightRadius: tokens.radius.lg,
               maxHeight: "70%",
-              paddingVertical: tokens.space["3"],
+              paddingTop: tokens.space["3"],
+              paddingBottom: tokens.space["3"] + insets.bottom,
             }}
           >
             <ScrollView>
