@@ -2763,3 +2763,15 @@ rollback confirmado con lectura fresca aparte (tabla y columna en 0).
 tabla nueva tiene RLS). Tarea 40 creada, `blocked` — falta que la usuaria
 aplique la migración 107. Con esto se completa TODO el pedido original
 inspirado en el informe de 2Workers (partes A, B y esta).
+
+## 2026-09-17 (4): migración 107 aplicada en prod + pedido completo desplegado
+
+Confirmado leyendo `information_schema` que `cotizacion_etapas` y
+`presupuestos.etapa_id` existen en prod. Push del backend/web a main.
+Tarea 40 cerrada.
+
+**Con esto queda completo y desplegado todo el pedido inspirado en el
+informe de referencia de 2Workers**: campo tipo "foto" incrustado en el
+formulario de OS (parte A), secciones configurables del PDF de OS
+(parte B), y etapas de cotización configurables (este). `trabajo_list.json`
+queda sin tareas abiertas.

@@ -622,8 +622,8 @@
         "tsc + verificar.sh completo en verde (incluye audit:tenant, la tabla nueva tiene RLS) -- HECHO",
         "Migracion validada con BEGIN/ROLLBACK real contra prod, incluida la insercion de etapas de prueba -- HECHO"
       ],
-      "status": "blocked",
-      "resolution": "Codigo listo y verificado. BLOQUEADA: falta que la usuaria aplique la migracion 107 en prod. Mismo camino ya establecido (>=100): `supabase db query -f supabase/migrations/107_etapas_cotizacion.sql` + `migration repair --status applied 107` -- NO usar `db push`."
+      "status": "done",
+      "resolution": "Codigo listo y verificado. BLOQUEADA: falta que la usuaria aplique la migracion 107 en prod. Mismo camino ya establecido (>=100): `supabase db query -f supabase/migrations/107_etapas_cotizacion.sql` + `migration repair --status applied 107` -- NO usar `db push`.\n\nMigración 107 aplicada en prod (confirmado leyendo information_schema: tabla y columna existen). Backend/web pusheados a main."
     }
   ]
 }
