@@ -7,19 +7,28 @@ import { requiereModulo } from "../permisos";
 
 export const tiposTrabajoRouter = Router();
 
-const TIPOS_CAMPO = ["texto", "numero", "fecha", "booleano"];
+// "foto" faltaba acá desde la migración 105 — cualquier tipo de trabajo
+// con un campo tipo "foto" era rechazado por esta validación (400) antes
+// de este fix (17-sep-2026).
+const TIPOS_CAMPO = ["texto", "numero", "fecha", "booleano", "foto", "seleccion"];
 
 function campoValido(c: unknown): c is CampoTipoTrabajo {
   if (typeof c !== "object" || c === null) return false;
   const campo = c as Record<string, unknown>;
-  return (
-    typeof campo.clave === "string" &&
-    campo.clave.trim().length > 0 &&
-    typeof campo.etiqueta === "string" &&
-    campo.etiqueta.trim().length > 0 &&
-    typeof campo.tipo === "string" &&
-    TIPOS_CAMPO.includes(campo.tipo)
-  );
+  if (
+    typeof campo.clave !== "string" ||
+    campo.clave.trim().length === 0 ||
+    typeof campo.etiqueta !== "string" ||
+    campo.etiqueta.trim().length === 0 ||
+    typeof campo.tipo !== "string" ||
+    !TIPOS_CAMPO.includes(campo.tipo)
+  ) {
+    return false;
+  }
+  if (campo.tipo === "seleccion") {
+    return Array.isArray(campo.opciones) && campo.opciones.length > 0 && campo.opciones.every((o) => typeof o === "string" && o.trim().length > 0);
+  }
+  return true;
 }
 
 tiposTrabajoRouter.get(
@@ -58,7 +67,7 @@ tiposTrabajoRouter.post(
     const camposFinal = campos === undefined ? [] : campos;
     if (!Array.isArray(camposFinal) || !camposFinal.every(campoValido)) {
       res.status(400).json({
-        error: "campos debe ser un arreglo de {clave, etiqueta, tipo: texto|numero|fecha|booleano}",
+        error: "campos debe ser un arreglo de {clave, etiqueta, tipo: texto|numero|fecha|booleano|foto|seleccion (seleccion requiere opciones: string[] no vacío)}",
       });
       return;
     }
@@ -94,7 +103,7 @@ tiposTrabajoRouter.patch(
     if (campos !== undefined) {
       if (!Array.isArray(campos) || !campos.every(campoValido)) {
         res.status(400).json({
-          error: "campos debe ser un arreglo de {clave, etiqueta, tipo: texto|numero|fecha|booleano}",
+          error: "campos debe ser un arreglo de {clave, etiqueta, tipo: texto|numero|fecha|booleano|foto|seleccion (seleccion requiere opciones: string[] no vacío)}",
         });
         return;
       }

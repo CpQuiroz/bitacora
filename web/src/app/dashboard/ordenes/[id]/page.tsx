@@ -11,7 +11,7 @@ import { apiFetch } from "@/lib/api";
 import { abrirPdfOS } from "@/lib/descargarPdf";
 import { formatearCLP } from "@bitacora/shared";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Button, Card, Cifra, DatePicker, Input, StatusBadge, Table, Textarea } from "@bitacora/ui/web";
+import { Button, Card, Cifra, DatePicker, Input, Select, StatusBadge, Table, Textarea } from "@bitacora/ui/web";
 import { InputMonto } from "@/components/InputMonto";
 import { CatalogoSelectorModal, type ItemSeleccionadoCatalogo } from "@/components/CatalogoSelectorModal";
 import { ComboboxResponsable } from "@/components/ComboboxResponsable";
@@ -318,6 +318,14 @@ export default function DetalleOrdenServicioPage() {
                           etiqueta={campo.etiqueta}
                           valor={aFecha(datosEdit[campo.clave] ?? "")}
                           onCambio={(f) => setDatosEdit((prev) => ({ ...prev, [campo.clave]: aTexto(f) }))}
+                        />
+                      ) : campo.tipo === "seleccion" ? (
+                        <Select
+                          key={campo.clave}
+                          etiqueta={campo.etiqueta}
+                          valor={datosEdit[campo.clave] ?? ""}
+                          onCambio={(v) => setDatosEdit((prev) => ({ ...prev, [campo.clave]: v }))}
+                          opciones={[{ valor: "", etiqueta: "Sin definir" }, ...(campo.opciones ?? []).map((o) => ({ valor: o, etiqueta: o }))]}
                         />
                       ) : (
                         <Input

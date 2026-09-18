@@ -15,6 +15,10 @@ const TIPOS_CAMPO: { valor: CampoTipoTrabajo["tipo"]; etiqueta: string }[] = [
   // exacto del formulario donde quedó este campo (no en la galería
   // general de fotos de la OS).
   { valor: "foto", etiqueta: "Foto" },
+  // El técnico elige una de las opciones definidas abajo (ej. "Se
+  // cumple con las herramientas" del informe de referencia de
+  // 2Workers/Hidroservi, 17-sep-2026).
+  { valor: "seleccion", etiqueta: "Selección" },
 ];
 
 function slugificar(texto: string) {
@@ -99,8 +103,17 @@ export default function TiposTrabajoPage() {
       setErrorForm("Cada campo necesita una clave (se genera sola desde la etiqueta)");
       return;
     }
+    // Los campos "seleccion" guardan las opciones tal como se tipearon
+    // (separadas por coma) — se limpian recién al guardar.
+    const camposLimpios = camposValidos.map((c) =>
+      c.tipo === "seleccion" ? { ...c, opciones: (c.opciones ?? []).map((o) => o.trim()).filter(Boolean) } : c
+    );
+    if (camposLimpios.some((c) => c.tipo === "seleccion" && (c.opciones?.length ?? 0) === 0)) {
+      setErrorForm("Los campos de tipo Selección necesitan al menos una opción");
+      return;
+    }
     setGuardando(true);
-    const body = JSON.stringify({ nombre, campos: camposValidos });
+    const body = JSON.stringify({ nombre, campos: camposLimpios });
     const res = editandoId
       ? await apiFetch(`/api/tipos-trabajo/${editandoId}`, { method: "PATCH", body })
       : await apiFetch("/api/tipos-trabajo", { method: "POST", body });
@@ -163,26 +176,36 @@ export default function TiposTrabajoPage() {
             </p>
             <div className="flex flex-col gap-ds-3">
               {campos.map((c, i) => (
-                <div key={i} className="grid grid-cols-[1fr_1fr_8rem_auto] items-end gap-ds-2 rounded-ds-md border border-ds-divider p-ds-3">
-                  <Input
-                    etiqueta={i === 0 ? "Etiqueta" : undefined}
-                    placeholder="ej: pH"
-                    valor={c.etiqueta}
-                    onCambio={(v) => {
-                      const claveAuto = c.clave === slugificar(c.etiqueta) || !c.clave;
-                      actualizarCampo(i, { etiqueta: v, clave: claveAuto ? slugificar(v) : c.clave });
-                    }}
-                  />
-                  <Input etiqueta={i === 0 ? "Clave interna" : undefined} placeholder="ph" valor={c.clave} onCambio={(v) => actualizarCampo(i, { clave: slugificar(v) })} />
-                  <Select
-                    etiqueta={i === 0 ? "Tipo" : undefined}
-                    valor={c.tipo}
-                    onCambio={(v) => actualizarCampo(i, { tipo: v as CampoTipoTrabajo["tipo"] })}
-                    opciones={TIPOS_CAMPO.map((t) => ({ valor: t.valor, etiqueta: t.etiqueta }))}
-                  />
-                  <Button variante="ghost" onPress={() => quitarCampo(i)} deshabilitado={campos.length === 1}>
-                    Quitar
-                  </Button>
+                <div key={i} className="flex flex-col gap-ds-2 rounded-ds-md border border-ds-divider p-ds-3">
+                  <div className="grid grid-cols-[1fr_1fr_8rem_auto] items-end gap-ds-2">
+                    <Input
+                      etiqueta={i === 0 ? "Etiqueta" : undefined}
+                      placeholder="ej: pH"
+                      valor={c.etiqueta}
+                      onCambio={(v) => {
+                        const claveAuto = c.clave === slugificar(c.etiqueta) || !c.clave;
+                        actualizarCampo(i, { etiqueta: v, clave: claveAuto ? slugificar(v) : c.clave });
+                      }}
+                    />
+                    <Input etiqueta={i === 0 ? "Clave interna" : undefined} placeholder="ph" valor={c.clave} onCambio={(v) => actualizarCampo(i, { clave: slugificar(v) })} />
+                    <Select
+                      etiqueta={i === 0 ? "Tipo" : undefined}
+                      valor={c.tipo}
+                      onCambio={(v) => actualizarCampo(i, { tipo: v as CampoTipoTrabajo["tipo"] })}
+                      opciones={TIPOS_CAMPO.map((t) => ({ valor: t.valor, etiqueta: t.etiqueta }))}
+                    />
+                    <Button variante="ghost" onPress={() => quitarCampo(i)} deshabilitado={campos.length === 1}>
+                      Quitar
+                    </Button>
+                  </div>
+                  {c.tipo === "seleccion" ? (
+                    <Input
+                      etiqueta="Opciones (separadas por coma)"
+                      placeholder="ej: Sí, No, Parcial"
+                      valor={(c.opciones ?? []).join(",")}
+                      onCambio={(v) => actualizarCampo(i, { opciones: v.split(",") })}
+                    />
+                  ) : null}
                 </div>
               ))}
             </div>

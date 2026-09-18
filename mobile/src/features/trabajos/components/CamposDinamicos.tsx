@@ -4,7 +4,7 @@ import * as ImagePicker from "expo-image-picker";
 import { Camera, RefreshCw, AlertCircle } from "lucide-react-native";
 import type { CampoTipoTrabajo } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
-import { Button, Input, Texto } from "@bitacora/ui/native";
+import { Button, Input, Select, Texto } from "@bitacora/ui/native";
 import { comprimirImagen } from "../../../lib/imagen";
 import type { FotoConUrl } from "../../../services/trabajos";
 import type { FotoPendiente } from "./FotosSection";
@@ -169,6 +169,16 @@ export function CamposDinamicos({
             onAgregar={(archivo) => onAgregarFoto?.(campo.clave, archivo)}
             onQuitarPendiente={onQuitarFotoPendiente}
             onEliminar={onEliminarFoto}
+          />
+        ) : campo.tipo === "seleccion" ? (
+          <Select
+            key={campo.clave}
+            etiqueta={campo.etiqueta}
+            deshabilitado={!editable}
+            valor={valores[campo.clave] ?? ""}
+            onCambio={(v) => onCambiar(campo.clave, v)}
+            opciones={(campo.opciones ?? []).map((o) => ({ valor: o, etiqueta: o }))}
+            placeholder="Elegir..."
           />
         ) : (
           <Input

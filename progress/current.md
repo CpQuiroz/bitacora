@@ -2803,3 +2803,47 @@ Implementado en los 2 lugares web donde aparece el selector "Función":
 Sin migración — cambio puramente de frontend (rendering condicional), sin
 tocar schema ni API. `tsc -p web` + `verificar.sh` completo en verde.
 Sin tarea nueva en `trabajo_list.json` (cambio chico, documentado acá).
+
+## 2026-09-17 (6): tipo de campo "selección" (parte 2 del pedido 2Workers)
+
+Última parte pendiente del pedido inspirado en 2Workers: tipo de campo
+"selección" para `CampoTipoTrabajo` (dropdown fijo, ej. campo #4 "Se
+cumple con las herramientas" del informe de referencia) — deferido
+originalmente al implementar la parte A (campo foto).
+
+**Bug real encontrado de paso** (no relacionado al pedido, descubierto
+al tocar la validación): `backend/src/routes/tiposTrabajo.ts`'s
+`TIPOS_CAMPO` **nunca incluyó `"foto"`** desde la migración 105 —
+cualquier tipo de trabajo con un campo tipo "foto" era rechazado con 400
+al guardar desde Configuración > Tipos de Trabajo. Corregido en el mismo
+cambio (agregado "foto" a la lista). Esto probablemente explica por qué
+la parte 3 (confirmación real de uso) seguía pendiente — el campo foto
+puede no haberse podido ni crear todavía. Falta que la usuaria lo
+verifique.
+
+Implementado "seleccion":
+- `packages/shared/src/types.ts`: `CampoTipoTrabajo.tipo` +`"seleccion"`,
+  `+ opciones?: string[]`. El valor elegido se guarda como texto en
+  `trabajo.datos` (igual que "texto"), sin cambios en
+  `mapearCamposPersonalizados`.
+- `backend/src/routes/tiposTrabajo.ts`: `TIPOS_CAMPO` ahora
+  `["texto","numero","fecha","booleano","foto","seleccion"]`;
+  `campoValido` exige `opciones: string[]` no vacío cuando `tipo ===
+  "seleccion"`.
+- Web `configuracion/tipos-trabajo/page.tsx`: opción "Selección" en el
+  selector de tipo + input "Opciones (separadas por coma)" que aparece
+  solo para ese tipo; se limpian (trim + descarta vacíos) al guardar.
+- Web `ordenes/[id]/page.tsx` (edición desktop de la OS): campo
+  "seleccion" se edita con un `<Select>` (antes solo texto/número/fecha
+  tenían tratamiento especial).
+- Mobile `CamposDinamicos.tsx`: campo "seleccion" usa el `<Select>`
+  nativo (hoja modal) de `@bitacora/ui/native` en vez de `<Input>`.
+
+Sin migración (`tipos_trabajo.campos` ya es `jsonb`, sin cambio de
+schema). `tsc` (backend/web/mobile) + `verificar.sh` completo en verde.
+
+**Con esto, las 2 partes técnicas del pedido de 2Workers están
+completas** (campos seleccionables + estatus de cotización). Queda la
+parte 3 — confirmación real de uso en producción por parte de la
+usuaria — que no es algo que yo pueda ejecutar, requiere que lo prueben
+con datos reales en el celular/web.

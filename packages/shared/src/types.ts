@@ -454,7 +454,14 @@ export type CampoTipoTrabajo = {
   // muestran como su propio bloque de fotos, en el lugar del
   // formulario donde la empresa las puso (mismo criterio que el
   // informe de referencia de 2Workers/Hidroservi, 14-sep-2026).
-  tipo: "texto" | "numero" | "fecha" | "booleano" | "foto";
+  // "seleccion": el técnico elige una de `opciones` (ej. "Se cumple
+  // con las herramientas" del informe de referencia de 2Workers) — el
+  // valor elegido se guarda como texto en trabajo.datos, igual que
+  // "texto".
+  tipo: "texto" | "numero" | "fecha" | "booleano" | "foto" | "seleccion";
+  // Solo aplica a tipo "seleccion": las alternativas que puede elegir
+  // el técnico. Ignorado para los demás tipos.
+  opciones?: string[];
 };
 
 // Cruza los campos definidos por el tipo de trabajo contra los valores
