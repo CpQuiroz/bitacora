@@ -2847,3 +2847,45 @@ completas** (campos seleccionables + estatus de cotización). Queda la
 parte 3 — confirmación real de uso en producción por parte de la
 usuaria — que no es algo que yo pueda ejecutar, requiere que lo prueben
 con datos reales en el celular/web.
+
+## 2026-09-18: "Pizarra Digital" — reorganización de navegación móvil
+
+Pedido: renombrar la primera sección de la app y darle a Viajes/
+Mantención/OS/Gastos/Cobros su propia sección con buen ícono. Antes de
+tocar código armé 3 mockups (Artifact) para acordar la forma exacta:
+uno para web (el pedido resultó ser para móvil, no web), uno móvil
+literal (7 secciones de 1 ítem en "Más") y uno con grilla de accesos
+rápidos — la usuaria eligió la grilla tras pedirle que lo estudiara
+bien ("es más ruidoso partir en 7 secciones que un bloque de íconos
+grandes").
+
+**Respaldo antes de aplicar** (pedido explícito): tag
+`pre-pizarra-digital-mobile` en `1879b03` (HEAD previo), pusheado a
+origin. Para volver atrás: `git checkout pre-pizarra-digital-mobile --
+mobile/` (o `git diff pre-pizarra-digital-mobile HEAD -- mobile/` para
+ver el diff completo).
+
+Implementado:
+- `AppTabs.tsx`: pestaña "Hoy" → label "Pizarra" (nombre corto, entra
+  en la tab bar), ícono `Sun` → `LayoutDashboard`. El `key: "Hoy"`
+  interno, `HoyStack`, `HoyScreen` y `services/hoy.ts` NO se tocaron —
+  solo lo visible. Esto toca la regla "tabs Agenda/Hoy congeladas" de
+  `AGENTS.md`, pero por pedido explícito de la usuaria (la regla dice
+  "sin pedido explícito", no "nunca").
+- `HoyScreen.tsx`: título del `ScreenHeader` "Hoy" → "Pizarra Digital"
+  (nombre completo, cabe ahí sin problema de espacio).
+- `MasScreen.tsx`: nueva grilla "Accesos rápidos" (3 columnas, filas
+  rellenadas con espacios vacíos si no completan 3) con Órdenes de
+  servicio / Viajes / Mantención / Cobros (con badge de vencidos, sin
+  el subtítulo de monto que no entra en una tarjeta chica) / Nuevo
+  gasto / Levantamientos — mismo gating por rol/módulo/plan que antes,
+  solo cambia cómo se pintan. Tinte alternado marca/marca secundaria
+  por tarjeta (no monocromo). El grupo "Operación" desaparece (todo su
+  contenido pasa a la grilla); "Administración" queda solo con
+  Servicios y packs + Informes (uso ocasional, se queda como lista sin
+  el mismo peso visual); "Cuenta" sin cambios.
+
+`tsc` (mobile) + `verificar.sh` completo en verde. Sin migración, sin
+cambios de backend — puramente mobile. Falta compilar y entregar un
+APK nuevo para que se vea en los celulares (mismo pendiente que ya
+estaba abierto desde el campo foto — ver nota anterior sobre APK).

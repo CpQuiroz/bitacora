@@ -48,6 +48,11 @@ function fechaDeHoy(): string {
 // `filtros`) y el Asistente se mueve del ícono del header al
 // AsistenteButton flotante, gateado igual que en "Más" (antes el ícono
 // del header no tenía ningún gating por plan — se corrige de paso).
+//
+// "Pizarra Digital" (18-sep-2026): solo cambia el título visible del
+// ScreenHeader y la etiqueta de la tab bar (AppTabs.tsx) — el nombre
+// interno (route key "Hoy", este componente, services/hoy.ts) no se
+// tocó, no hacía falta.
 export function HoyScreen({ navigation }: NativeStackScreenProps<HoyStackParamList, "HoyInicio">) {
   const auth = useAuth();
   const marca = useMarca();
@@ -112,7 +117,7 @@ export function HoyScreen({ navigation }: NativeStackScreenProps<HoyStackParamLi
   if (items === null && !error) {
     return (
       <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
-        <ScreenHeader antetitulo={fechaDeHoy()} titulo="Hoy" filtros={filtros} />
+        <ScreenHeader antetitulo={fechaDeHoy()} titulo="Pizarra Digital" filtros={filtros} />
         <View style={{ padding: tokens.space["4"], gap: tokens.space["3"] }}>
           <LoadingState>
             <Skeleton alto={72} radio={32} />
@@ -127,7 +132,7 @@ export function HoyScreen({ navigation }: NativeStackScreenProps<HoyStackParamLi
   if (error && !items) {
     return (
       <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
-        <ScreenHeader antetitulo={fechaDeHoy()} titulo="Hoy" filtros={filtros} />
+        <ScreenHeader antetitulo={fechaDeHoy()} titulo="Pizarra Digital" filtros={filtros} />
         <ErrorState mensaje={error} onReintentar={cargar} />
         <AsistenteButton visible={veAsistente} onPress={() => navigation.navigate("Asistente")} />
       </View>
@@ -136,7 +141,7 @@ export function HoyScreen({ navigation }: NativeStackScreenProps<HoyStackParamLi
 
   return (
     <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
-      <ScreenHeader antetitulo={fechaDeHoy()} titulo="Hoy" filtros={filtros} />
+      <ScreenHeader antetitulo={fechaDeHoy()} titulo="Pizarra Digital" filtros={filtros} />
       <OfflineBanner guardadoEn={guardadoEn} />
       <FlatList
         data={items ?? []}

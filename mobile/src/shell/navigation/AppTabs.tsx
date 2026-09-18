@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { View } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { CalendarClock, Ellipsis, Sun, User, type LucideIcon } from "lucide-react-native";
+import { CalendarClock, Ellipsis, LayoutDashboard, User, type LucideIcon } from "lucide-react-native";
 import { tokens } from "@bitacora/design-tokens";
 import { useMarca } from "@bitacora/ui/native";
 import { useAuth } from "../../features/auth/AuthContext";
@@ -24,8 +24,14 @@ const Tab = createBottomTabNavigator();
 // Se cambian las 4 pestañas juntas a propósito: la tab bar es una sola
 // fila visual, no tiene sentido dejar un ícono nuevo al lado de 3
 // viejos mientras el resto de "Más" se pilotea con contenido real.
+//
+// "Pizarra" (18-sep-2026): la pestaña "Hoy" se renombra visualmente —
+// el `key: "Hoy"` interno, el stack y la pantalla siguen llamándose
+// igual (HoyStack/HoyScreen/services/hoy.ts) para no tocar código que
+// no hace falta tocar. Nombre corto para que entre en la tab bar; el
+// nombre completo "Pizarra Digital" queda como título de la pantalla.
 const TABS: { key: TabKey; label: string; Icono: LucideIcon; componente: React.ComponentType }[] = [
-  { key: "Hoy", label: "Hoy", Icono: Sun, componente: HoyStack },
+  { key: "Hoy", label: "Pizarra", Icono: LayoutDashboard, componente: HoyStack },
   { key: "Agenda", label: "Agenda", Icono: CalendarClock, componente: AgendaStack },
   { key: "Clientes", label: "Clientes", Icono: User, componente: ClientesStack },
   { key: "Mas", label: "Más", Icono: Ellipsis, componente: MasStack },
