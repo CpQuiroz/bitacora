@@ -76,6 +76,10 @@ export type HoyStackParamList = {
   Trabajos: NavigatorScreenParams<TrabajosStackParamList> | undefined;
   Agenda: NavigatorScreenParams<AgendaStackParamList> | undefined;
   Viajes: NavigatorScreenParams<ViajesStackParamList> | undefined;
+  // Levantamientos (18-sep-2026): a diferencia de Trabajos/Agenda/Viajes
+  // no es un sub-stack propio (en "Más" tampoco lo es, ver MasStack) —
+  // es solo el detalle, plano, igual que ahí.
+  LevantamientoDetalle: { id: string };
 };
 
 export type TabKey = "Hoy" | "Agenda" | "Clientes" | "Mas";

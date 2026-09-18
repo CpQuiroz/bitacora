@@ -1,9 +1,10 @@
 import { useCallback, useState } from "react";
 import { FlatList, RefreshControl, View } from "react-native";
-import { CalendarClock, Car, ClipboardList, Sun } from "lucide-react-native";
+import { CalendarClock, Car, ClipboardList, Search, Sun } from "lucide-react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { tokens } from "@bitacora/design-tokens";
+import { FUNCIONES_LEVANTAMIENTOS } from "@bitacora/shared";
 import { AsistenteButton, Card, EmptyState, ErrorState, ESPACIO_ASISTENTE_FLOTANTE, LoadingState, ScreenHeader, Skeleton, StatusBadge, Texto, useMarca } from "@bitacora/ui/native";
 import { OfflineBanner } from "../../components/OfflineBanner";
 import { formatearFechaLarga } from "../../lib/horario";
@@ -15,6 +16,7 @@ const ICONO: Record<ItemHoy["tipo"], typeof ClipboardList> = {
   trabajo: ClipboardList,
   cita: CalendarClock,
   viaje: Car,
+  levantamiento: Search,
 };
 
 const ETIQUETA_ESTADO: Record<string, string> = {
@@ -30,6 +32,11 @@ const ETIQUETA_ESTADO: Record<string, string> = {
   borrador: "Borrador",
   confirmado: "Confirmado",
   facturado: "Facturado",
+  // Levantamientos (18-sep-2026) — los 3 estados que aparecen en la
+  // Pizarra (los demás ya se filtran antes en services/hoy.ts).
+  creado: "Creado",
+  asignado: "Por completar",
+  en_terreno: "En terreno",
 };
 
 // "Hoy" siempre muestra la fecha del día como antetítulo del
@@ -59,6 +66,9 @@ export function HoyScreen({ navigation }: NativeStackScreenProps<HoyStackParamLi
   const esGestion = auth.fase === "listo" && auth.usuario.rol !== "colaborador";
   const incluirViajes = auth.fase === "listo" && !auth.modulosDeshabilitados.includes("viajes");
   const veAsistente = auth.fase === "listo" && auth.modulosVisibles.includes("asistente");
+  // Mismo eje que en MasScreen.tsx: usuarios.funcion, no rol/módulo.
+  const funcion = auth.fase === "listo" ? auth.usuario.funcion : null;
+  const incluirLevantamientos = funcion != null && FUNCIONES_LEVANTAMIENTOS.includes(funcion);
 
   const [equipo, setEquipo] = useState(false);
   const [items, setItems] = useState<ItemHoy[] | null>(null);
@@ -69,13 +79,13 @@ export function HoyScreen({ navigation }: NativeStackScreenProps<HoyStackParamLi
   const cargar = useCallback(async () => {
     setError(null);
     try {
-      const r = await cargarHoy(esGestion && equipo, incluirViajes);
+      const r = await cargarHoy(esGestion && equipo, incluirViajes, incluirLevantamientos);
       setItems(r.items);
       setGuardadoEn(r.desdeCache ? r.guardadoEn : undefined);
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo cargar el día");
     }
-  }, [esGestion, equipo, incluirViajes]);
+  }, [esGestion, equipo, incluirViajes, incluirLevantamientos]);
 
   useFocusEffect(
     useCallback(() => {
@@ -94,8 +104,10 @@ export function HoyScreen({ navigation }: NativeStackScreenProps<HoyStackParamLi
       navigation.navigate("Trabajos", { screen: "TrabajoDetalle", params: { trabajoId: item.id, titulo: item.titulo } });
     } else if (item.tipo === "cita") {
       navigation.navigate("Agenda", { screen: "TareaDetalle", params: { tareaId: item.id, titulo: item.titulo } });
-    } else {
+    } else if (item.tipo === "viaje") {
       navigation.navigate("Viajes", { screen: "ViajeDetalle", params: { viajeId: item.id } });
+    } else {
+      navigation.navigate("LevantamientoDetalle", { id: item.id });
     }
   }
 

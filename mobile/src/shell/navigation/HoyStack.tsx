@@ -4,6 +4,7 @@ import { FUENTE_NATIVE } from "@bitacora/ui/native";
 import type { HoyStackParamList } from "./types";
 import { HoyScreen } from "../../features/hoy/HoyScreen";
 import { AsistenteScreen } from "../../features/asistente/AsistenteScreen";
+import { LevantamientoDetalleScreen } from "../../features/levantamientos/LevantamientoDetalleScreen";
 import { TrabajosStack } from "./TrabajosStack";
 import { AgendaStack } from "./AgendaStack";
 import { ViajesStack } from "./ViajesStack";
@@ -35,6 +36,9 @@ export function HoyStack() {
       <Stack.Screen name="Trabajos" component={TrabajosStack} options={{ headerShown: false }} />
       <Stack.Screen name="Agenda" component={AgendaStack} options={{ headerShown: false }} />
       <Stack.Screen name="Viajes" component={ViajesStack} options={{ headerShown: false }} />
+      {/* LevantamientoDetalle dibuja su propio ScreenHeader (mismo
+          criterio que en MasStack) — plano, sin sub-stack propio. */}
+      <Stack.Screen name="LevantamientoDetalle" component={LevantamientoDetalleScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 }

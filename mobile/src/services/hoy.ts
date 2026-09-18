@@ -2,13 +2,22 @@ import type { EstadoOS } from "@bitacora/shared";
 import { listarTrabajos } from "./trabajos";
 import { listarTareasRango } from "./agenda";
 import { listarViajesEquipo, listarViajesPropios } from "./viajes";
+import { listarMisLevantamientos } from "./levantamientos";
 import { estadoOsDeTrabajo } from "@bitacora/shared";
 
-// "Hoy": una sola lista cronológica con todo lo del día — trabajos,
-// citas y viajes juntos, ordenados por hora. El rol define el alcance
-// (propios vs. todo el equipo), no qué se ve.
+// "Hoy"/"Pizarra": una sola lista cronológica con todo lo del día —
+// trabajos, citas, viajes y (18-sep-2026) levantamientos pendientes,
+// juntos, ordenados por hora. El rol define el alcance (propios vs.
+// todo el equipo), no qué se ve.
+//
+// Levantamientos es distinto a los otros 3: no tiene una fecha
+// programada (no existe ese campo en la tabla — es un encargo que se
+// atiende cuando se puede, no una cita agendada). Por eso no se filtra
+// por "hoy" como el resto — se listan TODOS los pendientes del técnico
+// (estado creado/asignado/en_terreno, los 3 que todavía esperan algo de
+// él) y quedan al final, sin hora, igual que los viajes.
 
-export type TipoItemHoy = "trabajo" | "cita" | "viaje";
+export type TipoItemHoy = "trabajo" | "cita" | "viaje" | "levantamiento";
 
 export type ItemHoy = {
   tipo: TipoItemHoy;
@@ -35,14 +44,16 @@ export type ResultadoHoy = { items: ItemHoy[]; desdeCache: boolean; guardadoEn?:
 /**
  * @param equipo  true = alcance de gestión (todo el equipo); false = solo lo propio.
  * @param incluirViajes  false si la empresa tiene el módulo "viajes" apagado.
+ * @param incluirLevantamientos  true si el usuario ve la sección Levantamientos (FUNCIONES_LEVANTAMIENTOS).
  */
-export async function cargarHoy(equipo: boolean, incluirViajes: boolean): Promise<ResultadoHoy> {
+export async function cargarHoy(equipo: boolean, incluirViajes: boolean, incluirLevantamientos = false): Promise<ResultadoHoy> {
   const dia = hoyISO();
 
-  const [rTrabajos, rCitas, rViajes] = await Promise.allSettled([
+  const [rTrabajos, rCitas, rViajes, rLevantamientos] = await Promise.allSettled([
     listarTrabajos(equipo),
     listarTareasRango(dia, dia),
     incluirViajes ? (equipo ? listarViajesEquipo() : listarViajesPropios()) : Promise.resolve(null),
+    incluirLevantamientos ? listarMisLevantamientos() : Promise.resolve(null),
   ]);
 
   let desdeCache = false;
@@ -109,11 +120,31 @@ export async function cargarHoy(equipo: boolean, incluirViajes: boolean): Promis
     }
   }
 
-  // Si las 3 fuentes fallaron, propaga el error de trabajos (la principal).
+  if (rLevantamientos.status === "fulfilled" && rLevantamientos.value) {
+    // Solo los que todavía esperan algo del técnico — completado_tecnico
+    // en adelante ya pasó a la oficina/cliente externo, no pertenece más
+    // al tablero de terreno.
+    for (const lev of rLevantamientos.value) {
+      if (!["creado", "asignado", "en_terreno"].includes(lev.estado)) continue;
+      items.push({
+        tipo: "levantamiento",
+        id: lev.id,
+        hora: null,
+        titulo: lev.cliente?.nombre ?? "Levantamiento",
+        subtitulo: lev.descripcion_requerimiento,
+        estado: lev.estado,
+        lat: null,
+        lng: null,
+      });
+    }
+  }
+
+  // Si las 4 fuentes fallaron, propaga el error de trabajos (la principal).
   if (
     rTrabajos.status === "rejected" &&
     rCitas.status === "rejected" &&
-    (rViajes.status === "rejected" || rViajes.value == null)
+    (rViajes.status === "rejected" || rViajes.value == null) &&
+    (rLevantamientos.status === "rejected" || rLevantamientos.value == null)
   ) {
     throw rTrabajos.reason instanceof Error ? rTrabajos.reason : new Error("No se pudo cargar el día");
   }

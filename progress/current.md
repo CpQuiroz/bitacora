@@ -2889,3 +2889,39 @@ Implementado:
 cambios de backend — puramente mobile. Falta compilar y entregar un
 APK nuevo para que se vea en los celulares (mismo pendiente que ya
 estaba abierto desde el campo foto — ver nota anterior sobre APK).
+
+## 2026-09-18 (2): Levantamientos se suma a la Pizarra
+
+Pregunta de la usuaria: "quiero que levantamientos, OS, trabajos,
+viajes, citas se vean en la pizarra, hasta ahora qué está incluido?".
+Estado antes de este cambio: Trabajos (con el folio de la OS si tiene
+una — es el mismo ítem, no hay "OS" aparte), Citas y Viajes ya estaban;
+Levantamientos NO.
+
+Encontré un matiz real antes de sumarlo: a diferencia de trabajo/cita/
+viaje, `levantamientos` no tiene fecha programada en el schema (migración
+100) — es un encargo que se atiende cuando se puede, no una cita del
+día. Decisión: en vez de intentar filtrar por "hoy" (no hay campo para
+eso), se listan TODOS los pendientes del técnico — estado
+`creado`/`asignado`/`en_terreno` (los 3 que todavía esperan algo de él;
+`completado_tecnico` en adelante ya pasó a la oficina, no pertenece más
+al tablero de terreno) — igual que hace `LevantamientosListScreen.tsx`
+para saber qué mostrarle. Quedan sin hora, al final, mezclados con los
+viajes (mismo criterio de orden que ya existía).
+
+Implementado:
+- `services/hoy.ts`: `TipoItemHoy` +`"levantamiento"`; `cargarHoy` gana
+  un 3er parámetro `incluirLevantamientos` (gateado igual que en
+  `MasScreen.tsx`: `FUNCIONES_LEVANTAMIENTOS`, no rol/módulo); si viene
+  en true, llama a `listarMisLevantamientos()` (ya filtrado por técnico
+  en el backend) y filtra a los 3 estados de arriba.
+- `HoyScreen.tsx`: ícono `Search` (mismo que en Más), 3 etiquetas de
+  estado nuevas (`creado`/`asignado`/`en_terreno`), navega a
+  `LevantamientoDetalle` al tocar.
+- `shell/navigation/types.ts` + `HoyStack.tsx`: `LevantamientoDetalle`
+  agregado como pantalla plana de `HoyStackParamList` (no es un
+  sub-stack como Trabajos/Agenda/Viajes — tampoco lo es en `MasStack`,
+  mismo criterio).
+
+`tsc` (mobile) + `verificar.sh` en verde. Sin migración, sin backend
+(usa el endpoint que ya existía). Sigue pendiente el mismo APK.
