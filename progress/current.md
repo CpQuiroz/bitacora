@@ -2775,3 +2775,31 @@ informe de referencia de 2Workers**: campo tipo "foto" incrustado en el
 formulario de OS (parte A), secciones configurables del PDF de OS
 (parte B), y etapas de cotización configurables (este). `trabajo_list.json`
 queda sin tareas abiertas.
+
+## 2026-09-17 (5): ocultar "Función" en Personas cuando no hay Levantamientos
+
+La usuaria pidió esconder el campo "Función" en Personas, asumiendo que
+"es lo mismo" que Rol. Investigué antes de tocar código: **la premisa era
+incorrecta** — `Función` (`FUNCIONES_LEVANTAMIENTOS` en
+`packages/shared/src/permisos.ts`) es un control de acceso real e
+independiente de `Rol`, chequeado tanto en móvil
+(`mobile/src/features/mas/MasScreen.tsx`) como en el backend
+(`backend/src/routes/levantamientos.ts`) para decidir quién ve la sección
+Levantamientos. Se lo planteé a la usuaria con `AskUserQuestion` — eligió
+la opción de menor riesgo: **ocultarla solo si la empresa no tiene el
+módulo Levantamientos activo**; dejarla visible si lo tiene (ahí no es
+cosmética).
+
+Implementado en los 2 lugares web donde aparece el selector "Función":
+- `personas/[id]/page.tsx` (ficha de edición) — ya tenía la infraestructura
+  `modulos`/`ve(m)` (poblada desde `modulos_visibles` de `/api/me`).
+  Envolví el bloque en `{ve("levantamientos") ? (...) : null}`.
+- `personas/page.tsx` (lista + formulario de invitar) — NO tenía esa
+  infraestructura, la agregué: estado `modulos`, helper `ve(m)`, y
+  extracción de `modulos_visibles` en `cargar()` (mismo patrón que
+  `[id]/page.tsx`). El selector del formulario de invitar ahora exige
+  `rol === "colaborador" && ve("levantamientos")`.
+
+Sin migración — cambio puramente de frontend (rendering condicional), sin
+tocar schema ni API. `tsc -p web` + `verificar.sh` completo en verde.
+Sin tarea nueva en `trabajo_list.json` (cambio chico, documentado acá).

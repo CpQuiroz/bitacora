@@ -347,16 +347,21 @@ export default function PersonaFichaPage() {
                 <Input etiqueta="Teléfono" tipo="tel" placeholder="+56 9 1234 5678" valor={telefono} deshabilitado={!puedeEditarIdentidad} onCambio={setTelefono} />
                 <p className="font-ds-body text-ds-caption text-ds-text/60">Con código de país. Necesario para que use el bot de WhatsApp.</p>
               </div>
-              <div className="flex flex-col gap-ds-1">
-                <Select
-                  etiqueta="Función"
-                  valor={funcion}
-                  deshabilitado={!puedeEditarIdentidad}
-                  onCambio={setFuncion}
-                  opciones={[{ valor: "", etiqueta: "Sin definir" }, ...FUNCIONES.map((f) => ({ valor: f.value, etiqueta: f.label }))]}
-                />
-                <p className="font-ds-body text-ds-caption text-ds-text/60">Define qué pestañas ve en la app móvil.</p>
-              </div>
+              {/* Solo tiene efecto real si Levantamientos está activo
+                  (decide quién ve esa sección en el móvil) — sin ese
+                  módulo, mostrarla es ruido sin función real. */}
+              {ve("levantamientos") ? (
+                <div className="flex flex-col gap-ds-1">
+                  <Select
+                    etiqueta="Función"
+                    valor={funcion}
+                    deshabilitado={!puedeEditarIdentidad}
+                    onCambio={setFuncion}
+                    opciones={[{ valor: "", etiqueta: "Sin definir" }, ...FUNCIONES.map((f) => ({ valor: f.value, etiqueta: f.label }))]}
+                  />
+                  <p className="font-ds-body text-ds-caption text-ds-text/60">Define qué pestañas ve en la app móvil.</p>
+                </div>
+              ) : null}
               <Select
                 etiqueta="Zona / área de cobertura"
                 valor={zona}

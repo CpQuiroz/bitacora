@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Mail, Users } from "lucide-react";
-import type { Usuario } from "@bitacora/shared";
+import type { Modulo, Usuario } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { useRolesDisponibles } from "@/lib/roles";
@@ -27,6 +27,8 @@ export default function PersonasPage() {
   const [puedeGestionar, setPuedeGestionar] = useState(false);
   const [usuarios, setUsuarios] = useState<(Usuario & { correo?: string | null })[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [modulos, setModulos] = useState<Modulo[] | null>(null);
+  const ve = (m: Modulo) => modulos?.includes(m) ?? false;
 
   const rolesDisponibles = useRolesDisponibles();
   const etiquetaRol = (slug: string) => rolesDisponibles.find((r) => r.value === slug)?.label ?? slug;
@@ -57,7 +59,9 @@ export default function PersonasPage() {
     }
     const [resMe, resConCorreo] = await Promise.all([apiFetch("/api/me"), apiFetch("/api/usuarios?con_correo=1")]);
     if (resMe.ok) {
-      const { usuario: u } = await resMe.json();
+      const body = await resMe.json();
+      const u = body.usuario;
+      if (Array.isArray(body.modulos_visibles)) setModulos(body.modulos_visibles);
       if (u)
         setUsuario({
           nombre: u.nombre,
@@ -174,7 +178,10 @@ export default function PersonasPage() {
                 </div>
                 <Input etiqueta="Nombre" requerido valor={nombre} onCambio={setNombre} />
                 <Select etiqueta="Rol" valor={rol} onCambio={setRol} opciones={rolesDisponibles.map((r) => ({ valor: r.value, etiqueta: r.label }))} />
-                {rol === "colaborador" && (
+                {/* Solo tiene efecto real si Levantamientos está activo
+                    (decide quién ve esa sección en el móvil) — sin ese
+                    módulo, mostrarla es ruido sin función real. */}
+                {rol === "colaborador" && ve("levantamientos") && (
                   <div className="flex flex-col gap-ds-1">
                     <Select
                       etiqueta="Función (opcional)"
