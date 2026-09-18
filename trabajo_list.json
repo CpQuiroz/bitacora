@@ -604,8 +604,8 @@
         "tsc + verificar.sh completo en verde -- HECHO",
         "Migracion validada con BEGIN/ROLLBACK real contra prod -- HECHO"
       ],
-      "status": "blocked",
-      "resolution": "Codigo listo y verificado. BLOQUEADA: falta que la usuaria aplique la migracion 106 en prod. Mismo camino ya establecido (>=100): `supabase db query -f supabase/migrations/106_secciones_pdf_os.sql` + `migration repair --status applied 106` -- NO usar `db push`."
+      "status": "done",
+      "resolution": "Codigo listo y verificado. BLOQUEADA: falta que la usuaria aplique la migracion 106 en prod. Mismo camino ya establecido (>=100): `supabase db query -f supabase/migrations/106_secciones_pdf_os.sql` + `migration repair --status applied 106` -- NO usar `db push`.\n\nMigración 106 aplicada en prod (confirmado leyendo information_schema). Backend/web pusheados a main."
     }
   ]
 }

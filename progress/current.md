@@ -2703,3 +2703,11 @@ bien (`jsonb`), rollback confirmado con lectura fresca aparte (0 rastro).
 falta que la usuaria aplique la migración 106 (mismo camino: `db query
 -f` + `migration repair`). Con esto se completa el pedido completo
 inspirado en el informe de 2Workers (parte A + parte B).
+
+## 2026-09-17 (2): migración 106 aplicada en prod + parte B desplegada
+
+Confirmado leyendo `information_schema.columns` que
+`plantillas_documento.secciones_pdf` existe en prod. Push del backend/web
+a main. Tarea 39 cerrada. Con esto queda completo el pedido inspirado en
+el informe de referencia de 2Workers (parte A: campo tipo "foto" +
+parte B: secciones configurables del PDF de OS).
