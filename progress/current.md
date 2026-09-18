@@ -2711,3 +2711,55 @@ Confirmado leyendo `information_schema.columns` que
 a main. Tarea 39 cerrada. Con esto queda completo el pedido inspirado en
 el informe de referencia de 2Workers (parte A: campo tipo "foto" +
 parte B: secciones configurables del PDF de OS).
+
+## 2026-09-17 (3): etapas de cotización configurables (último pendiente grande)
+
+Retomado el último pendiente grande del pedido original inspirado en el
+informe de 2Workers: "las cotizaciones se pueden seleccionar los estados"
+(tabla CRUD Abiertos/Aprobados/Vendidos/Entregados/Cancelados).
+
+Investigué el riesgo real antes de tocar código: el `estado` fijo de
+`presupuestos` (borrador/enviado/aprobado/rechazado/expirado) maneja
+lógica real —
+- `portal.ts`: el cliente aprueba/rechaza una cotización desde el Portal,
+  seteando `estado` directo.
+- `cotizaciones.ts`: convertir a OS exige `estado === "aprobado"`.
+- `agregacionesDashboard.ts`: 3 KPIs (tasa de conversión, aprobadas por
+  mes) filtran por `estado === "aprobado"`.
+
+Reemplazar el estado fijo por un pipeline 100% libre exigía reescribir
+esa lógica de negocio real, con riesgo de romper el Portal del Cliente.
+Le presenté el tradeoff a la usuaria con `AskUserQuestion` — eligió el
+diseño de menor riesgo: **"etapa" como capa de seguimiento interno,
+puramente cosmética, en paralelo al `estado` real** — el estado sigue
+siendo el único que dispara algo (aprobar/rechazar, paso a OS, KPIs).
+
+Implementado:
+- **Migración 107**: tabla `cotizacion_etapas` (empresa_id, nombre,
+  orden) con RLS + `presupuestos.etapa_id` (FK, `on delete set null` —
+  borrar una etapa no bloquea ni arrastra las cotizaciones que la
+  tenían).
+- `backend/src/routes/cotizacionEtapas.ts` (nueva): GET siembra las 5
+  etapas del ejemplo (Abiertos/Aprobados/Vendidos/Entregados/Cancelados)
+  la primera vez que una empresa no tiene ninguna (mismo criterio que
+  `obtenerOCrearPlantilla`), después la empresa las administra libre.
+  POST/PATCH/DELETE completos.
+- `backend/src/routes/cotizaciones.ts`: `PATCH /:id` acepta `etapa_id`
+  sin afectar la invalidación de `pdf_url` ni la lógica de `estado`.
+- Web `configuracion/cotizacion-etapas/page.tsx` (nueva, en el sidebar de
+  Configuración): CRUD con editar/eliminar, mismo patrón que Centros de
+  Costo.
+- Web `financiero/cotizaciones/page.tsx`: columna "Etapa" (selector) en
+  la lista, con actualización optimista.
+
+**Cero cambios** en `portal.ts`, `agregacionesDashboard.ts`, ni en la
+lógica de conversión a OS — confirmado, no se tocaron.
+
+**Validado con `BEGIN`/`ROLLBACK` real contra prod** (tabla + RLS +
+índice + FK + insert de etapas de prueba para Transportes Itineris) —
+rollback confirmado con lectura fresca aparte (tabla y columna en 0).
+
+`tsc` + `verificar.sh` completo en verde (incluye `audit:tenant` — la
+tabla nueva tiene RLS). Tarea 40 creada, `blocked` — falta que la usuaria
+aplique la migración 107. Con esto se completa TODO el pedido original
+inspirado en el informe de 2Workers (partes A, B y esta).

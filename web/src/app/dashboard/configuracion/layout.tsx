@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Bell, Box, Briefcase, Calendar, ClipboardCheck, CreditCard, Layers, Paperclip, Plug, Shield, Tag, User, Users, Wallet, Wrench } from "lucide-react";
+import { Bell, Box, Briefcase, Calendar, ClipboardCheck, CreditCard, Flag, Layers, Paperclip, Plug, Shield, Tag, User, Users, Wallet, Wrench } from "lucide-react";
 import type { Modulo } from "@bitacora/shared";
 import { puedeVerModulo } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
@@ -29,6 +29,7 @@ const SECCIONES: { valor: string; label: string; icon: typeof User; modulo: Modu
   { valor: "inventario", label: "Inventario", icon: Box, modulo: "configuracion" },
   { valor: "categorias-gastos", label: "Categorías de Gastos", icon: Wallet, modulo: "configuracion" },
   { valor: "centros-costo", label: "Centros de Costo", icon: Layers, modulo: "configuracion" },
+  { valor: "cotizacion-etapas", label: "Etapas de Cotización", icon: Flag, modulo: "configuracion" },
   // Remuneraciones dejó de ser grupo del sidebar: sus parámetros (tope
   // imponible, UF, tasas AFP…) se tocan un par de veces al año.
   { valor: "parametros-remuneracion", label: "Parámetros de remuneración", icon: CreditCard, modulo: "remuneraciones", href: "/dashboard/remuneraciones/parametros" },

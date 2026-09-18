@@ -37,6 +37,7 @@ import { tiposOsRouter } from "./routes/tiposOs";
 import { integracionesRouter } from "./routes/integraciones";
 import { categoriasGastoRouter } from "./routes/categoriasGasto";
 import { centrosCostoRouter } from "./routes/centrosCosto";
+import { cotizacionEtapasRouter } from "./routes/cotizacionEtapas";
 import { notificacionesRouter } from "./routes/notificaciones";
 import { encuestaPublicaRouter } from "./routes/encuestaPublica";
 import { equiposRouter } from "./routes/equipos";
@@ -343,6 +344,7 @@ app.use("/api/tipos-os", requiereAuth, requiereEmpresa, tiposOsRouter);
 app.use("/api/integraciones", requiereAuth, requiereEmpresa, integracionesRouter);
 app.use("/api/categorias-gasto", requiereAuth, requiereEmpresa, categoriasGastoRouter);
 app.use("/api/centros-costo", requiereAuth, requiereEmpresa, centrosCostoRouter);
+app.use("/api/cotizacion-etapas", requiereAuth, requiereEmpresa, cotizacionEtapasRouter);
 app.use("/api/notificaciones", requiereAuth, requiereEmpresa, notificacionesRouter);
 app.use("/api/equipos", requiereAuth, requiereEmpresa, equiposRouter);
 // Registros de mantención de flota — mismo prefijo /api/equipos, sin

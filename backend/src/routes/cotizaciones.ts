@@ -255,7 +255,7 @@ cotizacionesRouter.post(
 cotizacionesRouter.patch(
   "/:id",
   ah<RequestConEmpresa>(async (req, res) => {
-    const { descripcion, fecha_vencimiento, estado, items: itemsRaw } = req.body ?? {};
+    const { descripcion, fecha_vencimiento, estado, etapa_id, items: itemsRaw } = req.body ?? {};
     const cambios: Partial<Presupuesto> = {};
 
     if (descripcion !== undefined) cambios.descripcion = descripcion?.trim() || null;
@@ -267,6 +267,9 @@ cotizacionesRouter.patch(
       }
       cambios.estado = estado;
     }
+    // Etapa de seguimiento interno a medida (migración 107) — capa
+    // cosmética, sin ningún efecto sobre `estado` ni sobre el paso a OS.
+    if (etapa_id !== undefined) cambios.etapa_id = etapa_id || null;
 
     let items: ItemEntrada[] | null = null;
     if (itemsRaw !== undefined) {

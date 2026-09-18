@@ -948,6 +948,19 @@ export type Presupuesto = {
   iva: number | null;
   fecha_vencimiento: string | null;
   pdf_url: string | null;
+  // Migración 107 — etapa de seguimiento interno A MEDIDA de la
+  // empresa (Configuración > Cotización), sin ninguna lógica propia:
+  // el aprobar/rechazar del Portal del Cliente y el paso a OS siguen
+  // manejados por `estado` (arriba), sin tocar. null = sin etapa.
+  etapa_id: string | null;
+  creado_en: string;
+};
+
+export type CotizacionEtapa = {
+  id: string;
+  empresa_id: string;
+  nombre: string;
+  orden: number;
   creado_en: string;
 };
 
@@ -1738,6 +1751,7 @@ export type Database = {
       os_items: Tabla<OsItem>;
       gastos: Tabla<Gasto>;
       presupuestos: Tabla<Presupuesto>;
+      cotizacion_etapas: Tabla<CotizacionEtapa>;
       informes_generados: Tabla<InformeGenerado>;
       plantillas_documento: Tabla<PlantillaDocumento>;
       checklist_templates: Tabla<ChecklistTemplate>;

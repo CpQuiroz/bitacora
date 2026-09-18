@@ -606,6 +606,24 @@
       ],
       "status": "done",
       "resolution": "Codigo listo y verificado. BLOQUEADA: falta que la usuaria aplique la migracion 106 en prod. Mismo camino ya establecido (>=100): `supabase db query -f supabase/migrations/106_secciones_pdf_os.sql` + `migration repair --status applied 106` -- NO usar `db push`.\n\nMigración 106 aplicada en prod (confirmado leyendo information_schema). Backend/web pusheados a main."
+    },
+    {
+      "id": 40,
+      "name": "etapas_cotizacion_configurables",
+      "title": "Etapas de cotizacion configurables por empresa (pendiente grande, retomado)",
+      "description": "Ultimo pendiente grande del pedido original inspirado en 2Workers: 'las cotizaciones se pueden seleccionar los estados' (tabla CRUD Abiertos/Aprobados/Vendidos/Entregados/Cancelados). Investigado el riesgo real: el estado fijo de presupuestos (borrador/enviado/aprobado/rechazado/expirado) maneja logica real (aprobar/rechazar del Portal del Cliente en portal.ts, bloqueo para convertir a OS en cotizaciones.ts, KPIs del dashboard en agregacionesDashboard.ts) -- reemplazarlo entero exigia reescribir esa logica. Presentado el tradeoff a la usuaria via AskUserQuestion, eligio el diseno de menor riesgo: 'etapa' configurable como CAPA COSMETICA en paralelo al estado real, sin ninguna logica propia -- el estado sigue siendo el unico que dispara algo.",
+      "acceptance": [
+        "Migracion 107 (tabla cotizacion_etapas + presupuestos.etapa_id, on delete set null) -- BLOQUEADA, falta que la usuaria la aplique en prod",
+        "Backend: nueva ruta /api/cotizacion-etapas (GET con seed lazy de 5 etapas por defecto, POST, PATCH, DELETE) -- HECHO",
+        "PATCH /api/cotizaciones/:id acepta etapa_id sin afectar la invalidacion de pdf_url ni la logica de estado -- HECHO",
+        "Web: nueva pagina Configuracion > Etapas de Cotizacion (CRUD, mismo patron que Centros de Costo) -- HECHO",
+        "Web: columna 'Etapa' (selector) en la lista de cotizaciones, con actualizacion optimista -- HECHO",
+        "Cero cambios en portal.ts, agregacionesDashboard.ts, ni en la logica de conversion a OS -- confirmado, no se tocaron",
+        "tsc + verificar.sh completo en verde (incluye audit:tenant, la tabla nueva tiene RLS) -- HECHO",
+        "Migracion validada con BEGIN/ROLLBACK real contra prod, incluida la insercion de etapas de prueba -- HECHO"
+      ],
+      "status": "blocked",
+      "resolution": "Codigo listo y verificado. BLOQUEADA: falta que la usuaria aplique la migracion 107 en prod. Mismo camino ya establecido (>=100): `supabase db query -f supabase/migrations/107_etapas_cotizacion.sql` + `migration repair --status applied 107` -- NO usar `db push`."
     }
   ]
 }

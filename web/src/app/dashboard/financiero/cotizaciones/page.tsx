@@ -3,12 +3,12 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Receipt } from "lucide-react";
-import type { EstadoPresupuesto, Presupuesto } from "@bitacora/shared";
+import type { CotizacionEtapa, EstadoPresupuesto, Presupuesto } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Button, Cifra, EmptyState, ErrorState, Input, LoadingState, StatusBadge, Table, type TonoEstado } from "@bitacora/ui/web";
+import { Button, Cifra, EmptyState, ErrorState, Input, LoadingState, Select, StatusBadge, Table, type TonoEstado } from "@bitacora/ui/web";
 
 type CotizacionConCliente = Presupuesto & { cliente_info: { nombre: string } | null };
 type Chip = "todos" | EstadoPresupuesto;
@@ -39,6 +39,7 @@ export default function CotizacionesPage() {
   const router = useRouter();
   const [usuario, setUsuario] = useState<UsuarioShell | null>(null);
   const [cotizaciones, setCotizaciones] = useState<CotizacionConCliente[] | null>(null);
+  const [etapas, setEtapas] = useState<CotizacionEtapa[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busqueda, setBusqueda] = useState("");
   const [filtro, setFiltro] = useState<Chip>("todos");
@@ -49,7 +50,12 @@ export default function CotizacionesPage() {
       router.replace("/login");
       return;
     }
-    const [resMe, resCotizaciones] = await Promise.all([apiFetch("/api/me"), apiFetch("/api/cotizaciones")]);
+    const [resMe, resCotizaciones, resEtapas] = await Promise.all([
+      apiFetch("/api/me"),
+      apiFetch("/api/cotizaciones"),
+      apiFetch("/api/cotizacion-etapas"),
+    ]);
+    if (resEtapas.ok) setEtapas(await resEtapas.json());
     if (resMe.ok) {
       const { usuario: u } = await resMe.json();
       if (u)
@@ -76,6 +82,14 @@ export default function CotizacionesPage() {
     cargar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Etapa de seguimiento interno a medida (migración 107) — capa
+  // cosmética en paralelo al estado real, sin ningún efecto sobre el
+  // aprobar/rechazar del cliente ni el paso a OS.
+  async function cambiarEtapa(cotizacionId: string, etapaId: string) {
+    setCotizaciones((prev) => prev?.map((c) => (c.id === cotizacionId ? { ...c, etapa_id: etapaId || null } : c)) ?? prev);
+    await apiFetch(`/api/cotizaciones/${cotizacionId}`, { method: "PATCH", body: JSON.stringify({ etapa_id: etapaId || null }) });
+  }
 
   if (!usuario) return null;
 
@@ -161,6 +175,18 @@ export default function CotizacionesPage() {
             { encabezado: "Cliente", celda: (c) => c.cliente_info?.nombre ?? "—" },
             { encabezado: "Monto", clase: "text-right", celda: (c) => <Cifra>{formatMoneda(c.monto, usuario.moneda)}</Cifra> },
             { encabezado: "Estado", celda: (c) => <StatusBadge estado={c.estado} tonoForzado={TONO_FORZADO[c.estado]} /> },
+            {
+              encabezado: "Etapa",
+              celda: (c) => (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Select
+                    valor={c.etapa_id ?? ""}
+                    onCambio={(v) => cambiarEtapa(c.id, v)}
+                    opciones={[{ valor: "", etiqueta: "Sin etapa" }, ...etapas.map((et) => ({ valor: et.id, etiqueta: et.nombre }))]}
+                  />
+                </div>
+              ),
+            },
             { encabezado: "Creación", celda: (c) => c.fecha },
             { encabezado: "Vencimiento", celda: (c) => c.fecha_vencimiento ?? "—" },
           ]}
