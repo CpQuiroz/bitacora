@@ -37,12 +37,24 @@ export const metadata: Metadata = {
   description: "Gestión para pymes de servicio en terreno.",
 };
 
+// Modo Nocturno (18-sep-2026): sin data-theme = automático por
+// prefers-color-scheme (tokens.css). Un valor guardado en localStorage
+// (ThemeToggle, en Configuración > Cuenta) le gana al sistema en los dos
+// sentidos — se aplica ANTES del primer paint con este script inline
+// (patrón oficial de Next: docs/01-app/02-guides/preventing-flash-
+// before-hydration.md § Themes), no con un useEffect que se ve tarde.
+const SCRIPT_TEMA = `(function(){try{var t=localStorage.getItem("bitacora:tema");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)}catch(e){}})()`;
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="es"
+      suppressHydrationWarning
       className={`${plexSans.variable} ${plexMono.variable} ${caprasimo.variable} ${figtree.variable} h-full antialiased`}
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: SCRIPT_TEMA }} />
+      </head>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );

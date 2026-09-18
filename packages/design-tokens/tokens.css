@@ -108,6 +108,95 @@
   --font-ds-heading-weight: 400;
 }
 
+/* Modo Nocturno (18-sep-2026). Mismos nombres de variable que arriba —
+   re-declararlas acá alcanza para toda la web, ninguna clase Tailwind
+   se toca. Automático por sistema (prefers-color-scheme) salvo que la
+   persona elija explícito en Configuración > Cuenta (data-theme en
+   <html>, ver web/src/app/layout.tsx + ThemeToggle) — un "light"
+   explícito le gana al sistema en los dos sentidos.
+   --ds-brand/--ds-accent2 (color de marca por empresa) NO se tocan
+   acá: son arbitrarios por tenant, siguen igual en los dos modos —
+   riesgo de contraste conocido y aceptado por ahora, no resuelto. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-ds-bg: #17140f;
+    --color-ds-surface: #201b13;
+    --color-ds-text: #f2e9d8;
+    --color-ds-accent: #e08a52;
+    --color-ds-accent2: #9db27a;
+    --color-ds-divider: rgba(242, 233, 216, 0.14);
+
+  --color-ds-neutral-100: #2e2b25;
+  --color-ds-neutral-200: #474238;
+  --color-ds-neutral-300: #645c50;
+  --color-ds-neutral-400: #82796a;
+  --color-ds-neutral-500: #a19786;
+  --color-ds-neutral-600: #c0b6a5;
+  --color-ds-neutral-700: #dcd3c4;
+  --color-ds-neutral-800: #eee7db;
+  --color-ds-neutral-900: #f9f4ed;
+
+  --color-ds-accent-100: #2a1b10;
+  --color-ds-accent-200: #3a2416;
+  --color-ds-accent-300: #4d301c;
+  --color-ds-accent-400: #603a20;
+  --color-ds-accent-500: #c9743e;
+  --color-ds-accent-600: #d88f56;
+  --color-ds-accent-700: #f6a06b;
+  --color-ds-accent-800: #ffc6a5;
+  --color-ds-accent-900: #ffe1d0;
+
+  --color-ds-accent2-100: #232a1a;
+  --color-ds-accent2-200: #333d24;
+  --color-ds-accent2-300: #44512f;
+  --color-ds-accent2-400: #566640;
+  --color-ds-accent2-500: #82945e;
+  --color-ds-accent2-600: #93a76c;
+  --color-ds-accent2-700: #c7d6a8;
+  --color-ds-accent2-800: #e1eecc;
+  --color-ds-accent2-900: #f0fae1;
+  }
+}
+
+:root[data-theme="dark"] {
+  --color-ds-bg: #17140f;
+  --color-ds-surface: #201b13;
+  --color-ds-text: #f2e9d8;
+  --color-ds-accent: #e08a52;
+  --color-ds-accent2: #9db27a;
+  --color-ds-divider: rgba(242, 233, 216, 0.14);
+
+  --color-ds-neutral-100: #2e2b25;
+  --color-ds-neutral-200: #474238;
+  --color-ds-neutral-300: #645c50;
+  --color-ds-neutral-400: #82796a;
+  --color-ds-neutral-500: #a19786;
+  --color-ds-neutral-600: #c0b6a5;
+  --color-ds-neutral-700: #dcd3c4;
+  --color-ds-neutral-800: #eee7db;
+  --color-ds-neutral-900: #f9f4ed;
+
+  --color-ds-accent-100: #2a1b10;
+  --color-ds-accent-200: #3a2416;
+  --color-ds-accent-300: #4d301c;
+  --color-ds-accent-400: #603a20;
+  --color-ds-accent-500: #c9743e;
+  --color-ds-accent-600: #d88f56;
+  --color-ds-accent-700: #f6a06b;
+  --color-ds-accent-800: #ffc6a5;
+  --color-ds-accent-900: #ffe1d0;
+
+  --color-ds-accent2-100: #232a1a;
+  --color-ds-accent2-200: #333d24;
+  --color-ds-accent2-300: #44512f;
+  --color-ds-accent2-400: #566640;
+  --color-ds-accent2-500: #82945e;
+  --color-ds-accent2-600: #93a76c;
+  --color-ds-accent2-700: #c7d6a8;
+  --color-ds-accent2-800: #e1eecc;
+  --color-ds-accent2-900: #f0fae1;
+}
+
 /* Voz display (Caprasimo): SOLO titulares y botones grandes, nunca
    párrafos. Combinar con text-ds-h1…h5 para el tamaño. */
 @utility ds-heading {

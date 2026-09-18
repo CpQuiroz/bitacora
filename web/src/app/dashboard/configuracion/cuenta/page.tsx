@@ -7,6 +7,7 @@ import type { NotificacionPreferencia, TipoNotificacion } from "@bitacora/shared
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { Button, Card, Input, LoadingState, Select } from "@bitacora/ui/web";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { useConfiguracion } from "../ConfiguracionContext";
 
 const TIPO_LABEL: Record<TipoNotificacion, string> = {
@@ -233,6 +234,16 @@ export default function CuentaPage() {
             {errorFoto ? <p className="mt-ds-2 font-ds-body text-ds-small text-ds-accent-700">{errorFoto}</p> : null}
           </div>
         </div>
+      </Card>
+
+      <Card>
+        <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Apariencia</p>
+        <div className="max-w-xs">
+          <ThemeToggle />
+        </div>
+        <p className="mt-ds-2 font-ds-body text-ds-caption text-ds-text/60">
+          &ldquo;Automático&rdquo; sigue el modo del sistema/navegador. Solo afecta a este dispositivo.
+        </p>
       </Card>
 
       <Card>

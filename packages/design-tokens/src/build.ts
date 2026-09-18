@@ -20,11 +20,17 @@ const RAIZ = join(__dirname, "..");
 const tokens = JSON.parse(readFileSync(join(RAIZ, "tokens.json"), "utf8")) as Tokens;
 
 type Ramp = Record<"100" | "200" | "300" | "400" | "500" | "600" | "700" | "800" | "900", string>;
+type Paleta = {
+  bg: string; surface: string; text: string; accent: string; accent2: string; divider: string;
+  neutral: Ramp; accentRamp: Ramp; accent2Ramp: Ramp;
+};
 export type Tokens = {
-  color: {
-    bg: string; surface: string; text: string; accent: string; accent2: string; divider: string;
-    neutral: Ramp; accentRamp: Ramp; accent2Ramp: Ramp;
-  };
+  color: Paleta;
+  // Modo Nocturno (18-sep-2026) — misma marca, misma forma, paleta oscura.
+  // Solo web por ahora (mobile sigue con un único `tokens.color` estático,
+  // ver docs/harness — pasar mobile a esto es un cambio de arquitectura
+  // aparte, no incluido acá).
+  colorDark: Paleta;
   font: { heading: string; body: string; headingWeight: number };
   size: Record<"h1" | "h2" | "h3" | "h4" | "h5" | "body" | "small" | "caption" | "micro", number>;
   space: Record<"1" | "2" | "3" | "4" | "6" | "8", number>;
@@ -128,6 +134,47 @@ ${rampCss("accent2", tokens.color.accent2Ramp)}
   --ds-accent2-strong: color-mix(in srgb, var(--ds-accent2) 50%, black);
 
   --font-ds-heading-weight: ${tokens.font.headingWeight};
+}
+
+/* Modo Nocturno (18-sep-2026). Mismos nombres de variable que arriba —
+   re-declararlas acá alcanza para toda la web, ninguna clase Tailwind
+   se toca. Automático por sistema (prefers-color-scheme) salvo que la
+   persona elija explícito en Configuración > Cuenta (data-theme en
+   <html>, ver web/src/app/layout.tsx + ThemeToggle) — un "light"
+   explícito le gana al sistema en los dos sentidos.
+   --ds-brand/--ds-accent2 (color de marca por empresa) NO se tocan
+   acá: son arbitrarios por tenant, siguen igual en los dos modos —
+   riesgo de contraste conocido y aceptado por ahora, no resuelto. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-ds-bg: ${tokens.colorDark.bg};
+    --color-ds-surface: ${tokens.colorDark.surface};
+    --color-ds-text: ${tokens.colorDark.text};
+    --color-ds-accent: ${tokens.colorDark.accent};
+    --color-ds-accent2: ${tokens.colorDark.accent2};
+    --color-ds-divider: ${tokens.colorDark.divider};
+
+${rampCss("neutral", tokens.colorDark.neutral)}
+
+${rampCss("accent", tokens.colorDark.accentRamp)}
+
+${rampCss("accent2", tokens.colorDark.accent2Ramp)}
+  }
+}
+
+:root[data-theme="dark"] {
+  --color-ds-bg: ${tokens.colorDark.bg};
+  --color-ds-surface: ${tokens.colorDark.surface};
+  --color-ds-text: ${tokens.colorDark.text};
+  --color-ds-accent: ${tokens.colorDark.accent};
+  --color-ds-accent2: ${tokens.colorDark.accent2};
+  --color-ds-divider: ${tokens.colorDark.divider};
+
+${rampCss("neutral", tokens.colorDark.neutral)}
+
+${rampCss("accent", tokens.colorDark.accentRamp)}
+
+${rampCss("accent2", tokens.colorDark.accent2Ramp)}
 }
 
 /* Voz display (Caprasimo): SOLO titulares y botones grandes, nunca

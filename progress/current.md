@@ -2925,3 +2925,47 @@ Implementado:
 
 `tsc` (mobile) + `verificar.sh` en verde. Sin migración, sin backend
 (usa el endpoint que ya existía). Sigue pendiente el mismo APK.
+
+## 2026-09-18 (3): Modo Nocturno — web
+
+Pedido aprobado tras el mockup de "Modo Nocturno"/"Taller" (Artifact) y
+el estimate de costo (web: barato, mecánico; mobile: refactor grande de
+70 archivos/752 usos de `tokens.color.*`, aparte — no incluido acá).
+
+Implementado:
+- `packages/design-tokens/tokens.json`: nuevo `colorDark` (mismo shape
+  que `color` — bg/surface/text/accent/accent2/divider + 3 rampas de 9).
+  Valores: los mismos que ya vio la usuaria en el mockup de "Modo
+  Nocturno" (bg `#17140f`, texto `#f2e9d8`, acento `#e08a52`, acento2
+  `#9db27a`). Las rampas de accent/accent2 NO son la rampa clara
+  invertida (esa desaturación no sirve para texto-sobre-tinte en fondo
+  oscuro) — son valores nuevos pensados para esa función; la rampa
+  `neutral` sí es la clara invertida (es gris puro, funciona igual dado
+  vuelta).
+- `build.ts`: emite un bloque `@media (prefers-color-scheme: dark)
+  :root:not([data-theme="light"])` + `:root[data-theme="dark"]`
+  redefiniendo las mismas ~30 variables `--color-ds-*` — ninguna clase
+  Tailwind se toca, es el mismo mecanismo que ya usa `--ds-brand` para
+  el color de marca por tenant (prueba en producción de que Tailwind v4
+  sí resuelve estas variables en runtime, no las deja fijas).
+  `--ds-brand`/`--ds-accent2` (color de marca, arbitrario por empresa)
+  quedan iguales en los 2 modos — riesgo de contraste conocido, sin
+  resolver todavía (aceptado, ya avisado en el estimate).
+- `web/src/app/layout.tsx`: `suppressHydrationWarning` + script inline
+  que aplica `data-theme` desde `localStorage` ANTES del primer paint —
+  patrón oficial de Next (`node_modules/next/dist/docs/01-app/02-
+  guides/preventing-flash-before-hydration.md` § Themes), no un
+  `useEffect` que se vería tarde. Sin `data-theme` guardado = automático
+  por `prefers-color-scheme`.
+- `web/src/components/ThemeToggle.tsx` (nuevo) + Card "Apariencia" en
+  `configuracion/cuenta/page.tsx`: selector Automático/Claro/Oscuro,
+  persistido en `localStorage` (por dispositivo, no por cuenta —
+  a propósito, es una preferencia de pantalla, no de datos).
+
+`tsc` + `verificar.sh` completo en verde. Sin migración (tokens.json no
+es una tabla). Verificación visual en vivo (Chrome) NO se hizo esta
+vuelta — requería elegir entre 2 navegadores conectados sin la usuaria
+presente; queda cubierta por: el mecanismo ya probado en prod
+(`--ds-brand`) + los valores ya vistos y aprobados en el mockup. Falta
+que la usuaria lo pruebe en la web real y confirme que se ve bien en
+pantallas concretas (no solo en el mockup).
