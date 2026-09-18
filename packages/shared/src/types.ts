@@ -79,6 +79,9 @@ export type Empresa = {
   logo_url: string | null;
   siguiente_folio_os: number;
   siguiente_numero_cotizacion: number;
+  siguiente_folio_cita: number;
+  siguiente_folio_viaje: number;
+  siguiente_folio_levantamiento: number;
   color_primario: string | null;
   color_primario_foreground: string | null;
   color_secundario: string | null;
@@ -605,6 +608,10 @@ export type Tarea = {
   origen: "manual" | "reserva_publica";
   creado_en: string;
   actualizado_en: string;
+  // Folio correlativo por empresa (migración 108) — igual mecanismo que
+  // ordenes_servicio.folio (siguiente_folio_os). Null en citas creadas
+  // antes de esta migración, no se backfillea histórico.
+  folio: number | null;
 };
 
 // Agenda Pro: catálogo de servicios (nombre, precio de lista, duración
@@ -1109,6 +1116,9 @@ export type Levantamiento = {
   orden_servicio_id: string | null;
   creado_en: string;
   actualizado_en: string;
+  // Folio correlativo por empresa (migración 108). Null en levantamientos
+  // creados antes de esta migración, no se backfillea histórico.
+  folio: number | null;
 };
 
 export type LevantamientoMaterial = {
@@ -1272,6 +1282,10 @@ export type Viaje = {
   foto_guia_url: string | null;
   comentarios: string | null;
   creado_en: string;
+  // Folio correlativo por empresa (migración 108) — igual mecanismo que
+  // ordenes_servicio.folio. Null en viajes creados antes de esta
+  // migración, no se backfillea histórico.
+  folio: number | null;
 };
 
 // Ledger de idempotencia del webhook de WhatsApp — nunca se expone
@@ -1850,6 +1864,18 @@ export type Database = {
         Returns: number;
       };
       siguiente_folio_mantencion: {
+        Args: { p_empresa_id: string };
+        Returns: number;
+      };
+      siguiente_folio_cita: {
+        Args: { p_empresa_id: string };
+        Returns: number;
+      };
+      siguiente_folio_viaje: {
+        Args: { p_empresa_id: string };
+        Returns: number;
+      };
+      siguiente_folio_levantamiento: {
         Args: { p_empresa_id: string };
         Returns: number;
       };

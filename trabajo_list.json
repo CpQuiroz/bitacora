@@ -624,6 +624,24 @@
       ],
       "status": "done",
       "resolution": "Codigo listo y verificado. BLOQUEADA: falta que la usuaria aplique la migracion 107 en prod. Mismo camino ya establecido (>=100): `supabase db query -f supabase/migrations/107_etapas_cotizacion.sql` + `migration repair --status applied 107` -- NO usar `db push`.\n\nMigración 107 aplicada en prod (confirmado leyendo information_schema: tabla y columna existen). Backend/web pusheados a main."
+    },
+    {
+      "id": 41,
+      "name": "folios_tipo_cita_viaje_levantamiento",
+      "title": "Distinguir tipo de item en la Pizarra + folio propio por tipo (OS/CIT/VIA/LEV)",
+      "description": "Pedido real: en la Pizarra (Hoy) movil no se distinguia si un item era OS, cita, viaje o levantamiento (solo un icono chico gris). Propuesta con mockup (Artifact) aprobada: cada tipo muestra su propio folio con prefijo (OS-0042, CIT-0031, VIA-0012, LEV-0004), coloreado por tipo -- resuelve distincion visual + da una referencia citable a la vez. OS ya tenia folio (ordenes_servicio.folio, siguiente_folio_os desde migracion 08); Cita/Viaje/Levantamiento no tenian ninguno -- se agrego el mismo mecanismo (contador atomico por empresa + funcion RPC) que ya usan OS/Cotizaciones/Mantencion, sin inventar nada nuevo.",
+      "acceptance": [
+        "Migracion 108: empresas.siguiente_folio_{cita,viaje,levantamiento} + funciones RPC siguiente_folio_{cita,viaje,levantamiento} + columna folio en tareas/viajes/levantamientos -- BLOQUEADA, falta que la usuaria la aplique en prod",
+        "packages/shared: formatearFolio(prefijo, folio) -- HECHO. Tarea/Viaje/Levantamiento ganan folio: number|null -- HECHO",
+        "backend/src/folios.ts (nuevo): helpers tolerantes a error (log + folio null) para los 3 tipos nuevos -- HECHO",
+        "Folio asignado en TODOS los puntos de creacion existentes: tareas.ts + reservaPublica.ts (citas); viajes.ts + misViajes.ts + whatsappFlujoViaje.ts + whatsapp.ts (viajes, incluye los 2 flujos de WhatsApp); levantamientos.ts (levantamientos) -- HECHO",
+        "Mobile: Pizarra (HoyScreen) muestra el folio como tag coloreado por tipo (antes solo icono gris) -- HECHO. TrabajoDetalle/TrabajosScreen, ViajeDetalle/ViajesScreen, LevantamientoDetalle/LevantamientosListScreen, TareaDetalle/AgendaScreen -- HECHO",
+        "Web: ordenes/page + ordenes/[id] (reformateados con prefijo), viajes/page (columna Guia), levantamientos/page (columna Folio + titulo del modal + link a OS), agenda/page (titulo del modal Editar tarea + subtitulo del evento en el calendario) -- HECHO",
+        "tsc (backend/web/mobile/shared/ui) + verificar.sh completo en verde -- HECHO",
+        "Migracion validada con BEGIN/ROLLBACK real contra prod (3 columnas + 3 funciones + rollback confirmado con lectura fresca aparte) -- HECHO"
+      ],
+      "status": "done",
+      "resolution": "Codigo listo y verificado. BLOQUEADA: falta que la usuaria aplique la migracion 108 en prod. Mismo camino establecido (>=100): `supabase db query -f supabase/migrations/108_folios_cita_viaje_levantamiento.sql` + `migration repair --status applied 108` -- NO usar `db push`."
     }
   ]
 }

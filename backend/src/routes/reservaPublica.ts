@@ -11,6 +11,7 @@ import { Router } from "express";
 import { supabase } from "../supabase";
 import { empresaTieneModulo } from "../permisos";
 import { avisarCitaAgendada } from "../agendaProAvisos";
+import { siguienteFolioCita } from "../folios";
 import { ah } from "../asyncHandler";
 
 export const reservaPublicaRouter = Router();
@@ -202,10 +203,12 @@ reservaPublicaRouter.post(
       clienteId = nuevoCliente.id;
     }
 
+    const folio = await siguienteFolioCita(empresa.id);
     const { data: tarea, error: errorTarea } = await supabase
       .from("tareas")
       .insert({
         empresa_id: empresa.id,
+        folio,
         titulo: `Cita agendada online — ${nombre.trim()}`,
         descripcion: notas?.trim() || null,
         fecha,

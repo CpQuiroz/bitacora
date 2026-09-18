@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Camera, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import type { Cliente, EstadoLevantamiento, Usuario } from "@bitacora/shared";
-import { FUNCIONES_LEVANTAMIENTOS } from "@bitacora/shared";
+import { FUNCIONES_LEVANTAMIENTOS, formatearFolio } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
@@ -21,6 +21,7 @@ type LevantamientoResumen = {
   creado_en: string;
   cliente: { id: string; nombre: string } | null;
   tecnico: { id: string; nombre: string } | null;
+  folio: number | null;
 };
 
 type Material = { id: string; catalogo_item_id: string; cantidad: number; catalogo_item: { id: string; nombre: string; precio_base: number; unidad: string } | null };
@@ -308,6 +309,7 @@ export default function LevantamientosPage() {
 
         <Table
           columnas={[
+            { encabezado: "Folio", celda: (l) => formatearFolio("LEV", l.folio) ?? "—" },
             { encabezado: "Fecha", celda: (l) => new Date(l.creado_en).toLocaleDateString("es-CL") },
             { encabezado: "Cliente", celda: (l) => l.cliente?.nombre ?? "—" },
             { encabezado: "Técnico", celda: (l) => l.tecnico?.nombre ?? "Sin asignar" },
@@ -349,7 +351,7 @@ export default function LevantamientosPage() {
         </div>
       </Modal>
 
-      <Modal open={detalleId != null} onClose={() => setDetalleId(null)} title="Detalle del levantamiento" wide>
+      <Modal open={detalleId != null} onClose={() => setDetalleId(null)} title={formatearFolio("LEV", detalle?.folio ?? null) ?? "Detalle del levantamiento"} wide>
         {!detalle ? (
           detalleError ? <ErrorState mensaje={detalleError} /> : <LoadingState />
         ) : (
@@ -359,7 +361,7 @@ export default function LevantamientosPage() {
               <div className="flex items-center gap-ds-3">
                 {detalle.trabajo_id ? (
                   <a href={`/dashboard/ordenes/${detalle.trabajo_id}`} className="text-ds-small font-medium text-ds-accent underline">
-                    Ver OS N° {detalle.folio_os ?? "—"}
+                    Ver {formatearFolio("OS", detalle.folio_os) ?? "OS"}
                   </a>
                 ) : null}
                 {puedeEditar && !editando ? (

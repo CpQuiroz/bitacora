@@ -13,7 +13,7 @@ import type {
   Trabajo,
   Usuario,
 } from "@bitacora/shared";
-import { puedeVerModulo } from "@bitacora/shared";
+import { puedeVerModulo, formatearFolio } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
@@ -92,6 +92,8 @@ function eventoDeOrden(o: OrdenListado): EventoAgenda {
 }
 
 function eventoDeTarea(t: TareaListado): EventoAgenda {
+  const subtituloBase = t.cliente?.nombre ?? t.responsable?.nombre ?? "—";
+  const folio = formatearFolio("CIT", t.folio);
   return {
     id: t.id,
     tipo: "tarea",
@@ -99,7 +101,7 @@ function eventoDeTarea(t: TareaListado): EventoAgenda {
     hora: t.hora,
     estadoAgenda: ESTADO_TAREA_A_AGENDA[t.estado],
     titulo: t.titulo,
-    subtitulo: t.cliente?.nombre ?? t.responsable?.nombre ?? "—",
+    subtitulo: folio ? `${folio} · ${subtituloBase}` : subtituloBase,
     origen: t,
   };
 }
@@ -144,6 +146,7 @@ function AgendaContenido() {
 
   const [formTareaAbierto, setFormTareaAbierto] = useState(false);
   const [tareaEditandoId, setTareaEditandoId] = useState<string | null>(null);
+  const [tareaEditandoFolio, setTareaEditandoFolio] = useState<number | null>(null);
   const [tituloTarea, setTituloTarea] = useState("");
   const [descripcionTarea, setDescripcionTarea] = useState("");
   const [fechaTarea, setFechaTarea] = useState("");
@@ -256,6 +259,7 @@ function AgendaContenido() {
 
     const fecha = borrador.fecha || fmtLocal(new Date());
     setTareaEditandoId(null);
+    setTareaEditandoFolio(null);
     setFormTareaAbierto(false);
     setTituloTarea(borrador.titulo ?? "");
     setDescripcionTarea(borrador.descripcion ?? "");
@@ -373,6 +377,7 @@ function AgendaContenido() {
   // sí solo — quien llama decide si abre el Modal completo o el rápido.
   function resetearFormTarea(fecha: string) {
     setTareaEditandoId(null);
+    setTareaEditandoFolio(null);
     setTrabajoVinculado(null);
     setTituloTarea("");
     setDescripcionTarea("");
@@ -456,6 +461,7 @@ function AgendaContenido() {
     setTareaRapidaFecha(null);
     setTrabajoVinculado(null);
     setTareaEditandoId(t.id);
+    setTareaEditandoFolio(t.folio);
     setTituloTarea(t.titulo);
     setDescripcionTarea(t.descripcion ?? "");
     setFechaTarea(t.fecha);
@@ -787,7 +793,12 @@ function AgendaContenido() {
         </div>
       </div>
 
-      <Modal open={formTareaAbierto} onClose={() => setFormTareaAbierto(false)} title={tareaEditandoId ? "Editar tarea" : "Nueva tarea"} wide>
+      <Modal
+        open={formTareaAbierto}
+        onClose={() => setFormTareaAbierto(false)}
+        title={tareaEditandoId ? (formatearFolio("CIT", tareaEditandoFolio) ? `Editar tarea — ${formatearFolio("CIT", tareaEditandoFolio)}` : "Editar tarea") : "Nueva tarea"}
+        wide
+      >
         <form onSubmit={onGuardarTarea} className="flex flex-col gap-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2">

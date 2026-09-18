@@ -3099,3 +3099,70 @@ los celulares.
 
 `tsc` (ui + mobile) + `verificar.sh` completo en verde. Sin backend, sin
 migración — 4 archivos de `packages/ui/src/native`.
+
+## 2026-09-18 (7): folios OS/CIT/VIA/LEV — tarea 41
+
+Pedido: en la Pizarra no se distinguía el tipo de cada ítem (solo un
+ícono chico gris). Propuesta con mockup (Artifact) aprobada: cada tipo
+muestra su propio folio con prefijo (OS-0042, CIT-0031, VIA-0012,
+LEV-0004) — resuelve la distinción visual y da una referencia citable a
+la vez. Prefijos aprobados por la usuaria: "OS/CIT/VIA/LEV me sirven, y
+sí, en todos lados".
+
+Investigué antes de tocar nada: OS ya tiene folio desde que se crea el
+trabajo (`crearOrdenServicio`, eager, no en el primer check-in — ver
+`backend/src/ordenes.ts`), así que el caso "trabajo sin OS todavía" que
+le planteé a la usuaria como pregunta abierta en realidad casi no
+ocurre en la práctica — no hizo falta decidir nada ahí, solo reformatear
+lo que ya existía.
+
+**Migración 108** (mismo mecanismo ya probado 3 veces en el proyecto —
+`siguiente_folio_os`/`siguiente_folio_mantencion`/
+`siguiente_numero_cotizacion`, contador atómico por empresa + función
+RPC): agrega `empresas.siguiente_folio_{cita,viaje,levantamiento}` +
+las 3 funciones + columna `folio` en `tareas`/`viajes`/`levantamientos`.
+Filas ya existentes quedan con folio `null` (mismo criterio que las OS
+viejas sin folio eager) — no se backfillea histórico.
+
+Implementado:
+- `packages/shared`: `formatearFolio(prefijo, folio)` (nuevo archivo
+  `folio.ts`) — arma "OS-0042" etc., el prefijo NUNCA se guarda en la
+  base. `Tarea`/`Viaje`/`Levantamiento` ganan `folio: number | null`.
+- `backend/src/folios.ts` (nuevo): `siguienteFolioCita/Viaje/
+  Levantamiento` — a propósito **tolerantes a error** (loguean y
+  devuelven `null` en vez de fallar la request completa), porque varios
+  puntos de creación son flujos automáticos (bot de WhatsApp) donde
+  perder el folio es mucho menos grave que perder la fila entera.
+- Folio asignado en **todos** los puntos de creación que encontré:
+  `tareas.ts` + `reservaPublica.ts` (citas); `viajes.ts` +
+  `misViajes.ts` + `whatsappFlujoViaje.ts` + `whatsapp.ts` (viajes — sí,
+  son 4 rutas distintas que insertan viajes); `levantamientos.ts`.
+- Mobile: Pizarra (`HoyScreen.tsx`) — el ítem ahora muestra un tag
+  coloreado con su folio (antes solo el ícono gris); colores por tipo
+  usando los 2 acentos de marca + neutral, "Cita" combina los dos
+  acentos (no hay un 4° tono propio en el sistema todavía, avisado a la
+  usuaria). También actualizados: `TrabajoDetalleScreen`/
+  `TrabajosScreen`, `ViajeDetalleScreen`/`ViajesScreen`,
+  `LevantamientoDetalleScreen`/`LevantamientosListScreen`,
+  `TareaDetalleScreen`/`AgendaScreen`.
+- Web: `ordenes/page.tsx` + `ordenes/[id]/page.tsx` (reformateados con
+  el prefijo, ya tenían el folio de OS), `viajes/page.tsx` (columna
+  Guía), `levantamientos/page.tsx` (columna Folio + título del modal +
+  el link "Ver OS N°..."), `agenda/page.tsx` (título del modal "Editar
+  tarea" + subtítulo del evento en el calendario).
+- **Hallazgo de paso**: `LevantamientoResumen` está definido en **3
+  lugares distintos** (shared, backend, y de nuevo en el propio
+  `web/levantamientos/page.tsx`) — deuda técnica preexistente, no la
+  toqué más que agregar `folio` a los 3 para no dejar type errors, no
+  es parte de este pedido unificarlos.
+- **Hallazgo de paso #2**: `web/agenda/page.tsx` sigue en el sistema de
+  diseño viejo ("Faena", `@/components/ui`) — nunca se migró a
+  `@bitacora/ui/web` (`ds-`) como el resto de las páginas. No lo toqué
+  (fuera de alcance, arreglo grande aparte) — el folio ahí se agregó
+  con los mismos componentes viejos de la página, sin abrir esa
+  migración.
+
+`tsc` (backend/web/mobile/shared/ui) + `verificar.sh` completo en verde.
+Migración validada con `BEGIN`/`ROLLBACK` real contra prod (3 columnas +
+3 funciones, rollback confirmado con lectura fresca aparte). Tarea 41
+creada — falta que la usuaria aplique la migración 108.

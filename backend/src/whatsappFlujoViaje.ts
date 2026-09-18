@@ -21,6 +21,7 @@ import type { PasoConversacionWhatsapp } from "@bitacora/shared";
 import { supabase } from "./supabase";
 import { calcularMontos } from "./viajesMontos";
 import { subirFotoGuiaConNombre } from "./storage";
+import { siguienteFolioViaje } from "./folios";
 
 type Chofer = { id: string; empresa_id: string };
 
@@ -261,10 +262,12 @@ function resumen(d: Datos): string {
 // ------------------------------------------------------------
 async function crearViaje(chofer: Chofer, d: Datos): Promise<string | null> {
   const { subtotal, iva, total } = calcularMontos(d.subtotal ?? 0, d.aplica_iva ?? true);
+  const folio = await siguienteFolioViaje(chofer.empresa_id);
   const { error } = await supabase.from("viajes").insert({
     empresa_id: chofer.empresa_id,
     fecha: new Date().toISOString().slice(0, 10),
     numero_guia: d.numero_guia?.trim() || "Sin número",
+    folio,
     cliente: d.cliente_nombre ?? "Por confirmar",
     cliente_id: d.cliente_id ?? null,
     chofer_id: chofer.id,

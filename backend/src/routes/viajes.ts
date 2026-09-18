@@ -7,6 +7,7 @@ import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
 import { requiereAccion } from "../permisos";
 import { calcularMontos } from "../viajesMontos";
+import { siguienteFolioViaje } from "../folios";
 
 export const viajesRouter = Router();
 
@@ -274,6 +275,7 @@ viajesRouter.post(
     }
     const aplicaIvaBool = aplica_iva !== false;
     const { subtotal: subtotalRedondeado, iva, total } = calcularMontos(subtotalNum, aplicaIvaBool);
+    const folio = await siguienteFolioViaje(req.empresaId!);
 
     const { data, error } = await supabase
       .from("viajes")
@@ -281,6 +283,7 @@ viajesRouter.post(
         empresa_id: req.empresaId!,
         fecha,
         numero_guia: numero_guia.trim(),
+        folio,
         cliente: resultado.cliente.nombre,
         cliente_id: resultado.cliente.id,
         chofer_id: typeof chofer_id === "string" && chofer_id ? chofer_id : null,

@@ -33,6 +33,8 @@ export type LevantamientoResumen = {
   creado_en: string;
   cliente: { id: string; nombre: string } | null;
   tecnico: { id: string; nombre: string } | null;
+  // Folio propio (migración 108) — formatear con formatearFolio("LEV", folio).
+  folio: number | null;
 };
 
 export type MaterialLevantamiento = {

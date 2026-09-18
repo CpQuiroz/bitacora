@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, Plus, CalendarX2 } from "lucide-react-native
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { EstadoTarea } from "@bitacora/shared";
+import { formatearFolio } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
 import {
   AsistenteButton,
@@ -675,6 +676,7 @@ function FilaCita({ item, esGestion, onPress, marca }: { item: TareaConDatos; es
           {item.titulo}
         </Texto>
         <Texto tamano={tokens.size.small} color={tokens.color.text + "99"} numberOfLines={1}>
+          {formatearFolio("CIT", item.folio) ? `${formatearFolio("CIT", item.folio)} · ` : ""}
           {item.cliente?.nombre ?? "Sin cliente"}
           {esGestion && item.responsable?.nombre ? ` · ${item.responsable.nombre}` : ""}
         </Texto>

@@ -4,6 +4,7 @@ import { Car, CloudUpload } from "lucide-react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { tokens } from "@bitacora/design-tokens";
+import { formatearFolio } from "@bitacora/shared";
 import {
   Button,
   EmptyState,
@@ -238,7 +239,7 @@ export function ViajesScreen({ navigation }: NativeStackScreenProps<ViajesStackP
                 key={item.id}
                 icono={<Car size={20} strokeWidth={2.25} color={tokens.color.accentRamp["700"]} />}
                 titulo={item.cliente_info?.nombre ?? item.cliente}
-                subtitulo={`${item.fecha} · Guía ${item.numero_guia} · ${item.origen} → ${item.destino}${equipo && item.chofer?.nombre ? ` · ${item.chofer.nombre}` : ""}`}
+                subtitulo={`${formatearFolio("VIA", item.folio) ? `${formatearFolio("VIA", item.folio)} · ` : ""}${item.fecha} · Guía ${item.numero_guia} · ${item.origen} → ${item.destino}${equipo && item.chofer?.nombre ? ` · ${item.chofer.nombre}` : ""}`}
                 trailing={
                   <View style={{ alignItems: "flex-end", gap: 4 }}>
                     <StatusBadge estado={item.estado} etiqueta={item.estado} tonoForzado={TONO_VIAJE[item.estado]} />

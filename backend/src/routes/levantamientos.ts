@@ -34,6 +34,7 @@ import { verificarLimiteOS } from "../limites";
 import { crearOrdenServicio } from "../ordenes";
 import { subirFotoLevantamiento, urlFirmada } from "../storage";
 import { notificar } from "../notificar";
+import { siguienteFolioLevantamiento } from "../folios";
 
 export const levantamientosRouter = Router();
 
@@ -85,6 +86,7 @@ type LevantamientoRow = {
   orden_servicio_id: string | null;
   creado_en: string;
   actualizado_en: string;
+  folio: number | null;
 };
 
 async function buscarLevantamiento(empresaId: string, id: string): Promise<LevantamientoRow | null> {
@@ -212,6 +214,11 @@ levantamientosRouter.post(
       tecnicoValido = tecnico_id;
     }
 
+    // Folio propio (migración 108), formateado como "LEV-000X" solo al
+    // mostrarlo (formatearFolio, @bitacora/shared). Tolerante a error —
+    // ver folios.ts.
+    const folio = await siguienteFolioLevantamiento(req.empresaId!);
+
     const { data, error } = await supabase
       .from("levantamientos")
       .insert({
@@ -221,6 +228,7 @@ levantamientosRouter.post(
         creado_por: req.userId!,
         estado: tecnicoValido ? "asignado" : "creado",
         descripcion_requerimiento: typeof descripcion_requerimiento === "string" ? descripcion_requerimiento.trim() || null : null,
+        folio,
       })
       .select()
       .single();

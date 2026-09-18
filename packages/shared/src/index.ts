@@ -2,6 +2,7 @@ export * from "./types";
 export * from "./dinero";
 export * from "./supabase";
 export * from "./rut";
+export * from "./folio";
 export * from "./permisos";
 export * from "./regionesComunas";
 export * from "./plantillas";

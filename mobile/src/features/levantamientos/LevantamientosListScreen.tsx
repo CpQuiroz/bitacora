@@ -4,6 +4,7 @@ import { ArrowLeft, Search } from "lucide-react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { EstadoLevantamiento } from "@bitacora/shared";
+import { formatearFolio } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
 import { EmptyState, ListRow, ListRowGrupo, LoadingState, ScreenHeader, StatusBadge, Texto, type TonoEstado } from "@bitacora/ui/native";
 import { listarMisLevantamientos, type LevantamientoResumen } from "../../services/levantamientos";
@@ -81,7 +82,11 @@ export function LevantamientosListScreen({ navigation }: NativeStackScreenProps<
                 key={item.id}
                 icono={<Search size={22} strokeWidth={2.25} color={tokens.color.accentRamp["700"]} />}
                 titulo={item.cliente?.nombre ?? "Cliente"}
-                subtitulo={item.descripcion_requerimiento ?? undefined}
+                subtitulo={
+                  formatearFolio("LEV", item.folio)
+                    ? `${formatearFolio("LEV", item.folio)}${item.descripcion_requerimiento ? ` · ${item.descripcion_requerimiento}` : ""}`
+                    : item.descripcion_requerimiento ?? undefined
+                }
                 onPress={() => navigation.navigate("LevantamientoDetalle", { id: item.id })}
                 trailing={
                   <View style={{ alignItems: "flex-end", gap: 4 }}>

@@ -3,6 +3,7 @@ import { Alert, FlatList, Image, Pressable, ScrollView, View } from "react-nativ
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { AlertCircle, ArrowLeft, Camera, Minus, Plus, RefreshCw, X } from "lucide-react-native";
 import type { CatalogoItem, EstadoLevantamiento } from "@bitacora/shared";
+import { formatearFolio } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
 import { Button, Dialog, ErrorState, LoadingState, ScreenHeader, Textarea, Texto, useMarca } from "@bitacora/ui/native";
 import { elegirFotos } from "../../lib/imagen";
@@ -172,7 +173,11 @@ export function LevantamientoDetalleScreen({ route, navigation }: NativeStackScr
 
   return (
     <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
-      <ScreenHeader antetitulo={ETIQUETA_ESTADO[detalle.estado]} titulo={detalle.cliente?.nombre ?? "Cliente"} accion={volver} />
+      <ScreenHeader
+        antetitulo={`${formatearFolio("LEV", detalle.folio) ? `${formatearFolio("LEV", detalle.folio)} · ` : ""}${ETIQUETA_ESTADO[detalle.estado]}`}
+        titulo={detalle.cliente?.nombre ?? "Cliente"}
+        accion={volver}
+      />
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: tokens.space["4"], gap: tokens.space["4"], paddingBottom: tokens.space["8"] * 2 }}>
         {detalle.descripcion_requerimiento ? (
           <View style={{ gap: 4 }}>

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ClipboardCheck, Plus, Receipt } from "lucide-react";
 import type { Cliente, EstadoOS, OrdenServicio, Trabajo, Usuario } from "@bitacora/shared";
+import { formatearFolio } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { abrirPdfOS } from "@/lib/descargarPdf";
@@ -279,7 +280,7 @@ export default function OrdenesServicioPage() {
               />
             ),
           },
-          { encabezado: "Folio", celda: (o) => (o.orden?.folio != null ? <Cifra>{`N° ${o.orden.folio}`}</Cifra> : "—") },
+          { encabezado: "Folio", celda: (o) => (o.orden?.folio != null ? <Cifra>{formatearFolio("OS", o.orden.folio)}</Cifra> : "—") },
           { encabezado: "Cliente", celda: (o) => o.cliente_info?.nombre ?? o.cliente },
           { encabezado: "Colaborador", celda: (o) => o.responsable?.nombre ?? "—" },
           {

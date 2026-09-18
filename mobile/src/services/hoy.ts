@@ -3,7 +3,7 @@ import { listarTrabajos } from "./trabajos";
 import { listarTareasRango } from "./agenda";
 import { listarViajesEquipo, listarViajesPropios } from "./viajes";
 import { listarMisLevantamientos } from "./levantamientos";
-import { estadoOsDeTrabajo } from "@bitacora/shared";
+import { estadoOsDeTrabajo, formatearFolio } from "@bitacora/shared";
 
 // "Hoy"/"Pizarra": una sola lista cronológica con todo lo del día —
 // trabajos, citas, viajes y (18-sep-2026) levantamientos pendientes,
@@ -28,6 +28,12 @@ export type ItemHoy = {
   estado: EstadoOS | string | null;
   lat: number | null;
   lng: number | null;
+  // Folio propio con prefijo ("OS-0042"/"CIT-0031"/"VIA-0012"/
+  // "LEV-0004", ya formateado) — 18-sep-2026, pedido para distinguir el
+  // tipo de un vistazo (antes solo un ícono chico y gris) y tener una
+  // referencia citable. Null = sin folio (fila creada antes de la
+  // migración 108, o falla al asignarlo).
+  folio: string | null;
 };
 
 function hoyISO(): string {
@@ -71,13 +77,13 @@ export async function cargarHoy(equipo: boolean, incluirViajes: boolean, incluir
         id: tr.id,
         hora: hhmm(tr.hora_programada),
         titulo: tr.cliente,
-        // Bug real (14-sep-2026): no se veía el folio de la OS en "Hoy"
-        // (sí se ve en "Todos los trabajos" y en el detalle) — se agrega
-        // acá como parte del subtítulo.
-        subtitulo: tr.orden?.folio != null ? `OS N° ${tr.orden.folio}${tr.ubicacion ? ` · ${tr.ubicacion}` : ""}` : tr.ubicacion ?? null,
+        // El folio ahora se ve aparte (tag "OS-000X", ver HoyScreen) —
+        // el subtítulo vuelve a ser solo la ubicación.
+        subtitulo: tr.ubicacion ?? null,
         estado: tr.orden?.estado_os ?? estadoOsDeTrabajo(tr.estado),
         lat: null,
         lng: null,
+        folio: formatearFolio("OS", tr.orden?.folio),
       });
     }
   }
@@ -97,6 +103,7 @@ export async function cargarHoy(equipo: boolean, incluirViajes: boolean, incluir
         estado: c.estado,
         lat: c.cliente?.lat ?? null,
         lng: c.cliente?.lng ?? null,
+        folio: formatearFolio("CIT", c.folio),
       });
     }
   }
@@ -116,6 +123,7 @@ export async function cargarHoy(equipo: boolean, incluirViajes: boolean, incluir
         estado: v.estado,
         lat: null,
         lng: null,
+        folio: formatearFolio("VIA", v.folio),
       });
     }
   }
@@ -135,6 +143,7 @@ export async function cargarHoy(equipo: boolean, incluirViajes: boolean, incluir
         estado: lev.estado,
         lat: null,
         lng: null,
+        folio: formatearFolio("LEV", lev.folio),
       });
     }
   }

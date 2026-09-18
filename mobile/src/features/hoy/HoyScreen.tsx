@@ -19,6 +19,18 @@ const ICONO: Record<ItemHoy["tipo"], typeof ClipboardList> = {
   levantamiento: Search,
 };
 
+// Color del ícono + del tag de folio, por tipo (18-sep-2026) — antes
+// los 4 tipos se veían con el mismo ícono gris, difícil de distinguir
+// de un vistazo (pedido real). Con solo 2 acentos de marca en el
+// sistema (terracota/oliva) más neutral, "Cita" combina fondo de un
+// acento con texto del otro — no hay un 4° tono propio todavía.
+const COLOR_TIPO: Record<ItemHoy["tipo"], { fondo: string; texto: string }> = {
+  trabajo: { fondo: tokens.color.accentRamp["200"], texto: tokens.color.accentRamp["700"] },
+  levantamiento: { fondo: tokens.color.accent2Ramp["200"], texto: tokens.color.accent2Ramp["800"] },
+  viaje: { fondo: tokens.color.neutral["200"], texto: tokens.color.neutral["800"] },
+  cita: { fondo: tokens.color.accent2Ramp["200"], texto: tokens.color.accentRamp["700"] },
+};
+
 const ETIQUETA_ESTADO: Record<string, string> = {
   pendiente: "Pendiente",
   enviada: "Enviada",
@@ -175,6 +187,7 @@ export function HoyScreen({ navigation }: NativeStackScreenProps<HoyStackParamLi
         }
         renderItem={({ item }) => {
           const Icono = ICONO[item.tipo];
+          const color = COLOR_TIPO[item.tipo];
           return (
             <Card onPress={() => abrir(item)}>
               <View style={{ flexDirection: "row", alignItems: "flex-start", gap: tokens.space["3"] }}>
@@ -182,12 +195,27 @@ export function HoyScreen({ navigation }: NativeStackScreenProps<HoyStackParamLi
                   <Texto tamano={tokens.size.caption} color={tokens.color.text} peso="semibold">
                     {item.hora ?? "—"}
                   </Texto>
-                  <Icono size={16} strokeWidth={2.75} color={`${tokens.color.text}66`} />
+                  <Icono size={16} strokeWidth={2.75} color={color.texto} />
                 </View>
                 <View style={{ flex: 1, gap: 2 }}>
                   <Texto tamano={tokens.size.body} color={tokens.color.text} peso="semibold">
                     {item.titulo}
                   </Texto>
+                  {item.folio ? (
+                    <View
+                      style={{
+                        alignSelf: "flex-start",
+                        backgroundColor: color.fondo,
+                        borderRadius: 5,
+                        paddingHorizontal: 6,
+                        paddingVertical: 1,
+                      }}
+                    >
+                      <Texto tamano={tokens.size.micro} color={color.texto} peso="semibold">
+                        {item.folio}
+                      </Texto>
+                    </View>
+                  ) : null}
                   {item.subtitulo ? (
                     <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} numberOfLines={1}>
                       {item.subtitulo}

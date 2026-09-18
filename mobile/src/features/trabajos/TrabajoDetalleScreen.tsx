@@ -3,7 +3,7 @@ import { Alert, Linking, Platform, Pressable, ScrollView, View } from "react-nat
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { EstadoTrabajo, ItemChecklist } from "@bitacora/shared";
-import { estadoOsDeTrabajo } from "@bitacora/shared";
+import { estadoOsDeTrabajo, formatearFolio } from "@bitacora/shared";
 import { ArrowLeft, ChevronRight, Navigation, Phone, type LucideIcon } from "lucide-react-native";
 import { tokens } from "@bitacora/design-tokens";
 import { Button, ErrorState, LoadingState, ScreenHeader, Skeleton, StatusBadge, Texto, useMarca } from "@bitacora/ui/native";
@@ -252,7 +252,7 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
 
   return (
     <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
-      <ScreenHeader antetitulo={orden?.folio != null ? `OS N° ${orden.folio}` : undefined} titulo={cli?.nombre ?? trabajo.cliente} accion={volver} />
+      <ScreenHeader antetitulo={formatearFolio("OS", orden?.folio) ?? undefined} titulo={cli?.nombre ?? trabajo.cliente} accion={volver} />
       <OfflineBanner guardadoEn={detalle.desdeCache ? detalle.guardadoEn : undefined} />
       <ScrollView contentContainerStyle={{ padding: tokens.space["6"], gap: tokens.space["4"], paddingBottom: tokens.space["8"] * 3 }}>
         {/* Estado + fecha + editar — no entran en ScreenHeader (sin lugar

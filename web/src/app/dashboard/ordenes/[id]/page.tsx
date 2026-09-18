@@ -9,7 +9,7 @@ import type { AnalisisFoto, CatalogoItem, Cliente, OrdenServicio, OsItem, Trabaj
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { abrirPdfOS } from "@/lib/descargarPdf";
-import { formatearCLP } from "@bitacora/shared";
+import { formatearCLP, formatearFolio } from "@bitacora/shared";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Button, Card, Cifra, DatePicker, Input, Select, StatusBadge, Table, Textarea } from "@bitacora/ui/web";
 import { InputMonto } from "@/components/InputMonto";
@@ -251,7 +251,7 @@ export default function DetalleOrdenServicioPage() {
           <div className="mb-ds-6 flex flex-col gap-ds-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="ds-heading text-ds-h2 text-ds-text">
-                {detalle.orden?.folio != null ? `OS N° ${detalle.orden.folio}` : "Orden de servicio"}
+                {formatearFolio("OS", detalle.orden?.folio) ?? "Orden de servicio"}
               </p>
               <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">
                 {detalle.cliente_info?.nombre ?? detalle.cliente} · {detalle.fecha}

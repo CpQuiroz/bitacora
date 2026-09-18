@@ -4,6 +4,7 @@ import type { EstadoViaje, Viaje } from "@bitacora/shared";
 import { supabase } from "../supabase";
 import { subirFotoGuiaConNombre, urlFirmadaFotoGuia } from "../storage";
 import { calcularMontos } from "../viajesMontos";
+import { siguienteFolioViaje } from "../folios";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
 
@@ -238,6 +239,7 @@ misViajesRouter.post(
       .eq("id", req.empresaId!)
       .maybeSingle();
     const estado: EstadoViaje = empresa?.viajes_aprobacion_automatica ? "confirmado" : "borrador";
+    const folio = await siguienteFolioViaje(req.empresaId!);
 
     const { data, error } = await supabase
       .from("viajes")
@@ -245,6 +247,7 @@ misViajesRouter.post(
         empresa_id: req.empresaId!,
         fecha: new Date().toISOString().slice(0, 10),
         numero_guia: numero_guia.trim(),
+        folio,
         cliente: cliente.nombre,
         cliente_id: cliente.id,
         chofer_id: req.userId!,

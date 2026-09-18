@@ -4,6 +4,7 @@ import { supabase } from "../supabase";
 import { notificar } from "../notificar";
 import { avisarCitaAgendada, avisarCitaCancelada } from "../agendaProAvisos";
 import { calcularEstadoCancelacion, obtenerOCrearAgendaProConfig } from "../agendaPro";
+import { siguienteFolioCita } from "../folios";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
 import { requiereModulo } from "../permisos";
@@ -189,11 +190,13 @@ tareasRouter.post(
       return;
     }
     const prioridadFinal: Prioridad = PRIORIDADES.includes(prioridad) ? prioridad : "media";
+    const folio = await siguienteFolioCita(req.empresaId!);
 
     const { data, error } = await supabase
       .from("tareas")
       .insert({
         empresa_id: req.empresaId!,
+        folio,
         titulo: titulo.trim(),
         descripcion: descripcion?.trim() || null,
         fecha,

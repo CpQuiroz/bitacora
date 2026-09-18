@@ -4,7 +4,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { ArrowLeft, MapPin, MessageCircle, Navigation, Pencil, Phone } from "lucide-react-native";
 import type { EstadoTarea } from "@bitacora/shared";
-import { ETIQUETA_ESTADO_TAREA } from "@bitacora/shared";
+import { ETIQUETA_ESTADO_TAREA, formatearFolio } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
 import { Button, Card, ErrorState, LoadingState, ScreenHeader, StatusBadge, Texto } from "@bitacora/ui/native";
 import { OfflineBanner } from "../../components/OfflineBanner";
@@ -193,7 +193,7 @@ export function TareaDetalleScreen({ route, navigation }: NativeStackScreenProps
   return (
     <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
       <ScreenHeader
-        antetitulo={`${tarea.fecha}${tarea.hora ? ` · ${tarea.hora.slice(0, 5)}` : ""}`}
+        antetitulo={`${formatearFolio("CIT", tarea.folio) ? `${formatearFolio("CIT", tarea.folio)} · ` : ""}${tarea.fecha}${tarea.hora ? ` · ${tarea.hora.slice(0, 5)}` : ""}`}
         titulo={tarea.titulo}
         accion={volver}
       />

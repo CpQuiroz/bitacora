@@ -2,6 +2,7 @@ import { Router, type Request } from "express";
 import { extraerDatosGuia } from "../claude";
 import { supabase } from "../supabase";
 import { subirFotoGuia } from "../storage";
+import { siguienteFolioViaje } from "../folios";
 import { env } from "../env";
 import { ah } from "../asyncHandler";
 import {
@@ -126,10 +127,12 @@ async function manejarFoto(chofer: { id: string; empresa_id: string }, mensaje: 
 
   const fotoKey = await subirFotoGuia(chofer.empresa_id, media.buffer, mimeType);
   const fecha = mensaje.timestamp ? new Date(Number(mensaje.timestamp) * 1000).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
+  const folio = await siguienteFolioViaje(chofer.empresa_id);
 
   const { error } = await supabase.from("viajes").insert({
     empresa_id: chofer.empresa_id,
     fecha,
+    folio,
     numero_guia: datos.numero_guia?.trim() || "Por confirmar",
     cliente: clienteNombre,
     cliente_id: clienteId,

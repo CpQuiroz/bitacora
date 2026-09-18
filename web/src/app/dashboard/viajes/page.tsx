@@ -4,7 +4,7 @@ import { Fragment, useEffect, useMemo, useState, type FormEvent } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Plus, Truck } from "lucide-react";
-import { CIUDADES_CHILE, type Cliente, type EstadoViaje, type Usuario, type Viaje } from "@bitacora/shared";
+import { CIUDADES_CHILE, formatearFolio, type Cliente, type EstadoViaje, type Usuario, type Viaje } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
@@ -638,7 +638,10 @@ export default function ViajesPage() {
                           />
                         </td>
                         <td className="px-ds-4 py-ds-3 text-ds-text/70">{v.fecha}</td>
-                        <td className="px-ds-4 py-ds-3 font-medium text-ds-text">{v.numero_guia}</td>
+                        <td className="px-ds-4 py-ds-3 font-medium text-ds-text">
+                          {formatearFolio("VIA", v.folio) ? <p className="font-ds-body text-ds-caption text-ds-text/60">{formatearFolio("VIA", v.folio)}</p> : null}
+                          {v.numero_guia}
+                        </td>
                         <td className="px-ds-4 py-ds-3 text-ds-text">{v.cliente_info?.nombre ?? v.cliente}</td>
                         <td className="px-ds-4 py-ds-3 text-ds-text/70">{v.chofer?.nombre ?? "—"}</td>
                         <td className="px-ds-4 py-ds-3 text-ds-text/70">

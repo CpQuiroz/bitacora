@@ -4,7 +4,7 @@ import { Navigation, ClipboardList } from "lucide-react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { EstadoOS, EstadoTrabajo } from "@bitacora/shared";
-import { estadoOsDeTrabajo } from "@bitacora/shared";
+import { estadoOsDeTrabajo, formatearFolio } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
 import { Button, Card, EmptyState, ErrorState, LoadingState, ScreenHeader, Skeleton, StatusBadge, Texto, useMarca } from "@bitacora/ui/native";
 import { OfflineBanner } from "../../components/OfflineBanner";
@@ -286,7 +286,7 @@ export function TrabajosScreen({ navigation }: NativeStackScreenProps<TrabajosSt
                     ) : null}
                     {item.orden?.folio != null ? (
                       <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} style={{ fontVariant: ["tabular-nums"] }}>
-                        OS N° {item.orden.folio}
+                        {formatearFolio("OS", item.orden.folio)}
                       </Texto>
                     ) : null}
                   </View>
