@@ -15,7 +15,7 @@
 // foto pueden competir entre sí y no terminar nunca (bug real,
 // 14-sep-2026, ver detalle en crearViaje de services/viajes.ts).
 // ============================================================
-import type { CatalogoItem, EstadoLevantamiento } from "@bitacora/shared";
+import type { CatalogoItem, DetalleLevantamiento, LevantamientoResumen } from "@bitacora/shared";
 import { apiJson } from "./api";
 import { encolar } from "./sync/queue";
 
@@ -26,34 +26,12 @@ export async function listarCatalogo(): Promise<CatalogoItem[]> {
   return res.ok ? res.data.filter((i) => i.activo) : [];
 }
 
-export type LevantamientoResumen = {
-  id: string;
-  estado: EstadoLevantamiento;
-  descripcion_requerimiento: string | null;
-  creado_en: string;
-  cliente: { id: string; nombre: string } | null;
-  tecnico: { id: string; nombre: string } | null;
-  // Folio propio (migración 108) — formatear con formatearFolio("LEV", folio).
-  folio: number | null;
-};
-
-export type MaterialLevantamiento = {
-  id: string;
-  catalogo_item_id: string;
-  cantidad: number;
-  catalogo_item: { id: string; nombre: string; precio_base: number; unidad: string } | null;
-};
-
-export type FotoLevantamiento = { id: string; url: string; creado_en: string };
-
-export type DetalleLevantamiento = LevantamientoResumen & {
-  descripcion_tecnico: string | null;
-  referencia_externa: string | null;
-  trabajo_id: string | null;
-  folio_os: number | null;
-  materiales: MaterialLevantamiento[];
-  fotos: FotoLevantamiento[];
-};
+// LevantamientoResumen/DetalleLevantamiento vivían acá, redeclarados a
+// mano (mismo shape que el backend y que web/levantamientos/page.tsx
+// volvían a escribir cada uno por su lado) — única fuente de verdad
+// ahora en @bitacora/shared, esto solo re-exporta para no tocar los
+// imports de las pantallas que ya los usaban desde este archivo.
+export type { LevantamientoResumen, DetalleLevantamiento };
 
 export async function listarMisLevantamientos(): Promise<LevantamientoResumen[]> {
   const res = await apiJson<LevantamientoResumen[]>("/api/levantamientos");

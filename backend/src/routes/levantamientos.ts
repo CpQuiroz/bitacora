@@ -73,29 +73,15 @@ async function esTecnicoAsignable(empresaId: string, userId: string): Promise<bo
   return funcion != null && FUNCIONES_LEVANTAMIENTOS.includes(funcion);
 }
 
-type LevantamientoRow = {
-  id: string;
-  empresa_id: string;
-  cliente_id: string;
-  tecnico_id: string | null;
-  creado_por: string | null;
-  estado: EstadoLevantamiento;
-  descripcion_requerimiento: string | null;
-  descripcion_tecnico: string | null;
-  referencia_externa: string | null;
-  orden_servicio_id: string | null;
-  creado_en: string;
-  actualizado_en: string;
-  folio: number | null;
-};
-
-async function buscarLevantamiento(empresaId: string, id: string): Promise<LevantamientoRow | null> {
+// El shape crudo de la fila ya está en @bitacora/shared (`Levantamiento`)
+// — antes se redeclaraba acá aparte (mismo hallazgo en mobile y web).
+async function buscarLevantamiento(empresaId: string, id: string): Promise<Levantamiento | null> {
   const { data } = await supabase.from("levantamientos").select("*").eq("empresa_id", empresaId).eq("id", id).maybeSingle();
-  return (data as LevantamientoRow) ?? null;
+  return (data as Levantamiento) ?? null;
 }
 
 // Admin ve cualquiera de su empresa; el técnico solo los suyos.
-async function puedeVer(req: RequestConEmpresa, lev: LevantamientoRow): Promise<boolean> {
+async function puedeVer(req: RequestConEmpresa, lev: Levantamiento): Promise<boolean> {
   if (esAdmin(req)) return true;
   return lev.tecnico_id === req.userId && (await esTecnicoAsignable(req.empresaId!, req.userId!));
 }

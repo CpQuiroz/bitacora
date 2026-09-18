@@ -1146,6 +1146,37 @@ export type LevantamientoFoto = {
 // cambio acá, no de lógica dispersa por pantallas.
 export const FUNCIONES_LEVANTAMIENTOS: FuncionColaborador[] = ["tecnico", "chofer"];
 
+// Formas de respuesta de /api/levantamientos (18-sep-2026) — antes
+// declaradas 3 veces por separado (shared ya tenía `Levantamiento`
+// crudo; backend, mobile y web volvían a escribir su propia versión
+// "aplanada" con cliente/técnico/materiales/fotos ya unidos). Única
+// fuente de verdad acá, los 3 consumidores ahora importan esto.
+export type LevantamientoMaterialConItem = {
+  id: string;
+  catalogo_item_id: string;
+  cantidad: number;
+  catalogo_item: { id: string; nombre: string; precio_base: number; unidad: string } | null;
+};
+
+export type LevantamientoFotoUrl = { id: string; url: string; creado_en: string };
+
+// GET /api/levantamientos — la fila cruda + los 2 joins que arma el
+// backend (cliente:clientes(id,nombre), tecnico:usuarios(id,nombre)).
+export type LevantamientoResumen = Levantamiento & {
+  cliente: { id: string; nombre: string } | null;
+  tecnico: { id: string; nombre: string } | null;
+};
+
+// GET /api/levantamientos/:id — el resumen + materiales/fotos +
+// trabajo_id/folio_os (derivados de la OS que nació al aprobar, si ya
+// existe uno).
+export type DetalleLevantamiento = LevantamientoResumen & {
+  materiales: LevantamientoMaterialConItem[];
+  fotos: LevantamientoFotoUrl[];
+  trabajo_id: string | null;
+  folio_os: number | null;
+};
+
 export type TipoCatalogoItem = "producto" | "servicio" | "kit";
 
 export type CatalogoItem = {

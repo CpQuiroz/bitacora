@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Camera, Pencil, Plus, Search, Trash2 } from "lucide-react";
-import type { Cliente, EstadoLevantamiento, Usuario } from "@bitacora/shared";
+import type { Cliente, DetalleLevantamiento, EstadoLevantamiento, LevantamientoResumen, Usuario } from "@bitacora/shared";
 import { FUNCIONES_LEVANTAMIENTOS, formatearFolio } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
@@ -14,27 +14,12 @@ import { Modal } from "@/components/Modal";
 import { ComboboxCliente } from "@/components/ComboboxCliente";
 import { ComboboxResponsable } from "@/components/ComboboxResponsable";
 
-type LevantamientoResumen = {
-  id: string;
-  estado: EstadoLevantamiento;
-  descripcion_requerimiento: string | null;
-  creado_en: string;
-  cliente: { id: string; nombre: string } | null;
-  tecnico: { id: string; nombre: string } | null;
-  folio: number | null;
-};
-
-type Material = { id: string; catalogo_item_id: string; cantidad: number; catalogo_item: { id: string; nombre: string; precio_base: number; unidad: string } | null };
-type Foto = { id: string; url: string; creado_en: string };
-
-type Detalle = LevantamientoResumen & {
-  descripcion_tecnico: string | null;
-  referencia_externa: string | null;
-  trabajo_id: string | null;
-  folio_os: number | null;
-  materiales: Material[];
-  fotos: Foto[];
-};
+// LevantamientoResumen/DetalleLevantamiento vivían acá, redeclarados a
+// mano (mismo shape que mobile y que el backend volvían a escribir cada
+// uno por su lado) — única fuente de verdad ahora en @bitacora/shared.
+// `Detalle` queda como alias local: el resto del archivo ya usaba ese
+// nombre corto, no hacía falta tocar cada punto de uso.
+type Detalle = DetalleLevantamiento;
 
 const TONO_ESTADO: Record<EstadoLevantamiento, "en_progreso" | "completado" | "cancelado"> = {
   creado: "en_progreso",

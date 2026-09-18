@@ -3166,3 +3166,37 @@ Implementado:
 Migración validada con `BEGIN`/`ROLLBACK` real contra prod (3 columnas +
 3 funciones, rollback confirmado con lectura fresca aparte). Tarea 41
 creada — falta que la usuaria aplique la migración 108.
+
+## 2026-09-18 (8): migración 108 confirmada + hallazgo 1 (tipos duplicados)
+
+Confirmado leyendo `information_schema`/`pg_proc` que la migración 108
+está aplicada en prod (3 columnas `folio` + 3 funciones). Push del
+commit de folios a `main`.
+
+**Hallazgo 1** (pedido: "sigue con el hallazgo 1 y 2"): `Levantamiento`/
+`LevantamientoResumen`/`DetalleLevantamiento` estaban declarados por
+separado en 3 lugares (`packages/shared` ya tenía el crudo
+`Levantamiento`; `backend/routes/levantamientos.ts`,
+`mobile/services/levantamientos.ts` y `web/levantamientos/page.tsx`
+volvían a escribir su propia versión "aplanada" con cliente/técnico/
+materiales/fotos ya unidos — 3 copias idénticas).
+
+Corregido: `packages/shared/src/types.ts` gana `LevantamientoResumen`
+(= `Levantamiento` + cliente + técnico, lo que realmente devuelve
+`GET /api/levantamientos`), `DetalleLevantamiento` (+ materiales/fotos/
+trabajo_id/folio_os, lo que devuelve `GET /api/levantamientos/:id`), y
+2 tipos de apoyo nuevos (`LevantamientoMaterialConItem`,
+`LevantamientoFotoUrl` — distintos de `LevantamientoMaterial`/
+`LevantamientoFoto` que ya existían, esos son la fila cruda sin joins).
+Los 3 consumidores ahora importan desde ahí:
+- `backend/routes/levantamientos.ts`: `LevantamientoRow` local
+  eliminado, usa `Levantamiento` de shared.
+- `mobile/services/levantamientos.ts`: los 4 tipos locales eliminados,
+  re-exporta los de shared (mismo nombre — cero cambios en los 2
+  archivos que los importaban).
+- `web/levantamientos/page.tsx`: los 4 tipos locales eliminados,
+  `Detalle` queda como alias local de `DetalleLevantamiento` (mismo
+  criterio, cero cambios en el resto del archivo).
+
+`tsc` (backend/shared/mobile/web) + `verificar.sh` completo en verde.
+Sin migración, sin cambio de comportamiento — solo tipos.
