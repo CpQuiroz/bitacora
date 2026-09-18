@@ -2969,3 +2969,54 @@ presente; queda cubierta por: el mecanismo ya probado en prod
 (`--ds-brand`) + los valores ya vistos y aprobados en el mockup. Falta
 que la usuaria lo pruebe en la web real y confirme que se ve bien en
 pantallas concretas (no solo en el mockup).
+
+## 2026-09-18 (4): Exportar/Importar CSV — Clientes/Catálogo/Equipos/Proveedores
+
+Pedido aprobado tras el análisis previo (encontré 3 botones "Importar"
+ya existentes en la web que solo mostraban una alerta "próximamente" —
+Clientes, Catálogo, Equipos; ninguno tenía Exportar; sumé Proveedores
+al mismo tratamiento por tener la misma forma que Clientes).
+
+**Exportar** (los 4, barato — reutiliza `descargarCSV` ya probado en
+Informes): botón "Exportar CSV" en Clientes/Catálogo/Equipos/
+Proveedores, exporta lo que está filtrado en pantalla en ese momento
+(mismo criterio que Informes), con las columnas relevantes de cada
+entidad.
+
+**Importar** (el trabajo real — implementado completo para Clientes,
+como referencia; Catálogo/Equipos/Proveedores quedan para una próxima
+pasada con el mismo patrón):
+- `web/src/components/ImportarCsvModal.tsx` (nuevo, genérico): plantilla
+  descargable (mismas columnas que se suben), parseo 100% client-side
+  con `papaparse` (nueva dependencia en `web`), preview de cantidad de
+  filas antes de confirmar, y reporte fila-por-fila (creados/omitidos/
+  con error) después. La validación real vive en el backend — el modal
+  no la duplica.
+- `backend/src/routes/clientes.ts`: `POST /api/clientes/importar`.
+  Mismas reglas que el alta manual (solo `nombre` obligatorio, RUT
+  validado si viene) MÁS una que el alta manual no tiene: dedupe por
+  RUT (si ya existe en la empresa o se repite dentro del mismo archivo,
+  se omite en vez de duplicar — protección contra subir el mismo
+  archivo dos veces). Tope de 500 filas por importación.
+  **Decisión importante:** NO geocodifica durante la importación —
+  Nominatim (el geocodificador que ya usa el alta manual) tiene
+  política de uso de ~1 request/segundo; cientos de filas seguidas la
+  violarían. Las filas importadas quedan sin lat/lng (igual que "crear
+  sin dirección" ya se comporta hoy) — se completan solas al editar la
+  dirección desde la ficha de cada cliente (el PATCH ya re-geocodifica).
+- `clientes/page.tsx`: el botón "Importar Clientes" deja de ser un
+  `alert()` y abre el modal de verdad.
+
+`tsc` + `verificar.sh` completo en verde (incluye `audit:tenant` — el
+endpoint nuevo filtra por `empresa_id` como todos). Sin migración.
+
+De paso: `npm install papaparse` mostró 3 vulnerabilidades **pre-
+existentes** en el monorepo (js-yaml, sharp, y una crítica de RCE en
+Next.js 16.0–16.3.2 en servidores Windows / con AVIF) — ninguna
+relacionada con papaparse. No las toqué (fuera de alcance de este
+pedido) pero quedan avisadas.
+
+Pendiente explícito: Catálogo, Equipos y Proveedores solo tienen
+Exportar por ahora — Importar sigue mostrando el `alert()` hasta que se
+haga esa segunda pasada (mismo componente `ImportarCsvModal`, un
+endpoint `/importar` nuevo por entidad).

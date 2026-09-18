@@ -10,6 +10,19 @@ import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Button, Card, EmptyState, Input, LoadingState, StatusBadge, Table } from "@bitacora/ui/web";
 import { linkWhatsapp } from "@/lib/whatsapp";
+import { descargarCSV } from "@/lib/exportCsv";
+import { ImportarCsvModal, type ColumnaImport } from "@/components/ImportarCsvModal";
+
+const COLUMNAS_IMPORT_CLIENTES: ColumnaImport[] = [
+  { clave: "nombre", etiqueta: "Nombre", ejemplo: "Juan Pérez", requerido: true },
+  { clave: "rut", etiqueta: "RUT", ejemplo: "12.345.678-9" },
+  { clave: "direccion", etiqueta: "Dirección", ejemplo: "Av. Siempre Viva 742" },
+  { clave: "comuna", etiqueta: "Comuna", ejemplo: "Rancagua" },
+  { clave: "telefono", etiqueta: "Teléfono", ejemplo: "+56912345678" },
+  { clave: "correo", etiqueta: "Correo", ejemplo: "juan@correo.cl" },
+  { clave: "contacto_nombre", etiqueta: "Contacto", ejemplo: "" },
+  { clave: "fecha_nacimiento", etiqueta: "Fecha de nacimiento", ejemplo: "1990-05-20" },
+];
 
 type ClienteConDatos = Cliente & { cantidad_os: number; cantidad_cotizaciones: number; ultima_actividad: string | null };
 
@@ -25,6 +38,7 @@ export default function ClientesPage() {
   const [filtro, setFiltro] = useState<Filtro>("todos");
 
   const [formAbierto, setFormAbierto] = useState(false);
+  const [importAbierto, setImportAbierto] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
@@ -137,6 +151,27 @@ export default function ClientesPage() {
     return true;
   });
 
+  // Exporta lo que está filtrado en pantalla, no siempre todo el
+  // universo — mismo criterio que descargarCSV ya usa en Informes.
+  function exportar() {
+    descargarCSV(
+      `clientes-${new Date().toISOString().slice(0, 10)}.csv`,
+      filtrados.map((c) => ({
+        Nombre: c.nombre,
+        RUT: c.rut ?? "",
+        Contacto: c.contacto_nombre ?? "",
+        Dirección: c.direccion,
+        Comuna: c.comuna ?? "",
+        Teléfono: c.telefono ?? "",
+        Correo: c.correo ?? "",
+        "Fecha de nacimiento": c.fecha_nacimiento ?? "",
+        Estado: c.activo ? "Activo" : "Inactivo",
+        "Órdenes de servicio": c.cantidad_os,
+        "Última actividad": c.ultima_actividad ?? "",
+      }))
+    );
+  }
+
   const CHIPS: { valor: Filtro; etiqueta: string }[] = [
     { valor: "todos", etiqueta: "Todos" },
     { valor: "activos", etiqueta: "Activos" },
@@ -153,7 +188,10 @@ export default function ClientesPage() {
           <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">Gestiona tus clientes y revisa el historial</p>
         </div>
         <div className="flex gap-ds-2">
-          <Button variante="secundario" onPress={() => alert("Importar clientes desde CSV — próximamente.")}>
+          <Button variante="secundario" onPress={exportar} deshabilitado={filtrados.length === 0}>
+            Exportar CSV
+          </Button>
+          <Button variante="secundario" onPress={() => setImportAbierto(true)}>
             Importar Clientes
           </Button>
           <Button iconoIzq={<Plus size={16} strokeWidth={2.75} />} onPress={() => setFormAbierto((v) => !v)}>
@@ -279,6 +317,16 @@ export default function ClientesPage() {
           ]}
         />
       )}
+
+      <ImportarCsvModal
+        abierto={importAbierto}
+        onCerrar={() => setImportAbierto(false)}
+        titulo="Importar clientes desde CSV"
+        nombreArchivoPlantilla="plantilla-clientes.csv"
+        endpoint="/api/clientes/importar"
+        columnas={COLUMNAS_IMPORT_CLIENTES}
+        onImportado={cargar}
+      />
     </DashboardShell>
   );
 }

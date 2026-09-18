@@ -14,6 +14,7 @@ import { Combobox } from "@/components/Combobox";
 import { Button, Card, EmptyState, ErrorState, Input, LoadingState, Select, StatusBadge, Table, Tag, type TonoEstado } from "@bitacora/ui/web";
 import { InputMonto } from "@/components/InputMonto";
 import { ICONO_TIPO } from "@/components/CatalogoSelectorModal";
+import { descargarCSV } from "@/lib/exportCsv";
 
 // Categorías sugeridas cuando el catálogo todavía no tiene ninguna
 // propia — una vez que existan categorías reales usadas, esas se
@@ -247,6 +248,23 @@ export default function CatalogoPage() {
     return true;
   });
 
+  function exportar() {
+    descargarCSV(
+      `catalogo-${new Date().toISOString().slice(0, 10)}.csv`,
+      filtrados.map((i) => ({
+        Nombre: i.nombre,
+        Tipo: TIPO_ETIQUETA[i.tipo],
+        SKU: i.sku ?? "",
+        Categoría: i.categoria ?? "",
+        Unidad: i.unidad,
+        "Precio base": i.precio_base,
+        "Stock actual": i.stock_actual ?? "",
+        "Stock mínimo": i.stock_minimo ?? "",
+        Estado: i.activo ? "Activo" : "Inactivo",
+      }))
+    );
+  }
+
   return (
     <DashboardShell usuario={usuario}>
       <div className="mb-ds-6 flex flex-wrap items-center justify-between gap-ds-3">
@@ -255,6 +273,9 @@ export default function CatalogoPage() {
           <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">Productos, servicios y kits reutilizables en cotizaciones y órdenes de servicio</p>
         </div>
         <div className="flex gap-ds-2">
+          <Button variante="secundario" onPress={exportar} deshabilitado={filtrados.length === 0}>
+            Exportar CSV
+          </Button>
           <Button variante="secundario" onPress={() => alert("Importar catálogo desde CSV — próximamente.")}>
             Importar Catálogo
           </Button>

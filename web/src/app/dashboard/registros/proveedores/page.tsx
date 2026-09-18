@@ -9,6 +9,7 @@ import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { SelectCrear } from "@/components/SelectCrear";
 import { Button, Card, EmptyState, ErrorState, Input, LoadingState, StatusBadge, Table } from "@bitacora/ui/web";
+import { descargarCSV } from "@/lib/exportCsv";
 
 type ProveedorConCategoria = Proveedor & { categoria: Pick<CategoriaGasto, "id" | "nombre" | "color"> | null };
 
@@ -153,6 +154,21 @@ export default function ProveedoresPage() {
     );
   });
 
+  function exportar() {
+    descargarCSV(
+      `proveedores-${new Date().toISOString().slice(0, 10)}.csv`,
+      filtrados.map((p) => ({
+        Nombre: p.nombre,
+        "Razón social": p.razon_social ?? "",
+        RUT: p.rut ?? "",
+        Teléfono: p.telefono ?? "",
+        Correo: p.correo ?? "",
+        "Categoría de gasto": p.categoria?.nombre ?? "",
+        Estado: p.activo ? "Activo" : "Inactivo",
+      }))
+    );
+  }
+
   return (
     <DashboardShell usuario={usuario}>
       <div className="mb-ds-6 flex flex-wrap items-center justify-between gap-ds-3">
@@ -160,9 +176,17 @@ export default function ProveedoresPage() {
           <p className="ds-heading text-ds-h2 text-ds-text">Proveedores</p>
           <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">Gestiona tus proveedores y contactos</p>
         </div>
-        <Button iconoIzq={<Plus size={16} strokeWidth={2.75} />} onPress={() => (formAbierto ? setFormAbierto(false) : abrirNuevo())}>
-          Nuevo Proveedor
-        </Button>
+        <div className="flex gap-ds-2">
+          <Button variante="secundario" onPress={exportar} deshabilitado={filtrados.length === 0}>
+            Exportar CSV
+          </Button>
+          <Button variante="secundario" onPress={() => alert("Importar proveedores desde CSV — próximamente.")}>
+            Importar Proveedores
+          </Button>
+          <Button iconoIzq={<Plus size={16} strokeWidth={2.75} />} onPress={() => (formAbierto ? setFormAbierto(false) : abrirNuevo())}>
+            Nuevo Proveedor
+          </Button>
+        </div>
       </div>
 
       {formAbierto && (

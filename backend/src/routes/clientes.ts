@@ -171,6 +171,107 @@ clientesRouter.post(
   })
 );
 
+type FilaImportCliente = {
+  nombre?: unknown;
+  rut?: unknown;
+  direccion?: unknown;
+  comuna?: unknown;
+  telefono?: unknown;
+  correo?: unknown;
+  contacto_nombre?: unknown;
+  fecha_nacimiento?: unknown;
+};
+
+// POST /importar — alta masiva desde el CSV que bajan de "Exportar CSV"
+// o de la plantilla (ver ImportarCsvModal.tsx). Mismas reglas que el
+// alta manual (arriba) salvo una: NO geocodifica — Nominatim tiene
+// política de 1 request/seg, cientos de filas seguidas la violarían.
+// lat/lng quedan null, igual que "crear sin dirección" hoy; se
+// completan solas al editar la dirección desde la ficha (PATCH re-
+// geocodifica). Dedupe por RUT (no existe en el alta manual — ahí es
+// una persona creando una a la vez, acá un archivo puede subirse dos
+// veces por error).
+clientesRouter.post(
+  "/importar",
+  ah<RequestConEmpresa>(async (req, res) => {
+    const filas = req.body?.filas;
+    if (!Array.isArray(filas) || filas.length === 0) {
+      res.status(400).json({ error: "Falta el arreglo de filas a importar" });
+      return;
+    }
+    if (filas.length > 500) {
+      res.status(400).json({ error: "Máximo 500 filas por importación — dividí el archivo en partes más chicas" });
+      return;
+    }
+
+    const { data: existentes } = await supabase
+      .from("clientes")
+      .select("rut")
+      .eq("empresa_id", req.empresaId!)
+      .not("rut", "is", null);
+    const rutsExistentes = new Set((existentes ?? []).map((c) => c.rut));
+
+    const errores: { fila: number; motivo: string }[] = [];
+    const omitidos: { fila: number; motivo: string }[] = [];
+    const paraCrear: {
+      empresa_id: string;
+      nombre: string;
+      rut: string | null;
+      direccion: string;
+      comuna: string | null;
+      telefono: string | null;
+      correo: string | null;
+      contacto_nombre: string | null;
+      fecha_nacimiento: string | null;
+    }[] = [];
+    const rutsEnEsteArchivo = new Set<string>();
+
+    (filas as FilaImportCliente[]).forEach((f, i) => {
+      const numeroFila = i + 2; // +1 por índice base 0, +1 por la fila de encabezado del CSV
+      const nombre = typeof f.nombre === "string" ? f.nombre.trim() : "";
+      if (!nombre) {
+        errores.push({ fila: numeroFila, motivo: "Falta el nombre" });
+        return;
+      }
+      const rutBruto = typeof f.rut === "string" ? f.rut.trim() : "";
+      if (rutBruto && !validarRut(rutBruto)) {
+        errores.push({ fila: numeroFila, motivo: `RUT inválido: "${rutBruto}"` });
+        return;
+      }
+      const rut = rutBruto ? formatearRut(rutBruto) : null;
+      if (rut && (rutsExistentes.has(rut) || rutsEnEsteArchivo.has(rut))) {
+        omitidos.push({ fila: numeroFila, motivo: `Ya existe un cliente con RUT ${rut} — no se creó de nuevo` });
+        return;
+      }
+      if (rut) rutsEnEsteArchivo.add(rut);
+
+      paraCrear.push({
+        empresa_id: req.empresaId!,
+        nombre,
+        rut,
+        direccion: typeof f.direccion === "string" ? f.direccion.trim() : "",
+        comuna: typeof f.comuna === "string" && f.comuna.trim() ? f.comuna.trim() : null,
+        telefono: typeof f.telefono === "string" && f.telefono.trim() ? f.telefono.trim() : null,
+        correo: typeof f.correo === "string" && f.correo.trim() ? f.correo.trim() : null,
+        contacto_nombre: typeof f.contacto_nombre === "string" && f.contacto_nombre.trim() ? f.contacto_nombre.trim() : null,
+        fecha_nacimiento: typeof f.fecha_nacimiento === "string" && f.fecha_nacimiento.trim() ? f.fecha_nacimiento.trim() : null,
+      });
+    });
+
+    if (paraCrear.length === 0) {
+      res.status(400).json({ error: "Ninguna fila es válida", errores, omitidos });
+      return;
+    }
+
+    const { data, error } = await supabase.from("clientes").insert(paraCrear).select("id");
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    res.json({ creados: data?.length ?? 0, errores, omitidos });
+  })
+);
+
 clientesRouter.patch(
   "/:id",
   ah<RequestConEmpresa>(async (req, res) => {

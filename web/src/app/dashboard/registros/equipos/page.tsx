@@ -12,6 +12,7 @@ import { DocumentoForm } from "@/components/DocumentoForm";
 import { Button, Card, EmptyState, ErrorState, Input, LoadingState, Select, StatusBadge, Table } from "@bitacora/ui/web";
 import { ComboboxCliente } from "@/components/ComboboxCliente";
 import { ComboboxResponsable } from "@/components/ComboboxResponsable";
+import { descargarCSV } from "@/lib/exportCsv";
 
 type EquipoConCliente = Equipo & {
   cliente: Pick<Cliente, "id" | "nombre"> | null;
@@ -253,6 +254,26 @@ export default function EquiposPage() {
     { valor: "inactivos", etiqueta: "Inactivos" },
   ];
 
+  function exportar() {
+    descargarCSV(
+      `equipos-${new Date().toISOString().slice(0, 10)}.csv`,
+      filtrados.map((e) => ({
+        Nombre: e.nombre,
+        Categoría: e.categoria ?? "",
+        Marca: e.marca ?? "",
+        Modelo: e.modelo ?? "",
+        "N° de serie": e.numero_serie ?? "",
+        Patente: e.patente ?? "",
+        Año: e.anio ?? "",
+        "Tipo de vehículo": e.tipo_vehiculo ?? "",
+        "Capacidad de carga": e.capacidad_carga ?? "",
+        Cliente: e.cliente?.nombre ?? "",
+        "Vencimiento de garantía": e.garantia_vencimiento ?? "",
+        Estado: e.activo ? "Activo" : "Inactivo",
+      }))
+    );
+  }
+
   return (
     <DashboardShell usuario={usuario}>
       <div className="mb-ds-6 flex flex-wrap items-center justify-between gap-ds-3">
@@ -263,6 +284,9 @@ export default function EquiposPage() {
         <div className="flex gap-ds-2">
           <Button variante="secundario" iconoIzq={<BarChart3 size={16} strokeWidth={2.75} />} onPress={() => router.push("/dashboard/registros/equipos/dashboard")}>
             Dashboard
+          </Button>
+          <Button variante="secundario" onPress={exportar} deshabilitado={filtrados.length === 0}>
+            Exportar CSV
           </Button>
           <Button variante="secundario" onPress={() => alert("Importar equipos desde CSV — próximamente.")}>
             Importar Equipos
