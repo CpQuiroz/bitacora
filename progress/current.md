@@ -3543,3 +3543,32 @@ el dashboard de widgets en vivo. Tarea 45 cerrada `done` sin código de
 producto nuevo (ver `resolution` en `trabajo_list.json`). Punto
 resuelto sin escribir ninguna línea de feature — el trabajo real fue
 la investigación que evitó duplicar algo que ya existía.
+
+## 2026-09-19 (8): vulnerabilidades de npm audit (tarea 46)
+
+Pedido explícito: "arranca con las 19 vulnerabilidades" (venían
+mencionadas como deferidas en un recap de días anteriores — ya habían
+bajado a 11 como efecto colateral del reinstall limpio que se hizo esta
+misma sesión para `react-native-pager-view`).
+
+`npm audit` en la raíz (un solo lockfile para todo el monorepo vía npm
+workspaces) mostraba 11 moderadas, todas de la MISMA cadena real:
+`expo@57.0.24` (SDK correcto de este proyecto, no se toca) →
+`@expo/config-plugins@57.0.9` → `xcode@3.0.1` → `uuid@7.0.3`
+(GHSA-w5hq-g745-h8pq, corregido en 11.1.1). El "fix" que sugiere `npm
+audit fix --force` es bajar todo a `expo@46.0.21` — SDK viejísimo, no
+es un fix real, es el resolver de npm confundido por el grafo del
+workspace. Se verificó primero que `xcode` solo llama `uuid.v4()` (API
+estable entre versiones, no toca el código con el bug real —
+`v3/v5/v6` con buffer explícito) antes de tocar nada.
+
+Fix: override en el `package.json` raíz (`uuid: "^11.1.1"`, mismo
+mecanismo que ya se usó para `react-native-pager-view` en la sesión del
+swipe de tabs) + reinstall limpio (`rm -rf node_modules
+package-lock.json && npm install` — un `npm install` normal deja el
+override a medio aplicar, `ELSPROBLEMS`, mismo síntoma que la vez
+anterior con pager-view).
+
+Resultado: `npm audit` → **0 vulnerabilidades** (raíz y backend, que ya
+estaba en 0). `npx expo install --check` sigue "Dependencies are up to
+date". `verificar.sh` completo en verde.

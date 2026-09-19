@@ -23,6 +23,7 @@
     "next": "16.3.5"
   },
   "overrides": {
-    "react-native-pager-view": "8.0.2"
+    "react-native-pager-view": "8.0.2",
+    "uuid": "^11.1.1"
   }
 }

@@ -713,6 +713,23 @@
       ],
       "status": "done",
       "resolution": "CERRADA sin construir nada nuevo. Al armar la migracion se detecto que YA existe la funcionalidad 'Informe con IA' en prod (migracion 23, tabla informes_personalizados -- secciones enteras + pregunta libre a la IA, con plantillas guardadas/historial/PDF). Se le mostro a la usuaria una maqueta fiel de esa funcionalidad existente (favicon 📎, 'Informe con IA (hoy)') y confirmo que asi esta bien -- ya le resuelve el pedido original, no hace falta un sistema paralelo de widgets. No se escribio codigo de producto (solo la migracion borrador 110, que colisionaba de nombre, se elimino sin commitear)."
+    },
+    {
+      "id": 46,
+      "name": "vulnerabilidades_npm_audit",
+      "title": "Resolver las vulnerabilidades pendientes de npm audit (deferidas de sesiones anteriores)",
+      "description": "Estaban deferidas desde antes (mencionadas como '19 vulnerabilidades' en un recap anterior -- ya bajaron a 11 como efecto secundario de un reinstall limpio hecho para otra tarea). La usuaria pidio arrancar con esto. NO usar 'npm audit fix --force' a ciegas -- ese comando sugiere bajar expo a 46.0.21 (SDK viejisimo, rompe todo), hay que revisar cadena por cadena.",
+      "acceptance": [
+        "npm audit en la raiz (cubre todo el monorepo -- un solo lockfile via npm workspaces) documentado: cuantas, de que severidad, por que cadena de paquetes",
+        "backend workspace ya en 0 vulnerabilidades -- confirmado, sin cambios ahi",
+        "Cadena real identificada: expo@57.0.24 (SDK correcto, no tocar) -> @expo/config-plugins@57.0.9 -> xcode@3.0.1 -> uuid@7.0.3 (bajo el minimo seguro 11.1.1, GHSA-w5hq-g745-h8pq)",
+        "Override de uuid en el root package.json (mismo mecanismo que ya se uso para react-native-pager-view) -- no un downgrade de expo",
+        "Reinstall limpio + verificar que xcode/@expo/config-plugins siguen funcionando (uuid.v4() es la unica funcion que xcode usa, estable entre versiones)",
+        "npm audit final: 0 vulnerabilidades (o documentar honestamente cuales quedan y por que no tienen fix limpio)",
+        "verificar.sh completo en verde"
+      ],
+      "status": "done",
+      "resolution": "Cadena real: expo@57.0.24 (SDK correcto, no tocado) -> @expo/config-plugins@57.0.9 -> xcode@3.0.1 -> uuid@7.0.3 (GHSA-w5hq-g745-h8pq, bajo el minimo seguro 11.1.1). xcode solo llama uuid.v4() (API estable entre versiones) -- se agrego un override en el package.json raiz (uuid: ^11.1.1, mismo mecanismo que react-native-pager-view) + reinstall limpio (rm -rf node_modules/package-lock.json, un install parcial deja el override a medio aplicar, mismo sintoma que la vez anterior). npm audit: 11 moderadas -> 0, en raiz y en backend. expo install --check sigue en verde. verificar.sh completo en verde."
     }
   ]
 }
