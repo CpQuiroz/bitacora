@@ -3600,3 +3600,41 @@ no de tipografía.
 
 Sin migración ni dependencia de backend — cambio puramente visual de
 mobile, se puede pushear directo. `verificar.sh` completo en verde.
+
+## 2026-09-19 (10): homologar la hoja "Nuevo cliente" (crear al vuelo)
+
+La usuaria mandó un screenshot de `HojaCrearCliente.tsx` (bottom sheet
+de "crear cliente al vuelo", usada desde Ventas/Citas/etc.) notando que
+"tiene otro estilo, como una app distinta". Tenía razón: era la ÚNICA
+pantalla que seguía importando el kit viejo (`mobile/src/components/ui`
++ `useTema()`, tema navy "Faena") en vez de `@bitacora/ui/native` —
+incluso `ClienteFormScreen.tsx` (la pantalla completa de "Nuevo
+cliente", a la que se llega SIN el atajo) ya estaba en el sistema
+actual desde "sistema visual móvil v2" (tarea 31).
+
+También preguntó si se podía agregar "empresa o razón social" +
+"persona encargada" — se investigó antes de prometer nada: el campo ya
+existe en el modelo de datos (`clientes.contacto_nombre`, "Persona de
+contacto") y YA se pide en `ClienteFormScreen.tsx` — `HojaCrearCliente`
+era la única que no lo exponía. No hacía falta inventar nada, solo
+sumarlo acá.
+
+Se le mostró una maqueta antes/después (usando su propio screenshot
+para el "antes") y aprobó.
+
+Reescrito `HojaCrearCliente.tsx`: `Input`/`Button`/`Texto`/`tokens` de
+`@bitacora/ui/native` en vez del kit viejo. Misma paleta/radios que
+`Dialog.tsx` (el bottom sheet compartido del sistema actual) — no se
+usó `Dialog` en sí porque esta hoja necesita `KeyboardAvoidingView`
+(varios campos, el primero con `autoFoco`) y mantiene su "handle"
+arrastrable en vez del botón de cerrar con X de `Dialog` (patrón propio
+de esta hoja desde el origen, no se inventó nada ahí). Cambios de
+contenido: "Nombre o razón social" → "Empresa o razón social"; nuevo
+campo "Persona de contacto (opcional)" (reusa `contacto_nombre`,
+mismo label que `ClienteFormScreen.tsx`). Interfaz pública sin cambios
+(`visible`/`nombreInicial`/`onCerrar`/`onCreado`) — cero cambios en los
+2 llamadores (`ClientesListaScreen.tsx`, `SelectorCliente.tsx`).
+
+Sin migración — `contacto_nombre` ya existía en la tabla, solo faltaba
+exponerlo en esta hoja puntual. `tsc` mobile limpio, `verificar.sh`
+completo en verde.
