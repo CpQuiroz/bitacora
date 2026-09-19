@@ -117,44 +117,44 @@ export function DetalleReservaCosmetologia({
       <ScreenHeader antetitulo={formatearFechaLarga(tarea.fecha)} titulo={cli?.nombre ?? servicio?.nombre ?? "Reserva"} accion={volver} />
       <ScrollView contentContainerStyle={{ padding: tokens.space["6"], gap: tokens.space["4"], paddingBottom: tokens.space["8"] * 1.5 }}>
         {/* Bloque de foco — lo único con fondo */}
-        <View style={{ backgroundColor: marca.base, borderRadius: 32, padding: tokens.space["6"], gap: tokens.space["1"] }}>
-          <Texto tamano={tokens.size.micro} color={`${marca.foreground}b3`} style={{ letterSpacing: 1.2, textTransform: "uppercase" }}>
+        <View style={{ backgroundColor: marca.suave, borderRadius: 32, padding: tokens.space["6"], gap: tokens.space["1"] }}>
+          <Texto tamano={tokens.size.micro} color={`${marca.fuerte}b3`} style={{ letterSpacing: 1.2, textTransform: "uppercase" }}>
             {formatearFechaLarga(tarea.fecha)}
           </Texto>
           <View style={{ flexDirection: "row", alignItems: "flex-end", gap: tokens.space["2"], marginTop: tokens.space["1"] }}>
-            <Texto tamano={46} color={marca.foreground} style={{ fontVariant: ["tabular-nums"] }}>
+            <Texto tamano={46} color={marca.fuerte} style={{ fontVariant: ["tabular-nums"] }}>
               {tarea.hora ? tarea.hora.slice(0, 5) : "—"}
             </Texto>
             {horaFin ? (
               <>
-                <Texto tamano={28} color={marca.foreground} style={{ opacity: 0.7, marginBottom: 4 }}>
+                <Texto tamano={28} color={marca.fuerte} style={{ opacity: 0.7, marginBottom: 4 }}>
                   –
                 </Texto>
-                <Texto tamano={28} color={marca.foreground} style={{ marginBottom: 2, fontVariant: ["tabular-nums"] }}>
+                <Texto tamano={28} color={marca.fuerte} style={{ marginBottom: 2, fontVariant: ["tabular-nums"] }}>
                   {horaFin}
                 </Texto>
               </>
             ) : null}
           </View>
           {tarea.duracion_min ? (
-            <Texto tamano={16} color={`${marca.foreground}cc`} style={{ marginTop: tokens.space["1"] }}>
+            <Texto tamano={16} color={`${marca.fuerte}cc`} style={{ marginTop: tokens.space["1"] }}>
               {formatearDuracion(tarea.duracion_min)}
             </Texto>
           ) : null}
 
           {servicio ? (
-            <View style={{ marginTop: tokens.space["3"], paddingTop: tokens.space["3"], borderTopWidth: 1, borderTopColor: `${marca.foreground}26` }}>
+            <View style={{ marginTop: tokens.space["3"], paddingTop: tokens.space["3"], borderTopWidth: 1, borderTopColor: `${marca.fuerte}26` }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                <Texto tamano={tokens.size.body} color={marca.foreground} peso="semibold">
+                <Texto tamano={tokens.size.body} color={marca.fuerte} peso="semibold">
                   {servicio.nombre}
                 </Texto>
                 <View style={{ flexDirection: "row", alignItems: "baseline", gap: tokens.space["1"] * 1.5 }}>
                   {tienePack && servicio.precio > 0 ? (
-                    <Texto tamano={13} color={`${marca.foreground}cc`} style={{ textDecorationLine: "line-through", fontVariant: ["tabular-nums"] }}>
+                    <Texto tamano={13} color={`${marca.fuerte}cc`} style={{ textDecorationLine: "line-through", fontVariant: ["tabular-nums"] }}>
                       {formatearMoneda(servicio.precio)}
                     </Texto>
                   ) : null}
-                  <Texto tamano={22} color={marca.foreground} style={{ fontVariant: ["tabular-nums"] }}>
+                  <Texto tamano={22} color={marca.fuerte} style={{ fontVariant: ["tabular-nums"] }}>
                     {tienePack ? (valorConPack != null ? formatearMoneda(valorConPack) : "Con pack") : formatearMoneda(servicio.precio)}
                   </Texto>
                 </View>

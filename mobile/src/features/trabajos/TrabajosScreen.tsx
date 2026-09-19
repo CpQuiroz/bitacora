@@ -146,12 +146,12 @@ export function TrabajosScreen({ navigation }: NativeStackScreenProps<TrabajosSt
   }
 
   const encabezado = (
-    <View style={{ backgroundColor: marca.base, padding: tokens.space["6"], gap: tokens.space["3"] }}>
+    <View style={{ backgroundColor: marca.suave, padding: tokens.space["6"], gap: tokens.space["3"] }}>
       <View>
-        <Texto tamano={tokens.size.h4} color={marca.foreground}>
+        <Texto tamano={tokens.size.h4} color={marca.fuerte}>
           {formatearFechaLarga(HOY())}
         </Texto>
-        <Texto tamano={tokens.size.caption} color={`${marca.foreground}b3`}>
+        <Texto tamano={tokens.size.caption} color={`${marca.fuerte}b3`}>
           {[empresaNombre, usuarioNombre].filter(Boolean).join(" · ")}
         </Texto>
       </View>
@@ -163,12 +163,12 @@ export function TrabajosScreen({ navigation }: NativeStackScreenProps<TrabajosSt
         ].map((c) => (
           <View
             key={c.k}
-            style={{ flex: 1, backgroundColor: `${marca.foreground}1f`, borderRadius: tokens.radius.md, padding: tokens.space["3"], gap: 2 }}
+            style={{ flex: 1, backgroundColor: `${marca.fuerte}1f`, borderRadius: tokens.radius.md, padding: tokens.space["3"], gap: 2 }}
           >
-            <Texto tamano={22} color={marca.foreground} style={{ fontVariant: ["tabular-nums"] }}>
+            <Texto tamano={22} color={marca.fuerte} style={{ fontVariant: ["tabular-nums"] }}>
               {c.v}
             </Texto>
-            <Texto tamano={11} color={`${marca.foreground}b3`}>
+            <Texto tamano={11} color={`${marca.fuerte}b3`}>
               {c.k}
             </Texto>
           </View>
@@ -219,12 +219,12 @@ export function TrabajosScreen({ navigation }: NativeStackScreenProps<TrabajosSt
                     alignItems: "center",
                     justifyContent: "center",
                     borderRadius: tokens.radius.pill,
-                    backgroundColor: activo ? marca.base : tokens.color.surface,
+                    backgroundColor: activo ? marca.suave : tokens.color.surface,
                     borderWidth: 1,
                     borderColor: activo ? marca.base : tokens.color.divider,
                   }}
                 >
-                  <Texto tamano={tokens.size.caption} color={activo ? marca.foreground : `${tokens.color.text}99`} peso="semibold">
+                  <Texto tamano={tokens.size.caption} color={activo ? marca.fuerte : `${tokens.color.text}99`} peso="semibold">
                     {op}
                   </Texto>
                 </Pressable>

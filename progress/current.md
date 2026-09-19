@@ -3709,3 +3709,70 @@ borrar esta herramienta.
 
 Los 2 fixes aplicados: `tsc` mobile limpio, `verificar.sh` completo en
 verde. Sin migración — se pueden pushear directo.
+
+## 2026-09-19 (12): barrido completo del verde sólido (punto 3, alcance "todo")
+
+La usuaria eligió el alcance más grande de las 4 opciones que le
+planteé: arreglar los ~25 lugares encontrados, no solo la tarjeta de
+Trabajos.
+
+**Refactor primero**: en vez de recalcular `tinteSuave(marca.base)`/
+`tonoFuerte(marca.base)` con un `useMemo` local en cada archivo (como
+había quedado en `Button.tsx` y `TrabajoFormScreen.tsx` de pasadas
+anteriores hoy), se agregó `marca.suave`/`marca.fuerte` directamente al
+objeto `Marca` (`packages/ui/src/native/marca.tsx`), calculado una sola
+vez en `resolverMarca()` — mismo patrón que ya existía para
+`secundarioSuave`/`secundarioFuerte`. `Button.tsx` y
+`TrabajoFormScreen.tsx` se simplificaron para usar `marca.suave`/
+`marca.fuerte` en vez de su cálculo local (mismo resultado, menos
+código repetido).
+
+**Convertidos** (bg `marca.base`→`marca.suave`, texto
+`marca.foreground`→`marca.fuerte`):
+- **Chips de selección** (patrón idéntico, 10 archivos):
+  RegistrarVentaScreen, ViajesScreen, InformesScreen,
+  GastosInformeSeccion, NuevaReservaCosmetologia, TrabajosScreen
+  (Míos/Equipo), CobroFormScreen (×2), CobroDetalleScreen,
+  NuevoGastoScreen (×2), NuevaCitaScreen (×2).
+- **`ScreenHeader.tsx`** — la fila de `filtros` (compartida por TODAS
+  las pantallas que la usan, incluida "Míos"/"Equipo" de Pizarra) tenía
+  además un detalle propio: el estado inactivo no tenía borde
+  (`borderWidth: activo ? 0 : 1`) — ahora el borde queda siempre
+  presente (color `marca.base` cuando está activo), para que el chip
+  tintado no pierda contorno.
+- **`AgendaScreen.tsx`** — el marcador de "hoy" en el calendario mensual
+  y el chip del selector de 6 días (semana).
+- **5 tarjetas "hero"** (bloque grande con texto blanco encima —
+  rediseño real, no un copy-paste del chip): `TrabajosScreen` (resumen
+  del día), `TrabajoDetalleScreen` (bloque de check-in), `ClienteDetalleScreen`
+  (saldo por cobrar), `MantencionVehiculoScreen` (camión asignado),
+  `DetalleReservaCosmetologia` (hora de la reserva). Estas tenían MÁS
+  usos de `marca.base`/`marca.foreground` en el mismo archivo por otras
+  cosas (íconos, `tintColor` del refresh, texto de un link) — se
+  convirtió con `sed` acotado por rango de líneas (no todo el archivo)
+  para no tocar esos otros usos, que están bien como están.
+- **`ChecklistMantencionScreen.tsx`** — el número de sección (22px,
+  se repite una vez por sección del checklist).
+- **`AsistenteScreen.tsx`** — la burbuja de "mis mensajes" (se repite
+  una vez por turno de conversación).
+
+**Dejados como relleno sólido, a propósito** (documentado para que quede
+registrado por qué, no un olvido):
+- El botón "+" flotante de Agenda (`AgendaScreen.tsx`) y el botón
+  circular de enviar del Asistente — son botones de acción únicos y
+  chicos (FAB), no se repiten en la pantalla; un FAB sólido es la
+  convención esperada en cualquier sistema de diseño (Material, iOS,
+  etc.), no contribuye a la fatiga de "toda la pantalla verde".
+- El checkbox de "Aplicar IVA" (`ViajeFormScreen.tsx`) — un cuadrado
+  chico, marcado = relleno sólido es la convención universal de
+  checkbox.
+- La barra de progreso del checklist (`ChecklistMantencionScreen.tsx`)
+  — una barra de progreso ES un indicador de avance, se espera que siga
+  el color de marca a full para leerse bien contra el track gris.
+- 3 lugares que YA estaban en un tinte translúcido (`${marca.base}1f`/
+  `${marca.base}14`, ~8-12% alpha) en `FotosSection.tsx`,
+  `CierreFirma.tsx` y el estado "seleccionado" (no numerado) de
+  `ChecklistMantencionScreen.tsx` — ya estaban bien, sin tocar.
+
+`tsc` mobile limpio, `verificar.sh` completo en verde. Sin migración —
+cambio puramente visual de mobile, se puede pushear directo.

@@ -187,13 +187,13 @@ export function AsistenteScreen({ navigation }: { navigation: NavConOpciones }) 
               style={{
                 alignSelf: esUsuario ? "flex-end" : "flex-start",
                 maxWidth: "85%",
-                backgroundColor: esUsuario ? marca.base : tokens.color.neutral["200"],
+                backgroundColor: esUsuario ? marca.suave : tokens.color.neutral["200"],
                 borderRadius: tokens.radius.md,
                 paddingHorizontal: tokens.space["3"],
                 paddingVertical: tokens.space["3"],
               }}
             >
-              <Texto tamano={tokens.size.body} color={esUsuario ? marca.foreground : tokens.color.text}>
+              <Texto tamano={tokens.size.body} color={esUsuario ? marca.fuerte : tokens.color.text}>
                 {item.contenido}
               </Texto>
             </View>

@@ -198,18 +198,18 @@ export function NuevaCitaScreen({ navigation, route }: NativeStackScreenProps<Ag
                     justifyContent: "center",
                     borderRadius: tokens.radius.md,
                     paddingHorizontal: tokens.space["2"],
-                    backgroundColor: activo ? marca.base : tokens.color.surface,
+                    backgroundColor: activo ? marca.suave : tokens.color.surface,
                     borderWidth: 1,
                     borderColor: activo ? marca.base : tokens.color.divider,
                   }}
                 >
-                  <Texto tamano={tokens.size.caption} color={activo ? marca.foreground : `${tokens.color.text}99`}>
+                  <Texto tamano={tokens.size.caption} color={activo ? marca.fuerte : `${tokens.color.text}99`}>
                     {DIAS[d.getDay()]}
                   </Texto>
-                  <Texto tamano={tokens.size.h5} peso="semibold" color={activo ? marca.foreground : tokens.color.text} style={{ fontVariant: ["tabular-nums"] }}>
+                  <Texto tamano={tokens.size.h5} peso="semibold" color={activo ? marca.fuerte : tokens.color.text} style={{ fontVariant: ["tabular-nums"] }}>
                     {d.getDate()}
                   </Texto>
-                  <Texto tamano={tokens.size.caption} color={activo ? marca.foreground : `${tokens.color.text}66`}>
+                  <Texto tamano={tokens.size.caption} color={activo ? marca.fuerte : `${tokens.color.text}66`}>
                     {MESES[d.getMonth()]}
                   </Texto>
                 </Pressable>
@@ -356,12 +356,12 @@ export function NuevaCitaScreen({ navigation, route }: NativeStackScreenProps<Ag
                     alignItems: "center",
                     justifyContent: "center",
                     borderRadius: tokens.radius.md,
-                    backgroundColor: activo ? marca.base : tokens.color.surface,
+                    backgroundColor: activo ? marca.suave : tokens.color.surface,
                     borderWidth: 1,
                     borderColor: activo ? marca.base : tokens.color.divider,
                   }}
                 >
-                  <Texto tamano={tokens.size.small} peso="semibold" color={activo ? marca.foreground : `${tokens.color.text}99`}>
+                  <Texto tamano={tokens.size.small} peso="semibold" color={activo ? marca.fuerte : `${tokens.color.text}99`}>
                     {p.label}
                   </Texto>
                 </Pressable>

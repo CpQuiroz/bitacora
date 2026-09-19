@@ -153,10 +153,10 @@ export function ViajesScreen({ navigation }: NativeStackScreenProps<ViajesStackP
                     alignItems: "center",
                     paddingVertical: tokens.space["2"],
                     borderRadius: tokens.radius.md,
-                    backgroundColor: activo ? marca.base : tokens.color.surface,
+                    backgroundColor: activo ? marca.suave : tokens.color.surface,
                   }}
                 >
-                  <Texto tamano={tokens.size.small} peso="semibold" color={activo ? marca.foreground : tokens.color.text + "99"}>
+                  <Texto tamano={tokens.size.small} peso="semibold" color={activo ? marca.fuerte : tokens.color.text + "99"}>
                     {o.label}
                   </Texto>
                 </Pressable>

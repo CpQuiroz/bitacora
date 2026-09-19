@@ -118,22 +118,22 @@ export function MantencionVehiculoScreen({ navigation }: NativeStackScreenProps<
       <ScreenHeader titulo="Mantención" accion={volver} />
       <ScrollView contentContainerStyle={{ padding: tokens.space["4"], gap: tokens.space["4"], paddingBottom: tokens.space["8"] }}>
         {/* Bloque de foco — mismo patrón que el saldo de ClienteDetalleScreen */}
-        <View style={{ backgroundColor: marca.base, borderRadius: 32, padding: tokens.space["6"], gap: tokens.space["2"] }}>
-          <Texto tamano={tokens.size.micro} color={`${marca.foreground}b3`} style={{ letterSpacing: 1.2, textTransform: "uppercase" }}>
+        <View style={{ backgroundColor: marca.suave, borderRadius: 32, padding: tokens.space["6"], gap: tokens.space["2"] }}>
+          <Texto tamano={tokens.size.micro} color={`${marca.fuerte}b3`} style={{ letterSpacing: 1.2, textTransform: "uppercase" }}>
             {override ? "Camión seleccionado" : "Camión asignado"}
           </Texto>
           {vehiculo ? (
             <>
-              <Texto tamano={26} peso="semibold" color={marca.foreground} style={{ fontVariant: ["tabular-nums"] }}>
+              <Texto tamano={26} peso="semibold" color={marca.fuerte} style={{ fontVariant: ["tabular-nums"] }}>
                 {vehiculo.patente ?? "—"}
               </Texto>
-              <Texto tamano={tokens.size.small} color={`${marca.foreground}b3`}>
+              <Texto tamano={tokens.size.small} color={`${marca.fuerte}b3`}>
                 {[vehiculo.marca, vehiculo.modelo].filter(Boolean).join(" ") || vehiculo.nombre}
                 {vehiculo.tipo_vehiculo ? ` · ${vehiculo.tipo_vehiculo}` : ""}
               </Texto>
             </>
           ) : (
-            <Texto tamano={tokens.size.body} color={marca.foreground}>
+            <Texto tamano={tokens.size.body} color={marca.fuerte}>
               Elige un camión para registrar su mantención.
             </Texto>
           )}

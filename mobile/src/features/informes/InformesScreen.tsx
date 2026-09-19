@@ -46,10 +46,10 @@ function ChipsPeriodo<T extends string>({ opciones, valor, onElegir }: { opcione
               justifyContent: "center",
               paddingHorizontal: tokens.space["3"],
               borderRadius: tokens.radius.pill,
-              backgroundColor: activo ? marca.base : tokens.color.surface,
+              backgroundColor: activo ? marca.suave : tokens.color.surface,
             }}
           >
-            <Texto tamano={tokens.size.caption} peso="semibold" color={activo ? marca.foreground : tokens.color.text}>
+            <Texto tamano={tokens.size.caption} peso="semibold" color={activo ? marca.fuerte : tokens.color.text}>
               {o.etiqueta}
             </Texto>
           </Pressable>

@@ -275,22 +275,22 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
         </View>
 
         {/* Bloque de foco — el único con el fondo de marca */}
-        <View style={{ backgroundColor: marca.base, borderRadius: 32, padding: tokens.space["6"], gap: tokens.space["3"] }}>
+        <View style={{ backgroundColor: marca.suave, borderRadius: 32, padding: tokens.space["6"], gap: tokens.space["3"] }}>
           {checkInAt ? (
             <>
-              <Texto tamano={tokens.size.caption} color={`${marca.foreground}b3`} style={{ letterSpacing: 1.2 }}>
+              <Texto tamano={tokens.size.caption} color={`${marca.fuerte}b3`} style={{ letterSpacing: 1.2 }}>
                 CHECK-IN REGISTRADO
               </Texto>
               <View style={{ flexDirection: "row", alignItems: "baseline", gap: tokens.space["3"] }}>
-                <Texto tamano={30} color={marca.foreground} style={{ fontVariant: ["tabular-nums"] }}>
+                <Texto tamano={30} color={marca.fuerte} style={{ fontVariant: ["tabular-nums"] }}>
                   {new Date(checkInAt).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })}
                 </Texto>
-                <Texto tamano={tokens.size.body} color={`${marca.foreground}b3`}>
+                <Texto tamano={tokens.size.body} color={`${marca.fuerte}b3`}>
                   {haceCuanto(checkInAt)}
                 </Texto>
               </View>
-              <View style={{ borderTopWidth: 1, borderTopColor: `${marca.foreground}26`, paddingTop: tokens.space["3"] }}>
-                <Texto tamano={tokens.size.caption} color={`${marca.foreground}b3`} style={{ fontVariant: ["tabular-nums"] }}>
+              <View style={{ borderTopWidth: 1, borderTopColor: `${marca.fuerte}26`, paddingTop: tokens.space["3"] }}>
+                <Texto tamano={tokens.size.caption} color={`${marca.fuerte}b3`} style={{ fontVariant: ["tabular-nums"] }}>
                   {orden?.check_in_precision != null ? `Precisión GPS ±${Math.round(orden.check_in_precision)} m` : "Precisión GPS no disponible"}
                   {orden?.check_in_lat != null && orden?.check_in_lng != null
                     ? `  ·  ${orden.check_in_lat.toFixed(5)}, ${orden.check_in_lng.toFixed(5)}`
@@ -300,10 +300,10 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
             </>
           ) : (
             <>
-              <Texto tamano={tokens.size.caption} color={`${marca.foreground}b3`} style={{ letterSpacing: 1.2 }}>
+              <Texto tamano={tokens.size.caption} color={`${marca.fuerte}b3`} style={{ letterSpacing: 1.2 }}>
                 SIN CHECK-IN
               </Texto>
-              <Texto tamano={tokens.size.body} color={marca.foreground}>
+              <Texto tamano={tokens.size.body} color={marca.fuerte}>
                 Marca tu llegada para empezar el trabajo.
               </Texto>
               <Button cargando={marcando === "Check-in"} deshabilitado={finalizada} onPress={() => marcar("Check-in")}>

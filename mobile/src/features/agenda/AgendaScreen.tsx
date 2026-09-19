@@ -369,13 +369,13 @@ function VistaMes({
                     borderRadius: esHoy ? 4 : 11,
                     alignItems: "center",
                     justifyContent: "center",
-                    backgroundColor: esHoy ? marca.base : "transparent",
+                    backgroundColor: esHoy ? marca.suave : "transparent",
                   }}
                 >
                   <Texto
                     tamano={tokens.size.caption}
                     peso={esHoy ? "semibold" : "regular"}
-                    color={esHoy ? marca.foreground : delMes ? tokens.color.text : tokens.color.text + "55"}
+                    color={esHoy ? marca.fuerte : delMes ? tokens.color.text : tokens.color.text + "55"}
                     style={{ fontVariant: ["tabular-nums"] }}
                   >
                     {cd.getDate()}
@@ -549,13 +549,13 @@ function VistaDia({
                 alignItems: "center",
                 paddingVertical: tokens.space["1"] * 1.5,
                 borderRadius: tokens.radius.sm,
-                backgroundColor: sel ? marca.base : "transparent",
+                backgroundColor: sel ? marca.suave : "transparent",
               }}
             >
-              <Texto tamano={tokens.size.caption} color={sel ? marca.foreground : tokens.color.text + "99"}>
+              <Texto tamano={tokens.size.caption} color={sel ? marca.fuerte : tokens.color.text + "99"}>
                 {DIAS[d.getDay()]}
               </Texto>
-              <Texto tamano={16} peso="semibold" color={sel ? marca.foreground : tokens.color.text} style={{ fontVariant: ["tabular-nums"] }}>
+              <Texto tamano={16} peso="semibold" color={sel ? marca.fuerte : tokens.color.text} style={{ fontVariant: ["tabular-nums"] }}>
                 {d.getDate()}
               </Texto>
             </Pressable>

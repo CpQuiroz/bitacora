@@ -7,6 +7,17 @@ export type Marca = {
   hover: string;
   pressed: string;
   foreground: string;
+  /** Tinte suave / tono fuerte de `base` (19-sep-2026) — para "seleccionado"
+   *  en chips/cards/burbujas en vez de relleno 100% opaco: un acento de
+   *  tenant muy saturado (ej. un verde vivo) satura la pantalla si se
+   *  repite así en varios lugares a la vez. Mismo criterio que ya usaba
+   *  Tag.tsx para el color secundario — acá centralizado para el primario,
+   *  un solo cálculo en vez de repetirlo por pantalla (antes vivía suelto
+   *  como useMemo local en Button.tsx y TrabajoFormScreen.tsx). El
+   *  relleno 100% opaco de `base` queda para elementos chicos y puntuales
+   *  (un ícono, una barra de progreso) donde no hay riesgo de saturar. */
+  suave: string;
+  fuerte: string;
   /** empresas.color_secundario (14-sep-2026), ya derivado a un par
    *  tinte-suave/tono-fuerte listo para tags/badges — nunca el
    *  accentRamp fijo del sistema. Ver Tag.tsx (tono "accent2"). */
@@ -41,6 +52,8 @@ export function resolverMarca(
     hover: oscurecerOklch(base, 0.05),
     pressed: oscurecerOklch(base, 0.11),
     foreground,
+    suave: tinteSuave(base),
+    fuerte: tonoFuerte(base),
     secundarioSuave: tinteSuave(baseSecundario),
     secundarioFuerte: tonoFuerte(baseSecundario),
   };

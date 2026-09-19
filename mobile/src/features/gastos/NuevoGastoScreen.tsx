@@ -70,18 +70,18 @@ function DiasChips({ valor, onElegir }: { valor: string; onElegir: (k: string) =
               justifyContent: "center",
               borderRadius: tokens.radius.md,
               paddingHorizontal: tokens.space["2"],
-              backgroundColor: activo ? marca.base : tokens.color.surface,
+              backgroundColor: activo ? marca.suave : tokens.color.surface,
               borderWidth: 1,
               borderColor: activo ? marca.base : tokens.color.divider,
             }}
           >
-            <Texto tamano={tokens.size.caption} color={activo ? marca.foreground : `${tokens.color.text}99`}>
+            <Texto tamano={tokens.size.caption} color={activo ? marca.fuerte : `${tokens.color.text}99`}>
               {DIAS[d.getDay()]}
             </Texto>
-            <Texto tamano={tokens.size.h5} peso="semibold" color={activo ? marca.foreground : tokens.color.text}>
+            <Texto tamano={tokens.size.h5} peso="semibold" color={activo ? marca.fuerte : tokens.color.text}>
               {d.getDate()}
             </Texto>
-            <Texto tamano={tokens.size.caption} color={activo ? marca.foreground : `${tokens.color.text}99`}>
+            <Texto tamano={tokens.size.caption} color={activo ? marca.fuerte : `${tokens.color.text}99`}>
               {MESES[d.getMonth()]}
             </Texto>
           </Pressable>
@@ -324,12 +324,12 @@ function EstadoChip({ activo, label, onPress }: { activo: boolean; label: string
         alignItems: "center",
         justifyContent: "center",
         borderRadius: tokens.radius.md,
-        backgroundColor: activo ? marca.base : tokens.color.surface,
+        backgroundColor: activo ? marca.suave : tokens.color.surface,
         borderWidth: 1,
         borderColor: activo ? marca.base : tokens.color.divider,
       }}
     >
-      <Texto tamano={tokens.size.caption} peso="semibold" color={activo ? marca.foreground : `${tokens.color.text}99`}>
+      <Texto tamano={tokens.size.caption} peso="semibold" color={activo ? marca.fuerte : `${tokens.color.text}99`}>
         {label}
       </Texto>
     </Pressable>

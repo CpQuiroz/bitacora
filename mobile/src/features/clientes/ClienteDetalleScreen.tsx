@@ -151,15 +151,15 @@ export function ClienteDetalleScreen({ route, navigation }: NativeStackScreenPro
         ) : null}
 
         {/* Bloque de foco — mismo patrón que el check-in de TrabajoDetalleScreen */}
-        <View style={{ backgroundColor: marca.base, borderRadius: 32, padding: tokens.space["6"], gap: tokens.space["3"] }}>
-          <Texto tamano={tokens.size.caption} color={`${marca.foreground}b3`} style={{ letterSpacing: 1.2 }}>
+        <View style={{ backgroundColor: marca.suave, borderRadius: 32, padding: tokens.space["6"], gap: tokens.space["3"] }}>
+          <Texto tamano={tokens.size.caption} color={`${marca.fuerte}b3`} style={{ letterSpacing: 1.2 }}>
             SALDO POR COBRAR
           </Texto>
-          <Texto tamano={30} color={marca.foreground} style={{ fontVariant: ["tabular-nums"] }}>
+          <Texto tamano={30} color={marca.fuerte} style={{ fontVariant: ["tabular-nums"] }}>
             {pesos(saldo.porCobrar)}
           </Texto>
-          <View style={{ borderTopWidth: 1, borderTopColor: `${marca.foreground}26`, paddingTop: tokens.space["3"] }}>
-            <Texto tamano={tokens.size.caption} color={`${marca.foreground}b3`} style={{ fontVariant: ["tabular-nums"] }}>
+          <View style={{ borderTopWidth: 1, borderTopColor: `${marca.fuerte}26`, paddingTop: tokens.space["3"] }}>
+            <Texto tamano={tokens.size.caption} color={`${marca.fuerte}b3`} style={{ fontVariant: ["tabular-nums"] }}>
               {saldo.vencido > 0 ? `${pesos(saldo.vencido)} vencido` : "Nada vencido"}
               {"  ·  "}
               {saldo.documentos} {saldo.documentos === 1 ? "documento" : "documentos"}

@@ -99,12 +99,12 @@ export function ScreenHeader({ antetitulo, titulo, accion, filtros }: PropsScree
                   paddingHorizontal: tokens.space["2"],
                   paddingVertical: 6,
                   borderRadius: tokens.radius.pill,
-                  backgroundColor: activo ? marca.base : "transparent",
-                  borderWidth: activo ? 0 : 1,
-                  borderColor: tokens.color.divider,
+                  backgroundColor: activo ? marca.suave : "transparent",
+                  borderWidth: 1,
+                  borderColor: activo ? marca.base : tokens.color.divider,
                 }}
               >
-                <Texto tamano={tokens.size.small} color={activo ? marca.foreground : tokens.color.text} peso={activo ? "semibold" : "medium"}>
+                <Texto tamano={tokens.size.small} color={activo ? marca.fuerte : tokens.color.text} peso={activo ? "semibold" : "medium"}>
                   {o.etiqueta}
                 </Texto>
               </Pressable>

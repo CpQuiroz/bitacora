@@ -35,12 +35,12 @@ function Chip({ etiqueta, activo, onPress }: { etiqueta: string; activo: boolean
         justifyContent: "center",
         paddingHorizontal: tokens.space["3"],
         borderRadius: tokens.radius.md,
-        backgroundColor: activo ? marca.base : tokens.color.surface,
+        backgroundColor: activo ? marca.suave : tokens.color.surface,
         borderWidth: 1,
         borderColor: activo ? marca.base : tokens.color.divider,
       }}
     >
-      <Texto tamano={tokens.size.small} peso="semibold" color={activo ? marca.foreground : tokens.color.text}>
+      <Texto tamano={tokens.size.small} peso="semibold" color={activo ? marca.fuerte : tokens.color.text}>
         {etiqueta}
       </Texto>
     </Pressable>

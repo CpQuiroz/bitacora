@@ -1,6 +1,5 @@
-import { useMemo } from "react";
 import { ActivityIndicator, Pressable, Text, View, type ViewStyle } from "react-native";
-import { tinteSuave, tokens, tonoFuerte } from "@bitacora/design-tokens";
+import { tokens } from "@bitacora/design-tokens";
 import type { PropsBoton, Tamano, VarianteBoton } from "../tipos";
 import { ALTURA_NATIVE } from "../tipos";
 import { useMarca } from "./marca";
@@ -27,23 +26,17 @@ export function Button({
   const inhabilitado = deshabilitado || cargando;
   const circular = forma === "circular";
 
-  // "primario" con tinte, no relleno sólido opaco de marca.base — un
-  // acento muy saturado de tenant (ej. un verde vivo) satura CADA
-  // pantalla con botón principal, no solo una. Mismo criterio ya usado
-  // en TrabajoFormScreen para los chips de selección (tinteSuave/
-  // tonoFuerte); acá se aplica una vez en el componente compartido en
-  // vez de repetirlo pantalla por pantalla (19-sep-2026).
-  const chipSuave = useMemo(() => tinteSuave(marca.base), [marca.base]);
-  const chipFuerte = useMemo(() => tonoFuerte(marca.base), [marca.base]);
-
+  // "primario" con tinte (marca.suave/fuerte), no relleno sólido opaco
+  // de marca.base — un acento muy saturado de tenant (ej. un verde
+  // vivo) satura CADA pantalla con botón principal, no solo una.
   const fondoPorVariante: Record<VarianteBoton, string> = {
-    primario: chipSuave,
+    primario: marca.suave,
     secundario: tokens.color.surface,
     ghost: "transparent",
     peligro: tokens.color.accentRamp["700"],
   };
   const textoPorVariante: Record<VarianteBoton, string> = {
-    primario: chipFuerte,
+    primario: marca.fuerte,
     secundario: tokens.color.text,
     ghost: marca.base,
     peligro: "#ffffff",

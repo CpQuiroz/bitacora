@@ -296,8 +296,8 @@ export function ChecklistMantencionScreen({ route, navigation }: NativeStackScre
                 onPress={() => setAbierta(open ? -1 : idx)}
                 style={{ flexDirection: "row", alignItems: "center", gap: tokens.space["3"], padding: tokens.space["3"], minHeight: 56 }}
               >
-                <View style={{ width: 22, height: 22, borderRadius: tokens.radius.sm, backgroundColor: completa ? tokens.color.accent2Ramp["200"] : marca.base, alignItems: "center", justifyContent: "center" }}>
-                  <Texto tamano={tokens.size.caption} peso="semibold" color={completa ? tokens.color.accent2Ramp["800"] : marca.foreground} style={{ fontVariant: ["tabular-nums"] }}>
+                <View style={{ width: 22, height: 22, borderRadius: tokens.radius.sm, backgroundColor: completa ? tokens.color.accent2Ramp["200"] : marca.suave, alignItems: "center", justifyContent: "center" }}>
+                  <Texto tamano={tokens.size.caption} peso="semibold" color={completa ? tokens.color.accent2Ramp["800"] : marca.fuerte} style={{ fontVariant: ["tabular-nums"] }}>
                     {idx + 1}
                   </Texto>
                 </View>
