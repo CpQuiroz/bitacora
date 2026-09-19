@@ -3572,3 +3572,31 @@ anterior con pager-view).
 Resultado: `npm audit` → **0 vulnerabilidades** (raíz y backend, que ya
 estaba en 0). `npx expo install --check` sigue "Dependencies are up to
 date". `verificar.sh` completo en verde.
+
+## 2026-09-19 (9): botón "Guardar" grande — extender el fix del verde a toda la app
+
+La usuaria preguntó si el fix de "mucho verde" cubría el botón grande
+de Guardar de crear OS — no lo cubría: ese fix (commit `c1d6290`) solo
+tocó los chips de selección de `TrabajoFormScreen.tsx`, no el botón
+principal, que es un componente COMPARTIDO
+(`packages/ui/src/native/Button.tsx`) usado como relleno sólido de
+`marca.base` en TODOS los botones primarios de TODA la app (crear
+cliente, cerrar caja, firmar OS, guardar cita, etc.) — el más grande y
+visualmente dominante de la pantalla.
+
+Le mostré la diferencia (fix puntual en esta pantalla vs. cambiar el
+componente compartido, con preview de cada opción) y eligió: cambiarlo
+**en toda la app**.
+
+Aplicado en `Button.tsx`: variante `"primario"` pasa de relleno
+opaco de `marca.base` a `tinteSuave(marca.base)` de fondo + borde
+`marca.base` + texto en `tonoFuerte(marca.base)` — mismo criterio que
+ya usan los chips y `Tag.tsx`, ahora centralizado en el componente en
+vez de repetido pantalla por pantalla. `variante="peligro"` (rojo/
+naranja fijo del sistema, no depende del color del tenant) NO se tocó
+— no tiene el problema que motivó este pedido. El peso de fuente
+(bold en `lg`/`primario`) se mantiene igual — es un cambio de relleno,
+no de tipografía.
+
+Sin migración ni dependencia de backend — cambio puramente visual de
+mobile, se puede pushear directo. `verificar.sh` completo en verde.
