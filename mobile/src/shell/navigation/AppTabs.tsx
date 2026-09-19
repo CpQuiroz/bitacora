@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { View } from "react-native";
-import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { createMaterialTopTabNavigator } from "@react-navigation/material-top-tabs";
 import { CalendarClock, Ellipsis, LayoutDashboard, User, type LucideIcon } from "lucide-react-native";
 import { tokens } from "@bitacora/design-tokens";
 import { useMarca } from "@bitacora/ui/native";
@@ -14,7 +14,7 @@ import { AgendaStack } from "./AgendaStack";
 import { ClientesStack } from "./ClientesStack";
 import { MasStack } from "./MasStack";
 
-const Tab = createBottomTabNavigator();
+const Tab = createMaterialTopTabNavigator();
 
 // Barra IDÉNTICA para todos los roles. El rol cambia el CONTENIDO de
 // cada pestaña (sobre todo "Hoy"), no qué pestañas existen.
@@ -30,6 +30,17 @@ const Tab = createBottomTabNavigator();
 // igual (HoyStack/HoyScreen/services/hoy.ts) para no tocar código que
 // no hace falta tocar. Nombre corto para que entre en la tab bar; el
 // nombre completo "Pizarra Digital" queda como título de la pantalla.
+//
+// Deslizar entre pestañas (19-sep-2026, pedido explícito — destraba a
+// propósito la regla "tabs congeladas"): `createBottomTabNavigator` no
+// soporta gesto de deslizar, solo tocar. `material-top-tabs` con
+// `tabBarPosition="bottom"` es el mecanismo que React Navigation arma
+// para justamente esto — misma barra abajo, misma API de
+// tabBarIcon/tabBarLabel/screenOptions, pero el contenido desliza
+// (react-native-pager-view por debajo). Al deslizar, cada pestaña
+// queda donde estaba (no resetea su stack) — mismo comportamiento que
+// ya tenía tocar entre pestañas, deslizar es solo otro gesto para lo
+// mismo, no un comportamiento nuevo que aprender.
 const TABS: { key: TabKey; label: string; Icono: LucideIcon; componente: React.ComponentType }[] = [
   { key: "Hoy", label: "Pizarra", Icono: LayoutDashboard, componente: HoyStack },
   { key: "Agenda", label: "Agenda", Icono: CalendarClock, componente: AgendaStack },
@@ -54,11 +65,22 @@ export function AppTabs() {
   return (
     <Tab.Navigator
       initialRouteName="Hoy"
+      tabBarPosition="bottom"
+      keyboardDismissMode="none"
       screenOptions={{
-        headerShown: false,
+        // headerShown no existe en material-top-tabs (nunca dibuja
+        // header) — cada Stack sigue con el suyo propio, sin cambios.
         tabBarActiveTintColor: marca.base,
         tabBarInactiveTintColor: `${tokens.color.text}99`,
-        tabBarStyle: { backgroundColor: tokens.color.surface, borderTopColor: tokens.color.divider },
+        tabBarStyle: { backgroundColor: tokens.color.surface, borderTopColor: tokens.color.divider, borderTopWidth: 1, elevation: 0, shadowOpacity: 0 },
+        // Sin esto se ve como pestañas de arriba: solo texto, en
+        // MAYÚSCULA, con la rayita indicadora de deslizado. Barra de
+        // abajo = ícono + label, sin rayita, texto tal cual.
+        tabBarShowIcon: true,
+        tabBarIndicatorStyle: { height: 0 },
+        tabBarLabelStyle: { textTransform: "none", fontSize: 11, fontWeight: "600", marginTop: 0 },
+        tabBarItemStyle: { flexDirection: "column" },
+        tabBarPressColor: "transparent",
       }}
     >
       {TABS.map((tab) => (
@@ -68,9 +90,11 @@ export function AppTabs() {
           component={tab.componente}
           options={{
             tabBarLabel: tab.label,
-            tabBarIcon: ({ color, size }) => (
+            // material-top-tabs no manda `size` acá (a diferencia de
+            // bottom-tabs) — mismo tamaño fijo que ya se veía antes.
+            tabBarIcon: ({ color }) => (
               <View>
-                <tab.Icono size={size} strokeWidth={2.75} color={color} />
+                <tab.Icono size={24} strokeWidth={2.75} color={color} />
                 {tab.key === "Mas" && pendientes.length > 0 ? (
                   <View
                     style={{

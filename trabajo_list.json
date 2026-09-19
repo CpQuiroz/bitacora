@@ -642,6 +642,22 @@
       ],
       "status": "done",
       "resolution": "Codigo listo y verificado. BLOQUEADA: falta que la usuaria aplique la migracion 108 en prod. Mismo camino establecido (>=100): `supabase db query -f supabase/migrations/108_folios_cita_viaje_levantamiento.sql` + `migration repair --status applied 108` -- NO usar `db push`."
+    },
+    {
+      "id": 42,
+      "name": "swipe_entre_pestanas",
+      "title": "Deslizar entre las 4 pestanas (Pizarra/Agenda/Clientes/Mas)",
+      "description": "Pedido explicito de la usuaria -- destraba a proposito la regla de tabs congeladas. createBottomTabNavigator no soporta gesto de deslizar; se reemplazo por @react-navigation/material-top-tabs con tabBarPosition='bottom' (mecanismo oficial de React Navigation para barra de abajo + swipe). Al deslizar estando adentro de un stack, cada pestana queda donde estaba (mismo comportamiento que tocar entre pestanas hoy) -- decision confirmada con la usuaria antes de programar.",
+      "acceptance": [
+        "Dependencias nuevas: @react-navigation/material-top-tabs + react-native-pager-view -- HECHO",
+        "Cuidado real resuelto: react-native-pager-view fijado a 8.0.2 (el que espera Expo SDK 57) via overrides en package.json raiz + reinstalacion limpia -- sin eso quedaban 2 versiones nativas distintas del mismo modulo en el arbol (material-top-tabs trae su propia copia anidada). Confirmado con `npx expo install --check` -> Dependencies are up to date -- HECHO",
+        "AppTabs.tsx: createBottomTabNavigator -> createMaterialTopTabNavigator + tabBarPosition=bottom, con los ajustes para que se siga viendo igual (tabBarShowIcon, tabBarIndicatorStyle height 0, tabBarLabelStyle sin uppercase, tabBarItemStyle columna) -- HECHO",
+        "tabBarIcon pierde el parametro size (no existe en material-top-tabs) -- tamano fijo 24 en su lugar -- HECHO",
+        "tsc + verificar.sh completo en verde -- HECHO",
+        "NO verificado en simulador/dispositivo real -- modulo nativo nuevo, requiere Expo Go o build nuevo, no confirmado en vivo esta vuelta"
+      ],
+      "status": "done",
+      "resolution": "Codigo listo y verificado (tsc + verificar.sh). Sin migracion, sin backend -- puro mobile + dependencias, se puede pushear directo. Falta verificacion visual real en Expo Go o un build nuevo (no es parte de trabajar codigo, es probar en un dispositivo)."
     }
   ]
 }

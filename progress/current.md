@@ -3200,3 +3200,50 @@ Los 3 consumidores ahora importan desde ahí:
 
 `tsc` (backend/shared/mobile/web) + `verificar.sh` completo en verde.
 Sin migración, sin cambio de comportamiento — solo tipos.
+
+## 2026-09-19: deslizar entre las 4 pestañas (tarea 42)
+
+Pedido explícito de la usuaria (destraba a propósito la regla "tabs
+Agenda/Hoy congeladas" — la regla dice "sin pedido explícito", este ya
+lo es). Pregunté antes de programar qué debía pasar al deslizar estando
+adentro de un stack (ej. viendo un Trabajo 3 pantallas adentro de
+Pizarra) — eligió "queda donde estaba" (mismo comportamiento que ya
+tenía tocar entre pestañas hoy; deslizar es solo otro gesto para lo
+mismo).
+
+`createBottomTabNavigator` no soporta deslizar — se reemplazó por
+`@react-navigation/material-top-tabs` con `tabBarPosition="bottom"`,
+el mecanismo que React Navigation arma específicamente para esto
+(misma barra abajo, mismo `tabBarIcon`/`tabBarLabel`, pero
+`react-native-tab-view`/`react-native-pager-view` por debajo habilita
+el gesto).
+
+- Dependencias nuevas: `@react-navigation/material-top-tabs` +
+  `react-native-pager-view`. **Cuidado real, ya resuelto**: npm instaló
+  `react-native-pager-view@9.0.4` por defecto, pero `npx expo install
+  --check` marcó que el SDK 57 espera `8.0.2` — y como
+  `material-top-tabs` trae su propia copia anidada vía
+  `react-native-tab-view`, sin fijarlo quedaban 2 versiones nativas
+  distintas del mismo módulo en el árbol (riesgo real de crash/build
+  roto). Se agregó `"overrides": { "react-native-pager-view": "8.0.2" }`
+  en el `package.json` raíz + reinstalación limpia (`rm -rf node_modules
+  package-lock.json && npm install`) para que quede una sola versión
+  resuelta en todo el árbol. Confirmado con `npx expo install --check`
+  → "Dependencies are up to date".
+- `AppTabs.tsx`: `createBottomTabNavigator` → `createMaterialTopTabNavigator`
+  + `tabBarPosition="bottom"`. Ajustes para que se siga viendo igual
+  que antes (material-top-tabs por defecto es la barra de ARRIBA:
+  solo texto en mayúscula + rayita indicadora de pestaña activa) —
+  `tabBarShowIcon: true`, `tabBarIndicatorStyle: { height: 0 }`,
+  `tabBarLabelStyle` sin `textTransform: uppercase`,
+  `tabBarItemStyle: { flexDirection: "column" }` (ícono arriba, label
+  abajo, como antes). `tabBarIcon` pierde el parámetro `size` (bottom-
+  tabs lo manda, material-top-tabs no) — tamaño fijo 24 en su lugar.
+
+`tsc` + `verificar.sh` completo en verde. **No se verificó en un
+simulador/dispositivo real** — es un módulo nativo nuevo, la app
+instalada (APK 1.10.1) no lo puede probar recargando el JS, hace falta
+un build nuevo (Expo Go del SDK 57 sí trae `react-native-pager-view`
+empaquetado, así que probar con `expo start` + Expo Go debería andar
+sin compilar nada nuevo — pero no lo confirmé en vivo esta vuelta).
+Sin migración, sin backend — puro mobile + dependencias.
