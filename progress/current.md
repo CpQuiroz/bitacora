@@ -3475,3 +3475,68 @@ https://claude.ai/code/artifact/2ec55e6b-115b-4fea-9358-5f6941c67931
 
 Sin tocar `trabajo_list.json` — no hay tarea que cerrar, es una
 propuesta a la espera de que la usuaria decida si se construye.
+
+## 2026-09-19 (7): Informes personalizados — construcción v1 (tarea 45, in_progress)
+
+La usuaria confirmó seguir con la maqueta. Arranca la v1 acotada tal
+como quedó planteada (ver entrada anterior): nada de constructor de
+consultas libre, sí elegir/ordenar widgets que YA existen.
+
+**Plan**:
+1. Migración nueva: `informes_personalizados` (empresa_id, nombre,
+   widgets jsonb, creado_por, timestamps) + RLS `empresa_actual()` —
+   mismo patrón que `registros_mantencion_equipo` (migración 96).
+2. `backend/routes/informesPersonalizados.ts` — CRUD simple (GET lista,
+   POST, GET :id, PATCH :id, DELETE :id), mismo patrón que
+   `categoriasGasto.ts`. El backend NO conoce el "significado" de cada
+   widget — solo persiste un array ordenado de ids de widget (strings
+   opacos, validados por forma/cantidad, no por contenido). Todo el
+   catálogo (qué widget muestra qué dato, de qué endpoint) vive en el
+   frontend — así no hay que escribir ninguna agregación nueva en el
+   backend, se reusan los 7 endpoints `/api/informes/*` que ya existen.
+3. Catálogo v1: los ~28 KPIs que ya muestran las 7 pantallas fijas
+   (Visión General, Financiero, Ventas, Operaciones, Servicios,
+   Clientes, Gastos) + 1 gráfico ("Ingreso por Período", mismo dato que
+   ya usan Visión General/Financiero). Los demás tipos de gráfico
+   (evolución doble, ranking, barras...) quedan para una iteración
+   futura si esta primera versión resulta útil — cada uno tiene una
+   forma de datos distinta y sumarlos todos de una vez no se justifica
+   antes de validar que el concepto sirve.
+4. Pestaña nueva "Mis informes" en `informes/layout.tsx` (8va, después
+   de Gastos) — reusa el mismo `useInformes()` (período/desde/hasta/
+   refreshKey) que ya comparten las otras 7, para no duplicar ese
+   selector ni divergir de la UX existente.
+5. Página de lista + página de constructor (mismo concepto visual que
+   la maqueta ya aprobada: catálogo a la izquierda, canvas a la
+   derecha).
+
+Migración pendiente de validar contra prod y de que la usuaria la
+aplique — mismo criterio que 108/109, no se pushea hasta confirmación.
+
+**Actualización — hallazgo importante, tarea pausada**: al validar la
+migración contra prod (`BEGIN; create table informes_personalizados
+...; ROLLBACK;`), el `CREATE TABLE` falló con `42P07: relation
+"informes_personalizados" already exists`. Investigando: esa tabla
+YA existe desde la migración 23 (`23_informe_ia_personalizado.sql`) —
+es el esquema de una funcionalidad distinta que ya está en producción:
+**"Informe con IA"** (`/dashboard/informe`, ruta backend
+`/api/informe/plantillas`), que deja elegir **secciones enteras**
+(Financiero/Ventas/Operaciones/Servicios/Clientes/Gastos), hacer una
+**pregunta libre** respondida por IA (RAG), guardar como plantilla con
+nombre, y tiene historial + PDF. Casi choco el nombre de tabla sin
+darme cuenta — no llegué a aplicar nada (la validación en modo lectura
+hizo justamente su trabajo).
+
+Antes de seguir, le mostré a la usuaria una maqueta FIEL de esta
+funcionalidad ya existente (reconstruida del código real de
+`web/dashboard/informe/page.tsx` + `backend/routes/informe.ts`, misma
+paleta "Faena" que tiene hoy en prod — esa página todavía no está
+migrada a ds-):
+https://claude.ai/code/artifact/bd40a716-aee8-41c8-bad8-fe629c249635
+
+Borré `supabase/migrations/110_informes_personalizados.sql` (nunca se
+commiteó — estaba untracked). Tarea 45 queda `in_progress` pero
+**pausada**, a la espera de que la usuaria decida entre: (a) seguir
+con el dashboard de widgets en vivo como algo nuevo y con otro nombre
+de tabla, (b) extender el Informe IA existente en vez de un sistema
+paralelo, o (c) que el Informe IA ya le resuelve lo que pidió.

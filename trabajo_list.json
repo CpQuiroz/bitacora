@@ -695,6 +695,24 @@
       ],
       "status": "done",
       "resolution": "Codigo completo y verificado, commiteado en local. NO pusheado a main -- la migracion 109 (empresas.tema + empresas.duracion_cita_default_min) todavia no esta aplicada en prod, falta que la usuaria la corra y confirme (igual que la migracion 108)."
+    },
+    {
+      "id": 45,
+      "name": "informes_personalizados",
+      "title": "Informes personalizados -- v1 acotada (catalogo de widgets existentes + tabla nueva)",
+      "description": "Tras mostrar una maqueta (sin codigo) y que la usuaria confirmara seguir, se construye la v1 acotada que quedo planteada: NO es un constructor de consultas libre (fuera de alcance), es elegir/ordenar widgets ya existentes (los mismos KPI y graficos que ya muestran los 7 informes fijos) y guardarlos como un dashboard propio por empresa. Nueva tabla `informes_personalizados` con RLS + catalogo de widgets en el frontend (sin endpoints de agregacion nuevos -- reusa los 7 /api/informes/* que ya existen) + pagina 'Mis informes' (lista + constructor) agregada como pestana nueva dentro del layout existente de Informes.",
+      "acceptance": [
+        "Migracion nueva: tabla informes_personalizados (empresa_id, nombre, widgets jsonb, creado_por, timestamps) + RLS via empresa_actual()",
+        "Validada en modo lectura contra prod (BEGIN/ROLLBACK) antes de pedir que la usuaria la aplique",
+        "backend/routes/informesPersonalizados.ts: GET / (lista), POST / (crear), GET /:id, PATCH /:id, DELETE /:id -- mismo patron que categoriasGasto.ts. Montado bajo requiereModulo(\"informes\")",
+        "Catalogo de widgets en el frontend (KPIs de los 7 informes existentes + 1 grafico de ingresos por mes) -- sin escribir ninguna query de agregacion nueva en el backend",
+        "Pestana 'Mis informes' en informes/layout.tsx, reusando el mismo periodo/desde/hasta/refreshKey del InformesContext existente",
+        "Pagina de lista (tarjetas de informes guardados, crear/editar/eliminar) + pagina de constructor (catalogo + canvas, mismo concepto que la maqueta aprobada)",
+        "tsc + verificar.sh completo en verde",
+        "Migracion NO se aplica sola -- falta que la usuaria la corra y confirme, igual que la 108/109, antes de pushear"
+      ],
+      "status": "in_progress",
+      "resolution": "PAUSADA para revision de la usuaria. Al armar la migracion se detecto que YA existe una tabla `informes_personalizados` en prod (migracion 23, 'Informe IA personalizado' -- secciones enteras + pregunta libre a la IA, con plantillas guardadas/historial/PDF) -- casi choca el nombre. Se le mostro una maqueta fiel de ESA funcionalidad existente (favicon 📎, 'Informe con IA (hoy)') para que decida si: (a) seguir con el dashboard de widgets en vivo como algo nuevo y distinto (con otro nombre de tabla), (b) extender el Informe IA existente en vez de crear algo paralelo, o (c) que el Informe IA ya le alcanza. La migracion 110 borrador (colisionaba) se elimino sin commitear -- no hay nada roto en el repo, solo la tarea a la espera de la decision."
     }
   ]
 }
