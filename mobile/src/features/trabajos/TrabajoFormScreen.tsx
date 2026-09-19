@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Alert, Pressable, ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { Cliente, EstadoTrabajo, Usuario } from "@bitacora/shared";
-import { tokens } from "@bitacora/design-tokens";
+import { tinteSuave, tokens, tonoFuerte } from "@bitacora/design-tokens";
 import { Button, Input, LoadingState, Skeleton, Texto, useMarca } from "@bitacora/ui/native";
 import { PickerBuscable } from "../../components/ui";
 import { SelectorCliente } from "../../components/SelectorCliente";
@@ -51,6 +51,15 @@ const VACIO: BorradorTrabajo = {
 // SelectorCliente/PickerBuscable/InputMonto tal cual (sin equivalente v2).
 export function TrabajoFormScreen({ navigation, route }: NativeStackScreenProps<TrabajosStackParamList, "TrabajoForm">) {
   const marca = useMarca();
+  // Chips de selección (fecha/estado) de esta pantalla: relleno sólido
+  // de marca.base se ve muy fuerte con acentos saturados de tenant
+  // (ej. un verde vivo) — mismo criterio que ya usa Tag.tsx para
+  // color_secundario (tinteSuave/tonoFuerte), aplicado acá solo al
+  // color primario, solo en estos 2 selectores. El resto de la app
+  // sigue con el relleno sólido tal cual (fuera del alcance de este
+  // cambio puntual).
+  const chipSuave = useMemo(() => tinteSuave(marca.base), [marca.base]);
+  const chipFuerte = useMemo(() => tonoFuerte(marca.base), [marca.base]);
   const { enLinea } = useRed();
   const editandoId = route.params?.trabajoId ?? null;
   const [clientes, setClientes] = useState<Cliente[] | null>(null);
@@ -207,18 +216,18 @@ export function TrabajoFormScreen({ navigation, route }: NativeStackScreenProps<
                     justifyContent: "center",
                     borderRadius: tokens.radius.md,
                     paddingHorizontal: tokens.space["2"],
-                    backgroundColor: activo ? marca.base : tokens.color.surface,
+                    backgroundColor: activo ? chipSuave : tokens.color.surface,
                     borderWidth: 1,
                     borderColor: activo ? marca.base : tokens.color.divider,
                   }}
                 >
-                  <Texto tamano={tokens.size.caption} color={activo ? marca.foreground : `${tokens.color.text}99`}>
+                  <Texto tamano={tokens.size.caption} color={activo ? chipFuerte : `${tokens.color.text}99`}>
                     {DIAS[d.getDay()]}
                   </Texto>
-                  <Texto tamano={tokens.size.h5} color={activo ? marca.foreground : tokens.color.text}>
+                  <Texto tamano={tokens.size.h5} color={activo ? chipFuerte : tokens.color.text}>
                     {d.getDate()}
                   </Texto>
-                  <Texto tamano={tokens.size.caption} color={activo ? marca.foreground : `${tokens.color.text}99`}>
+                  <Texto tamano={tokens.size.caption} color={activo ? chipFuerte : `${tokens.color.text}99`}>
                     {MESES[d.getMonth()]}
                   </Texto>
                 </Pressable>
@@ -248,12 +257,12 @@ export function TrabajoFormScreen({ navigation, route }: NativeStackScreenProps<
                     alignItems: "center",
                     justifyContent: "center",
                     borderRadius: tokens.radius.md,
-                    backgroundColor: activo ? marca.base : tokens.color.surface,
+                    backgroundColor: activo ? chipSuave : tokens.color.surface,
                     borderWidth: 1,
                     borderColor: activo ? marca.base : tokens.color.divider,
                   }}
                 >
-                  <Texto tamano={tokens.size.caption} peso="semibold" color={activo ? marca.foreground : `${tokens.color.text}99`}>
+                  <Texto tamano={tokens.size.caption} peso="semibold" color={activo ? chipFuerte : `${tokens.color.text}99`}>
                     {e.label}
                   </Texto>
                 </Pressable>
