@@ -3444,3 +3444,34 @@ patrón nuevo.
 la migración 109 — se podría pushear solo, pero queda atrás del commit
 anterior en la misma rama; se pushean los dos juntos recién cuando la
 usuaria confirme la migración aplicada).
+
+## 2026-09-19 (6): Informes personalizados — investigación + maqueta (sin código)
+
+Pedido explícito: mostrar cómo quedaría ANTES de tocar código. Solo
+investigación + maqueta, cero cambios de código en esta entrada.
+
+Estado real de `web/dashboard/informes/*`: cada pantalla (Visión
+general, Ventas, Gastos, Operaciones, Servicios, Clientes, Financiero)
+es una página armada a mano, con su propio endpoint en
+`backend/routes/informes.ts` (7 rutas GET, cada una con su propia
+forma de respuesta — no hay un formato de "métrica" uniforme entre
+ellas). No existe hoy ningún catálogo de widgets reutilizables ni
+tabla para guardar layouts por empresa.
+
+**Sí se puede**, pero es una funcionalidad grande, no un toggle.
+Alcance realista para una v1:
+- Catalogar ~15-20 widgets (los mismos KPI/gráficos que ya existen en
+  los informes fijos) detrás de endpoints normalizados.
+- Tabla nueva `informes_personalizados` (empresa_id + nombre + qué
+  widgets + en qué orden), con RLS.
+- Constructor de consultas libre (que la persona arme una métrica
+  desde cero eligiendo tablas/filtros) queda explícitamente FUERA de
+  alcance para v1 — más superficie de riesgo multi-tenant/rendimiento
+  de la que se justifica sin haber probado primero si esto sirve.
+
+Maqueta publicada (interactiva, sin backend — agregar/sacar widgets
+es real en el navegador, "Guardar" solo muestra un toast):
+https://claude.ai/code/artifact/2ec55e6b-115b-4fea-9358-5f6941c67931
+
+Sin tocar `trabajo_list.json` — no hay tarea que cerrar, es una
+propuesta a la espera de que la usuaria decida si se construye.
