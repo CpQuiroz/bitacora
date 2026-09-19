@@ -98,11 +98,18 @@ export default function EmpresaPage() {
   const [color, setColor] = useState(usuario.empresa.color_primario || COLOR_PRIMARIO_DEFAULT);
   const [colorSecundario, setColorSecundario] = useState(usuario.empresa.color_secundario || COLOR_SECUNDARIO_DEFAULT);
   const [fuente, setFuente] = useState(usuario.empresa.fuente || "sistema");
+  const [tema, setTema] = useState<"faena" | "taller">(usuario.empresa.tema ?? "faena");
   const [moneda, setMoneda] = useState(usuario.empresa.moneda ?? "CLP");
   const [guardandoMarca, setGuardandoMarca] = useState(false);
   const [restableciendo, setRestableciendo] = useState(false);
   const [avisoMarca, setAvisoMarca] = useState<string | null>(null);
   const [errorMarca, setErrorMarca] = useState<string | null>(null);
+
+  // --- agenda ---
+  const [duracionCitaDefault, setDuracionCitaDefault] = useState(String(usuario.empresa.duracion_cita_default_min ?? 60));
+  const [guardandoAgenda, setGuardandoAgenda] = useState(false);
+  const [avisoAgenda, setAvisoAgenda] = useState<string | null>(null);
+  const [errorAgenda, setErrorAgenda] = useState<string | null>(null);
 
   const rutValido = rut.trim() === "" || validarRut(rut);
 
@@ -182,7 +189,7 @@ export default function EmpresaPage() {
     setGuardandoMarca(true);
     const res = await apiFetch("/api/empresa", {
       method: "PATCH",
-      body: JSON.stringify({ color_primario: color, color_secundario: colorSecundario, fuente, moneda }),
+      body: JSON.stringify({ color_primario: color, color_secundario: colorSecundario, fuente, tema, moneda }),
     });
     setGuardandoMarca(false);
     if (!res.ok) {
@@ -213,6 +220,31 @@ export default function EmpresaPage() {
     setColorSecundario(COLOR_SECUNDARIO_DEFAULT);
     setFuente("sistema");
     setAvisoMarca("Se restableció a los valores por defecto");
+  }
+
+  // Duración por defecto de una cita nueva de Agenda (mobile y web ya no
+  // preguntan el campo "Duración en minutos" — usan este valor solo).
+  async function onGuardarAgenda() {
+    setErrorAgenda(null);
+    setAvisoAgenda(null);
+    const minutos = parseInt(duracionCitaDefault, 10);
+    if (!Number.isInteger(minutos) || minutos <= 0) {
+      setErrorAgenda("Ingresa un número de minutos válido (mayor a 0)");
+      return;
+    }
+    setGuardandoAgenda(true);
+    const res = await apiFetch("/api/empresa", {
+      method: "PATCH",
+      body: JSON.stringify({ duracion_cita_default_min: minutos }),
+    });
+    setGuardandoAgenda(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setErrorAgenda(body.error ?? "No se pudo guardar");
+      return;
+    }
+    await recargar();
+    setAvisoAgenda("Cambios guardados");
   }
 
   const fuenteInfo = fuenteDe(fuente);
@@ -404,6 +436,22 @@ export default function EmpresaPage() {
             </div>
           </Card>
 
+          <Card>
+            <p className="mb-ds-1 font-ds-body text-ds-small font-semibold text-ds-text">Tema visual</p>
+            <p className="mb-ds-4 font-ds-body text-ds-caption text-ds-text/60">
+              Cambia la tipografía y los colores de fondo de toda la app. Tu color de acento y tu logo se mantienen igual en los dos.
+            </p>
+            <Select
+              etiqueta="Tema"
+              valor={tema}
+              onCambio={(v) => setTema(v as "faena" | "taller")}
+              opciones={[
+                { valor: "faena", etiqueta: "Faena (por defecto)" },
+                { valor: "taller", etiqueta: "Taller" },
+              ]}
+            />
+          </Card>
+
           {errorMarca ? <p className="font-ds-body text-ds-small text-ds-accent-700">{errorMarca}</p> : null}
           {avisoMarca ? <p className="font-ds-body text-ds-small font-medium text-ds-accent2-800">{avisoMarca}</p> : null}
           <div className="flex gap-ds-3">
@@ -414,6 +462,23 @@ export default function EmpresaPage() {
               Restablecer valores por defecto
             </Button>
           </div>
+
+          <Card>
+            <p className="mb-ds-1 font-ds-body text-ds-small font-semibold text-ds-text">Agenda</p>
+            <p className="mb-ds-4 font-ds-body text-ds-caption text-ds-text/60">
+              Duración que se asigna sola a cada cita nueva. Ya no se pide al crearla — mobile y web usan este valor.
+            </p>
+            <div className="max-w-[12rem]">
+              <Input etiqueta="Duración por defecto (min)" tipo="numero" valor={duracionCitaDefault} onCambio={setDuracionCitaDefault} />
+            </div>
+            {errorAgenda ? <p className="mt-ds-3 font-ds-body text-ds-small text-ds-accent-700">{errorAgenda}</p> : null}
+            {avisoAgenda ? <p className="mt-ds-3 font-ds-body text-ds-small font-medium text-ds-accent2-800">{avisoAgenda}</p> : null}
+            <div className="mt-ds-4">
+              <Button onPress={onGuardarAgenda} cargando={guardandoAgenda}>
+                Guardar agenda
+              </Button>
+            </div>
+          </Card>
         </div>
 
         <div>

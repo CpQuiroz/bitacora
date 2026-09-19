@@ -211,6 +211,7 @@ export default function DashboardPage() {
         empresaNombre: usuario.empresa.nombre,
         empresaLogoUrl: usuario.empresa.logo_url,
         colorPrimario: usuario.empresa.color_primario,
+        tema: usuario.empresa.tema,
         colorPrimarioForeground: usuario.empresa.color_primario_foreground,
         colorSecundario: usuario.empresa.color_secundario,
         fuente: usuario.empresa.fuente,

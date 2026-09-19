@@ -146,6 +146,9 @@ export type UsuarioShell = {
   colorSecundario?: string | null;
   fuente?: string | null;
   moneda?: string;
+  // "faena": sistema original. "taller": tema alternativo por empresa
+  // (ver tokens.json/build.ts — bloque [data-tema="taller"]).
+  tema?: "faena" | "taller";
 };
 
 const CLAVE_COLAPSADO = "bitacora:sidebar-colapsado";
@@ -496,7 +499,11 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
           </button>
         </div>
       )}
-      <div className={`flex min-h-screen bg-ds-bg ${impersonando || (consentimientoPendiente && !impersonando) ? "pt-9" : ""}`} style={temaStyle}>
+      <div
+        className={`flex min-h-screen bg-ds-bg ${impersonando || (consentimientoPendiente && !impersonando) ? "pt-9" : ""}`}
+        style={temaStyle}
+        data-tema={usuario.tema ?? "faena"}
+      >
       {/* Sidebar de escritorio */}
       <aside
         className={`sticky top-0 hidden h-screen shrink-0 flex-col border-r border-ds-divider bg-ds-surface transition-[width] duration-150 print:hidden sm:flex ${

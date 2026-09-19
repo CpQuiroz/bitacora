@@ -66,6 +66,7 @@ export default function ClientesPage() {
           empresaNombre: u.empresa?.nombre ?? "",
           empresaLogoUrl: u.empresa?.logo_url ?? null,
           colorPrimario: u.empresa?.color_primario ?? null,
+          tema: u.empresa?.tema ?? "faena",
           colorPrimarioForeground: u.empresa?.color_primario_foreground ?? null,
           colorSecundario: u.empresa?.color_secundario ?? null,
           fuente: u.empresa?.fuente ?? null,

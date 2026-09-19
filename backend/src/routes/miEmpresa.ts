@@ -14,6 +14,7 @@ const MONEDAS = ["CLP", "USD", "EUR", "PEN", "COP", "MXN", "ARS"];
 // Debe reflejar exactamente los "valor" de web/src/lib/fuentes.ts.
 const FUENTES = ["sistema", "inter", "roboto", "poppins", "montserrat", "nunito", "work-sans", "lato", "source-sans-3"];
 const TIPOS_CUENTA: TipoCuenta[] = ["corriente", "vista", "ahorro"];
+const TEMAS: Empresa["tema"][] = ["faena", "taller"];
 const ESTADOS_OS_DISPARADOR: EstadoOS[] = ["pendiente", "enviada", "en_proceso", "completada", "firmada"];
 
 // Brillo percibido (fórmula YIQ) para decidir si el texto sobre el
@@ -77,6 +78,8 @@ miEmpresaRouter.patch(
       color_secundario,
       moneda,
       fuente,
+      tema,
+      duracion_cita_default_min,
       razon_social,
       giro,
       rut,
@@ -220,6 +223,20 @@ miEmpresaRouter.patch(
         return;
       }
       cambios.moneda = moneda;
+    }
+    if (tema !== undefined) {
+      if (!TEMAS.includes(tema)) {
+        res.status(400).json({ error: `tema debe ser uno de: ${TEMAS.join(", ")}` });
+        return;
+      }
+      cambios.tema = tema;
+    }
+    if (duracion_cita_default_min !== undefined) {
+      if (!Number.isInteger(duracion_cita_default_min) || duracion_cita_default_min <= 0) {
+        res.status(400).json({ error: "duracion_cita_default_min debe ser un entero positivo" });
+        return;
+      }
+      cambios.duracion_cita_default_min = duracion_cita_default_min;
     }
     if (Object.keys(cambios).length === 0) {
       res.status(400).json({ error: "Nada que actualizar" });

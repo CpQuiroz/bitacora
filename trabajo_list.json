@@ -675,6 +675,26 @@
       ],
       "status": "done",
       "resolution": "Codigo listo y verificado (tsc + verificar.sh + boot real). Sin migracion, sin backend -- puro frontend, se puede pushear directo. Falta que la usuaria confirme visualmente navegando la pagina en prod (no es parte de escribir el codigo, es la validacion final de un cambio grande de UI)."
+    },
+    {
+      "id": 44,
+      "name": "tema_taller_y_duracion_cita",
+      "title": "Tema visual 'Taller' (punto 7, antes solo maqueta) + duracion de cita configurable en empresa",
+      "description": "Tema alternativo por empresa (empresas.tema: faena/taller) via [data-tema] en el sistema de tokens ds-, seleccionable en Configuracion > Empresa. Junto con eso: se saca el campo manual 'duracion en minutos' de Nueva Cita en mobile y pasa a ser empresas.duracion_cita_default_min, configurable en la misma pagina -- ambos van en la migracion 109.",
+      "acceptance": [
+        "tokens.json/build.ts: colorTaller + fontTaller (Archivo 700 heading, reusa --font-plex-sans para body), bloque [data-tema=\"taller\"] -- HECHO",
+        "Bug de paso corregido: @utility ds-heading tenia font-weight literal (400) en vez de var(--font-ds-heading-weight) -- HECHO",
+        "web/layout.tsx carga Archivo; DashboardShell estampa data-tema en el div que ya fija --ds-brand -- HECHO",
+        "UsuarioShell.tema agregado en las 34 paginas que arman el objeto a mano (sed, 2 patrones -- multilinea y una-linea) -- HECHO, verificado conteo 34/34",
+        "backend PATCH /api/empresa acepta tema + duracion_cita_default_min -- HECHO",
+        "Selector 'Tema' + campo 'Duracion por defecto' en configuracion/empresa/page.tsx -- HECHO",
+        "mobile NuevaCitaScreen: se quito el Input de duracion manual, usa el default de empresa solo al crear con hora -- HECHO. NuevaReservaCosmetologia (Agenda Pro) NO se toco",
+        "web agenda/page.tsx: resetearFormTarea ya no fija \"60\" a fuego, lee el default de empresa -- HECHO",
+        "Migracion 109 validada en modo lectura contra prod (BEGIN/ROLLBACK) -- HECHO. Falta que la usuaria la aplique (mismo flujo que la 108)",
+        "verificar.sh completo (mobile tsc + 3 test suites, no --rapido) en verde -- HECHO"
+      ],
+      "status": "done",
+      "resolution": "Codigo completo y verificado, commiteado en local. NO pusheado a main -- la migracion 109 (empresas.tema + empresas.duracion_cita_default_min) todavia no esta aplicada en prod, falta que la usuaria la corra y confirme (igual que la migracion 108)."
     }
   ]
 }

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Sans, IBM_Plex_Mono, Caprasimo, Figtree } from "next/font/google";
+import { IBM_Plex_Sans, IBM_Plex_Mono, Caprasimo, Figtree, Archivo } from "next/font/google";
 import "./globals.css";
 
 // Faena (en migración) — se quitan cuando ninguna pantalla use --font-sans/mono.
@@ -32,6 +32,17 @@ const figtree = Figtree({
   display: "swap",
 });
 
+// Tema "Taller" (19-sep-2026) — solo el heading necesita fuente nueva;
+// el body reusa --font-plex-sans (ya cargada arriba para Faena). Un solo
+// peso (700): --font-ds-heading-weight es lo que decide si se usa acá o
+// en Caprasimo (ver packages/design-tokens/src/build.ts).
+const archivo = Archivo({
+  variable: "--font-archivo",
+  weight: "700",
+  subsets: ["latin"],
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: "Bitácora",
   description: "Gestión para pymes de servicio en terreno.",
@@ -50,7 +61,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="es"
       suppressHydrationWarning
-      className={`${plexSans.variable} ${plexMono.variable} ${caprasimo.variable} ${figtree.variable} h-full antialiased`}
+      className={`${plexSans.variable} ${plexMono.variable} ${caprasimo.variable} ${figtree.variable} ${archivo.variable} h-full antialiased`}
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: SCRIPT_TEMA }} />

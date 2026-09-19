@@ -86,6 +86,12 @@ export type Empresa = {
   color_primario_foreground: string | null;
   color_secundario: string | null;
   fuente: string | null;
+  // Tema visual alternativo (19-sep-2026, ver packages/design-tokens).
+  tema: "faena" | "taller";
+  // Duración por defecto (minutos) de una cita nueva de Agenda — ya no
+  // se pide manualmente en el formulario (mobile/web), ver NuevaCitaScreen
+  // y agenda/page.tsx.
+  duracion_cita_default_min: number;
   moneda: string;
   razon_social: string | null;
   giro: string | null;

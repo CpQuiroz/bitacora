@@ -153,6 +153,9 @@ function AgendaContenido() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [usuario, setUsuario] = useState<UsuarioShell | null>(null);
+  // Duración por defecto de una cita nueva (Configuración > Empresa >
+  // Agenda) — ya no se pide en el formulario (ver resetearFormTarea).
+  const [duracionCitaDefault, setDuracionCitaDefault] = useState(60);
   const [modulosDeshabilitados, setModulosDeshabilitados] = useState<Modulo[]>([]);
   const [modulosVisibles, setModulosVisibles] = useState<Modulo[] | null>(null);
   const [vista, setVista] = useState<"mes" | "semana" | "dia">("mes");
@@ -244,9 +247,11 @@ function AgendaContenido() {
             empresaNombre: u.empresa?.nombre ?? "",
             empresaLogoUrl: u.empresa?.logo_url ?? null,
             colorPrimario: u.empresa?.color_primario ?? null,
+            tema: u.empresa?.tema ?? "faena",
             colorPrimarioForeground: u.empresa?.color_primario_foreground ?? null,
             moneda: u.empresa?.moneda ?? "CLP",
           });
+          setDuracionCitaDefault(u.empresa?.duracion_cita_default_min ?? 60);
         }
         setModulosDeshabilitados(deshabilitados ?? []);
       }
@@ -402,8 +407,9 @@ function AgendaContenido() {
     setDescripcionTarea("");
     setFechaTarea(fecha);
     setHoraTarea("");
-    // Duración fija: ya no se pide al usuario, toda cita nueva dura 1 hora.
-    setDuracionTarea("60");
+    // Ya no se pide al usuario — usa el default configurable de la
+    // empresa (Configuración > Empresa > Agenda, antes fijo en "60").
+    setDuracionTarea(String(duracionCitaDefault));
     setClienteIdTarea("");
     setResponsableIdTarea("");
     setPrioridadTarea("media");

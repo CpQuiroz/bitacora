@@ -37,6 +37,11 @@ export function NuevaCitaScreen({ navigation, route }: NativeStackScreenProps<Ag
 
   const editandoId = route.params?.tareaId ?? null;
   const fechaInicial = route.params?.fecha ?? clave(new Date());
+  // Ya no se pide "duración en minutos" en el formulario (19-sep-2026) —
+  // toda cita nueva con hora usa este valor de empresa en silencio
+  // (Configuración > Empresa > Agenda). Al editar se respeta la
+  // duración que la cita ya tenía (obtenerTarea la carga tal cual).
+  const duracionDefault = auth.fase === "listo" ? auth.usuario.empresa.duracion_cita_default_min ?? 60 : 60;
 
   // Tema por rubro: cosmetología tiene su propia pantalla de creación
   // ("Nueva reserva") — solo para crear, editar sigue con el genérico
@@ -139,8 +144,13 @@ export function NuevaCitaScreen({ navigation, route }: NativeStackScreenProps<Ag
     }
     if (!enLinea) return Alert.alert("Sin conexión", "Necesitas conexión para guardar la cita.");
 
+    // Al crear (no al editar): si hay hora y no hay duración cargada
+    // (ya no se pide a mano), se usa el default de empresa.
+    const payload: BorradorCita =
+      !editandoId && b.hora && !b.duracion_min ? { ...b, duracion_min: String(duracionDefault) } : b;
+
     setGuardando(true);
-    const r = editandoId ? await editarCita(editandoId, b) : await crearCita(b);
+    const r = editandoId ? await editarCita(editandoId, payload) : await crearCita(payload);
     setGuardando(false);
     if (!r.ok) {
       Alert.alert("No se pudo guardar", r.error);
@@ -209,16 +219,6 @@ export function NuevaCitaScreen({ navigation, route }: NativeStackScreenProps<Ag
         </View>
 
         <SelectorHora etiqueta="Hora (opcional)" valor={b.hora} onCambiar={(v) => set("hora", v)} />
-
-        {b.hora ? (
-          <Input
-            etiqueta="Duración en minutos (opcional)"
-            placeholder="Ej. 60"
-            tipo="numero"
-            valor={b.duracion_min}
-            onCambio={(v) => set("duracion_min", v.replace(/\D/g, ""))}
-          />
-        ) : null}
 
         <SelectorCliente
           etiqueta="Cliente (opcional)"

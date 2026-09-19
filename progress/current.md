@@ -3327,3 +3327,82 @@ raro sino que el archivo quedó con una ruta `/importar` registrada
 ANTES del cierre real de `POST /`, dejando código huérfano — se
 corrigió reordenando antes de seguir con los otros 2 endpoints (ahí sí
 confirmé el cierre real de cada handler antes de editar).
+
+## 2026-09-19 (4): tema "Taller" (punto 7) + duración de cita configurable
+
+Pedido combinado de la usuaria: terminar el punto 7 (tema "Taller",
+antes solo maqueta) + sacar el campo manual "duración en minutos" de
+Nueva Cita en mobile y dejarlo como ajuste de empresa. Van juntos
+porque ambos necesitaban la misma migración nueva.
+
+**Migración 109** (`empresas.tema` + `empresas.duracion_cita_default_min`,
+default 'faena'/60) — validada en modo lectura contra prod
+(`BEGIN;...;ROLLBACK;`, 3 empresas, ambos defaults aplicados limpio).
+**Falta que la usuaria la aplique** (mismo flujo que la 108) — el
+código que lee/escribe estas 2 columnas quedó commiteado en local pero
+NO se pushea a `main` hasta que confirme.
+
+**Tema "Taller"**:
+- `packages/design-tokens/tokens.json` — nuevo bloque `colorTaller`
+  (paleta industrial: grises acero + acento naranja `#d1580f` + verde
+  azulado `#3d5a5c`) y `fontTaller` (Archivo 700 para heading, IBM
+  Plex Sans para body — reusa `--font-plex-sans`, que YA se carga
+  global para Faena, así que Taller no suma un font load nuevo, solo
+  Archivo).
+- `build.ts` — emite `[data-tema="taller"]` con toda la paleta +
+  fuentes. Scopeado al MISMO div donde `DashboardShell` ya fija
+  `--ds-brand` por tenant (no a `:root`/`<html>` como Modo Nocturno) —
+  por resolución de custom properties (ancestro más cercano que la
+  define, no especificidad), esto no necesitó el guard
+  `:not([data-theme="light"])` que sí le hizo falta a Modo Nocturno.
+  Solo claro por ahora (no hay `colorTallerDark`).
+- **Bug de paso encontrado y corregido**: `@utility ds-heading` tenía
+  `font-weight` como literal (400) en vez de `var(--font-ds-heading-weight)`
+  — con eso, pisar el peso a 700 en Taller no habría hecho nada. Ahora
+  lee la variable, igual que ya hacía `font-family`.
+- `web/src/app/layout.tsx` — agrega `Archivo` (next/font/google, peso
+  700 nomás) publicado como `--font-archivo`.
+- `DashboardShell.tsx` — `UsuarioShell.tema?: "faena"|"taller"`; el div
+  que ya tenía `style={temaStyle}` ahora también lleva
+  `data-tema={usuario.tema ?? "faena"}`.
+- **Bloqueador mecánico resuelto**: `UsuarioShell` se arma por copiar-
+  pegar en 34 páginas distintas (`DashboardShell` no hace su propio
+  fetch de `/api/me`) — se insertó `tema: u.empresa?.tema ?? "faena",`
+  en las 34 con un `sed` (2 variantes: multilínea con backreference de
+  indentación, y una línea sola para los ~8 archivos de objeto
+  compacto en una sola línea — el primer `sed` no los tocó, se detectó
+  comparando el conteo de archivos con `tema:` contra el conteo original
+  y se corrigió con el segundo patrón).
+- `backend/routes/miEmpresa.ts` — PATCH acepta `tema` (validado contra
+  `["faena","taller"]`) y `duracion_cita_default_min` (entero > 0).
+  `/api/me` ya devuelve ambos sin tocarlo (usa `select("*, empresa:empresas(*)")`).
+- `web/dashboard/configuracion/empresa/page.tsx` — nuevo `Select` "Tema"
+  (Faena/Taller) en la tarjeta de marca existente, + tarjeta nueva
+  "Agenda" con el input de duración por defecto (minutos) y su propio
+  guardar.
+
+**Duración de cita configurable**:
+- `mobile/NuevaCitaScreen.tsx` — se quitó el `Input` "Duración en
+  minutos (opcional)". Al crear (no al editar) con hora puesta y sin
+  duración cargada, `guardar()` inyecta el default de empresa
+  (`auth.usuario.empresa.duracion_cita_default_min ?? 60`) antes de
+  mandar. Editar sigue respetando la duración que la cita ya tenía
+  (`obtenerTarea` la carga tal cual) — no toqué `NuevaReservaCosmetologia.tsx`
+  (su selector de duración es otra cosa, ligado a `duracion_sugerida_min`
+  del catálogo de Agenda Pro).
+- `web/dashboard/agenda/page.tsx` — `resetearFormTarea()` ya no fija
+  `"60"` a fuego: lee `duracionCitaDefault` (nuevo estado, cargado
+  desde `/api/me` junto con el resto de `usuario`).
+
+`packages/shared` (tipo `Empresa` + `tema`/`duracion_cita_default_min`)
+se reconstruyó (`npm run build` en el paquete) — sin eso `tsc` de
+backend/web/mobile no veía los campos nuevos aunque `types.ts` ya los
+tuviera (dist/ compilado, no se regenera solo). `verificar.sh` completo
+(no `--rapido`, incluye mobile tsc + los 3 test suites) en verde.
+
+`next build` de `web` falla por un problema previo a esta sesión y sin
+relación (`recharts@3.10.1` importa `@reduxjs/toolkit`, que no está
+instalado — nada que ver con fuentes/temas; `verificar.sh` no corre
+`next build`, solo `tsc --noEmit`, así que esto no lo agarra). No lo
+toqué — está fuera del pedido de hoy, lo dejo anotado para revisar
+aparte.

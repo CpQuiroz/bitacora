@@ -31,7 +31,13 @@ export type Tokens = {
   // ver docs/harness — pasar mobile a esto es un cambio de arquitectura
   // aparte, no incluido acá).
   colorDark: Paleta;
+  // Tema "Taller" (19-sep-2026) — alternativa opcional por empresa
+  // (empresas.tema), independiente de Modo Nocturno. Solo claro por ahora:
+  // no tiene una variante colorTallerDark. Ver DashboardShell (data-tema)
+  // y UsuarioShell.tema.
+  colorTaller: Paleta;
   font: { heading: string; body: string; headingWeight: number };
+  fontTaller: { heading: string; body: string; headingWeight: number };
   size: Record<"h1" | "h2" | "h3" | "h4" | "h5" | "body" | "small" | "caption" | "micro", number>;
   space: Record<"1" | "2" | "3" | "4" | "6" | "8", number>;
   radius: Record<"sm" | "md" | "lg" | "pill", number>;
@@ -44,6 +50,12 @@ const AVISO = "/* GENERADO por packages/design-tokens/src/build.ts — no editar
 // --font-figtree (ver web/src/app/layout.tsx). El literal queda de fallback.
 const stackHeading = `var(--font-caprasimo), "${tokens.font.heading}", ui-sans-serif, system-ui, sans-serif`;
 const stackBody = `var(--font-figtree), "${tokens.font.body}", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`;
+
+// Tema "Taller": heading propio (Archivo, --font-archivo cargado en
+// layout.tsx solo para este tema); body reusa --font-plex-sans, que YA
+// se carga globalmente para Faena (evita un font load nuevo).
+const stackHeadingTaller = `var(--font-archivo), "${tokens.fontTaller.heading}", ui-sans-serif, system-ui, sans-serif`;
+const stackBodyTaller = `var(--font-plex-sans), "${tokens.fontTaller.body}", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`;
 
 // ── tokens.css (web / Tailwind v4) ─────────────────────────────────
 function rampCss(prefijo: string, ramp: Ramp): string {
@@ -177,11 +189,42 @@ ${rampCss("accent", tokens.colorDark.accentRamp)}
 ${rampCss("accent2", tokens.colorDark.accent2Ramp)}
 }
 
-/* Voz display (Caprasimo): SOLO titulares y botones grandes, nunca
-   párrafos. Combinar con text-ds-h1…h5 para el tamaño. */
+/* Tema "Taller" (19-sep-2026) — override opcional por empresa
+   (empresas.tema), independiente de Modo Nocturno. Se activa con
+   data-tema="taller" en el div que YA fija --ds-brand por tenant
+   (DashboardShell) — no en <html> como Modo Nocturno. La resolución de
+   custom properties es "ancestro más cercano que la define", no
+   especificidad/orden de :root, así que este bloque no necesita el
+   :not([data-theme="light"]) que sí necesitó Modo Nocturno (ese pisa
+   :root arriba en <html>; este pisa un div más abajo en el árbol, y
+   siempre gana ahí sin importar qué puso :root). Solo claro por ahora
+   (no hay colorTallerDark todavía). */
+[data-tema="taller"] {
+  --color-ds-bg: ${tokens.colorTaller.bg};
+  --color-ds-surface: ${tokens.colorTaller.surface};
+  --color-ds-text: ${tokens.colorTaller.text};
+  --color-ds-accent: ${tokens.colorTaller.accent};
+  --color-ds-accent2: ${tokens.colorTaller.accent2};
+  --color-ds-divider: ${tokens.colorTaller.divider};
+
+${rampCss("neutral", tokens.colorTaller.neutral)}
+
+${rampCss("accent", tokens.colorTaller.accentRamp)}
+
+${rampCss("accent2", tokens.colorTaller.accent2Ramp)}
+
+  --font-ds-heading: ${stackHeadingTaller};
+  --font-ds-body: ${stackBodyTaller};
+  --font-ds-heading-weight: ${tokens.fontTaller.headingWeight};
+}
+
+/* Voz display (Caprasimo en Faena / Archivo en Taller): SOLO titulares y
+   botones grandes, nunca párrafos. Combinar con text-ds-h1…h5 para el
+   tamaño. font-weight sale de --font-ds-heading-weight (no un literal)
+   para que Taller pueda pisarlo a 700 sin duplicar este @utility. */
 @utility ds-heading {
   font-family: var(--font-ds-heading);
-  font-weight: ${tokens.font.headingWeight};
+  font-weight: var(--font-ds-heading-weight);
   line-height: 1.12;
   letter-spacing: -0.015em;
 }
@@ -212,6 +255,11 @@ export type Tokens = typeof tokens;
 export const fontStackCss = {
   heading: ${JSON.stringify(stackHeading)},
   body: ${JSON.stringify(stackBody)},
+} as const;
+
+export const fontStackCssTaller = {
+  heading: ${JSON.stringify(stackHeadingTaller)},
+  body: ${JSON.stringify(stackBodyTaller)},
 } as const;
 `;
 

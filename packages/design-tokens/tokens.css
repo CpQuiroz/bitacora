@@ -197,11 +197,66 @@
   --color-ds-accent2-900: #f0fae1;
 }
 
-/* Voz display (Caprasimo): SOLO titulares y botones grandes, nunca
-   párrafos. Combinar con text-ds-h1…h5 para el tamaño. */
+/* Tema "Taller" (19-sep-2026) — override opcional por empresa
+   (empresas.tema), independiente de Modo Nocturno. Se activa con
+   data-tema="taller" en el div que YA fija --ds-brand por tenant
+   (DashboardShell) — no en <html> como Modo Nocturno. La resolución de
+   custom properties es "ancestro más cercano que la define", no
+   especificidad/orden de :root, así que este bloque no necesita el
+   :not([data-theme="light"]) que sí necesitó Modo Nocturno (ese pisa
+   :root arriba en <html>; este pisa un div más abajo en el árbol, y
+   siempre gana ahí sin importar qué puso :root). Solo claro por ahora
+   (no hay colorTallerDark todavía). */
+[data-tema="taller"] {
+  --color-ds-bg: #eceae4;
+  --color-ds-surface: #e0ddd3;
+  --color-ds-text: #211f1c;
+  --color-ds-accent: #d1580f;
+  --color-ds-accent2: #3d5a5c;
+  --color-ds-divider: rgba(33, 31, 28, 0.18);
+
+  --color-ds-neutral-100: #f6f5f1;
+  --color-ds-neutral-200: #e9e6dd;
+  --color-ds-neutral-300: #d3cec0;
+  --color-ds-neutral-400: #b3ac99;
+  --color-ds-neutral-500: #928b77;
+  --color-ds-neutral-600: #726c5c;
+  --color-ds-neutral-700: #565143;
+  --color-ds-neutral-800: #3c3830;
+  --color-ds-neutral-900: #26231e;
+
+  --color-ds-accent-100: #fdece0;
+  --color-ds-accent-200: #fbd2b3;
+  --color-ds-accent-300: #f5ac74;
+  --color-ds-accent-400: #e8843f;
+  --color-ds-accent-500: #d1580f;
+  --color-ds-accent-600: #ab440a;
+  --color-ds-accent-700: #813308;
+  --color-ds-accent-800: #5a2306;
+  --color-ds-accent-900: #3a1704;
+
+  --color-ds-accent2-100: #e6edec;
+  --color-ds-accent2-200: #c9d8d7;
+  --color-ds-accent2-300: #a1bcbb;
+  --color-ds-accent2-400: #729392;
+  --color-ds-accent2-500: #4f7473;
+  --color-ds-accent2-600: #3d5a5c;
+  --color-ds-accent2-700: #2e4546;
+  --color-ds-accent2-800: #213233;
+  --color-ds-accent2-900: #151f20;
+
+  --font-ds-heading: var(--font-archivo), "Archivo", ui-sans-serif, system-ui, sans-serif;
+  --font-ds-body: var(--font-plex-sans), "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-ds-heading-weight: 700;
+}
+
+/* Voz display (Caprasimo en Faena / Archivo en Taller): SOLO titulares y
+   botones grandes, nunca párrafos. Combinar con text-ds-h1…h5 para el
+   tamaño. font-weight sale de --font-ds-heading-weight (no un literal)
+   para que Taller pueda pisarlo a 700 sin duplicar este @utility. */
 @utility ds-heading {
   font-family: var(--font-ds-heading);
-  font-weight: 400;
+  font-weight: var(--font-ds-heading-weight);
   line-height: 1.12;
   letter-spacing: -0.015em;
 }

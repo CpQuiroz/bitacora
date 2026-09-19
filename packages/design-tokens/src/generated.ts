@@ -89,6 +89,52 @@ export const tokens = {
     "body": "Figtree",
     "headingWeight": 400
   },
+  "colorTaller": {
+    "bg": "#eceae4",
+    "surface": "#e0ddd3",
+    "text": "#211f1c",
+    "accent": "#d1580f",
+    "accent2": "#3d5a5c",
+    "divider": "rgba(33, 31, 28, 0.18)",
+    "neutral": {
+      "100": "#f6f5f1",
+      "200": "#e9e6dd",
+      "300": "#d3cec0",
+      "400": "#b3ac99",
+      "500": "#928b77",
+      "600": "#726c5c",
+      "700": "#565143",
+      "800": "#3c3830",
+      "900": "#26231e"
+    },
+    "accentRamp": {
+      "100": "#fdece0",
+      "200": "#fbd2b3",
+      "300": "#f5ac74",
+      "400": "#e8843f",
+      "500": "#d1580f",
+      "600": "#ab440a",
+      "700": "#813308",
+      "800": "#5a2306",
+      "900": "#3a1704"
+    },
+    "accent2Ramp": {
+      "100": "#e6edec",
+      "200": "#c9d8d7",
+      "300": "#a1bcbb",
+      "400": "#729392",
+      "500": "#4f7473",
+      "600": "#3d5a5c",
+      "700": "#2e4546",
+      "800": "#213233",
+      "900": "#151f20"
+    }
+  },
+  "fontTaller": {
+    "heading": "Archivo",
+    "body": "IBM Plex Sans",
+    "headingWeight": 700
+  },
   "size": {
     "h1": 42,
     "h2": 32,
@@ -131,4 +177,9 @@ export type Tokens = typeof tokens;
 export const fontStackCss = {
   heading: "var(--font-caprasimo), \"Caprasimo\", ui-sans-serif, system-ui, sans-serif",
   body: "var(--font-figtree), \"Figtree\", ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+} as const;
+
+export const fontStackCssTaller = {
+  heading: "var(--font-archivo), \"Archivo\", ui-sans-serif, system-ui, sans-serif",
+  body: "var(--font-plex-sans), \"IBM Plex Sans\", ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
 } as const;
