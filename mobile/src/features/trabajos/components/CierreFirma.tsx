@@ -3,6 +3,7 @@ import { Alert, Image, View } from "react-native";
 import { tokens } from "@bitacora/design-tokens";
 import { Button, Card, Input, Textarea, Texto, useMarca } from "@bitacora/ui/native";
 import { LienzoFirma, type LienzoFirmaHandle } from "../../../components/LienzoFirma";
+import { useAuth } from "../../auth/AuthContext";
 import type { OrdenConFirma } from "../../../services/trabajos";
 
 function hhmm(iso: string | null | undefined): string {
@@ -33,27 +34,30 @@ export function CierreFirma({
   onGuardarSinFirmar?: (observaciones: string) => void;
 }) {
   const marca = useMarca();
+  const auth = useAuth();
   const [nombre, setNombre] = useState("");
   const [cargo, setCargo] = useState("");
   const [observaciones, setObservaciones] = useState("");
   const [cerrando, setCerrando] = useState(false);
   const lienzo = useRef<LienzoFirmaHandle>(null);
 
-  // Firma del técnico (opcional, va en el PDF).
-  const [tecNombre, setTecNombre] = useState("");
-  const [tecDoc, setTecDoc] = useState("");
+  // Firma del técnico (opcional, va en el PDF) — el nombre sale de la
+  // cuenta con la que está logueado quien firma, no se vuelve a pedir
+  // a mano (19-sep-2026): quién hizo el trabajo ya quedó registrado al
+  // asignar la OS, pedir nombre/RUT tipeados acá era una fricción sin
+  // verificación real. El RUT se sacó directo (mismo motivo, sin uso).
+  const tecNombre = auth.fase === "listo" ? auth.usuario.nombre : "";
   const [guardandoTec, setGuardandoTec] = useState(false);
   const lienzoTec = useRef<LienzoFirmaHandle>(null);
   const tecFirmado = Boolean(orden?.firma_tecnico_url || orden?.firma_tecnico_url_firmada);
 
   async function guardarFirmaTecnico() {
     if (!onFirmarTecnico) return;
-    if (!tecNombre.trim()) return Alert.alert("Falta un dato", "Escribe el nombre del técnico.");
     const base64 = await lienzoTec.current?.capturar();
     if (!base64) return Alert.alert("Falta la firma", "Firma en el recuadro.");
     setGuardandoTec(true);
     try {
-      await onFirmarTecnico({ firma_base64: base64, tecnico_nombre: tecNombre.trim(), tecnico_documento: tecDoc.trim() });
+      await onFirmarTecnico({ firma_base64: base64, tecnico_nombre: tecNombre, tecnico_documento: "" });
     } finally {
       setGuardandoTec(false);
     }
@@ -104,9 +108,10 @@ export function CierreFirma({
             </Card>
           ) : editable ? (
             <>
+              <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
+                {tecNombre || "Sin nombre en tu cuenta"}
+              </Texto>
               <LienzoFirma ref={lienzoTec} />
-              <Input etiqueta="Nombre del técnico" valor={tecNombre} onCambio={setTecNombre} />
-              <Input etiqueta="RUT del técnico (opcional)" valor={tecDoc} onCambio={setTecDoc} />
               <Button variante="secundario" onPress={guardarFirmaTecnico} cargando={guardandoTec}>
                 Guardar firma del técnico
               </Button>

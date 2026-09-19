@@ -3776,3 +3776,29 @@ registrado por qué, no un olvido):
 
 `tsc` mobile limpio, `verificar.sh` completo en verde. Sin migración —
 cambio puramente visual de mobile, se puede pushear directo.
+
+## 2026-09-19 (13): puntos 4 y 5 cerrados — firma del técnico + herramienta de diagnóstico
+
+La usuaria aceptó la recomendación sobre la firma del técnico (mantener
+la firma, sacar el RUT) y pidió sacar la herramienta de diagnóstico.
+
+**Firma del técnico** (`CierreFirma.tsx`): se sacaron los 2 `Input`
+("Nombre del técnico" y "RUT del técnico") — el nombre ahora sale de
+`useAuth()` (la cuenta con la que está logueado quien firma) y se
+muestra como texto, no se vuelve a pedir a mano. El RUT se manda como
+`""` — el backend (`POST /:id/firma-tecnico`) ya hacía
+`tecnico_documento?.trim() || null`, así que sigue guardando `null` en
+la base sin tocar nada del backend. Sigue habiendo un lienzo de firma
+(eso no se sacó, por la razón que se le dio a la usuaria: es la única
+evidencia real de presencia en terreno, la asignación del admin no
+alcanza para eso).
+
+**Herramienta de diagnóstico** (`PerfilScreen.tsx` +
+`lib/diagnosticoRed.ts`): se sacó por completo — el botón "Diagnóstico
+de red (foto)", la función `correrDiagnostico`, el estado
+`diagnosticando`, y el archivo `diagnosticoRed.ts` entero (no lo
+usaba nadie más). Cumplió su función (investigar el bug de "foto
+atorada" de mediados de septiembre) y el propio comentario del código
+ya decía que debía borrarse al cerrar esa investigación.
+
+`tsc` mobile limpio, `verificar.sh` completo en verde. Sin migración.
