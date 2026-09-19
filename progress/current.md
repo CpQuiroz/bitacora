@@ -3638,3 +3638,74 @@ mismo label que `ClienteFormScreen.tsx`). Interfaz pública sin cambios
 Sin migración — `contacto_nombre` ya existía en la tabla, solo faltaba
 exponerlo en esta hoja puntual. `tsc` mobile limpio, `verificar.sh`
 completo en verde.
+
+## 2026-09-19 (11): probando el build 1.10.2 — 5 hallazgos reales
+
+La usuaria probó el APK local en el teléfono y mandó 4 screenshots +
+una lista de 5 cosas. De las 5, apliqué 2 (bugs claros, sin ambigüedad)
+y dejé 3 para su decisión (necesitan opinión/alcance, no son "arreglar
+un bug").
+
+**1) Reloj del sistema tapando el título — APLICADO.** Causa real:
+Expo SDK 57 (RN 0.81) fuerza edge-to-edge en Android — el status bar
+ya NO reserva espacio solo. `ScreenHeader.tsx` (compartido por 29 de
+las 33 pantallas de la app) nunca llamaba `useSafeAreaInsets()` para
+el tope (sí se usa para abajo, en las hojas emergentes) — probable
+gap desde que "sistema visual móvil v2" se armó (13-sep), recién
+visible ahora porque este es el primer build real que se prueba en
+dispositivo desde ese cambio. Se agregó `insets.top` como
+`paddingTop` en el contenedor de `ScreenHeader`. Cubre las 4 pantallas
+del reporte (Pizarra/Trabajos/detalle de OS/Perfil) + 25 más que
+comparten el mismo header. Quedan 6 pantallas sin `ScreenHeader`
+(login, MFA, NuevaCita —modal—, Asistente) sin revisar — si se ve el
+mismo problema ahí, es una tarea aparte.
+
+**2) "La orden de servicio pasa a llamarse trabajo y se confunde" —
+APLICADO.** Encontré la inconsistencia exacta: `MasScreen.tsx` ya
+llama a esa sección "Órdenes de servicio" en el menú (línea 160), pero
+la pantalla a la que lleva (`TrabajosScreen.tsx`) se titula a sí misma
+"Trabajos" — literalmente lo que la usuaria describió. Mismo criterio
+que el rename "Hoy" → "Pizarra" del 18-sep: **solo la etiqueta
+visible** cambia (4 `ScreenHeader`, el botón "Nuevo trabajo" → "Nueva
+orden de servicio", el mensaje vacío de Pizarra) — nombres internos
+(`Trabajo`, rutas, `TrabajosStack`, `trabajos.ts`) sin tocar, no hace
+falta.
+
+**3) Color verde "usa demasiada pantalla" — INVESTIGADO, sin aplicar.**
+Encontré que el patrón de relleno 100% opaco de `marca.base` (el mismo
+que ya veníamos achicando hoy en chips/botón) aparece en **~25 lugares
+más** de mobile: tarjetas "hero" grandes (Trabajos, detalle de OS,
+Mantención, Cliente, Reserva — todas con texto blanco encima, un
+rediseño distinto al de un chip, no un copy-paste del mismo fix),
+chips de selección en Viajes/Agenda/Gastos/Cobros/Informes, burbujas
+del Asistente, barra de progreso de Mantención. Es un fix real pero
+grande y con matices de diseño (las tarjetas "hero" necesitan texto
+legible arriba, no alcanza con tintar el fondo sin repensar el
+contraste) — no lo apliqué a ciegas, se lo planteé a la usuaria para
+que decida el alcance antes de tocar 25 archivos.
+
+**4) Firma del técnico en el cierre de OS — opinión dada, sin
+aplicar.** Investigué el origen (`docs/pdf-os-fase2.md`,
+migración 98): se agregó en fase 2 SOLO para que el PDF tenga 2
+bloques de firma (técnico + cliente) como un documento de referencia
+que la usuaria quería imitar — no cambia `estado_os` (solo la firma
+del CLIENTE congela la OS), y el nombre/RUT del técnico son campos de
+texto libre, sin validar contra `responsable_id` (el técnico ya
+asignado). Le di mi recomendación (ver respuesta al usuario): sacar
+los campos de texto (nombre/RUT tipeados a mano) mantiene fricción
+cero pero pierde la firma en sí, que si es evidencia real de presencia
+en terreno — a la espera de que decida.
+
+**5) "Diagnóstico de red" al subir una foto — investigado y
+explicado, sin aplicar.** No es un bug nuevo ni automático: es una
+herramienta de debug manual (`correrDiagnostico` en `PerfilScreen.tsx`,
+botón "Diagnóstico de red (foto)") agregada el 14-sep para investigar
+un bug real de foto atorada — el propio comentario en el código dice
+"se borra... cuando se cierre esta investigación". Los 2 resultados
+que vio la usuaria fueron ambos "OK — HTTP 201" (la subida funcionó).
+Falta confirmar con ella si el "1 sin enviar" se resolvió solo después
+(cola procesándose) o si persiste, antes de decidir si ya se puede
+borrar esta herramienta.
+
+Los 2 fixes aplicados: `tsc` mobile limpio, `verificar.sh` completo en
+verde. Sin migración — se pueden pushear directo.

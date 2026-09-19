@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Pressable, ScrollView, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { tokens } from "@bitacora/design-tokens";
 import { Texto } from "./Texto";
 import { useMarca } from "./marca";
@@ -32,8 +33,15 @@ export type PropsScreenHeader = {
 
 export function ScreenHeader({ antetitulo, titulo, accion, filtros }: PropsScreenHeader) {
   const marca = useMarca();
+  // Expo SDK 57 (RN 0.81) fuerza edge-to-edge en Android — el status bar
+  // ya no reserva espacio solo: sin este padding, el reloj/íconos del
+  // sistema quedan encima del título en TODAS las pantallas (ninguna
+  // pantalla llamaba useSafeAreaInsets() para el tope, solo para abajo
+  // en las hojas emergentes) — reportado por la usuaria 19-sep-2026
+  // sobre 4 pantallas distintas, todas con este mismo header compartido.
+  const insets = useSafeAreaInsets();
   return (
-    <View style={{ paddingHorizontal: tokens.space["4"], gap: tokens.space["1"] }}>
+    <View style={{ paddingHorizontal: tokens.space["4"], paddingTop: insets.top + tokens.space["2"], gap: tokens.space["1"] }}>
       <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: tokens.space["2"] }}>
         <View style={{ flex: 1 }}>
           {antetitulo ? (

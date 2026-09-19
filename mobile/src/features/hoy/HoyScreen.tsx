@@ -182,7 +182,7 @@ export function HoyScreen({ navigation }: NativeStackScreenProps<HoyStackParamLi
           <EmptyState
             icono={<Sun size={32} strokeWidth={2.75} color={tokens.color.accent2Ramp["800"]} />}
             titulo="Nada para hoy"
-            mensaje={equipo ? "El equipo no tiene nada agendado hoy." : "No tienes trabajos, citas ni viajes hoy."}
+            mensaje={equipo ? "El equipo no tiene nada agendado hoy." : "No tienes órdenes de servicio, citas ni viajes hoy."}
           />
         }
         renderItem={({ item }) => {

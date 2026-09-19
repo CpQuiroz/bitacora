@@ -139,7 +139,7 @@ export function TrabajosScreen({ navigation }: NativeStackScreenProps<TrabajosSt
   if (vista === "mapa") {
     return (
       <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
-        <ScreenHeader antetitulo=" " titulo="Trabajos" filtros={filtrosVista} />
+        <ScreenHeader antetitulo=" " titulo="Órdenes de servicio" filtros={filtrosVista} />
         <TrabajosMapa onVerOS={(trabajoId) => navigation.navigate("TrabajoDetalle", { trabajoId })} />
       </View>
     );
@@ -180,7 +180,7 @@ export function TrabajosScreen({ navigation }: NativeStackScreenProps<TrabajosSt
   if (trabajos === null && !error)
     return (
       <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
-        <ScreenHeader antetitulo=" " titulo="Trabajos" filtros={filtrosVista} />
+        <ScreenHeader antetitulo=" " titulo="Órdenes de servicio" filtros={filtrosVista} />
         <View style={{ padding: tokens.space["4"], gap: tokens.space["3"] }}>
           <LoadingState>
             <Skeleton alto={72} radio={32} />
@@ -192,19 +192,19 @@ export function TrabajosScreen({ navigation }: NativeStackScreenProps<TrabajosSt
   if (error && !trabajos)
     return (
       <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
-        <ScreenHeader antetitulo=" " titulo="Trabajos" filtros={filtrosVista} />
+        <ScreenHeader antetitulo=" " titulo="Órdenes de servicio" filtros={filtrosVista} />
         <ErrorState mensaje={error} onReintentar={cargar} />
       </View>
     );
 
   return (
     <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
-      <ScreenHeader antetitulo={`${contadores.pendientes} pendientes · ${contadores.listas} listas`} titulo="Trabajos" filtros={filtrosVista} />
+      <ScreenHeader antetitulo={`${contadores.pendientes} pendientes · ${contadores.listas} listas`} titulo="Órdenes de servicio" filtros={filtrosVista} />
       <OfflineBanner guardadoEn={guardadoEn} />
       {esGestion ? (
         <View style={{ paddingHorizontal: tokens.space["4"], paddingBottom: tokens.space["2"], gap: tokens.space["2"] }}>
           <Button bloque onPress={() => navigation.navigate("TrabajoForm")}>
-            Nuevo trabajo
+            Nueva orden de servicio
           </Button>
           <View style={{ flexDirection: "row", gap: tokens.space["2"] }}>
             {(["Míos", "Equipo"] as const).map((op, i) => {
