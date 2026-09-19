@@ -3535,8 +3535,11 @@ migrada a ds-):
 https://claude.ai/code/artifact/bd40a716-aee8-41c8-bad8-fe629c249635
 
 Borré `supabase/migrations/110_informes_personalizados.sql` (nunca se
-commiteó — estaba untracked). Tarea 45 queda `in_progress` pero
-**pausada**, a la espera de que la usuaria decida entre: (a) seguir
-con el dashboard de widgets en vivo como algo nuevo y con otro nombre
-de tabla, (b) extender el Informe IA existente en vez de un sistema
-paralelo, o (c) que el Informe IA ya le resuelve lo que pidió.
+commiteó — estaba untracked).
+
+**Cierre**: la usuaria confirmó ("Sigue asi esta bien") que el Informe
+IA existente le resuelve el pedido original — no hace falta construir
+el dashboard de widgets en vivo. Tarea 45 cerrada `done` sin código de
+producto nuevo (ver `resolution` en `trabajo_list.json`). Punto
+resuelto sin escribir ninguna línea de feature — el trabajo real fue
+la investigación que evitó duplicar algo que ya existía.

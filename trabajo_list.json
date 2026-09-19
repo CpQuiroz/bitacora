@@ -711,8 +711,8 @@
         "tsc + verificar.sh completo en verde",
         "Migracion NO se aplica sola -- falta que la usuaria la corra y confirme, igual que la 108/109, antes de pushear"
       ],
-      "status": "in_progress",
-      "resolution": "PAUSADA para revision de la usuaria. Al armar la migracion se detecto que YA existe una tabla `informes_personalizados` en prod (migracion 23, 'Informe IA personalizado' -- secciones enteras + pregunta libre a la IA, con plantillas guardadas/historial/PDF) -- casi choca el nombre. Se le mostro una maqueta fiel de ESA funcionalidad existente (favicon 📎, 'Informe con IA (hoy)') para que decida si: (a) seguir con el dashboard de widgets en vivo como algo nuevo y distinto (con otro nombre de tabla), (b) extender el Informe IA existente en vez de crear algo paralelo, o (c) que el Informe IA ya le alcanza. La migracion 110 borrador (colisionaba) se elimino sin commitear -- no hay nada roto en el repo, solo la tarea a la espera de la decision."
+      "status": "done",
+      "resolution": "CERRADA sin construir nada nuevo. Al armar la migracion se detecto que YA existe la funcionalidad 'Informe con IA' en prod (migracion 23, tabla informes_personalizados -- secciones enteras + pregunta libre a la IA, con plantillas guardadas/historial/PDF). Se le mostro a la usuaria una maqueta fiel de esa funcionalidad existente (favicon 📎, 'Informe con IA (hoy)') y confirmo que asi esta bien -- ya le resuelve el pedido original, no hace falta un sistema paralelo de widgets. No se escribio codigo de producto (solo la migracion borrador 110, que colisionaba de nombre, se elimino sin commitear)."
     }
   ]
 }
