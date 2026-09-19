@@ -3406,3 +3406,41 @@ instalado — nada que ver con fuentes/temas; `verificar.sh` no corre
 `next build`, solo `tsc --noEmit`, así que esto no lo agarra). No lo
 toqué — está fuera del pedido de hoy, lo dejo anotado para revisar
 aparte.
+
+## 2026-09-19 (5): OS creación mobile — "tiene mucho verde"
+
+Diagnóstico primero (consulta de solo lectura a prod): no es un bug —
+`empresas.color_primario` de la empresa real de la usuaria es
+`#3acb43`, un verde bien saturado, usado como relleno 100% opaco en
+los chips "seleccionado" (fecha, estado) de `TrabajoFormScreen.tsx`
+(pantalla de crear/editar OS). El mismo patrón (relleno sólido de
+`marca.base`) lo usan también Viajes y Agenda — no es exclusivo de
+esta pantalla, pero el pedido fue puntual sobre esta, así que las
+otras quedan sin tocar por ahora (ver `progress/history.md` si se
+pide extenderlo).
+
+Reusé `tinteSuave`/`tonoFuerte` (`packages/design-tokens/src/mezcla.ts`),
+ya usados por `Tag.tsx` para el color secundario del tenant — ahora
+también para el primario, solo en estos 2 selectores: fondo = tinte
+suave (78% hacia blanco), borde = `marca.base` sólido, texto = tono
+fuerte (50% hacia negro). Mismo color de marca, mucho menos "peso"
+visual.
+
+Nota (**bug de dist, no de código fuente**): `packages/design-tokens`
+tiene un paso `gen` (tokens.css + generated.ts) separado de `build`
+(gen + `tsc` → dist/) — mi cambio de tokens.json de la tarea anterior
+solo había corrido `gen`, dejando `dist/generated.js` desactualizado
+(sin `colorTaller`/`fontTaller`). Se detectó al revisar antes de dar
+por buena esta tarea (no por un fallo de `tsc`) y se corrigió con
+`npm run build` en el paquete.
+
+Rating antes/después: **4/10 → 8/10**. Antes: el verde vivo del tenant
+cubre el chip entero, satura la pantalla con varios chips seleccionados
+a la vista a la vez. Después: se sigue viendo clarísimo cuál está
+seleccionado, pero calmo — mismo criterio que ya usa `Tag.tsx`, no un
+patrón nuevo.
+
+`verificar.sh` completo en verde. Commiteado en local (no depende de
+la migración 109 — se podría pushear solo, pero queda atrás del commit
+anterior en la misma rama; se pushean los dos juntos recién cuando la
+usuaria confirme la migración aplicada).
