@@ -658,6 +658,23 @@
       ],
       "status": "done",
       "resolution": "Codigo listo y verificado (tsc + verificar.sh). Sin migracion, sin backend -- puro mobile + dependencias, se puede pushear directo. Falta verificacion visual real en Expo Go o un build nuevo (no es parte de trabajar codigo, es probar en un dispositivo)."
+    },
+    {
+      "id": 43,
+      "name": "migrar_agenda_ds",
+      "title": "Migrar web/dashboard/agenda/page.tsx al sistema de diseno ds- (hallazgo 2)",
+      "description": "Ultima pantalla de la web que seguia en el sistema visual viejo 'Faena' (azul-tinta/naranja quemado, IBM Plex, esquinas cortas) -- el resto ya paso al sistema nuevo (crema/terracota/oliva, Caprasimo/Figtree, PASO 6). Encontrado como hallazgo de paso al agregar el folio de citas. Mockup antes/despues aprobado por la usuaria antes de tocar codigo.",
+      "acceptance": [
+        "Imports viejos (@/components/ui, @/components/icons) reemplazados por @bitacora/ui/web + lucide-react -- HECHO",
+        "ESTADOS_AGENDA: clase (Faena a mano) -> tono: TonoEstado (mismo sistema de StatusBadge). 'agendado' mapeado a 'cerrado' -- HECHO",
+        "Fecha: sin tipo date nativo en el Input ds- -- resuelto con DatePicker (trabaja con Date, no string), reusando fechaDesdeString/fmtLocal que ya existian en el archivo para la conversion -- HECHO",
+        "EstadoCitaRiel.tsx migrado completo (unico consumidor es esta pagina) -- HECHO",
+        "Cero cambios de logica de negocio -- mismos handlers, mismo flujo de cancelacion/paquetes/vinculo con OS -- confirmado",
+        "tsc + verificar.sh completo en verde (incluye chequeo de colores literales/px arbitrario) -- HECHO",
+        "Boot real de next dev + /dashboard/agenda responde 200 sin error en el log -- HECHO. NO se hizo revision visual en vivo con sesion real (necesita login)"
+      ],
+      "status": "done",
+      "resolution": "Codigo listo y verificado (tsc + verificar.sh + boot real). Sin migracion, sin backend -- puro frontend, se puede pushear directo. Falta que la usuaria confirme visualmente navegando la pagina en prod (no es parte de escribir el codigo, es la validacion final de un cambio grande de UI)."
     }
   ]
 }

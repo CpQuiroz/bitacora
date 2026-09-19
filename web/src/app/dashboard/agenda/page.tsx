@@ -14,6 +14,7 @@ import type {
   Usuario,
 } from "@bitacora/shared";
 import { puedeVerModulo, formatearFolio } from "@bitacora/shared";
+import { Calendar, ChevronLeft, ChevronRight, ClipboardCheck, Plus, Wrench } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
@@ -21,8 +22,7 @@ import { Modal } from "@/components/Modal";
 import { ComboboxCliente } from "@/components/ComboboxCliente";
 import { ComboboxResponsable } from "@/components/ComboboxResponsable";
 import { EstadoCitaRiel } from "@/components/EstadoCitaRiel";
-import { Badge, Button, Card, ErrorText, Input, Label, Select, Textarea } from "@/components/ui";
-import { IconCalendar, IconChevronLeft, IconChevronRight, IconClipboardCheck, IconPlus, IconWrench } from "@/components/icons";
+import { Button, Card, DatePicker, Input, Select, StatusBadge, Textarea, type TonoEstado } from "@bitacora/ui/web";
 
 type OrdenListado = Trabajo & {
   cliente_info: { nombre: string } | null;
@@ -48,12 +48,31 @@ type EventoAgenda = {
   origen: OrdenListado | TareaListado;
 };
 
-const ESTADOS_AGENDA: { valor: EstadoAgenda; etiqueta: string; clase: string }[] = [
-  { valor: "agendado", etiqueta: "Agendado", clase: "bg-brand-soft text-brand" },
-  { valor: "en_progreso", etiqueta: "En progreso", clase: "bg-warning-soft text-warning" },
-  { valor: "completado", etiqueta: "Completado", clase: "bg-success-soft text-success" },
-  { valor: "cancelado", etiqueta: "Cancelado", clase: "bg-danger-soft text-danger" },
+// tono: mismos 4 tonos que ya usa StatusBadge en el resto de la web
+// (en_progreso/completado/cerrado/cancelado) — "agendado" no tiene un
+// tono propio en ese sistema, se mapea a "cerrado" (neutro, distinto de
+// "cancelado" por el matiz del gris, no por un color de marca aparte).
+const ESTADOS_AGENDA: { valor: EstadoAgenda; etiqueta: string; tono: TonoEstado }[] = [
+  { valor: "agendado", etiqueta: "Agendado", tono: "cerrado" },
+  { valor: "en_progreso", etiqueta: "En progreso", tono: "en_progreso" },
+  { valor: "completado", etiqueta: "Completado", tono: "completado" },
+  { valor: "cancelado", etiqueta: "Cancelado", tono: "cancelado" },
 ];
+
+// Mismas clases que StatusBadge arma internamente — necesarias acá
+// porque las celdas del mes/semana necesitan el ícono adentro del chip
+// (StatusBadge no tiene ese slot), así que no se puede reusar el
+// componente tal cual en esos 2 lugares.
+const CLASE_CHIP: Record<TonoEstado, string> = {
+  en_progreso: "bg-ds-accent-200 text-ds-accent-800",
+  completado: "bg-ds-accent2-200 text-ds-accent2-800",
+  cerrado: "bg-ds-neutral-300 text-ds-neutral-900",
+  cancelado: "bg-ds-neutral-200 text-ds-neutral-700",
+};
+
+function estadoInfo(estado: EstadoAgenda) {
+  return ESTADOS_AGENDA.find((x) => x.valor === estado)!;
+}
 
 const ESTADO_TAREA_A_AGENDA: Record<EstadoTarea, EstadoAgenda> = {
   pendiente: "agendado",
@@ -482,8 +501,10 @@ function AgendaContenido() {
     else setPaquetesCliente([]);
   }
 
-  async function onCrearPaquete(e: FormEvent) {
-    e.preventDefault();
+  // No es un <form onSubmit> real — el botón que la dispara es
+  // type="button" dentro del Modal (que ya tiene su propio form para
+  // "Guardar cambios" de la tarea); no hace falta preventDefault.
+  async function onCrearPaquete() {
     setErrorPaquete(null);
     if (!clienteIdTarea) {
       setErrorPaquete("Selecciona un cliente primero");
@@ -669,46 +690,38 @@ function AgendaContenido() {
   function renderTareaRapida() {
     if (!tareaRapidaFecha || !puedeGestionarAgenda) return null;
     return (
-      <Card className="border-brand/40">
-        <form onSubmit={onGuardarTarea} className="flex flex-col gap-3">
+      <Card>
+        <form onSubmit={onGuardarTarea} className="flex flex-col gap-ds-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-foreground">
+            <p className="font-ds-body text-ds-small font-semibold text-ds-text">
               Nueva tarea — {fechaDesdeString(tareaRapidaFecha).toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" })}
-            </h3>
-            <button type="button" onClick={cerrarTareaRapida} className="text-xs font-medium text-muted hover:text-foreground">
+            </p>
+            <button type="button" onClick={cerrarTareaRapida} className="font-ds-body text-ds-caption font-medium text-ds-text/60 hover:text-ds-text">
               Cerrar
             </button>
           </div>
 
           {trabajoVinculado && (
-            <p className="rounded-lg bg-brand-soft px-3 py-2 text-xs font-medium text-brand">
-              ✓ {trabajoVinculado.folio != null ? `OS N° ${trabajoVinculado.folio}` : "Orden de servicio"} creada — se vincula a esta tarea al guardar.
+            <p className="rounded-ds-md bg-ds-accent2-100 px-ds-3 py-ds-2 font-ds-body text-ds-caption font-medium text-ds-accent2-800">
+              ✓ {formatearFolio("OS", trabajoVinculado.folio) ?? "Orden de servicio"} creada — se vincula a esta tarea al guardar.
             </p>
           )}
 
-          <div>
-            <Label>Título</Label>
-            <Input type="text" value={tituloTarea} onChange={(e) => setTituloTarea(e.target.value)} placeholder="Ej: Visita técnica, recordatorio…" />
+          <Input etiqueta="Título" valor={tituloTarea} onCambio={setTituloTarea} placeholder="Ej: Visita técnica, recordatorio…" />
+          <div className="grid gap-ds-3 sm:grid-cols-2">
+            <DatePicker
+              etiqueta="Fecha"
+              valor={fechaTarea ? fechaDesdeString(fechaTarea) : null}
+              onCambio={(f) => {
+                const texto = f ? fmtLocal(f) : "";
+                setFechaTarea(texto);
+                setTareaRapidaFecha(texto || tareaRapidaFecha);
+              }}
+            />
+            <Input etiqueta="Hora (opcional)" tipo="hora" valor={horaTarea} onCambio={setHoraTarea} />
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <Label>Fecha</Label>
-              <Input
-                type="date"
-                value={fechaTarea}
-                onChange={(e) => {
-                  setFechaTarea(e.target.value);
-                  setTareaRapidaFecha(e.target.value || tareaRapidaFecha);
-                }}
-              />
-            </div>
-            <div>
-              <Label>Hora (opcional)</Label>
-              <Input type="time" value={horaTarea} onChange={(e) => setHoraTarea(e.target.value)} />
-            </div>
-          </div>
-          <div>
-            <Label>Cliente (opcional)</Label>
+          <div className="flex flex-col gap-ds-1">
+            <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Cliente (opcional)</label>
             <ComboboxCliente
               value={clienteIdTarea}
               onChange={onCambiarClienteTarea}
@@ -718,8 +731,8 @@ function AgendaContenido() {
               placeholder="Sin cliente"
             />
           </div>
-          <div>
-            <Label>Responsable (opcional)</Label>
+          <div className="flex flex-col gap-ds-1">
+            <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Responsable (opcional)</label>
             <ComboboxResponsable
               value={responsableIdTarea}
               onChange={setResponsableIdTarea}
@@ -729,15 +742,14 @@ function AgendaContenido() {
             />
           </div>
 
-          {errorTarea && <ErrorText>{errorTarea}</ErrorText>}
+          {errorTarea ? <p className="font-ds-body text-ds-small text-ds-accent-700">{errorTarea}</p> : null}
 
-          <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
-            <Button type="submit" disabled={guardandoTarea}>
-              {guardandoTarea ? "Guardando…" : "Guardar tarea"}
+          <div className="flex flex-wrap items-center gap-ds-2 border-t border-ds-divider pt-ds-3">
+            <Button tipo="submit" cargando={guardandoTarea}>
+              Guardar tarea
             </Button>
             {!trabajoVinculado && (
-              <Button type="button" variant="outline" onClick={onCrearOSDesdeTarea} disabled={guardandoTarea}>
-                <IconWrench className="h-4 w-4" />
+              <Button variante="secundario" onPress={onCrearOSDesdeTarea} deshabilitado={guardandoTarea} iconoIzq={<Wrench size={16} strokeWidth={2.75} />}>
                 Crear Orden de Servicio
               </Button>
             )}
@@ -749,44 +761,28 @@ function AgendaContenido() {
 
   return (
     <DashboardShell usuario={usuario}>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight text-foreground">
-          <IconCalendar className="h-6 w-6 text-brand" />
+      <div className="mb-ds-6 flex flex-wrap items-center justify-between gap-ds-3">
+        <p className="ds-heading flex items-center gap-ds-2 text-ds-h2 text-ds-text">
+          <Calendar size={24} strokeWidth={2.5} className="text-ds-brand" />
           Agenda
-        </h1>
-        <div className="flex items-center gap-2">
-          <div className="flex rounded-lg border border-border p-0.5">
-            <button
-              type="button"
-              onClick={() => setVista("mes")}
-              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-                vista === "mes" ? "bg-brand-soft text-brand" : "text-muted"
-              }`}
-            >
-              Mes
-            </button>
-            <button
-              type="button"
-              onClick={() => setVista("semana")}
-              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-                vista === "semana" ? "bg-brand-soft text-brand" : "text-muted"
-              }`}
-            >
-              Semana
-            </button>
-            <button
-              type="button"
-              onClick={() => setVista("dia")}
-              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-                vista === "dia" ? "bg-brand-soft text-brand" : "text-muted"
-              }`}
-            >
-              Día
-            </button>
+        </p>
+        <div className="flex items-center gap-ds-2">
+          <div className="flex gap-1 rounded-ds-pill border border-ds-divider p-ds-1">
+            {(["mes", "semana", "dia"] as const).map((v) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setVista(v)}
+                className={`rounded-ds-pill px-ds-3 py-1.5 font-ds-body text-ds-small font-medium transition-colors ${
+                  vista === v ? "bg-ds-brand/[0.08] text-ds-brand" : "text-ds-text/60 hover:text-ds-text"
+                }`}
+              >
+                {v === "mes" ? "Mes" : v === "semana" ? "Semana" : "Día"}
+              </button>
+            ))}
           </div>
           {puedeGestionarAgenda && (
-            <Button type="button" variant="outline" onClick={abrirNuevaTarea}>
-              <IconClipboardCheck className="h-4 w-4" />
+            <Button variante="secundario" onPress={abrirNuevaTarea} iconoIzq={<ClipboardCheck size={16} strokeWidth={2.75} />}>
               Nueva Tarea
             </Button>
           )}
@@ -799,22 +795,15 @@ function AgendaContenido() {
         title={tareaEditandoId ? (formatearFolio("CIT", tareaEditandoFolio) ? `Editar tarea — ${formatearFolio("CIT", tareaEditandoFolio)}` : "Editar tarea") : "Nueva tarea"}
         wide
       >
-        <form onSubmit={onGuardarTarea} className="flex flex-col gap-4">
-            <div className="grid gap-4 sm:grid-cols-2">
+        <form onSubmit={onGuardarTarea} className="flex flex-col gap-ds-4">
+            <div className="grid gap-ds-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
-                <Label>Título</Label>
-                <Input type="text" required value={tituloTarea} onChange={(e) => setTituloTarea(e.target.value)} />
+                <Input etiqueta="Título" requerido valor={tituloTarea} onCambio={setTituloTarea} />
               </div>
-              <div>
-                <Label>Fecha</Label>
-                <Input type="date" required value={fechaTarea} onChange={(e) => setFechaTarea(e.target.value)} />
-              </div>
-              <div>
-                <Label>Hora (opcional)</Label>
-                <Input type="time" value={horaTarea} onChange={(e) => setHoraTarea(e.target.value)} />
-              </div>
-              <div>
-                <Label>Cliente (opcional)</Label>
+              <DatePicker etiqueta="Fecha" valor={fechaTarea ? fechaDesdeString(fechaTarea) : null} onCambio={(f) => setFechaTarea(f ? fmtLocal(f) : "")} />
+              <Input etiqueta="Hora (opcional)" tipo="hora" valor={horaTarea} onCambio={setHoraTarea} />
+              <div className="flex flex-col gap-ds-1">
+                <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Cliente (opcional)</label>
                 <ComboboxCliente
                   value={clienteIdTarea}
                   onChange={onCambiarClienteTarea}
@@ -825,69 +814,53 @@ function AgendaContenido() {
                 />
               </div>
               {puedeAgendaPro && clienteIdTarea && (
-                <div className="sm:col-span-2 rounded-lg border border-border p-3">
-                  <p className="mb-2 text-xs font-semibold text-foreground">Paquete de sesiones (Agenda Pro)</p>
-                  <div className="grid gap-3 sm:grid-cols-[1fr_8rem]">
-                    <div>
-                      <Label>Paquete (opcional)</Label>
-                      <Select value={paqueteIdTarea} onChange={(e) => setPaqueteIdTarea(e.target.value)}>
-                        <option value="">Sin paquete (cita suelta)</option>
-                        {paquetesCliente.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.nombre} — {p.saldo}/{p.cantidad_total} restantes
-                          </option>
-                        ))}
-                      </Select>
-                    </div>
+                <div className="rounded-ds-md border border-ds-divider p-ds-3 sm:col-span-2">
+                  <p className="mb-ds-2 font-ds-body text-ds-caption font-semibold text-ds-text">Paquete de sesiones (Agenda Pro)</p>
+                  <div className="grid gap-ds-3 sm:grid-cols-[1fr_8rem]">
+                    <Select
+                      etiqueta="Paquete (opcional)"
+                      valor={paqueteIdTarea}
+                      onCambio={setPaqueteIdTarea}
+                      opciones={[
+                        { valor: "", etiqueta: "Sin paquete (cita suelta)" },
+                        ...paquetesCliente.map((p) => ({ valor: p.id, etiqueta: `${p.nombre} — ${p.saldo}/${p.cantidad_total} restantes` })),
+                      ]}
+                    />
                     {paqueteIdTarea && (
-                      <div>
-                        <Label>Sesiones a consumir</Label>
-                        <Input
-                          type="number"
-                          min={1}
-                          value={sesionesConsumidasTarea}
-                          onChange={(e) => setSesionesConsumidasTarea(Number(e.target.value) || 1)}
-                        />
-                      </div>
+                      <Input
+                        etiqueta="Sesiones a consumir"
+                        tipo="numero"
+                        valor={String(sesionesConsumidasTarea)}
+                        onCambio={(v) => setSesionesConsumidasTarea(Number(v) || 1)}
+                      />
                     )}
                   </div>
                   {!formPaqueteAbierto ? (
                     <button
                       type="button"
                       onClick={() => setFormPaqueteAbierto(true)}
-                      className="mt-2 text-xs font-medium text-brand hover:underline"
+                      className="mt-ds-2 font-ds-body text-ds-caption font-medium text-ds-brand hover:underline"
                     >
                       + Crear paquete nuevo para este cliente
                     </button>
                   ) : (
-                    <div className="mt-3 flex flex-col gap-2 border-t border-border pt-3 sm:flex-row sm:items-end">
+                    <div className="mt-ds-3 flex flex-col gap-ds-2 border-t border-ds-divider pt-ds-3 sm:flex-row sm:items-end">
                       <div className="flex-1">
-                        <Label>Nombre del paquete</Label>
-                        <Input
-                          type="text"
-                          placeholder="Ej: Pack 10 sesiones"
-                          value={nombrePaquete}
-                          onChange={(e) => setNombrePaquete(e.target.value)}
-                        />
+                        <Input etiqueta="Nombre del paquete" placeholder="Ej: Pack 10 sesiones" valor={nombrePaquete} onCambio={setNombrePaquete} />
                       </div>
                       <div className="w-24">
-                        <Label>Cantidad</Label>
-                        <Input type="number" min={1} value={cantidadPaquete} onChange={(e) => setCantidadPaquete(Number(e.target.value) || 1)} />
+                        <Input etiqueta="Cantidad" tipo="numero" valor={String(cantidadPaquete)} onCambio={(v) => setCantidadPaquete(Number(v) || 1)} />
                       </div>
-                      <Button type="button" variant="outline" disabled={guardandoPaquete} onClick={onCrearPaquete}>
-                        {guardandoPaquete ? "Creando…" : "Crear"}
+                      <Button variante="secundario" cargando={guardandoPaquete} onPress={onCrearPaquete}>
+                        Crear
                       </Button>
                     </div>
                   )}
-                  {errorPaquete && (
-                    <div className="mt-2">
-                      <ErrorText>{errorPaquete}</ErrorText>
-                    </div>
-                  )}
+                  {errorPaquete ? <p className="mt-ds-2 font-ds-body text-ds-small text-ds-accent-700">{errorPaquete}</p> : null}
                 </div>
               )}
-              <div>
-                <Label>Responsable (opcional)</Label>
+              <div className="flex flex-col gap-ds-1">
+                <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Responsable (opcional)</label>
                 <ComboboxResponsable
                   value={responsableIdTarea}
                   onChange={setResponsableIdTarea}
@@ -896,28 +869,20 @@ function AgendaContenido() {
                   placeholder="Sin asignar"
                 />
               </div>
-              <div>
-                <Label>Prioridad</Label>
-                <Select value={prioridadTarea} onChange={(e) => setPrioridadTarea(e.target.value as Prioridad)}>
-                  {PRIORIDADES.map((p) => (
-                    <option key={p} value={p}>
-                      {p}
-                    </option>
-                  ))}
-                </Select>
-              </div>
+              <Select
+                etiqueta="Prioridad"
+                valor={prioridadTarea}
+                onCambio={(v) => setPrioridadTarea(v as Prioridad)}
+                opciones={PRIORIDADES.map((p) => ({ valor: p, etiqueta: p.charAt(0).toUpperCase() + p.slice(1) }))}
+              />
               {tareaEditandoId && (
-                <div className="sm:col-span-2 rounded-lg border border-border p-3">
+                <div className="rounded-ds-md border border-ds-divider p-ds-3 sm:col-span-2">
                   {(estadoTarea === "pendiente" || estadoTarea === "confirmada") && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      disabled={guardandoTarea}
-                      onClick={() => onCambiarEstadoInstantaneo("completada")}
-                      className="mb-3"
-                    >
-                      Marcar Asistió
-                    </Button>
+                    <div className="mb-ds-3">
+                      <Button variante="secundario" deshabilitado={guardandoTarea} onPress={() => onCambiarEstadoInstantaneo("completada")}>
+                        Marcar Asistió
+                      </Button>
+                    </div>
                   )}
                   <EstadoCitaRiel
                     estado={estadoTarea}
@@ -930,88 +895,91 @@ function AgendaContenido() {
                 </div>
               )}
               <div className="sm:col-span-2">
-                <Label>Descripción (opcional)</Label>
-                <Textarea rows={3} value={descripcionTarea} onChange={(e) => setDescripcionTarea(e.target.value)} />
+                <Textarea etiqueta="Descripción (opcional)" filas={3} valor={descripcionTarea} onCambio={setDescripcionTarea} />
               </div>
             </div>
-            {errorTarea && <ErrorText>{errorTarea}</ErrorText>}
-            <div className="flex items-center gap-2">
-              <Button type="submit" disabled={guardandoTarea} className="self-start">
-                {guardandoTarea ? "Guardando…" : tareaEditandoId ? "Guardar cambios" : "Crear tarea"}
+            {errorTarea ? <p className="font-ds-body text-ds-small text-ds-accent-700">{errorTarea}</p> : null}
+            <div className="flex items-center gap-ds-2">
+              <Button tipo="submit" cargando={guardandoTarea}>
+                {tareaEditandoId ? "Guardar cambios" : "Crear tarea"}
               </Button>
-              <Button type="button" variant="ghost" onClick={() => setFormTareaAbierto(false)}>
+              <Button variante="ghost" onPress={() => setFormTareaAbierto(false)}>
                 Cancelar
               </Button>
               {tareaEditandoId && (
-                <Button type="button" variant="danger" className="ml-auto" onClick={onEliminarTarea}>
-                  Eliminar
-                </Button>
+                <div className="ml-auto">
+                  <Button variante="peligro" onPress={onEliminarTarea}>
+                    Eliminar
+                  </Button>
+                </div>
               )}
             </div>
         </form>
       </Modal>
 
-      <Card className="mb-6">
-        <div className="mb-4 flex flex-wrap items-center gap-2">
-          {ESTADOS_AGENDA.map((e) => (
+      <div className="mb-ds-6">
+        <Card>
+          <div className="mb-ds-4 flex flex-wrap items-center gap-ds-2">
+            {ESTADOS_AGENDA.map((e) => (
+              <button
+                key={e.valor}
+                type="button"
+                onClick={() => alternarFiltro(e.valor)}
+                className={`rounded-ds-pill border px-ds-3 py-1 font-ds-body text-ds-caption font-medium transition-colors ${
+                  filtros.has(e.valor) ? `${CLASE_CHIP[e.tono]} border-transparent` : "border-ds-divider text-ds-text/70 hover:border-ds-text/30"
+                }`}
+              >
+                {e.etiqueta}
+              </button>
+            ))}
+            {filtros.size > 0 && (
+              <button type="button" onClick={() => setFiltros(new Set())} className="font-ds-body text-ds-caption font-medium text-ds-text/60 hover:text-ds-brand">
+                Limpiar
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center justify-between">
             <button
-              key={e.valor}
               type="button"
-              onClick={() => alternarFiltro(e.valor)}
-              className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                filtros.has(e.valor) ? `${e.clase} border-transparent` : "border-border text-muted hover:bg-brand-soft"
-              }`}
+              onClick={() => (vista === "mes" ? irMes(-1) : vista === "semana" ? irSemana(-1) : irDia(-1))}
+              className="rounded-ds-pill p-ds-2 text-ds-text/60 transition-colors hover:bg-ds-text/[0.07] hover:text-ds-brand"
             >
-              {e.etiqueta}
+              <ChevronLeft size={16} strokeWidth={2.75} />
             </button>
-          ))}
-          {filtros.size > 0 && (
-            <button type="button" onClick={() => setFiltros(new Set())} className="text-xs font-medium text-muted hover:text-brand">
-              Limpiar
+            <p className="font-ds-body text-ds-small font-semibold capitalize text-ds-text">
+              {vista === "mes" ? tituloMes : vista === "semana" ? tituloSemana : tituloDia}
+            </p>
+            <button
+              type="button"
+              onClick={() => (vista === "mes" ? irMes(1) : vista === "semana" ? irSemana(1) : irDia(1))}
+              className="rounded-ds-pill p-ds-2 text-ds-text/60 transition-colors hover:bg-ds-text/[0.07] hover:text-ds-brand"
+            >
+              <ChevronRight size={16} strokeWidth={2.75} />
             </button>
-          )}
-        </div>
+          </div>
+        </Card>
+      </div>
 
-        <div className="flex items-center justify-between">
-          <button
-            type="button"
-            onClick={() => (vista === "mes" ? irMes(-1) : vista === "semana" ? irSemana(-1) : irDia(-1))}
-            className="rounded-lg p-2 text-muted transition-colors hover:bg-brand-soft hover:text-brand"
-          >
-            <IconChevronLeft className="h-4 w-4" />
-          </button>
-          <h2 className="text-sm font-semibold capitalize text-foreground">
-            {vista === "mes" ? tituloMes : vista === "semana" ? tituloSemana : tituloDia}
-          </h2>
-          <button
-            type="button"
-            onClick={() => (vista === "mes" ? irMes(1) : vista === "semana" ? irSemana(1) : irDia(1))}
-            className="rounded-lg p-2 text-muted transition-colors hover:bg-brand-soft hover:text-brand"
-          >
-            <IconChevronRight className="h-4 w-4" />
-          </button>
+      {error ? (
+        <div className="mb-ds-6">
+          <p className="font-ds-body text-ds-small text-ds-accent-700">{error}</p>
         </div>
-      </Card>
-
-      {error && (
-        <div className="mb-6">
-          <ErrorText>{error}</ErrorText>
-        </div>
-      )}
+      ) : null}
 
       {vista === "mes" ? (
-        <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
-          <Card className="overflow-hidden p-0">
-            <div className="grid grid-cols-7 border-b border-border text-center text-xs font-medium text-muted">
+        <div className="grid gap-ds-6 lg:grid-cols-[1fr_20rem]">
+          <Card sinRelleno>
+            <div className="grid grid-cols-7 border-b border-ds-divider text-center font-ds-body text-ds-caption font-medium text-ds-text/60">
               {NOMBRES_DIA_CORTOS.map((d) => (
-                <div key={d} className="py-2">
+                <div key={d} className="py-ds-2">
                   {d}
                 </div>
               ))}
             </div>
             <div className="grid grid-cols-7">
               {celdas.map((dia, i) => {
-                if (!dia) return <div key={i} className="min-h-[6.5rem] border-b border-r border-border last:border-r-0" />;
+                if (!dia) return <div key={i} className="min-h-[6.5rem] border-b border-r border-ds-divider last:border-r-0" />;
                 const clave = fmtLocal(dia);
                 const esHoy = clave === hoy;
                 const eventosDia = eventosPorDia.get(clave) ?? [];
@@ -1027,29 +995,29 @@ function AgendaContenido() {
                       if (puedeGestionarAgenda) abrirTareaRapida(clave);
                     }}
                     title={puedeGestionarAgenda ? "Clic: ver citas · Doble clic: agendar" : "Clic: ver citas del día"}
-                    className={`flex min-h-[6.5rem] flex-col items-stretch gap-1 border-b border-r border-border p-1.5 text-left transition-colors last:border-r-0 hover:bg-surface-sunken ${
-                      seleccionado ? "bg-brand-soft/60" : ""
+                    className={`flex min-h-[6.5rem] flex-col items-stretch gap-1 border-b border-r border-ds-divider p-ds-1 text-left transition-colors last:border-r-0 hover:bg-ds-neutral-100 ${
+                      seleccionado ? "bg-ds-brand/[0.08]" : ""
                     }`}
                   >
                     <span
-                      className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium ${
-                        esHoy ? "bg-brand text-brand-foreground" : "text-foreground"
+                      className={`inline-flex h-6 w-6 items-center justify-center rounded-ds-pill font-ds-body text-ds-caption font-medium ${
+                        esHoy ? "bg-ds-brand text-ds-brand-foreground" : "text-ds-text"
                       }`}
                     >
                       {dia.getDate()}
                     </span>
                     <div className="flex flex-col gap-1">
                       {eventosDia.slice(0, 2).map((e) => {
-                        const est = ESTADOS_AGENDA.find((x) => x.valor === e.estadoAgenda)!;
+                        const est = estadoInfo(e.estadoAgenda);
                         return (
                           <span
                             key={`${e.tipo}-${e.id}`}
-                            className={`flex items-center gap-1 truncate rounded px-1.5 py-0.5 text-[11px] font-medium ${est.clase}`}
+                            className={`flex items-center gap-1 truncate rounded-ds-sm px-1.5 py-0.5 font-ds-body text-[11px] font-medium ${CLASE_CHIP[est.tono]}`}
                           >
                             {e.tipo === "tarea" ? (
-                              <IconClipboardCheck className="h-3 w-3 shrink-0" />
+                              <ClipboardCheck size={12} strokeWidth={2.75} className="shrink-0" />
                             ) : (
-                              <IconWrench className="h-3 w-3 shrink-0" />
+                              <Wrench size={12} strokeWidth={2.75} className="shrink-0" />
                             )}
                             <span className="truncate">
                               {e.hora ? `${e.hora} ` : ""}
@@ -1059,7 +1027,7 @@ function AgendaContenido() {
                         );
                       })}
                       {eventosDia.length > 2 && (
-                        <span className="text-[11px] font-medium text-muted">+{eventosDia.length - 2} más</span>
+                        <span className="font-ds-body text-[11px] font-medium text-ds-text/60">+{eventosDia.length - 2} más</span>
                       )}
                     </div>
                   </button>
@@ -1068,25 +1036,25 @@ function AgendaContenido() {
             </div>
           </Card>
 
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-ds-6">
           {tareaRapidaFecha === diaSeleccionado && renderTareaRapida()}
           <Card>
             {diaSeleccionado ? (
               <>
-                <div className="mb-3 flex items-center justify-between gap-2">
-                  <h3 className="text-sm font-semibold capitalize text-foreground">
+                <div className="mb-ds-3 flex items-center justify-between gap-ds-2">
+                  <p className="font-ds-body text-ds-small font-semibold capitalize text-ds-text">
                     {fechaDesdeString(diaSeleccionado).toLocaleDateString("es-CL", {
                       weekday: "long",
                       day: "numeric",
                       month: "long",
                     })}
-                  </h3>
-                  <div className="flex items-center gap-3">
+                  </p>
+                  <div className="flex items-center gap-ds-3">
                     {puedeGestionarAgenda && (
                       <button
                         type="button"
                         onClick={() => abrirTareaRapida(diaSeleccionado)}
-                        className="text-xs font-medium text-brand hover:underline"
+                        className="font-ds-body text-ds-caption font-medium text-ds-brand hover:underline"
                       >
                         Agendar cita
                       </button>
@@ -1097,44 +1065,44 @@ function AgendaContenido() {
                         setDiaSeleccionado(null);
                         cerrarTareaRapida();
                       }}
-                      className="text-xs font-medium text-muted hover:text-foreground"
+                      className="font-ds-body text-ds-caption font-medium text-ds-text/60 hover:text-ds-text"
                     >
                       Cerrar
                     </button>
                   </div>
                 </div>
                 {eventosDiaSeleccionado.length === 0 ? (
-                  <p className="text-sm text-muted">Sin eventos agendados este día.</p>
+                  <p className="font-ds-body text-ds-small text-ds-text/60">Sin eventos agendados este día.</p>
                 ) : (
-                  <div className="flex flex-col divide-y divide-border">
+                  <div className="flex flex-col divide-y divide-ds-divider">
                     {eventosDiaSeleccionado.map((e) => (
                       <button
                         key={`${e.tipo}-${e.id}`}
                         type="button"
                         onClick={() => abrirEvento(e)}
-                        className="flex items-center justify-between gap-2 py-2.5 text-left hover:text-brand"
+                        className="flex items-center justify-between gap-ds-2 py-ds-2 text-left hover:text-ds-brand"
                       >
                         <div className="min-w-0">
-                          <p className="flex items-center gap-1.5 truncate text-sm font-medium text-foreground">
+                          <p className="flex items-center gap-1.5 truncate font-ds-body text-ds-small font-medium text-ds-text">
                             {e.tipo === "tarea" ? (
-                              <IconClipboardCheck className="h-3.5 w-3.5 shrink-0 text-muted" />
+                              <ClipboardCheck size={14} strokeWidth={2.75} className="shrink-0 text-ds-text/60" />
                             ) : (
-                              <IconWrench className="h-3.5 w-3.5 shrink-0 text-muted" />
+                              <Wrench size={14} strokeWidth={2.75} className="shrink-0 text-ds-text/60" />
                             )}
                             {e.titulo}
                           </p>
-                          <p className="text-xs text-muted">
+                          <p className="font-ds-body text-ds-caption text-ds-text/60">
                             {e.hora ?? "Sin hora"} · {e.subtitulo}
                           </p>
                         </div>
-                        <Badge value={e.estadoAgenda} />
+                        <StatusBadge estado={e.estadoAgenda} etiqueta={estadoInfo(e.estadoAgenda).etiqueta} tonoForzado={estadoInfo(e.estadoAgenda).tono} />
                       </button>
                     ))}
                   </div>
                 )}
               </>
             ) : (
-              <p className="text-sm text-muted">
+              <p className="font-ds-body text-ds-small text-ds-text/60">
                 Haz clic en un día para ver sus citas. Doble clic para agendar una cita nueva.
               </p>
             )}
@@ -1142,10 +1110,10 @@ function AgendaContenido() {
           </div>
         </div>
       ) : vista === "semana" ? (
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-ds-6">
         {renderTareaRapida()}
-        <Card className="overflow-hidden p-0">
-          <div className="grid grid-cols-1 divide-y divide-border sm:grid-cols-7 sm:divide-x sm:divide-y-0">
+        <Card sinRelleno>
+          <div className="grid grid-cols-1 divide-y divide-ds-divider sm:grid-cols-7 sm:divide-x sm:divide-y-0">
             {diasSemana.map((dia) => {
               const clave = fmtLocal(dia);
               const esHoy = clave === hoy;
@@ -1157,37 +1125,37 @@ function AgendaContenido() {
                     onClick={() => (puedeGestionarAgenda ? abrirTareaRapida(clave) : undefined)}
                     disabled={!puedeGestionarAgenda}
                     title={puedeGestionarAgenda ? "Nueva tarea este día" : undefined}
-                    className={`flex items-center justify-center gap-2 border-b px-3 py-2 text-xs font-medium transition-colors sm:flex-col sm:gap-1 ${
-                      tareaRapidaFecha === clave ? "border-brand bg-brand-soft/60" : "border-border"
-                    } ${esHoy ? "text-brand" : "text-muted"} ${puedeGestionarAgenda ? "hover:bg-surface-sunken" : ""}`}
+                    className={`flex items-center justify-center gap-2 border-b px-ds-3 py-ds-2 font-ds-body text-ds-caption font-medium transition-colors sm:flex-col sm:gap-1 ${
+                      tareaRapidaFecha === clave ? "border-ds-brand bg-ds-brand/[0.08]" : "border-ds-divider"
+                    } ${esHoy ? "text-ds-brand" : "text-ds-text/60"} ${puedeGestionarAgenda ? "hover:bg-ds-neutral-100" : ""}`}
                   >
                     <span className="capitalize">{NOMBRES_DIA_CORTOS[dia.getDay()]}</span>
                     <span
-                      className={`flex h-6 w-6 items-center justify-center rounded-full text-sm ${
-                        esHoy ? "bg-brand text-brand-foreground" : "text-foreground"
+                      className={`flex h-6 w-6 items-center justify-center rounded-ds-pill text-ds-small ${
+                        esHoy ? "bg-ds-brand text-ds-brand-foreground" : "text-ds-text"
                       }`}
                     >
                       {dia.getDate()}
                     </span>
                   </button>
-                  <div className="flex min-h-[4rem] flex-1 flex-col gap-1.5 p-2">
+                  <div className="flex min-h-[4rem] flex-1 flex-col gap-1.5 p-ds-2">
                     {eventosDia.length === 0 ? (
-                      <p className="py-1 text-center text-xs text-muted sm:hidden">Sin eventos</p>
+                      <p className="py-ds-1 text-center font-ds-body text-ds-caption text-ds-text/60 sm:hidden">Sin eventos</p>
                     ) : (
                       eventosDia.map((e) => {
-                        const est = ESTADOS_AGENDA.find((x) => x.valor === e.estadoAgenda)!;
+                        const est = estadoInfo(e.estadoAgenda);
                         return (
                           <button
                             key={`${e.tipo}-${e.id}`}
                             type="button"
                             onClick={() => abrirEvento(e)}
-                            className={`flex w-full flex-col items-start gap-0.5 overflow-hidden rounded-lg px-2 py-1.5 text-left text-xs transition-opacity hover:opacity-80 ${est.clase}`}
+                            className={`flex w-full flex-col items-start gap-0.5 overflow-hidden rounded-ds-md px-ds-2 py-1.5 text-left font-ds-body text-ds-caption transition-opacity hover:opacity-80 ${CLASE_CHIP[est.tono]}`}
                           >
                             <span className="flex items-center gap-1 font-medium">
                               {e.tipo === "tarea" ? (
-                                <IconClipboardCheck className="h-3 w-3 shrink-0" />
+                                <ClipboardCheck size={12} strokeWidth={2.75} className="shrink-0" />
                               ) : (
-                                <IconWrench className="h-3 w-3 shrink-0" />
+                                <Wrench size={12} strokeWidth={2.75} className="shrink-0" />
                               )}
                               {e.hora ?? "Sin hora"}
                             </span>
@@ -1204,45 +1172,44 @@ function AgendaContenido() {
         </Card>
         </div>
       ) : (
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-ds-6">
         {renderTareaRapida()}
         <Card>
           {puedeGestionarAgenda && tareaRapidaFecha !== fmtLocal(fechaActual) && (
-            <div className="mb-4">
-              <Button type="button" variant="outline" onClick={() => abrirTareaRapida(fmtLocal(fechaActual))}>
-                <IconPlus className="h-4 w-4" />
+            <div className="mb-ds-4">
+              <Button variante="secundario" onPress={() => abrirTareaRapida(fmtLocal(fechaActual))} iconoIzq={<Plus size={16} strokeWidth={2.75} />}>
                 Nueva tarea este día
               </Button>
             </div>
           )}
           {eventosDelDiaVista.length === 0 ? (
-            <div className="flex flex-col items-center gap-3 py-16 text-center">
-              <IconCalendar className="h-8 w-8 text-muted" />
-              <p className="text-sm text-muted">Sin eventos agendados este día.</p>
+            <div className="flex flex-col items-center gap-ds-3 py-16 text-center">
+              <Calendar size={32} strokeWidth={2.75} className="text-ds-text/60" />
+              <p className="font-ds-body text-ds-small text-ds-text/60">Sin eventos agendados este día.</p>
             </div>
           ) : (
-            <div className="flex flex-col divide-y divide-border">
+            <div className="flex flex-col divide-y divide-ds-divider">
               {eventosDelDiaVista.map((e) => (
                 <button
                   key={`${e.tipo}-${e.id}`}
                   type="button"
                   onClick={() => abrirEvento(e)}
-                  className="flex items-center justify-between gap-3 py-3 text-left hover:text-brand"
+                  className="flex items-center justify-between gap-ds-3 py-ds-3 text-left hover:text-ds-brand"
                 >
                   <div className="min-w-0">
-                    <p className="flex items-center gap-1.5 truncate font-medium text-foreground">
+                    <p className="flex items-center gap-1.5 truncate font-ds-body text-ds-body font-medium text-ds-text">
                       {e.tipo === "tarea" ? (
-                              <IconClipboardCheck className="h-3.5 w-3.5 shrink-0 text-muted" />
-                            ) : (
-                              <IconWrench className="h-3.5 w-3.5 shrink-0 text-muted" />
-                            )}
+                        <ClipboardCheck size={14} strokeWidth={2.75} className="shrink-0 text-ds-text/60" />
+                      ) : (
+                        <Wrench size={14} strokeWidth={2.75} className="shrink-0 text-ds-text/60" />
+                      )}
                       {e.titulo}
                     </p>
-                    <p className="text-xs text-muted">
+                    <p className="font-ds-body text-ds-caption text-ds-text/60">
                       {e.hora ?? "Sin hora"} · {e.subtitulo}
                     </p>
                   </div>
-                  <Badge value={e.estadoAgenda} />
+                  <StatusBadge estado={e.estadoAgenda} etiqueta={estadoInfo(e.estadoAgenda).etiqueta} tonoForzado={estadoInfo(e.estadoAgenda).tono} />
                 </button>
               ))}
             </div>

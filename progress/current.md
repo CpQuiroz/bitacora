@@ -3247,3 +3247,48 @@ un build nuevo (Expo Go del SDK 57 sí trae `react-native-pager-view`
 empaquetado, así que probar con `expo start` + Expo Go debería andar
 sin compilar nada nuevo — pero no lo confirmé en vivo esta vuelta).
 Sin migración, sin backend — puro mobile + dependencias.
+
+## 2026-09-19 (2): migración de Agenda al sistema de diseño ds- (hallazgo 2)
+
+Pedido, con mockup previo aprobado ("Sigamos") mostrando lado a lado
+Faena (lo que había) vs. ds- (el resto de la web). 1263 líneas, el
+mismo tamaño que "PASO 6" en su momento — todos los controles del
+formulario tenían API distinta (`Input value/onChange` → `valor/
+onCambio`, `Select` con `&lt;option&gt;` hijos → `opciones=[...]`, sin
+componente para fecha nativa `type="date"` — se resolvió con
+`DatePicker` de `@bitacora/ui/web`, que trabaja con `Date`, no string;
+`fechaDesdeString`/`fmtLocal` (ya existían en el archivo) hacen la
+conversión ida y vuelta sin tocar el resto de la lógica de fechas, que
+sigue en string "YYYY-MM-DD" como siempre).
+
+- `ESTADOS_AGENDA`: la columna `clase` (clases Faena a mano) pasa a
+  `tono: TonoEstado` (mismo sistema de 4 tonos que ya usa `StatusBadge`
+  en toda la web). "Agendado" no tenía un tono propio en ese sistema —
+  se mapeó a `"cerrado"` (neutro, se distingue de "cancelado" por el
+  matiz del gris nomás, no por un color de marca aparte).
+- Nuevo `CLASE_CHIP`/`estadoInfo()`: los chips de evento en las grillas
+  de mes/semana necesitan ícono + texto adentro (`StatusBadge` no tiene
+  ese slot) — se arman con las mismas clases que `StatusBadge` usa
+  internamente, no un sistema de color paralelo. El resto (badge del
+  panel lateral, badge de la vista Día) sí usa `<StatusBadge>` directo.
+- `EstadoCitaRiel.tsx` (el riel de 3+2 pasos de una cita) migrado
+  completo — único consumidor es esta página.
+- Íconos: `Icon*` (custom, viejos) → `lucide-react` (`Calendar`,
+  `ChevronLeft`, `ChevronRight`, `ClipboardCheck`, `Plus`, `Wrench`),
+  mismos que ya usa el resto de la web.
+- **Cero cambios de lógica de negocio** — mismos handlers, mismos
+  `useState`/`useEffect`, misma validación, mismo flujo de cancelación/
+  paquetes/vínculo con OS. Un ajuste real de tipos (no de comportamiento):
+  `onCrearPaquete` tenía un parámetro `FormEvent` sin sentido real (lo
+  dispara un botón `type="button"`, no un submit) — se le quitó el
+  parámetro y el `preventDefault()` que no hacía falta.
+
+`tsc` + `verificar.sh` completo en verde (incluye el chequeo de colores
+literales/px arbitrario — 0 nuevos). Confirmado que no queda ningún
+import del sistema viejo (`@/components/ui`, `@/components/icons`) ni
+en la página ni en `EstadoCitaRiel.tsx`. Boot real de `next dev` +
+`/dashboard/agenda` responde 200 sin error en el log — **no se hizo
+una revisión visual en vivo con sesión real** (necesita login), la
+usuaria lo puede confirmar navegando la página ya en prod.
+
+Sin migración, sin backend — puro frontend.
