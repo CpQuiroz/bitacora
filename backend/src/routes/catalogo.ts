@@ -200,6 +200,104 @@ catalogoRouter.post(
   })
 );
 
+// POST /importar — alta masiva desde CSV (mismo patrón que
+// clientes.ts). Dedupe por SKU (si viene) — sin SKU no hay forma
+// confiable de detectar un duplicado, se crea igual (mismo criterio que
+// el alta manual, que tampoco dedupea por nombre). No arma kit_items ni
+// tipos_equipo — son relaciones aparte, se completan editando el ítem.
+type FilaImportCatalogo = {
+  tipo?: unknown;
+  nombre?: unknown;
+  sku?: unknown;
+  categoria?: unknown;
+  unidad?: unknown;
+  precio_base?: unknown;
+  stock_actual?: unknown;
+  stock_minimo?: unknown;
+};
+
+catalogoRouter.post(
+  "/importar",
+  ah<RequestConEmpresa>(async (req, res) => {
+    const filas = req.body?.filas;
+    if (!Array.isArray(filas) || filas.length === 0) {
+      res.status(400).json({ error: "Falta el arreglo de filas a importar" });
+      return;
+    }
+    if (filas.length > 500) {
+      res.status(400).json({ error: "Máximo 500 filas por importación — dividí el archivo en partes más chicas" });
+      return;
+    }
+
+    const { data: existentes } = await supabase.from("catalogo_items").select("sku").eq("empresa_id", req.empresaId!).not("sku", "is", null);
+    const skusExistentes = new Set((existentes ?? []).map((i) => i.sku));
+
+    const errores: { fila: number; motivo: string }[] = [];
+    const omitidos: { fila: number; motivo: string }[] = [];
+    const paraCrear: {
+      empresa_id: string;
+      tipo: TipoCatalogoItem;
+      nombre: string;
+      sku: string | null;
+      categoria: string | null;
+      unidad: string;
+      precio_base: number;
+      stock_actual: number | null;
+      stock_minimo: number | null;
+    }[] = [];
+    const skusEnEsteArchivo = new Set<string>();
+
+    (filas as FilaImportCatalogo[]).forEach((f, i) => {
+      const numeroFila = i + 2;
+      const nombre = typeof f.nombre === "string" ? f.nombre.trim() : "";
+      if (!nombre) {
+        errores.push({ fila: numeroFila, motivo: "Falta el nombre" });
+        return;
+      }
+      const tipoBruto = typeof f.tipo === "string" ? f.tipo.trim().toLowerCase() : "producto";
+      const tipo = (TIPOS.includes(tipoBruto as TipoCatalogoItem) ? tipoBruto : "producto") as TipoCatalogoItem;
+      const precio = Number(f.precio_base);
+      if (!Number.isFinite(precio) || precio < 0) {
+        errores.push({ fila: numeroFila, motivo: `precio_base inválido: "${f.precio_base}"` });
+        return;
+      }
+      const sku = typeof f.sku === "string" && f.sku.trim() ? f.sku.trim() : null;
+      if (sku && (skusExistentes.has(sku) || skusEnEsteArchivo.has(sku))) {
+        omitidos.push({ fila: numeroFila, motivo: `Ya existe un ítem con SKU ${sku} — no se creó de nuevo` });
+        return;
+      }
+      if (sku) skusEnEsteArchivo.add(sku);
+
+      const stockActualNum = Number(f.stock_actual);
+      const stockMinimoNum = Number(f.stock_minimo);
+
+      paraCrear.push({
+        empresa_id: req.empresaId!,
+        tipo,
+        nombre,
+        sku,
+        categoria: typeof f.categoria === "string" && f.categoria.trim() ? f.categoria.trim() : null,
+        unidad: typeof f.unidad === "string" && f.unidad.trim() ? f.unidad.trim() : "unidad",
+        precio_base: precio,
+        stock_actual: tipo === "producto" && Number.isFinite(stockActualNum) && stockActualNum >= 0 ? stockActualNum : tipo === "producto" ? 0 : null,
+        stock_minimo: tipo === "producto" && Number.isInteger(stockMinimoNum) && stockMinimoNum >= 0 ? stockMinimoNum : null,
+      });
+    });
+
+    if (paraCrear.length === 0) {
+      res.status(400).json({ error: "Ninguna fila es válida", errores, omitidos });
+      return;
+    }
+
+    const { data: creados, error: errorImport } = await supabase.from("catalogo_items").insert(paraCrear).select("id");
+    if (errorImport) {
+      res.status(500).json({ error: errorImport.message });
+      return;
+    }
+    res.json({ creados: creados?.length ?? 0, errores, omitidos });
+  })
+);
+
 catalogoRouter.patch(
   "/:id",
   ah<RequestConEmpresa>(async (req, res) => {

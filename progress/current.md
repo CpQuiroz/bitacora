@@ -3292,3 +3292,38 @@ una revisión visual en vivo con sesión real** (necesita login), la
 usuaria lo puede confirmar navegando la página ya en prod.
 
 Sin migración, sin backend — puro frontend.
+
+## 2026-09-19 (3): Importar CSV para Catálogo/Equipos/Proveedores (punto 6)
+
+Completa lo que quedó pendiente de la tanda de export/import: los otros
+3 botones "Importar X" (que también mostraban un `alert()`) ahora abren
+`ImportarCsvModal` de verdad, mismo patrón que Clientes.
+
+- `backend/routes/catalogo.ts` → `POST /importar`: dedupe por SKU (si
+  viene). `tipo` default "producto" si viene vacío/inválido. No arma
+  `kit_items` ni `tipos_equipo` — son relaciones aparte, se completan
+  editando el ítem.
+- `backend/routes/equipos.ts` → `POST /importar`: dedupe por patente
+  (hay un índice único `(empresa_id, patente)` en la base — se chequea
+  antes de insertar para reportar "omitida" fila por fila en vez de que
+  el batch entero falle por constraint violation). No resuelve
+  `cliente_id` por nombre (ambiguo con homónimos) — un equipo
+  importado queda sin cliente asignado, se completa editando la ficha.
+- `backend/routes/proveedores.ts` → `POST /importar`: dedupe por RUT,
+  mismo criterio que Clientes. No resuelve `categoria_gasto_id` por
+  nombre, mismo motivo que equipos/cliente.
+- Los 3 wired en su página web respectiva (columnas de plantilla +
+  botón real).
+
+`tsc` + `verificar.sh` completo en verde. Sin migración — las 3 tablas
+ya existían tal cual.
+
+**Bug real encontrado y corregido al escribir el de Catálogo**: mi
+primer `Edit` cortó el handler de `POST /` de catálogo a la mitad
+(el `old_string` hizo match con un `.single()` que no era el cierre
+real del handler — tenía más código después: movimiento de stock
+inicial, kit_items, tipos_equipo). Lo noté porque `tsc` no tiró error
+raro sino que el archivo quedó con una ruta `/importar` registrada
+ANTES del cierre real de `POST /`, dejando código huérfano — se
+corrigió reordenando antes de seguir con los otros 2 endpoints (ahí sí
+confirmé el cierre real de cada handler antes de editar).

@@ -15,6 +15,18 @@ import { Button, Card, EmptyState, ErrorState, Input, LoadingState, Select, Stat
 import { InputMonto } from "@/components/InputMonto";
 import { ICONO_TIPO } from "@/components/CatalogoSelectorModal";
 import { descargarCSV } from "@/lib/exportCsv";
+import { ImportarCsvModal, type ColumnaImport } from "@/components/ImportarCsvModal";
+
+const COLUMNAS_IMPORT_CATALOGO: ColumnaImport[] = [
+  { clave: "nombre", etiqueta: "Nombre", ejemplo: "Aceite de motor 15W40", requerido: true },
+  { clave: "tipo", etiqueta: "Tipo", ejemplo: "producto" },
+  { clave: "sku", etiqueta: "SKU", ejemplo: "" },
+  { clave: "categoria", etiqueta: "Categoría", ejemplo: "Insumos" },
+  { clave: "unidad", etiqueta: "Unidad", ejemplo: "litro" },
+  { clave: "precio_base", etiqueta: "Precio base", ejemplo: "12000", requerido: true },
+  { clave: "stock_actual", etiqueta: "Stock actual", ejemplo: "10" },
+  { clave: "stock_minimo", etiqueta: "Stock mínimo", ejemplo: "5" },
+];
 
 // Categorías sugeridas cuando el catálogo todavía no tiene ninguna
 // propia — una vez que existan categorías reales usadas, esas se
@@ -63,6 +75,7 @@ export default function CatalogoPage() {
   const [stockMinimoDefault, setStockMinimoDefault] = useState(5);
 
   const [formAbierto, setFormAbierto] = useState(false);
+  const [importAbierto, setImportAbierto] = useState(false);
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
@@ -276,7 +289,7 @@ export default function CatalogoPage() {
           <Button variante="secundario" onPress={exportar} deshabilitado={filtrados.length === 0}>
             Exportar CSV
           </Button>
-          <Button variante="secundario" onPress={() => alert("Importar catálogo desde CSV — próximamente.")}>
+          <Button variante="secundario" onPress={() => setImportAbierto(true)}>
             Importar Catálogo
           </Button>
           <Button iconoIzq={<Plus size={16} strokeWidth={2.75} />} onPress={() => (formAbierto ? setFormAbierto(false) : abrirNuevo())}>
@@ -575,6 +588,16 @@ export default function CatalogoPage() {
           ]}
         />
       )}
+
+      <ImportarCsvModal
+        abierto={importAbierto}
+        onCerrar={() => setImportAbierto(false)}
+        titulo="Importar catálogo desde CSV"
+        nombreArchivoPlantilla="plantilla-catalogo.csv"
+        endpoint="/api/catalogo/importar"
+        columnas={COLUMNAS_IMPORT_CATALOGO}
+        onImportado={cargar}
+      />
     </DashboardShell>
   );
 }

@@ -13,6 +13,20 @@ import { Button, Card, EmptyState, ErrorState, Input, LoadingState, Select, Stat
 import { ComboboxCliente } from "@/components/ComboboxCliente";
 import { ComboboxResponsable } from "@/components/ComboboxResponsable";
 import { descargarCSV } from "@/lib/exportCsv";
+import { ImportarCsvModal, type ColumnaImport } from "@/components/ImportarCsvModal";
+
+const COLUMNAS_IMPORT_EQUIPOS: ColumnaImport[] = [
+  { clave: "nombre", etiqueta: "Nombre", ejemplo: "Camión Volvo FH", requerido: true },
+  { clave: "categoria", etiqueta: "Categoría", ejemplo: "Vehículo" },
+  { clave: "marca", etiqueta: "Marca", ejemplo: "Volvo" },
+  { clave: "modelo", etiqueta: "Modelo", ejemplo: "FH 460" },
+  { clave: "numero_serie", etiqueta: "N° de serie", ejemplo: "" },
+  { clave: "patente", etiqueta: "Patente", ejemplo: "AB-CD-12" },
+  { clave: "anio", etiqueta: "Año", ejemplo: "2020" },
+  { clave: "tipo_vehiculo", etiqueta: "Tipo de vehículo", ejemplo: "Camión" },
+  { clave: "capacidad_carga", etiqueta: "Capacidad de carga", ejemplo: "10 ton" },
+  { clave: "garantia_vencimiento", etiqueta: "Vencimiento de garantía", ejemplo: "2027-01-15" },
+];
 
 type EquipoConCliente = Equipo & {
   cliente: Pick<Cliente, "id" | "nombre"> | null;
@@ -41,6 +55,7 @@ export default function EquiposPage() {
   const [filtroCategoria, setFiltroCategoria] = useState("");
 
   const [formAbierto, setFormAbierto] = useState(false);
+  const [importAbierto, setImportAbierto] = useState(false);
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
@@ -288,7 +303,7 @@ export default function EquiposPage() {
           <Button variante="secundario" onPress={exportar} deshabilitado={filtrados.length === 0}>
             Exportar CSV
           </Button>
-          <Button variante="secundario" onPress={() => alert("Importar equipos desde CSV — próximamente.")}>
+          <Button variante="secundario" onPress={() => setImportAbierto(true)}>
             Importar Equipos
           </Button>
           <Button iconoIzq={<Plus size={16} strokeWidth={2.75} />} onPress={() => (formAbierto ? setFormAbierto(false) : abrirNuevo())}>
@@ -485,6 +500,16 @@ export default function EquiposPage() {
       <Modal open={equipoDocumentos !== null} onClose={() => setEquipoDocumentos(null)} title={`Documentos — ${equipoDocumentos?.nombre ?? ""}`} wide>
         {equipoDocumentos && <DocumentoForm entidadTipo="vehiculo" entidadId={equipoDocumentos.id} />}
       </Modal>
+
+      <ImportarCsvModal
+        abierto={importAbierto}
+        onCerrar={() => setImportAbierto(false)}
+        titulo="Importar equipos desde CSV"
+        nombreArchivoPlantilla="plantilla-equipos.csv"
+        endpoint="/api/equipos/importar"
+        columnas={COLUMNAS_IMPORT_EQUIPOS}
+        onImportado={cargar}
+      />
     </DashboardShell>
   );
 }

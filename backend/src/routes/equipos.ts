@@ -244,6 +244,113 @@ equiposRouter.post(
   })
 );
 
+// POST /importar — alta masiva desde CSV (mismo patrón que
+// clientes.ts). Dedupe por patente (si viene y es Vehículo) — hay un
+// índice único (empresa_id, patente) en la base; se chequea antes de
+// insertar para reportar "omitida" en vez de que el batch entero falle
+// por una fila con constraint violation. No resuelve cliente_id por
+// nombre (ambiguo con homónimos) — un vehículo importado queda sin
+// cliente asignado, se completa editando la ficha.
+type FilaImportEquipo = {
+  nombre?: unknown;
+  categoria?: unknown;
+  marca?: unknown;
+  modelo?: unknown;
+  numero_serie?: unknown;
+  patente?: unknown;
+  anio?: unknown;
+  tipo_vehiculo?: unknown;
+  capacidad_carga?: unknown;
+  garantia_vencimiento?: unknown;
+};
+
+equiposRouter.post(
+  "/importar",
+  ah<RequestConEmpresa>(async (req, res) => {
+    const filas = req.body?.filas;
+    if (!Array.isArray(filas) || filas.length === 0) {
+      res.status(400).json({ error: "Falta el arreglo de filas a importar" });
+      return;
+    }
+    if (filas.length > 500) {
+      res.status(400).json({ error: "Máximo 500 filas por importación — dividí el archivo en partes más chicas" });
+      return;
+    }
+
+    const { data: existentes } = await supabase.from("equipos").select("patente").eq("empresa_id", req.empresaId!).not("patente", "is", null);
+    const patentesExistentes = new Set((existentes ?? []).map((e) => e.patente));
+
+    const errores: { fila: number; motivo: string }[] = [];
+    const omitidos: { fila: number; motivo: string }[] = [];
+    const paraCrear: {
+      empresa_id: string;
+      nombre: string;
+      categoria: string | null;
+      marca: string | null;
+      modelo: string | null;
+      numero_serie: string | null;
+      patente: string | null;
+      anio: number | null;
+      tipo_vehiculo: string | null;
+      capacidad_carga: string | null;
+      garantia_vencimiento: string | null;
+    }[] = [];
+    const patentesEnEsteArchivo = new Set<string>();
+
+    (filas as FilaImportEquipo[]).forEach((f, i) => {
+      const numeroFila = i + 2;
+      const nombre = typeof f.nombre === "string" ? f.nombre.trim() : "";
+      if (!nombre) {
+        errores.push({ fila: numeroFila, motivo: "Falta el nombre" });
+        return;
+      }
+      const anioRaw = f.anio;
+      let anio: number | null = null;
+      if (anioRaw !== undefined && anioRaw !== null && anioRaw !== "") {
+        const n = Number(anioRaw);
+        if (!Number.isInteger(n)) {
+          errores.push({ fila: numeroFila, motivo: `año inválido: "${anioRaw}"` });
+          return;
+        }
+        anio = n;
+      }
+      const patenteRaw = typeof f.patente === "string" ? f.patente.trim().toUpperCase() : "";
+      const patente = patenteRaw || null;
+      if (patente && (patentesExistentes.has(patente) || patentesEnEsteArchivo.has(patente))) {
+        omitidos.push({ fila: numeroFila, motivo: `Ya existe un equipo con patente ${patente} — no se creó de nuevo` });
+        return;
+      }
+      if (patente) patentesEnEsteArchivo.add(patente);
+
+      paraCrear.push({
+        empresa_id: req.empresaId!,
+        nombre,
+        categoria: typeof f.categoria === "string" && f.categoria.trim() ? f.categoria.trim() : null,
+        marca: typeof f.marca === "string" && f.marca.trim() ? f.marca.trim() : null,
+        modelo: typeof f.modelo === "string" && f.modelo.trim() ? f.modelo.trim() : null,
+        numero_serie: typeof f.numero_serie === "string" && f.numero_serie.trim() ? f.numero_serie.trim() : null,
+        patente,
+        anio,
+        tipo_vehiculo: typeof f.tipo_vehiculo === "string" && f.tipo_vehiculo.trim() ? f.tipo_vehiculo.trim() : null,
+        capacidad_carga: typeof f.capacidad_carga === "string" && f.capacidad_carga.trim() ? f.capacidad_carga.trim() : null,
+        garantia_vencimiento: typeof f.garantia_vencimiento === "string" && f.garantia_vencimiento.trim() ? f.garantia_vencimiento.trim() : null,
+      });
+    });
+
+    if (paraCrear.length === 0) {
+      res.status(400).json({ error: "Ninguna fila es válida", errores, omitidos });
+      return;
+    }
+
+    const { data: creados, error: errorImport } = await supabase.from("equipos").insert(paraCrear).select("id");
+    if (errorImport) {
+      res.status(500).json({ error: errorImport.message });
+      return;
+    }
+    res.json({ creados: creados?.length ?? 0, errores, omitidos });
+  })
+);
+
 equiposRouter.patch(
   "/:id",
   ah<RequestConEmpresa>(async (req, res) => {

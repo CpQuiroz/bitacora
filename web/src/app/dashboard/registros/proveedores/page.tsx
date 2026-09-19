@@ -10,6 +10,15 @@ import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { SelectCrear } from "@/components/SelectCrear";
 import { Button, Card, EmptyState, ErrorState, Input, LoadingState, StatusBadge, Table } from "@bitacora/ui/web";
 import { descargarCSV } from "@/lib/exportCsv";
+import { ImportarCsvModal, type ColumnaImport } from "@/components/ImportarCsvModal";
+
+const COLUMNAS_IMPORT_PROVEEDORES: ColumnaImport[] = [
+  { clave: "nombre", etiqueta: "Nombre", ejemplo: "Repuestos Sur Ltda.", requerido: true },
+  { clave: "razon_social", etiqueta: "Razón social", ejemplo: "" },
+  { clave: "rut", etiqueta: "RUT", ejemplo: "76.123.456-7" },
+  { clave: "telefono", etiqueta: "Teléfono", ejemplo: "+56221234567" },
+  { clave: "correo", etiqueta: "Correo", ejemplo: "contacto@proveedor.cl" },
+];
 
 type ProveedorConCategoria = Proveedor & { categoria: Pick<CategoriaGasto, "id" | "nombre" | "color"> | null };
 
@@ -23,6 +32,7 @@ export default function ProveedoresPage() {
   const [busqueda, setBusqueda] = useState("");
 
   const [formAbierto, setFormAbierto] = useState(false);
+  const [importAbierto, setImportAbierto] = useState(false);
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
@@ -180,7 +190,7 @@ export default function ProveedoresPage() {
           <Button variante="secundario" onPress={exportar} deshabilitado={filtrados.length === 0}>
             Exportar CSV
           </Button>
-          <Button variante="secundario" onPress={() => alert("Importar proveedores desde CSV — próximamente.")}>
+          <Button variante="secundario" onPress={() => setImportAbierto(true)}>
             Importar Proveedores
           </Button>
           <Button iconoIzq={<Plus size={16} strokeWidth={2.75} />} onPress={() => (formAbierto ? setFormAbierto(false) : abrirNuevo())}>
@@ -306,6 +316,16 @@ export default function ProveedoresPage() {
           ]}
         />
       )}
+
+      <ImportarCsvModal
+        abierto={importAbierto}
+        onCerrar={() => setImportAbierto(false)}
+        titulo="Importar proveedores desde CSV"
+        nombreArchivoPlantilla="plantilla-proveedores.csv"
+        endpoint="/api/proveedores/importar"
+        columnas={COLUMNAS_IMPORT_PROVEEDORES}
+        onImportado={cargar}
+      />
     </DashboardShell>
   );
 }

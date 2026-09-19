@@ -78,6 +78,89 @@ proveedoresRouter.post(
   })
 );
 
+// POST /importar — alta masiva desde CSV (mismo patrón que
+// clientes.ts). Dedupe por RUT, igual criterio. No resuelve
+// categoria_gasto_id por nombre (ambiguo) — se completa editando la
+// ficha.
+type FilaImportProveedor = {
+  nombre?: unknown;
+  razon_social?: unknown;
+  rut?: unknown;
+  telefono?: unknown;
+  correo?: unknown;
+};
+
+proveedoresRouter.post(
+  "/importar",
+  ah<RequestConEmpresa>(async (req, res) => {
+    const filas = req.body?.filas;
+    if (!Array.isArray(filas) || filas.length === 0) {
+      res.status(400).json({ error: "Falta el arreglo de filas a importar" });
+      return;
+    }
+    if (filas.length > 500) {
+      res.status(400).json({ error: "Máximo 500 filas por importación — dividí el archivo en partes más chicas" });
+      return;
+    }
+
+    const { data: existentes } = await supabase.from("proveedores").select("rut").eq("empresa_id", req.empresaId!).not("rut", "is", null);
+    const rutsExistentes = new Set((existentes ?? []).map((p) => p.rut));
+
+    const errores: { fila: number; motivo: string }[] = [];
+    const omitidos: { fila: number; motivo: string }[] = [];
+    const paraCrear: {
+      empresa_id: string;
+      nombre: string;
+      razon_social: string | null;
+      rut: string | null;
+      telefono: string | null;
+      correo: string | null;
+    }[] = [];
+    const rutsEnEsteArchivo = new Set<string>();
+
+    (filas as FilaImportProveedor[]).forEach((f, i) => {
+      const numeroFila = i + 2;
+      const nombre = typeof f.nombre === "string" ? f.nombre.trim() : "";
+      if (!nombre) {
+        errores.push({ fila: numeroFila, motivo: "Falta el nombre" });
+        return;
+      }
+      const rutBruto = typeof f.rut === "string" ? f.rut.trim() : "";
+      if (rutBruto && !validarRut(rutBruto)) {
+        errores.push({ fila: numeroFila, motivo: `RUT inválido: "${rutBruto}"` });
+        return;
+      }
+      const rut = rutBruto ? formatearRut(rutBruto) : null;
+      if (rut && (rutsExistentes.has(rut) || rutsEnEsteArchivo.has(rut))) {
+        omitidos.push({ fila: numeroFila, motivo: `Ya existe un proveedor con RUT ${rut} — no se creó de nuevo` });
+        return;
+      }
+      if (rut) rutsEnEsteArchivo.add(rut);
+
+      paraCrear.push({
+        empresa_id: req.empresaId!,
+        nombre,
+        razon_social: typeof f.razon_social === "string" && f.razon_social.trim() ? f.razon_social.trim() : null,
+        rut,
+        telefono: typeof f.telefono === "string" && f.telefono.trim() ? f.telefono.trim() : null,
+        correo: typeof f.correo === "string" && f.correo.trim() ? f.correo.trim() : null,
+      });
+    });
+
+    if (paraCrear.length === 0) {
+      res.status(400).json({ error: "Ninguna fila es válida", errores, omitidos });
+      return;
+    }
+
+    const { data: creados, error: errorImport } = await supabase.from("proveedores").insert(paraCrear).select("id");
+    if (errorImport) {
+      res.status(500).json({ error: errorImport.message });
+      return;
+    }
+    res.json({ creados: creados?.length ?? 0, errores, omitidos });
+  })
+);
+
 proveedoresRouter.patch(
   "/:id",
   ah<RequestConEmpresa>(async (req, res) => {
