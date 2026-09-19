@@ -18,3 +18,6 @@ android/
 
 *storybook.log
 storybook-static
+
+# APKs de build local (build-android-local.md) — no versionar binarios
+/builds/
