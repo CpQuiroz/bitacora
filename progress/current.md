@@ -4156,3 +4156,12 @@ formato nuevo.
 (los folios ya existían). Pendiente: nuevo build de APK para que se
 vea este cambio (no urgía hacerlo de inmediato, se puede acumular con
 el próximo pedido).
+
+## 2026-09-20 (9): build APK 1.10.6
+
+`gradlew assembleRelease` — BUILD SUCCESSFUL en 11m04s (639 tasks, 611
+ejecutadas). APK 39M, verificación de bundle OK (prod). `.env`
+restaurado a dev. Copiado a `builds/bitacora-1.10.6.apk` (se borró el
+1.10.5 anterior). Incluye el reordenamiento de Nuevo gasto + folio de
+OS en el picker (tarea 52), sobre todo lo de 1.10.5 (tema por empresa,
+safe-area, QuickAccessCard, ícono nuevo).
