@@ -3904,3 +3904,50 @@ fantasma ni el texto de ayuda equivocado. La usuaria la eligió.
 
 Sin migración — `usuarios.funcion` ya existía tal cual. `tsc` web
 limpio, `verificar.sh` completo en verde.
+
+## 2026-09-20 (3): CRÍTICO — el deploy de web llevaba ~1 día roto en Vercel
+
+Pedido: "dame imágenes de cómo quedó la web" — para eso navegué la web
+real (Chrome logueado) para sacar screenshots reales de Agenda y
+Personas. **Personas mostraba el desplegable viejo de 5 opciones**, no
+el checkbox que acababa de commitear y pushear. Eso disparó la
+investigación.
+
+Entré al dashboard de Vercel (misma sesión logueada del navegador): el
+**deployment de producción estaba en el commit `4f0c683`** ("hallazgo
+1: Levantamiento type dedup") — el PRIMER commit de esta sesión, de
+ayer. **Todos los pushes posteriores fallaron el build silenciosamente**
+(swipe de tabs, migración de Agenda a ds-, importar CSV, tema Taller,
+folios, fix de npm audit, tema Confianza, ícono, simplificar Función —
+literalmente TODO lo de ayer y hoy) — nada de eso llegó nunca a
+producción, y no lo noté porque después de cada push asumí "push a
+main = deploy" (cierto en general para este proyecto) sin volver a
+chequear el estado real del deploy en Vercel.
+
+**Causa raíz** (la misma que había encontrado y descarté como "previa
+a la sesión, no relacionada" al arreglar las vulnerabilidades de
+`npm audit` — ahí me equivoqué: nunca comprobé si también rompía el
+build REAL de Vercel, solo un `next build` local aislado, y asumí que
+"no tocamos nada de esto hoy" alcanzaba para descartarlo):
+`recharts@3.10.1` declara `@reduxjs/toolkit`/`react-redux` como
+dependencias reales (no opcionales) en su propio `package.json`, pero
+ninguna de las dos — ni sus propias dependencias (`clsx`,
+`es-toolkit`, `immer`, `reselect`, etc.) — llegaron a resolverse en
+`package-lock.json` (ni con el reinstall limpio que ya se había hecho
+hoy para el fix de `uuid`). Sospecho que el propio `package.json` de
+`recharts` trae un campo `"workspaces": ["www"]` que confunde al
+instalador de npm en modo workspaces del monorepo.
+
+**Fix**: en vez de perseguir por qué npm no resuelve la cadena
+completa de recharts sola, se declaran `@reduxjs/toolkit` y
+`react-redux` como dependencias EXPLÍCITAS de `web/package.json`
+(`npm install @reduxjs/toolkit@^2 react-redux@^9 -w web`) — de ahí en
+adelante Node los encuentra igual (resolución hacia arriba del árbol),
+sin depender de que recharts los traiga bien solo.
+
+Verificado con el build real, no solo `tsc`: `npm run build:shared &&
+cd web && npm run build` — **termina limpio**, las ~70 rutas
+prerenderizadas sin error. `verificar.sh` completo en verde.
+
+Sin migración — se pushea de inmediato, es la prioridad #1 (todo lo de
+ayer/hoy está bloqueado hasta que este commit llegue a Vercel).

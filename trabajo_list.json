@@ -748,6 +748,22 @@
       ],
       "status": "done",
       "resolution": "Icono pusheado (96653b1). Migracion 110 aplicada y confirmada por la usuaria (constraint empresas_tema_check verificado en prod con 'confianza' incluido) -- codigo del tema pusheado tambien."
+    },
+    {
+      "id": 48,
+      "name": "fix_build_vercel_recharts",
+      "title": "CRITICO: el build de produccion en Vercel llevaba ~1 dia roto (recharts sin @reduxjs/toolkit)",
+      "description": "Al sacar screenshots reales de la web para la usuaria se detecto que Personas mostraba codigo viejo. Investigando en el dashboard de Vercel: el deployment de produccion estaba en el commit 4f0c683 (el PRIMERO de esta sesion) -- TODOS los pushes posteriores (swipe tabs, agenda ds-, CSV import, Taller, folios, npm audit fix, Confianza, icono, Funcion) fallaron el build silenciosamente y nunca llegaron a prod.",
+      "acceptance": [
+        "Causa raiz encontrada: recharts@3.10.1 declara @reduxjs/toolkit + react-redux como dependencies reales (no opcionales/peer) en su propio package.json, pero npm nunca los resolvio en package-lock.json (ni con el reinstall limpio de la tarea 46) -- sospecha: el package.json de recharts trae su propio campo \"workspaces\":[\"www\"] que confunde al instalador en modo workspaces del monorepo",
+        "Fix: @reduxjs/toolkit + react-redux agregados como dependencia EXPLICITA de web/package.json (no se persiguio por que npm no resuelve solo la cadena completa de recharts)",
+        "Verificado con el build REAL (npm run build:shared && cd web && npm run build), no solo tsc -- termina limpio, ~70 rutas prerenderizadas sin error",
+        "verificar.sh completo en verde",
+        "Pusheado de inmediato (prioridad maxima -- desbloquea TODO lo de ayer/hoy que estaba stuck)",
+        "Confirmar en el dashboard de Vercel que el deploy de este commit termina en Ready, no en Error"
+      ],
+      "status": "done",
+      "resolution": "web/package.json + package-lock.json actualizados y pusheados. Pendiente de confirmar visualmente en Vercel que el build de ESTE commit especifico pasa (se hizo el fix, se valido localmente con el build real, pero el siguiente paso de la conversacion es confirmar el deploy real)."
     }
   ]
 }
