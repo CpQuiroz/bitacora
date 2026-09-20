@@ -746,8 +746,8 @@
         "Migracion 110 (empresas_tema_check con 'confianza' agregado -- Postgres no tiene alter check, se dropea y se vuelve a crear) -- validada en modo lectura contra prod (BEGIN/UPDATE real/ROLLBACK)",
         "verificar.sh completo en verde"
       ],
-      "status": "in_progress",
-      "resolution": "Icono YA pusheado (no depende de DB). El tema 'Confianza' (codigo + migracion 110) esta commiteado en LOCAL, no pusheado -- falta que la usuaria aplique la migracion 110 y confirme, mismo criterio que 108/109."
+      "status": "done",
+      "resolution": "Icono pusheado (96653b1). Migracion 110 aplicada y confirmada por la usuaria (constraint empresas_tema_check verificado en prod con 'confianza' incluido) -- codigo del tema pusheado tambien."
     }
   ]
 }
