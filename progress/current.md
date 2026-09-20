@@ -3860,3 +3860,47 @@ imitando la progresión de luminosidad de los ramps existentes).
 `verificar.sh` completo en verde (110 migraciones locales, prod sigue
 en 109 hasta que la usuaria aplique esta). No se pushea nada de esto
 hasta que confirme, mismo criterio que 108/109.
+
+**Actualización**: migración 110 confirmada aplicada y verificada en
+modo lectura contra prod — pusheado (`e5a76bb`). Tarea 47 cerrada.
+
+## 2026-09-20 (2): simplificar "Función (opcional)" en Personas
+
+La usuaria notó que el campo "Función" en Personas (invitar + ficha)
+"no sirve de nada" y propuso sacarlo, dejando solo Rol. Investigué
+antes de aplicar nada: en TODO el código, `usuarios.funcion` solo
+controla una cosa real — si el colaborador ve "Levantamientos" en el
+celular (`FUNCIONES_LEVANTAMIENTOS` en shared, usado en
+`MasScreen.tsx`/`HoyScreen.tsx`). El texto de ayuda que decía "un
+chofer no ve Órdenes de servicio" era **incorrecto** — eso no pasa,
+nunca pasó. Consulté la base (solo lectura): de las 5 opciones
+(Técnico/Chofer/Instalador/Administrativo/Otro), en las 3 empresas
+reales del sistema nunca se usó "Instalador", "Administrativo" ni
+"Otro" — solo "Chofer" (1 persona, Transportes Itineris) y "Técnico"
+(2 personas, otra empresa), las 2 únicas que hacen algo.
+
+Le planteé la opción del medio en vez de borrarlo del todo: un check
+simple ("Ve Levantamientos en el celular") en vez del desplegable de 5
+—mantiene la granularidad por persona que ya existía (nadie pierde la
+posibilidad de excluir a alguien puntual) pero sin las 3 opciones
+fantasma ni el texto de ayuda equivocado. La usuaria la eligió.
+
+- `personas/page.tsx` (invitar): el `Select` de 5 opciones pasa a un
+  checkbox — `checked ? "tecnico" : ""`. Sin historial que preservar
+  (persona nueva).
+- `personas/[id]/page.tsx` (ficha): mismo checkbox, pero el estado
+  `checked` se deriva con `FUNCIONES_LEVANTAMIENTOS.includes(funcion)`
+  — si la persona ya tenía "chofer" y nadie toca el check, se guarda
+  "chofer" tal cual (no se lo pisa a "tecnico" solo por guardar otra
+  cosa de la ficha). Solo se fuerza a `"tecnico"` cuando el check pasa
+  de apagado a prendido desde acá.
+- `web/src/lib/funciones.ts` (el `Select` de 5 opciones) — eliminado,
+  sin uso en ningún otro lugar de web tras el cambio.
+- Sin cambios en mobile (`FUNCIONES_LEVANTAMIENTOS`, `MasScreen.tsx`,
+  `HoyScreen.tsx`, `PerfilScreen.tsx` siguen leyendo el mismo campo
+  `usuarios.funcion` de siempre) ni en el backend (mismo endpoint,
+  sigue aceptando cualquier `FuncionColaborador` o `null`) — el cambio
+  es puramente de qué tan honesto es el control en la UI web.
+
+Sin migración — `usuarios.funcion` ya existía tal cual. `tsc` web
+limpio, `verificar.sh` completo en verde.

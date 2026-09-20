@@ -7,7 +7,6 @@ import type { Modulo, Usuario } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { useRolesDisponibles } from "@/lib/roles";
-import { FUNCIONES } from "@/lib/funciones";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Button, Card, EmptyState, ErrorState, Input, LoadingState, Select, StatusBadge, Table, Tag } from "@bitacora/ui/web";
 
@@ -181,16 +180,23 @@ export default function PersonasPage() {
                 <Select etiqueta="Rol" valor={rol} onCambio={setRol} opciones={rolesDisponibles.map((r) => ({ valor: r.value, etiqueta: r.label }))} />
                 {/* Solo tiene efecto real si Levantamientos está activo
                     (decide quién ve esa sección en el móvil) — sin ese
-                    módulo, mostrarla es ruido sin función real. */}
+                    módulo, mostrarla es ruido sin función real. Antes era
+                    un desplegable de 5 opciones (Técnico/Chofer/
+                    Instalador/Administrativo/Otro) pero solo 2 de esas 5
+                    hacían algo (ver FUNCIONES_LEVANTAMIENTOS en shared) y
+                    nadie usó nunca las otras 3 en ninguna empresa real —
+                    se simplificó a lo que de verdad decide (20-sep-2026). */}
                 {rol === "colaborador" && ve("levantamientos") && (
-                  <div className="flex flex-col gap-ds-1">
-                    <Select
-                      etiqueta="Función (opcional)"
-                      valor={funcion}
-                      onCambio={setFuncion}
-                      opciones={[{ valor: "", etiqueta: "Sin definir" }, ...FUNCIONES.map((f) => ({ valor: f.value, etiqueta: f.label }))]}
-                    />
-                    <p className="font-ds-body text-ds-caption text-ds-text/60">Define qué ve en la app móvil (un chofer no ve Órdenes de servicio).</p>
+                  <div className="flex items-end pb-2.5">
+                    <label className="flex items-center gap-ds-2 font-ds-body text-ds-small text-ds-text">
+                      <input
+                        type="checkbox"
+                        checked={funcion !== ""}
+                        onChange={(e) => setFuncion(e.target.checked ? "tecnico" : "")}
+                        className="accent-[var(--ds-brand)]"
+                      />
+                      Ve Levantamientos en el celular
+                    </label>
                   </div>
                 )}
                 <div className="sm:col-span-2">
