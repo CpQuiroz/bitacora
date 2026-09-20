@@ -4225,3 +4225,11 @@ del sidebar/dashboard donde aparecen ambos juntos; el dashboard
 ("Visión general") no tiene acceso directo a Levantamientos, así que
 no hay otro lugar que reordenar. `tsc` web limpio, `verificar.sh` en
 verde. Sin migración — cambio puramente de UI.
+
+## 2026-09-20 (12): build APK 1.10.7
+
+`gradlew assembleRelease` — BUILD SUCCESSFUL en 7m31s. APK 39M,
+verificación de bundle OK (prod). `.env` restaurado a dev. Copiado a
+`builds/bitacora-1.10.7.apk` (se borró el 1.10.6 anterior). Incluye
+header de Levantamiento + crear al vuelo en Gasto + "hoy" en selectores
+de día (tarea 53), sobre todo lo de 1.10.6.
