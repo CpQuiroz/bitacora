@@ -3980,3 +3980,55 @@ botón "Nuevo levantamiento" siempre dentro de `DashboardShell`,
 
 Sin migración — cambio puramente de orden de render. `tsc` web
 limpio, `verificar.sh` completo en verde.
+
+## 2026-09-20 (5): safe-area inferior (Android) + QuickAccessCard (tarea 50)
+
+Pedido con 2 partes explícitas, con instrucción de investigar antes de
+tocar código.
+
+**Investigación primero**: `AccesoRapido` en `MasScreen.tsx` YA era una
+sola función aplicada a los 6 botones de "Accesos rápidos" — ya
+compartían tamaño/radio/ícono/fuente/spacing (nada estaba
+desincronizado). Lo que faltaba era que fuera un componente
+REUTILIZABLE (vivía local a la pantalla), no arreglar una
+inconsistencia que no existía. Auditando el resto de la app: el único
+parecido real es `BotonGrande` (`MantencionVehiculoScreen.tsx`) — pero
+es un patrón DISTINTO (2 por fila, con subtítulo, sin badge) — no se
+fuerza a compartir el componente ahí para no perder esa información.
+
+**Safe-area inferior**: misma causa raíz que el fix del status bar de
+ayer (ver entrada del 19-sep) — `material-top-tabs` no reserva sola el
+espacio de la barra de gestos/navegación de Android, a diferencia de
+`bottom-tabs` (el navegador de antes de "deslizar entre pestañas").
+Se leyó el código fuente de `react-native-tab-view/TabView.js` para
+confirmar el layout real: el pager (contenido de cada pestaña) es
+`flex: 1` **hermano** de la tab bar en un layout de columna normal, NO
+posición absoluta — así que agrandar la tab bar con `insets.bottom`
+como padding (sin `height` fijo, para no arriesgar recortar ícono+label
+adivinando un número) alcanza para que el pager se achique solo y deje
+ese espacio, sin tocar los 27+ archivos que usan
+`ESPACIO_ASISTENTE_FLOTANTE` ni `AsistenteButton.tsx`.
+
+Lo que SÍ necesitaba su propio fix: las 5 pantallas que son
+`presentation: "modal"` (no viven dentro del pager, no heredan nada de
+lo de arriba) — `CobroFormScreen`, `TrabajoFormScreen`,
+`NuevoGastoScreen`, `NuevaCitaScreen`, `NuevaReservaCosmetologia` (esta
+última con un pie fijo aparte del scroll — dos lugares a corregir, no
+uno). Auditando el resto: `RegistrarVentaScreen.tsx` y
+`ClienteDetalleScreen.tsx` también tienen un pie fijo absoluto, pero
+son *pushes normales* (no modales) dentro del stack de un tab — se
+dejaron sin tocar, protegidos transitivamente por el fix de
+`AppTabs.tsx` (su `position: absolute` resuelve contra los límites de
+la pantalla dentro del pager, ya correctamente achicado).
+
+**Bug propio cometido y corregido en el momento**: al editar
+`NuevaReservaCosmetologia.tsx` metí sin querer un comentario HTML
+(`<!-- ... -->`, sintaxis inválida en JSX) en vez de identificar bien
+cuál de los dos paddingBottom (el del scroll o el del pie fijo)
+necesitaba el cambio real — se revirtió y se corrigió apuntando al pie
+fijo, que es el que de verdad toca el borde de la pantalla.
+
+`QuickAccessCard` nuevo en `packages/ui/src/native/`, exportado desde
+el índice. `tsc` mobile limpio, `verificar.sh` completo en verde. Sin
+migración — cambio puramente de mobile, necesita build nuevo para
+verse en dispositivo.

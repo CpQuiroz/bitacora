@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Alert, Image, Pressable, ScrollView, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Camera } from "lucide-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { CategoriaGasto, CentroCosto, EstadoGasto, Proveedor, Trabajo } from "@bitacora/shared";
@@ -97,6 +98,12 @@ function DiasChips({ valor, onElegir }: { valor: string; onElegir: (k: string) =
 // todavía equivalente v2 — quedan tal cual (gap conocido), el resto del
 // contenido pasa a tokens/Texto/Button/Input de @bitacora/ui/native.
 export function NuevoGastoScreen({ navigation }: NativeStackScreenProps<MasStackParamList, "GastoForm">) {
+  // Pantalla modal (presentation: "modal" en MasStack.tsx) — no vive
+  // dentro del pager de AppTabs.tsx, así que no hereda el fix de
+  // paddingBottom de la tab bar (ver ese archivo, 20-sep-2026). Necesita
+  // su propio insets.bottom para no quedar detrás de la barra de
+  // gestos/navegación de Android.
+  const insets = useSafeAreaInsets();
   const { enLinea } = useRed();
   const [categorias, setCategorias] = useState<CategoriaGasto[] | null>(null);
   const [centros, setCentros] = useState<CentroCosto[]>([]);
@@ -174,7 +181,7 @@ export function NuevoGastoScreen({ navigation }: NativeStackScreenProps<MasStack
   return (
     <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
       <ScrollView
-        contentContainerStyle={{ padding: tokens.space["4"], gap: tokens.space["4"], paddingBottom: tokens.space["8"] }}
+        contentContainerStyle={{ padding: tokens.space["4"], gap: tokens.space["4"], paddingBottom: tokens.space["8"] + insets.bottom }}
         keyboardShouldPersistTaps="handled"
       >
         {/* La foto de la boleta arriba, grande */}

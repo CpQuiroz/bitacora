@@ -779,6 +779,23 @@
       ],
       "status": "done",
       "resolution": "Aplicado exactamente segun las instrucciones de la usuaria (incluia el diff exacto a aplicar). Sin migracion -- cambio puramente de orden de render en el frontend."
+    },
+    {
+      "id": 50,
+      "name": "safe_area_bottom_y_quickaccesscard",
+      "title": "Fix safe-area inferior (Android edge-to-edge) + componente compartido QuickAccessCard",
+      "description": "Pedido con 2 partes: (1) contenido tapado por la barra de gestos/navegacion de Android en Pizarra/Mas/otras pantallas -- misma causa raiz que el fix del status bar de arriba (tarea del 19-sep): material-top-tabs no reserva sola el espacio del sistema, a diferencia de bottom-tabs. (2) homologar los 6 botones de 'Accesos rapidos' en un componente reutilizable + auditar el resto de la app por el mismo patron.",
+      "acceptance": [
+        "Investigacion previa (sin tocar codigo primero): se confirmo que AccesoRapido en MasScreen.tsx YA era una sola funcion aplicada consistentemente a los 6 botones (compartian todo lo pedido) -- lo que faltaba era que fuera un componente REUTILIZABLE, no local a la pantalla",
+        "AppTabs.tsx: useSafeAreaInsets() + paddingBottom: insets.bottom en tabBarStyle (sin height fijo, para no arriesgar recortar el contenido -- crece por padding, no reemplaza el alto). Como el pager es flex:1 hermano de la tab bar (no posicion absoluta, confirmado leyendo react-native-tab-view/TabView.js), esto alcanza para toda pantalla dentro del pager -- no hizo falta tocar los 27+ archivos que usan ESPACIO_ASISTENTE_FLOTANTE ni AsistenteButton.tsx",
+        "5 pantallas modal (presentation:'modal', NO viven dentro del pager, no heredan el fix de arriba) corregidas una por una: CobroFormScreen, TrabajoFormScreen, NuevoGastoScreen, NuevaCitaScreen, NuevaReservaCosmetologia (esta ultima con un pie fijo aparte del scroll, doble ojo ahi)",
+        "Auditado: RegistrarVentaScreen.tsx y ClienteDetalleScreen.tsx tienen pie fijo absoluto tambien, pero son pushes NORMALES (no modales) dentro del stack de un tab -- se dejaron sin tocar, protegidos transitivamente por el fix de AppTabs.tsx",
+        "QuickAccessCard nuevo en packages/ui/src/native/ -- extraido de AccesoRapido (antes local a MasScreen.tsx), mismo diseno exacto",
+        "Auditoria del resto de la app: unico parecido real es BotonGrande (MantencionVehiculoScreen.tsx) -- NO se fuerza a compartir el componente porque es un patron distinto (2 por fila, con subtitulo, sin badge) y perderia esa informacion",
+        "tsc mobile limpio, verificar.sh completo en verde"
+      ],
+      "status": "done",
+      "resolution": "Sin migracion, cambio puramente de mobile. Necesita build nuevo para verse en dispositivo."
     }
   ]
 }

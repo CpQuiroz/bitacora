@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { Pressable, ScrollView, View } from "react-native";
+import { ScrollView, View } from "react-native";
 import {
   Banknote,
   ChevronRight,
@@ -18,7 +18,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { tokens } from "@bitacora/design-tokens";
 import { FUNCIONES_LEVANTAMIENTOS } from "@bitacora/shared";
-import { ScreenHeader, ListRow, ListRowGrupo, AsistenteButton, ESPACIO_ASISTENTE_FLOTANTE, Texto, Tag } from "@bitacora/ui/native";
+import { ScreenHeader, ListRow, ListRowGrupo, AsistenteButton, ESPACIO_ASISTENTE_FLOTANTE, QuickAccessCard, Texto, Tag } from "@bitacora/ui/native";
 import { useAuth } from "../auth/AuthContext";
 import { useRed } from "../../services/sync/NetworkProvider";
 import { estaVencido, listarCobros } from "../../services/cobros";
@@ -54,58 +54,13 @@ type Item = {
 // tarjeta en tarjeta (ver `tinte` en AccesoRapido).
 type AccesoItem = { titulo: string; Icono: LucideIcon; badge?: number; ir: () => void };
 
-// Tarjeta de la grilla de accesos rápidos. Dos tintes alternados
-// (marca / marca secundaria) para que la grilla no se vea como un solo
-// bloque monocromo — mismo criterio visual que ya usa StatusBadge con
-// sus tonos, adaptado a esta pantalla.
-function AccesoRapido({ item, tinte }: { item: AccesoItem; tinte: 0 | 1 }) {
-  const fondoIcono = tinte === 0 ? `${tokens.color.accent}22` : `${tokens.color.accent2}22`;
-  const colorIcono = tinte === 0 ? tokens.color.accentRamp["700"] : tokens.color.accent2Ramp["700"];
-  return (
-    <Pressable onPress={item.ir} style={{ flex: 1 }}>
-      <View
-        style={{
-          position: "relative",
-          alignItems: "center",
-          gap: tokens.space["1"],
-          borderRadius: tokens.radius.md,
-          backgroundColor: tokens.color.surface,
-          borderWidth: 1,
-          borderColor: tokens.color.divider,
-          paddingVertical: tokens.space["3"],
-          paddingHorizontal: tokens.space["1"],
-        }}
-      >
-        {item.badge ? (
-          <View
-            style={{
-              position: "absolute",
-              top: 4,
-              right: 8,
-              minWidth: 17,
-              height: 17,
-              borderRadius: 9,
-              paddingHorizontal: 3,
-              backgroundColor: tokens.color.accent,
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Texto tamano={tokens.size.micro} color={tokens.color.surface} peso="semibold">
-              {item.badge}
-            </Texto>
-          </View>
-        ) : null}
-        <View style={{ width: 40, height: 40, borderRadius: tokens.radius.sm, backgroundColor: fondoIcono, alignItems: "center", justifyContent: "center" }}>
-          <item.Icono size={20} strokeWidth={2.25} color={colorIcono} />
-        </View>
-        <Texto tamano={tokens.size.caption} color={tokens.color.text} peso="semibold" style={{ textAlign: "center" }} numberOfLines={2}>
-          {item.titulo}
-        </Texto>
-      </View>
-    </Pressable>
-  );
-}
+// Tarjeta de la grilla de accesos rápidos — componente compartido
+// (packages/ui/src/native/QuickAccessCard.tsx, 20-sep-2026) para poder
+// reusarla en cualquier otra pantalla con este mismo patrón. Se audita
+// el resto de la app en esa fecha: el único parecido real es
+// BotonGrande (MantencionVehiculoScreen.tsx) — pero ese es un patrón
+// DISTINTO (2 por fila, con subtítulo), no se fuerza a compartir este
+// componente para no perder esa información.
 
 // Agrupa de a 3 para la grilla, rellenando la última fila con espacios
 // vacíos (en vez de dejar que 1-2 tarjetas sueltas se estiren al ancho
@@ -212,7 +167,13 @@ export function MasScreen({ navigation }: NativeStackScreenProps<MasStackParamLi
             <View style={{ gap: tokens.space["2"] }}>
               {filasDeTres(accesos).map((fila, i) => (
                 <View key={i} style={{ flexDirection: "row", gap: tokens.space["2"] }}>
-                  {fila.map((item, j) => (item ? <AccesoRapido key={item.titulo} item={item} tinte={((i * 3 + j) % 2) as 0 | 1} /> : <View key={j} style={{ flex: 1 }} />))}
+                  {fila.map((item, j) =>
+                    item ? (
+                      <QuickAccessCard key={item.titulo} titulo={item.titulo} Icono={item.Icono} badge={item.badge} tinte={((i * 3 + j) % 2) as 0 | 1} onPress={item.ir} />
+                    ) : (
+                      <View key={j} style={{ flex: 1 }} />
+                    )
+                  )}
                 </View>
               ))}
             </View>

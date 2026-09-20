@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { createMaterialTopTabNavigator } from "@react-navigation/material-top-tabs";
 import { CalendarClock, Ellipsis, LayoutDashboard, User, type LucideIcon } from "lucide-react-native";
 import { tokens } from "@bitacora/design-tokens";
@@ -52,6 +53,7 @@ export function AppTabs() {
   const marca = useMarca();
   const auth = useAuth();
   const { pendientes } = useRed();
+  const insets = useSafeAreaInsets();
 
   const esGestion = auth.fase === "listo" && auth.usuario.rol !== "colaborador";
   useEffect(() => {
@@ -72,7 +74,27 @@ export function AppTabs() {
         // header) — cada Stack sigue con el suyo propio, sin cambios.
         tabBarActiveTintColor: marca.base,
         tabBarInactiveTintColor: `${tokens.color.text}99`,
-        tabBarStyle: { backgroundColor: tokens.color.surface, borderTopColor: tokens.color.divider, borderTopWidth: 1, elevation: 0, shadowOpacity: 0 },
+        // Expo SDK 57 (RN 0.81) fuerza edge-to-edge en Android — igual
+        // que el status bar arriba (ver ScreenHeader.tsx, 19-sep-2026),
+        // `material-top-tabs` no reserva sola el espacio de la barra de
+        // gestos/navegación abajo (a diferencia de `bottom-tabs`, que sí
+        // lo hacía automático antes del cambio a deslizar entre
+        // pestañas). Se agrega `insets.bottom` como padding — la barra
+        // crece hacia arriba en vez de quedar clavada bajo el sistema;
+        // como el pager (el contenido de cada pestaña) tiene `flex: 1`
+        // como hermano de la tab bar en el mismo layout de columna (no
+        // posición absoluta), se achica solo para dejarle ese espacio —
+        // no hace falta tocar el paddingBottom de cada pantalla ni el
+        // botón flotante del Asistente, sus offsets ya son relativos a
+        // esa misma área de contenido.
+        tabBarStyle: {
+          backgroundColor: tokens.color.surface,
+          borderTopColor: tokens.color.divider,
+          borderTopWidth: 1,
+          elevation: 0,
+          shadowOpacity: 0,
+          paddingBottom: insets.bottom,
+        },
         // Sin esto se ve como pestañas de arriba: solo texto, en
         // MAYÚSCULA, con la rayita indicadora de deslizado. Barra de
         // abajo = ícono + label, sin rayita, texto tal cual.

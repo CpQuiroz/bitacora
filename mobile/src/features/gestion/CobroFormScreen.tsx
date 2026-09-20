@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Alert, Pressable, ScrollView, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { Cliente, MedioPago } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
@@ -42,6 +43,12 @@ const VENC_OPCIONES = [
 // acá solo se recolorea el contenido. Sin ScreenHeader propio.
 export function CobroFormScreen({ navigation }: NativeStackScreenProps<MasStackParamList, "CobroForm">) {
   const marca = useMarca();
+  // Pantalla modal (presentation: "modal" en MasStack.tsx) — no vive
+  // dentro del pager de AppTabs.tsx, así que no hereda el fix de
+  // paddingBottom de la tab bar (ver ese archivo, 20-sep-2026). Necesita
+  // su propio insets.bottom para no quedar detrás de la barra de
+  // gestos/navegación de Android.
+  const insets = useSafeAreaInsets();
   const { enLinea } = useRed();
   const [clientes, setClientes] = useState<Cliente[] | null>(null);
   const [guardando, setGuardando] = useState(false);
@@ -93,7 +100,7 @@ export function CobroFormScreen({ navigation }: NativeStackScreenProps<MasStackP
   return (
     <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
       <ScrollView
-        contentContainerStyle={{ padding: tokens.space["6"], gap: tokens.space["4"], paddingBottom: tokens.space["8"] }}
+        contentContainerStyle={{ padding: tokens.space["6"], gap: tokens.space["4"], paddingBottom: tokens.space["8"] + insets.bottom }}
         keyboardShouldPersistTaps="handled"
       >
         <SelectorCliente

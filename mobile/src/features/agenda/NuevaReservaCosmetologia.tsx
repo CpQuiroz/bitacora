@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Alert, Pressable, ScrollView, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ArrowLeft, X } from "lucide-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { Cliente, PaqueteSesionesConSaldo, Servicio, Usuario } from "@bitacora/shared";
@@ -65,6 +66,14 @@ function Filete() {
  */
 export function NuevaReservaCosmetologia({ navigation, route }: NativeStackScreenProps<AgendaStackParamList, "NuevaCita">) {
   const marca = useMarca();
+  // Pantalla modal (presentation: "modal" en AgendaStack.tsx, misma
+  // ruta "NuevaCita" que NuevaCitaScreen.tsx) — no vive dentro del pager
+  // de AppTabs.tsx, así que no hereda el fix de paddingBottom de la tab
+  // bar (ver ese archivo, 20-sep-2026). Necesita su propio insets.bottom
+  // para no quedar detrás de la barra de gestos/navegación de Android —
+  // acá importa el doble, porque además del scroll hay una barra fija
+  // de acción abajo de todo con el botón de guardar.
+  const insets = useSafeAreaInsets();
   const { enLinea } = useRed();
   const fechaInicial = route.params?.fecha ?? clave(new Date());
 
@@ -441,8 +450,19 @@ export function NuevaReservaCosmetologia({ navigation, route }: NativeStackScree
         </View>
       </ScrollView>
 
-      {/* Pie fijo */}
-      <View style={{ padding: tokens.space["4"], paddingBottom: tokens.space["6"], borderTopWidth: 1, borderTopColor: tokens.color.divider, backgroundColor: tokens.color.surface, gap: tokens.space["1"] * 1.5 }}>
+      {/* Pie fijo — el que de verdad necesita insets.bottom (queda al
+          borde real de la pantalla, a diferencia del padding del
+          ScrollView de arriba, que solo da aire antes de llegar acá). */}
+      <View
+        style={{
+          padding: tokens.space["4"],
+          paddingBottom: tokens.space["6"] + insets.bottom,
+          borderTopWidth: 1,
+          borderTopColor: tokens.color.divider,
+          backgroundColor: tokens.color.surface,
+          gap: tokens.space["1"] * 1.5,
+        }}
+      >
         <Button tamano="lg" bloque onPress={guardar} cargando={guardando}>
           Agendar
         </Button>
