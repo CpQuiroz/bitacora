@@ -4,7 +4,8 @@ import { Alert, Linking, Pressable, ScrollView, Share, Switch, View } from "reac
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { AlertCircle, ArrowLeft, Download } from "lucide-react-native";
 import { tokens } from "@bitacora/design-tokens";
-import { Button, Card, ScreenHeader, Texto, useMarca } from "@bitacora/ui/native";
+import type { Empresa } from "@bitacora/shared";
+import { Button, Card, ScreenHeader, Select, Texto, useMarca } from "@bitacora/ui/native";
 import { useAuth } from "../auth/AuthContext";
 import { useRed } from "../../services/sync/NetworkProvider";
 import { MAX_INTENTOS, ultimoErrorGlobal } from "../../services/sync/queue";
@@ -28,6 +29,15 @@ const ETIQUETA_FUNCION: Record<string, string> = {
   administrativo: "Administrativo",
   otro: "Otro",
 };
+
+// Mismo dato que Configuración > Empresa en la web (empresas.tema,
+// PATCH /api/empresa) — acá solo cambia color (ver theme/aplicarTema.ts;
+// "Taller" en la web también cambia tipografía, en mobile por ahora no).
+const OPCIONES_TEMA: { valor: Empresa["tema"]; etiqueta: string }[] = [
+  { valor: "faena", etiqueta: "Faena (original)" },
+  { valor: "taller", etiqueta: "Taller" },
+  { valor: "confianza", etiqueta: "Confianza" },
+];
 
 // Sistema visual móvil v2 (14-sep-2026) — ScreenHeader propio (volver) +
 // tokens/Texto/Card en vez de useTema()/components-ui viejo. El toggle
@@ -75,6 +85,23 @@ export function PerfilScreen({ navigation }: NativeStackScreenProps<MasStackPara
     nombreBiometria().then(setBioNombre);
     biometriaActivada().then(setBioActiva);
   }, []);
+
+  const [temaGuardando, setTemaGuardando] = useState(false);
+  const [temaError, setTemaError] = useState<string | null>(null);
+  async function cambiarTema(nuevo: Empresa["tema"]) {
+    setTemaGuardando(true);
+    setTemaError(null);
+    const r = await apiJson("/api/empresa", { method: "PATCH", body: JSON.stringify({ tema: nuevo }) });
+    setTemaGuardando(false);
+    if (!r.ok) {
+      setTemaError("No se pudo guardar. Intenta de nuevo con conexión.");
+      return;
+    }
+    // Refresca /api/me: al llegar el usuario.empresa.tema nuevo,
+    // App.tsx (NavegacionConTema) remonta la navegación con la paleta
+    // aplicada — ver theme/aplicarTema.ts.
+    await auth.refrescar();
+  }
 
   async function alternarBiometria() {
     if (bioActiva) {
@@ -132,6 +159,37 @@ export function PerfilScreen({ navigation }: NativeStackScreenProps<MasStackPara
             <Fila etiqueta="Conexión" valor={enLinea ? "En línea" : "Sin conexión"} />
           </View>
         </Card>
+
+        {/* Tema de la empresa (20-sep-2026) — solo admin, mismo criterio
+            de acceso que Configuración > Empresa en la web. */}
+        {u.rol === "admin" && (
+          <Card>
+            <View style={{ gap: tokens.space["2"] }}>
+              <Texto tamano={tokens.size.small} peso="semibold" color={tokens.color.text}>
+                Tema de {u.empresa.nombre}
+              </Texto>
+              <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
+                Cambia los colores de toda la app para tu equipo (se guarda para toda la empresa).
+              </Texto>
+              <Select
+                valor={u.empresa.tema ?? "faena"}
+                onCambio={(v) => cambiarTema(v as Empresa["tema"])}
+                opciones={OPCIONES_TEMA}
+                deshabilitado={temaGuardando}
+              />
+              {temaGuardando ? (
+                <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
+                  Guardando…
+                </Texto>
+              ) : null}
+              {temaError ? (
+                <Texto tamano={tokens.size.caption} color={tokens.color.accentRamp["700"]}>
+                  {temaError}
+                </Texto>
+              ) : null}
+            </View>
+          </Card>
+        )}
 
         {/* Diagnóstico (14-sep-2026): un error que escapa de procesar() sin
             que nadie lo capture desaparecía sin dejar rastro — "Reintentar

@@ -796,6 +796,22 @@
       ],
       "status": "done",
       "resolution": "Sin migracion, cambio puramente de mobile. Necesita build nuevo para verse en dispositivo."
+    },
+    {
+      "id": 51,
+      "name": "tema_mobile_selector_y_build",
+      "title": "Tema (colores) por empresa en mobile + selector en Perfil + build APK",
+      "description": "Portar el sistema Taller/Confianza (ya en web) a mobile: seleccionable desde una pantalla de config, y build de APK nuevo al final. Pedido explícito: 'Aplica el cambio de colores para mobile igual que la web, que se seleccione desde config y luego crea el build.'",
+      "acceptance": [
+        "tokens.colorTaller/colorConfianza (ya generados para la web) se aplican en mobile mutando tokens.color in-place (mobile/src/theme/aplicarTema.ts) — NO se porta el mecanismo CSS-cascade de la web 1:1, por la escala real (72 archivos / ~800 usos de tokens.color.* en mobile+packages/ui, sin cascada en RN)",
+        "Solo color, no tipografía — Taller en mobile no cambia de fuente (mobile solo precarga Caprasimo/Figtree vía useFonts); Confianza tampoco cambia fuente en la web, así que ahí es igual en ambas plataformas",
+        "Selector nuevo en Perfil (mobile no tenía ninguna pantalla de config de empresa) — gateado a rol admin, mismo dato que Configuración > Empresa en la web (PATCH /api/empresa {tema}, sin cambios de backend)",
+        "Al guardar, refrescar() trae el usuario.empresa.tema nuevo → App.tsx remonta la navegación (key=tema) para que TODA pantalla ya montada quede consistente (mutar tokens.color solo no repinta solas las pantallas ya montadas — RN no tiene cascada)",
+        "tsc mobile limpio, verificar.sh completo en verde",
+        "Build de APK nuevo al final (incluye también el fix de safe-area/QuickAccessCard de la tarea 50, que todavía no estaba en ningún APK)"
+      ],
+      "status": "done",
+      "resolution": "mobile/src/theme/aplicarTema.ts: mutación in-place de tokens.color (no Context/hook — 72 archivos/~800 usos de tokens.color.* leen fresco en cada render, alcanza con reasignar las claves). Se llama SINCRÓNICAMENTE en el render de NavegacionConTema (shell/App.tsx), no en un useEffect, para que ya esté aplicada antes del primer render de <RootNavigator key={tema}> (evita un frame con colores viejos). Cambiar de tema remonta toda la navegación (key=tema) para que pantallas YA montadas también queden consistentes — RN no tiene cascada, mutar el objeto solo no las repinta. Selector nuevo en PerfilScreen.tsx (Select de @bitacora/ui/native), admin-only, PATCH /api/empresa {tema} existente (sin cambios de backend), refrescar() trae el tema nuevo. Solo color, no tipografía (mobile solo precarga Caprasimo/Figtree). tsc mobile limpio, verificar.sh completo en verde."
     }
   ]
 }

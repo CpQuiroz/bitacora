@@ -4032,3 +4032,66 @@ fijo, que es el que de verdad toca el borde de la pantalla.
 el índice. `tsc` mobile limpio, `verificar.sh` completo en verde. Sin
 migración — cambio puramente de mobile, necesita build nuevo para
 verse en dispositivo.
+
+## 2026-09-20 (6): tema (colores) por empresa en mobile + selector + build (tarea 51)
+
+Pedido: "Aplica el cambio de colores para mobile igual que la web, que
+se seleccione desde config y luego crea el build."
+
+**El mismatch real**: en la web, Taller/Confianza cambian solo ~5
+archivos porque las variables CSS cascadean solas. En mobile no hay
+cascada — `tokens.color.*` se lee inline en 72 archivos / ~800 usos
+(grep). Portar el mecanismo de la web 1:1 (Context + hook, refactor de
+los 800 usos) era un proyecto categóricamente más grande que lo demás
+de esta sesión.
+
+**Decisión**: `tokens` (packages/design-tokens/src/generated.ts) es un
+único objeto JS compartido — `as const` es solo de TypeScript, no
+`Object.freeze` en runtime — y casi todos esos ~800 usos leen
+`tokens.color.X` fresco en cada render, no una constante congelada a
+nivel de módulo. `mobile/src/theme/aplicarTema.ts` nuevo: muta
+`tokens.color` in-place (`Object.assign`) con `tokens.colorTaller` /
+`tokens.colorConfianza` — la MISMA data que ya se generó para la web
+(confirmado: ya estaban en generated.ts/dist antes de este cambio).
+Solo color, no tipografía: Taller en la web también cambia fuente,
+pero mobile solo precarga Caprasimo/Figtree vía `useFonts()` — agregar
+Archivo/IBM Plex Sans es un cambio aparte que no se pidió ("cambio de
+COLORES"). Confianza no cambia fuente ni en la web, así que ahí mobile
+y web quedan idénticos.
+
+**Timing (el detalle que casi se me escapa)**: mutar `tokens.color` no
+repinta sola una pantalla ya montada — RN no tiene cascada, cada
+componente solo relee el estilo si vuelve a renderizar por otro
+motivo. Puse la llamada a `aplicarTemaMobile()` primero en un
+`useEffect` de `AuthContext.tsx`, pero un efecto corre DESPUÉS del
+commit/paint — el primer render de la navegación con el tema real ya
+habría pintado con colores viejos (frame equivocado en el arranque
+para una empresa no-faena). Lo saqué de ahí y lo puse SINCRÓNICO en el
+cuerpo de render de `NavegacionConTema` (shell/App.tsx), antes de
+`return`, así ya está aplicado cuando `<RootNavigator>` hace su
+primer render. Para que pantallas YA montadas (no solo las nuevas)
+también queden consistentes al cambiar de tema en caliente: `App.tsx`
+remonta toda la navegación con `key={tema}` en `<RootNavigator>` —
+se pierde la pantalla en la que estabas (vuelve al inicio), aceptable
+porque cambiar de tema es una acción de admin, deliberada y rara.
+
+**Selector**: mobile no tenía NINGUNA pantalla de config de empresa
+(solo `PerfilScreen` con preferencias personales). Se agregó un Card
+nuevo ahí, gateado a `rol === "admin"` (mismo criterio de acceso que
+Configuración > Empresa en la web), con el `Select` ya existente de
+`@bitacora/ui/native`. Reusa `PATCH /api/empresa {tema}` (sin cambios
+de backend — el endpoint ya acepta "confianza" desde la migración 110
+de ayer). Al guardar, `auth.refrescar()` trae el `tema` nuevo, lo que
+dispara el remount de arriba.
+
+**Bug propio atrapado por tsc, no en runtime**: `type Paleta = typeof
+tokens.color` capturaba los literales EXACTOS de la paleta faena
+("#f5ead8", ...) por el `as const` de tokens.json — asignar
+`tokens.colorTaller`/`colorConfianza` (con sus propios literales)
+fallaba el type-check. Se cambió a un tipo `Paleta` ensanchado a mano
+(mismos campos, tipados `string`/`Record<string,string>`) — solo
+importa la FORMA, no el valor exacto.
+
+`tsc` mobile limpio, `verificar.sh` completo en verde. Sin migración
+(usa la 110 de ayer). Sigue: build de APK (incluye también el fix de
+safe-area/QuickAccessCard de la tarea 50, todavía no en ningún APK).
