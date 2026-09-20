@@ -843,6 +843,18 @@
       ],
       "status": "done",
       "resolution": "Ver mensajes de progress/current.md del 20-sep-2026 (entrada 10). Mockup aprobado sin cambios antes de implementar."
+    },
+    {
+      "id": 54,
+      "name": "sidebar_levantamiento_antes_de_os",
+      "title": "Sidebar web: Levantamientos antes que Órdenes de servicio",
+      "description": "Pedido explícito: el flujo real es levantamiento primero, la OS nace después al aprobar la cotización — el sidebar (grupo Operación) tenía el orden inverso.",
+      "acceptance": [
+        "DashboardShell.tsx: NAV_GROUPS 'Operación' — Levantamientos antes de Órdenes de servicio",
+        "tsc web limpio, verificar.sh completo en verde"
+      ],
+      "status": "done",
+      "resolution": "Reordenado en web/src/components/DashboardShell.tsx, grupo 'Operación' — Levantamientos pasa a ir antes de Órdenes de servicio, con comentario explicando la excepción al criterio general de frecuencia de uso (PASO 4). Ningún otro lugar de la web lista ambos juntos (el dashboard homepage no tiene acceso directo a Levantamientos). tsc web limpio, verificar.sh completo en verde."
     }
   ]
 }

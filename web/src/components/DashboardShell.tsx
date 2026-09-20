@@ -62,14 +62,17 @@ const NAV_GROUPS: NavGroup[] = [
     titulo: "Operación",
     items: [
       { href: "/dashboard/agenda", label: "Agenda", icon: Calendar, modulo: "agenda" },
+      // Levantamientos va ANTES que Órdenes de servicio (20-sep-2026,
+      // pedido explícito): el orden real del flujo es evaluar en
+      // terreno primero — la OS nace recién al aprobar la cotización
+      // (opt-in, empresa_modulos). Se prioriza el orden del flujo por
+      // sobre el criterio general de frecuencia de uso del resto del
+      // sidebar (PASO 4, ago-2026).
+      { href: "/dashboard/levantamientos", label: "Levantamientos", icon: Search, modulo: "levantamientos" },
       // Una sola lista: trabajos y OS son la misma fila. El filtro
       // "con documento / sin documento" y el alta rápida ("Nueva OS")
       // viven dentro de la página.
       { href: "/dashboard/ordenes", label: "Órdenes de servicio", icon: ClipboardCheck, modulo: "ordenes_servicio" },
-      // Opt-in (empresa_modulos): evaluación en terreno + materiales,
-      // antes de que exista una OS — la cotización ocurre fuera de
-      // Bitácora, al aprobar nace la OS.
-      { href: "/dashboard/levantamientos", label: "Levantamientos", icon: Search, modulo: "levantamientos" },
       // Módulos apagables, cada uno con su propio gate.
       { href: "/dashboard/rutas", label: "Rutas", icon: Route, modulo: "rutas" },
       { href: "/dashboard/viajes", label: "Viajes", icon: Truck, modulo: "viajes" },

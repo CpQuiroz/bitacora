@@ -4214,3 +4214,14 @@ Agenda (tab congelada, regla dura del proyecto) NO se tocó.
 
 `tsc` mobile limpio, `verificar.sh` completo en verde (incluyendo 0
 literales de color nuevos). Sin migración. Pendiente: build de APK.
+
+## 2026-09-20 (11): sidebar web — Levantamientos antes que OS (tarea 54)
+
+Pedido puntual: "quiero que levantamiento esté más sobre OS, ya que el
+orden es primero hacer un levantamiento y luego un OS". Cambio directo,
+sin mockup previo (reorden de 2 líneas, bajo riesgo) — swap en
+`NAV_GROUPS` (grupo "Operación") de `DashboardShell.tsx`. Único lugar
+del sidebar/dashboard donde aparecen ambos juntos; el dashboard
+("Visión general") no tiene acceso directo a Levantamientos, así que
+no hay otro lugar que reordenar. `tsc` web limpio, `verificar.sh` en
+verde. Sin migración — cambio puramente de UI.
