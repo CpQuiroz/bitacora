@@ -4118,3 +4118,41 @@ activos, el build no se había interrumpido) y se corrigió esperando
 por el PID real del script (`while kill -0 <pid>; do sleep; done`)
 en un nuevo background — así sí llegó la notificación real al
 terminar.
+
+## 2026-09-20 (8): Nuevo gasto — reordenar campos + folio de OS en el picker (tarea 52)
+
+Feedback probando 1.10.5 instalada en dispositivo real (no emulador):
+capturas de "Nuevo gasto" y del picker de "Orden de Servicio".
+
+**Reordenar**: foto de la boleta estaba arriba de todo, descripción
+casi al final — se pidió invertir: descripción primero, foto al final
+(justo antes de "Registrar gasto"). Cambio puramente de orden de JSX,
+sin tocar lógica.
+
+**Folio faltante en el picker de OS**: el picker mostraba solo nombre
+de cliente + fecha — con varias OS del mismo cliente (caso real: varias
+"Itineris Spa" seguidas en la captura) es imposible saber cuál es cuál.
+Antes de tocar nada se verificó qué tan grave era el gap — la respuesta
+del usuario ("¿qué pasó con los IDs únicos de OS/levantamiento?") hacía
+pensar en un problema de datos, pero no lo era: el folio correlativo ya
+existe de punta a punta desde antes (migraciones previas,
+`ordenes_servicio.folio`, `formatearFolio()` en packages/shared, ya
+usado en TrabajosScreen/TrabajoDetalleScreen/ClienteDetalleScreen/
+AgendaScreen/ViajesScreen/LevantamientosListScreen) y `GET /api/trabajos`
+YA devuelve `orden.folio` en el join. El único problema real era que
+`NuevoGastoScreen.tsx` tipaba su estado local como `Trabajo[]` (sin el
+campo `orden`) en vez de `TrabajoLista[]` (que ya existe en
+services/trabajos.ts con ese campo) y armaba el label del picker sin
+usarlo. Se confirmó por grep que este es el ÚNICO picker de "elegir un
+Trabajo/OS" en todo mobile — no hay otros lugares con el mismo bug que
+homologar.
+
+Fix: `useState<TrabajoLista[]>`, label del picker ahora
+`formatearFolio("OS", tr.orden?.folio) + " · " + tr.cliente` cuando hay
+folio — mismo formato ya establecido en el resto de la app, no un
+formato nuevo.
+
+`tsc` mobile limpio, `verificar.sh` completo en verde. Sin migración
+(los folios ya existían). Pendiente: nuevo build de APK para que se
+vea este cambio (no urgía hacerlo de inmediato, se puede acumular con
+el próximo pedido).

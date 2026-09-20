@@ -812,6 +812,20 @@
       ],
       "status": "done",
       "resolution": "mobile/src/theme/aplicarTema.ts: mutación in-place de tokens.color (no Context/hook — 72 archivos/~800 usos de tokens.color.* leen fresco en cada render, alcanza con reasignar las claves). Se llama SINCRÓNICAMENTE en el render de NavegacionConTema (shell/App.tsx), no en un useEffect, para que ya esté aplicada antes del primer render de <RootNavigator key={tema}> (evita un frame con colores viejos). Cambiar de tema remonta toda la navegación (key=tema) para que pantallas YA montadas también queden consistentes — RN no tiene cascada, mutar el objeto solo no las repinta. Selector nuevo en PerfilScreen.tsx (Select de @bitacora/ui/native), admin-only, PATCH /api/empresa {tema} existente (sin cambios de backend), refrescar() trae el tema nuevo. Solo color, no tipografía (mobile solo precarga Caprasimo/Figtree). tsc mobile limpio, verificar.sh completo en verde."
+    },
+    {
+      "id": 52,
+      "name": "gasto_orden_reordenar_y_folio_os",
+      "title": "Nuevo gasto: reordenar descripción/foto + mostrar folio de OS en el picker",
+      "description": "Feedback directo probando 1.10.5 en dispositivo real: (1) mover Descripción antes de la foto y la foto al final del formulario; (2) el picker 'Orden de Servicio (opcional)' solo mostraba nombre de cliente + fecha, sin nada que identifique la OS puntual entre varias del mismo cliente.",
+      "acceptance": [
+        "NuevoGastoScreen.tsx: Descripción es el primer campo, Foto de la boleta es el último (antes del botón Registrar gasto)",
+        "Picker de Orden de Servicio usa TrabajoLista (no Trabajo) y arma el label como 'OS-0012 · Cliente' vía formatearFolio, mismo formato ya usado en TrabajosScreen/AgendaScreen/ViajesScreen/LevantamientosListScreen — no se inventó un formato nuevo",
+        "Los folios (OS, LEV, CIT, VIA) ya existían de punta a punta (backend + tipos) desde antes — esto era pura falta de uso en este picker puntual, no un gap de datos",
+        "tsc mobile limpio, verificar.sh completo en verde"
+      ],
+      "status": "done",
+      "resolution": "mobile/src/features/gastos/NuevoGastoScreen.tsx: reordenado el JSX del ScrollView (Descripción primero, bloque de foto movido al final, sin cambiar ningún otro campo de lugar). Picker de OS: useState<Trabajo[]> -> useState<TrabajoLista[]> (tipo ya existente en services/trabajos.ts, con el join orden:{folio,estado_os} que ya devuelve GET /api/trabajos hace tiempo) y el label pasa a incluir formatearFolio('OS', tr.orden?.folio) cuando existe, igual que en TrabajosScreen/TrabajoDetalleScreen/ClienteDetalleScreen/AgendaScreen/ViajesScreen/LevantamientosListScreen. Era el único picker de 'elegir un Trabajo/OS' en todo mobile — no había otros lugares con el mismo bug. tsc mobile limpio, verificar.sh completo en verde."
     }
   ]
 }

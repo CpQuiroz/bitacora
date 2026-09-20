@@ -3,14 +3,15 @@ import { Alert, Image, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Camera } from "lucide-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import type { CategoriaGasto, CentroCosto, EstadoGasto, Proveedor, Trabajo } from "@bitacora/shared";
+import type { CategoriaGasto, CentroCosto, EstadoGasto, Proveedor } from "@bitacora/shared";
+import { formatearFolio } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
 import { Button, Input, LoadingState, Texto, useMarca } from "@bitacora/ui/native";
 import { PickerBuscable } from "../../components/ui";
 import { InputMonto } from "../../components/InputMonto";
 import { useRed } from "../../services/sync/NetworkProvider";
 import { elegirFotos } from "../../lib/imagen";
-import { listarTrabajos } from "../../services/trabajos";
+import { listarTrabajos, type TrabajoLista } from "../../services/trabajos";
 import {
   crearGasto,
   encolarGasto,
@@ -108,7 +109,7 @@ export function NuevoGastoScreen({ navigation }: NativeStackScreenProps<MasStack
   const [categorias, setCategorias] = useState<CategoriaGasto[] | null>(null);
   const [centros, setCentros] = useState<CentroCosto[]>([]);
   const [proveedores, setProveedores] = useState<Proveedor[]>([]);
-  const [trabajos, setTrabajos] = useState<Trabajo[]>([]);
+  const [trabajos, setTrabajos] = useState<TrabajoLista[]>([]);
   const [foto, setFoto] = useState<Foto | null>(null);
   const [guardando, setGuardando] = useState(false);
 
@@ -184,43 +185,12 @@ export function NuevoGastoScreen({ navigation }: NativeStackScreenProps<MasStack
         contentContainerStyle={{ padding: tokens.space["4"], gap: tokens.space["4"], paddingBottom: tokens.space["8"] + insets.bottom }}
         keyboardShouldPersistTaps="handled"
       >
-        {/* La foto de la boleta arriba, grande */}
-        {foto ? (
-          <View style={{ gap: tokens.space["2"] }}>
-            <Image source={{ uri: foto.uri }} style={{ width: "100%", height: 220, borderRadius: tokens.radius.md, backgroundColor: tokens.color.surface }} resizeMode="cover" />
-            <View style={{ flexDirection: "row", gap: tokens.space["2"] }}>
-              <View style={{ flex: 1 }}>
-                <Button variante="secundario" bloque onPress={adjuntarFoto}>
-                  Cambiar
-                </Button>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Button variante="peligro" bloque onPress={() => setFoto(null)}>
-                  Quitar
-                </Button>
-              </View>
-            </View>
-          </View>
-        ) : (
-          <Pressable
-            onPress={adjuntarFoto}
-            style={{
-              height: 160,
-              borderRadius: tokens.radius.md,
-              borderWidth: 1.5,
-              borderStyle: "dashed",
-              borderColor: tokens.color.divider,
-              alignItems: "center",
-              justifyContent: "center",
-              gap: tokens.space["2"],
-            }}
-          >
-            <Camera size={28} strokeWidth={2} color={`${tokens.color.text}99`} />
-            <Texto tamano={tokens.size.small} peso="semibold" color={`${tokens.color.text}99`}>
-              Foto de la boleta
-            </Texto>
-          </Pressable>
-        )}
+        <Input
+          etiqueta="Descripción (opcional)"
+          placeholder="Ej. Bencina camión 3"
+          valor={b.descripcion}
+          onCambio={(v) => set("descripcion", v)}
+        />
 
         <InputMonto valor={b.monto} onChangeText={(v) => set("monto", v)} />
 
@@ -260,17 +230,18 @@ export function NuevoGastoScreen({ navigation }: NativeStackScreenProps<MasStack
             placeholder="Sin vincular"
             opcionVacia="Sin vincular"
             valor={b.trabajo_id}
-            opciones={trabajos.map((tr) => ({ id: tr.id, label: tr.cliente, sublabel: tr.fecha }))}
+            opciones={trabajos.map((tr) => ({
+              id: tr.id,
+              // Antes solo mostraba el nombre del cliente — con varias OS
+              // del mismo cliente era imposible distinguir cuál era cuál
+              // (20-sep-2026). El folio ya lo devuelve /api/trabajos
+              // (orden.folio, ver TrabajoLista) — solo faltaba usarlo acá.
+              label: tr.orden?.folio != null ? `${formatearFolio("OS", tr.orden.folio)} · ${tr.cliente}` : tr.cliente,
+              sublabel: tr.fecha,
+            }))}
             onElegir={(id) => set("trabajo_id", id)}
           />
         ) : null}
-
-        <Input
-          etiqueta="Descripción (opcional)"
-          placeholder="Ej. Bencina camión 3"
-          valor={b.descripcion}
-          onCambio={(v) => set("descripcion", v)}
-        />
 
         <View style={{ gap: tokens.space["1"] * 1.5 }}>
           <Texto tamano={tokens.size.small} peso="medium" color={`${tokens.color.text}99`}>
@@ -302,6 +273,45 @@ export function NuevoGastoScreen({ navigation }: NativeStackScreenProps<MasStack
           </View>
         ) : null}
 
+        {/* Foto de la boleta — al final (20-sep-2026, pedido explícito:
+            la descripción va antes, la foto queda como lo último antes
+            de guardar). */}
+        {foto ? (
+          <View style={{ gap: tokens.space["2"] }}>
+            <Image source={{ uri: foto.uri }} style={{ width: "100%", height: 220, borderRadius: tokens.radius.md, backgroundColor: tokens.color.surface }} resizeMode="cover" />
+            <View style={{ flexDirection: "row", gap: tokens.space["2"] }}>
+              <View style={{ flex: 1 }}>
+                <Button variante="secundario" bloque onPress={adjuntarFoto}>
+                  Cambiar
+                </Button>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Button variante="peligro" bloque onPress={() => setFoto(null)}>
+                  Quitar
+                </Button>
+              </View>
+            </View>
+          </View>
+        ) : (
+          <Pressable
+            onPress={adjuntarFoto}
+            style={{
+              height: 160,
+              borderRadius: tokens.radius.md,
+              borderWidth: 1.5,
+              borderStyle: "dashed",
+              borderColor: tokens.color.divider,
+              alignItems: "center",
+              justifyContent: "center",
+              gap: tokens.space["2"],
+            }}
+          >
+            <Camera size={28} strokeWidth={2} color={`${tokens.color.text}99`} />
+            <Texto tamano={tokens.size.small} peso="semibold" color={`${tokens.color.text}99`}>
+              Foto de la boleta
+            </Texto>
+          </Pressable>
+        )}
       </ScrollView>
 
       <View
