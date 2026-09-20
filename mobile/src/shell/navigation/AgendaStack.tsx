@@ -6,6 +6,7 @@ import { AgendaScreen } from "../../features/agenda/AgendaScreen";
 import { TareaDetalleScreen } from "../../features/agenda/TareaDetalleScreen";
 import { NuevaCitaScreen } from "../../features/agenda/NuevaCitaScreen";
 import { AsistenteScreen } from "../../features/asistente/AsistenteScreen";
+import { LevantamientoDetalleScreen } from "../../features/levantamientos/LevantamientoDetalleScreen";
 
 const Stack = createNativeStackNavigator<AgendaStackParamList>();
 
@@ -30,6 +31,11 @@ export function AgendaStack() {
       <Stack.Screen name="TareaDetalle" component={TareaDetalleScreen} options={{ headerShown: false }} />
       <Stack.Screen name="NuevaCita" component={NuevaCitaScreen} options={{ title: "Nueva cita", presentation: "modal" }} />
       <Stack.Screen name="Asistente" component={AsistenteScreen} options={{ title: "Asistente" }} />
+      {/* Levantamientos agendados (fecha_visita, 20-sep-2026) aparecen en
+          el calendario junto a las citas — mismo patrón ya usado en
+          HoyStack/MasStack: plano, no un sub-stack propio, dibuja su
+          propio ScreenHeader. */}
+      <Stack.Screen name="LevantamientoDetalle" component={LevantamientoDetalleScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 }

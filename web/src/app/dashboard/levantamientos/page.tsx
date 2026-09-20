@@ -9,7 +9,7 @@ import { FUNCIONES_LEVANTAMIENTOS, formatearFolio } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Button, ErrorState, Input, LoadingState, StatusBadge, Table } from "@bitacora/ui/web";
+import { Button, DatePicker, ErrorState, Input, LoadingState, StatusBadge, Table } from "@bitacora/ui/web";
 import { Modal } from "@/components/Modal";
 import { ComboboxCliente } from "@/components/ComboboxCliente";
 import { ComboboxResponsable } from "@/components/ComboboxResponsable";
@@ -20,6 +20,20 @@ import { ComboboxResponsable } from "@/components/ComboboxResponsable";
 // `Detalle` queda como alias local: el resto del archivo ya usaba ese
 // nombre corto, no hacía falta tocar cada punto de uso.
 type Detalle = DetalleLevantamiento;
+
+// Mismo par de helpers que ya usa Agenda (web/src/app/dashboard/agenda/
+// page.tsx) para su propio DatePicker — hora LOCAL, no toISOString
+// (corre la fecha un día para atrás en husos negativos como Chile).
+function fmtLocal(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function fechaDesdeString(fecha: string): Date {
+  return new Date(`${fecha}T00:00:00`);
+}
 
 const TONO_ESTADO: Record<EstadoLevantamiento, "en_progreso" | "completado" | "cancelado"> = {
   creado: "en_progreso",
@@ -55,6 +69,7 @@ export default function LevantamientosPage() {
   const [clienteId, setClienteId] = useState("");
   const [tecnicoId, setTecnicoId] = useState("");
   const [descripcion, setDescripcion] = useState("");
+  const [fechaVisita, setFechaVisita] = useState("");
   const [guardando, setGuardando] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -68,6 +83,7 @@ export default function LevantamientosPage() {
   const [editClienteId, setEditClienteId] = useState("");
   const [editTecnicoId, setEditTecnicoId] = useState("");
   const [editDescripcion, setEditDescripcion] = useState("");
+  const [editFechaVisita, setEditFechaVisita] = useState("");
   const [guardandoEdicion, setGuardandoEdicion] = useState(false);
 
   const fileRef = useRef<HTMLInputElement>(null);
@@ -125,7 +141,12 @@ export default function LevantamientosPage() {
     setFormError(null);
     const res = await apiFetch("/api/levantamientos", {
       method: "POST",
-      body: JSON.stringify({ cliente_id: clienteId, tecnico_id: tecnicoId || undefined, descripcion_requerimiento: descripcion }),
+      body: JSON.stringify({
+        cliente_id: clienteId,
+        tecnico_id: tecnicoId || undefined,
+        descripcion_requerimiento: descripcion,
+        fecha_visita: fechaVisita || undefined,
+      }),
     });
     setGuardando(false);
     if (!res.ok) {
@@ -137,6 +158,7 @@ export default function LevantamientosPage() {
     setClienteId("");
     setTecnicoId("");
     setDescripcion("");
+    setFechaVisita("");
     await cargarLevantamientos();
   }
 
@@ -161,6 +183,7 @@ export default function LevantamientosPage() {
     setEditClienteId(detalle.cliente?.id ?? "");
     setEditTecnicoId(detalle.tecnico?.id ?? "");
     setEditDescripcion(detalle.descripcion_requerimiento ?? "");
+    setEditFechaVisita(detalle.fecha_visita ?? "");
     setEditando(true);
   }
 
@@ -169,7 +192,12 @@ export default function LevantamientosPage() {
     setGuardandoEdicion(true);
     const res = await apiFetch(`/api/levantamientos/${detalle.id}`, {
       method: "PATCH",
-      body: JSON.stringify({ cliente_id: editClienteId, tecnico_id: editTecnicoId || null, descripcion_requerimiento: editDescripcion }),
+      body: JSON.stringify({
+        cliente_id: editClienteId,
+        tecnico_id: editTecnicoId || null,
+        descripcion_requerimiento: editDescripcion,
+        fecha_visita: editFechaVisita || null,
+      }),
     });
     setGuardandoEdicion(false);
     if (!res.ok) {
@@ -298,7 +326,11 @@ export default function LevantamientosPage() {
           <Table
             columnas={[
               { encabezado: "Folio", celda: (l) => formatearFolio("LEV", l.folio) ?? "—" },
-              { encabezado: "Fecha", celda: (l) => new Date(l.creado_en).toLocaleDateString("es-CL") },
+              { encabezado: "Creado", celda: (l) => new Date(l.creado_en).toLocaleDateString("es-CL") },
+              {
+                encabezado: "Fecha de visita",
+                celda: (l) => (l.fecha_visita ? new Date(`${l.fecha_visita}T00:00:00`).toLocaleDateString("es-CL") : "—"),
+              },
               { encabezado: "Cliente", celda: (l) => l.cliente?.nombre ?? "—" },
               { encabezado: "Técnico", celda: (l) => l.tecnico?.nombre ?? "Sin asignar" },
               {
@@ -323,6 +355,12 @@ export default function LevantamientosPage() {
             equipo={tecnicos}
             opcionVacia="Asignar después"
             placeholder="Técnico o chofer asignado"
+          />
+          <DatePicker
+            etiqueta="Fecha de visita (opcional)"
+            ayuda="Cuándo debe ir el técnico a evaluar en terreno. Sin fecha, aparece como pendiente sin día fijo."
+            valor={fechaVisita ? fechaDesdeString(fechaVisita) : null}
+            onCambio={(f) => setFechaVisita(f ? fmtLocal(f) : "")}
           />
           <div className="flex flex-col gap-1">
             <label className="text-ds-small font-medium text-ds-text/80">Qué necesita evaluar el técnico</label>
@@ -365,6 +403,11 @@ export default function LevantamientosPage() {
               <div className="flex flex-col gap-ds-3 rounded-ds-md border border-ds-divider p-ds-3">
                 <ComboboxCliente value={editClienteId} onChange={setEditClienteId} clientes={clientes} onClienteCreado={(c) => setClientes((prev) => [...prev, c])} />
                 <ComboboxResponsable value={editTecnicoId} onChange={setEditTecnicoId} equipo={tecnicos} opcionVacia="Sin asignar" placeholder="Técnico o chofer asignado" />
+                <DatePicker
+                  etiqueta="Fecha de visita (opcional)"
+                  valor={editFechaVisita ? fechaDesdeString(editFechaVisita) : null}
+                  onCambio={(f) => setEditFechaVisita(f ? fmtLocal(f) : "")}
+                />
                 <textarea
                   className="min-h-24 rounded-ds-md border border-ds-divider bg-ds-surface p-ds-3 text-ds-body text-ds-text outline-none focus-visible:ring-2 focus-visible:ring-ds-accent"
                   value={editDescripcion}
@@ -382,7 +425,7 @@ export default function LevantamientosPage() {
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-2 gap-ds-3 text-ds-small">
+                <div className="grid grid-cols-3 gap-ds-3 text-ds-small">
                   <div>
                     <span className="text-ds-text/60">Cliente</span>
                     <p className="text-ds-text">{detalle.cliente?.nombre ?? "—"}</p>
@@ -390,6 +433,12 @@ export default function LevantamientosPage() {
                   <div>
                     <span className="text-ds-text/60">Técnico asignado</span>
                     <p className="text-ds-text">{detalle.tecnico?.nombre ?? "Sin asignar"}</p>
+                  </div>
+                  <div>
+                    <span className="text-ds-text/60">Fecha de visita</span>
+                    <p className="text-ds-text">
+                      {detalle.fecha_visita ? fechaDesdeString(detalle.fecha_visita).toLocaleDateString("es-CL") : "Sin fecha"}
+                    </p>
                   </div>
                 </div>
 

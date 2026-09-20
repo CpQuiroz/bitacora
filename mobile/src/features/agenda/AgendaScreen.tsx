@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight, Plus, CalendarX2 } from "lucide-react-native
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { EstadoTarea } from "@bitacora/shared";
-import { formatearFolio } from "@bitacora/shared";
+import { FUNCIONES_LEVANTAMIENTOS, formatearFolio } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
 import {
   AsistenteButton,
@@ -20,6 +20,7 @@ import {
 import { OfflineBanner } from "../../components/OfflineBanner";
 import { useAuth } from "../auth/AuthContext";
 import { listarTareasRango, type TareaConDatos } from "../../services/agenda";
+import { listarMisLevantamientos, type LevantamientoResumen } from "../../services/levantamientos";
 import type { AgendaStackParamList } from "../../shell/navigation/types";
 
 const DIAS = ["D", "L", "M", "M", "J", "V", "S"];
@@ -71,6 +72,13 @@ export function AgendaScreen({ navigation }: NativeStackScreenProps<AgendaStackP
   const auth = useAuth();
   const esGestion = auth.fase === "listo" && auth.usuario.rol !== "colaborador";
   const veAsistente = auth.fase === "listo" && auth.modulosVisibles.includes("asistente");
+  // Levantamientos con fecha_visita (migración 111, 20-sep-2026) — mismo
+  // criterio de visibilidad que ya usa Pizarra (mobile/src/features/hoy/
+  // HoyScreen.tsx): por función, no por rol. Si la empresa no tiene el
+  // módulo activo, el backend igual responde vacío/error — se tolera
+  // (Promise.allSettled más abajo), no rompe la agenda de citas.
+  const funcion = auth.fase === "listo" ? auth.usuario.funcion : null;
+  const incluirLevantamientos = funcion != null && FUNCIONES_LEVANTAMIENTOS.includes(funcion);
 
   const hoy = new Date();
   const hoyKey = clave(hoy);
@@ -78,6 +86,7 @@ export function AgendaScreen({ navigation }: NativeStackScreenProps<AgendaStackP
   const [modo, setModo] = useState<Modo>(ultimoModo);
   const [ancla, setAncla] = useState(hoyKey);
   const [tareas, setTareas] = useState<TareaConDatos[] | null>(null);
+  const [levantamientos, setLevantamientos] = useState<LevantamientoResumen[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [refrescando, setRefrescando] = useState(false);
   const [guardadoEn, setGuardadoEn] = useState<number | undefined>();
@@ -104,13 +113,22 @@ export function AgendaScreen({ navigation }: NativeStackScreenProps<AgendaStackP
   const cargar = useCallback(async () => {
     setError(null);
     try {
-      const r = await listarTareasRango(desde, hasta);
+      const [r] = await Promise.all([
+        listarTareasRango(desde, hasta),
+        // Tolerante a error a propósito (igual que hoy.ts): si falla o el
+        // módulo está apagado, la agenda de citas sigue funcionando.
+        incluirLevantamientos
+          ? listarMisLevantamientos()
+              .then(setLevantamientos)
+              .catch(() => setLevantamientos([]))
+          : Promise.resolve(setLevantamientos([])),
+      ]);
       setTareas(r.tareas);
       setGuardadoEn(r.desdeCache ? r.guardadoEn : undefined);
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo cargar la agenda");
     }
-  }, [desde, hasta]);
+  }, [desde, hasta, incluirLevantamientos]);
 
   useEffect(() => {
     setTareas(null);
@@ -134,6 +152,21 @@ export function AgendaScreen({ navigation }: NativeStackScreenProps<AgendaStackP
     return m;
   }, [tareas]);
 
+  // Solo los agendados (con fecha_visita) y todavía pendientes de algo
+  // del técnico — mismo filtro de estado que Pizarra (hoy.ts). Sin
+  // fecha_visita no aparecen acá (ver Pizarra, sin día fijo) — sería
+  // engañoso ponerlos en un día cualquiera del calendario.
+  const porDiaLevantamientos = useMemo(() => {
+    const m = new Map<string, LevantamientoResumen[]>();
+    for (const lev of levantamientos) {
+      if (!lev.fecha_visita) continue;
+      if (!["creado", "asignado", "en_terreno"].includes(lev.estado)) continue;
+      if (!m.has(lev.fecha_visita)) m.set(lev.fecha_visita, []);
+      m.get(lev.fecha_visita)!.push(lev);
+    }
+    return m;
+  }, [levantamientos]);
+
   function mover(delta: number) {
     if (modo === "dia") setAncla(clave(sumarDias(anclaDate, delta)));
     else if (modo === "semana") setAncla(clave(sumarDias(anclaDate, delta * 7)));
@@ -155,6 +188,7 @@ export function AgendaScreen({ navigation }: NativeStackScreenProps<AgendaStackP
   }, [modo, ancla, anclaDate, hoyKey]);
 
   const abrirCita = (item: TareaConDatos) => navigation.navigate("TareaDetalle", { tareaId: item.id, titulo: item.titulo });
+  const abrirLevantamiento = (item: LevantamientoResumen) => navigation.navigate("LevantamientoDetalle", { id: item.id });
   const nuevaCita = (fecha?: string) => navigation.navigate("NuevaCita", { fecha: fecha && fecha >= hoyKey ? fecha : undefined });
   const verDia = (k: string) => {
     setAncla(k);
@@ -226,8 +260,10 @@ export function AgendaScreen({ navigation }: NativeStackScreenProps<AgendaStackP
           hoyKey={hoyKey}
           anclaKey={ancla}
           porDia={porDia}
+          porDiaLevantamientos={porDiaLevantamientos}
           onDia={(k) => setAncla(k)}
           onCita={abrirCita}
+          onLevantamiento={abrirLevantamiento}
           esGestion={esGestion}
           refrescando={refrescando}
           onRefresh={onRefresh}
@@ -238,15 +274,27 @@ export function AgendaScreen({ navigation }: NativeStackScreenProps<AgendaStackP
           dias={diasDelRango}
           hoyKey={hoyKey}
           porDia={porDia}
+          porDiaLevantamientos={porDiaLevantamientos}
           onDia={verDia}
           onCita={abrirCita}
+          onLevantamiento={abrirLevantamiento}
           esGestion={esGestion}
           refrescando={refrescando}
           onRefresh={onRefresh}
           marca={marca}
         />
       ) : (
-        <VistaDia anclaDate={anclaDate} anclaKey={ancla} hoyKey={hoyKey} citas={porDia.get(ancla) ?? []} onDia={(k) => setAncla(k)} onCita={abrirCita} marca={marca} />
+        <VistaDia
+          anclaDate={anclaDate}
+          anclaKey={ancla}
+          hoyKey={hoyKey}
+          citas={porDia.get(ancla) ?? []}
+          levantamientos={porDiaLevantamientos.get(ancla) ?? []}
+          onDia={(k) => setAncla(k)}
+          onCita={abrirCita}
+          onLevantamiento={abrirLevantamiento}
+          marca={marca}
+        />
       )}
 
       <AsistenteButton visible={veAsistente} onPress={() => navigation.navigate("Asistente")} />
@@ -280,13 +328,49 @@ export function AgendaScreen({ navigation }: NativeStackScreenProps<AgendaStackP
 
 // ---------------------------------------------------------------------------
 
-function BarrasDia({ citas, marca }: { citas: TareaConDatos[]; marca: Marca }) {
+// Levantamientos usan siempre el mismo color (accent2, "LEV" en el
+// resto de la app) — acá la barra distingue TIPO, no estado; el estado
+// de la cita ya lo hace colorEstado.
+function BarrasDia({ citas, levantamientos = 0, marca }: { citas: TareaConDatos[]; levantamientos?: number; marca: Marca }) {
   return (
     <View style={{ flexDirection: "row", gap: 2, marginTop: 3, height: 4 }}>
       {citas.slice(0, 3).map((c) => (
         <View key={c.id} style={{ width: 10, height: 4, borderRadius: 1, backgroundColor: colorEstado(c.estado, marca) }} />
       ))}
+      {levantamientos > 0 && citas.length < 3 ? (
+        <View style={{ width: 10, height: 4, borderRadius: 1, backgroundColor: tokens.color.accent2Ramp["700"] }} />
+      ) : null}
     </View>
+  );
+}
+
+function FilaLevantamiento({ item, onPress }: { item: LevantamientoResumen; onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        gap: tokens.space["3"],
+        paddingVertical: tokens.space["2"] * 1.25,
+        borderBottomWidth: 1,
+        borderBottomColor: tokens.color.divider,
+      }}
+    >
+      <Texto tamano={tokens.size.small} peso="semibold" color={`${tokens.color.text}66`} style={{ width: 46 }}>
+        --:--
+      </Texto>
+      <View style={{ flex: 1 }}>
+        <Texto tamano={tokens.size.h5} peso="semibold" color={tokens.color.text} numberOfLines={1}>
+          {item.cliente?.nombre ?? "Levantamiento"}
+        </Texto>
+        <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`} numberOfLines={1}>
+          {formatearFolio("LEV", item.folio) ? `${formatearFolio("LEV", item.folio)} · ` : ""}
+          {item.descripcion_requerimiento ?? "Evaluar en terreno"}
+        </Texto>
+      </View>
+      <View style={{ width: 4, alignSelf: "stretch", borderRadius: 2, backgroundColor: tokens.color.accent2Ramp["700"] }} />
+    </Pressable>
   );
 }
 
@@ -295,8 +379,10 @@ function VistaMes({
   hoyKey,
   anclaKey,
   porDia,
+  porDiaLevantamientos,
   onDia,
   onCita,
+  onLevantamiento,
   esGestion,
   refrescando,
   onRefresh,
@@ -306,8 +392,10 @@ function VistaMes({
   hoyKey: string;
   anclaKey: string;
   porDia: Map<string, TareaConDatos[]>;
+  porDiaLevantamientos: Map<string, LevantamientoResumen[]>;
   onDia: (k: string) => void;
   onCita: (c: TareaConDatos) => void;
+  onLevantamiento: (l: LevantamientoResumen) => void;
   esGestion: boolean;
   refrescando: boolean;
   onRefresh: () => void;
@@ -323,6 +411,7 @@ function VistaMes({
   const celdas = useMemo(() => Array.from({ length: semanas * 7 }, (_, i) => sumarDias(inicioGrilla, i)), [inicioGrilla, semanas]);
 
   const delDia = porDia.get(anclaKey) ?? [];
+  const levDelDia = porDiaLevantamientos.get(anclaKey) ?? [];
   const d = new Date(anclaKey + "T00:00:00");
 
   return (
@@ -381,7 +470,7 @@ function VistaMes({
                     {cd.getDate()}
                   </Texto>
                 </View>
-                <BarrasDia citas={porDia.get(k) ?? []} marca={marca} />
+                <BarrasDia citas={porDia.get(k) ?? []} levantamientos={porDiaLevantamientos.get(k)?.length ?? 0} marca={marca} />
               </Pressable>
             );
           })}
@@ -393,12 +482,19 @@ function VistaMes({
         <Texto tamano={tokens.size.h5} peso="semibold" color={tokens.color.text} style={{ textTransform: "capitalize" }}>
           {anclaKey === hoyKey ? "Hoy" : `${DIAS_LARGO[d.getDay()]} ${d.getDate()} de ${MESES[d.getMonth()]}`}
         </Texto>
-        {delDia.length === 0 ? (
+        {delDia.length === 0 && levDelDia.length === 0 ? (
           <Texto tamano={tokens.size.small} color={tokens.color.text + "99"}>
             Sin citas este día.
           </Texto>
         ) : (
-          delDia.map((c) => <FilaCita key={c.id} item={c} esGestion={esGestion} onPress={() => onCita(c)} marca={marca} />)
+          <>
+            {levDelDia.map((l) => (
+              <FilaLevantamiento key={l.id} item={l} onPress={() => onLevantamiento(l)} />
+            ))}
+            {delDia.map((c) => (
+              <FilaCita key={c.id} item={c} esGestion={esGestion} onPress={() => onCita(c)} marca={marca} />
+            ))}
+          </>
         )}
       </View>
     </ScrollView>
@@ -411,22 +507,26 @@ function VistaSemana({
   porDia,
   onDia,
   onCita,
+  onLevantamiento,
   esGestion,
   refrescando,
   onRefresh,
   marca,
+  porDiaLevantamientos,
 }: {
   dias: Date[];
   hoyKey: string;
   porDia: Map<string, TareaConDatos[]>;
+  porDiaLevantamientos: Map<string, LevantamientoResumen[]>;
   onDia: (k: string) => void;
   onCita: (c: TareaConDatos) => void;
+  onLevantamiento: (l: LevantamientoResumen) => void;
   esGestion: boolean;
   refrescando: boolean;
   onRefresh: () => void;
   marca: Marca;
 }) {
-  const conCitas = dias.map(clave).filter((k) => (porDia.get(k)?.length ?? 0) > 0);
+  const conCitas = dias.map(clave).filter((k) => (porDia.get(k)?.length ?? 0) > 0 || (porDiaLevantamientos.get(k)?.length ?? 0) > 0);
   return (
     <>
       <View
@@ -461,7 +561,7 @@ function VistaSemana({
               <Texto tamano={tokens.size.h5} color={tokens.color.text} style={{ fontVariant: ["tabular-nums"] }}>
                 {d.getDate()}
               </Texto>
-              <BarrasDia citas={porDia.get(k) ?? []} marca={marca} />
+              <BarrasDia citas={porDia.get(k) ?? []} levantamientos={porDiaLevantamientos.get(k)?.length ?? 0} marca={marca} />
             </Pressable>
           );
         })}
@@ -481,7 +581,10 @@ function VistaSemana({
                 <Texto tamano={tokens.size.h5} peso="semibold" color={tokens.color.text} style={{ textTransform: "capitalize" }}>
                   {k === hoyKey ? "Hoy" : `${DIAS_LARGO[d.getDay()].slice(0, 3)} ${d.getDate()}`}
                 </Texto>
-                {porDia.get(k)!.map((c) => (
+                {(porDiaLevantamientos.get(k) ?? []).map((l) => (
+                  <FilaLevantamiento key={l.id} item={l} onPress={() => onLevantamiento(l)} />
+                ))}
+                {(porDia.get(k) ?? []).map((c) => (
                   <FilaCita key={c.id} item={c} esGestion={esGestion} onPress={() => onCita(c)} marca={marca} />
                 ))}
               </View>
@@ -498,16 +601,20 @@ function VistaDia({
   anclaKey,
   hoyKey,
   citas,
+  levantamientos,
   onDia,
   onCita,
+  onLevantamiento,
   marca,
 }: {
   anclaDate: Date;
   anclaKey: string;
   hoyKey: string;
   citas: TareaConDatos[];
+  levantamientos: LevantamientoResumen[];
   onDia: (k: string) => void;
   onCita: (c: TareaConDatos) => void;
+  onLevantamiento: (l: LevantamientoResumen) => void;
   marca: Marca;
 }) {
   const scrollRef = useRef<ScrollView>(null);
@@ -562,6 +669,18 @@ function VistaDia({
           );
         })}
       </View>
+
+      {/* Levantamientos agendados este día: sin hora (fecha_visita es
+          solo fecha), así que no entran en la grilla horaria de abajo —
+          van fijos arriba, mismo criterio que un evento "todo el día"
+          en un calendario. */}
+      {levantamientos.length > 0 ? (
+        <View style={{ paddingHorizontal: tokens.space["4"], paddingTop: tokens.space["2"], paddingBottom: tokens.space["1"], borderBottomWidth: 1, borderBottomColor: tokens.color.divider }}>
+          {levantamientos.map((l) => (
+            <FilaLevantamiento key={l.id} item={l} onPress={() => onLevantamiento(l)} />
+          ))}
+        </View>
+      ) : null}
 
       <ScrollView ref={scrollRef} style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: ESPACIO_ASISTENTE_FLOTANTE }}>
         <View style={{ position: "relative", marginTop: tokens.space["2"] }}>

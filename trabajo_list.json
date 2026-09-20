@@ -855,6 +855,22 @@
       ],
       "status": "done",
       "resolution": "Reordenado en web/src/components/DashboardShell.tsx, grupo 'Operación' — Levantamientos pasa a ir antes de Órdenes de servicio, con comentario explicando la excepción al criterio general de frecuencia de uso (PASO 4). Ningún otro lugar de la web lista ambos juntos (el dashboard homepage no tiene acceso directo a Levantamientos). tsc web limpio, verificar.sh completo en verde."
+    },
+    {
+      "id": 55,
+      "name": "levantamiento_fecha_visita_pizarra_agenda",
+      "title": "Levantamiento: fecha de visita + aparece en Pizarra y Agenda (mobile) si está asignado",
+      "description": "Pedido: el Admin necesita decirle al técnico CUÁNDO ir a evaluar en terreno, no solo quién va. Con fecha_visita asignada, el levantamiento debe aparecer en el día correspondiente en Pizarra y en la pestaña Agenda de mobile (antes solo mostraba citas).",
+      "acceptance": [
+        "Migración 111: levantamientos.fecha_visita (date, nullable) — validada read-only contra prod, aplicada por la usuaria",
+        "Backend: POST y PATCH /api/levantamientos aceptan fecha_visita opcional",
+        "Web: DatePicker 'Fecha de visita' en crear y editar levantamiento; columna nueva en la tabla; nueva fila en el detalle",
+        "Mobile Pizarra (hoy.ts): un levantamiento con fecha_visita futura NO aparece hoy; con fecha_visita <= hoy (hoy o atrasado) SÍ aparece; sin fecha_visita sigue el comportamiento de siempre (siempre pendiente, sin día fijo)",
+        "Mobile Agenda (AgendaScreen.tsx, tab congelada — tocada por pedido explícito): levantamientos con fecha_visita y estado pendiente (creado/asignado/en_terreno) aparecen junto a las citas en Mes/Semana/Día, con color distinto (accent2) — sin fecha_visita NO aparecen acá (le corresponde solo a Pizarra). Tocar uno navega al detalle del levantamiento (LevantamientoDetalleScreen, agregado a AgendaStack con el mismo patrón ya usado en HoyStack/MasStack — plano, no un sub-stack propio)",
+        "tsc de los 6 workspaces limpio, verificar.sh completo en verde, 0 literales de color nuevos"
+      ],
+      "status": "in_progress",
+      "resolution": null
     }
   ]
 }

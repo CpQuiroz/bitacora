@@ -4233,3 +4233,62 @@ verificación de bundle OK (prod). `.env` restaurado a dev. Copiado a
 `builds/bitacora-1.10.7.apk` (se borró el 1.10.6 anterior). Incluye
 header de Levantamiento + crear al vuelo en Gasto + "hoy" en selectores
 de día (tarea 53), sobre todo lo de 1.10.6.
+
+## 2026-09-20 (13): Levantamiento — fecha_visita + Pizarra/Agenda mobile (tarea 55, EN CURSO — falta aplicar migración 111)
+
+Pedido: el Admin necesita decirle al técnico CUÁNDO ir a evaluar en
+terreno (hoy no existía ningún campo de fecha en levantamientos, a
+diferencia de trabajos/tareas/viajes). Además: que aparezca en Pizarra
+y en la pestaña Agenda de mobile si tiene técnico asignado.
+
+Antes de tocar código, plan + 1 pregunta de diseño confirmada con la
+usuaria (qué pasa al tocar un levantamiento en la Agenda de mobile →
+abre el detalle, mismo criterio que Pizarra).
+
+**Migración 111**: `levantamientos.fecha_visita date` (nullable, sin
+backfill) — validada read-only contra prod (BEGIN/UPDATE real con
+fecha/ROLLBACK). Pendiente que la usuaria la aplique.
+
+**Backend**: POST y PATCH /api/levantamientos aceptan `fecha_visita`
+opcional (mismo criterio de validación que `trabajos.fecha` — sin
+regex, se confía en que Postgres rechace un formato inválido).
+
+**Web** (levantamientos/page.tsx): DatePicker "Fecha de visita
+(opcional)" en crear y editar (mismos helpers `fmtLocal`/
+`fechaDesdeString` que ya usa Agenda web para su propio DatePicker).
+Columna nueva en la tabla (la columna "Fecha" existente, que en
+realidad era `creado_en`, se renombró a "Creado" para no confundirla).
+Nueva fila en el detalle de solo lectura.
+
+**Mobile — Pizarra** (`hoy.ts`): antes un levantamiento pendiente
+SIEMPRE aparecía, sin día fijo — ahora, con fecha_visita futura NO
+aparece hoy (le toca su día), con fecha_visita <= hoy (hoy o atrasado)
+SÍ aparece, sin fecha_visita sigue igual que siempre (compatibilidad
+con lo ya creado).
+
+**Mobile — Agenda** (`AgendaScreen.tsx`, pantalla marcada como
+congelada en las reglas del proyecto — tocada por pedido EXPLÍCITO,
+que es justamente la excepción que la regla misma prevé): esta
+pestaña solo mostraba citas hasta ahora — primera vez que se integra
+otro tipo de dato. Se agregó `porDiaLevantamientos` (paralelo a
+`porDia`, sin fusionar en un tipo unión — menos invasivo en una
+pantalla compleja con 3 vistas), `FilaLevantamiento` (mismo layout que
+`FilaCita`, sin hora — "--:--"), barra de color distinto en la grilla
+de mes/semana (accent2, no compite con `colorEstado` de las citas). En
+Día, que tiene grilla horaria fija, los levantamientos (sin hora) van
+en una sección fija arriba, mismo criterio que un evento "todo el día"
+en cualquier calendario. Solo los que YA tienen fecha_visita aparecen
+acá — sin fecha, le corresponden a Pizarra, no a un día cualquiera del
+calendario (sería engañoso).
+
+Navegación: `LevantamientoDetalleScreen` se agregó a `AgendaStack.tsx`
+con el mismo patrón exacto ya usado en `HoyStack.tsx`/`MasStack.tsx`
+(encontrado como precedente ya existente, no inventado) — plano, no
+un sub-stack propio, `headerShown: false` (dibuja su propio
+ScreenHeader).
+
+`tsc` de los 6 workspaces limpio, `verificar.sh` completo en verde
+(incluyendo 0 literales de color nuevos). Commit hecho LOCAL, sin
+pushear — pendiente que la usuaria aplique la migración 111 antes de
+subir (mismo flujo de siempre: valido read-only → ella aplica →
+confirmo leyendo prod → recién ahí push).

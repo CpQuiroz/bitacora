@@ -1125,6 +1125,12 @@ export type Levantamiento = {
   // Folio correlativo por empresa (migración 108). Null en levantamientos
   // creados antes de esta migración, no se backfillea histórico.
   folio: number | null;
+  // Cuándo debe ir el técnico a evaluar en terreno (migración 111,
+  // 20-sep-2026) — fecha simple, sin hora (para horario ya está Agenda).
+  // Null = sin fecha asignada, mismo comportamiento de siempre (aparece
+  // como pendiente sin día fijo en la Pizarra, ver mobile/src/services/
+  // hoy.ts).
+  fecha_visita: string | null;
 };
 
 export type LevantamientoMaterial = {

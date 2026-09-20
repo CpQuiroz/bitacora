@@ -181,7 +181,7 @@ levantamientosRouter.post(
       res.status(403).json({ error: "Solo un Admin puede crear un levantamiento" });
       return;
     }
-    const { cliente_id, tecnico_id, descripcion_requerimiento } = req.body ?? {};
+    const { cliente_id, tecnico_id, descripcion_requerimiento, fecha_visita } = req.body ?? {};
     if (typeof cliente_id !== "string" || !cliente_id) {
       res.status(400).json({ error: "Falta cliente_id" });
       return;
@@ -214,6 +214,10 @@ levantamientosRouter.post(
         creado_por: req.userId!,
         estado: tecnicoValido ? "asignado" : "creado",
         descripcion_requerimiento: typeof descripcion_requerimiento === "string" ? descripcion_requerimiento.trim() || null : null,
+        // Fecha simple, sin hora (migración 111) — para eso ya está
+        // Agenda. Postgres rechaza un formato inválido (mismo criterio
+        // que trabajos.fecha, sin regex acá).
+        fecha_visita: typeof fecha_visita === "string" && fecha_visita ? fecha_visita : null,
         folio,
       })
       .select()
@@ -260,7 +264,7 @@ levantamientosRouter.patch(
       return;
     }
 
-    const { cliente_id, tecnico_id, descripcion_requerimiento } = req.body ?? {};
+    const { cliente_id, tecnico_id, descripcion_requerimiento, fecha_visita } = req.body ?? {};
     const cambios: Partial<Levantamiento> = { actualizado_en: new Date().toISOString() };
 
     if (cliente_id !== undefined) {
@@ -296,6 +300,10 @@ levantamientosRouter.patch(
 
     if (descripcion_requerimiento !== undefined) {
       cambios.descripcion_requerimiento = typeof descripcion_requerimiento === "string" ? descripcion_requerimiento.trim() || null : null;
+    }
+
+    if (fecha_visita !== undefined) {
+      cambios.fecha_visita = typeof fecha_visita === "string" && fecha_visita ? fecha_visita : null;
     }
 
     const { error } = await supabase.from("levantamientos").update(cambios).eq("id", lev.id);

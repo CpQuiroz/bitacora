@@ -34,6 +34,10 @@ export type AgendaStackParamList = {
   TareaDetalle: { tareaId: string; titulo?: string };
   NuevaCita: { tareaId?: string; fecha?: string } | undefined;
   Asistente: undefined;
+  // Levantamientos con fecha_visita asignada (migración 111,
+  // 20-sep-2026) — mismo criterio que HoyStackParamList/MasStackParamList:
+  // no es un sub-stack propio, es solo el detalle, plano.
+  LevantamientoDetalle: { id: string };
 };
 
 export type ClientesStackParamList = {

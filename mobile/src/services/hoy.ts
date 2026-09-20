@@ -6,16 +6,18 @@ import { listarMisLevantamientos } from "./levantamientos";
 import { estadoOsDeTrabajo, formatearFolio } from "@bitacora/shared";
 
 // "Hoy"/"Pizarra": una sola lista cronológica con todo lo del día —
-// trabajos, citas, viajes y (18-sep-2026) levantamientos pendientes,
-// juntos, ordenados por hora. El rol define el alcance (propios vs.
-// todo el equipo), no qué se ve.
+// trabajos, citas, viajes y levantamientos pendientes, juntos,
+// ordenados por hora. El rol define el alcance (propios vs. todo el
+// equipo), no qué se ve.
 //
-// Levantamientos es distinto a los otros 3: no tiene una fecha
-// programada (no existe ese campo en la tabla — es un encargo que se
-// atiende cuando se puede, no una cita agendada). Por eso no se filtra
-// por "hoy" como el resto — se listan TODOS los pendientes del técnico
-// (estado creado/asignado/en_terreno, los 3 que todavía esperan algo de
-// él) y quedan al final, sin hora, igual que los viajes.
+// Levantamientos (20-sep-2026, migración 111 — fecha_visita): antes no
+// tenía ninguna fecha propia, así que TODOS los pendientes aparecían
+// siempre, cualquier día. Ahora, si tiene fecha_visita asignada, se
+// muestra el día que corresponde (y se queda visible si queda
+// atrasado — mismo criterio que una tarea vencida, no desaparece
+// sola). Sin fecha_visita (no asignada, o levantamientos creados antes
+// de esta migración), sigue el comportamiento de siempre: aparece
+// pendiente sin día fijo, sin hora, al final.
 
 export type TipoItemHoy = "trabajo" | "cita" | "viaje" | "levantamiento";
 
@@ -134,6 +136,10 @@ export async function cargarHoy(equipo: boolean, incluirViajes: boolean, incluir
     // al tablero de terreno.
     for (const lev of rLevantamientos.value) {
       if (!["creado", "asignado", "en_terreno"].includes(lev.estado)) continue;
+      // Con fecha (hoy o atrasada): se muestra. Con fecha futura: no
+      // acá — le toca a su propio día. Sin fecha: comportamiento de
+      // siempre, siempre visible.
+      if (lev.fecha_visita && lev.fecha_visita > dia) continue;
       items.push({
         tipo: "levantamiento",
         id: lev.id,
