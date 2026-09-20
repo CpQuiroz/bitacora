@@ -763,7 +763,22 @@
         "Confirmar en el dashboard de Vercel que el deploy de este commit termina en Ready, no en Error"
       ],
       "status": "done",
-      "resolution": "web/package.json + package-lock.json actualizados y pusheados. Pendiente de confirmar visualmente en Vercel que el build de ESTE commit especifico pasa (se hizo el fix, se valido localmente con el build real, pero el siguiente paso de la conversacion es confirmar el deploy real)."
+      "resolution": "web/package.json + package-lock.json actualizados y pusheados. Confirmado en el dashboard de Vercel: el deploy de ese commit quedo Ready en Production -- todo lo de ayer/hoy ya esta en vivo (verificado navegando la web real: Personas ya muestra el checkbox nuevo, Configuracion > Empresa ya ofrece el tema Confianza)."
+    },
+    {
+      "id": 49,
+      "name": "fix_flash_levantamientos",
+      "title": "Fix: flash de pantalla vacia al entrar a /dashboard/levantamientos",
+      "description": "Reporte detallado de la usuaria con causa raiz ya diagnosticada: levantamientos/page.tsx hacia `return <LoadingState/>` (o ErrorState) ANTES de montar DashboardShell mientras cargaban usuario/levantamientos -- sin sidebar/topbar alrededor, se veia como un flash de pantalla oscura. Patron correcto ya usado en personas/page.tsx y ordenes/page.tsx: montar el shell apenas hay `usuario`, loading/error DENTRO del shell.",
+      "acceptance": [
+        "Early-return cambiado a `if (!usuario) return null;` (ya no espera a levantamientos)",
+        "Header + boton 'Nuevo levantamiento' se renderizan siempre dentro de DashboardShell, sin depender de que levantamientos ya cargo",
+        "{error ? <ErrorState/> : null} y {levantamientos === null && !error ? <LoadingState/> : null} dentro del shell",
+        "<Table> solo cuando levantamientos !== null",
+        "tsc web limpio, verificar.sh completo en verde"
+      ],
+      "status": "done",
+      "resolution": "Aplicado exactamente segun las instrucciones de la usuaria (incluia el diff exacto a aplicar). Sin migracion -- cambio puramente de orden de render en el frontend."
     }
   ]
 }

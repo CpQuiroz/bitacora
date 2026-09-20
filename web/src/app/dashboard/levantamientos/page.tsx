@@ -274,9 +274,7 @@ export default function LevantamientosPage() {
   const puedeEditar = detalle != null && detalle.estado !== "aprobado" && detalle.estado !== "rechazado";
   const puedeEliminar = detalle != null && detalle.estado !== "aprobado";
 
-  if (!usuario || levantamientos === null) {
-    return error ? <ErrorState mensaje={error} /> : <LoadingState />;
-  }
+  if (!usuario) return null;
 
   return (
     <DashboardShell usuario={usuario}>
@@ -293,22 +291,27 @@ export default function LevantamientosPage() {
           </Button>
         </div>
 
-        <Table
-          columnas={[
-            { encabezado: "Folio", celda: (l) => formatearFolio("LEV", l.folio) ?? "—" },
-            { encabezado: "Fecha", celda: (l) => new Date(l.creado_en).toLocaleDateString("es-CL") },
-            { encabezado: "Cliente", celda: (l) => l.cliente?.nombre ?? "—" },
-            { encabezado: "Técnico", celda: (l) => l.tecnico?.nombre ?? "Sin asignar" },
-            {
-              encabezado: "Estado",
-              celda: (l) => <StatusBadge estado={l.estado} etiqueta={ETIQUETA_ESTADO[l.estado]} tonoForzado={TONO_ESTADO[l.estado]} />,
-            },
-          ]}
-          filas={levantamientos}
-          claveFila={(l) => l.id}
-          onFilaClick={(l) => abrirDetalle(l.id)}
-          vacio={{ titulo: "Sin levantamientos todavía", mensaje: "Creá el primero para empezar.", icono: <Search size={32} /> }}
-        />
+        {error ? <ErrorState mensaje={error} /> : null}
+        {levantamientos === null && !error ? <LoadingState /> : null}
+
+        {levantamientos !== null ? (
+          <Table
+            columnas={[
+              { encabezado: "Folio", celda: (l) => formatearFolio("LEV", l.folio) ?? "—" },
+              { encabezado: "Fecha", celda: (l) => new Date(l.creado_en).toLocaleDateString("es-CL") },
+              { encabezado: "Cliente", celda: (l) => l.cliente?.nombre ?? "—" },
+              { encabezado: "Técnico", celda: (l) => l.tecnico?.nombre ?? "Sin asignar" },
+              {
+                encabezado: "Estado",
+                celda: (l) => <StatusBadge estado={l.estado} etiqueta={ETIQUETA_ESTADO[l.estado]} tonoForzado={TONO_ESTADO[l.estado]} />,
+              },
+            ]}
+            filas={levantamientos}
+            claveFila={(l) => l.id}
+            onFilaClick={(l) => abrirDetalle(l.id)}
+            vacio={{ titulo: "Sin levantamientos todavía", mensaje: "Creá el primero para empezar.", icono: <Search size={32} /> }}
+          />
+        ) : null}
       </div>
 
       <Modal open={formAbierto} onClose={() => setFormAbierto(false)} title="Nuevo levantamiento">

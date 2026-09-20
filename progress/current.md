@@ -3951,3 +3951,32 @@ prerenderizadas sin error. `verificar.sh` completo en verde.
 
 Sin migración — se pushea de inmediato, es la prioridad #1 (todo lo de
 ayer/hoy está bloqueado hasta que este commit llegue a Vercel).
+
+**Actualización**: confirmado en el dashboard de Vercel — el deploy de
+`d8fd02e` quedó "Ready" en Production. Verificado navegando la web
+real: Personas ya muestra el checkbox nuevo, Configuración > Empresa
+ya ofrece "Confianza" en el selector de tema (probado en vivo,
+revertido a Faena después de la captura). Se le mandaron a la usuaria
+2 screenshots reales (Personas, Dashboard en Confianza) + un mockup de
+mobile con el ícono nuevo embebido. Tarea 48 cerrada.
+
+## 2026-09-20 (4): fix — flash de pantalla vacía en Levantamientos (tarea 49)
+
+Reporte de la usuaria, con causa raíz y solución ya diagnosticadas por
+ella misma (diff exacto incluido en el pedido): `levantamientos/page.tsx`
+hacía `return <LoadingState/>` (o `ErrorState`) ANTES de montar
+`<DashboardShell>` mientras cargaban `usuario`/`levantamientos` — sin
+sidebar/topbar alrededor, se veía como un flash de pantalla oscura al
+entrar. Mismo patrón que ya usan `personas/page.tsx` y
+`ordenes/page.tsx`: montar el shell apenas hay `usuario`
+(`if (!usuario) return null;`), loading/error DENTRO del shell, no
+como reemplazo de toda la página.
+
+Aplicado tal cual se pidió: `if (!usuario) return null;`, header +
+botón "Nuevo levantamiento" siempre dentro de `DashboardShell`,
+`{error ? <ErrorState/> : null}` + `{levantamientos === null && !error
+? <LoadingState/> : null}` dentro del shell, `<Table>` solo cuando
+`levantamientos !== null`.
+
+Sin migración — cambio puramente de orden de render. `tsc` web
+limpio, `verificar.sh` completo en verde.
