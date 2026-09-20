@@ -11,7 +11,7 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#1e4e8c"
+      "backgroundColor": "#2563a6"
     },
     "ios": {
       "supportsTablet": true,
@@ -25,7 +25,7 @@
       "package": "cl.transportesitineris.bitacora",
       "versionCode": 44,
       "adaptiveIcon": {
-        "backgroundColor": "#1e4e8c",
+        "backgroundColor": "#2563a6",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
