@@ -4095,3 +4095,26 @@ importa la FORMA, no el valor exacto.
 `tsc` mobile limpio, `verificar.sh` completo en verde. Sin migración
 (usa la 110 de ayer). Sigue: build de APK (incluye también el fix de
 safe-area/QuickAccessCard de la tarea 50, todavía no en ningún APK).
+
+## 2026-09-20 (7): build APK 1.10.5
+
+`gradlew assembleRelease` en background — BUILD SUCCESSFUL en 8m35s.
+639 tasks (611 ejecutadas, 28 up-to-date). APK 39M, verificación de
+bundle: sin `localhost:8080` ni ref de dev (`pruwvpnlvrvgtmpetlsr`),
+apunta a prod (`bitacora-cgt7.onrender.com`, `yjbskbskyadxjooxngjv`).
+`.env` restaurado a dev después. Copiado a `builds/bitacora-1.10.5.apk`
+(se borró el 1.10.4 anterior). Incluye: tema por empresa + selector en
+Perfil (tarea 51), safe-area inferior + QuickAccessCard (tarea 50, no
+tenía build previo), y todo lo de antes (ícono nuevo, Confianza web no
+aplica a mobile por temas — Confianza SÍ está disponible como opción
+en el selector mobile).
+
+Nota propia: el primer intento de esperar el build en background se
+perdió — lancé el script con `&` propio ADEMÁS de `run_in_background`,
+así que el tracking se "completó" de inmediato (solo el lanzamiento),
+dejando el proceso real corriendo huérfano sin notificación de
+verdad. Se detectó a tiempo (`pgrep` mostró gradle/kotlin/clang++
+activos, el build no se había interrumpido) y se corrigió esperando
+por el PID real del script (`while kill -0 <pid>; do sleep; done`)
+en un nuevo background — así sí llegó la notificación real al
+terminar.
