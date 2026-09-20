@@ -39,6 +39,7 @@ export function SelectorHoraCosmetologia({
   onCambiarHora: (h: string) => void;
 }) {
   const t = useTema();
+  const hoyKey = useMemo(() => clave(new Date()), []);
 
   const dias = useMemo(() => {
     const hoy = new Date();
@@ -114,6 +115,11 @@ export function SelectorHoraCosmetologia({
           {dias.map((d) => {
             const k = clave(d);
             const activo = k === fecha;
+            // 20-sep-2026: esta tira ya arranca en hoy (no hay días
+            // pasados que la corran fuera de pantalla, a diferencia de
+            // Nuevo gasto/trabajo) — el único gap era que no había
+            // ninguna marca de "hoy" más allá de estar seleccionado.
+            const esHoy = k === hoyKey;
             return (
               <Pressable
                 key={k}
@@ -126,6 +132,19 @@ export function SelectorHoraCosmetologia({
                   backgroundColor: activo ? t.colores.bg : "transparent",
                 }}
               >
+                {esHoy ? (
+                  <View
+                    style={{
+                      position: "absolute",
+                      top: 3,
+                      width: 4,
+                      height: 4,
+                      borderRadius: 2,
+                      backgroundColor: activo ? t.colores.brand : t.colores.brandForeground,
+                      opacity: activo ? 1 : 0.85,
+                    }}
+                  />
+                ) : null}
                 <Text variante="caption" tono={activo ? "muted" : "inverso"} style={activo ? undefined : { opacity: 0.7 }}>
                   {DIAS_CORTOS[d.getDay()]}
                 </Text>

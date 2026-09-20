@@ -826,6 +826,23 @@
       ],
       "status": "done",
       "resolution": "mobile/src/features/gastos/NuevoGastoScreen.tsx: reordenado el JSX del ScrollView (Descripción primero, bloque de foto movido al final, sin cambiar ningún otro campo de lugar). Picker de OS: useState<Trabajo[]> -> useState<TrabajoLista[]> (tipo ya existente en services/trabajos.ts, con el join orden:{folio,estado_os} que ya devuelve GET /api/trabajos hace tiempo) y el label pasa a incluir formatearFolio('OS', tr.orden?.folio) cuando existe, igual que en TrabajosScreen/TrabajoDetalleScreen/ClienteDetalleScreen/AgendaScreen/ViajesScreen/LevantamientosListScreen. Era el único picker de 'elegir un Trabajo/OS' en todo mobile — no había otros lugares con el mismo bug. tsc mobile limpio, verificar.sh completo en verde."
+    },
+    {
+      "id": 53,
+      "name": "levantamiento_header_gasto_crear_y_selector_dias",
+      "title": "Levantamiento: header + folio · Nuevo gasto: crear proveedor/categoría · Selector de día: hoy marcado",
+      "description": "3 pedidos de feedback probando 1.10.6 en dispositivo real, con mockup aprobado antes de tocar código (artifact 6030f619): (1) header de Levantamiento — folio perdido dentro de un antetítulo largo que envolvía a varias líneas; (2) Nuevo gasto — crear Proveedor/Categoría sin salir del formulario (OS excluida a propósito); (3) selector de día — que hoy sea el punto de partida al abrir, marcado siempre, en todos los calendarios (excepto Agenda, congelada).",
+      "acceptance": [
+        "LevantamientoDetalleScreen: antetítulo = solo folio (formatearFolio), estado baja a un StatusBadge propio (TONO_ESTADO explícito para los 7 estados, ninguno cae en MAPA_ESTADO_TONO)",
+        "NuevoGastoScreen: Proveedor siempre ofrece 'Crear proveedor' (backend sin gate de módulo); Categoría solo la ofrece si modulosVisibles incluye 'configuracion' (gateada por requiereModulo en el backend, no delegable a colaborador) — nuevas funciones crearProveedor/crearCategoriaGasto en services/gastos.ts",
+        "packages/ui/src/native/SelectorDias.tsx nuevo: extrae el patrón duplicado de NuevoGastoScreen/TrabajoFormScreen (arrancaba 7 días atrás), agrega auto-scroll a hoy al montar (si no se está editando una fecha pasada) + marca 'HOY' siempre visible sobre el chip, seleccionado o no",
+        "Aplicado en NuevoGastoScreen (fecha y fecha_pago), TrabajoFormScreen (fecha), NuevaCitaScreen (fecha, diasAtras=0 — ya arrancaba en hoy, solo le faltaba la marca)",
+        "SelectorHoraCosmetologia.tsx (widget de tema oscuro, sistema visual viejo, no comparte componente con los anteriores): solo necesitaba la marca 'HOY' (ya arrancaba en hoy, sin días pasados) — se agregó un punto en el token de color existente (brandForeground), sin literal nuevo",
+        "AgendaScreen.tsx NO tocado — está marcada como congelada en las reglas del proyecto, fuera de este pedido",
+        "tsc mobile limpio, verificar.sh completo en verde, 0 literales de color nuevos"
+      ],
+      "status": "done",
+      "resolution": "Ver mensajes de progress/current.md del 20-sep-2026 (entrada 10). Mockup aprobado sin cambios antes de implementar."
     }
   ]
 }

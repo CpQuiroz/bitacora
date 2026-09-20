@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { Cliente, PaqueteSesionesConSaldo, Prioridad, TipoPack, Usuario } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
-import { Button, Input, LoadingState, Textarea, Texto, useMarca } from "@bitacora/ui/native";
+import { Button, Input, LoadingState, SelectorDias, Textarea, Texto, useMarca } from "@bitacora/ui/native";
 import { PickerBuscable, SelectorHora } from "../../components/ui";
 import { SelectorCliente } from "../../components/SelectorCliente";
 import { SelectorResponsable } from "../../components/SelectorResponsable";
@@ -15,9 +15,6 @@ import { crearPaquete, listarPaquetesCliente } from "../../services/paquetes";
 import { listarTiposPack } from "../../services/tiposPack";
 import type { AgendaStackParamList } from "../../shell/navigation/types";
 import { NuevaReservaCosmetologia } from "./NuevaReservaCosmetologia";
-
-const DIAS = ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"];
-const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
 
 function clave(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -83,14 +80,6 @@ export function NuevaCitaScreen({ navigation, route }: NativeStackScreenProps<Ag
     sesiones_consumidas: 1,
   });
   const set = <K extends keyof BorradorCita>(k: K, v: BorradorCita[K]) => setB((p) => ({ ...p, [k]: v }));
-
-  // Rango de fechas de los chips: desde hoy (o desde la fecha actual de
-  // la cita si está en el pasado, para poder mantenerla).
-  const dias = useMemo(() => {
-    const hoy = new Date();
-    const base = b.fecha < clave(hoy) ? new Date(b.fecha + "T00:00:00") : hoy;
-    return Array.from({ length: 45 }, (_, i) => new Date(base.getFullYear(), base.getMonth(), base.getDate() + i));
-  }, [b.fecha]);
 
   useEffect(() => {
     navigation.setOptions({ title: editandoId ? "Editar cita" : "Nueva cita" });
@@ -190,39 +179,7 @@ export function NuevaCitaScreen({ navigation, route }: NativeStackScreenProps<Ag
           <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
             Fecha
           </Texto>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: tokens.space["2"] }}>
-            {dias.map((d) => {
-              const k = clave(d);
-              const activo = k === b.fecha;
-              return (
-                <Pressable
-                  key={k}
-                  onPress={() => set("fecha", k)}
-                  style={{
-                    minWidth: 56,
-                    minHeight: 60,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    borderRadius: tokens.radius.md,
-                    paddingHorizontal: tokens.space["2"],
-                    backgroundColor: activo ? marca.suave : tokens.color.surface,
-                    borderWidth: 1,
-                    borderColor: activo ? marca.base : tokens.color.divider,
-                  }}
-                >
-                  <Texto tamano={tokens.size.caption} color={activo ? marca.fuerte : `${tokens.color.text}99`}>
-                    {DIAS[d.getDay()]}
-                  </Texto>
-                  <Texto tamano={tokens.size.h5} peso="semibold" color={activo ? marca.fuerte : tokens.color.text} style={{ fontVariant: ["tabular-nums"] }}>
-                    {d.getDate()}
-                  </Texto>
-                  <Texto tamano={tokens.size.caption} color={activo ? marca.fuerte : `${tokens.color.text}66`}>
-                    {MESES[d.getMonth()]}
-                  </Texto>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
+          <SelectorDias valor={b.fecha} onElegir={(k) => set("fecha", k)} diasAtras={0} />
         </View>
 
         <SelectorHora etiqueta="Hora (opcional)" valor={b.hora} onCambiar={(v) => set("hora", v)} />

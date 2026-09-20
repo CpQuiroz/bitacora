@@ -4165,3 +4165,52 @@ restaurado a dev. Copiado a `builds/bitacora-1.10.6.apk` (se borró el
 1.10.5 anterior). Incluye el reordenamiento de Nuevo gasto + folio de
 OS en el picker (tarea 52), sobre todo lo de 1.10.5 (tema por empresa,
 safe-area, QuickAccessCard, ícono nuevo).
+
+## 2026-09-20 (10): Levantamiento header + crear al vuelo en Gasto + "hoy" en selectores de día (tarea 53)
+
+3 pedidos de feedback probando 1.10.6 en dispositivo real. Mockup
+(artifact 6030f619) mostrado y aprobado sin cambios ANTES de tocar
+código, según lo pedido explícitamente.
+
+**Levantamiento — folio perdido**: no era un dato faltante — el folio
+ya estaba en el antetítulo del header, pero concatenado con el texto
+del estado en una sola línea chica/uppercase que con estados largos
+("Completado — esperando cotización") envolvía a 2-3 líneas, enterrando
+el folio ahí adentro. Antetítulo pasa a ser SOLO el folio (corto, como
+en Trabajos/Viajes); el estado baja a un `StatusBadge` propio (mismo
+componente que ya usa el resto de la app). `EstadoLevantamiento` no
+está en `MAPA_ESTADO_TONO` — mapa `TONO_ESTADO` explícito para los 7
+estados en vez de dejar 2 al fallback por descuido.
+
+**Nuevo gasto — crear Proveedor/Categoría al vuelo**: `PickerBuscable`
+(mobile/src/components/ui) YA tenía el mecanismo completo (`alCrear`,
+`etiquetaCrear`) — no se usaba en estos 2 campos. Encontré una
+diferencia real de permisos que hay que respetar: `POST /api/proveedores`
+no tiene gate de módulo, pero `POST /api/categorias-gasto` exige
+`requiereModulo("configuracion")`, EXCLUIDO a propósito de los módulos
+delegables a nivel empresa (packages/shared/src/permisos.ts) — un
+colaborador (el rol típico que carga gastos en terreno) normalmente NO
+lo tiene. Categoría solo ofrece "Crear categoría" si
+`auth.modulosVisibles` lo incluye; Proveedor siempre lo ofrece. Nuevas
+`crearProveedor`/`crearCategoriaGasto` en services/gastos.ts.
+
+**Selector de día — que hoy sea el punto de partida**: confirmé que
+`NuevoGastoScreen` y `TrabajoFormScreen` tenían el MISMO código
+duplicado (arrancaba la tira 7 días atrás — al abrir el formulario lo
+visible eran días pasados, hoy quedaba fuera de pantalla). Extraje
+`packages/ui/src/native/SelectorDias.tsx`: mantiene la posibilidad de
+elegir fechas pasadas, pero al montar hace scroll a hoy (si no se está
+editando una fecha ya pasada) y marca "HOY" siempre, esté o no
+seleccionado. Aplicado en Nuevo gasto (fecha y fecha de pago), Nuevo
+trabajo, y Nueva cita (esta última ya arrancaba en hoy — `diasAtras=0`,
+solo le faltaba la marca). `SelectorHoraCosmetologia.tsx` (el widget de
+tema oscuro de "Nueva reserva" cosmetología) usa el sistema visual
+VIEJO (`useTema()`, no comparte componente con los otros 3) y además ya
+arrancaba en hoy sin días pasados — no necesitaba el auto-scroll, solo
+se le agregó el punto de "hoy" con un token de color ya existente
+(`brandForeground`), para no meter un literal nuevo (el checker de
+`verificar.sh` lo agarró al toque en el primer intento con "#fff").
+Agenda (tab congelada, regla dura del proyecto) NO se tocó.
+
+`tsc` mobile limpio, `verificar.sh` completo en verde (incluyendo 0
+literales de color nuevos). Sin migración. Pendiente: build de APK.

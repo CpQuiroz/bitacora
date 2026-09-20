@@ -33,6 +33,28 @@ export async function listarProveedores(): Promise<Proveedor[]> {
   return (await leerCache<Proveedor[]>("gastos:proveedores"))?.datos ?? [];
 }
 
+// "Crear al vuelo" desde Nuevo gasto (20-sep-2026) — necesita conexión
+// (no tiene sentido encolar la creación de un proveedor/categoría
+// offline: el picker necesita el id real para poder elegirlo ya
+// mismo). Proveedor: sin restricción de módulo en el backend, cualquier
+// rol puede crear uno. Categoría SÍ está gateada a `requiereModulo
+// ("configuracion")` — por diseño, ver packages/shared/src/permisos.ts
+// (excluido a propósito de MODULOS_DELEGABLES_POR_EMPRESA) — por eso
+// NuevoGastoScreen solo ofrece "crear categoría" cuando
+// modulosVisibles la incluye, para no mostrarle a un colaborador un
+// botón que le va a dar 403.
+export async function crearProveedor(nombre: string): Promise<{ ok: true; proveedor: Proveedor } | { ok: false; error: string }> {
+  const res = await apiJson<Proveedor>("/api/proveedores", { method: "POST", body: JSON.stringify({ nombre }) });
+  if (res.ok) return { ok: true, proveedor: res.data };
+  return { ok: false, error: res.error };
+}
+
+export async function crearCategoriaGasto(nombre: string): Promise<{ ok: true; categoria: CategoriaGasto } | { ok: false; error: string }> {
+  const res = await apiJson<CategoriaGasto>("/api/categorias-gasto", { method: "POST", body: JSON.stringify({ nombre }) });
+  if (res.ok) return { ok: true, categoria: res.data };
+  return { ok: false, error: res.error };
+}
+
 export type Foto = { uri: string; name: string; type: string };
 
 export type BorradorGasto = {

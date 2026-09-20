@@ -5,7 +5,7 @@ import { AlertCircle, ArrowLeft, Camera, Minus, Plus, RefreshCw, X } from "lucid
 import type { CatalogoItem, EstadoLevantamiento } from "@bitacora/shared";
 import { formatearFolio } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
-import { Button, Dialog, ErrorState, LoadingState, ScreenHeader, Textarea, Texto, useMarca } from "@bitacora/ui/native";
+import { Button, Dialog, ErrorState, LoadingState, ScreenHeader, StatusBadge, Textarea, Texto, useMarca, type TonoEstado } from "@bitacora/ui/native";
 import { elegirFotos } from "../../lib/imagen";
 import { useRed } from "../../services/sync/NetworkProvider";
 import {
@@ -26,6 +26,24 @@ const ETIQUETA_ESTADO: Record<EstadoLevantamiento, string> = {
   cotizado_externo: "Cotizado — esperando aprobación",
   aprobado: "Aprobado",
   rechazado: "Rechazado",
+};
+
+// 20-sep-2026: antes el folio y este texto iban juntos en una sola
+// línea chica del antetítulo del header — con estados largos como
+// "Completado — esperando cotización" envolvía a 2-3 líneas en
+// mayúscula y el folio quedaba enterrado ahí adentro. Ahora el folio
+// va solo en el antetítulo (corto, como en Trabajos/Viajes) y el
+// estado baja a un StatusBadge aparte. EstadoLevantamiento no está en
+// MAPA_ESTADO_TONO (packages/ui/src/tipos.ts) — tonoForzado explícito
+// para los 7, no dejar 2 al azar del fallback.
+const TONO_ESTADO: Record<EstadoLevantamiento, TonoEstado> = {
+  creado: "en_progreso",
+  asignado: "en_progreso",
+  en_terreno: "en_progreso",
+  completado_tecnico: "completado",
+  cotizado_externo: "en_progreso",
+  aprobado: "completado",
+  rechazado: "cancelado",
 };
 
 type MaterialLocal = { catalogo_item_id: string; cantidad: number; nombre: string; unidad: string };
@@ -174,10 +192,13 @@ export function LevantamientoDetalleScreen({ route, navigation }: NativeStackScr
   return (
     <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
       <ScreenHeader
-        antetitulo={`${formatearFolio("LEV", detalle.folio) ? `${formatearFolio("LEV", detalle.folio)} · ` : ""}${ETIQUETA_ESTADO[detalle.estado]}`}
+        antetitulo={formatearFolio("LEV", detalle.folio) ?? undefined}
         titulo={detalle.cliente?.nombre ?? "Cliente"}
         accion={volver}
       />
+      <View style={{ paddingHorizontal: tokens.space["4"] }}>
+        <StatusBadge estado={detalle.estado} etiqueta={ETIQUETA_ESTADO[detalle.estado]} tonoForzado={TONO_ESTADO[detalle.estado]} />
+      </View>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: tokens.space["4"], gap: tokens.space["4"], paddingBottom: tokens.space["8"] * 2 }}>
         {detalle.descripcion_requerimiento ? (
           <View style={{ gap: 4 }}>

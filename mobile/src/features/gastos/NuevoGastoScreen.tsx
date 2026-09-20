@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert, Image, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Camera } from "lucide-react-native";
@@ -6,14 +6,17 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { CategoriaGasto, CentroCosto, EstadoGasto, Proveedor } from "@bitacora/shared";
 import { formatearFolio } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
-import { Button, Input, LoadingState, Texto, useMarca } from "@bitacora/ui/native";
+import { Button, Input, LoadingState, SelectorDias, Texto, useMarca } from "@bitacora/ui/native";
 import { PickerBuscable } from "../../components/ui";
 import { InputMonto } from "../../components/InputMonto";
 import { useRed } from "../../services/sync/NetworkProvider";
+import { useAuth } from "../auth/AuthContext";
 import { elegirFotos } from "../../lib/imagen";
 import { listarTrabajos, type TrabajoLista } from "../../services/trabajos";
 import {
+  crearCategoriaGasto,
   crearGasto,
+  crearProveedor,
   encolarGasto,
   listarCategoriasGasto,
   listarCentrosCosto,
@@ -22,9 +25,6 @@ import {
   type Foto,
 } from "../../services/gastos";
 import type { MasStackParamList } from "../../shell/navigation/types";
-
-const DIAS = ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"];
-const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
 
 function clave(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -47,52 +47,6 @@ const VACIO: BorradorGasto = {
   fecha_pago: clave(new Date()),
 };
 
-function DiasChips({ valor, onElegir }: { valor: string; onElegir: (k: string) => void }) {
-  const marca = useMarca();
-  const dias = useMemo(() => {
-    const hoy = new Date();
-    const base =
-      valor < clave(hoy) ? new Date(valor + "T00:00:00") : new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() - 7);
-    return Array.from({ length: 45 }, (_, i) => new Date(base.getFullYear(), base.getMonth(), base.getDate() + i));
-  }, [valor]);
-
-  return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: tokens.space["2"] }}>
-      {dias.map((d) => {
-        const k = clave(d);
-        const activo = k === valor;
-        return (
-          <Pressable
-            key={k}
-            onPress={() => onElegir(k)}
-            style={{
-              minWidth: 56,
-              minHeight: 60,
-              alignItems: "center",
-              justifyContent: "center",
-              borderRadius: tokens.radius.md,
-              paddingHorizontal: tokens.space["2"],
-              backgroundColor: activo ? marca.suave : tokens.color.surface,
-              borderWidth: 1,
-              borderColor: activo ? marca.base : tokens.color.divider,
-            }}
-          >
-            <Texto tamano={tokens.size.caption} color={activo ? marca.fuerte : `${tokens.color.text}99`}>
-              {DIAS[d.getDay()]}
-            </Texto>
-            <Texto tamano={tokens.size.h5} peso="semibold" color={activo ? marca.fuerte : tokens.color.text}>
-              {d.getDate()}
-            </Texto>
-            <Texto tamano={tokens.size.caption} color={activo ? marca.fuerte : `${tokens.color.text}99`}>
-              {MESES[d.getMonth()]}
-            </Texto>
-          </Pressable>
-        );
-      })}
-    </ScrollView>
-  );
-}
-
 // Sistema visual móvil v2 — pantalla MODAL: sin ScreenHeader propio (el
 // título nativo del stack, "Nuevo gasto", ya lo pone MasStack), solo se
 // recolorea el contenido. `InputMonto` y `PickerBuscable` no tienen
@@ -106,6 +60,7 @@ export function NuevoGastoScreen({ navigation }: NativeStackScreenProps<MasStack
   // gestos/navegación de Android.
   const insets = useSafeAreaInsets();
   const { enLinea } = useRed();
+  const auth = useAuth();
   const [categorias, setCategorias] = useState<CategoriaGasto[] | null>(null);
   const [centros, setCentros] = useState<CentroCosto[]>([]);
   const [proveedores, setProveedores] = useState<Proveedor[]>([]);
@@ -134,6 +89,28 @@ export function NuevoGastoScreen({ navigation }: NativeStackScreenProps<MasStack
   async function adjuntarFoto() {
     const [elegida] = await elegirFotos({ titulo: "Foto del comprobante" });
     if (elegida) setFoto(elegida);
+  }
+
+  // "Crear al vuelo" (20-sep-2026) — pedido explícito: crear Proveedor y
+  // Categoría sin salir de Nuevo gasto (Orden de Servicio queda afuera a
+  // propósito: es un dato asociado, no algo que se cree desde acá).
+  // Categoría está gateada por el backend a requiereModulo("configuracion")
+  // (ver services/gastos.ts) — un colaborador normalmente no lo tiene, así
+  // que ni se le ofrece el botón (ver más abajo, puedeCrearCategoria).
+  async function crearProveedorAlVuelo(nombre: string) {
+    if (!nombre) return;
+    const r = await crearProveedor(nombre);
+    if (!r.ok) return Alert.alert("No se pudo crear el proveedor", r.error);
+    setProveedores((p) => [...p, r.proveedor]);
+    set("proveedor_id", r.proveedor.id);
+  }
+
+  async function crearCategoriaAlVuelo(nombre: string) {
+    if (!nombre) return;
+    const r = await crearCategoriaGasto(nombre);
+    if (!r.ok) return Alert.alert("No se pudo crear la categoría", r.error);
+    setCategorias((c) => [...(c ?? []), r.categoria]);
+    set("categoria_gasto_id", r.categoria.id);
   }
 
   async function guardar() {
@@ -200,6 +177,13 @@ export function NuevoGastoScreen({ navigation }: NativeStackScreenProps<MasStack
           valor={b.categoria_gasto_id}
           opciones={categorias.map((c) => ({ id: c.id, label: c.nombre }))}
           onElegir={(id) => set("categoria_gasto_id", id)}
+          // El backend exige el módulo "configuracion" para crear
+          // categorías (no delegable a colaborador) — si el usuario
+          // logueado no lo tiene, no le ofrecemos un botón que le va a
+          // devolver 403.
+          {...(auth.fase === "listo" && auth.modulosVisibles.includes("configuracion")
+            ? { alCrear: crearCategoriaAlVuelo, etiquetaCrear: "Crear categoría" }
+            : {})}
         />
 
         {centros.length > 0 ? (
@@ -213,16 +197,16 @@ export function NuevoGastoScreen({ navigation }: NativeStackScreenProps<MasStack
           />
         ) : null}
 
-        {proveedores.length > 0 ? (
-          <PickerBuscable
-            etiqueta="Proveedor (opcional)"
-            placeholder="Sin proveedor"
-            opcionVacia="Sin proveedor"
-            valor={b.proveedor_id}
-            opciones={proveedores.map((p) => ({ id: p.id, label: p.nombre }))}
-            onElegir={(id) => set("proveedor_id", id)}
-          />
-        ) : null}
+        <PickerBuscable
+          etiqueta="Proveedor (opcional)"
+          placeholder="Sin proveedor"
+          opcionVacia="Sin proveedor"
+          valor={b.proveedor_id}
+          opciones={proveedores.map((p) => ({ id: p.id, label: p.nombre }))}
+          onElegir={(id) => set("proveedor_id", id)}
+          alCrear={crearProveedorAlVuelo}
+          etiquetaCrear="Crear proveedor"
+        />
 
         {trabajos.length > 0 ? (
           <PickerBuscable
@@ -247,7 +231,7 @@ export function NuevoGastoScreen({ navigation }: NativeStackScreenProps<MasStack
           <Texto tamano={tokens.size.small} peso="medium" color={`${tokens.color.text}99`}>
             Fecha
           </Texto>
-          <DiasChips valor={b.fecha} onElegir={(k) => set("fecha", k)} />
+          <SelectorDias valor={b.fecha} onElegir={(k) => set("fecha", k)} />
         </View>
 
         <View style={{ gap: tokens.space["1"] * 1.5 }}>
@@ -269,7 +253,7 @@ export function NuevoGastoScreen({ navigation }: NativeStackScreenProps<MasStack
             <Texto tamano={tokens.size.small} peso="medium" color={`${tokens.color.text}99`}>
               Fecha de pago
             </Texto>
-            <DiasChips valor={b.fecha_pago} onElegir={(k) => set("fecha_pago", k)} />
+            <SelectorDias valor={b.fecha_pago} onElegir={(k) => set("fecha_pago", k)} />
           </View>
         ) : null}
 

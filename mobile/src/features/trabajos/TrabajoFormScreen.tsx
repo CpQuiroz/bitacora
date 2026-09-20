@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { Cliente, EstadoTrabajo, Usuario } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
-import { Button, Input, LoadingState, Skeleton, Texto, useMarca } from "@bitacora/ui/native";
+import { Button, Input, LoadingState, SelectorDias, Skeleton, Texto, useMarca } from "@bitacora/ui/native";
 import { PickerBuscable } from "../../components/ui";
 import { SelectorCliente } from "../../components/SelectorCliente";
 import { InputMonto } from "../../components/InputMonto";
@@ -18,9 +18,6 @@ import {
   obtenerDetalle,
 } from "../../services/trabajos";
 import type { TrabajosStackParamList } from "../../shell/navigation/types";
-
-const DIAS = ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"];
-const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
 
 function clave(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -97,12 +94,6 @@ export function TrabajoFormScreen({ navigation, route }: NativeStackScreenProps<
       .catch((e) => Alert.alert("No se pudo cargar el trabajo", e instanceof Error ? e.message : "Intenta de nuevo"))
       .finally(() => setCargando(false));
   }, [editandoId]);
-
-  const dias = useMemo(() => {
-    const hoy = new Date();
-    const base = b.fecha < clave(hoy) ? new Date(b.fecha + "T00:00:00") : new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() - 7);
-    return Array.from({ length: 60 }, (_, i) => new Date(base.getFullYear(), base.getMonth(), base.getDate() + i));
-  }, [b.fecha]);
 
   function elegirClienteGuardado(id: string) {
     set("cliente_id", id);
@@ -199,39 +190,7 @@ export function TrabajoFormScreen({ navigation, route }: NativeStackScreenProps<
           <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
             Fecha
           </Texto>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: tokens.space["2"] }}>
-            {dias.map((d) => {
-              const k = clave(d);
-              const activo = k === b.fecha;
-              return (
-                <Pressable
-                  key={k}
-                  onPress={() => set("fecha", k)}
-                  style={{
-                    minWidth: 56,
-                    minHeight: 60,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    borderRadius: tokens.radius.md,
-                    paddingHorizontal: tokens.space["2"],
-                    backgroundColor: activo ? marca.suave : tokens.color.surface,
-                    borderWidth: 1,
-                    borderColor: activo ? marca.base : tokens.color.divider,
-                  }}
-                >
-                  <Texto tamano={tokens.size.caption} color={activo ? marca.fuerte : `${tokens.color.text}99`}>
-                    {DIAS[d.getDay()]}
-                  </Texto>
-                  <Texto tamano={tokens.size.h5} color={activo ? marca.fuerte : tokens.color.text}>
-                    {d.getDate()}
-                  </Texto>
-                  <Texto tamano={tokens.size.caption} color={activo ? marca.fuerte : `${tokens.color.text}99`}>
-                    {MESES[d.getMonth()]}
-                  </Texto>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
+          <SelectorDias valor={b.fecha} onElegir={(k) => set("fecha", k)} cantidadDias={60} />
         </View>
 
         <InputMonto valor={b.monto} onChangeText={(v) => set("monto", v)} />
