@@ -148,7 +148,7 @@ export type UsuarioShell = {
   moneda?: string;
   // "faena": sistema original. "taller": tema alternativo por empresa
   // (ver tokens.json/build.ts — bloque [data-tema="taller"]).
-  tema?: "faena" | "taller";
+  tema?: "faena" | "taller" | "confianza";
 };
 
 const CLAVE_COLAPSADO = "bitacora:sidebar-colapsado";

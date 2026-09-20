@@ -36,6 +36,12 @@ export type Tokens = {
   // no tiene una variante colorTallerDark. Ver DashboardShell (data-tema)
   // y UsuarioShell.tema.
   colorTaller: Paleta;
+  // Tema "Confianza" (20-sep-2026) — misma idea que Taller pero SOLO
+  // color, sin tipografía propia (usa Caprasimo/Figtree, igual que
+  // Faena) — investigación de mercado sugirió un azul clásico como
+  // alternativa "segura" para clientes nuevos, sin tocar la voz
+  // tipográfica de la marca.
+  colorConfianza: Paleta;
   font: { heading: string; body: string; headingWeight: number };
   fontTaller: { heading: string; body: string; headingWeight: number };
   size: Record<"h1" | "h2" | "h3" | "h4" | "h5" | "body" | "small" | "caption" | "micro", number>;
@@ -218,7 +224,28 @@ ${rampCss("accent2", tokens.colorTaller.accent2Ramp)}
   --font-ds-heading-weight: ${tokens.fontTaller.headingWeight};
 }
 
-/* Voz display (Caprasimo en Faena / Archivo en Taller): SOLO titulares y
+/* Tema "Confianza" (20-sep-2026) — mismo mecanismo que Taller
+   (data-tema en el div de marca por tenant), pero SOLO color: no pisa
+   --font-ds-heading/body/weight, así que hereda Caprasimo/Figtree tal
+   cual vienen de :root arriba. Azul clásico + acento naranja, pensado
+   como alternativa "segura" de confianza para empresas que recién
+   arrancan con clientes nuevos (ver investigación en progress/current.md). */
+[data-tema="confianza"] {
+  --color-ds-bg: ${tokens.colorConfianza.bg};
+  --color-ds-surface: ${tokens.colorConfianza.surface};
+  --color-ds-text: ${tokens.colorConfianza.text};
+  --color-ds-accent: ${tokens.colorConfianza.accent};
+  --color-ds-accent2: ${tokens.colorConfianza.accent2};
+  --color-ds-divider: ${tokens.colorConfianza.divider};
+
+${rampCss("neutral", tokens.colorConfianza.neutral)}
+
+${rampCss("accent", tokens.colorConfianza.accentRamp)}
+
+${rampCss("accent2", tokens.colorConfianza.accent2Ramp)}
+}
+
+/* Voz display (Caprasimo en Faena/Confianza / Archivo en Taller): SOLO titulares y
    botones grandes, nunca párrafos. Combinar con text-ds-h1…h5 para el
    tamaño. font-weight sale de --font-ds-heading-weight (no un literal)
    para que Taller pueda pisarlo a 700 sin duplicar este @utility. */

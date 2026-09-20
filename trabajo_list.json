@@ -730,6 +730,24 @@
       ],
       "status": "done",
       "resolution": "Cadena real: expo@57.0.24 (SDK correcto, no tocado) -> @expo/config-plugins@57.0.9 -> xcode@3.0.1 -> uuid@7.0.3 (GHSA-w5hq-g745-h8pq, bajo el minimo seguro 11.1.1). xcode solo llama uuid.v4() (API estable entre versiones) -- se agrego un override en el package.json raiz (uuid: ^11.1.1, mismo mecanismo que react-native-pager-view) + reinstall limpio (rm -rf node_modules/package-lock.json, un install parcial deja el override a medio aplicar, mismo sintoma que la vez anterior). npm audit: 11 moderadas -> 0, en raiz y en backend. expo install --check sigue en verde. verificar.sh completo en verde."
+    },
+    {
+      "id": 47,
+      "name": "icono_y_tema_confianza",
+      "title": "Icono nuevo (libro azul) + tema \"Confianza\" (investigacion de mercado con imagenes antes)",
+      "description": "Pedido: cambiar el icono + investigar que colores/estilos piden los clientes, mostrando imagenes antes de aplicar. Se investigo con WebSearch (fuentes reales), se armo una maqueta con 3 conceptos de icono x 3 paletas, la usuaria eligio 'Bitacora' (libro) en azul confianza -- para el icono Y para toda la app (tema nuevo, mismo mecanismo que Taller de la tarea 44).",
+      "acceptance": [
+        "Icono: 6 assets regenerados (icon/foreground/background/monochrome/splash/favicon) con sharp+SVG -- glifo de libro con paginas+lineas+lomo, azul #2563a6 -- HECHO, pusheado (96653b1), sin dependencia de DB",
+        "app.json: splash.backgroundColor + adaptiveIcon.backgroundColor al mismo azul -- HECHO",
+        "Tema 'Confianza': colorConfianza en tokens.json + bloque [data-tema=\"confianza\"] en build.ts -- SOLO color, hereda Caprasimo/Figtree (a diferencia de Taller) -- HECHO",
+        "Empresa.tema / UsuarioShell.tema -> incluye \"confianza\" -- HECHO",
+        "backend TEMAS acepta confianza -- HECHO",
+        "Selector 'Confianza' en configuracion/empresa/page.tsx -- HECHO",
+        "Migracion 110 (empresas_tema_check con 'confianza' agregado -- Postgres no tiene alter check, se dropea y se vuelve a crear) -- validada en modo lectura contra prod (BEGIN/UPDATE real/ROLLBACK)",
+        "verificar.sh completo en verde"
+      ],
+      "status": "in_progress",
+      "resolution": "Icono YA pusheado (no depende de DB). El tema 'Confianza' (codigo + migracion 110) esta commiteado en LOCAL, no pusheado -- falta que la usuaria aplique la migracion 110 y confirme, mismo criterio que 108/109."
     }
   ]
 }

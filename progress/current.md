@@ -3802,3 +3802,61 @@ atorada" de mediados de septiembre) y el propio comentario del código
 ya decía que debía borrarse al cerrar esa investigación.
 
 `tsc` mobile limpio, `verificar.sh` completo en verde. Sin migración.
+
+## 2026-09-20: ícono nuevo + investigación de mercado + tema "Confianza"
+
+Pedido: cambiar el ícono de la app + "aún tengo duda con los colores,
+investiga qué piden los clientes — muéstrame imágenes antes".
+
+**Investigación** (con `WebSearch`, fuentes reales citadas en el chat):
+la paleta actual (crema/terracota/oliva) ya está alineada con hacia
+dónde va el diseño B2B 2025-26 (paletas cálidas, no "colores de tech"
+genéricos) — no hay evidencia de que esté anticuada. El azul sigue
+siendo el color más "seguro" de confianza para clientes nuevos (IBM,
+bancos, LinkedIn). Marrón/tierra es un término medio. Para íconos:
+geometría simple, sin texto ni realismo.
+
+Se armó una maqueta (favicon 🎨) con 3 conceptos de ícono (ruta+check,
+libro de "Bitácora", monograma) × 3 paletas (actual, azul confianza,
+tierra) para elegir viendo el resultado, no a ciegas.
+
+**Elegido**: el libro ("Bitácora") en azul confianza — para el ícono
+Y para toda la app (confirmado explícitamente: no es solo el ícono).
+
+**Ícono** (ya pusheado, `96653b1`, sin dependencia de migración): los 6
+assets (icon/foreground/background/monochrome/splash/favicon)
+regenerados con un glifo de libro abierto (páginas + líneas de texto +
+lomo), azul `#2563a6`, vía `sharp` + SVG (no había herramienta de
+raster en el entorno — `rsvg-convert`/`imagemagick`/`cairosvg` no
+estaban, `sharp` sí porque ya era dependencia transitiva de algo del
+monorepo). `app.json`: `splash.backgroundColor` y
+`adaptiveIcon.backgroundColor` al mismo azul (antes `#1e4e8c`, el navy
+viejo de Faena).
+
+**Tema "Confianza"** (código listo, **NO pusheado** — depende de la
+migración 110): mismo mecanismo que "Taller" (`empresas.tema`,
+`data-tema` en el div de marca), pero a diferencia de Taller es SOLO
+color — no pisa `--font-ds-heading`/`--font-ds-body`/
+`--font-ds-heading-weight`, así que hereda Caprasimo/Figtree tal cual.
+Paleta: bg `#eef3f7`, texto `#132c40`, acento `#2563a6`, acento2
+(naranja) `#f2a541` — ramps de 9 pasos generados por HSL (no había
+`rsvg`/herramienta de diseño a mano, se armó con un script propio
+imitando la progresión de luminosidad de los ramps existentes).
+
+- `packages/design-tokens/tokens.json` + `build.ts`: `colorConfianza` +
+  bloque `[data-tema="confianza"]`.
+- `packages/shared/src/types.ts` + `web/components/DashboardShell.tsx`:
+  `Empresa.tema`/`UsuarioShell.tema` → `"faena" | "taller" | "confianza"`.
+- `backend/routes/miEmpresa.ts`: `TEMAS` acepta `"confianza"`.
+- `configuracion/empresa/page.tsx`: tercera opción "Confianza" en el
+  selector de tema (y el texto de ayuda ahora es preciso: Confianza no
+  cambia la tipografía, a diferencia de Taller).
+- **Migración 110** (`110_tema_confianza.sql`): Postgres no tiene
+  "alter check" — se saca `empresas_tema_check` y se pone de nuevo con
+  `'confianza'` agregado. Validada en modo lectura contra prod
+  (`BEGIN`/`UPDATE` real a `'confianza'`/`ROLLBACK`) — el constraint
+  nuevo aceptó el valor sin problema.
+
+`verificar.sh` completo en verde (110 migraciones locales, prod sigue
+en 109 hasta que la usuaria aplique esta). No se pushea nada de esto
+hasta que confirme, mismo criterio que 108/109.

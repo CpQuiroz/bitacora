@@ -98,7 +98,7 @@ export default function EmpresaPage() {
   const [color, setColor] = useState(usuario.empresa.color_primario || COLOR_PRIMARIO_DEFAULT);
   const [colorSecundario, setColorSecundario] = useState(usuario.empresa.color_secundario || COLOR_SECUNDARIO_DEFAULT);
   const [fuente, setFuente] = useState(usuario.empresa.fuente || "sistema");
-  const [tema, setTema] = useState<"faena" | "taller">(usuario.empresa.tema ?? "faena");
+  const [tema, setTema] = useState<"faena" | "taller" | "confianza">(usuario.empresa.tema ?? "faena");
   const [moneda, setMoneda] = useState(usuario.empresa.moneda ?? "CLP");
   const [guardandoMarca, setGuardandoMarca] = useState(false);
   const [restableciendo, setRestableciendo] = useState(false);
@@ -439,15 +439,16 @@ export default function EmpresaPage() {
           <Card>
             <p className="mb-ds-1 font-ds-body text-ds-small font-semibold text-ds-text">Tema visual</p>
             <p className="mb-ds-4 font-ds-body text-ds-caption text-ds-text/60">
-              Cambia la tipografía y los colores de fondo de toda la app. Tu color de acento y tu logo se mantienen igual en los dos.
+              Cambia los colores de fondo de toda la app (Taller también cambia la tipografía). Tu color de acento y tu logo se mantienen igual en todos.
             </p>
             <Select
               etiqueta="Tema"
               valor={tema}
-              onCambio={(v) => setTema(v as "faena" | "taller")}
+              onCambio={(v) => setTema(v as "faena" | "taller" | "confianza")}
               opciones={[
                 { valor: "faena", etiqueta: "Faena (por defecto)" },
                 { valor: "taller", etiqueta: "Taller" },
+                { valor: "confianza", etiqueta: "Confianza" },
               ]}
             />
           </Card>

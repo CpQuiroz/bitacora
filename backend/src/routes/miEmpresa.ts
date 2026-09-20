@@ -14,7 +14,7 @@ const MONEDAS = ["CLP", "USD", "EUR", "PEN", "COP", "MXN", "ARS"];
 // Debe reflejar exactamente los "valor" de web/src/lib/fuentes.ts.
 const FUENTES = ["sistema", "inter", "roboto", "poppins", "montserrat", "nunito", "work-sans", "lato", "source-sans-3"];
 const TIPOS_CUENTA: TipoCuenta[] = ["corriente", "vista", "ahorro"];
-const TEMAS: Empresa["tema"][] = ["faena", "taller"];
+const TEMAS: Empresa["tema"][] = ["faena", "taller", "confianza"];
 const ESTADOS_OS_DISPARADOR: EstadoOS[] = ["pendiente", "enviada", "en_proceso", "completada", "firmada"];
 
 // Brillo percibido (fórmula YIQ) para decidir si el texto sobre el
