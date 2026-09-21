@@ -1199,6 +1199,24 @@
       ],
       "status": "done",
       "resolution": "Implementado y verificado por tipos/lint. Se probó en vivo la tarea 76 (creó OS-0005 real en Hidroservi/prod con orden de compra OC-TEST-12345, confirmado que se guarda y se muestra en Detalle) — no se pudo confirmar visualmente el PDF por una limitación de la herramienta de navegador (no puede capturar pantalla de un blob: URL de PDF), pero el campo nuevo reutiliza el mismo mecanismo de grilla ya probado (cajaGrilla) que el resto de los campos del PDF, que sí funcionan. OS-0005 quedó como registro de prueba real en Hidroservi/prod, con descripción \"(borrar despues)\" — pendiente que la usuaria la elimine manualmente (no se automatizó el borrado porque dispara un confirm() nativo del navegador, que bloquea la extensión). Falta commit/push."
+    },
+    {
+      "id": 78,
+      "name": "rendiciones_fondo_por_rendir",
+      "title": "Feature completa: Rendiciones (fondo por rendir / caja chica) — migración + backend + web + mobile",
+      "description": "Prompt detallado del usuario (PASO 0 auditoría + PASO 1-4 build) pidiendo analizar factibilidad/utilidad antes de aplicar. Se hizo PASO 0 (auditoría de solo lectura, reportada), se confirmó que es un dolor real hoy (choferes/técnicos reciben efectivo y se reconcilia a mano), y se avanzó con la implementación completa en dev.",
+      "acceptance": [
+        "Migración 120: tabla rendiciones (folio REND-, colaborador_id, periodo, fechas, monto_entregado, estado, aprobado_por/fecha_aprobacion/motivo_rechazo, saldo_liquidado/fecha_liquidacion) + empresas.siguiente_folio_rendicion + función atómica + gastos.rendicion_id/viaje_id + índices + RLS tenant real",
+        "Correcciones reales encontradas en PASO 0 vs. el prompt: subirAnexo no era la función correcta (es de OS, no de gastos) — gastos ya tenía subirComprobante propia; el mecanismo de foto en mobile NUNCA sube inline (crea el gasto por JSON, encola la foto aparte) — se rediseñó POST /:id/items para no romper ese patrón (la foto obligatoria se exige recién al enviar, no al crear cada gasto); gastos nunca tuvo bloqueo de edición por estado — se agregó",
+        "backend/src/routes/rendiciones.ts: POST / (crear borrador), GET / y GET /:id (con saldo calculado siempre en el backend, nunca guardado), POST /:id/items (crea gasto asociado), POST /:id/enviar (bloquea si falta algún comprobante), PATCH /:id (aprobar/rechazar/saldo_liquidado) — montado detrás de requiereModulo(financiero) igual que /api/gastos",
+        "gastos.ts: nuevo chequeo — un gasto de una rendición no borrador queda congelado para PATCH",
+        "packages/shared: tipos Rendicion/EstadoRendicion/PeriodoRendicion, Gasto.rendicion_id/viaje_id, prefijo de folio REND",
+        "web: /dashboard/rendiciones (listado + KPIs + filtro) y /dashboard/rendiciones/[id] (detalle + PanelAcciones aprobar/rechazar + checkbox saldo liquidado), nuevo ítem en NAV_GROUPS/Dinero",
+        "mobile: RendicionesListScreen/RendicionFormScreen/RendicionDetalleScreen (Más → Rendiciones) + NuevoGastoScreen extendido para aceptar rendicionId (foto obligatoria, sin cola para la creación en sí, la foto sí va por la cola existente)",
+        "tsc (6 workspaces) + eslint + audit:tenant + verificar.sh completo en verde"
+      ],
+      "status": "blocked",
+      "resolution": "Implementado y verificado por tipos/lint/audit de tenant. BLOQUEADO a propósito: el prompt pide explícitamente no aplicar la migración a prod todavía — falta que la usuaria la corra en DEV primero, pruebe el flujo completo (web + mobile) y recién ahí decida pushear/aplicar a prod. No se corrieron tests nuevos (no se pidió). No se verificó visualmente en ningún entorno en esta sesión."
     }
   ]
 }

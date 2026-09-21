@@ -5274,3 +5274,81 @@ extensión de automatización — no se puede clickear con seguridad).
 Queda que la usuaria la elimine a mano cuando quiera. Falta
 commit/push del fix de "Cliente".
 
+## 2026-09-21: Rendiciones (fondo por rendir / caja chica) — feature completa (tarea 78, BLOQUEADA — falta migración 120 en dev)
+
+Prompt muy detallado (PASO 0 auditoría + PASO 1-4 build) pidiendo
+"analiza esto y decime si es factible y si sirve de algo" — no aplicar
+nada hasta aprobar. Se hizo PASO 0 primero (solo lectura, reportado
+antes de tocar código):
+
+- Confirmado exacto: estructura de `gastos`, mecanismo de folio
+  (`empresas.siguiente_folio_<x>` + función atómica), ubicación de
+  NAV_GROUPS/Dinero, `PanelAcciones` reusado en Cotizaciones/Cobros,
+  el formulario mobile "Nuevo Gasto" (categoría/proveedor al vuelo,
+  picker de OS con folio).
+- **Corrección real encontrada**: `subirAnexo` (que citaba el prompt)
+  es específico de OS (`trabajos/{id}/...`), no un mecanismo genérico —
+  Gastos ya tiene su propia `subirComprobante(empresaId, gastoId, ...)`,
+  ya conectada. Mejor noticia de lo que suponía el prompt: "foto
+  obligatoria" no necesita nada nuevo de storage.
+- **Corrección real #2, más importante**: el mobile NUNCA sube la foto
+  inline junto con la creación del gasto — crea el gasto por JSON
+  primero (rápido, confiable) y encola el comprobante APARTE contra
+  `PATCH /api/gastos/:id` (mismo mecanismo de reintento offline, para
+  evitar el bug ya documentado de dos multipart del mismo archivo
+  viajando a la vez). Se rediseñó `POST /:id/items` para no romper ese
+  patrón: crea el gasto sin exigir el archivo en esa misma request: la
+  foto se encola después, y "foto obligatoria" se exige recién en
+  `POST /:id/enviar` (bloquea si algún gasto de la rendición todavía no
+  tiene `comprobante_url`).
+- **Corrección real #3**: `gastosRouter` SÍ está montado detrás de
+  `requiereModulo("financiero")` — el prompt decía "sin gate de módulo
+  nuevo" pero en realidad Nuevo Gasto ya depende de que la empresa le
+  delegue ese módulo al rol colaborador (sistema de 3 capas). Rendiciones
+  se montó con el mismo criterio exacto, sin inventar una excepción.
+- Se preguntó si esto refleja un dolor real hoy (choferes/técnicos
+  reciben efectivo y se reconcilia a mano) — confirmó que sí.
+
+**Implementado** (ver detalle completo en el prompt original, todo
+Paso 1-4 salvo lo ya corregido arriba):
+- Migración 120: `rendiciones` (folio REND-, colaborador_id, periodo,
+  fechas, monto_entregado, estado, aprobado_por/fecha_aprobación/
+  motivo_rechazo, saldo_liquidado/fecha_liquidación) +
+  `empresas.siguiente_folio_rendicion` + función atómica +
+  `gastos.rendicion_id`/`viaje_id` + índices + RLS tenant real.
+- `backend/src/routes/rendiciones.ts`: POST / (crear borrador — un
+  colaborador solo la suya, gestión puede asignarla a otro), GET / y
+  GET /:id (saldo SIEMPRE calculado en el backend, nunca guardado),
+  POST /:id/items (crea gasto asociado, ownership + estado borrador),
+  POST /:id/enviar (bloquea si falta algún comprobante), PATCH /:id
+  (aprobar/rechazar — rechazar exige motivo y vuelve a 'borrador' —
+  /marcar saldo_liquidado, gestión únicamente).
+- `gastos.ts`: nuevo chequeo — un gasto de una rendición que ya no está
+  en 'borrador' queda congelado para PATCH (nunca existió ningún
+  bloqueo de edición por estado en Gastos antes de esto).
+- `packages/shared`: `Rendicion`/`EstadoRendicion`/`PeriodoRendicion`,
+  `Gasto.rendicion_id`/`viaje_id`, prefijo de folio `REND` — rebuild de
+  dist obligatorio (si no, tsc de backend/web ve tipos viejos).
+- web: `/dashboard/rendiciones` (listado + 3 KPIs + filtro por estado)
+  y `/dashboard/rendiciones/[id]` (detalle + `PanelAcciones` reusado
+  para aprobar/rechazar + checkbox saldo liquidado), nuevo ítem
+  "Rendiciones" en el grupo Dinero de `DashboardShell.tsx`.
+- mobile: `RendicionesListScreen`/`RendicionFormScreen`/
+  `RendicionDetalleScreen` (Más → Rendiciones, ícono `HandCoins`) +
+  `NuevoGastoScreen` extendido para aceptar un `rendicionId` opcional
+  (foto pasa a obligatoria, apunta a `agregarGastoRendicion` en vez de
+  `crearGasto` — sin cola nueva, reusa `encolarComprobante` tal cual).
+
+`tsc` (6 workspaces) + `eslint` + `audit:tenant` + `verificar.sh`
+completo en verde. Sin tests nuevos (no se pidieron). Tarea 78
+`blocked` a propósito.
+
+**BLOQUEADA a propósito, tal como pidió el prompt**: "No aplicar esta
+migración a producción — solo dev, hasta que se revise en dev primero."
+No se corrió ningún comando de base de datos en esta sesión (mismo
+criterio que otras migraciones: el CLI de esta sesión puede estar
+enlazado a prod). Falta que la usuaria aplique la migración 120 en
+DEV, pruebe el flujo completo (crear rendición → agregar gastos con
+foto → enviar → aprobar/rechazar desde la web) y recién ahí decida si
+aplicar a prod y pushear.
+

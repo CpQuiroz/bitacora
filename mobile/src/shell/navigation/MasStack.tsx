@@ -7,6 +7,9 @@ import { CobrosListaScreen } from "../../features/gestion/CobrosListaScreen";
 import { CobroFormScreen } from "../../features/gestion/CobroFormScreen";
 import { CobroDetalleScreen } from "../../features/gestion/CobroDetalleScreen";
 import { NuevoGastoScreen } from "../../features/gastos/NuevoGastoScreen";
+import { RendicionesListScreen } from "../../features/rendiciones/RendicionesListScreen";
+import { RendicionFormScreen } from "../../features/rendiciones/RendicionFormScreen";
+import { RendicionDetalleScreen } from "../../features/rendiciones/RendicionDetalleScreen";
 import { InformesScreen } from "../../features/informes/InformesScreen";
 import { AsistenteScreen } from "../../features/asistente/AsistenteScreen";
 import { PerfilScreen } from "../../features/perfil/PerfilScreen";
@@ -57,6 +60,11 @@ export function MasStack() {
       {/* CobroDetalleScreen dibuja su propio ScreenHeader — mismo criterio. */}
       <Stack.Screen name="CobroDetalle" component={CobroDetalleScreen} options={{ headerShown: false }} />
       <Stack.Screen name="GastoForm" component={NuevoGastoScreen} options={{ title: "Nuevo gasto", presentation: "modal" }} />
+      {/* Rendiciones (Más → Rendiciones, 21-sep-2026) — mismo criterio que
+          Levantamientos: ScreenHeader propio, header nativo apagado. */}
+      <Stack.Screen name="RendicionesLista" component={RendicionesListScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="RendicionForm" component={RendicionFormScreen} options={{ title: "Nueva rendición", presentation: "modal" }} />
+      <Stack.Screen name="RendicionDetalle" component={RendicionDetalleScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Informes" component={InformesScreen} options={{ headerShown: false }} />
       {/* AsistenteScreen mantiene el header nativo a propósito: es el
           destino del botón flotante desde 4 stacks distintos (Hoy/Agenda/

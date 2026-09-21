@@ -96,6 +96,8 @@ export type Empresa = {
   siguiente_folio_gasto: number;
   siguiente_folio_proveedor: number;
   siguiente_folio_cobro: number;
+  // Migración 120 (21-sep-2026): Rendiciones.
+  siguiente_folio_rendicion: number;
   color_primario: string | null;
   color_primario_foreground: string | null;
   color_secundario: string | null;
@@ -1027,6 +1029,39 @@ export type Gasto = {
   // Folio correlativo por empresa (migración 112). Null en gastos
   // creados antes de esta migración, no se backfillea histórico.
   folio: number | null;
+  // Rendiciones (migración 120, 21-sep-2026) — un gasto puede agrupar a
+  // una rendición Y a la vez estar ligado a una OS (trabajo_id) o un
+  // viaje, sin restricción entre ambos.
+  rendicion_id: string | null;
+  viaje_id: string | null;
+};
+
+export type PeriodoRendicion = "diario" | "semanal";
+export type EstadoRendicion = "borrador" | "enviada" | "aprobada" | "rechazada";
+
+// Fondo por rendir / caja chica: plata entregada en efectivo a un
+// colaborador para gastos de terreno, reconciliada contra sus gastos
+// reales (gastos.rendicion_id) al cerrar el período. El saldo
+// (monto_entregado - suma de gastos) se calcula siempre en el backend,
+// nunca se guarda en una columna — ver GET /api/rendiciones/:id.
+export type Rendicion = {
+  id: string;
+  empresa_id: string;
+  folio: number | null;
+  colaborador_id: string;
+  periodo: PeriodoRendicion;
+  fecha_inicio: string;
+  fecha_termino: string;
+  monto_entregado: number;
+  estado: EstadoRendicion;
+  aprobado_por: string | null;
+  fecha_aprobacion: string | null;
+  motivo_rechazo: string | null;
+  // Informativo (mismo criterio que Cobros) — ninguna pasarela real
+  // detrás, el saldo no se devuelve solo porque se marque esto.
+  saldo_liquidado: boolean;
+  fecha_liquidacion: string | null;
+  creado_en: string;
 };
 
 export type Presupuesto = {
@@ -1893,6 +1928,7 @@ export type Database = {
       rutas_planificadas: Tabla<RutaPlanificada>;
       os_items: Tabla<OsItem>;
       gastos: Tabla<Gasto>;
+      rendiciones: Tabla<Rendicion>;
       presupuestos: Tabla<Presupuesto>;
       cotizacion_etapas: Tabla<CotizacionEtapa>;
       informes_generados: Tabla<InformeGenerado>;
@@ -2018,6 +2054,10 @@ export type Database = {
         Returns: number;
       };
       siguiente_folio_cobro: {
+        Args: { p_empresa_id: string };
+        Returns: number;
+      };
+      siguiente_folio_rendicion: {
         Args: { p_empresa_id: string };
         Returns: number;
       };

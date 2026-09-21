@@ -5,6 +5,7 @@ import {
   ChevronRight,
   CircleUser,
   FileChartColumn,
+  HandCoins,
   HardHat,
   Receipt,
   RefreshCw,
@@ -128,6 +129,9 @@ export function MasScreen({ navigation }: NativeStackScreenProps<MasStackParamLi
     // gastos en el móvil) — se deja "Nuevo gasto", no "Gastos", para no
     // prometer una vista que no existe.
     accesos.push({ titulo: "Nuevo gasto", Icono: Receipt, ir: () => navigation.navigate("GastoForm") });
+    // Rendiciones (fondo por rendir/caja chica, 21-sep-2026) — mismo
+    // gate que Cobros/Gasto (módulo "financiero").
+    accesos.push({ titulo: "Rendiciones", Icono: HandCoins, ir: () => navigation.navigate("RendicionesLista") });
   }
   if (veLevantamientos) {
     accesos.push({ titulo: "Levantamientos", Icono: Search, ir: () => navigation.navigate("Levantamientos") });

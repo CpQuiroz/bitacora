@@ -24,6 +24,7 @@ import {
   type BorradorGasto,
   type Foto,
 } from "../../services/gastos";
+import { agregarGastoRendicion } from "../../services/rendiciones";
 import type { MasStackParamList } from "../../shell/navigation/types";
 
 function clave(d: Date): string {
@@ -52,7 +53,12 @@ const VACIO: BorradorGasto = {
 // recolorea el contenido. `InputMonto` y `PickerBuscable` no tienen
 // todavía equivalente v2 — quedan tal cual (gap conocido), el resto del
 // contenido pasa a tokens/Texto/Button/Input de @bitacora/ui/native.
-export function NuevoGastoScreen({ navigation }: NativeStackScreenProps<MasStackParamList, "GastoForm">) {
+export function NuevoGastoScreen({ navigation, route }: NativeStackScreenProps<MasStackParamList, "GastoForm">) {
+  // Rendiciones (migración 120, 21-sep-2026): mismo formulario, pero el
+  // gasto queda asociado a una rendición en 'borrador' y la foto pasa a
+  // ser obligatoria (una rendición sin respaldo fotográfico no sirve
+  // para la reconciliación) — ver guardar() más abajo.
+  const rendicionId = route.params?.rendicionId;
   // Pantalla modal (presentation: "modal" en MasStack.tsx) — no vive
   // dentro del pager de AppTabs.tsx, así que no hereda el fix de
   // paddingBottom de la tab bar (ver ese archivo, 20-sep-2026). Necesita
@@ -72,8 +78,8 @@ export function NuevoGastoScreen({ navigation }: NativeStackScreenProps<MasStack
   const set = <K extends keyof BorradorGasto>(k: K, v: BorradorGasto[K]) => setB((p) => ({ ...p, [k]: v }));
 
   useEffect(() => {
-    navigation.setOptions({ title: "Nuevo gasto" });
-  }, [navigation]);
+    navigation.setOptions({ title: rendicionId ? "Agregar gasto" : "Nuevo gasto" });
+  }, [navigation, rendicionId]);
 
   useEffect(() => {
     Promise.all([listarCategoriasGasto(), listarCentrosCosto(), listarProveedores(), listarTrabajos(true)]).then(
@@ -118,6 +124,21 @@ export function NuevoGastoScreen({ navigation }: NativeStackScreenProps<MasStack
     if (!(Number(b.monto || 0) > 0)) return Alert.alert("Falta el monto", "Ingresa el monto del gasto.");
 
     const volver = () => navigation.goBack();
+
+    if (rendicionId) {
+      if (!foto) return Alert.alert("Falta la foto", "Un gasto de rendición siempre necesita comprobante.");
+      // Sin cola offline para la creación en sí (mismo criterio que
+      // "crear al vuelo" de categoría/proveedor): necesita conexión. La
+      // foto sí va por la cola de siempre (agregarGastoRendicion la
+      // encola aparte) — eso nunca se pierde aunque falte señal después.
+      if (!enLinea) return Alert.alert("Sin conexión", "Necesitás conexión para agregar un gasto a la rendición.");
+      setGuardando(true);
+      const r = await agregarGastoRendicion(rendicionId, b, foto);
+      setGuardando(false);
+      if (!r.ok) return Alert.alert("No se pudo agregar", r.error);
+      return Alert.alert("Gasto agregado", "El comprobante se está subiendo y se reintenta solo si falla.", [{ text: "Listo", onPress: volver }]);
+    }
+
     setGuardando(true);
 
     if (enLinea) {
@@ -292,7 +313,7 @@ export function NuevoGastoScreen({ navigation }: NativeStackScreenProps<MasStack
           >
             <Camera size={28} strokeWidth={2} color={`${tokens.color.text}99`} />
             <Texto tamano={tokens.size.small} peso="semibold" color={`${tokens.color.text}99`}>
-              Foto de la boleta
+              {rendicionId ? "Foto de la boleta (obligatoria)" : "Foto de la boleta"}
             </Texto>
           </Pressable>
         )}

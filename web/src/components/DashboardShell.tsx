@@ -20,6 +20,7 @@ import {
   ChevronRight,
   ClipboardCheck,
   CreditCard,
+  HandCoins,
   HelpCircle,
   Home,
   Layers,
@@ -92,6 +93,9 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/dashboard/financiero/cotizaciones", label: "Cotizaciones", icon: Tag, modulo: "financiero" },
       { href: "/dashboard/financiero/cobros", label: "Cobros", icon: Receipt, modulo: "financiero" },
       { href: "/dashboard/gastos", label: "Gastos", icon: Wallet, modulo: "financiero" },
+      // Rendiciones (fondo por rendir/caja chica, 21-sep-2026) — reusa
+      // el mismo módulo "financiero" que el resto del grupo.
+      { href: "/dashboard/rendiciones", label: "Rendiciones", icon: HandCoins, modulo: "financiero" },
       // Remuneraciones deja de ser grupo de primer nivel: se usa una vez
       // al mes. Parámetros de remuneración pasa a Configuración.
       { href: "/dashboard/remuneraciones", label: "Liquidaciones", icon: CreditCard, modulo: "remuneraciones" },

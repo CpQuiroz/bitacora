@@ -30,6 +30,7 @@ import { reservaPublicaRouter } from "./routes/reservaPublica";
 import { dashboardRouter } from "./routes/dashboard";
 import { informesRouter } from "./routes/informes";
 import { gastosRouter } from "./routes/gastos";
+import { rendicionesRouter } from "./routes/rendiciones";
 import { cotizacionesRouter } from "./routes/cotizaciones";
 import { plantillasRouter } from "./routes/plantillas";
 import { checklistsRouter } from "./routes/checklists";
@@ -336,6 +337,7 @@ app.use("/api/agenda-pro/config", requiereAuth, requiereEmpresa, agendaProConfig
 app.use("/api/dashboard", requiereAuth, requiereEmpresa, dashboardRouter);
 app.use("/api/informes", requiereAuth, requiereEmpresa, requiereModulo("informes"), informesRouter);
 app.use("/api/gastos", requiereAuth, requiereEmpresa, requiereModulo("financiero"), gastosRouter);
+app.use("/api/rendiciones", requiereAuth, requiereEmpresa, requiereModulo("financiero"), rendicionesRouter);
 app.use("/api/cotizaciones", requiereAuth, requiereEmpresa, requiereModulo("financiero"), cotizacionesRouter);
 app.use("/api/plantillas", requiereAuth, requiereEmpresa, plantillasRouter);
 app.use("/api/checklists", requiereAuth, requiereEmpresa, checklistsRouter);

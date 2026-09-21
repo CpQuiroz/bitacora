@@ -10,7 +10,7 @@
 // confusión (migración 112, 20-sep-2026). Persona (usuarios) queda
 // deliberadamente sin folio propio — ya tiene RUT como identificador
 // único.
-export type PrefijoFolio = "OS" | "CIT" | "VIA" | "LEV" | "CLI" | "PACK" | "GTO" | "PROV" | "COB";
+export type PrefijoFolio = "OS" | "CIT" | "VIA" | "LEV" | "CLI" | "PACK" | "GTO" | "PROV" | "COB" | "REND";
 
 /**
  * @param folio null = todavía sin folio (fila creada antes de que

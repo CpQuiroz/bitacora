@@ -23,7 +23,10 @@ const upload = multer({
   },
 });
 
-async function resolverCategoria(empresaId: string, categoriaGastoId: string | undefined) {
+// Exportadas para reusarlas en rendiciones.ts (POST /:id/items crea un
+// gasto igual que acá, solo que scopeado a una rendición y exigiendo
+// comprobante) — nada de duplicar esta validación.
+export async function resolverCategoria(empresaId: string, categoriaGastoId: string | undefined) {
   if (!categoriaGastoId) return { categoria_gasto_id: null, categoria: null };
   const { data } = await supabase
     .from("categorias_gasto")
@@ -35,7 +38,7 @@ async function resolverCategoria(empresaId: string, categoriaGastoId: string | u
   return { categoria_gasto_id: data.id, categoria: data.nombre };
 }
 
-async function existeEnTabla(tabla: string, empresaId: string, id: string) {
+export async function existeEnTabla(tabla: string, empresaId: string, id: string) {
   const { data } = await supabase.from(tabla).select("id").eq("empresa_id", empresaId).eq("id", id).maybeSingle();
   return Boolean(data);
 }
@@ -180,9 +183,23 @@ gastosRouter.patch(
     const { estado, fecha_pago, categoria_gasto_id, centro_costo_id, proveedor_id, trabajo_id, descripcion, monto, fecha } = req.body ?? {};
     const cambios: Partial<Gasto> = {};
 
-    const { data: gastoActual } = await supabase.from("gastos").select("estado").eq("empresa_id", req.empresaId!).eq("id", req.params.id).maybeSingle();
+    const { data: gastoActual } = await supabase
+      .from("gastos")
+      .select("estado, rendicion:rendiciones(estado)")
+      .eq("empresa_id", req.empresaId!)
+      .eq("id", req.params.id)
+      .maybeSingle();
     if (!gastoActual) {
       res.status(404).json({ error: "Gasto no encontrado" });
+      return;
+    }
+    // Rendiciones (migración 120): una vez que la rendición dejó
+    // 'borrador' (enviada/aprobada), sus gastos quedan congelados — ni
+    // el colaborador ni nadie los edita desde acá. Se libera si se
+    // rechaza (vuelve a 'borrador').
+    const rendicionDeGasto = (gastoActual as unknown as { rendicion: { estado: string } | null }).rendicion;
+    if (rendicionDeGasto && rendicionDeGasto.estado !== "borrador") {
+      res.status(409).json({ error: "Este gasto pertenece a una rendición ya enviada — no se puede editar" });
       return;
     }
 

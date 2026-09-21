@@ -21,7 +21,8 @@ async function siguienteFolio(
     | "siguiente_folio_pack"
     | "siguiente_folio_gasto"
     | "siguiente_folio_proveedor"
-    | "siguiente_folio_cobro",
+    | "siguiente_folio_cobro"
+    | "siguiente_folio_rendicion",
   empresaId: string
 ): Promise<number | null> {
   const { data, error } = await supabase.rpc(fn, { p_empresa_id: empresaId });
@@ -41,3 +42,5 @@ export const siguienteFolioPack = (empresaId: string) => siguienteFolio("siguien
 export const siguienteFolioGasto = (empresaId: string) => siguienteFolio("siguiente_folio_gasto", empresaId);
 export const siguienteFolioProveedor = (empresaId: string) => siguienteFolio("siguiente_folio_proveedor", empresaId);
 export const siguienteFolioCobro = (empresaId: string) => siguienteFolio("siguiente_folio_cobro", empresaId);
+// Migración 120 (21-sep-2026) — Rendiciones.
+export const siguienteFolioRendicion = (empresaId: string) => siguienteFolio("siguiente_folio_rendicion", empresaId);

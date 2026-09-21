@@ -63,7 +63,12 @@ export type MasStackParamList = {
   CobrosLista: undefined;
   CobroForm: undefined;
   CobroDetalle: { cobroId: string };
-  GastoForm: undefined;
+  // GastoForm con rendicionId: mismo formulario, foto obligatoria y el
+  // gasto queda asociado a esa rendición (Más → Rendiciones).
+  GastoForm: { rendicionId?: string } | undefined;
+  RendicionesLista: undefined;
+  RendicionForm: undefined;
+  RendicionDetalle: { id: string };
   Informes: undefined;
   Asistente: undefined;
   Perfil: undefined;
