@@ -956,6 +956,20 @@
       ],
       "status": "done",
       "resolution": "Ambos cambios hechos y verificados."
+    },
+    {
+      "id": 61,
+      "name": "cita_gana_crear_levantamiento",
+      "title": "Form rápido de Nueva Tarea (Agenda): agrega 'Crear Levantamiento' junto a 'Crear Orden de Servicio'",
+      "description": "Pedido: al hacer clic en el calendario para crear una cita, solo se ofrecía crear una OS desde ahí, no un Levantamiento. Agregado un botón simétrico. A diferencia de OS (que vincula trabajo_id a la tarea al volver), Levantamiento no tiene esa columna de vínculo en tareas — en vez de replicar el viaje-y-vuelta completo, lo ya escrito (cliente/descripción/fecha/hora) se lleva precargado al form de Levantamientos vía query params, sin perder nada.",
+      "acceptance": [
+        "agenda/page.tsx: nuevo onCrearLevantamientoDesdeTarea() — navega a /dashboard/levantamientos?crear=1 con cliente_id/descripcion/fecha_visita/hora_visita precargados desde lo ya tipeado en la tarea",
+        "Botón 'Crear Levantamiento' junto a 'Crear Orden de Servicio' en el form rápido, mismo criterio de visibilidad (!trabajoVinculado)",
+        "levantamientos/page.tsx: el efecto de ?crear=1 ahora también lee cliente_id/descripcion/fecha_visita/hora_visita y precarga el form antes de abrir el modal",
+        "tsc de los 6 workspaces limpio, verificar.sh completo en verde"
+      ],
+      "status": "done",
+      "resolution": "Implementado y verificado."
     }
   ]
 }

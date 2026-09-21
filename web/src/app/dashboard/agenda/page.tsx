@@ -493,6 +493,20 @@ function AgendaContenido() {
     router.push(`/dashboard/ordenes/nueva?${q.toString()}`);
   }
 
+  // Análogo a onCrearOSDesdeTarea, pero para Levantamiento — no guarda
+  // borrador de tarea ni vuelve a Agenda al terminar (Levantamiento no
+  // se "vincula" a una cita como sí lo hace una OS a trabajo_id; no hay
+  // columna equivalente en tareas). En cambio, lo que ya escribiste acá
+  // se lleva directo al form de Levantamientos, precargado.
+  function onCrearLevantamientoDesdeTarea() {
+    const q = new URLSearchParams({ crear: "1" });
+    if (clienteIdTarea) q.set("cliente_id", clienteIdTarea);
+    if (descripcionTarea.trim()) q.set("descripcion", descripcionTarea.trim());
+    if (fechaTarea) q.set("fecha_visita", fechaTarea);
+    if (horaTarea) q.set("hora_visita", horaTarea);
+    router.push(`/dashboard/levantamientos?${q.toString()}`);
+  }
+
   // Menú "+ Nuevo" del encabezado — a diferencia de onCrearOSDesdeTarea
   // (que salva un borrador de tarea en curso), estas van directo: no hay
   // nada que preservar, así que no llevan ?volverA=agenda.
@@ -783,6 +797,11 @@ function AgendaContenido() {
             {!trabajoVinculado && (
               <Button variante="secundario" onPress={onCrearOSDesdeTarea} deshabilitado={guardandoTarea} iconoIzq={<Wrench size={16} strokeWidth={2.75} />}>
                 Crear Orden de Servicio
+              </Button>
+            )}
+            {!trabajoVinculado && (
+              <Button variante="secundario" onPress={onCrearLevantamientoDesdeTarea} deshabilitado={guardandoTarea} iconoIzq={<Search size={16} strokeWidth={2.75} />}>
+                Crear Levantamiento
               </Button>
             )}
           </div>

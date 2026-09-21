@@ -4633,3 +4633,20 @@ normal). Elimina la clase entera de bug (staleness de un chequeo que
 corre una sola vez) en vez de parchear el síntoma puntual.
 
 `tsc web` limpio, `verificar.sh --rapido` en verde. Tarea 60 `done`.
+
+## 2026-09-21: Nueva Tarea gana "Crear Levantamiento" (tarea 61)
+
+Pedido: al pinchar el calendario y abrir "Nueva Tarea" (Agenda), solo
+había opción de crear una OS desde ahí, no un Levantamiento. Antes de
+tocar código, revisé si `tareas` tiene alguna columna equivalente a
+`trabajo_id` para "vincular" un Levantamiento igual que a una OS —
+no la tiene, así que replicar el viaje-y-vuelta completo (crear allá,
+volver acá con el vínculo) hubiera exigido una migración nueva solo
+para esto. En su lugar: "Crear Levantamiento" lleva lo ya tipeado
+(cliente/descripción/fecha/hora) precargado al form de Levantamientos
+vía query params (`?crear=1&cliente_id=...`) — no se pierde nada,
+pero no vuelve solo a Agenda al terminar (Levantamiento no necesita
+"volver" — ya tiene su propia fecha_visita/hora_visita, no depende de
+una cita para agendarse).
+
+`tsc` x6 limpio, `verificar.sh` completo en verde. Tarea 61 `done`.

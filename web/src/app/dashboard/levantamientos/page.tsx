@@ -142,6 +142,17 @@ function LevantamientosContenido() {
   // y limpia el query param para que un refresh no lo reabra.
   useEffect(() => {
     if (searchParams.get("crear") !== "1") return;
+    // Viene de "Crear Levantamiento" en el form rápido de Agenda — lo
+    // que ya se había escrito ahí (cliente/descripción/fecha/hora) se
+    // precarga acá, no se pierde por saltar de pantalla.
+    const clienteIdParam = searchParams.get("cliente_id");
+    const descripcionParam = searchParams.get("descripcion");
+    const fechaVisitaParam = searchParams.get("fecha_visita");
+    const horaVisitaParam = searchParams.get("hora_visita");
+    if (clienteIdParam) setClienteId(clienteIdParam);
+    if (descripcionParam) setDescripcion(descripcionParam);
+    if (fechaVisitaParam) setFechaVisita(fechaVisitaParam);
+    if (horaVisitaParam) setHoraVisita(horaVisitaParam);
     setFormAbierto(true);
     router.replace("/dashboard/levantamientos");
     // eslint-disable-next-line react-hooks/exhaustive-deps
