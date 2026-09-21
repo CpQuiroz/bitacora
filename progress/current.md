@@ -4946,3 +4946,26 @@ migración — 100% web/superadmin. Tarea 69 `done`.
 **Pendiente**: no se verificó visualmente en navegador en esta sesión
 (no había dev server local) — solo tsc/eslint + revisión de estructura
 JSX. Falta push (a pedido de la usuaria, no pushear hasta que avise).
+
+## 2026-09-21: Equipo abierta por defecto + clave personalizada al restablecer (tarea 70)
+
+Pedido: "dejá Equipo abierta por defecto y dame una opcion para dejar
+clave personaliza a los usuarios".
+
+- `equipoAbierto` vuelve a `useState(true)` — la única tarjeta que
+  arranca abierta de toda la página (el resto sigue en `false`, tarea
+  69).
+- Restablecer contraseña deja de ser un `confirm()` directo — ahora
+  abre un panel inline (mismo patrón que Impersonar/Eliminar usuario)
+  con un campo opcional "Contraseña personalizada": vacío → sigue
+  generando una temporal al azar (comportamiento de siempre); con
+  texto → usa esa clave elegida. Backend (`restablecer-password`)
+  valida mínimo 8 caracteres si viene una personalizada (mismo mínimo
+  que Configuración > Cuenta) y deja constancia en la auditoría de si
+  fue personalizada o generada.
+
+`tsc` (backend + web) + `eslint` limpios, `verificar.sh` completo en
+verde. Sin migración. Tarea 70 `done`.
+
+**Pendiente**: no se verificó visualmente en navegador en esta sesión.
+Falta push (a pedido de la usuaria, no pushear hasta que avise).

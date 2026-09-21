@@ -1086,6 +1086,20 @@
       ],
       "status": "done",
       "resolution": "Implementado. Todas las tarjetas arrancan cerradas por defecto (mismo criterio literal que pidió la usuaria) — incluida \"Equipo\", la más usada; si en la práctica resulta molesto tener que abrirla siempre, es un ajuste rápido (arrancar abierta) a pedido. Sin migración — 100% web/superadmin. No se verificó visualmente en navegador en esta sesión (no había dev server local) — solo tsc/eslint + revisión de estructura JSX. Falta push (a pedido de la usuaria, no pushear hasta que avise)."
+    },
+    {
+      "id": 70,
+      "name": "superadmin_equipo_abierta_y_clave_personalizada",
+      "title": "Super-Admin: \"Equipo\" abierta por defecto + opción de contraseña personalizada al restablecer",
+      "description": "Pedido: \"dejá Equipo abierta por defecto y dame una opcion para dejar clave personaliza a los usuarios\". Equipo vuelve a useState(true) (única tarjeta que arranca abierta). El botón \"Restablecer contraseña\" deja de disparar directo con confirm() — ahora abre un panel inline (mismo patrón que Impersonar/Eliminar usuario) con un campo opcional: vacío = genera una temporal al azar (comportamiento de siempre), con texto = usa esa clave elegida (mínimo 8 caracteres, mismo mínimo que Configuración > Cuenta).",
+      "acceptance": [
+        "equipoAbierto arranca en true (el resto de las tarjetas de la página sigue en false)",
+        "backend: POST .../restablecer-password acepta un body opcional {password} — si viene, valida longitud >= 8 y la usa; si no viene, genera la temporal al azar de siempre. Auditoría deja registrado si fue personalizada.",
+        "web: nuevo panel inline (restablecerUsuario + passwordPersonalizada) con el campo opcional, reemplaza el confirm() de una sola pregunta",
+        "tsc backend + web, eslint web, verificar.sh completo en verde"
+      ],
+      "status": "done",
+      "resolution": "Implementado y verificado (tsc + eslint + verificar.sh). Sin migración. No se verificó visualmente en navegador en esta sesión. Falta push (a pedido de la usuaria)."
     }
   ]
 }

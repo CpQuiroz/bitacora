@@ -567,7 +567,16 @@ superadminRouter.post(
       return;
     }
 
-    const passwordTemporal = crypto.randomBytes(9).toString("base64url");
+    // Clave personalizada opcional (21-sep-2026, pedido explícito) — si
+    // no se manda `password`, sigue generando una temporal al azar como
+    // siempre. Mismo mínimo de 8 caracteres que ya exige el cambio de
+    // contraseña del propio usuario en Configuración > Cuenta.
+    const { password: passwordPersonalizada } = req.body ?? {};
+    if (passwordPersonalizada !== undefined && (typeof passwordPersonalizada !== "string" || passwordPersonalizada.length < 8)) {
+      res.status(400).json({ error: "La contraseña personalizada debe tener al menos 8 caracteres" });
+      return;
+    }
+    const passwordAUsar = passwordPersonalizada || crypto.randomBytes(9).toString("base64url");
     // email_confirm: true — hallazgo real (21-sep-2026): un usuario
     // invitado que nunca completó el link de invitación (nunca definió
     // contraseña, nunca confirmó el correo) seguía sin poder entrar
@@ -575,7 +584,7 @@ superadminRouter.post(
     // Auth exige el correo confirmado para el login normal. Confirmarlo
     // en este mismo paso es seguro: el propio Super-Admin ya está
     // verificando la identidad de la empresa/usuario antes de resetear.
-    const { error } = await supabase.auth.admin.updateUserById(usuario.id, { password: passwordTemporal, email_confirm: true });
+    const { error } = await supabase.auth.admin.updateUserById(usuario.id, { password: passwordAUsar, email_confirm: true });
     if (error) {
       res.status(500).json({ error: error.message });
       return;
@@ -584,10 +593,10 @@ superadminRouter.post(
     await registrarAuditoria(req.superAdminId!, "restablecer_password_usuario", {
       empresaId: req.params.id,
       ip: req.ip ?? null,
-      detalle: `Usuario: ${usuario.nombre} (${usuario.id})`,
+      detalle: `Usuario: ${usuario.nombre} (${usuario.id})${passwordPersonalizada ? " — clave personalizada" : ""}`,
     });
 
-    res.json({ password: passwordTemporal });
+    res.json({ password: passwordAUsar });
   })
 );
 

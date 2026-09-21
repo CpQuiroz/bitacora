@@ -149,7 +149,9 @@ export default function SuperAdminSaludEmpresaPage() {
   const [suscripcionAbierta, setSuscripcionAbierta] = useState(false);
   const [modulosAbierto, setModulosAbierto] = useState(false);
   const [correosAbierto, setCorreosAbierto] = useState(false);
-  const [equipoAbierto, setEquipoAbierto] = useState(false);
+  // Equipo arranca ABIERTA (a diferencia del resto) — pedido explícito
+  // 21-sep-2026: es la tarjeta que más se usa (reset de contraseña, 2FA).
+  const [equipoAbierto, setEquipoAbierto] = useState(true);
   const [anonClienteAbierto, setAnonClienteAbierto] = useState(false);
   const [exportarAbierto, setExportarAbierto] = useState(false);
   const [zonaPeligroAbierta, setZonaPeligroAbierta] = useState(false);
@@ -166,6 +168,12 @@ export default function SuperAdminSaludEmpresaPage() {
   const [errorUsuarios, setErrorUsuarios] = useState<string | null>(null);
   const [restableciendoId, setRestableciendoId] = useState<string | null>(null);
   const [passwordGenerada, setPasswordGenerada] = useState<{ usuarioId: string; nombre: string; password: string } | null>(null);
+  // Panel de restablecer contraseña (21-sep-2026, pedido: poder dejar
+  // una clave personalizada en vez de solo la temporal al azar) — mismo
+  // patrón de panel inline que impersonarUsuario/eliminarUsuario, en vez
+  // de un confirm() de una sola pregunta.
+  const [restablecerUsuario, setRestablecerUsuario] = useState<{ id: string; nombre: string } | null>(null);
+  const [passwordPersonalizada, setPasswordPersonalizada] = useState("");
   const [cambiandoMfaId, setCambiandoMfaId] = useState<string | null>(null);
   const [secretoTotpGenerado, setSecretoTotpGenerado] = useState<{ usuarioId: string; nombre: string; secreto: string } | null>(null);
   const [cambiandoEstadoId, setCambiandoEstadoId] = useState<string | null>(null);
@@ -434,12 +442,17 @@ export default function SuperAdminSaludEmpresaPage() {
   }
 
   async function onRestablecerPassword(usuarioId: string, nombre: string) {
-    if (!confirm(`¿Restablecer la contraseña de ${nombre}? La contraseña actual dejará de funcionar de inmediato.`)) return;
+    const personalizada = passwordPersonalizada.trim();
+    if (personalizada && personalizada.length < 8) {
+      setErrorUsuarios("La contraseña personalizada debe tener al menos 8 caracteres");
+      return;
+    }
     setErrorUsuarios(null);
     setPasswordGenerada(null);
     setRestableciendoId(usuarioId);
     const res = await superadminFetch(`/api/superadmin/empresas/${params.id}/usuarios/${usuarioId}/restablecer-password`, {
       method: "POST",
+      body: JSON.stringify(personalizada ? { password: personalizada } : {}),
     });
     setRestableciendoId(null);
     if (!res.ok) {
@@ -449,6 +462,8 @@ export default function SuperAdminSaludEmpresaPage() {
     }
     const { password } = await res.json();
     setPasswordGenerada({ usuarioId, nombre, password });
+    setRestablecerUsuario(null);
+    setPasswordPersonalizada("");
   }
 
   async function onActivarMfa(usuarioId: string, nombre: string) {
@@ -1306,6 +1321,50 @@ export default function SuperAdminSaludEmpresaPage() {
               </div>
             )}
 
+            {restablecerUsuario && (
+              <div className="mb-4 rounded-lg border border-border p-3">
+                <p className="text-sm font-semibold text-foreground">Restablecer la contraseña de {restablecerUsuario.nombre}</p>
+                <p className="mt-1 text-xs text-muted">
+                  La contraseña actual deja de funcionar de inmediato. Dejá el campo vacío para generar una temporal al azar, o
+                  escribí una vos mismo para dejarle una clave elegida (mínimo 8 caracteres).
+                </p>
+                <div className="mt-3">
+                  <Label>Contraseña personalizada (opcional)</Label>
+                  <Input
+                    type="text"
+                    value={passwordPersonalizada}
+                    onChange={(e) => setPasswordPersonalizada(e.target.value)}
+                    placeholder="Dejar vacío para generar una automática"
+                    className="max-w-sm font-mono"
+                  />
+                </div>
+                {errorUsuarios && (
+                  <div className="mt-2">
+                    <ErrorText>{errorUsuarios}</ErrorText>
+                  </div>
+                )}
+                <div className="mt-3 flex gap-2">
+                  <Button
+                    type="button"
+                    disabled={restableciendoId === restablecerUsuario.id}
+                    onClick={() => onRestablecerPassword(restablecerUsuario.id, restablecerUsuario.nombre)}
+                  >
+                    {restableciendoId === restablecerUsuario.id ? "Restableciendo…" : "Restablecer"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => {
+                      setRestablecerUsuario(null);
+                      setErrorUsuarios(null);
+                    }}
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+              </div>
+            )}
+
             {passwordGenerada && (
               <div className="mb-3 rounded-lg border border-brand/40 bg-brand-soft p-3 text-sm">
                 <p className="font-medium text-foreground">
@@ -1368,10 +1427,14 @@ export default function SuperAdminSaludEmpresaPage() {
                             <Button
                               type="button"
                               variant="outline"
-                              disabled={restableciendoId === u.id}
-                              onClick={() => onRestablecerPassword(u.id, u.nombre)}
+                              onClick={() => {
+                                setRestablecerUsuario({ id: u.id, nombre: u.nombre });
+                                setPasswordPersonalizada("");
+                                setPasswordGenerada(null);
+                                setErrorUsuarios(null);
+                              }}
                             >
-                              {restableciendoId === u.id ? "Restableciendo…" : "Restablecer contraseña"}
+                              Restablecer contraseña
                             </Button>
                             <Button
                               type="button"
