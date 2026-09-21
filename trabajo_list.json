@@ -1000,6 +1000,21 @@
       ],
       "status": "done",
       "resolution": "Migración 117 aplicada y verificada en prod (ON DELETE CASCADE confirmado). Probado el fix de punta a punta: DELETE /api/trabajos/:id sobre OS-0003 (la de prueba) devolvió 204 y desapareció del listado."
+    },
+    {
+      "id": 64,
+      "name": "build_apk_1_10_9",
+      "title": "Build local APK 1.10.9 (versionCode 50)",
+      "description": "Build local (JDK17 + Android SDK vía brew, cuota EAS Free agotada hasta 1-oct) con todo lo acumulado desde 1.10.8: hora_visita de Levantamiento en Pizarra/Agenda, tipo_trabajo->tipo (unificación Tipo de OS/Trabajo, TrabajoDetalleScreen.tsx/services/trabajos.ts).",
+      "acceptance": [
+        "mobile/app.json: version 1.10.8->1.10.9, versionCode 49->50",
+        "expo prebuild + gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a, con mobile/.env sobrescrito a valores de prod (eas.json preview) durante el build",
+        "Verificado con strings sobre el APK: contiene bitacora-cgt7.onrender.com y yjbskbskyadxjooxngjv (prod), sin localhost ni pruwvpnlvrvgtmpetlsr (dev)",
+        ".env restaurado a dev y mobile/package.json revertido (prebuild los pisa) después del build",
+        "APK copiado a ~/Desktop/bitacora-builds/bitacora-1.10.9.apk y entregado a la usuaria"
+      ],
+      "status": "done",
+      "resolution": "Build exitoso (11m 59s), verificado apuntando a prod, entregado."
     }
   ]
 }

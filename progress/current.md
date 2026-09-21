@@ -4732,3 +4732,32 @@ CASCADE` confirmado. Probé el fix de punta a punta sobre la propia
 OS-0003 (la de prueba, que había quedado "Cancelada" antes del fix):
 `DELETE /api/trabajos/:id` devolvió **204** y desapareció del listado
 — ya no hace falta cancelar en vez de eliminar. Tarea 63 → `done`.
+
+## 2026-09-21: build local APK 1.10.9 (tarea 64)
+
+Build local (cuota EAS Free agotada hasta 1-oct) con todo lo
+acumulado en mobile desde el 1.10.8: hora_visita de Levantamiento en
+Pizarra/Agenda, y el rename tipo_trabajo->tipo de la unificación Tipo
+de OS/Trabajo (TrabajoDetalleScreen.tsx, services/trabajos.ts).
+`mobile/app.json`: 1.10.8/vc49 -> 1.10.9/vc50.
+
+Mismo procedimiento ya documentado: `expo prebuild` + `.env`
+sobreescrito a valores de prod (eas.json > build.preview.env) durante
+el build, `gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a`
+(11m 59s, BUILD SUCCESSFUL), `.env` restaurado a dev y
+`package.json` revertido después. Verificado con `strings` sobre el
+APK: contiene `bitacora-cgt7.onrender.com`/`yjbskbskyadxjooxngjv`
+(prod), sin `localhost`/`pruwvpnlvrvgtmpetlsr` (dev). APK copiado a
+`~/Desktop/bitacora-builds/bitacora-1.10.9.apk` (40 MB) y entregado.
+
+**Nota de proceso**: al lanzar el build detecté que había repetido el
+error de "doble backgrounding" ya documentado antes en esta sesión
+(`nohup ... & ` DENTRO de un comando con `run_in_background: true` —
+el harness marca "completado" apenas termina el launcher, no el
+proceso real). Lo detecté a tiempo (verifiqué con `pgrep` que el
+proceso de gradle seguía vivo) y lo corregí lanzando un segundo
+comando en background que esperaba de verdad al PID real
+(`while kill -0 <pid>; do sleep; done`) — mismo patrón correctivo que
+la primera vez.
+
+Tarea 64 `done`.
