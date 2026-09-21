@@ -905,8 +905,8 @@
         "Hallazgo de paso, no corregido (fuera de alcance, no se pidió): el encabezado de Cobranza hoy no se usa en ningún correo/PDF real — los avisos de cobro usan Configuración > Notificaciones, un sistema aparte",
         "tsc de los 6 workspaces limpio, verificar.sh completo en verde, 0 literales de color nuevos"
       ],
-      "status": "blocked",
-      "resolution": "Implementación completa y commiteada localmente; bloqueada esperando que la usuaria aplique la migración 113 en prod antes de pushear."
+      "status": "done",
+      "resolution": "Migración 113 aplicada y verificada en prod (jsonb correcto, sin filas con contenido que backfillear). El comando de apply reportó un error de la capa CLI/API (22P02, json inválido) pero la inspección read-only post-hoc confirmó que el DDL real ya había committeado limpio antes de ese error — no fue un fallo real."
     },
     {
       "id": 58,

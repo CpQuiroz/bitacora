@@ -4510,3 +4510,28 @@ prod (mismo comando que las anteriores — ver abajo). Tarea 57 (Personas/
 Perfiles/Plantillas) sigue `blocked` esperando la 113 — ambas migraciones
 + ambos commits locales se pueden pushear juntos una vez que la usuaria
 confirme que aplicó las dos.
+
+## 2026-09-21: migraciones 113 y 114 aplicadas — falsa alarma en la 113, ambas OK
+
+La usuaria corrió las 4 comandos. La 113 reportó un error real de
+Postgres (`22P02: invalid input syntax for type json`, apuntando a la
+línea del `update ... case when texto_encabezado <> ''`) — pero el
+`migration repair --status applied --linked 113` corrió igual después
+(marca bookkeeping, no valida que el DDL haya committeado).
+
+**Antes de asumir nada, inspección read-only completa contra prod**:
+`plantillas_documento.texto_encabezado` es `jsonb` (el tipo final
+correcto), sin columna `texto_encabezado_nuevo` residual (habría
+quedado si el rename no hubiera corrido) y las 10 filas existentes
+tienen `texto_encabezado: null` — consistente con lo ya verificado
+antes de escribir la migración ("hoy no hay ninguna fila con
+contenido"). Conclusión: **la migración 113 sí completó de punta a
+punta** (add column → backfill no-op → drop → rename); el error
+reportado por el CLI fue ruido de la capa API/CLI DESPUÉS de que la
+transacción real ya había committeado (no se identificó la causa
+exacta del error del lado del cliente, pero el estado real de la BD no
+deja dudas). Migración 114 (`levantamientos.hora_visita text`) también
+confirmada aplicada, sin drama, columna presente con el tipo correcto.
+
+Tarea 57 pasa de `blocked` a `done`. Ambos commits (`09f6b6b`, `f552a0a`)
+pusheados a `main` — Vercel/Render redespliegan solos.
