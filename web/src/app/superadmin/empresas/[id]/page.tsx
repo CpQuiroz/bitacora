@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import type { EstadoEmpresa, Plan, Rubro, Suscripcion, SuscripcionCobro } from "@bitacora/shared";
@@ -66,10 +66,24 @@ function formatearBytes(bytes: number): string {
 // siempre, aunque el Super-Admin casi nunca las toca). Solo pinta el
 // título + chevron; quien la usa decide qué envolver debajo con
 // `abierto`.
-function CabeceraColapsable({ titulo, abierto, onToggle }: { titulo: string; abierto: boolean; onToggle: () => void }) {
+function CabeceraColapsable({
+  titulo,
+  abierto,
+  onToggle,
+  extra,
+}: {
+  titulo: string;
+  abierto: boolean;
+  onToggle: () => void;
+  /** Contenido extra junto al título (ej. un Badge de estado) — visible aunque esté cerrada. */
+  extra?: ReactNode;
+}) {
   return (
     <button type="button" onClick={onToggle} className="flex w-full items-center justify-between gap-2 text-left">
-      <h2 className="text-sm font-semibold text-foreground">{titulo}</h2>
+      <span className="flex items-center gap-2">
+        <h2 className="text-sm font-semibold text-foreground">{titulo}</h2>
+        {extra}
+      </span>
       <IconChevronDown className={`h-4 w-4 shrink-0 text-muted transition-transform ${abierto ? "rotate-180" : ""}`} />
     </button>
   );
@@ -121,6 +135,24 @@ export default function SuperAdminSaludEmpresaPage() {
   // Retráctiles (21-sep-2026) — arrancan cerradas, se abren al tocar el título.
   const [perfilesAbierto, setPerfilesAbierto] = useState(false);
   const [flagsAbierto, setFlagsAbierto] = useState(false);
+  // Resto de las tarjetas (21-sep-2026, mismo pedido extendido a "las
+  // otras secciones que se puedan") — todas arrancan cerradas, igual
+  // que Perfiles/Feature flags. Quedan afuera "Editar identidad" (ya
+  // es condicional, solo aparece en modo edición) y las 4 tarjetitas de
+  // KPI de arriba (Última actividad/Usuarios/OS/Almacenamiento — son
+  // una sola línea, no tienen un cuerpo separado del título que valga
+  // la pena ocultar).
+  const [consumoAbierto, setConsumoAbierto] = useState(false);
+  const [erroresAbierto, setErroresAbierto] = useState(false);
+  const [estadoAbierto, setEstadoAbierto] = useState(false);
+  const [planAbierto, setPlanAbierto] = useState(false);
+  const [suscripcionAbierta, setSuscripcionAbierta] = useState(false);
+  const [modulosAbierto, setModulosAbierto] = useState(false);
+  const [correosAbierto, setCorreosAbierto] = useState(false);
+  const [equipoAbierto, setEquipoAbierto] = useState(false);
+  const [anonClienteAbierto, setAnonClienteAbierto] = useState(false);
+  const [exportarAbierto, setExportarAbierto] = useState(false);
+  const [zonaPeligroAbierta, setZonaPeligroAbierta] = useState(false);
   const [suscripcion, setSuscripcion] = useState<{ prueba_termina_en: string | null; suscripcion: Suscripcion | null; cobros: SuscripcionCobro[] } | null>(
     null
   );
@@ -744,8 +776,10 @@ export default function SuperAdminSaludEmpresaPage() {
 
           <div className="grid gap-4 lg:grid-cols-2">
             <Card>
-              <h2 className="mb-3 text-sm font-semibold text-foreground">Consumo de Claude este mes</h2>
-              <div className="flex gap-6">
+              <CabeceraColapsable titulo="Consumo de Claude este mes" abierto={consumoAbierto} onToggle={() => setConsumoAbierto((v) => !v)} />
+              {consumoAbierto && (
+                <>
+              <div className="mt-3 flex gap-6">
                 <div>
                   <p className="text-xs text-muted">Tokens de entrada</p>
                   <p className="text-lg font-semibold text-foreground">{salud.consumo_ia_mes.tokens_entrada.toLocaleString("es-CL")}</p>
@@ -770,14 +804,17 @@ export default function SuperAdminSaludEmpresaPage() {
               <p className="mt-3 text-[11px] text-muted">
                 El costo exacto depende del precio vigente por token — revisa console.anthropic.com para calcularlo.
               </p>
+                </>
+              )}
             </Card>
 
             <Card>
-              <h2 className="mb-3 text-sm font-semibold text-foreground">Errores recientes</h2>
-              {salud.errores_recientes.length === 0 ? (
-                <p className="text-sm text-muted">Sin errores recientes.</p>
+              <CabeceraColapsable titulo="Errores recientes" abierto={erroresAbierto} onToggle={() => setErroresAbierto((v) => !v)} />
+              {erroresAbierto && (
+              salud.errores_recientes.length === 0 ? (
+                <p className="mt-3 text-sm text-muted">Sin errores recientes.</p>
               ) : (
-                <div className="flex flex-col divide-y divide-border">
+                <div className="mt-3 flex flex-col divide-y divide-border">
                   {salud.errores_recientes.map((e, i) => (
                     <div key={i} className="py-2 text-xs">
                       <div className="flex items-center justify-between">
@@ -788,24 +825,29 @@ export default function SuperAdminSaludEmpresaPage() {
                     </div>
                   ))}
                 </div>
+              )
               )}
             </Card>
           </div>
 
           <div className="mt-4 grid gap-4 lg:grid-cols-2">
             <Card>
-              <h2 className="mb-3 text-sm font-semibold text-foreground">Estado</h2>
-              <p className="mb-3 text-sm text-muted">
-                Estado actual: <Badge value={salud.empresa.estado} />
-              </p>
+              <CabeceraColapsable
+                titulo="Estado"
+                abierto={estadoAbierto}
+                onToggle={() => setEstadoAbierto((v) => !v)}
+                extra={<Badge value={salud.empresa.estado} />}
+              />
+              {estadoAbierto && (
+                <>
               {salud.empresa.estado === "dada_de_baja" && salud.empresa.dada_de_baja_en && ahora != null && (
-                <p className="mb-3 rounded-lg bg-amber-50 p-2 text-xs text-amber-900">
+                <p className="mb-3 mt-3 rounded-lg bg-amber-50 p-2 text-xs text-amber-900">
                   Dada de baja el {new Date(salud.empresa.dada_de_baja_en).toLocaleDateString("es-CL")} (
                   {Math.floor((ahora - new Date(salud.empresa.dada_de_baja_en).getTime()) / 86400000)} días).
                   Ley 21.719 — evaluar eliminar sus datos personales pasado el plazo de conservación.
                 </p>
               )}
-              <div className="flex flex-wrap gap-2">
+              <div className="mt-3 flex flex-wrap gap-2">
                 {ESTADOS.filter((e) => e !== salud.empresa.estado).map((e) => (
                   <Button key={e} type="button" variant="outline" disabled={guardandoEstado} onClick={() => onCambiarEstado(e)}>
                     {e === "activa" ? "Activar" : e === "suspendida" ? "Suspender" : "Dar de baja"}
@@ -820,11 +862,20 @@ export default function SuperAdminSaludEmpresaPage() {
               <p className="mt-3 text-[11px] text-muted">
                 Suspendida o dada de baja bloquea el acceso a la app completa para todos los usuarios de esta empresa de inmediato.
               </p>
+                </>
+              )}
             </Card>
 
             <Card>
-              <h2 className="mb-3 text-sm font-semibold text-foreground">Plan</h2>
-              <div className="flex items-end gap-2">
+              <CabeceraColapsable
+                titulo="Plan"
+                abierto={planAbierto}
+                onToggle={() => setPlanAbierto((v) => !v)}
+                extra={<span className="text-xs text-muted">{salud.empresa.plan}</span>}
+              />
+              {planAbierto && (
+                <>
+              <div className="mt-3 flex items-end gap-2">
                 <div className="flex-1">
                   <Label>Plan actual</Label>
                   <Select value={planSeleccionado} onChange={(e) => setPlanSeleccionado(e.target.value as Plan)}>
@@ -848,14 +899,20 @@ export default function SuperAdminSaludEmpresaPage() {
                 Cambiar el plan acá activa/desactiva automáticamente los módulos opt-in de Pro (mismo camino que usa la empresa
                 al autogestionarse desde Configuración &gt; Plan) y queda en el historial visible para la empresa.
               </p>
+                </>
+              )}
             </Card>
           </div>
 
           <Card className="mt-4">
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-foreground">Suscripción</h2>
-              {suscripcion?.suscripcion && <Badge value={suscripcion.suscripcion.estado} />}
-            </div>
+            <CabeceraColapsable
+              titulo="Suscripción"
+              abierto={suscripcionAbierta}
+              onToggle={() => setSuscripcionAbierta((v) => !v)}
+              extra={suscripcion?.suscripcion && <Badge value={suscripcion.suscripcion.estado} />}
+            />
+            {suscripcionAbierta && (
+              <div className="mt-3">
             {!suscripcion ? (
               <p className="text-sm text-muted">Cargando…</p>
             ) : !suscripcion.suscripcion ? (
@@ -932,11 +989,15 @@ export default function SuperAdminSaludEmpresaPage() {
                 </div>
               </div>
             )}
+              </div>
+            )}
           </Card>
 
           <Card className="mt-4">
-            <h2 className="mb-2 text-sm font-semibold text-foreground">Módulos contratados</h2>
-            <p className="mb-3 text-sm text-muted">
+            <CabeceraColapsable titulo="Módulos contratados" abierto={modulosAbierto} onToggle={() => setModulosAbierto((v) => !v)} />
+            {modulosAbierto && (
+              <>
+            <p className="mb-3 mt-2 text-sm text-muted">
               Desactivar un módulo lo oculta del menú y bloquea sus rutas para todos los usuarios de esta empresa, sin importar su rol.
             </p>
             {!modulos ? (
@@ -960,6 +1021,8 @@ export default function SuperAdminSaludEmpresaPage() {
               <div className="mt-3">
                 <ErrorText>{errorModulos}</ErrorText>
               </div>
+            )}
+              </>
             )}
           </Card>
 
@@ -1090,8 +1153,10 @@ export default function SuperAdminSaludEmpresaPage() {
           </Card>
 
           <Card className="mt-4">
-            <h2 className="mb-2 text-sm font-semibold text-foreground">Correos y dominios autorizados</h2>
-            <p className="mb-3 text-sm text-muted">
+            <CabeceraColapsable titulo="Correos y dominios autorizados" abierto={correosAbierto} onToggle={() => setCorreosAbierto((v) => !v)} />
+            {correosAbierto && (
+              <>
+            <p className="mb-3 mt-2 text-sm text-muted">
               Un correo exacto (<code>persona@empresa.cl</code>) o un dominio entero (<code>empresa.cl</code>) de esta lista puede
               entrar a la empresa sin ser invitado — la primera vez que inicia sesión se le crea el usuario con el rol indicado.
               Un correo que no está acá ni fue invitado no puede entrar.
@@ -1154,11 +1219,15 @@ export default function SuperAdminSaludEmpresaPage() {
                 <ErrorText>{errorAcceso}</ErrorText>
               </div>
             )}
+              </>
+            )}
           </Card>
 
           <Card className="mt-4">
-            <h2 className="mb-2 text-sm font-semibold text-foreground">Equipo</h2>
-            <p className="mb-3 text-sm text-muted">
+            <CabeceraColapsable titulo="Equipo" abierto={equipoAbierto} onToggle={() => setEquipoAbierto((v) => !v)} />
+            {equipoAbierto && (
+              <>
+            <p className="mb-3 mt-2 text-sm text-muted">
               Restablece la contraseña de un usuario si quedó bloqueado — se genera una clave temporal que reemplaza la actual de
               inmediato. Se muestra una sola vez acá, no se guarda en ningún lado; pásasela por el canal de soporte que uses.
             </p>
@@ -1405,11 +1474,15 @@ export default function SuperAdminSaludEmpresaPage() {
                 </div>
               </div>
             )}
+              </>
+            )}
           </Card>
 
           <Card className="mt-4">
-            <h2 className="mb-2 text-sm font-semibold text-foreground">Anonimizar un cliente (Ley 21.719)</h2>
-            <p className="mb-3 text-sm text-muted">
+            <CabeceraColapsable titulo="Anonimizar un cliente (Ley 21.719)" abierto={anonClienteAbierto} onToggle={() => setAnonClienteAbierto((v) => !v)} />
+            {anonClienteAbierto && (
+              <>
+            <p className="mb-3 mt-2 text-sm text-muted">
               Reemplaza nombre/RUT/contacto del cliente por un placeholder y borra sus accesos al Portal y consentimientos.
               Los trabajos/cobros quedan sin nombre de persona. Irreversible. El ID sale del export de la empresa o de la base.
             </p>
@@ -1431,11 +1504,15 @@ export default function SuperAdminSaludEmpresaPage() {
                 {msgAnonCliente.tipo === "ok" ? <SuccessText>{msgAnonCliente.texto}</SuccessText> : <ErrorText>{msgAnonCliente.texto}</ErrorText>}
               </div>
             )}
+              </>
+            )}
           </Card>
 
           <Card className="mt-4">
-            <h2 className="mb-2 text-sm font-semibold text-foreground">Exportar datos</h2>
-            <p className="mb-3 text-sm text-muted">
+            <CabeceraColapsable titulo="Exportar datos" abierto={exportarAbierto} onToggle={() => setExportarAbierto((v) => !v)} />
+            {exportarAbierto && (
+              <>
+            <p className="mb-3 mt-2 text-sm text-muted">
               Genera un archivo con todos los datos de esta empresa (para portabilidad si se da de baja). No incluye el contenido de
               fotos/PDFs, solo las referencias ya guardadas.
             </p>
@@ -1447,14 +1524,25 @@ export default function SuperAdminSaludEmpresaPage() {
                 <ErrorText>{errorExportar}</ErrorText>
               </div>
             )}
+              </>
+            )}
           </Card>
 
           <Card className="mt-4 border-danger/40">
-            <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-danger">
-              <IconShield className="h-4 w-4" />
-              Zona de peligro
-            </h2>
-            <p className="mb-4 text-sm text-muted">
+            <button
+              type="button"
+              onClick={() => setZonaPeligroAbierta((v) => !v)}
+              className="flex w-full items-center justify-between gap-2 text-left"
+            >
+              <h2 className="flex items-center gap-2 text-sm font-semibold text-danger">
+                <IconShield className="h-4 w-4" />
+                Zona de peligro
+              </h2>
+              <IconChevronDown className={`h-4 w-4 shrink-0 text-muted transition-transform ${zonaPeligroAbierta ? "rotate-180" : ""}`} />
+            </button>
+            {zonaPeligroAbierta && (
+              <>
+            <p className="mb-4 mt-3 text-sm text-muted">
               Eliminar la empresa borra <strong>permanentemente</strong> a {salud.empresa.nombre} — clientes, cotizaciones, órdenes de
               servicio, cobranzas y todo lo demás. Esta acción no se puede deshacer.
             </p>
@@ -1474,6 +1562,8 @@ export default function SuperAdminSaludEmpresaPage() {
             >
               {eliminando ? "Eliminando…" : "Eliminar empresa"}
             </Button>
+              </>
+            )}
           </Card>
         </>
       )}

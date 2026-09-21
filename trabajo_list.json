@@ -1072,6 +1072,20 @@
       ],
       "status": "done",
       "resolution": "Implementado. Sin migración — solo web/src/app/superadmin. No se verificó visualmente en un navegador en esta sesión (no había un dev server ni backend local levantados) — solo tsc/eslint + revisión de la estructura JSX. Falta push (a pedido de la usuaria, no pushear hasta que avise)."
+    },
+    {
+      "id": 69,
+      "name": "superadmin_todas_tarjetas_retractiles",
+      "title": "Super-Admin (empresa): el resto de las tarjetas también pasan a ser retráctiles",
+      "description": "Pedido: \"puede hacer lo mismo para las otras secciones que se puedan\" (extensión del pedido anterior de Perfiles/Feature flags). Se aplicó el mismo componente CabeceraColapsable a Consumo de Claude, Errores recientes, Estado, Plan, Suscripción, Módulos contratados, Correos y dominios autorizados, Equipo, Anonimizar un cliente, Exportar datos y Zona de peligro — todas arrancan cerradas. Se dejaron afuera \"Editar identidad\" (ya es condicional, solo aparece en modo edición) y las 4 tarjetitas de KPI (Última actividad/Usuarios/OS/Almacenamiento — una sola línea, sin cuerpo separable del título).",
+      "acceptance": [
+        "CabeceraColapsable gana un prop opcional extra (ReactNode) para mostrar contenido junto al título aunque la tarjeta esté cerrada (ej. el Badge de Estado de la empresa, el Badge de la suscripción, el plan actual)",
+        "11 tarjetas más usan CabeceraColapsable (o su propio botón a mano en el caso de \"Zona de peligro\", que necesita el ícono + color rojo del título)",
+        "La carga de datos de cada sección sigue disparándose igual que antes independientemente de si está abierta o cerrada",
+        "tsc + eslint de web limpios, verificar.sh completo en verde"
+      ],
+      "status": "done",
+      "resolution": "Implementado. Todas las tarjetas arrancan cerradas por defecto (mismo criterio literal que pidió la usuaria) — incluida \"Equipo\", la más usada; si en la práctica resulta molesto tener que abrirla siempre, es un ajuste rápido (arrancar abierta) a pedido. Sin migración — 100% web/superadmin. No se verificó visualmente en navegador en esta sesión (no había dev server local) — solo tsc/eslint + revisión de estructura JSX. Falta push (a pedido de la usuaria, no pushear hasta que avise)."
     }
   ]
 }

@@ -4910,3 +4910,39 @@ migración — 100% web/superadmin. Tarea 68 `done`.
 sesión (no había dev server ni backend local levantados) — solo
 tsc/eslint + revisión de la estructura JSX. Falta push (a pedido de la
 usuaria: no pushear hasta que avise).
+
+## 2026-09-21: Super-Admin — el resto de las tarjetas también retráctiles (tarea 69)
+
+Pedido: "puede hacer lo mismo para las otras secciones que se puedan"
+(extensión de la tarea 68). Se aplicó `CabeceraColapsable` a 11
+tarjetas más: Consumo de Claude, Errores recientes, Estado, Plan,
+Suscripción, Módulos contratados, Correos y dominios autorizados,
+Equipo, Anonimizar un cliente, Exportar datos y Zona de peligro —
+todas arrancan cerradas.
+
+`CabeceraColapsable` ganó un prop `extra` (ReactNode) para mostrar algo
+junto al título aunque la tarjeta esté cerrada — se usa para el Badge
+de Estado de la empresa, el Badge de la suscripción y el nombre del
+plan actual, así esos datos siguen siendo visibles de un vistazo sin
+tener que abrir la tarjeta. "Zona de peligro" no usa el componente
+compartido (necesita el ícono + texto rojo propio), se armó con el
+mismo patrón de botón a mano.
+
+Quedaron sin tocar, a propósito: "Editar identidad" (ya es condicional,
+solo aparece en modo edición) y las 4 tarjetitas de KPI de arriba
+(Última actividad/Usuarios/OS/Almacenamiento — una sola línea, no hay
+cuerpo separado del título que valga la pena ocultar).
+
+**Nota**: todas arrancan cerradas por igual, incluida "Equipo" (la
+tarjeta más usada de la página — password reset, 2FA, etc.) — se siguió
+el pedido literal en vez de decidir por mi cuenta dejarla abierta por
+defecto. Si en la práctica resulta molesto tener que abrirla cada vez,
+es un cambio de una línea (`useState(true)` en vez de `false`) avisando
+nomás.
+
+`tsc` + `eslint` de web limpios, `verificar.sh` completo en verde. Sin
+migración — 100% web/superadmin. Tarea 69 `done`.
+
+**Pendiente**: no se verificó visualmente en navegador en esta sesión
+(no había dev server local) — solo tsc/eslint + revisión de estructura
+JSX. Falta push (a pedido de la usuaria, no pushear hasta que avise).
