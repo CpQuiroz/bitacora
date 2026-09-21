@@ -1158,6 +1158,19 @@
       ],
       "status": "done",
       "resolution": "Implementado y verificado por tipos/lint. Sin migración (centros_costo ya tenía la columna, solo faltaba la ruta PATCH). No se verificó visualmente en navegador en esta sesión."
+    },
+    {
+      "id": 75,
+      "name": "eliminar_os_frontend",
+      "title": "Se agrega el botón \"Eliminar orden de servicio\" a la ficha de OS (backend ya lo soportaba)",
+      "description": "Pedido: \"los elementos creados tambien debieran tener la opcion de eliminar, solo los que estan en estado completado o algun estado bloqueado\". Se investigó y esa política YA es el patrón establecido en Cotizaciones y Cobros (el botón desaparece una vez bloqueadas/pagadas). El único gap real: Órdenes de servicio tenía el backend correctamente gateado (trabajoBloqueado(), bloquea si finalizada_en) desde antes de esta sesión (y reforzado en la tarea 63 de esta sesión, migración 117), pero la web nunca le puso un botón \"Eliminar\" — solo existía \"Cancelar\" en el listado.",
+      "acceptance": [
+        "ordenes/[id]/page.tsx: nueva sección \"Zona de peligro\" — botón \"Eliminar orden de servicio\" visible mientras !detalle.orden?.finalizada_en, mensaje explicativo en su lugar una vez finalizada (mismo patrón visual que Cotizaciones/Cobros)",
+        "onEliminar() con confirm() nativo + DELETE /api/trabajos/:id (ya existía y ya estaba bien gateado) + redirect a /dashboard/ordenes al eliminar",
+        "tsc + eslint limpios, verificar.sh completo en verde"
+      ],
+      "status": "done",
+      "resolution": "Implementado y verificado por tipos/lint. Sin cambios de backend (el DELETE ya existía, correctamente gateado desde la tarea 63). Sin migración. No se verificó visualmente en navegador en esta sesión."
     }
   ]
 }

@@ -76,6 +76,9 @@ export default function DetalleOrdenServicioPage() {
   const [preciosAvanzados, setPreciosAvanzados] = useState(false);
   const [patrones, setPatrones] = useState("");
 
+  const [eliminando, setEliminando] = useState(false);
+  const [errorEliminar, setErrorEliminar] = useState<string | null>(null);
+
   const [editando, setEditando] = useState(false);
   const [descEdit, setDescEdit] = useState("");
   const [itemsEdit, setItemsEdit] = useState<ItemOS[]>([]);
@@ -256,6 +259,25 @@ export default function DetalleOrdenServicioPage() {
     }
     setEditando(false);
     await cargar();
+  }
+
+  // Mismo patrón que Cotizaciones/Cobros: el botón directamente
+  // desaparece una vez que la OS está bloqueada (firmada/finalizada),
+  // no un mensaje de error al hacer clic. El backend (trabajos.ts,
+  // trabajoBloqueado()) ya rechaza el delete en ese caso igual — doble
+  // resguardo, no solo el frontend.
+  async function onEliminar() {
+    if (!confirm("¿Eliminar esta orden de servicio? Esta acción no se puede deshacer.")) return;
+    setErrorEliminar(null);
+    setEliminando(true);
+    const res = await apiFetch(`/api/trabajos/${params.id}`, { method: "DELETE" });
+    setEliminando(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setErrorEliminar(body.error ?? "No se pudo eliminar la orden de servicio");
+      return;
+    }
+    router.push("/dashboard/ordenes");
   }
 
   if (!usuario) return null;
@@ -655,6 +677,24 @@ export default function DetalleOrdenServicioPage() {
               </Card>
             </div>
           ) : null}
+
+          <div className="my-ds-6">
+            <Card>
+              <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Zona de peligro</p>
+              {!detalle.orden?.finalizada_en ? (
+                <div className="flex flex-col gap-ds-2">
+                  <Button variante="peligro" onPress={onEliminar} cargando={eliminando}>
+                    Eliminar orden de servicio
+                  </Button>
+                  {errorEliminar ? <p className="font-ds-body text-ds-small text-ds-accent-700">{errorEliminar}</p> : null}
+                </div>
+              ) : (
+                <p className="font-ds-body text-ds-small text-ds-text/70">
+                  Esta OS ya fue finalizada y no se puede eliminar — cancélala en vez de eliminarla si necesitás dejarla sin efecto.
+                </p>
+              )}
+            </Card>
+          </div>
 
           {error ? <p className="my-ds-4 font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
         </>

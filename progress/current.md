@@ -5145,3 +5145,34 @@ ruta). Tarea 74 `done`.
 Falta commitear/pushear (a confirmar con la usuaria el flujo de
 siempre).
 
+## 2026-09-21: botón "Eliminar OS" en la ficha (tarea 75)
+
+Pedido: "los elementos creados tambien debieran tener la opcion de
+eliminar, solo los que estan en estado completado o algun estado
+bloqueado, dame opiniones de eso" — di la opinión primero (sin tocar
+nada), investigando Cotizaciones/Cobros/OS/Gastos/Clientes. Hallazgo:
+esa política YA es el patrón establecido — Cotizaciones (bloqueada si
+`trabajo_id` seteado) y Cobros (bloqueado si `estado === "pagada"`) ya
+ocultan el botón "Eliminar" exactamente así. El único gap real: OS
+tenía el backend correctamente gateado desde antes (`trabajoBloqueado()`,
+bloquea si `finalizada_en` — reforzado esta misma sesión en la tarea 63,
+migración 117) pero la web **nunca le puso un botón "Eliminar"** — solo
+"Cancelar" existía, y solo en el listado.
+
+Gastos y Clientes no tienen delete en absoluto (ni gateado) — opiné que
+es probablemente deliberado (registro financiero / Ley 21.719 vía
+Anonimizar) y no lo toqué, a la espera de que se pida explícitamente.
+
+**Arreglado**: `ordenes/[id]/page.tsx` gana una sección "Zona de
+peligro" — mismo patrón visual que Cotizaciones/Cobros: botón
+"Eliminar orden de servicio" visible mientras `!finalizada_en`, mensaje
+explicativo en su lugar una vez finalizada. Sin cambios de backend (el
+DELETE ya existía y ya estaba bien gateado).
+
+`tsc` + `eslint` limpios, `verificar.sh` completo en verde. Sin
+migración. Tarea 75 `done`.
+
+**Pendiente**: no se verificó visualmente en navegador en esta sesión.
+Falta commitear/pushear (a confirmar con la usuaria el flujo de
+siempre).
+
