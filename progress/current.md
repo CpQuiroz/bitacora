@@ -4292,3 +4292,10 @@ ScreenHeader).
 pushear — pendiente que la usuaria aplique la migración 111 antes de
 subir (mismo flujo de siempre: valido read-only → ella aplica →
 confirmo leyendo prod → recién ahí push).
+
+## 2026-09-20 (14): migración 111 confirmada — push
+
+Usuaria aplicó `111_fecha_visita_levantamiento.sql` en prod. Verificado
+read-only (`information_schema.columns`: `fecha_visita date, nullable`
+ya existe). Pusheado el commit `51ee165` (que ya estaba listo,
+esperando esto). Tarea 55 cerrada.

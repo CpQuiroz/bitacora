@@ -869,8 +869,8 @@
         "Mobile Agenda (AgendaScreen.tsx, tab congelada — tocada por pedido explícito): levantamientos con fecha_visita y estado pendiente (creado/asignado/en_terreno) aparecen junto a las citas en Mes/Semana/Día, con color distinto (accent2) — sin fecha_visita NO aparecen acá (le corresponde solo a Pizarra). Tocar uno navega al detalle del levantamiento (LevantamientoDetalleScreen, agregado a AgendaStack con el mismo patrón ya usado en HoyStack/MasStack — plano, no un sub-stack propio)",
         "tsc de los 6 workspaces limpio, verificar.sh completo en verde, 0 literales de color nuevos"
       ],
-      "status": "in_progress",
-      "resolution": null
+      "status": "done",
+      "resolution": "Migración 111 confirmada aplicada en prod (fecha_visita date, nullable). Backend, web y mobile (Pizarra + Agenda) implementados y verificados en la entrada anterior de progress/current.md. Pusheado a main."
     }
   ]
 }
