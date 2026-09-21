@@ -82,13 +82,18 @@ export function MasScreen({ navigation }: NativeStackScreenProps<MasStackParamLi
   const visibles = listo ? auth.modulosVisibles : [];
   const acciones = listo ? auth.acciones : [];
   const deshabilitados = listo ? auth.modulosDeshabilitados : [];
-  // Levantamientos no se gatea por rol/módulo (el técnico es
-  // rol=colaborador, igual que cualquier otro terreno) — el eje real es
-  // usuarios.funcion. Sumar un perfil nuevo a futuro (ej. "asistente")
-  // es un cambio acá, en FUNCIONES_LEVANTAMIENTOS (shared), no de lógica
-  // dispersa por pantallas.
+  // Levantamientos no se gatea por rol/módulo para el TÉCNICO (el
+  // técnico es rol=colaborador, igual que cualquier otro terreno) — el
+  // eje real ahí es usuarios.funcion. Sumar un perfil nuevo a futuro
+  // (ej. "asistente") es un cambio acá, en FUNCIONES_LEVANTAMIENTOS
+  // (shared), no de lógica dispersa por pantallas. El Admin es la
+  // excepción: ve la sección igual sin necesitar función técnica —
+  // mismo criterio que la web (backend no filtra por técnico_id si
+  // esAdmin(req), pedido 21-sep-2026, "el admin debiera poder ver
+  // todos los levantamientos de todos los equipos" — antes esta
+  // sección ni le aparecía en el celular).
   const funcion = listo ? auth.usuario.funcion : null;
-  const veLevantamientos = funcion != null && FUNCIONES_LEVANTAMIENTOS.includes(funcion);
+  const veLevantamientos = (funcion != null && FUNCIONES_LEVANTAMIENTOS.includes(funcion)) || (listo && auth.usuario.rol === "admin");
   const veAsistente = visibles.includes("asistente");
 
   const [cobros, setCobros] = useState<{ vencidos: number; monto: number } | null>(null);

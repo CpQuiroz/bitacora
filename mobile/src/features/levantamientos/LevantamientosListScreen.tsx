@@ -8,6 +8,7 @@ import { formatearFolio } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
 import { EmptyState, ListRow, ListRowGrupo, LoadingState, ScreenHeader, StatusBadge, Texto, type TonoEstado } from "@bitacora/ui/native";
 import { listarMisLevantamientos, type LevantamientoResumen } from "../../services/levantamientos";
+import { useAuth } from "../auth/AuthContext";
 import type { MasStackParamList } from "../../shell/navigation/types";
 
 const ETIQUETA_ESTADO: Record<EstadoLevantamiento, string> = {
@@ -35,12 +36,18 @@ function tonoDe(estado: EstadoLevantamiento): TonoEstado {
 
 // El técnico solo ve los suyos (el backend ya los filtra) — nada que
 // completar además de descripción + materiales + fotos. Cotizar y
-// aprobar/rechazar es exclusivo de la web (Admin).
+// aprobar/rechazar es exclusivo de la web (Admin). El Admin SÍ ve
+// todos los de la empresa acá (21-sep-2026, pedido explícito) — el
+// backend ya no filtra por técnico para ese rol; en esta pantalla se
+// agrega el nombre del técnico en el subtítulo para que se pueda
+// distinguir de quién es cada uno.
 //
 // Sistema visual móvil v2 (14-sep-2026) — ScreenHeader propio con
 // `accion`=volver (pantalla push desde "Más", no raíz de tab) +
 // ListRow/ListRowGrupo en vez de las tarjetas con borde a mano.
 export function LevantamientosListScreen({ navigation }: NativeStackScreenProps<MasStackParamList, "Levantamientos">) {
+  const auth = useAuth();
+  const esAdmin = auth.fase === "listo" && auth.usuario.rol === "admin";
   const [lista, setLista] = useState<LevantamientoResumen[] | null>(null);
 
   const cargar = useCallback(async () => {
@@ -73,7 +80,7 @@ export function LevantamientosListScreen({ navigation }: NativeStackScreenProps<
           <EmptyState
             icono={<Search size={32} strokeWidth={2.75} color={tokens.color.accent2Ramp["800"]} />}
             titulo="Sin levantamientos"
-            mensaje="No tenés ninguno asignado por ahora."
+            mensaje={esAdmin ? "Todavía no hay ninguno creado." : "No tenés ninguno asignado por ahora."}
           />
         ) : (
           <ListRowGrupo>
@@ -83,9 +90,13 @@ export function LevantamientosListScreen({ navigation }: NativeStackScreenProps<
                 icono={<Search size={22} strokeWidth={2.25} color={tokens.color.accentRamp["700"]} />}
                 titulo={item.cliente?.nombre ?? "Cliente"}
                 subtitulo={
-                  formatearFolio("LEV", item.folio)
-                    ? `${formatearFolio("LEV", item.folio)}${item.descripcion_requerimiento ? ` · ${item.descripcion_requerimiento}` : ""}`
-                    : item.descripcion_requerimiento ?? undefined
+                  [
+                    formatearFolio("LEV", item.folio),
+                    esAdmin ? (item.tecnico?.nombre ?? "Sin técnico asignado") : null,
+                    item.descripcion_requerimiento,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ") || undefined
                 }
                 onPress={() => navigation.navigate("LevantamientoDetalle", { id: item.id })}
                 trailing={

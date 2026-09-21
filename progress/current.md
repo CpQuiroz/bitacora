@@ -4761,3 +4761,34 @@ comando en background que esperaba de verdad al PID real
 la primera vez.
 
 Tarea 64 `done`.
+
+## 2026-09-21: Admin ve Levantamientos en mobile (tarea 65)
+
+Pedido ambiguo al principio ("el admin debiera poder ver todos los
+levantamientos de todos los equipos") — pregunté para confirmar
+dónde faltaba, ya que en la web el Admin ya veía todos sin filtro
+(verificado antes de tocar nada). Confirmado: era sobre el celular —
+la sección Levantamientos de "Más" se gateaba solo por
+`usuarios.funcion` (técnico/chofer), nunca por rol, así que un Admin
+sin esa función no la veía ni ahí.
+
+**Fix con un matiz importante que agregué sin que se pidiera
+explícitamente**: el Admin ahora ve cualquier levantamiento de la
+empresa en mobile, pero **en modo solo lectura** si no es el técnico
+asignado — antes de este pedido, la pantalla de detalle gateaba
+"editable" solo por `estado` (nunca por quién mira), así que sin este
+matiz el Admin hubiera visto el form completo de completar/editar de
+CUALQUIER técnico, pudiendo marcar como completado un trabajo de
+terreno que no hizo él. Separado en `esElTecnicoAsignado` (compara
+`detalle.tecnico.id` con `auth.usuario.id`).
+
+También: el listado ahora muestra el nombre del técnico en el
+subtítulo cuando quien mira es Admin (para distinguir de quién es cada
+uno entre varios técnicos), y el mensaje de "sin levantamientos" ya no
+dice "no tenés ninguno asignado" para el Admin.
+
+Sin migración — cambio 100% mobile (`MasScreen.tsx`,
+`LevantamientoDetalleScreen.tsx`, `LevantamientosListScreen.tsx`).
+`tsc` x6 limpio, `verificar.sh` completo en verde. Tarea 65 `done` —
+queda incluido en el próximo build de APK (no compilado todavía, el
+1.10.9 ya entregado es anterior a este fix).

@@ -1015,6 +1015,20 @@
       ],
       "status": "done",
       "resolution": "Build exitoso (11m 59s), verificado apuntando a prod, entregado."
+    },
+    {
+      "id": 65,
+      "name": "admin_ve_levantamientos_mobile",
+      "title": "Mobile: el Admin ve Levantamientos en 'Más' (antes solo función Técnico/Chofer)",
+      "description": "Pedido: 'el admin debiera poder ver todos los levantamientos de todos los equipos' — confirmado con la usuaria que era sobre el celular, no la web (en la web el Admin ya veía todos sin filtro). La sección Levantamientos de 'Más' se gateaba solo por usuarios.funcion (técnico/chofer), nunca por rol — un Admin sin esa función no la veía en absoluto.",
+      "acceptance": [
+        "MasScreen.tsx: veLevantamientos también es true si rol==='admin', sin necesitar función técnica",
+        "LevantamientoDetalleScreen.tsx: se agregó esElTecnicoAsignado (detalle.tecnico.id === auth.usuario.id) al cálculo de 'editable' — el Admin ve cualquier levantamiento de la empresa pero en modo SOLO LECTURA (no puede completar/editar en nombre del técnico asignado, evita corromper el registro de terreno)",
+        "LevantamientosListScreen.tsx: el Admin ve todos (el backend ya no filtra por técnico para ese rol) — se agregó el nombre del técnico al subtítulo de cada fila para distinguir de quién es cada uno, y el mensaje de lista vacía cambia de tono ('no tenés ninguno asignado' -> 'todavía no hay ninguno creado')",
+        "tsc de los 6 workspaces limpio, verificar.sh completo en verde"
+      ],
+      "status": "done",
+      "resolution": "Implementado y verificado. Sin migración — cambio solo de mobile."
     }
   ]
 }

@@ -7,6 +7,7 @@ import { formatearFolio } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
 import { Button, Dialog, ErrorState, LoadingState, ScreenHeader, StatusBadge, Textarea, Texto, useMarca, type TonoEstado } from "@bitacora/ui/native";
 import { elegirFotos } from "../../lib/imagen";
+import { useAuth } from "../auth/AuthContext";
 import { useRed } from "../../services/sync/NetworkProvider";
 import {
   completarLevantamiento,
@@ -59,6 +60,7 @@ type MaterialLocal = { catalogo_item_id: string; cantidad: number; nombre: strin
 // propósito.
 export function LevantamientoDetalleScreen({ route, navigation }: NativeStackScreenProps<MasStackParamList, "LevantamientoDetalle">) {
   const marca = useMarca();
+  const auth = useAuth();
   const { enLinea, pendientes } = useRed();
   const { id } = route.params;
   const fotosEnCola = pendientes.filter((a) => a.recurso === `levantamiento:${id}` && a.etiqueta === "Foto de levantamiento");
@@ -99,7 +101,15 @@ export function LevantamientoDetalleScreen({ route, navigation }: NativeStackScr
     void cargar();
   }, [fotosEnCola.length, cargar]);
 
-  const editable = detalle != null && detalle.estado !== "aprobado" && detalle.estado !== "rechazado";
+  // El Admin ahora puede VER cualquier levantamiento de la empresa acá
+  // (pedido 21-sep-2026, "el admin debiera poder ver todos los
+  // levantamientos de todos los equipos" — antes esta sección ni le
+  // aparecía en el celular) — pero completar/editar sigue siendo solo
+  // del técnico asignado, no algo que el Admin haga por él desde el
+  // celular (esto solo lo desconecta si reasigna, vía web). Sin esta
+  // condición, el Admin vería el form editable de cualquier técnico.
+  const esElTecnicoAsignado = auth.fase === "listo" && detalle?.tecnico?.id === auth.usuario.id;
+  const editable = detalle != null && detalle.estado !== "aprobado" && detalle.estado !== "rechazado" && esElTecnicoAsignado;
 
   async function abrirPicker() {
     setPickerAbierto(true);
