@@ -5172,7 +5172,31 @@ DELETE ya existía y ya estaba bien gateado).
 `tsc` + `eslint` limpios, `verificar.sh` completo en verde. Sin
 migración. Tarea 75 `done`.
 
-**Pendiente**: no se verificó visualmente en navegador en esta sesión.
-Falta commitear/pushear (a confirmar con la usuaria el flujo de
-siempre).
+No se verificó visualmente en navegador en esta sesión. Pusheado a
+main (`4298101`).
+
+## 2026-09-21: permisos de editar/eliminar por dueño/asignado — sin cambios de código (aclaración)
+
+"esta opcion de eliminar o editar solo pueden el admin o el que creo
+el objeto, por ejemplo el chofer puede editar viejes y el tecnico
+editar levantamiento o OS asignadas pero solo editar los datos que se
+le permiten" — se investigó el backend antes de tocar nada. Los 3
+ejemplos que dio (chofer/viajes, técnico/levantamientos, técnico/OS)
+**ya están implementados exactamente así**, con doble resguardo:
+
+- `misViajes.ts`: colaborador solo edita sus propios viajes
+  (`chofer_id !== req.userId` → 403), nunca elimina, no puede tocar
+  `estado`/`comentarios`.
+- Levantamientos (tarea 65, esta sesión): solo el técnico asignado
+  edita (`esElTecnicoAsignado`).
+- `trabajos.ts`: el propio `.update()` va scopeado con
+  `.eq("responsable_id", req.userId!)` cuando el rol es colaborador
+  (a nivel de query SQL, no solo la pantalla) + bloqueo de campos de
+  gestión (cliente/ubicación/código/monto) sin importar de quién sea.
+
+Quedaba una pregunta de diseño real: en la web, ¿Supervisor debería
+quedar restringido a "solo lo suyo" para editar/eliminar OS? Se
+preguntó — eligió dejarlo como está (Supervisor es un rol de gestión
+de equipo, restringirlo lo dejaría sin poder supervisar). Sin cambios
+de código.
 
