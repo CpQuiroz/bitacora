@@ -4365,3 +4365,23 @@ Usuaria aplicó `112_folios_cliente_pack_gasto_proveedor_cobro.sql` en
 prod. Verificado read-only (`information_schema.columns`: `folio`
 integer/nullable ya existe en las 5 tablas). Pusheado el commit
 `9f5b45d` (que ya estaba listo, esperando esto). Tarea 56 cerrada.
+
+## 2026-09-20 (17): CONTEXTO_PROYECTO.md regenerado + build APK 1.10.8
+
+Pedido: "homologar conocimiento con Claude IA y Claude Design" antes
+de compilar. Ambos proyectos de claude.ai comparten el mismo archivo
+(confirmado con la usuaria). Regenerado cubriendo 12-sep→20-sep: temas
+Taller/Confianza (web+mobile), fix crítico de deploy Vercel, fecha de
+visita de Levantamiento + Pizarra/Agenda, folios nuevos (Cliente/Pack/
+Gasto/Proveedor/Cobro), sidebar reordenado, safe-area/QuickAccessCard/
+SelectorDias. Migraciones 100→112, mobile 1.9.8/vc25→1.10.8/vc49.
+Corregido también un párrafo de tabla markdown que quedó con una celda
+de más al insertar contenido nuevo (detectado y arreglado antes de
+pushear). Memoria del proyecto actualizada con la fecha de esta
+regeneración.
+
+`gradlew assembleRelease` — BUILD SUCCESSFUL en 8m04s. APK 39M,
+verificación de bundle OK (prod). `.env` restaurado a dev. Copiado a
+`builds/bitacora-1.10.8.apk` (se borró el 1.10.7 anterior). Incluye
+folio de Cliente/Cobro en las pantallas de mobile (tarea 56, pusheado
+después del build 1.10.7).
