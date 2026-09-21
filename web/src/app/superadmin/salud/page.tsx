@@ -2,9 +2,23 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import type { TendenciaMensual } from "@bitacora/shared";
 import { SuperAdminShell } from "@/components/SuperAdminShell";
 import { Badge, Card, ErrorText, PageHeader } from "@/components/ui";
+import { GraficoEvolucionSimple } from "@/components/charts/GraficoEvolucionSimple";
+import { GraficoEvolucionDoble } from "@/components/charts/GraficoEvolucionDoble";
 import { obtenerTokenSuperAdmin, superadminFetch } from "@/lib/superadminApi";
+
+function formatearBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 ** 2) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 ** 3) return `${(bytes / 1024 ** 2).toFixed(1)} MB`;
+  return `${(bytes / 1024 ** 3).toFixed(2)} GB`;
+}
+
+function formatearEntero(n: number): string {
+  return n.toLocaleString("es-CL");
+}
 
 type Proveedor = { nombre: string; estado: "operational" | "degraded" | "outage" | "desconocido"; descripcion: string | null; pagina: string };
 type ProveedorSinMonitoreo = { nombre: string; pagina: string | null };
@@ -20,6 +34,8 @@ type RequestLentoFila = {
   empresa: { nombre: string } | null;
 };
 
+type StorageHistoricoFila = { mes: string; bytes_total: number };
+
 type SaludPlataforma = {
   sentry_configurado: boolean;
   errores_ultimas_24h: number;
@@ -28,6 +44,8 @@ type SaludPlataforma = {
   requests_lentos: RequestLentoFila[];
   proveedores: Proveedor[];
   proveedores_sin_monitoreo: ProveedorSinMonitoreo[];
+  tendencia_mensual: TendenciaMensual[];
+  storage_historico: StorageHistoricoFila[];
   generado_en: string;
 };
 
@@ -164,6 +182,49 @@ export default function SuperAdminSaludPage() {
               </div>
             )}
           </Card>
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Card>
+              <h2 className="mb-1 text-sm font-semibold text-foreground">Tokens de IA por mes</h2>
+              <p className="mb-3 text-[11px] text-muted">Últimos 12 meses · todas las empresas.</p>
+              <GraficoEvolucionSimple
+                datos={salud.tendencia_mensual.map((t) => ({ mes: t.mes, monto: t.tokens_ia }))}
+                mensajeVacio="Sin consumo de IA registrado."
+                formatearValor={formatearEntero}
+              />
+            </Card>
+            <Card>
+              <h2 className="mb-1 text-sm font-semibold text-foreground">Órdenes de servicio creadas por mes</h2>
+              <p className="mb-3 text-[11px] text-muted">Últimos 12 meses · todas las empresas.</p>
+              <GraficoEvolucionSimple
+                datos={salud.tendencia_mensual.map((t) => ({ mes: t.mes, monto: t.os_creadas }))}
+                mensajeVacio="Sin OS creadas todavía."
+                formatearValor={formatearEntero}
+              />
+            </Card>
+            <Card>
+              <h2 className="mb-1 text-sm font-semibold text-foreground">Errores y requests lentos por mes</h2>
+              <p className="mb-3 text-[11px] text-muted">Tendencia de salud técnica · todas las empresas.</p>
+              <GraficoEvolucionDoble
+                datos={salud.tendencia_mensual.map((t) => ({ mes: t.mes, a: t.errores, b: t.requests_lentos }))}
+                etiquetaA="Errores"
+                etiquetaB="Requests lentos"
+                mensajeVacio="Sin errores ni requests lentos registrados."
+                formatearValor={formatearEntero}
+              />
+            </Card>
+            <Card>
+              <h2 className="mb-1 text-sm font-semibold text-foreground">Storage usado por mes</h2>
+              <p className="mb-3 text-[11px] text-muted">
+                Foto tomada al abrir esta pantalla cada mes — puede tener huecos si un mes entero pasa sin abrirla.
+              </p>
+              <GraficoEvolucionSimple
+                datos={salud.storage_historico.map((s) => ({ mes: s.mes.slice(0, 7), monto: s.bytes_total }))}
+                mensajeVacio="Todavía no hay suficiente historia — vuelve el próximo mes."
+                formatearValor={formatearBytes}
+              />
+            </Card>
+          </div>
 
           <Card>
             <h2 className="mb-1 text-sm font-semibold text-foreground">Errores recientes (todas las empresas)</h2>

@@ -300,32 +300,67 @@ async function consultarProveedores(): Promise<ProveedorConsultado[]> {
   return datos;
 }
 
+// Foto perezosa del storage total del mes (migración 118) — si ya
+// existe una fila para el mes actual no hace nada; si no, la calcula
+// (sum de empresas.storage_bytes_usado, el mismo contador que ya usa
+// superadmin_metricas_calcular()) y la guarda. Sin cron: se dispara
+// cada vez que se abre esta pantalla, así que como mucho tarda en
+// aparecer hasta la próxima visita del mes.
+async function asegurarSnapshotStorageDelMes(): Promise<void> {
+  const inicioMes = new Date();
+  inicioMes.setDate(1);
+  const mesIso = inicioMes.toISOString().slice(0, 10);
+
+  const { data: yaExiste } = await supabase.from("superadmin_storage_historico").select("mes").eq("mes", mesIso).maybeSingle();
+  if (yaExiste) return;
+
+  const { data: empresasStorage } = await supabase.from("empresas").select("storage_bytes_usado");
+  const total = (empresasStorage ?? []).reduce((suma, e) => suma + (e.storage_bytes_usado ?? 0), 0);
+  const { error } = await supabase.from("superadmin_storage_historico").upsert({ mes: mesIso, bytes_total: total });
+  if (error) console.error("asegurarSnapshotStorageDelMes:", error.message);
+}
+
 superadminRouter.get(
   "/salud-plataforma",
   requiereSuperAdmin,
   ah<RequestConSuperAdmin>(async (req, res) => {
     await registrarAuditoria(req.superAdminId!, "ver_salud_plataforma", { ip: req.ip ?? null });
 
+    // Antes de leer el historial de storage, asegurar que el mes actual
+    // ya tenga su foto — así el gráfico incluye el mes en curso desde
+    // la primera vez que se abre la pantalla ese mes.
+    await asegurarSnapshotStorageDelMes();
+
     const desde24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    const [{ data: erroresRecientes }, { count: erroresUltimas24h }, { data: requestsLentos }, { count: requestsLentosUltimas24h }, proveedores] =
-      await Promise.all([
-        supabase
-          .from("errores_backend")
-          .select("id, ruta, metodo, mensaje, creado_en, empresa:empresas(nombre)")
-          .order("creado_en", { ascending: false })
-          .limit(50),
-        supabase.from("errores_backend").select("id", { count: "exact", head: true }).gte("creado_en", desde24h),
-        // requests_lentos (backend/src/instrumentacion.ts, migración 83) ya
-        // se venía guardando desde la auditoría de performance, pero nunca
-        // tuvo una pantalla — es la primera vez que se muestra.
-        supabase
-          .from("requests_lentos")
-          .select("id, ruta, metodo, ms, status_code, filas_devueltas, creado_en, empresa:empresas(nombre)")
-          .order("creado_en", { ascending: false })
-          .limit(50),
-        supabase.from("requests_lentos").select("id", { count: "exact", head: true }).gte("creado_en", desde24h),
-        consultarProveedores(),
-      ]);
+    const [
+      { data: erroresRecientes },
+      { count: erroresUltimas24h },
+      { data: requestsLentos },
+      { count: requestsLentosUltimas24h },
+      proveedores,
+      { data: tendenciaMensual },
+      { data: storageHistorico },
+    ] = await Promise.all([
+      supabase
+        .from("errores_backend")
+        .select("id, ruta, metodo, mensaje, creado_en, empresa:empresas(nombre)")
+        .order("creado_en", { ascending: false })
+        .limit(50),
+      supabase.from("errores_backend").select("id", { count: "exact", head: true }).gte("creado_en", desde24h),
+      // requests_lentos (backend/src/instrumentacion.ts, migración 83) ya
+      // se venía guardando desde la auditoría de performance, pero nunca
+      // tuvo una pantalla — es la primera vez que se muestra.
+      supabase
+        .from("requests_lentos")
+        .select("id, ruta, metodo, ms, status_code, filas_devueltas, creado_en, empresa:empresas(nombre)")
+        .order("creado_en", { ascending: false })
+        .limit(50),
+      supabase.from("requests_lentos").select("id", { count: "exact", head: true }).gte("creado_en", desde24h),
+      consultarProveedores(),
+      // Tendencia mensual (IA/OS/errores/requests lentos) — migración 118.
+      supabase.rpc("superadmin_tendencia_mensual", { meses: 12 }),
+      supabase.from("superadmin_storage_historico").select("mes, bytes_total").order("mes", { ascending: true }).limit(12),
+    ]);
 
     res.json({
       sentry_configurado: Boolean(env.SENTRY_DSN),
@@ -335,6 +370,8 @@ superadminRouter.get(
       requests_lentos: requestsLentos ?? [],
       proveedores,
       proveedores_sin_monitoreo: PROVEEDORES_SIN_MONITOREO_AUTOMATICO,
+      tendencia_mensual: tendenciaMensual ?? [],
+      storage_historico: storageHistorico ?? [],
       generado_en: new Date().toISOString(),
     });
   })

@@ -5054,3 +5054,59 @@ yo — son cuentas de terceros)**:
    — es el que avisa de verdad si Supabase dejó de responder.
 
 Falta push (a pedido de la usuaria, no pushear hasta que avise).
+## 2026-09-21: Salud — 4 gráficos mensuales (tarea 73, BLOQUEADA — falta migración 118)
+
+Pedido: "quiero ver mas dashboard. uso de recursos de cpu, memoria,
+storage, Ia, etc, y tener graficos de uso mensuales". Antes de tocar
+código: aclaré que CPU/memoria del contenedor ya las muestra gratis el
+propio dashboard de Render (reconstruirlo desde adentro sería peor y
+sin necesidad) y pregunté qué gráficos armar de los que sí tienen
+sentido — eligió los 4: IA, OS creadas, errores+requests lentos,
+storage.
+
+**Implementado**:
+- Migración 118: tabla `superadmin_storage_historico` (foto mensual de
+  `sum(empresas.storage_bytes_usado)` — ese campo es un CONTADOR, no
+  loguea historia, así que hace falta una foto propia; RLS + revoke
+  igual que `superadmin_metricas_cache`) + función
+  `superadmin_tendencia_mensual(meses)` que agrega `ia_uso`/
+  `ordenes_servicio`/`errores_backend`/`requests_lentos` por mes
+  (`generate_series` + `left join` — estas 4 SÍ tienen fecha propia,
+  no necesitan snapshot).
+- `packages/shared`: tipos `TendenciaMensual` y
+  `SuperadminStorageHistorico` + entradas en `Database.Functions`/
+  `Tables` — **hubo que reconstruir el `dist/` del paquete** (`npm run
+  build` en `packages/shared`), si no `tsc` de backend/web sigue viendo
+  los tipos viejos compilados y falla en silencio con errores confusos
+  ("`mes` no existe en tipo `never[]`") en vez de avisar que faltaba
+  rebuildear.
+- `GET /api/superadmin/salud-plataforma`: antes de responder, asegura
+  la foto del mes actual de storage (perezoso, sin cron — mismo
+  criterio que `superadmin_metricas_cache`), agrega `tendencia_mensual`
+  (RPC) y `storage_historico` (últimos 12 meses) a la respuesta.
+- 4 gráficos nuevos en `/superadmin/salud`, reutilizando
+  `GraficoEvolucionSimple`/`GraficoEvolucionDoble` (recharts, ya
+  usados en `/superadmin/resumen`) — cero componentes de gráfico
+  nuevos.
+
+`tsc` (shared+backend+web) + `eslint` limpios, `verificar.sh` completo
+en verde (118 migraciones detectadas).
+
+**BLOQUEADA en aplicar la migración**: no ejecuté ningún comando de
+base de datos en esta sesión — el CLI de Supabase estaba **enlazado a
+prod** (`yjbskbskyadxjooxngjv`) y correr algo ahí sin que la usuaria lo
+pida viola la regla de "prod solo lectura". Falta que la usuaria
+corra:
+
+```
+npx supabase db query --linked --project-ref yjbskbskyadxjooxngjv -f supabase/migrations/118_salud_tendencias_mensuales.sql
+npx supabase migration repair --status applied --linked 118
+```
+
+**Orden importa**: el código ya espera que `tendencia_mensual`/
+`storage_historico` existan — si se pushea antes de aplicar la
+migración, esas dos partes de la respuesta de `/salud-plataforma`
+fallarían (tabla/función inexistentes en prod). Primero la migración,
+recién después el push. Tarea 73 `blocked` hasta que confirme que la
+corrió.
+

@@ -208,6 +208,14 @@ export type SuperadminMetricasCache = {
   generado_en: string;
 };
 
+// Foto mensual del storage total (sum de empresas.storage_bytes_usado)
+// para el gráfico de tendencia de Salud — ver migración 118.
+export type SuperadminStorageHistorico = {
+  mes: string; // date, "YYYY-MM-01"
+  bytes_total: number;
+  creado_en: string;
+};
+
 // Forma del jsonb que devuelve superadmin_metricas_calcular() + los
 // campos que agrega el endpoint (generado_en, cacheado).
 export type MetricasSuperAdmin = {
@@ -223,6 +231,16 @@ export type MetricasSuperAdmin = {
   generado_en: string;
   cacheado: boolean;
   obsoleto?: boolean;
+};
+
+// Un mes de la tendencia global de Salud (Super-Admin) — ver
+// superadmin_tendencia_mensual() y GET /api/superadmin/salud-plataforma.
+export type TendenciaMensual = {
+  mes: string; // "YYYY-MM"
+  tokens_ia: number;
+  os_creadas: number;
+  errores: number;
+  requests_lentos: number;
 };
 
 export type ErrorBackend = {
@@ -1911,6 +1929,7 @@ export type Database = {
       super_admins: Tabla<SuperAdmin>;
       super_admin_auditoria: Tabla<SuperAdminAuditoria>;
       superadmin_metricas_cache: Tabla<SuperadminMetricasCache>;
+      superadmin_storage_historico: Tabla<SuperadminStorageHistorico>;
       empresa_feature_flags: Tabla<EmpresaFeatureFlag>;
       ia_uso: Tabla<IaUso>;
       errores_backend: Tabla<ErrorBackend>;
@@ -2005,6 +2024,10 @@ export type Database = {
       superadmin_metricas_calcular: {
         Args: Record<string, never>;
         Returns: MetricasSuperAdmin;
+      };
+      superadmin_tendencia_mensual: {
+        Args: { meses?: number };
+        Returns: TendenciaMensual[];
       };
       trabajos_del_dia: {
         Args: {

@@ -1128,6 +1128,21 @@
       ],
       "status": "done",
       "resolution": "Implementado y verificado (tsc/eslint/curl a los 6 proveedores reales). Sin migración — errores_backend y requests_lentos ya existían. No se probó end-to-end con un dev server + sesión de Super-Admin real en esta sesión (falta un superadmin autenticado localmente); la parte de fetch a proveedores externos sí se verificó en vivo. Falta push (a pedido de la usuaria). Pendiente de la usuaria, fuera de código (Nivel 1): cargar SENTRY_DSN en Render y armar un monitor externo (UptimeRobot/Better Uptime) apuntando a /health/ready — son cuentas de terceros, no las puedo crear yo."
+    },
+    {
+      "id": 73,
+      "name": "salud_graficos_mensuales",
+      "title": "Salud (Super-Admin): 4 gráficos mensuales — IA, OS creadas, errores/requests lentos, storage",
+      "description": "Pedido: \"quiero ver mas dashboard. uso de recursos de cpu, memoria, storage, Ia, etc, y tener graficos de uso mensuales\". Se aclaró que CPU/memoria del contenedor ya las muestra el propio dashboard de Render gratis (no tiene sentido reconstruirlo peor desde adentro) y se preguntó qué gráficos armar — eligió los 4: IA, OS creadas, errores+requests lentos, storage.",
+      "acceptance": [
+        "Migración 118: tabla superadmin_storage_historico (foto mensual de sum(empresas.storage_bytes_usado), RLS+revoke igual que superadmin_metricas_cache) + función superadmin_tendencia_mensual(meses) que agrega ia_uso/ordenes_servicio/errores_backend/requests_lentos por mes (generate_series + left join, sin necesitar snapshot para estos 4 — ya tienen fecha)",
+        "packages/shared: tipos TendenciaMensual y SuperadminStorageHistorico + entrada en Database.Functions/Tables (reconstruido el dist, si no tsc de backend/web falla en silencio con tipos viejos)",
+        "GET /api/superadmin/salud-plataforma extendido: asegura la foto del mes actual de storage antes de responder (perezoso, sin cron), agrega tendencia_mensual (RPC) y storage_historico (últimos 12) a la respuesta",
+        "4 gráficos nuevos en /superadmin/salud, reutilizando GraficoEvolucionSimple/GraficoEvolucionDoble (recharts, ya usados en /superadmin/resumen) — nada de componentes de gráfico nuevos",
+        "tsc (shared+backend+web) + eslint limpios, verificar.sh completo en verde"
+      ],
+      "status": "blocked",
+      "resolution": "Implementado y verificado por tipos/lint. BLOQUEADO en aplicar la migración 118 — no se ejecutó ningún comando de base de datos en esta sesión porque el CLI de Supabase estaba enlazado a PROD (yjbskbskyadxjooxngjv) y correr algo ahí sin que lo pida la usuaria viola la regla de \"prod solo lectura\". Falta que la usuaria corra: npx supabase db query --linked --project-ref yjbskbskyadxjooxngjv -f supabase/migrations/118_salud_tendencias_mensuales.sql, después npx supabase migration repair --status applied --linked 118. Falta push del código (a pedido de la usuaria, no pushear hasta que avise) — y push antes de la migración dejaría el endpoint devolviendo 500 en tendencia_mensual/storage_historico (tabla/función no existen todavía en prod), así que el orden importa: primero migración, después push."
     }
   ]
 }
