@@ -479,12 +479,12 @@ function normalizarTipoOs(tipo: TipoOsEmbed): { nombre: string } | null {
 export async function kpisYDistribucionServicios(empresaId: string, desde: string, hasta: string) {
   const { data } = await supabase
     .from("trabajos")
-    .select("estado, tipo_os_id, cliente, orden:ordenes_servicio(estado_os), tipo:tipos_os(nombre)")
+    .select("estado, tipo_id, cliente, orden:ordenes_servicio(estado_os), tipo:tipos_os_trabajo(nombre)")
     .eq("empresa_id", empresaId)
     .gte("fecha", desde)
     .lte("fecha", hasta);
 
-  type Fila = { estado: string; tipo_os_id: string | null; cliente: string; orden: OrdenEmbed; tipo: TipoOsEmbed };
+  type Fila = { estado: string; tipo_id: string | null; cliente: string; orden: OrdenEmbed; tipo: TipoOsEmbed };
   const filas = ((data ?? []) as unknown as Fila[])
     .map((t) => ({ ...t, orden: normalizarOrden(t.orden), tipo: normalizarTipoOs(t.tipo) }))
     .filter((t) => t.orden !== null);
@@ -493,17 +493,17 @@ export async function kpisYDistribucionServicios(empresaId: string, desde: strin
   const completadas = filas.filter(
     (t) => t.estado === "completado" || t.orden?.estado_os === "completada" || t.orden?.estado_os === "firmada"
   ).length;
-  const tiposUtilizados = new Set(filas.filter((t) => t.tipo_os_id).map((t) => t.tipo_os_id)).size;
+  const tiposUtilizados = new Set(filas.filter((t) => t.tipo_id).map((t) => t.tipo_id)).size;
 
   const porTipo = new Map<string, { nombre: string; cantidad: number }>();
   const porClienteTipo = new Map<string, { cliente: string; tipo: string; cantidad: number }>();
   for (const t of filas) {
-    if (!t.tipo_os_id || !t.tipo) continue;
-    const actual = porTipo.get(t.tipo_os_id) ?? { nombre: t.tipo.nombre, cantidad: 0 };
+    if (!t.tipo_id || !t.tipo) continue;
+    const actual = porTipo.get(t.tipo_id) ?? { nombre: t.tipo.nombre, cantidad: 0 };
     actual.cantidad += 1;
-    porTipo.set(t.tipo_os_id, actual);
+    porTipo.set(t.tipo_id, actual);
 
-    const claveCT = `${t.cliente}::${t.tipo_os_id}`;
+    const claveCT = `${t.cliente}::${t.tipo_id}`;
     const filaCT = porClienteTipo.get(claveCT) ?? { cliente: t.cliente, tipo: t.tipo.nombre, cantidad: 0 };
     filaCT.cantidad += 1;
     porClienteTipo.set(claveCT, filaCT);

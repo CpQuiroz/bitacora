@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import type { CatalogoItem, Cliente, Equipo, Prioridad, TipoOS, TipoTrabajo, Usuario } from "@bitacora/shared";
+import type { CatalogoItem, Cliente, Equipo, Prioridad, TipoOsTrabajo, Usuario } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
@@ -43,8 +43,7 @@ function NuevaOrdenServicioContenido() {
   const [usuario, setUsuario] = useState<UsuarioShell | null>(null);
   const [equipo, setEquipo] = useState<Usuario[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
-  const [tiposTrabajo, setTiposTrabajo] = useState<TipoTrabajo[]>([]);
-  const [tiposOs, setTiposOs] = useState<TipoOS[]>([]);
+  const [tipos, setTipos] = useState<TipoOsTrabajo[]>([]);
   // Bloque C — activos (maquinaria/vehículos) del cliente, no
   // confundir con "equipo" de arriba (colaboradores).
   const [equipos, setEquipos] = useState<Equipo[]>([]);
@@ -55,9 +54,8 @@ function NuevaOrdenServicioContenido() {
   // ficha ya trae el cliente puesto).
   const [clienteId, setClienteId] = useState(() => searchParams.get("cliente_id") ?? "");
   const [responsableId, setResponsableId] = useState("");
-  const [tipoTrabajoId, setTipoTrabajoId] = useState("");
+  const [tipoId, setTipoId] = useState("");
   const [datosDinamicos, setDatosDinamicos] = useState<Record<string, string>>({});
-  const [tipoOsId, setTipoOsId] = useState("");
   const [descripcion, setDescripcion] = useState("");
   const [fecha, setFecha] = useState(() => new Date().toISOString().slice(0, 10));
   const [horaProgramada, setHoraProgramada] = useState("");
@@ -76,12 +74,11 @@ function NuevaOrdenServicioContenido() {
         router.replace("/login");
         return;
       }
-      const [resMe, resEquipo, resClientes, resTipos, resTiposOs, resEquipos, resCatalogo] = await Promise.all([
+      const [resMe, resEquipo, resClientes, resTipos, resEquipos, resCatalogo] = await Promise.all([
         apiFetch("/api/me"),
         apiFetch("/api/usuarios"),
         apiFetch("/api/clientes"),
-        apiFetch("/api/tipos-trabajo"),
-        apiFetch("/api/tipos-os"),
+        apiFetch("/api/tipos-os-trabajo"),
         apiFetch("/api/equipos"),
         apiFetch("/api/catalogo"),
       ]);
@@ -96,12 +93,8 @@ function NuevaOrdenServicioContenido() {
       }
       if (resClientes.ok) setClientes(await resClientes.json());
       if (resTipos.ok) {
-        const lista: TipoTrabajo[] = await resTipos.json();
-        setTiposTrabajo(lista.filter((t) => t.activo));
-      }
-      if (resTiposOs.ok) {
-        const lista: TipoOS[] = await resTiposOs.json();
-        setTiposOs(lista.filter((t) => t.activo));
+        const lista: TipoOsTrabajo[] = await resTipos.json();
+        setTipos(lista.filter((t) => t.activo));
       }
       if (resEquipos.ok) setEquipos(await resEquipos.json());
       if (resCatalogo.ok) setCatalogo(await resCatalogo.json());
@@ -128,7 +121,7 @@ function NuevaOrdenServicioContenido() {
   }
 
   const clienteSeleccionado = clientes.find((c) => c.id === clienteId);
-  const tipoTrabajoSeleccionado = tiposTrabajo.find((t) => t.id === tipoTrabajoId);
+  const tipoSeleccionado = tipos.find((t) => t.id === tipoId);
   // Stock actual de un ítem del catálogo, solo si es un producto con
   // control de stock. null = no aplica (servicio, kit, o ítem manual).
   function stockDe(catalogoItemId: string | null): number | null {
@@ -169,8 +162,7 @@ function NuevaOrdenServicioContenido() {
         cliente_id: clienteId,
         equipo_id: equipoIdOS || undefined,
         responsable_id: responsableId,
-        tipo_trabajo_id: tipoTrabajoId || undefined,
-        tipo_os_id: tipoOsId || undefined,
+        tipo_id: tipoId || undefined,
         datos: Object.keys(datosDinamicos).length > 0 ? datosDinamicos : undefined,
         descripcion: descripcion.trim(),
         fecha,
@@ -302,43 +294,28 @@ function NuevaOrdenServicioContenido() {
                   />
                 </div>
               )}
-              <div>
-                <Label>Tipo de servicio</Label>
-                <SelectCrear<TipoTrabajo>
-                  value={tipoTrabajoId}
+              <div className="sm:col-span-2">
+                <Label>Tipo de OS/Trabajo</Label>
+                <SelectCrear<TipoOsTrabajo>
+                  value={tipoId}
                   onChange={(id) => {
-                    setTipoTrabajoId(id);
+                    setTipoId(id);
                     setDatosDinamicos({});
                   }}
-                  opciones={tiposTrabajo}
-                  endpoint="/api/tipos-trabajo"
+                  opciones={tipos}
+                  endpoint="/api/tipos-os-trabajo"
                   placeholder="Sin tipo específico"
-                  etiquetaCrear="+ Crear tipo de servicio"
-                  onCreado={(nuevo) => setTiposTrabajo((prev) => [...prev, nuevo])}
-                  gestionHref="/dashboard/configuracion/tipos-trabajo"
-                  gestionLabel="Configurar tipos de trabajo →"
+                  etiquetaCrear="+ Crear tipo de OS/Trabajo"
+                  onCreado={(nuevo) => setTipos((prev) => [...prev, nuevo])}
+                  gestionHref="/dashboard/configuracion/tipos-os-trabajo"
+                  gestionLabel="Configurar tipos de OS/Trabajo →"
                 />
-                <p className="mt-1 text-xs text-muted">Qué trabajo es. Define los datos a medir en terreno.</p>
+                <p className="mt-1 text-xs text-muted">Qué tipo de OS es — define los datos a medir en terreno y su clasificación (color, checklist, tiempo estimado) en el listado.</p>
               </div>
-              <div>
-                <Label>Tipo de OS (opcional)</Label>
-                <SelectCrear<TipoOS>
-                  value={tipoOsId}
-                  onChange={setTipoOsId}
-                  opciones={tiposOs}
-                  endpoint="/api/tipos-os"
-                  placeholder="Sin clasificar"
-                  etiquetaCrear="+ Crear tipo de OS"
-                  onCreado={(nuevo) => setTiposOs((prev) => [...prev, nuevo])}
-                  gestionHref="/dashboard/configuracion/tipos-os"
-                  gestionLabel="Configurar tipos de OS →"
-                />
-                <p className="mt-1 text-xs text-muted">Clasificación con color y checklist para el listado de OS.</p>
-              </div>
-              {tipoTrabajoSeleccionado && tipoTrabajoSeleccionado.campos.length > 0 && (
+              {tipoSeleccionado && tipoSeleccionado.campos.length > 0 && (
                 <div className="grid gap-3 rounded-lg bg-surface-sunken p-3 sm:col-span-2 sm:grid-cols-2">
-                  <p className="text-xs font-medium text-muted sm:col-span-2">Datos medidos — {tipoTrabajoSeleccionado.nombre}</p>
-                  {tipoTrabajoSeleccionado.campos.map((campo) => (
+                  <p className="text-xs font-medium text-muted sm:col-span-2">Datos medidos — {tipoSeleccionado.nombre}</p>
+                  {tipoSeleccionado.campos.map((campo) => (
                     <div key={campo.clave}>
                       <Label>{campo.etiqueta}</Label>
                       <Input

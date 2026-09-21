@@ -1,12 +1,12 @@
 import * as Crypto from "expo-crypto";
-import type { AnalisisFoto, Cliente, EstadoOS, EstadoTrabajo, OrdenServicio, TipoTrabajo, Trabajo, Usuario } from "@bitacora/shared";
+import type { AnalisisFoto, Cliente, EstadoOS, EstadoTrabajo, OrdenServicio, TipoOsTrabajo, Trabajo, Usuario } from "@bitacora/shared";
 import { apiFetch, apiJson } from "./api";
 import { encolar } from "./sync/queue";
 import { guardarCache, leerCache } from "./sync/cache";
 import type { Ubicacion } from "../lib/geo";
 
 export type ClienteContacto = Pick<Cliente, "id" | "nombre" | "telefono" | "direccion" | "lat" | "lng">;
-export type TrabajoConTipo = Trabajo & { tipo_trabajo: TipoTrabajo | null; cliente_info: ClienteContacto | null };
+export type TrabajoConTipo = Trabajo & { tipo: TipoOsTrabajo | null; cliente_info: ClienteContacto | null };
 export type FotoConUrl = AnalisisFoto & { url: string };
 export type OrdenConFirma = OrdenServicio & {
   firma_url_firmada: string | null;

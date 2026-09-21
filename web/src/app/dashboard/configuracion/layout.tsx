@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Bell, Box, Briefcase, Calendar, ClipboardCheck, CreditCard, Flag, Layers, Paperclip, Plug, Shield, Tag, User, Users, Wallet, Wrench } from "lucide-react";
+import { Bell, Box, Briefcase, Calendar, ClipboardCheck, CreditCard, Flag, Layers, Paperclip, Plug, Shield, Tag, User, Users, Wallet } from "lucide-react";
 import type { Modulo } from "@bitacora/shared";
 import { puedeVerModulo } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
@@ -23,8 +23,7 @@ const SECCIONES: { valor: string; label: string; icon: typeof User; modulo: Modu
   { valor: "plan", label: "Plan", icon: CreditCard, modulo: "configuracion" },
   { valor: "plantillas", label: "Plantillas", icon: Paperclip, modulo: "configuracion" },
   { valor: "checklists", label: "Checklists", icon: ClipboardCheck, modulo: "configuracion" },
-  { valor: "tipos-os", label: "Tipos de OS", icon: Tag, modulo: "configuracion" },
-  { valor: "tipos-trabajo", label: "Tipos de Trabajo", icon: Wrench, modulo: "configuracion" },
+  { valor: "tipos-os-trabajo", label: "Tipos de OS/Trabajo", icon: Tag, modulo: "configuracion" },
   { valor: "integraciones", label: "Integraciones", icon: Plug, modulo: "configuracion" },
   { valor: "inventario", label: "Inventario", icon: Box, modulo: "configuracion" },
   { valor: "categorias-gastos", label: "Categorías de Gastos", icon: Wallet, modulo: "configuracion" },

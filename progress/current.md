@@ -4535,3 +4535,56 @@ confirmada aplicada, sin drama, columna presente con el tipo correcto.
 
 Tarea 57 pasa de `blocked` a `done`. Ambos commits (`09f6b6b`, `f552a0a`)
 pusheados a `main` — Vercel/Render redespliegan solos.
+
+## 2026-09-21: unificar Tipo de OS y Tipo de Trabajo (tarea 59)
+
+Parte 3 del pedido original, aprobada por separado ("vamos con el paso
+1, 2, 3" — 1 acá era esta unificación). Investigación antes de tocar
+código: `tipos_trabajo` (campos dinámicos del formulario) y `tipos_os`
+(color/checklist/tiempo estimado) — la migración 15 los había separado
+a propósito en su momento, pero en la práctica el formulario de Nueva
+OS mostraba 2 selectores casi idénticos uno debajo del otro. Query
+read-only contra prod: 6 filas en tipos_trabajo, 5 en tipos_os, **0
+nombres repetidos entre ambas tablas para una misma empresa**, y solo
+1 trabajo en toda la base con ambos ids seteados (a filas distintas) —
+riesgo de datos casi nulo, validado ANTES de escribir la migración de
+verdad (no solo asumido).
+
+**Migración 115**: `tipos_trabajo` gana las columnas de `tipos_os`
+(mismos defaults); cada fila de `tipos_os` se inserta como fila nueva
+de `tipos_trabajo` (`campos: []`); `trabajos` gana `tipo_id` (prioriza
+`tipo_trabajo_id` cuando había ambos — es el que tenía datos reales en
+`trabajo.datos`, `tipo_os_id` ahí era solo clasificación visual); se
+dropean `tipo_trabajo_id`/`tipo_os_id`/`tipos_os`; se renombra
+`tipos_trabajo` → `tipos_os_trabajo`. Validada read-only (`begin;
+...rollback;`) contra prod — confirmé que los 6 tipos_trabajo
+originales YA tenían `campos: []` en prod (no es que la migración los
+vació: nunca tuvieron campos configurados). Pendiente que la usuaria
+la aplique.
+
+**Alcance del código** (15 archivos): `packages/shared` (TipoTrabajo +
+TipoOS → `TipoOsTrabajo`; `Trabajo.tipo_id`); backend — nuevo
+`routes/tiposOsTrabajo.ts` (merge de los 2 routers viejos, eliminados)
+en `/api/tipos-os-trabajo`, más `trabajos.ts`, `ordenes.ts`,
+`ordenesServicio.ts`, `agregacionesDashboard.ts`,
+`rutasPlanificadas.ts`, `seedRubro.ts` y `tenant.ts` (lista de
+`audit:tenant`); web — nueva página
+`configuracion/tipos-os-trabajo` (merge de las 2 viejas, eliminadas:
+sugeridos + campos dinámicos + color/checklist/tiempo en un solo
+form), `ordenes/nueva` con **un solo picker** (antes 2), `ordenes/[id]`,
+`trabajos/[id]`, `rutas/nueva`, nav de Configuración (1 entrada en vez
+de 2); mobile — `services/trabajos.ts` + `TrabajoDetalleScreen.tsx`.
+
+**Hallazgo al verificar**: `check-colores.mjs`/ESLint fallaron con "11
+literales nuevos" — no eran nuevos de verdad, era la paleta de colores
+de la página vieja `tipos-os/page.tsx` (ya exenta en
+`scripts/colores-permitidos.json` con motivo) que se movió a la página
+nueva sin actualizar esa entrada. Corregido moviendo la exención al
+nuevo path.
+
+`tsc` de los 6 workspaces limpio, `verificar.sh` completo en verde
+(115 migraciones, 0 literales nuevos, audit:tenant 0). Tarea 59
+`blocked` — commiteado local, pendiente que la usuaria aplique la
+migración 115 antes de pushear. Item pendiente de la sesión: verificar
+visualmente el deploy en vivo (requiere login, ver nota arriba) y
+regenerar CONTEXTO_PROYECTO.md — quedan para después de este push.

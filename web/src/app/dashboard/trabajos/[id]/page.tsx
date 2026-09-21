@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import type { AnalisisFoto, Anexo, ItemChecklist, OrdenServicio, Trabajo, TipoTrabajo } from "@bitacora/shared";
+import type { AnalisisFoto, Anexo, ItemChecklist, OrdenServicio, Trabajo, TipoOsTrabajo } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { comprimirImagen } from "@/lib/comprimirImagen";
@@ -12,7 +12,7 @@ import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Badge, Button, Card, ErrorText, PageHeader } from "@/components/ui";
 import { IconCamera, IconChevronLeft, IconClipboardCheck } from "@/components/icons";
 
-type TrabajoConTipo = Trabajo & { tipo_trabajo: TipoTrabajo | null };
+type TrabajoConTipo = Trabajo & { tipo: TipoOsTrabajo | null };
 type AnalisisFotoConUrl = AnalisisFoto & { url: string };
 type OrdenConFirma = OrdenServicio & { firma_url_firmada: string | null };
 type AnexoConUrl = Anexo & { url: string };

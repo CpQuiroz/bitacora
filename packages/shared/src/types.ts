@@ -513,11 +513,22 @@ export function mapearCamposPersonalizados(
     });
 }
 
-export type TipoTrabajo = {
+// Catálogo unificado "Tipo de OS/Trabajo" (migración 115, 21-sep-2026)
+// — antes 2 tablas separadas (tipos_trabajo, con campos dinámicos; y
+// tipos_os, con color/checklist/tiempo estimado). Se unificaron porque
+// en la práctica describen la misma cosa desde 2 ángulos — el
+// formulario de Nueva OS mostraba 2 selectores casi idénticos uno
+// debajo del otro. `campos` sigue siendo específico del rubro; el
+// resto es lo que antes vivía en TipoOS.
+export type TipoOsTrabajo = {
   id: string;
   empresa_id: string;
   nombre: string;
   campos: CampoTipoTrabajo[];
+  descripcion: string | null;
+  color: string;
+  checklist_template_id: string | null;
+  tiempo_estimado_minutos: number | null;
   activo: boolean;
   creado_en: string;
 };
@@ -537,8 +548,9 @@ export type Anexo = {
 export type Trabajo = {
   id: string;
   empresa_id: string;
-  tipo_trabajo_id: string | null;
-  tipo_os_id: string | null;
+  // Unificado en migración 115 (antes tipo_trabajo_id + tipo_os_id
+  // separados) — ver TipoOsTrabajo.
+  tipo_id: string | null;
   codigo: string | null;
   fecha: string;
   semana: number | null;
@@ -1616,17 +1628,6 @@ export type ChecklistTemplate = {
   actualizado_en: string;
 };
 
-export type TipoOS = {
-  id: string;
-  empresa_id: string;
-  nombre: string;
-  descripcion: string | null;
-  color: string;
-  checklist_template_id: string | null;
-  tiempo_estimado_minutos: number | null;
-  activo: boolean;
-  creado_en: string;
-};
 
 export type UnidadMedida = {
   id: string;
@@ -1836,7 +1837,7 @@ export type Database = {
     Tables: {
       empresas: Tabla<Empresa>;
       usuarios: Tabla<Usuario>;
-      tipos_trabajo: Tabla<TipoTrabajo>;
+      tipos_os_trabajo: Tabla<TipoOsTrabajo>;
       trabajos: Tabla<Trabajo>;
       clientes: Tabla<Cliente>;
       facturas: Tabla<Factura>;
@@ -1852,7 +1853,6 @@ export type Database = {
       informes_generados: Tabla<InformeGenerado>;
       plantillas_documento: Tabla<PlantillaDocumento>;
       checklist_templates: Tabla<ChecklistTemplate>;
-      tipos_os: Tabla<TipoOS>;
       integraciones: Tabla<Integracion>;
       categorias_gasto: Tabla<CategoriaGasto>;
       centros_costo: Tabla<CentroCosto>;

@@ -243,7 +243,7 @@ rutasPlanificadasRouter.post(
 
     const {
       cliente_id,
-      tipo_trabajo_id,
+      tipo_id,
       etiquetas,
       duracion_estimada_min,
       tipo_checkin,
@@ -305,7 +305,7 @@ rutasPlanificadasRouter.post(
         ubicacion: cliente.direccion,
         fecha: ruta.fecha_inicio,
         estado: "en_curso",
-        tipo_trabajo_id: tipo_trabajo_id || null,
+        tipo_id: tipo_id || null,
         datos: datosObj,
         descripcion: descripcion.trim(),
         duracion_estimada_min: duracionNum,

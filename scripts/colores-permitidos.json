@@ -3,7 +3,7 @@
   "archivos_exentos": {
     "web/src/app/login/page.tsx": "Colores de marca del logo de Google (SVG oficial) — deben ser exactos, no son colores de la UI de Bitácora",
     "web/src/app/dashboard/configuracion/categorias-gastos/page.tsx": "Paleta de datos: colores que el usuario asigna a cada categoría de gasto (dato, no estilo)",
-    "web/src/app/dashboard/configuracion/tipos-os/page.tsx": "Paleta de datos: colores por tipo de OS (dato, no estilo)",
+    "web/src/app/dashboard/configuracion/tipos-os-trabajo/page.tsx": "Paleta de datos: colores por tipo de OS/Trabajo (dato, no estilo)",
     "web/src/app/dashboard/configuracion/empresa/page.tsx": "Defaults del branding del PDF de la empresa + función de contraste (no es la UI)",
     "web/src/app/dashboard/configuracion/plantillas/page.tsx": "Preview del PDF de plantillas: replica el look del documento generado, no la UI de la app",
     "web/src/app/dashboard/configuracion/tipos-documento/page.tsx": "Default de color de branding",

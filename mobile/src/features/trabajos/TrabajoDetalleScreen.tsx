@@ -315,7 +315,7 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
 
         {/* Filas de datos */}
         <View style={{ borderTopWidth: 1, borderTopColor: tokens.color.divider }}>
-          <Fila etiqueta="Servicio" valor={trabajo.tipo_trabajo?.nombre ?? trabajo.descripcion ?? "—"} />
+          <Fila etiqueta="Servicio" valor={trabajo.tipo?.nombre ?? trabajo.descripcion ?? "—"} />
           {direccion ? <Fila etiqueta="Dirección" valor={direccion} onPress={abrirMapa} Icono={Navigation} /> : null}
           {cli?.telefono ? (
             <Fila
@@ -350,10 +350,10 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
           </View>
         ) : null}
 
-        {trabajo.tipo_trabajo ? (
+        {trabajo.tipo ? (
           <CamposDinamicos
-            nombre={trabajo.tipo_trabajo.nombre}
-            campos={trabajo.tipo_trabajo.campos}
+            nombre={trabajo.tipo.nombre}
+            campos={trabajo.tipo.campos}
             valores={datosForm}
             onCambiar={(k, v) => setDatosForm((p) => ({ ...p, [k]: v }))}
             onGuardar={guardarDatos}

@@ -73,7 +73,7 @@ ordenesServicioRouter.get(
   ah<RequestConEmpresa>(async (req, res) => {
     let queryTrabajo = supabase
       .from("trabajos")
-      .select("*, cliente_info:clientes(*), responsable:usuarios(nombre), tipo_trabajo:tipos_trabajo(*)")
+      .select("*, cliente_info:clientes(*), responsable:usuarios(nombre), tipo:tipos_os_trabajo(*)")
       .eq("empresa_id", req.empresaId!)
       .eq("id", req.params.trabajoId);
     if (req.rol === "colaborador") queryTrabajo = queryTrabajo.eq("responsable_id", req.userId!);

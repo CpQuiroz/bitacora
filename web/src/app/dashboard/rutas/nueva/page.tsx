@@ -10,7 +10,7 @@ import type {
   Prioridad,
   RutaPlanificada,
   TipoCheckin,
-  TipoTrabajo,
+  TipoOsTrabajo,
   Trabajo,
   Usuario,
 } from "@bitacora/shared";
@@ -60,7 +60,7 @@ export default function NuevaRutaPage() {
   const [usuario, setUsuario] = useState<UsuarioShell | null>(null);
   const [equipo, setEquipo] = useState<Usuario[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
-  const [tiposTrabajo, setTiposTrabajo] = useState<TipoTrabajo[]>([]);
+  const [tiposTrabajo, setTiposTrabajo] = useState<TipoOsTrabajo[]>([]);
   const [trabajosSinRuta, setTrabajosSinRuta] = useState<Trabajo[]>([]);
   const [vehiculos, setVehiculos] = useState<VehiculoConAsignacion[]>([]);
 
@@ -113,7 +113,7 @@ export default function NuevaRutaPage() {
         apiFetch("/api/me"),
         apiFetch("/api/usuarios"),
         apiFetch("/api/clientes"),
-        apiFetch("/api/tipos-trabajo"),
+        apiFetch("/api/tipos-os-trabajo"),
         apiFetch("/api/equipos"),
       ]);
       if (resMe.ok) {
@@ -233,7 +233,7 @@ export default function NuevaRutaPage() {
     setGuardandoTarea(true);
     const formData = new FormData();
     formData.append("cliente_id", clienteId);
-    if (tipoTrabajoId) formData.append("tipo_trabajo_id", tipoTrabajoId);
+    if (tipoTrabajoId) formData.append("tipo_id", tipoTrabajoId);
     formData.append("etiquetas", etiquetas);
     formData.append("duracion_estimada_min", duracionMin);
     formData.append("tipo_checkin", tipoCheckin);
@@ -475,16 +475,16 @@ export default function NuevaRutaPage() {
 
                     <div className="flex flex-col gap-ds-1">
                       <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Tipo de tarea</label>
-                      <SelectCrear<TipoTrabajo>
+                      <SelectCrear<TipoOsTrabajo>
                         value={tipoTrabajoId}
                         onChange={(id) => { setTipoTrabajoId(id); setDatosDinamicos({}); }}
                         opciones={tiposTrabajo}
-                        endpoint="/api/tipos-trabajo"
+                        endpoint="/api/tipos-os-trabajo"
                         placeholder="Sin tipo específico"
-                        etiquetaCrear="+ Crear tipo de tarea"
+                        etiquetaCrear="+ Crear tipo de OS/Trabajo"
                         onCreado={(nuevo) => setTiposTrabajo((prev) => [...prev, nuevo])}
-                        gestionHref="/dashboard/configuracion/tipos-trabajo"
-                        gestionLabel="Configurar tipos de trabajo →"
+                        gestionHref="/dashboard/configuracion/tipos-os-trabajo"
+                        gestionLabel="Configurar tipos de OS/Trabajo →"
                       />
                     </div>
                     <Input
@@ -521,7 +521,7 @@ export default function NuevaRutaPage() {
                       <div className="grid gap-ds-3 rounded-ds-md bg-ds-text/[0.04] p-ds-3 sm:col-span-2 sm:grid-cols-2">
                         {tipoTrabajoSeleccionado.campos.map((campo) =>
                           // Input (ds-) no tiene tipo "fecha" (solo lo usan estos campos
-                          // dinámicos de tipo_trabajo) — reusa el input date nativo de
+                          // dinámicos del Tipo de OS/Trabajo) — reusa el input date nativo de
                           // más abajo en vez de inventarle una variante puntual al
                           // primitivo compartido.
                           campo.tipo === "fecha" ? (

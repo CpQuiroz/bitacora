@@ -104,7 +104,7 @@ export async function sembrarSugerenciasRubro(empresaId: string, rubro: Rubro): 
 
     // Filtra contra lo que ya existe (idempotencia sin depender de que
     // cada tabla tenga un unique(empresa_id, nombre)).
-    async function nuevos(tabla: "tipos_documento" | "categorias_gasto" | "tipos_os", candidatos: string[]): Promise<Set<string>> {
+    async function nuevos(tabla: "tipos_documento" | "categorias_gasto" | "tipos_os_trabajo", candidatos: string[]): Promise<Set<string>> {
       if (candidatos.length === 0) return new Set();
       const { data: existentes } = await supabase.from(tabla).select("nombre").eq("empresa_id", empresaId);
       const yaHay = new Set((existentes ?? []).map((r) => r.nombre));
@@ -114,7 +114,7 @@ export async function sembrarSugerenciasRubro(empresaId: string, rubro: Rubro): 
     const [docsNuevos, catsNuevas, osNuevos] = await Promise.all([
       nuevos("tipos_documento", nombresDe("tipo_documento")),
       nuevos("categorias_gasto", nombresDe("categoria_gasto")),
-      nuevos("tipos_os", nombresDe("tipo_os")),
+      nuevos("tipos_os_trabajo", nombresDe("tipo_os")),
     ]);
 
     const filasDocs = sugerencias
@@ -131,7 +131,7 @@ export async function sembrarSugerenciasRubro(empresaId: string, rubro: Rubro): 
     const resultados = await Promise.all([
       filasDocs.length ? supabase.from("tipos_documento").insert(filasDocs) : Promise.resolve({ error: null }),
       filasCats.length ? supabase.from("categorias_gasto").insert(filasCats) : Promise.resolve({ error: null }),
-      filasOs.length ? supabase.from("tipos_os").insert(filasOs) : Promise.resolve({ error: null }),
+      filasOs.length ? supabase.from("tipos_os_trabajo").insert(filasOs) : Promise.resolve({ error: null }),
     ]);
     for (const r of resultados) {
       if (r.error) console.error("Error sembrando sugerencias de rubro:", r.error);

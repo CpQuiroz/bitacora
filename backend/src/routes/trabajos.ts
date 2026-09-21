@@ -1,6 +1,6 @@
 import { Router } from "express";
 import multer from "multer";
-import type { Anexo, CampoTipoTrabajo, CategoriaFotoOS, EstadoOS, EstadoTrabajo, ItemChecklist, OrdenServicio, Prioridad, SeccionPdfOS, TipoCheckin, TipoTrabajo, Trabajo } from "@bitacora/shared";
+import type { Anexo, CampoTipoTrabajo, CategoriaFotoOS, EstadoOS, EstadoTrabajo, ItemChecklist, OrdenServicio, Prioridad, SeccionPdfOS, TipoCheckin, TipoOsTrabajo, Trabajo } from "@bitacora/shared";
 import { CATEGORIAS_FOTO_OS, SECCIONES_PDF_OS, mapearCamposPersonalizados, sustituirVariables, sustituirVariablesEnBloques } from "@bitacora/shared";
 import { supabase } from "../supabase";
 import { subirFirma, subirFoto, urlFirmada, subirPdfOS, descargarPdfOS, descargarFoto, borrarFoto, subirAnexo, urlFirmadaAnexo } from "../storage";
@@ -46,18 +46,13 @@ async function trabajoExiste(empresaId: string, trabajoId: string) {
   return Boolean(data);
 }
 
-async function tipoTrabajoExiste(empresaId: string, tipoTrabajoId: string) {
+async function tipoExiste(empresaId: string, tipoId: string) {
   const { data } = await supabase
-    .from("tipos_trabajo")
+    .from("tipos_os_trabajo")
     .select("id")
     .eq("empresa_id", empresaId)
-    .eq("id", tipoTrabajoId)
+    .eq("id", tipoId)
     .maybeSingle();
-  return Boolean(data);
-}
-
-async function tipoOsExiste(empresaId: string, tipoOsId: string) {
-  const { data } = await supabase.from("tipos_os").select("id").eq("empresa_id", empresaId).eq("id", tipoOsId).maybeSingle();
   return Boolean(data);
 }
 
@@ -134,7 +129,7 @@ trabajosRouter.get(
   ah<RequestConEmpresa>(async (req, res) => {
     let query = supabase
       .from("trabajos")
-      .select("*, tipo_trabajo:tipos_trabajo(*), cliente_info:clientes(id, nombre, telefono, direccion, lat, lng)")
+      .select("*, tipo:tipos_os_trabajo(*), cliente_info:clientes(id, nombre, telefono, direccion, lat, lng)")
       .eq("empresa_id", req.empresaId!);
     // No revela que el trabajo existe si no es del colaborador — 404, no 403.
     if (req.rol === "colaborador") query = query.eq("responsable_id", req.userId!);
@@ -160,7 +155,7 @@ trabajosRouter.patch(
     const {
       datos,
       estado,
-      tipo_trabajo_id,
+      tipo_id,
       ruta_id,
       descripcion,
       prioridad,
@@ -247,12 +242,12 @@ trabajosRouter.patch(
       }
       cambios.estado = estado;
     }
-    if (tipo_trabajo_id !== undefined) {
-      if (tipo_trabajo_id !== null && !(await tipoTrabajoExiste(req.empresaId!, tipo_trabajo_id))) {
-        res.status(400).json({ error: "tipo_trabajo_id inválido" });
+    if (tipo_id !== undefined) {
+      if (tipo_id !== null && !(await tipoExiste(req.empresaId!, tipo_id))) {
+        res.status(400).json({ error: "tipo_id inválido" });
         return;
       }
-      cambios.tipo_trabajo_id = tipo_trabajo_id;
+      cambios.tipo_id = tipo_id;
     }
     // ruta_id: para "incluir tarea ya creada" en una ruta (o
     // desvincularla pasando null).
@@ -511,8 +506,7 @@ trabajosRouter.post(
       ubicacion,
       codigo,
       estado,
-      tipo_trabajo_id,
-      tipo_os_id,
+      tipo_id,
       responsable_id,
       descripcion,
       prioridad,
@@ -539,12 +533,8 @@ trabajosRouter.post(
       res.status(400).json({ error: "monto inválido" });
       return;
     }
-    if (tipo_trabajo_id && !(await tipoTrabajoExiste(req.empresaId!, tipo_trabajo_id))) {
-      res.status(400).json({ error: "tipo_trabajo_id inválido" });
-      return;
-    }
-    if (tipo_os_id && !(await tipoOsExiste(req.empresaId!, tipo_os_id))) {
-      res.status(400).json({ error: "tipo_os_id inválido" });
+    if (tipo_id && !(await tipoExiste(req.empresaId!, tipo_id))) {
+      res.status(400).json({ error: "tipo_id inválido" });
       return;
     }
     await verificarLimiteOS(req.empresaId!);
@@ -588,8 +578,7 @@ trabajosRouter.post(
         estado: estadoFinal,
         descripcion: descripcion?.trim() || null,
         prioridad: prioridadFinal,
-        tipo_trabajo_id: tipo_trabajo_id || null,
-        tipo_os_id: tipo_os_id || null,
+        tipo_id: tipo_id || null,
         // La columna es `jsonb not null default '{}'` — nunca null.
         datos: datos && typeof datos === "object" && !Array.isArray(datos) && Object.keys(datos).length > 0 ? datos : {},
         responsable_id: responsable_id || req.userId!,
@@ -604,7 +593,7 @@ trabajosRouter.post(
 
     // Si el Tipo de OS elegido tiene una plantilla de checklist, la OS
     // arranca con esos ítems (además de Check-in / Check-out).
-    const checklistPlantilla = await checklistDeTipoOs(req.empresaId!, tipo_os_id);
+    const checklistPlantilla = await checklistDeTipoOs(req.empresaId!, tipo_id);
     let orden = await crearOrdenServicio(req.empresaId!, data.id, checklistPlantilla);
 
     // PASO 1: un trabajo cargado ya cerrado (formulario liviano, típico
@@ -1392,7 +1381,7 @@ trabajosRouter.post(
 export async function armarDatosPdf(empresaId: string, trabajoId: string) {
   const { data: trabajo } = await supabase
     .from("trabajos")
-    .select("*, responsable:usuarios(nombre), tipo_trabajo:tipos_trabajo(nombre, campos)")
+    .select("*, responsable:usuarios(nombre), tipo:tipos_os_trabajo(nombre, campos)")
     .eq("empresa_id", empresaId)
     .eq("id", trabajoId)
     .maybeSingle();
@@ -1463,11 +1452,11 @@ export async function armarDatosPdf(empresaId: string, trabajoId: string) {
   const firmaTecnicoUrl = orden.firma_tecnico_url ? await urlFirmada(orden.firma_tecnico_url, 15) : null;
 
   const colaboradorNombre = (trabajo as unknown as { responsable: { nombre: string } | null }).responsable?.nombre ?? "—";
-  const tipoTrabajo = (trabajo as unknown as { tipo_trabajo: { nombre: string; campos: CampoTipoTrabajo[] } | null }).tipo_trabajo;
+  const tipoTrabajo = (trabajo as unknown as { tipo: { nombre: string; campos: CampoTipoTrabajo[] } | null }).tipo;
   const camposPersonalizados = mapearCamposPersonalizados(tipoTrabajo?.campos, trabajo.datos as Record<string, unknown>);
   // Campos tipo "foto" del formulario (migración 105) — se pasan aparte
   // porque su valor son fotos reales, no texto (mapearCamposPersonalizados
-  // los excluye a propósito). Orden preservado: el mismo de tipos_trabajo.campos.
+  // los excluye a propósito). Orden preservado: el mismo de tipos_os_trabajo.campos.
   const camposFotoBrutos = (tipoTrabajo?.campos ?? []).filter((c) => c.tipo === "foto");
   const camposFoto = await Promise.all(
     camposFotoBrutos.map(async (c) => ({
@@ -1649,7 +1638,7 @@ trabajosRouter.post(
 
     const { data: trabajo } = await supabase
       .from("trabajos")
-      .select("*, tipo_trabajo:tipos_trabajo(*)")
+      .select("*, tipo:tipos_os_trabajo(*)")
       .eq("empresa_id", req.empresaId!)
       .eq("id", req.params.id)
       .maybeSingle();
@@ -1671,7 +1660,7 @@ trabajosRouter.post(
       .eq("orden_servicio_id", orden.id)
       .order("creado_en");
 
-    const tipoTrabajo = (trabajo as unknown as { tipo_trabajo: TipoTrabajo | null }).tipo_trabajo;
+    const tipoTrabajo = (trabajo as unknown as { tipo: TipoOsTrabajo | null }).tipo;
     const datosGuardados = (trabajo.datos ?? {}) as Record<string, unknown>;
     const datosPersonalizados = mapearCamposPersonalizados(tipoTrabajo?.campos, datosGuardados)
       .map((c) => `${c.etiqueta}: ${c.valor}`)

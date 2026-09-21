@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { Camera, ChevronLeft, ClipboardCheck, Mail, Plus } from "lucide-react";
-import type { AnalisisFoto, CatalogoItem, Cliente, OrdenServicio, OsItem, Trabajo, TipoTrabajo, Usuario } from "@bitacora/shared";
+import type { AnalisisFoto, CatalogoItem, Cliente, OrdenServicio, OsItem, Trabajo, TipoOsTrabajo, Usuario } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { abrirPdfOS } from "@/lib/descargarPdf";
@@ -36,7 +36,7 @@ function aTexto(fecha: Date | null): string {
 type DetalleOS = Trabajo & {
   cliente_info: Cliente | null;
   responsable: Usuario | null;
-  tipo_trabajo: TipoTrabajo | null;
+  tipo: TipoOsTrabajo | null;
   orden: OrdenConFirma | null;
   items: OsItem[];
   fotos: AnalisisFotoConUrl[];
@@ -208,7 +208,7 @@ export default function DetalleOrdenServicioPage() {
     if (usuario?.rol !== "colaborador") {
       body.responsable_id = responsableEdit || null;
     }
-    if (detalle?.tipo_trabajo && detalle.tipo_trabajo.campos.length > 0) {
+    if (detalle?.tipo && detalle.tipo.campos.length > 0) {
       body.datos = datosEdit;
     }
     if (!tieneFirma) {
@@ -303,15 +303,15 @@ export default function DetalleOrdenServicioPage() {
                   <Textarea etiqueta="Descripción" filas={2} valor={descEdit} onCambio={setDescEdit} deshabilitado={tieneFirma} />
                 </div>
 
-                {detalle.tipo_trabajo && detalle.tipo_trabajo.campos.some((c) => c.tipo !== "foto") ? (
+                {detalle.tipo && detalle.tipo.campos.some((c) => c.tipo !== "foto") ? (
                   <div className="mb-ds-5 grid gap-ds-3 rounded-ds-md bg-ds-neutral-200 p-ds-3 sm:grid-cols-2">
                     <p className="font-ds-body text-ds-caption font-medium text-ds-text/60 sm:col-span-2">
-                      Datos medidos — {detalle.tipo_trabajo.nombre}
+                      Datos medidos — {detalle.tipo.nombre}
                     </p>
                     {/* Campos tipo "foto" (migración 105) no se editan acá — no
                         hay cámara en desktop. El técnico las sube en el
                         celular; se ven en el PDF/informe de la OS. */}
-                    {detalle.tipo_trabajo.campos.filter((c) => c.tipo !== "foto").map((campo) =>
+                    {detalle.tipo.campos.filter((c) => c.tipo !== "foto").map((campo) =>
                       campo.tipo === "fecha" ? (
                         <DatePicker
                           key={campo.clave}
@@ -433,10 +433,10 @@ export default function DetalleOrdenServicioPage() {
                     <p className="text-ds-text">{detalle.descripcion}</p>
                   </div>
                 ) : null}
-                {detalle.tipo_trabajo ? (
+                {detalle.tipo ? (
                   <div>
                     <p className="text-ds-caption text-ds-text/60">Tipo de servicio</p>
-                    <p className="font-medium text-ds-text">{detalle.tipo_trabajo.nombre}</p>
+                    <p className="font-medium text-ds-text">{detalle.tipo.nombre}</p>
                   </div>
                 ) : null}
                 {detalle.orden?.observaciones_cierre ? (
@@ -453,15 +453,15 @@ export default function DetalleOrdenServicioPage() {
                 ) : null}
               </div>
 
-              {detalle.tipo_trabajo && detalle.tipo_trabajo.campos.some((c) => c.tipo !== "foto") ? (
+              {detalle.tipo && detalle.tipo.campos.some((c) => c.tipo !== "foto") ? (
                 <div className="mt-ds-5 border-t border-ds-divider pt-ds-5">
                   <p className="mb-ds-3 font-ds-body text-ds-caption font-medium text-ds-text/60">
-                    Datos medidos — {detalle.tipo_trabajo.nombre}
+                    Datos medidos — {detalle.tipo.nombre}
                   </p>
                   {/* Campos tipo "foto" (migración 105) se ven en el PDF/
                       informe de la OS, no acá — ver arriba. */}
                   <div className="grid gap-ds-3 sm:grid-cols-3">
-                    {detalle.tipo_trabajo.campos.filter((c) => c.tipo !== "foto").map((c) => (
+                    {detalle.tipo.campos.filter((c) => c.tipo !== "foto").map((c) => (
                       <div key={c.clave} className="rounded-ds-md border border-ds-divider p-ds-3">
                         <p className="font-ds-body text-ds-caption text-ds-text/60">{c.etiqueta}</p>
                         <p className="mt-ds-1 font-ds-body text-ds-small font-semibold text-ds-text">

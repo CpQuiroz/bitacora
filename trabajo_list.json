@@ -925,6 +925,23 @@
       ],
       "status": "done",
       "resolution": "Implementado items 1, 2 y 4 (item 3 excluido, requiere confirmación aparte). tsc x6 limpio, verificar.sh completo en verde. Migración 114 validada read-only, pendiente que la usuaria la aplique en prod antes de pushear."
+    },
+    {
+      "id": 59,
+      "name": "unificar_tipo_os_trabajo",
+      "title": "Unificar Tipo de OS y Tipo de Trabajo en un solo catálogo (Tipo de OS/Trabajo)",
+      "description": "Parte 3 del pedido de 4 (21-sep-2026), aprobada por separado tras confirmación explícita ('vamos con el paso 1, 2, 3'). En Nueva OS aparecían 2 selectores casi idénticos uno debajo del otro. Investigado antes de tocar código: tipos_trabajo (campos dinámicos) y tipos_os (color/checklist/tiempo estimado) tenían 0 nombres repetidos entre sí por empresa en prod, y solo 1 trabajo en toda la base tenía ambos ids seteados (a filas distintas) — riesgo de datos casi nulo, migración validada read-only antes de escribir código de aplicación.",
+      "acceptance": [
+        "Migración 115: tipos_trabajo gana las columnas de tipos_os (descripcion/color/checklist_template_id/tiempo_estimado_minutos), cada fila de tipos_os se inserta como fila nueva, trabajos gana tipo_id (repuntando tipo_trabajo_id primero, tipo_os_id solo si no había tipo_trabajo_id), se dropean tipo_trabajo_id/tipo_os_id/tipos_os, se renombra tipos_trabajo -> tipos_os_trabajo — validada read-only contra prod, pendiente que la usuaria la aplique",
+        "packages/shared: TipoTrabajo + TipoOS -> TipoOsTrabajo único; Trabajo.tipo_trabajo_id/tipo_os_id -> tipo_id",
+        "Backend: nuevo routes/tiposOsTrabajo.ts (merge de tiposTrabajo.ts + tiposOs.ts, eliminados) montado en /api/tipos-os-trabajo; trabajos.ts, ordenes.ts, ordenesServicio.ts, agregacionesDashboard.ts, rutasPlanificadas.ts, seedRubro.ts, tenant.ts (audit:tenant) actualizados",
+        "Web: nueva página configuracion/tipos-os-trabajo (merge de las 2 anteriores, eliminadas) con sugeridos+campos dinámicos+color/checklist/tiempo en un solo form; ordenes/nueva con un solo picker (antes 2); ordenes/[id], trabajos/[id], rutas/nueva actualizados; nav de Configuración con 1 entrada en vez de 2",
+        "Mobile: services/trabajos.ts + TrabajoDetalleScreen.tsx actualizados (tipo_trabajo -> tipo)",
+        "scripts/colores-permitidos.json: exención de paleta de datos movida al nuevo archivo",
+        "tsc de los 6 workspaces limpio, verificar.sh completo en verde (115 migraciones, 0 literales nuevos, audit:tenant 0)"
+      ],
+      "status": "blocked",
+      "resolution": "Implementación completa y commiteada localmente; bloqueada esperando que la usuaria aplique la migración 115 en prod antes de pushear."
     }
   ]
 }

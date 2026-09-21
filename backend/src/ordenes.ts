@@ -15,13 +15,13 @@ function armarChecklistInicial(itemsPlantilla: string[] = []): ItemChecklist[] {
 // Aplana la plantilla de checklist (secciones → preguntas) a la lista
 // de textos que se copian al checklist de la OS. Devuelve [] si el tipo
 // de OS no tiene plantilla o no se encuentra.
-export async function checklistDeTipoOs(empresaId: string, tipoOsId: string | null | undefined): Promise<string[]> {
-  if (!tipoOsId) return [];
+export async function checklistDeTipoOs(empresaId: string, tipoId: string | null | undefined): Promise<string[]> {
+  if (!tipoId) return [];
   const { data: tipo } = await supabase
-    .from("tipos_os")
+    .from("tipos_os_trabajo")
     .select("checklist_template_id")
     .eq("empresa_id", empresaId)
-    .eq("id", tipoOsId)
+    .eq("id", tipoId)
     .maybeSingle();
   if (!tipo?.checklist_template_id) return [];
   const { data: plantilla } = await supabase
