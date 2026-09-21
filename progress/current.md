@@ -4601,3 +4601,35 @@ corregidos, no solo el changelog).
 más el de cierre de esta entrada) pusheados a `main` — Vercel/Render
 redespliegan solos. Pendiente real: build de APK nuevo (no pedido
 todavía) para que el código de mobile alcance al último push.
+
+## 2026-09-21: Portal del cliente a Configuración + fix real de Inventario en Hidroservi (tarea 60)
+
+2 pedidos sueltos. **Portal del cliente**: vivía en el sidebar top-level
+(grupo Clientes) — pasa a ser una pestaña de Configuración (href
+externo a `/dashboard/portal-cliente`, mismo patrón que "Personas"/
+"Parámetros de remuneración" en `configuracion/layout.tsx`).
+
+**Inventario en Hidroservi no se dejaba activar**: la usuaria confirmó
+que entraba logueada directo como Admin (no impersonación de
+Super-Admin, primera hipótesis que descarté). Investigación completa
+antes de tocar código: módulo "registros"/"configuracion" activados
+por default y sin override; rol admin global incluye ambos; plan
+"pro"; **8 productos reales, activos, en el catálogo** — nada de esto
+explicaba el bloqueo. Pregunté qué veía exactamente ("el switch está
+gris") y ahí apareció la causa real: `hayProductos` se calcula UNA
+SOLA VEZ en un `useEffect` sin re-fetch — si el catálogo estaba vacío
+cuando esa pestaña cargó por primera vez, queda pegado en "sin
+productos" para siempre en esa sesión, sin ninguna forma de reintentar
+salvo refrescar la página. Los 8 productos de Hidroservi se crearon
+todos hoy en una ventana de 5 minutos — coincide perfectamente con
+"agregué productos y volví a la pestaña ya abierta de Configuración
+sin refrescar".
+
+**Fix**: se sacó el `disabled` del switch por completo — el mensaje
+"todavía no tienes productos" queda como sugerencia informativa, no
+como bloqueo duro. Activar Inventario con el catálogo vacío no rompe
+nada (la pantalla de Inventario ya maneja ese caso con un empty state
+normal). Elimina la clase entera de bug (staleness de un chequeo que
+corre una sola vez) en vez de parchear el síntoma puntual.
+
+`tsc web` limpio, `verificar.sh --rapido` en verde. Tarea 60 `done`.

@@ -942,6 +942,20 @@
       ],
       "status": "done",
       "resolution": "Migración 115 aplicada y verificada en prod: trabajos.tipo_id único (columnas viejas dropeadas), solo tipos_os_trabajo existe, 2 trabajos reconectados a su tipo correctamente."
+    },
+    {
+      "id": 60,
+      "name": "portal_cliente_a_configuracion_y_fix_toggle_inventario",
+      "title": "Portal del cliente movido a Configuración · fix: toggle de Inventario quedaba pegado en 'sin productos'",
+      "description": "2 pedidos sueltos (21-sep-2026). (1) 'Portal del cliente' vivía en el grupo 'Clientes' del sidebar top-level; se movió a ser una pestaña más dentro de Configuración (mismo patrón que Personas/Plantillas, con href externo). (2) La usuaria reportó no poder activar Inventario en Hidroservi. Investigado a fondo (módulo, rol, plan, catálogo real — 8 productos activos, todo en orden) antes de encontrar la causa real: el switch se deshabilitaba con `hayProductos === false`, un chequeo que corre UNA VEZ al montar la página (`useEffect` sin re-fetch) — los 8 productos de Hidroservi se crearon todos hoy en una ventana de 5 minutos, muy probablemente después de que esa pestaña ya había cargado con el catálogo vacío, dejando el switch pegado en deshabilitado sin ninguna forma de reintentar sin refrescar.",
+      "acceptance": [
+        "DashboardShell.tsx: 'Portal del cliente' sacado del grupo Clientes",
+        "configuracion/layout.tsx: nueva sección 'portal-cliente' (href externo a /dashboard/portal-cliente, mismo patrón que 'equipo'/'parametros-remuneracion')",
+        "configuracion/inventario/page.tsx: el switch de activar Inventario ya no se deshabilita por `hayProductos` — el mensaje informativo de 'crea un producto primero' se mantiene como sugerencia, no como bloqueo duro",
+        "tsc web limpio, verificar.sh (--rapido) en verde"
+      ],
+      "status": "done",
+      "resolution": "Ambos cambios hechos y verificados."
     }
   ]
 }

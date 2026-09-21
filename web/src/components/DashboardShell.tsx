@@ -31,7 +31,6 @@ import {
   Route,
   Search,
   Settings,
-  Share2,
   Sparkles,
   Tag,
   Truck,
@@ -85,7 +84,6 @@ const NAV_GROUPS: NavGroup[] = [
       // Un pack es una relación comercial con el cliente, no una pieza de
       // la operación diaria.
       { href: "/dashboard/agenda/paquetes", label: "Packs de sesiones", icon: Box, modulo: "agenda_pro" },
-      { href: "/dashboard/portal-cliente", label: "Portal del cliente", icon: Share2, modulo: "configuracion" },
     ],
   },
   {

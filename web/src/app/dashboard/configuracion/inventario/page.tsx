@@ -165,11 +165,8 @@ export default function InventarioPage() {
             type="button"
             role="switch"
             aria-checked={activado}
-            disabled={hayProductos === false && !activado}
             onClick={() => setActivado((v) => !v)}
-            className={`relative h-6 w-11 shrink-0 rounded-ds-pill transition-colors ${activado ? "bg-ds-brand" : "bg-ds-divider"} ${
-              hayProductos === false && !activado ? "cursor-not-allowed opacity-50" : ""
-            }`}
+            className={`relative h-6 w-11 shrink-0 rounded-ds-pill transition-colors ${activado ? "bg-ds-brand" : "bg-ds-divider"}`}
           >
             <span
               className={`absolute top-0.5 h-5 w-5 rounded-ds-pill bg-white shadow transition-transform ${

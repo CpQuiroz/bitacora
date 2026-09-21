@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Bell, Box, Briefcase, Calendar, ClipboardCheck, CreditCard, Flag, Layers, Paperclip, Plug, Shield, Tag, User, Users, Wallet } from "lucide-react";
+import { Bell, Box, Briefcase, Calendar, ClipboardCheck, CreditCard, Flag, Layers, Paperclip, Plug, Share2, Shield, Tag, User, Users, Wallet } from "lucide-react";
 import type { Modulo } from "@bitacora/shared";
 import { puedeVerModulo } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
@@ -34,6 +34,7 @@ const SECCIONES: { valor: string; label: string; icon: typeof User; modulo: Modu
   { valor: "parametros-remuneracion", label: "Parámetros de remuneración", icon: CreditCard, modulo: "remuneraciones", href: "/dashboard/remuneraciones/parametros" },
   { valor: "tipos-documento", label: "Tipos de Documento", icon: Paperclip, modulo: "flota" },
   { valor: "agenda-pro", label: "Reserva online", icon: Calendar, modulo: "agenda_pro" },
+  { valor: "portal-cliente", label: "Portal del cliente", icon: Share2, modulo: "configuracion", href: "/dashboard/portal-cliente" },
   { valor: "notificaciones", label: "Notificaciones", icon: Bell, modulo: "configuracion" },
   { valor: "seguridad", label: "Seguridad", icon: Shield, modulo: null },
 ];
