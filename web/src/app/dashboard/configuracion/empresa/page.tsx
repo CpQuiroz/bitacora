@@ -90,6 +90,10 @@ export default function EmpresaPage() {
   const [numeroCuenta, setNumeroCuenta] = useState(usuario.empresa.pago_numero_cuenta ?? "");
   const [titular, setTitular] = useState(usuario.empresa.pago_titular ?? "");
 
+  // Costo/mayorista/minorista en OS y Cotización (migración 116) —
+  // opt-in, solo para las empresas que lo pidan.
+  const [preciosAvanzados, setPreciosAvanzados] = useState(usuario.empresa.precios_avanzados_activado);
+
   const [guardandoDatos, setGuardandoDatos] = useState(false);
   const [errorDatos, setErrorDatos] = useState<string | null>(null);
   const [avisoDatos, setAvisoDatos] = useState<string | null>(null);
@@ -169,6 +173,7 @@ export default function EmpresaPage() {
         pago_tipo_cuenta: tipoCuenta,
         pago_numero_cuenta: numeroCuenta,
         pago_titular: titular,
+        precios_avanzados_activado: preciosAvanzados,
       }),
     });
     setGuardandoDatos(false);
@@ -347,6 +352,30 @@ export default function EmpresaPage() {
             <Input etiqueta="Titular" valor={titular} onCambio={setTitular} />
           </div>
         )}
+      </Card>
+
+      <Card>
+        <div className="flex items-center justify-between">
+          <p className="font-ds-body text-ds-small font-semibold text-ds-text">Costo y precios mayorista/minorista</p>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={preciosAvanzados}
+            onClick={() => setPreciosAvanzados((v) => !v)}
+            className={`relative h-6 w-11 shrink-0 rounded-ds-pill transition-colors ${preciosAvanzados ? "bg-ds-brand" : "bg-ds-divider"}`}
+          >
+            <span
+              className={`absolute top-0.5 h-5 w-5 rounded-ds-pill bg-white shadow transition-transform ${
+                preciosAvanzados ? "translate-x-5" : "translate-x-0.5"
+              }`}
+            />
+          </button>
+        </div>
+        <p className="mt-ds-4 font-ds-body text-ds-caption text-ds-text/60">
+          Al activarlo, cada ítem de Catálogo, Orden de servicio y Cotización gana 3 campos opcionales
+          (costo, precio mayorista, precio minorista) — solo para uso interno, nunca se imprimen en el
+          PDF que ve el cliente.
+        </p>
       </Card>
 
       {errorDatos ? <p className="font-ds-body text-ds-small text-ds-accent-700">{errorDatos}</p> : null}

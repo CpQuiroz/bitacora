@@ -4650,3 +4650,40 @@ pero no vuelve solo a Agenda al terminar (Levantamiento no necesita
 una cita para agendarse).
 
 `tsc` x6 limpio, `verificar.sh` completo en verde. Tarea 61 `done`.
+
+## 2026-09-21: Costo/precio mayorista/precio minorista, opcional por empresa (tarea 62)
+
+Pedido: agregar costo/mayorista/minorista a ítems de Cotización y OS,
+"opcional ya que será solo para algunas empresas". Investigué el
+esquema real antes de proponer nada: os_items/presupuesto_items solo
+tenían descripcion/cantidad/precio_unitario, y catalogo_items ya tenía
+el patrón establecido de precio_base → precio_unitario (se copia solo
+al agregar el ítem desde CatalogoSelectorModal). Presenté 3 preguntas
+concretas antes de tocar código (dónde viven los campos, si se
+imprimen en el PDF, dónde va el interruptor) — las 3 recomendaciones
+fueron aceptadas.
+
+**Migración 116**: `empresas.precios_avanzados_activado` (default
+false, mismo criterio que `inventario_activado`); `costo`/
+`precio_mayorista`/`precio_minorista` nullable en `catalogo_items`,
+`os_items`, `presupuesto_items`. Validada read-only contra prod antes
+de escribir código de aplicación.
+
+**Alcance del código**: shared (4 tipos); backend — `miEmpresa.ts`,
+`catalogo.ts` (POST/PATCH), `trabajos.ts` (parseo + los 2 `insert` de
+`os_items`), `cotizaciones.ts` (parseo + `guardarItems` + "Convertir a
+OS"), `levantamientos.ts` (aprobar → nace la OS, mismo carry-over
+desde Catálogo). Verifiqué explícitamente que `generarPdfOS.ts`/
+`generarPdfCotizacion.ts` siguen mapeando el ítem con un allowlist
+(`descripcion`/`cantidad`/`precio_unitario` nomás) — los 3 campos
+nuevos nunca llegan al PDF, ya estaba así por construcción, no hizo
+falta blindar nada nuevo. Web: toggle en Configuración > Empresa,
+Catálogo (3 campos condicionales), `CatalogoSelectorModal` (carry-over
+al agregar del catálogo), y los 4 formularios de ítems (OS nueva/
+editar, Cotización nueva/editar) — cada uno con su propio "sub-fila"
+de 3 campos que solo aparece si la empresa tiene la función activada.
+
+`tsc` de los 6 workspaces limpio, `verificar.sh` completo en verde
+(116 migraciones, 0 literales nuevos). Tarea 62 `blocked` — commiteado
+local, pendiente que la usuaria aplique la migración 116 antes de
+pushear.

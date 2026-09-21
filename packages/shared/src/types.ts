@@ -136,6 +136,11 @@ export type Empresa = {
   // trabajo. FALSE = la empresa factura por fuera (ej. contra guía
   // semanal) y sigue usando "desde trabajos" a mano.
   cobro_automatico_al_firmar: boolean;
+  // Costo/mayorista/minorista en ítems de Catálogo, OS y Cotización
+  // (migración 116, 21-sep-2026) — opt-in a propósito ("solo para
+  // algunas empresas"), mismo criterio que inventario_activado. Con
+  // esto en false los 3 campos ni se muestran en los formularios.
+  precios_avanzados_activado: boolean;
   // Viajes registrados desde la app: en TRUE entran directo como
   // "confirmado" (sin pasar por aprobación del admin). Ver migración 78.
   viajes_aprobacion_automatica: boolean;
@@ -946,6 +951,10 @@ export type OsItem = {
   descripcion: string;
   cantidad: number;
   precio_unitario: number;
+  // Solo internos — nunca se imprimen en el PDF (migración 116).
+  costo: number | null;
+  precio_mayorista: number | null;
+  precio_minorista: number | null;
   creado_en: string;
 };
 
@@ -1032,6 +1041,10 @@ export type PresupuestoItem = {
   descripcion: string;
   cantidad: number;
   precio_unitario: number;
+  // Solo internos — nunca se imprimen en el PDF (migración 116).
+  costo: number | null;
+  precio_mayorista: number | null;
+  precio_minorista: number | null;
   creado_en: string;
 };
 
@@ -1245,6 +1258,12 @@ export type CatalogoItem = {
   stock_actual: number | null;
   stock_minimo: number | null;
   activo: boolean;
+  // Solo si la empresa tiene precios_avanzados_activado (migración 116)
+  // — igual que precio_base, se copian solos al agregar el ítem a una
+  // OS/Cotización (CatalogoSelectorModal), editables por línea después.
+  costo: number | null;
+  precio_mayorista: number | null;
+  precio_minorista: number | null;
   creado_en: string;
   // Derivado (join con catalogo_item_tipos_equipo), no una columna
   // propia — igual que "items" en los kits. Solo viene en GET /api/catalogo.

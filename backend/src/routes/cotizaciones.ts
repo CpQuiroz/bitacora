@@ -16,12 +16,28 @@ export const cotizacionesRouter = Router();
 const ESTADOS: EstadoPresupuesto[] = ["borrador", "enviado", "aprobado", "rechazado", "expirado"];
 const IVA_TASA = 0.19;
 
-type ItemEntrada = { catalogo_item_id?: string | null; descripcion: string; cantidad: number; precio_unitario: number };
+type ItemEntrada = {
+  catalogo_item_id?: string | null;
+  descripcion: string;
+  cantidad: number;
+  precio_unitario: number;
+  // Solo si la empresa tiene precios_avanzados_activado (migración
+  // 116) — opcionales aunque lo tenga.
+  costo?: number | null;
+  precio_mayorista?: number | null;
+  precio_minorista?: number | null;
+};
 
 function calcularTotales(items: ItemEntrada[]) {
   const subtotal = items.reduce((acc, it) => acc + it.cantidad * it.precio_unitario, 0);
   const iva = Math.round(subtotal * IVA_TASA);
   return { subtotal: Math.round(subtotal), iva, total: Math.round(subtotal) + iva };
+}
+
+// "" / null / undefined → null; NaN si viene un valor no numérico.
+function numeroOpcional(v: unknown): number | null {
+  if (v === undefined || v === null || v === "") return null;
+  return Number(v);
 }
 
 function parsearItems(raw: unknown): ItemEntrada[] | null {
@@ -31,10 +47,30 @@ function parsearItems(raw: unknown): ItemEntrada[] | null {
     const descripcion = String(it?.descripcion ?? "").trim();
     const cantidad = Number(it?.cantidad);
     const precioUnitario = Number(it?.precio_unitario);
-    if (!descripcion || !Number.isFinite(cantidad) || cantidad <= 0 || !Number.isFinite(precioUnitario) || precioUnitario < 0) {
+    const costo = numeroOpcional(it?.costo);
+    const precioMayorista = numeroOpcional(it?.precio_mayorista);
+    const precioMinorista = numeroOpcional(it?.precio_minorista);
+    if (
+      !descripcion ||
+      !Number.isFinite(cantidad) ||
+      cantidad <= 0 ||
+      !Number.isFinite(precioUnitario) ||
+      precioUnitario < 0 ||
+      (costo !== null && Number.isNaN(costo)) ||
+      (precioMayorista !== null && Number.isNaN(precioMayorista)) ||
+      (precioMinorista !== null && Number.isNaN(precioMinorista))
+    ) {
       return null;
     }
-    items.push({ catalogo_item_id: it?.catalogo_item_id || null, descripcion, cantidad, precio_unitario: precioUnitario });
+    items.push({
+      catalogo_item_id: it?.catalogo_item_id || null,
+      descripcion,
+      cantidad,
+      precio_unitario: precioUnitario,
+      costo,
+      precio_mayorista: precioMayorista,
+      precio_minorista: precioMinorista,
+    });
   }
   return items;
 }
@@ -50,6 +86,9 @@ async function guardarItems(empresaId: string, presupuestoId: string, items: Ite
       descripcion: it.descripcion,
       cantidad: it.cantidad,
       precio_unitario: it.precio_unitario,
+      costo: it.costo ?? null,
+      precio_mayorista: it.precio_mayorista ?? null,
+      precio_minorista: it.precio_minorista ?? null,
     }))
   );
 }
@@ -442,6 +481,9 @@ cotizacionesRouter.post(
           descripcion: it.descripcion,
           cantidad: it.cantidad,
           precio_unitario: it.precio_unitario,
+          costo: it.costo,
+          precio_mayorista: it.precio_mayorista,
+          precio_minorista: it.precio_minorista,
         }))
       );
     }

@@ -429,6 +429,9 @@ trabajosRouter.patch(
             descripcion: it.descripcion,
             cantidad: it.cantidad,
             precio_unitario: it.precio_unitario,
+            costo: it.costo,
+            precio_mayorista: it.precio_mayorista,
+            precio_minorista: it.precio_minorista,
           }))
         );
       }
@@ -463,7 +466,23 @@ trabajosRouter.delete(
   })
 );
 
-type ItemOsParseado = { catalogo_item_id: string | null; descripcion: string; cantidad: number; precio_unitario: number };
+type ItemOsParseado = {
+  catalogo_item_id: string | null;
+  descripcion: string;
+  cantidad: number;
+  precio_unitario: number;
+  // Solo si la empresa tiene precios_avanzados_activado (migración
+  // 116) — opcionales aunque lo tenga, "" / ausente = null.
+  costo: number | null;
+  precio_mayorista: number | null;
+  precio_minorista: number | null;
+};
+
+// "" / null / undefined → null; NaN si viene un valor no numérico.
+function numeroOpcional(v: unknown): number | null {
+  if (v === undefined || v === null || v === "") return null;
+  return Number(v);
+}
 
 // Reutilizado por POST / (crear OS) y PATCH /:id (editar ítems antes de
 // la firma) — misma validación en los dos lugares, un solo formato.
@@ -477,8 +496,21 @@ function parsearItemsOS(items: unknown): ItemOsParseado[] | null {
       descripcion: String(it.descripcion ?? "").trim(),
       cantidad: Number(it.cantidad ?? 1),
       precio_unitario: Number(it.precio_unitario ?? 0),
+      costo: numeroOpcional(it.costo),
+      precio_mayorista: numeroOpcional(it.precio_mayorista),
+      precio_minorista: numeroOpcional(it.precio_minorista),
     }));
-    if (itemsParseados.some((it) => !it.descripcion || Number.isNaN(it.cantidad) || Number.isNaN(it.precio_unitario))) {
+    if (
+      itemsParseados.some(
+        (it) =>
+          !it.descripcion ||
+          Number.isNaN(it.cantidad) ||
+          Number.isNaN(it.precio_unitario) ||
+          (it.costo !== null && Number.isNaN(it.costo)) ||
+          (it.precio_mayorista !== null && Number.isNaN(it.precio_mayorista)) ||
+          (it.precio_minorista !== null && Number.isNaN(it.precio_minorista))
+      )
+    ) {
       return null;
     }
     return itemsParseados;
@@ -620,6 +652,9 @@ trabajosRouter.post(
           descripcion: it.descripcion,
           cantidad: it.cantidad,
           precio_unitario: it.precio_unitario,
+          costo: it.costo,
+          precio_mayorista: it.precio_mayorista,
+          precio_minorista: it.precio_minorista,
         }))
       );
     }

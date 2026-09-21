@@ -32,8 +32,17 @@ import { ComboboxCliente } from "@/components/ComboboxCliente";
 import { ComboboxResponsable } from "@/components/ComboboxResponsable";
 import { ComboboxEquipo } from "@/components/ComboboxEquipo";
 
-type ItemOS = { catalogo_item_id: string | null; descripcion: string; cantidad: string; precio_unitario: string };
-const ITEM_VACIO: ItemOS = { catalogo_item_id: null, descripcion: "", cantidad: "1", precio_unitario: "0" };
+type ItemOS = {
+  catalogo_item_id: string | null;
+  descripcion: string;
+  cantidad: string;
+  precio_unitario: string;
+  // Solo si la empresa tiene precios_avanzados_activado (migración 116).
+  costo: string;
+  precio_mayorista: string;
+  precio_minorista: string;
+};
+const ITEM_VACIO: ItemOS = { catalogo_item_id: null, descripcion: "", cantidad: "1", precio_unitario: "0", costo: "", precio_mayorista: "", precio_minorista: "" };
 
 const PRIORIDADES: Prioridad[] = ["alta", "media", "baja"];
 
@@ -49,6 +58,11 @@ function NuevaOrdenServicioContenido() {
   const [equipos, setEquipos] = useState<Equipo[]>([]);
   const [equipoIdOS, setEquipoIdOS] = useState("");
   const [catalogo, setCatalogo] = useState<CatalogoItem[]>([]);
+  // Costo/mayorista/minorista (migración 116) — opt-in por empresa,
+  // ver Configuración > Empresa. UsuarioShell no trae este campo (es
+  // una proyección liviana), se guarda aparte igual que el resto de
+  // los datos que esta pantalla necesita del /api/me crudo.
+  const [preciosAvanzados, setPreciosAvanzados] = useState(false);
 
   // Preselección desde la Vista 360° del Cliente ("+ Nueva OS" en la
   // ficha ya trae el cliente puesto).
@@ -84,7 +98,10 @@ function NuevaOrdenServicioContenido() {
       ]);
       if (resMe.ok) {
         const { usuario: u } = await resMe.json();
-        if (u) setUsuario({ nombre: u.nombre, rol: u.rol, empresaNombre: u.empresa?.nombre ?? "", empresaLogoUrl: u.empresa?.logo_url ?? null, colorPrimario: u.empresa?.color_primario ?? null, tema: u.empresa?.tema ?? "faena", colorPrimarioForeground: u.empresa?.color_primario_foreground ?? null, colorSecundario: u.empresa?.color_secundario ?? null, fuente: u.empresa?.fuente ?? null, moneda: u.empresa?.moneda ?? "CLP" });
+        if (u) {
+          setUsuario({ nombre: u.nombre, rol: u.rol, empresaNombre: u.empresa?.nombre ?? "", empresaLogoUrl: u.empresa?.logo_url ?? null, colorPrimario: u.empresa?.color_primario ?? null, tema: u.empresa?.tema ?? "faena", colorPrimarioForeground: u.empresa?.color_primario_foreground ?? null, colorSecundario: u.empresa?.color_secundario ?? null, fuente: u.empresa?.fuente ?? null, moneda: u.empresa?.moneda ?? "CLP" });
+          setPreciosAvanzados(Boolean(u.empresa?.precios_avanzados_activado));
+        }
       }
       if (resEquipo.ok) {
         const lista: Usuario[] = await resEquipo.json();
@@ -116,6 +133,9 @@ function NuevaOrdenServicioContenido() {
         descripcion: item.descripcion,
         cantidad: String(item.cantidad),
         precio_unitario: String(item.precio_unitario),
+        costo: item.costo != null ? String(item.costo) : "",
+        precio_mayorista: item.precio_mayorista != null ? String(item.precio_mayorista) : "",
+        precio_minorista: item.precio_minorista != null ? String(item.precio_minorista) : "",
       })),
     ]);
   }
@@ -177,6 +197,9 @@ function NuevaOrdenServicioContenido() {
             descripcion: it.descripcion.trim(),
             cantidad: Number(it.cantidad || 0),
             precio_unitario: Number(it.precio_unitario || 0),
+            costo: it.costo.trim() ? Number(it.costo) : null,
+            precio_mayorista: it.precio_mayorista.trim() ? Number(it.precio_mayorista) : null,
+            precio_minorista: it.precio_minorista.trim() ? Number(it.precio_minorista) : null,
           }))
         ) : undefined,
       }),
@@ -378,7 +401,8 @@ function NuevaOrdenServicioContenido() {
                 const stock = stockDe(it.catalogo_item_id);
                 const excede = stock != null && Number(it.cantidad || 0) > stock;
                 return (
-                <div key={i} className="grid grid-cols-[1fr_5rem_7rem_auto] items-start gap-2">
+                <div key={i} className="flex flex-col gap-2 border-b border-border pb-2 last:border-0 last:pb-0">
+                <div className="grid grid-cols-[1fr_5rem_7rem_auto] items-start gap-2">
                   <div>
                     {i === 0 && <Label>Descripción</Label>}
                     <Input
@@ -418,6 +442,23 @@ function NuevaOrdenServicioContenido() {
                   >
                     Quitar
                   </Button>
+                </div>
+                {preciosAvanzados && (
+                  <div className="grid grid-cols-3 gap-2 pl-0 sm:pl-1">
+                    <div>
+                      {i === 0 && <Label>Costo (opcional)</Label>}
+                      <InputMonto value={it.costo} onChange={(v) => actualizarItem(i, "costo", v)} moneda={usuario.moneda} />
+                    </div>
+                    <div>
+                      {i === 0 && <Label>P. mayorista (opcional)</Label>}
+                      <InputMonto value={it.precio_mayorista} onChange={(v) => actualizarItem(i, "precio_mayorista", v)} moneda={usuario.moneda} />
+                    </div>
+                    <div>
+                      {i === 0 && <Label>P. minorista (opcional)</Label>}
+                      <InputMonto value={it.precio_minorista} onChange={(v) => actualizarItem(i, "precio_minorista", v)} moneda={usuario.moneda} />
+                    </div>
+                  </div>
+                )}
                 </div>
                 );
               })}

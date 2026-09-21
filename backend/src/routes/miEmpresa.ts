@@ -101,6 +101,7 @@ miEmpresaRouter.patch(
       inventario_descontar_en_estado,
       inventario_permitir_negativo,
       inventario_descontar_una_vez,
+      precios_avanzados_activado,
       viajes_aprobacion_automatica,
       portal_muestra_ordenes,
       portal_muestra_citas,
@@ -189,6 +190,7 @@ miEmpresaRouter.patch(
     }
     if (inventario_permitir_negativo !== undefined) cambios.inventario_permitir_negativo = Boolean(inventario_permitir_negativo);
     if (inventario_descontar_una_vez !== undefined) cambios.inventario_descontar_una_vez = Boolean(inventario_descontar_una_vez);
+    if (precios_avanzados_activado !== undefined) cambios.precios_avanzados_activado = Boolean(precios_avanzados_activado);
     if (viajes_aprobacion_automatica !== undefined) cambios.viajes_aprobacion_automatica = Boolean(viajes_aprobacion_automatica);
     if (portal_muestra_ordenes !== undefined) cambios.portal_muestra_ordenes = Boolean(portal_muestra_ordenes);
     if (portal_muestra_citas !== undefined) cambios.portal_muestra_citas = Boolean(portal_muestra_citas);

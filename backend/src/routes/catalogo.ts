@@ -112,10 +112,21 @@ function parseStockMinimo(v: unknown): number | null | undefined {
   return Number.isInteger(n) && n >= 0 ? n : undefined;
 }
 
+// costo / precio_mayorista / precio_minorista (migración 116) — solo
+// si la empresa tiene precios_avanzados_activado, y siempre opcionales
+// item por item aunque lo tenga. "" / null / undefined → null.
+// undefined de retorno = valor inválido.
+function parsePrecioOpcional(v: unknown): number | null | undefined {
+  if (v === null || v === undefined || v === "") return null;
+  const n = Number(v);
+  return Number.isFinite(n) && n >= 0 ? n : undefined;
+}
+
 catalogoRouter.post(
   "/",
   ah<RequestConEmpresa>(async (req, res) => {
-    const { tipo, nombre, sku, categoria, unidad, precio_base, items, tipos_equipo, stock_inicial, stock_minimo } = req.body ?? {};
+    const { tipo, nombre, sku, categoria, unidad, precio_base, items, tipos_equipo, stock_inicial, stock_minimo, costo, precio_mayorista, precio_minorista } =
+      req.body ?? {};
 
     if (typeof tipo !== "string" || !TIPOS.includes(tipo as TipoCatalogoItem)) {
       res.status(400).json({ error: `tipo debe ser uno de: ${TIPOS.join(", ")}` });
@@ -145,6 +156,14 @@ catalogoRouter.post(
       return;
     }
 
+    const costoFinal = parsePrecioOpcional(costo);
+    const mayoristaFinal = parsePrecioOpcional(precio_mayorista);
+    const minoristaFinal = parsePrecioOpcional(precio_minorista);
+    if (costoFinal === undefined || mayoristaFinal === undefined || minoristaFinal === undefined) {
+      res.status(400).json({ error: "costo / precio_mayorista / precio_minorista deben ser un número mayor o igual a 0" });
+      return;
+    }
+
     const { data, error } = await supabase
       .from("catalogo_items")
       .insert({
@@ -159,6 +178,9 @@ catalogoRouter.post(
         // null = "sin definir", distinto de "definido en 0" — cae al
         // umbral por defecto de la empresa (Configuración > Inventario).
         stock_minimo: stockMinimo,
+        costo: costoFinal,
+        precio_mayorista: mayoristaFinal,
+        precio_minorista: minoristaFinal,
       })
       .select()
       .single();
@@ -301,7 +323,8 @@ catalogoRouter.post(
 catalogoRouter.patch(
   "/:id",
   ah<RequestConEmpresa>(async (req, res) => {
-    const { nombre, sku, categoria, unidad, precio_base, activo, items, tipos_equipo, stock_minimo } = req.body ?? {};
+    const { nombre, sku, categoria, unidad, precio_base, activo, items, tipos_equipo, stock_minimo, costo, precio_mayorista, precio_minorista } =
+      req.body ?? {};
     const cambios: Partial<CatalogoItem> = {};
 
     if (nombre !== undefined) {
@@ -330,6 +353,30 @@ catalogoRouter.patch(
         return;
       }
       cambios.stock_minimo = sm;
+    }
+    if (costo !== undefined) {
+      const c = parsePrecioOpcional(costo);
+      if (c === undefined) {
+        res.status(400).json({ error: "costo debe ser un número mayor o igual a 0" });
+        return;
+      }
+      cambios.costo = c;
+    }
+    if (precio_mayorista !== undefined) {
+      const m = parsePrecioOpcional(precio_mayorista);
+      if (m === undefined) {
+        res.status(400).json({ error: "precio_mayorista debe ser un número mayor o igual a 0" });
+        return;
+      }
+      cambios.precio_mayorista = m;
+    }
+    if (precio_minorista !== undefined) {
+      const m = parsePrecioOpcional(precio_minorista);
+      if (m === undefined) {
+        res.status(400).json({ error: "precio_minorista debe ser un número mayor o igual a 0" });
+        return;
+      }
+      cambios.precio_minorista = m;
     }
 
     if (Object.keys(cambios).length === 0 && items === undefined && tipos_equipo === undefined) {

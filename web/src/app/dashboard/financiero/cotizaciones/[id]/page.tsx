@@ -17,7 +17,16 @@ import { PanelAcciones } from "@/components/PanelAcciones";
 
 type ClienteInfo = Pick<Cliente, "id" | "nombre" | "correo" | "telefono" | "direccion">;
 type CotizacionDetalle = Presupuesto & { cliente_info: ClienteInfo | null; items: PresupuestoItem[]; os_folio: number | null };
-type Linea = { catalogo_item_id: string | null; descripcion: string; cantidad: string; precio_unitario: string };
+type Linea = {
+  catalogo_item_id: string | null;
+  descripcion: string;
+  cantidad: string;
+  precio_unitario: string;
+  // Solo si la empresa tiene precios_avanzados_activado (migración 116).
+  costo: string;
+  precio_mayorista: string;
+  precio_minorista: string;
+};
 
 const ESTADOS: EstadoPresupuesto[] = ["borrador", "enviado", "aprobado", "rechazado"];
 const IVA_TASA = 0.19;
@@ -49,6 +58,8 @@ export default function CotizacionDetallePage() {
   const [descEdit, setDescEdit] = useState("");
   const [fechaVencEdit, setFechaVencEdit] = useState("");
   const [lineasEdit, setLineasEdit] = useState<Linea[]>([]);
+  // Migración 116 — ver nota en ordenes/nueva/page.tsx.
+  const [preciosAvanzados, setPreciosAvanzados] = useState(false);
   const [guardandoEdit, setGuardandoEdit] = useState(false);
   const [errorEdit, setErrorEdit] = useState<string | null>(null);
   const [selectorAbiertoEdit, setSelectorAbiertoEdit] = useState(false);
@@ -75,6 +86,7 @@ export default function CotizacionDetallePage() {
           fuente: u.empresa?.fuente ?? null,
           moneda: u.empresa?.moneda ?? "CLP",
         });
+      setPreciosAvanzados(Boolean(u?.empresa?.precios_avanzados_activado));
     }
     if (!resCotizacion.ok) {
       setError("No se pudo cargar la cotización");
@@ -108,8 +120,11 @@ export default function CotizacionDetallePage() {
             descripcion: it.descripcion,
             cantidad: String(it.cantidad),
             precio_unitario: String(it.precio_unitario),
+            costo: it.costo != null ? String(it.costo) : "",
+            precio_mayorista: it.precio_mayorista != null ? String(it.precio_mayorista) : "",
+            precio_minorista: it.precio_minorista != null ? String(it.precio_minorista) : "",
           }))
-        : [{ catalogo_item_id: null, descripcion: "", cantidad: "1", precio_unitario: "0" }]
+        : [{ catalogo_item_id: null, descripcion: "", cantidad: "1", precio_unitario: "0", costo: "", precio_mayorista: "", precio_minorista: "" }]
     );
     setErrorEdit(null);
     setEditando(true);
@@ -126,6 +141,9 @@ export default function CotizacionDetallePage() {
         descripcion: item.descripcion,
         cantidad: String(item.cantidad),
         precio_unitario: String(item.precio_unitario),
+        costo: item.costo != null ? String(item.costo) : "",
+        precio_mayorista: item.precio_mayorista != null ? String(item.precio_mayorista) : "",
+        precio_minorista: item.precio_minorista != null ? String(item.precio_minorista) : "",
       })),
     ]);
   }
@@ -157,6 +175,9 @@ export default function CotizacionDetallePage() {
           descripcion: l.descripcion,
           cantidad: Number(l.cantidad),
           precio_unitario: Number(l.precio_unitario),
+          costo: l.costo.trim() ? Number(l.costo) : null,
+          precio_mayorista: l.precio_mayorista.trim() ? Number(l.precio_mayorista) : null,
+          precio_minorista: l.precio_minorista.trim() ? Number(l.precio_minorista) : null,
         })),
       }),
     });
@@ -291,7 +312,8 @@ export default function CotizacionDetallePage() {
 
               <div className="mt-ds-5 flex flex-col gap-ds-3">
                 {lineasEdit.map((l, idx) => (
-                  <div key={idx} className="grid items-end gap-ds-3 sm:grid-cols-[2fr_1fr_1fr_auto]">
+                  <div key={idx} className="flex flex-col gap-ds-2 border-b border-ds-divider pb-ds-3 last:border-0 last:pb-0">
+                  <div className="grid items-end gap-ds-3 sm:grid-cols-[2fr_1fr_1fr_auto]">
                     <Input etiqueta={idx === 0 ? "Descripción" : undefined} requerido valor={l.descripcion} onCambio={(v) => cambiarLineaEdit(idx, { descripcion: v })} />
                     <Input etiqueta={idx === 0 ? "Cantidad" : undefined} tipo="numero" requerido valor={l.cantidad} onCambio={(v) => cambiarLineaEdit(idx, { cantidad: v })} />
                     <div className="flex flex-col gap-ds-1">
@@ -301,6 +323,23 @@ export default function CotizacionDetallePage() {
                     <Button variante="ghost" onPress={() => quitarLineaEdit(idx)} deshabilitado={lineasEdit.length === 1}>
                       Quitar
                     </Button>
+                  </div>
+                  {preciosAvanzados && (
+                    <div className="grid gap-ds-3 sm:grid-cols-3">
+                      <div className="flex flex-col gap-ds-1">
+                        {idx === 0 && <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Costo (opcional)</label>}
+                        <InputMonto value={l.costo} onChange={(v) => cambiarLineaEdit(idx, { costo: v })} moneda={usuario.moneda} />
+                      </div>
+                      <div className="flex flex-col gap-ds-1">
+                        {idx === 0 && <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">P. mayorista (opcional)</label>}
+                        <InputMonto value={l.precio_mayorista} onChange={(v) => cambiarLineaEdit(idx, { precio_mayorista: v })} moneda={usuario.moneda} />
+                      </div>
+                      <div className="flex flex-col gap-ds-1">
+                        {idx === 0 && <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">P. minorista (opcional)</label>}
+                        <InputMonto value={l.precio_minorista} onChange={(v) => cambiarLineaEdit(idx, { precio_minorista: v })} moneda={usuario.moneda} />
+                      </div>
+                    </div>
+                  )}
                   </div>
                 ))}
               </div>

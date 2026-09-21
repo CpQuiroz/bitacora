@@ -970,6 +970,22 @@
       ],
       "status": "done",
       "resolution": "Implementado y verificado."
+    },
+    {
+      "id": 62,
+      "name": "costo_mayorista_minorista_opcional",
+      "title": "Costo, precio mayorista y precio minorista (opcional por empresa) en Catálogo, OS y Cotización",
+      "description": "Pedido: agregar costo/mayorista/minorista a los ítems de Cotización y OS, opcional porque solo lo usarán algunas empresas. Confirmado con la usuaria (3 preguntas): (1) también viven en Catálogo como default, se copian al agregar el ítem igual que precio_base; (2) solo internos, nunca se imprimen en el PDF que ve el cliente; (3) el interruptor va en Configuración > Empresa, no una pantalla propia.",
+      "acceptance": [
+        "Migración 116: empresas.precios_avanzados_activado (default false); costo/precio_mayorista/precio_minorista nullable en catalogo_items, os_items, presupuesto_items — validada read-only y aplicada",
+        "shared: Empresa.precios_avanzados_activado; CatalogoItem/OsItem/PresupuestoItem con los 3 campos nuevos",
+        "Backend: miEmpresa.ts (PATCH), catalogo.ts (POST/PATCH con validación), trabajos.ts (parsearItemsOS + los 2 insert de os_items), cotizaciones.ts (ItemEntrada/parsearItems/guardarItems + convertir a OS), levantamientos.ts (aprobar → crea OS, copia costo/mayorista/minorista del catálogo)",
+        "Confirmado: los PDF (generarPdfOS.ts, generarPdfCotizacion.ts) siguen mapeando explícitamente solo descripcion/cantidad/precio_unitario — los 3 campos nuevos nunca llegan al PDF",
+        "Web: configuracion/empresa (toggle), registros/catalogo (3 campos condicionales), CatalogoSelectorModal (carry-over), ordenes/nueva, ordenes/[id], cotizaciones/nueva, cotizaciones/[id] (3 campos condicionales por ítem + carry-over desde Catálogo)",
+        "tsc de los 6 workspaces limpio, verificar.sh completo en verde (116 migraciones, 0 literales nuevos, audit:tenant 0)"
+      ],
+      "status": "blocked",
+      "resolution": "Implementación completa y commiteada localmente; bloqueada esperando que la usuaria aplique la migración 116 en prod antes de pushear."
     }
   ]
 }

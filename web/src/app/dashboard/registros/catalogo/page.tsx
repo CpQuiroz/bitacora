@@ -86,6 +86,11 @@ export default function CatalogoPage() {
   const [categoria, setCategoria] = useState("");
   const [unidad, setUnidad] = useState("unidad");
   const [precioBase, setPrecioBase] = useState("");
+  // Solo si la empresa tiene precios_avanzados_activado (migración 116).
+  const [costo, setCosto] = useState("");
+  const [precioMayorista, setPrecioMayorista] = useState("");
+  const [precioMinorista, setPrecioMinorista] = useState("");
+  const [preciosAvanzados, setPreciosAvanzados] = useState(false);
   // Solo para "Nuevo ítem" tipo Producto. Editar el stock después va por
   // el flujo de ajuste de Inventario (para no romper la trazabilidad).
   const [stockInicial, setStockInicial] = useState("0");
@@ -130,6 +135,7 @@ export default function CatalogoPage() {
           moneda: u.empresa?.moneda ?? "CLP",
         });
       if (u?.empresa?.inventario_stock_minimo_default != null) setStockMinimoDefault(u.empresa.inventario_stock_minimo_default);
+      setPreciosAvanzados(Boolean(u?.empresa?.precios_avanzados_activado));
     }
     if (!resItems.ok) {
       setError("No se pudo cargar el catálogo");
@@ -153,6 +159,9 @@ export default function CatalogoPage() {
     setCategoria("");
     setUnidad("");
     setPrecioBase("");
+    setCosto("");
+    setPrecioMayorista("");
+    setPrecioMinorista("");
     setStockInicial("0");
     setStockMinimo("");
     setKitItems([]);
@@ -169,6 +178,9 @@ export default function CatalogoPage() {
     setCategoria(i.categoria ?? "");
     setUnidad(i.unidad);
     setPrecioBase(String(i.precio_base));
+    setCosto(i.costo != null ? String(i.costo) : "");
+    setPrecioMayorista(i.precio_mayorista != null ? String(i.precio_mayorista) : "");
+    setPrecioMinorista(i.precio_minorista != null ? String(i.precio_minorista) : "");
     setStockMinimo(i.stock_minimo != null ? String(i.stock_minimo) : "");
     setKitItems((i.items ?? []).map((k) => ({ item_id: k.item_id, cantidad: String(k.cantidad) })));
     setTiposEquipo(i.tipos_equipo ?? []);
@@ -200,7 +212,17 @@ export default function CatalogoPage() {
     setFormError(null);
     setAviso(null);
     setGuardando(true);
-    const payload: Record<string, unknown> = { nombre, sku, categoria, unidad, precio_base: Number(precioBase), tipos_equipo: tiposEquipo };
+    const payload: Record<string, unknown> = {
+      nombre,
+      sku,
+      categoria,
+      unidad,
+      precio_base: Number(precioBase),
+      tipos_equipo: tiposEquipo,
+      costo: costo.trim() ? Number(costo) : null,
+      precio_mayorista: precioMayorista.trim() ? Number(precioMayorista) : null,
+      precio_minorista: precioMinorista.trim() ? Number(precioMinorista) : null,
+    };
     if (!editandoId) {
       payload.tipo = tipo;
       if (tipo === "producto") payload.stock_inicial = Number(stockInicial) || 0;
@@ -363,6 +385,22 @@ export default function CatalogoPage() {
                   <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Precio base (CLP)</label>
                   <InputMonto required value={precioBase} onChange={setPrecioBase} moneda={usuario.moneda} />
                 </div>
+                {preciosAvanzados && (
+                  <>
+                    <div className="flex flex-col gap-ds-1">
+                      <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Costo (opcional)</label>
+                      <InputMonto value={costo} onChange={setCosto} moneda={usuario.moneda} />
+                    </div>
+                    <div className="flex flex-col gap-ds-1">
+                      <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">P. mayorista (opcional)</label>
+                      <InputMonto value={precioMayorista} onChange={setPrecioMayorista} moneda={usuario.moneda} />
+                    </div>
+                    <div className="flex flex-col gap-ds-1">
+                      <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">P. minorista (opcional)</label>
+                      <InputMonto value={precioMinorista} onChange={setPrecioMinorista} moneda={usuario.moneda} />
+                    </div>
+                  </>
+                )}
                 {tipo === "producto" && !editandoId && (
                   <div className="flex flex-col gap-ds-1">
                     <label className="flex items-center gap-1.5 font-ds-body text-ds-caption font-medium text-ds-text/70">

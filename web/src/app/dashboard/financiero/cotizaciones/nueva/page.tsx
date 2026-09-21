@@ -13,7 +13,16 @@ import { InputMonto } from "@/components/InputMonto";
 import { CatalogoSelectorModal, type ItemSeleccionadoCatalogo } from "@/components/CatalogoSelectorModal";
 import { ComboboxCliente } from "@/components/ComboboxCliente";
 
-type Linea = { catalogo_item_id: string | null; descripcion: string; cantidad: string; precio_unitario: string };
+type Linea = {
+  catalogo_item_id: string | null;
+  descripcion: string;
+  cantidad: string;
+  precio_unitario: string;
+  // Solo si la empresa tiene precios_avanzados_activado (migración 116).
+  costo: string;
+  precio_mayorista: string;
+  precio_minorista: string;
+};
 
 const IVA_TASA = 0.19;
 
@@ -33,6 +42,8 @@ function NuevaCotizacionContenido() {
   const [fechaVencimiento, setFechaVencimiento] = useState("");
   const [lineas, setLineas] = useState<Linea[]>([]);
   const [selectorAbierto, setSelectorAbierto] = useState(false);
+  // Migración 116 — ver nota en ordenes/nueva/page.tsx.
+  const [preciosAvanzados, setPreciosAvanzados] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -57,6 +68,7 @@ function NuevaCotizacionContenido() {
             fuente: u.empresa?.fuente ?? null,
             moneda: u.empresa?.moneda ?? "CLP",
           });
+        setPreciosAvanzados(Boolean(u?.empresa?.precios_avanzados_activado));
       }
       if (resClientes.ok) setClientes(await resClientes.json());
     })();
@@ -74,6 +86,9 @@ function NuevaCotizacionContenido() {
         descripcion: item.descripcion,
         cantidad: String(item.cantidad),
         precio_unitario: String(item.precio_unitario),
+        costo: item.costo != null ? String(item.costo) : "",
+        precio_mayorista: item.precio_mayorista != null ? String(item.precio_mayorista) : "",
+        precio_minorista: item.precio_minorista != null ? String(item.precio_minorista) : "",
       })),
     ]);
   }
@@ -110,6 +125,9 @@ function NuevaCotizacionContenido() {
           descripcion: l.descripcion,
           cantidad: Number(l.cantidad),
           precio_unitario: Number(l.precio_unitario),
+          costo: l.costo.trim() ? Number(l.costo) : null,
+          precio_mayorista: l.precio_mayorista.trim() ? Number(l.precio_mayorista) : null,
+          precio_minorista: l.precio_minorista.trim() ? Number(l.precio_minorista) : null,
         })),
       }),
     });
@@ -165,7 +183,8 @@ function NuevaCotizacionContenido() {
 
           <div className="flex flex-col gap-ds-3">
             {lineas.map((l, idx) => (
-              <div key={idx} className="grid items-end gap-ds-3 sm:grid-cols-[2fr_1fr_1fr_auto]">
+              <div key={idx} className="flex flex-col gap-ds-2 border-b border-ds-divider pb-ds-3 last:border-0 last:pb-0">
+              <div className="grid items-end gap-ds-3 sm:grid-cols-[2fr_1fr_1fr_auto]">
                 <Input etiqueta="Descripción" requerido valor={l.descripcion} onCambio={(v) => cambiarLinea(idx, { descripcion: v })} />
                 <Input etiqueta="Cantidad" tipo="numero" requerido valor={l.cantidad} onCambio={(v) => cambiarLinea(idx, { cantidad: v })} />
                 <div className="flex flex-col gap-ds-1">
@@ -175,6 +194,23 @@ function NuevaCotizacionContenido() {
                 <Button variante="ghost" onPress={() => quitarLinea(idx)}>
                   Quitar
                 </Button>
+              </div>
+              {preciosAvanzados && (
+                <div className="grid gap-ds-3 sm:grid-cols-3">
+                  <div className="flex flex-col gap-ds-1">
+                    <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Costo (opcional)</label>
+                    <InputMonto value={l.costo} onChange={(v) => cambiarLinea(idx, { costo: v })} moneda={usuario.moneda} />
+                  </div>
+                  <div className="flex flex-col gap-ds-1">
+                    <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">P. mayorista (opcional)</label>
+                    <InputMonto value={l.precio_mayorista} onChange={(v) => cambiarLinea(idx, { precio_mayorista: v })} moneda={usuario.moneda} />
+                  </div>
+                  <div className="flex flex-col gap-ds-1">
+                    <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">P. minorista (opcional)</label>
+                    <InputMonto value={l.precio_minorista} onChange={(v) => cambiarLinea(idx, { precio_minorista: v })} moneda={usuario.moneda} />
+                  </div>
+                </div>
+              )}
               </div>
             ))}
           </div>

@@ -16,7 +16,16 @@ import { InputMonto } from "@/components/InputMonto";
 import { CatalogoSelectorModal, type ItemSeleccionadoCatalogo } from "@/components/CatalogoSelectorModal";
 import { ComboboxResponsable } from "@/components/ComboboxResponsable";
 
-type ItemOS = { catalogo_item_id: string | null; descripcion: string; cantidad: string; precio_unitario: string };
+type ItemOS = {
+  catalogo_item_id: string | null;
+  descripcion: string;
+  cantidad: string;
+  precio_unitario: string;
+  // Solo si la empresa tiene precios_avanzados_activado (migración 116).
+  costo: string;
+  precio_mayorista: string;
+  precio_minorista: string;
+};
 
 type OrdenConFirma = OrdenServicio & { firma_url_firmada: string | null };
 type AnalisisFotoConUrl = AnalisisFoto & { url: string };
@@ -63,6 +72,8 @@ export default function DetalleOrdenServicioPage() {
   const [generandoInforme, setGenerandoInforme] = useState(false);
   const [errorInforme, setErrorInforme] = useState<string | null>(null);
   const [modulosVisibles, setModulosVisibles] = useState<string[]>([]);
+  // Migración 116 — ver nota en ordenes/nueva/page.tsx.
+  const [preciosAvanzados, setPreciosAvanzados] = useState(false);
   const [patrones, setPatrones] = useState("");
 
   const [editando, setEditando] = useState(false);
@@ -96,7 +107,10 @@ export default function DetalleOrdenServicioPage() {
     if (resMe.ok) {
       const cuerpoMe = await resMe.json();
       const u = cuerpoMe.usuario;
-      if (u) setUsuario({ nombre: u.nombre, rol: u.rol, empresaNombre: u.empresa?.nombre ?? "", empresaLogoUrl: u.empresa?.logo_url ?? null, colorPrimario: u.empresa?.color_primario ?? null, tema: u.empresa?.tema ?? "faena", colorPrimarioForeground: u.empresa?.color_primario_foreground ?? null, colorSecundario: u.empresa?.color_secundario ?? null, fuente: u.empresa?.fuente ?? null, moneda: u.empresa?.moneda ?? "CLP" });
+      if (u) {
+        setUsuario({ nombre: u.nombre, rol: u.rol, empresaNombre: u.empresa?.nombre ?? "", empresaLogoUrl: u.empresa?.logo_url ?? null, colorPrimario: u.empresa?.color_primario ?? null, tema: u.empresa?.tema ?? "faena", colorPrimarioForeground: u.empresa?.color_primario_foreground ?? null, colorSecundario: u.empresa?.color_secundario ?? null, fuente: u.empresa?.fuente ?? null, moneda: u.empresa?.moneda ?? "CLP" });
+        setPreciosAvanzados(Boolean(u.empresa?.precios_avanzados_activado));
+      }
       if (Array.isArray(cuerpoMe.modulos_visibles)) setModulosVisibles(cuerpoMe.modulos_visibles);
     }
     if (!resDetalle.ok) {
@@ -164,6 +178,9 @@ export default function DetalleOrdenServicioPage() {
         descripcion: it.descripcion,
         cantidad: String(it.cantidad),
         precio_unitario: String(it.precio_unitario),
+        costo: it.costo != null ? String(it.costo) : "",
+        precio_mayorista: it.precio_mayorista != null ? String(it.precio_mayorista) : "",
+        precio_minorista: it.precio_minorista != null ? String(it.precio_minorista) : "",
       }))
     );
     setNotasEdit(detalle.notas_internas ?? "");
@@ -193,6 +210,9 @@ export default function DetalleOrdenServicioPage() {
         descripcion: item.descripcion,
         cantidad: String(item.cantidad),
         precio_unitario: String(item.precio_unitario),
+        costo: item.costo != null ? String(item.costo) : "",
+        precio_mayorista: item.precio_mayorista != null ? String(item.precio_mayorista) : "",
+        precio_minorista: item.precio_minorista != null ? String(item.precio_minorista) : "",
       })),
     ]);
   }
@@ -221,6 +241,9 @@ export default function DetalleOrdenServicioPage() {
             descripcion: it.descripcion.trim(),
             cantidad: Number(it.cantidad || 0),
             precio_unitario: Number(it.precio_unitario || 0),
+            costo: it.costo.trim() ? Number(it.costo) : null,
+            precio_mayorista: it.precio_mayorista.trim() ? Number(it.precio_mayorista) : null,
+            precio_minorista: it.precio_minorista.trim() ? Number(it.precio_minorista) : null,
           }))
       );
     }
@@ -354,7 +377,8 @@ export default function DetalleOrdenServicioPage() {
                       const cat = it.catalogo_item_id ? catalogo.find((c) => c.id === it.catalogo_item_id) : null;
                       const stock = cat && cat.tipo === "producto" && cat.stock_actual != null ? cat.stock_actual : null;
                       return (
-                        <div key={i} className="grid grid-cols-[1fr_5rem_7rem_auto] items-start gap-ds-2">
+                        <div key={i} className="flex flex-col gap-ds-2 border-b border-ds-divider pb-ds-2 last:border-0 last:pb-0">
+                        <div className="grid grid-cols-[1fr_5rem_7rem_auto] items-start gap-ds-2">
                           <div>
                             <Input
                               placeholder="Descripción"
@@ -380,6 +404,14 @@ export default function DetalleOrdenServicioPage() {
                               Quitar
                             </Button>
                           ) : null}
+                        </div>
+                        {preciosAvanzados && (
+                          <div className="grid grid-cols-3 gap-ds-2">
+                            <InputMonto value={it.costo} disabled={tieneFirma} onChange={(v) => actualizarItemEdit(i, "costo", v)} moneda={usuario.moneda} placeholder="Costo" />
+                            <InputMonto value={it.precio_mayorista} disabled={tieneFirma} onChange={(v) => actualizarItemEdit(i, "precio_mayorista", v)} moneda={usuario.moneda} placeholder="P. mayorista" />
+                            <InputMonto value={it.precio_minorista} disabled={tieneFirma} onChange={(v) => actualizarItemEdit(i, "precio_minorista", v)} moneda={usuario.moneda} placeholder="P. minorista" />
+                          </div>
+                        )}
                         </div>
                       );
                     })}

@@ -14,6 +14,11 @@ export type ItemSeleccionadoCatalogo = {
   descripcion: string;
   cantidad: number;
   precio_unitario: number;
+  // Solo si la empresa tiene precios_avanzados_activado (migración
+  // 116) — se copian del ítem de Catálogo, igual que precio_base.
+  costo: number | null;
+  precio_mayorista: number | null;
+  precio_minorista: number | null;
 };
 
 type Tab = "todos" | TipoCatalogoItem;
@@ -149,6 +154,9 @@ export function CatalogoSelectorModal({
         descripcion: item.nombre,
         cantidad: cantidadDe(item.id),
         precio_unitario: item.precio_base,
+        costo: item.costo,
+        precio_mayorista: item.precio_mayorista,
+        precio_minorista: item.precio_minorista,
       }));
     if (items.length === 0) return;
     onAgregar(items);
@@ -156,7 +164,7 @@ export function CatalogoSelectorModal({
   }
 
   function onAgregarManual() {
-    onAgregar([{ catalogo_item_id: null, descripcion: "", cantidad: 1, precio_unitario: 0 }]);
+    onAgregar([{ catalogo_item_id: null, descripcion: "", cantidad: 1, precio_unitario: 0, costo: null, precio_mayorista: null, precio_minorista: null }]);
     onClose();
   }
 

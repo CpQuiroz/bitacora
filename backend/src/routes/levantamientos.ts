@@ -632,7 +632,7 @@ levantamientosRouter.post(
     }
     const { data: materiales } = await supabase
       .from("levantamiento_materiales")
-      .select("catalogo_item_id, cantidad, catalogo_item:catalogo_items(nombre, precio_base)")
+      .select("catalogo_item_id, cantidad, catalogo_item:catalogo_items(nombre, precio_base, costo, precio_mayorista, precio_minorista)")
       .eq("levantamiento_id", lev.id);
 
     await verificarLimiteOS(req.empresaId!);
@@ -671,6 +671,11 @@ levantamientosRouter.post(
         descripcion: item?.nombre ?? "Material del levantamiento",
         cantidad: m.cantidad,
         precio_unitario: item?.precio_base ?? 0,
+        // Migración 116 — mismo criterio que "Convertir a OS" en
+        // cotizaciones.ts: se copian si la empresa los tiene cargados.
+        costo: item?.costo ?? null,
+        precio_mayorista: item?.precio_mayorista ?? null,
+        precio_minorista: item?.precio_minorista ?? null,
       };
     });
     if (itemsOS.length > 0) {
