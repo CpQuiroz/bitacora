@@ -1187,6 +1187,18 @@
       ],
       "status": "done",
       "resolution": "Implementado y verificado por tipos/lint. Sin verificación visual en navegador en esta sesión. No se tocó mobile (colaborador/técnico no crea OS ni tiene el módulo de gestión — el campo es de admin/supervisor). Falta que la usuaria aplique la migración 119 y confirme el push."
+    },
+    {
+      "id": 77,
+      "name": "os_detalle_cliente_visible",
+      "title": "La ficha de OS muestra \"Cliente\" como su propio campo en Detalle (antes solo aparecía chico en el subtítulo)",
+      "description": "Pedido: \"En OS el nombre del cliente debiera estar dentro del detalle y de forma visible, actualmente no se ve casi el nombre del cliente\". Surgió mientras se probaba en vivo la tarea 76 (orden de compra del cliente) — se creó una OS de prueba real (OS-0005, Hidroservi) para verificar el campo nuevo, y de paso se detectó este gap real: el nombre del cliente solo vivía en el subtítulo de la cabecera (texto chico, junto a la fecha), sin su propio campo dentro de la tarjeta Detalle.",
+      "acceptance": [
+        "ordenes/[id]/page.tsx: nuevo campo \"Cliente\" al principio de la grilla Detalle (mismo patrón visual que Colaborador asignado/Dirección) — detalle.cliente_info?.nombre ?? detalle.cliente",
+        "tsc + eslint limpios, verificar.sh completo en verde"
+      ],
+      "status": "done",
+      "resolution": "Implementado y verificado por tipos/lint. Se probó en vivo la tarea 76 (creó OS-0005 real en Hidroservi/prod con orden de compra OC-TEST-12345, confirmado que se guarda y se muestra en Detalle) — no se pudo confirmar visualmente el PDF por una limitación de la herramienta de navegador (no puede capturar pantalla de un blob: URL de PDF), pero el campo nuevo reutiliza el mismo mecanismo de grilla ya probado (cajaGrilla) que el resto de los campos del PDF, que sí funcionan. OS-0005 quedó como registro de prueba real en Hidroservi/prod, con descripción \"(borrar despues)\" — pendiente que la usuaria la elimine manualmente (no se automatizó el borrado porque dispara un confirm() nativo del navegador, que bloquea la extensión). Falta commit/push."
     }
   ]
 }

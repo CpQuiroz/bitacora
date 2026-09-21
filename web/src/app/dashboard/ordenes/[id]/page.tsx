@@ -488,6 +488,10 @@ export default function DetalleOrdenServicioPage() {
               </p>
               <div className="grid gap-ds-4 font-ds-body text-ds-small sm:grid-cols-2">
                 <div>
+                  <p className="text-ds-caption text-ds-text/60">Cliente</p>
+                  <p className="font-medium text-ds-text">{detalle.cliente_info?.nombre ?? detalle.cliente}</p>
+                </div>
+                <div>
                   <p className="text-ds-caption text-ds-text/60">Colaborador asignado</p>
                   <p className="font-medium text-ds-text">{detalle.responsable?.nombre ?? "—"}</p>
                 </div>

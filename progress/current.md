@@ -5239,3 +5239,38 @@ el campo es de admin/supervisor.
 **Actualización**: usuaria confirmó "Ya la corrí" — pusheado a main
 (`3ef6c39`).
 
+## 2026-09-21: probé en vivo la tarea 76 + gap real: cliente casi invisible en Detalle (tarea 77)
+
+Pedido: "probá crear una OS de prueba y revisá el PDF". Usé la sesión
+ya autenticada del navegador (Hidroservi/prod, Rodrigo Pinilla) para
+crear una OS real (**OS-0005**, cliente Agroindustrial Surfrut SPA)
+con "Orden de compra del cliente" = `OC-TEST-12345` y descripción
+marcada "(borrar despues)".
+
+**Confirmado en vivo**: el campo se guarda y se muestra correctamente
+en la tarjeta Detalle ("Orden de compra del cliente: OC-TEST-12345").
+El PDF se genera sin error (botón "Descargar PDF" abrió el archivo) —
+no pude confirmar visualmente el contenido del PDF por una limitación
+de la herramienta de navegador (no soporta capturar pantalla de un
+`blob:` URL, que es como Chrome muestra el PDF descargado). El código
+reutiliza el mismo mecanismo (`cajaGrilla`) que ya usan Fecha/
+Colaborador/Ubicación en ese mismo PDF, que sí se ven bien siempre —
+confianza alta igual sin la captura.
+
+**Gap real detectado de paso**: mientras miraba la ficha de la OS de
+prueba, la usuaria notó que el nombre del cliente **no tiene su propio
+campo** en la tarjeta Detalle — solo aparece chico, en el subtítulo de
+la cabecera junto a la fecha ("Agroindustrial Surfrut SPA · 2026-09-21").
+Se agregó "Cliente" como primer campo de la grilla Detalle, mismo
+patrón visual que Colaborador asignado/Dirección.
+
+`tsc` + `eslint` limpios, `verificar.sh` completo en verde. Sin
+migración. Tarea 77 `done`.
+
+**Pendiente**: OS-0005 quedó como registro de prueba real en
+Hidroservi/prod — no la borré yo (el botón "Eliminar orden de
+servicio" dispara un `confirm()` nativo del navegador, que bloquea la
+extensión de automatización — no se puede clickear con seguridad).
+Queda que la usuaria la elimine a mano cuando quiera. Falta
+commit/push del fix de "Cliente".
+
