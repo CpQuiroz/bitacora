@@ -4687,3 +4687,7 @@ de 3 campos que solo aparece si la empresa tiene la función activada.
 (116 migraciones, 0 literales nuevos). Tarea 62 `blocked` — commiteado
 local, pendiente que la usuaria aplique la migración 116 antes de
 pushear.
+
+Migración 116 aplicada y verificada en prod (mismo día) — las 10
+columnas nuevas confirmadas (empresas, catalogo_items, os_items,
+presupuesto_items). Tarea 62 → `done`.

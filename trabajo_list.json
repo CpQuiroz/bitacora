@@ -984,8 +984,8 @@
         "Web: configuracion/empresa (toggle), registros/catalogo (3 campos condicionales), CatalogoSelectorModal (carry-over), ordenes/nueva, ordenes/[id], cotizaciones/nueva, cotizaciones/[id] (3 campos condicionales por ítem + carry-over desde Catálogo)",
         "tsc de los 6 workspaces limpio, verificar.sh completo en verde (116 migraciones, 0 literales nuevos, audit:tenant 0)"
       ],
-      "status": "blocked",
-      "resolution": "Implementación completa y commiteada localmente; bloqueada esperando que la usuaria aplique la migración 116 en prod antes de pushear."
+      "status": "done",
+      "resolution": "Migración 116 aplicada y verificada en prod: las 10 columnas nuevas confirmadas."
     }
   ]
 }
