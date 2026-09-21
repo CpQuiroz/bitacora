@@ -998,8 +998,8 @@
         "Verificado read-only que ningún otro eslabón de la cadena (os_items, analisis_fotos, levantamientos) bloquea — todos ya tenían CASCADE/SET NULL correctos",
         "tsc de los 6 workspaces limpio, verificar.sh completo en verde"
       ],
-      "status": "blocked",
-      "resolution": "Implementación completa y commiteada localmente; bloqueada esperando que la usuaria aplique la migración 117 en prod antes de pushear."
+      "status": "done",
+      "resolution": "Migración 117 aplicada y verificada en prod (ON DELETE CASCADE confirmado). Probado el fix de punta a punta: DELETE /api/trabajos/:id sobre OS-0003 (la de prueba) devolvió 204 y desapareció del listado."
     }
   ]
 }

@@ -4726,3 +4726,9 @@ resto del backend.
 `tsc` de los 6 workspaces limpio, `verificar.sh` completo en verde
 (117 migraciones). Tarea 63 `blocked` — commiteado local, pendiente
 que la usuaria aplique la migración 117.
+
+Migración 117 aplicada y verificada en prod (mismo día) — `ON DELETE
+CASCADE` confirmado. Probé el fix de punta a punta sobre la propia
+OS-0003 (la de prueba, que había quedado "Cancelada" antes del fix):
+`DELETE /api/trabajos/:id` devolvió **204** y desapareció del listado
+— ya no hace falta cancelar en vez de eliminar. Tarea 63 → `done`.
