@@ -39,7 +39,12 @@ export async function checklistDeTipoOs(empresaId: string, tipoId: string | null
 // obtenerOCrearOrden, que la crea perezosamente en el primer
 // check-in/foto/firma. Se necesita el folio disponible de inmediato
 // para mostrarlo en el panel de administración al crear la OS.
-export async function crearOrdenServicio(empresaId: string, trabajoId: string, checklistPlantilla: string[] = []) {
+export async function crearOrdenServicio(
+  empresaId: string,
+  trabajoId: string,
+  checklistPlantilla: string[] = [],
+  ordenCompraCliente: string | null = null
+) {
   const { data: folio, error: errorFolio } = await supabase.rpc("siguiente_folio_os", {
     p_empresa_id: empresaId,
   });
@@ -56,6 +61,7 @@ export async function crearOrdenServicio(empresaId: string, trabajoId: string, c
       fotos: [],
       folio,
       estado_os: "enviada",
+      orden_compra_cliente: ordenCompraCliente,
     })
     .select()
     .single();

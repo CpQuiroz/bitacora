@@ -1171,6 +1171,22 @@
       ],
       "status": "done",
       "resolution": "Implementado y verificado por tipos/lint. Sin cambios de backend (el DELETE ya existía, correctamente gateado desde la tarea 63). Sin migración. No se verificó visualmente en navegador en esta sesión."
+    },
+    {
+      "id": 76,
+      "name": "orden_compra_cliente_en_os",
+      "title": "La OS gana un campo \"Orden de compra del cliente\" (referencia libre, siempre visible en el PDF)",
+      "description": "Pedido: \"el os debe tener la opcion de agregar numero de orden de compra que genero cliente\". Vive en ordenes_servicio (no en trabajos) — es documentación de la OS. A diferencia de costo/precio_mayorista/precio_minorista, este campo SIEMPRE aparece en el PDF (el cliente ya conoce su propio número, el sentido de imprimirlo es que pueda conciliarlo). Gateado como campo de gestión (mismo criterio que codigo/cliente/ubicacion/monto) — un colaborador no puede tocarlo.",
+      "acceptance": [
+        "Migración 119: ordenes_servicio.orden_compra_cliente text",
+        "packages/shared: OrdenServicio.orden_compra_cliente (rebuild de dist obligatorio o tsc falla en silencio con tipos viejos)",
+        "backend: crearOrdenServicio() acepta el valor inicial; POST /api/trabajos lo pasa; PATCH /api/trabajos/:id lo actualiza en ordenes_servicio (no en cambios/Partial<Trabajo>) — siempre editable, nunca bloqueado por firma/finalización (mismo criterio que notas_internas); agregado a CAMPOS_GESTION (colaborador no puede tocarlo)",
+        "generarPdfOS.ts + armarDatosPdf(): nueva fila \"Orden de compra\" en la grilla \"Datos de la tarea\", siempre visible (no hay toggle de ocultarlo)",
+        "web: ordenes/nueva (crear) y ordenes/[id] (ver + editar, gateado por rol igual que Colaborador asignado) tienen el campo",
+        "tsc (shared+backend+web) + eslint + verificar.sh completo en verde"
+      ],
+      "status": "done",
+      "resolution": "Implementado y verificado por tipos/lint. Sin verificación visual en navegador en esta sesión. No se tocó mobile (colaborador/técnico no crea OS ni tiene el módulo de gestión — el campo es de admin/supervisor). Falta que la usuaria aplique la migración 119 y confirme el push."
     }
   ]
 }

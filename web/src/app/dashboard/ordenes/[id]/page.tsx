@@ -83,6 +83,7 @@ export default function DetalleOrdenServicioPage() {
   const [descEdit, setDescEdit] = useState("");
   const [itemsEdit, setItemsEdit] = useState<ItemOS[]>([]);
   const [notasEdit, setNotasEdit] = useState("");
+  const [ordenCompraEdit, setOrdenCompraEdit] = useState("");
   const [fechaEdit, setFechaEdit] = useState("");
   const [horaEdit, setHoraEdit] = useState("");
   const [datosEdit, setDatosEdit] = useState<Record<string, string>>({});
@@ -187,6 +188,7 @@ export default function DetalleOrdenServicioPage() {
       }))
     );
     setNotasEdit(detalle.notas_internas ?? "");
+    setOrdenCompraEdit(detalle.orden?.orden_compra_cliente ?? "");
     setFechaEdit(detalle.fecha);
     setHoraEdit(detalle.hora_programada ?? "");
     setResponsableEdit(detalle.responsable_id ?? "");
@@ -230,6 +232,7 @@ export default function DetalleOrdenServicioPage() {
     };
     if (usuario?.rol !== "colaborador") {
       body.responsable_id = responsableEdit || null;
+      body.orden_compra_cliente = ordenCompraEdit.trim() || null;
     }
     if (detalle?.tipo && detalle.tipo.campos.length > 0) {
       body.datos = datosEdit;
@@ -340,6 +343,17 @@ export default function DetalleOrdenServicioPage() {
                       opcionVacia="Sin asignar"
                       gestionHref="/dashboard/personas"
                       gestionLabel="Gestionar equipo"
+                    />
+                  </div>
+                ) : null}
+
+                {usuario?.rol !== "colaborador" ? (
+                  <div className="mb-ds-5">
+                    <Input
+                      etiqueta="Orden de compra del cliente (opcional)"
+                      valor={ordenCompraEdit}
+                      onCambio={setOrdenCompraEdit}
+                      placeholder="N° de OC del cliente"
                     />
                   </div>
                 ) : null}
@@ -491,6 +505,12 @@ export default function DetalleOrdenServicioPage() {
                   <div>
                     <p className="text-ds-caption text-ds-text/60">Tipo de servicio</p>
                     <p className="font-medium text-ds-text">{detalle.tipo.nombre}</p>
+                  </div>
+                ) : null}
+                {detalle.orden?.orden_compra_cliente ? (
+                  <div>
+                    <p className="text-ds-caption text-ds-text/60">Orden de compra del cliente</p>
+                    <p className="font-medium text-ds-text">{detalle.orden.orden_compra_cliente}</p>
                   </div>
                 ) : null}
                 {detalle.orden?.observaciones_cierre ? (

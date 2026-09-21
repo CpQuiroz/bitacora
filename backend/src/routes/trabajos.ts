@@ -174,13 +174,15 @@ trabajosRouter.patch(
       ubicacion,
       codigo,
       monto,
+      orden_compra_cliente,
     } = req.body ?? {};
     const cambios: Partial<Trabajo> = {};
 
     // Editar los datos base del trabajo (cliente, ubicación, código,
-    // monto) es tarea de gestión. Un colaborador solo completa lo suyo
-    // en terreno (formulario, check-in, fotos, firma).
-    const CAMPOS_GESTION = { cliente, cliente_id, ubicacion, codigo, monto };
+    // monto, orden de compra del cliente) es tarea de gestión. Un
+    // colaborador solo completa lo suyo en terreno (formulario,
+    // check-in, fotos, firma).
+    const CAMPOS_GESTION = { cliente, cliente_id, ubicacion, codigo, monto, orden_compra_cliente };
     if (req.rol === "colaborador" && Object.values(CAMPOS_GESTION).some((v) => v !== undefined)) {
       res.status(403).json({ error: "Tu rol no puede editar los datos del trabajo" });
       return;
@@ -338,7 +340,10 @@ trabajosRouter.patch(
       cambios.monto = itemsParseados.reduce((acc, it) => acc + it.cantidad * it.precio_unitario, 0);
     }
 
-    if (Object.keys(cambios).length === 0) {
+    // orden_compra_cliente vive en ordenes_servicio, no en `cambios`
+    // (que es Partial<Trabajo>) — un PATCH que solo la toque a ella
+    // igual cuenta como "algo que actualizar".
+    if (Object.keys(cambios).length === 0 && orden_compra_cliente === undefined) {
       res.status(400).json({ error: "Nada que actualizar" });
       return;
     }
@@ -376,10 +381,22 @@ trabajosRouter.patch(
       }
     }
 
-    let upd = supabase.from("trabajos").update(cambios).eq("empresa_id", req.empresaId!).eq("id", req.params.id);
-    // Un colaborador solo edita sus propios trabajos (mismo criterio que GET /:id).
-    if (req.rol === "colaborador") upd = upd.eq("responsable_id", req.userId!);
-    const { data, error } = await upd.select().maybeSingle();
+    // cambios puede quedar vacío si el único campo tocado fue
+    // orden_compra_cliente (vive en ordenes_servicio, no acá) — en ese
+    // caso no hay nada que actualizar en `trabajos`, solo hace falta
+    // devolver la fila tal cual está.
+    let data: Trabajo | null;
+    let error: { message: string } | null;
+    if (Object.keys(cambios).length > 0) {
+      let upd = supabase.from("trabajos").update(cambios).eq("empresa_id", req.empresaId!).eq("id", req.params.id);
+      // Un colaborador solo edita sus propios trabajos (mismo criterio que GET /:id).
+      if (req.rol === "colaborador") upd = upd.eq("responsable_id", req.userId!);
+      ({ data, error } = await upd.select().maybeSingle());
+    } else {
+      let sel = supabase.from("trabajos").select("*").eq("empresa_id", req.empresaId!).eq("id", req.params.id);
+      if (req.rol === "colaborador") sel = sel.eq("responsable_id", req.userId!);
+      ({ data, error } = await sel.maybeSingle());
+    }
 
     if (error) {
       res.status(500).json({ error: error.message });
@@ -416,6 +433,17 @@ trabajosRouter.patch(
       if (nuevoEstadoOs && orden.estado_os !== nuevoEstadoOs && (nuevoEstadoOs === "cancelada" || orden.estado_os !== "firmada")) {
         await supabase.from("ordenes_servicio").update({ estado_os: nuevoEstadoOs }).eq("id", orden.id);
       }
+    }
+
+    // Orden de compra del cliente (migración 119) vive en
+    // ordenes_servicio, no en trabajos — se guarda aparte. Nunca
+    // bloqueada por firma/finalización (mismo criterio que
+    // notas_internas): es solo una referencia, no afecta ítems/monto.
+    if (orden_compra_cliente !== undefined && orden) {
+      await supabase
+        .from("ordenes_servicio")
+        .update({ orden_compra_cliente: typeof orden_compra_cliente === "string" ? orden_compra_cliente.trim() || null : null })
+        .eq("id", orden.id);
     }
 
     if (tocaItems) {
@@ -553,6 +581,7 @@ trabajosRouter.post(
       hora_programada,
       items,
       datos,
+      orden_compra_cliente,
     } = req.body ?? {};
 
     if (datos !== undefined && datos !== null && (typeof datos !== "object" || Array.isArray(datos))) {
@@ -634,7 +663,12 @@ trabajosRouter.post(
     // Si el Tipo de OS elegido tiene una plantilla de checklist, la OS
     // arranca con esos ítems (además de Check-in / Check-out).
     const checklistPlantilla = await checklistDeTipoOs(req.empresaId!, tipo_id);
-    let orden = await crearOrdenServicio(req.empresaId!, data.id, checklistPlantilla);
+    let orden = await crearOrdenServicio(
+      req.empresaId!,
+      data.id,
+      checklistPlantilla,
+      typeof orden_compra_cliente === "string" ? orden_compra_cliente.trim() || null : null
+    );
 
     // PASO 1: un trabajo cargado ya cerrado (formulario liviano, típico
     // de rubros que no hacen el flujo de terreno) nace con la orden en
@@ -1535,6 +1569,7 @@ export async function armarDatosPdf(empresaId: string, trabajoId: string) {
     textoPie: plantilla?.texto_pie ? sustituirVariables(plantilla.texto_pie, variables) : null,
     clienteId: trabajo.cliente_id,
     folio: orden.folio,
+    ordenCompraCliente: orden.orden_compra_cliente,
     fecha: trabajo.fecha,
     horaProgramada: trabajo.hora_programada,
     clienteNombre: clienteFicha?.nombre ?? trabajo.cliente,

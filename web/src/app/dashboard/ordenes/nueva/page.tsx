@@ -71,6 +71,7 @@ function NuevaOrdenServicioContenido() {
   const [tipoId, setTipoId] = useState("");
   const [datosDinamicos, setDatosDinamicos] = useState<Record<string, string>>({});
   const [descripcion, setDescripcion] = useState("");
+  const [ordenCompraCliente, setOrdenCompraCliente] = useState("");
   const [fecha, setFecha] = useState(() => new Date().toISOString().slice(0, 10));
   const [horaProgramada, setHoraProgramada] = useState("");
   const [prioridad, setPrioridad] = useState<Prioridad>("media");
@@ -185,6 +186,7 @@ function NuevaOrdenServicioContenido() {
         tipo_id: tipoId || undefined,
         datos: Object.keys(datosDinamicos).length > 0 ? datosDinamicos : undefined,
         descripcion: descripcion.trim(),
+        orden_compra_cliente: ordenCompraCliente.trim() || undefined,
         fecha,
         hora_programada: horaProgramada || undefined,
         ubicacion: clienteSeleccionado?.direccion,
@@ -384,6 +386,10 @@ function NuevaOrdenServicioContenido() {
                     </option>
                   ))}
                 </Select>
+              </div>
+              <div>
+                <Label>Orden de compra del cliente (opcional)</Label>
+                <Input value={ordenCompraCliente} onChange={(e) => setOrdenCompraCliente(e.target.value)} placeholder="N° de OC del cliente" />
               </div>
             </div>
           </Card>

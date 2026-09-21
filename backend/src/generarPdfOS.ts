@@ -28,6 +28,12 @@ export type DatosOSPdf = {
   textoEncabezado: BloqueEncabezado[] | null;
   textoPie: string | null;
   folio: number | null;
+  // Referencia del cliente (migración 119, pedido 21-sep-2026) — el
+  // número de orden de compra que emitió el cliente, para que pueda
+  // conciliarlo con su propio sistema. Nunca se oculta (a diferencia de
+  // costo/precio_mayorista/precio_minorista): el cliente ya conoce su
+  // propio número, el sentido de imprimirlo es justamente ese.
+  ordenCompraCliente: string | null;
   fecha: string;
   horaProgramada: string | null;
   clienteNombre: string;
@@ -188,6 +194,7 @@ export async function generarPdfOS(datos: DatosOSPdf): Promise<Buffer> {
       { etiqueta: "Tipo de trabajo", valor: datos.tipoTrabajoNombre },
       { etiqueta: "Realizado por", valor: datos.colaboradorNombre },
       { etiqueta: "Ubicación", valor: datos.direccion },
+      { etiqueta: "Orden de compra", valor: datos.ordenCompraCliente },
       { etiqueta: "Check-in", valor: fechaHora(datos.checkInAt) },
       { etiqueta: "Check-out", valor: fechaHora(datos.checkOutAt) },
     ],

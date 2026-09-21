@@ -958,6 +958,14 @@ export type OrdenServicio = {
   // tiene el cobro automático apagado). El batch "desde trabajos" avisa
   // si un trabajo ya tiene cobro para no facturar dos veces.
   cobro_id: string | null;
+  // Número de orden de compra que emitió el cliente (migración 119,
+  // pedido 21-sep-2026) — referencia libre para que el cliente pueda
+  // conciliar la OS con su propio sistema de compras. Siempre editable
+  // (no la bloquea la firma/finalización, es solo un dato de
+  // referencia) y siempre visible en el PDF — a diferencia de costo/
+  // precio_mayorista/precio_minorista, el cliente ya conoce su propio
+  // número.
+  orden_compra_cliente: string | null;
   creado_en: string;
 };
 

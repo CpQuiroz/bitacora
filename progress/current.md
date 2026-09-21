@@ -5200,3 +5200,40 @@ preguntó — eligió dejarlo como está (Supervisor es un rol de gestión
 de equipo, restringirlo lo dejaría sin poder supervisar). Sin cambios
 de código.
 
+## 2026-09-21: la OS gana "Orden de compra del cliente" (tarea 76)
+
+Pedido: "el os debe tener la opcion de agregar numero de orden de
+compra que genero cliente".
+
+- Migración 119: `ordenes_servicio.orden_compra_cliente text`. Vive en
+  `ordenes_servicio` (no en `trabajos`) — es documentación de la OS, no
+  del trabajo de terreno.
+- A diferencia de costo/precio_mayorista/precio_minorista (migración
+  116, siempre ocultos del PDF), este campo **siempre aparece** en el
+  PDF — el cliente ya conoce su propio número, el sentido de imprimirlo
+  es justamente que pueda conciliarlo con su sistema de compras. Nueva
+  fila "Orden de compra" en la grilla "Datos de la tarea" de
+  `generarPdfOS.ts`.
+- Backend: `crearOrdenServicio()` acepta el valor inicial (solo se pasa
+  desde el POST directo de "Nueva OS" — las OS que nacen de
+  Levantamientos/Cotizaciones/Rutas siguen sin él, no correspondía
+  inventarlo ahí). El PATCH lo actualiza aparte en `ordenes_servicio`
+  (no es parte de `Partial<Trabajo>`) — **siempre editable**, nunca
+  bloqueado por firma/finalización (mismo criterio que
+  `notas_internas`, a diferencia de ítems/monto/descripción). Se agregó
+  a `CAMPOS_GESTION` — un colaborador no puede tocarlo, mismo criterio
+  que `codigo`/`cliente`/`ubicación`/`monto`.
+- Hubo que ajustar el chequeo de "Nada que actualizar" del PATCH: como
+  este campo no vive en `cambios` (`Partial<Trabajo>`), un PATCH que
+  *solo* lo toque a él ya no cae en 400 por error.
+- web: `ordenes/nueva` (crear) y `ordenes/[id]` (ver + editar, gateado
+  por rol igual que "Colaborador asignado") tienen el campo.
+
+`tsc` (shared+backend+web) + `eslint` limpios, `verificar.sh` completo
+en verde (119 migraciones). Tarea 76 `done`.
+
+**Pendiente**: no se verificó visualmente en navegador en esta sesión.
+No se tocó mobile — colaborador/técnico no crea OS ni tiene el módulo
+de gestión, el campo es de admin/supervisor. Falta que la usuaria
+aplique la migración 119 y confirme push.
+
