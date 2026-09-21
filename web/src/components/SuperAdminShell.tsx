@@ -9,6 +9,7 @@ import { cerrarSesionSuperAdmin } from "@/lib/superadminApi";
 
 const NAV = [
   { href: "/superadmin/resumen", label: "Resumen" },
+  { href: "/superadmin/salud", label: "Salud" },
   { href: "/superadmin", label: "Empresas" },
   { href: "/superadmin/roles", label: "Roles" },
 ];

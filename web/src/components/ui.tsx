@@ -244,6 +244,8 @@ const TONO_DE_ESTADO: Record<string, Tono> = {
   confirmado: "exito", facturado: "brand",
   // agenda (estado derivado, no es una columna propia)
   agendado: "brand", en_progreso: "alerta",
+  // Salud de la plataforma (Super-Admin) — estado de cada proveedor externo
+  operational: "exito", degraded: "alerta", outage: "riesgo", desconocido: "neutro",
   // activo/inactivo (checklists, tipos de OS, etc.)
   activo: "exito", inactivo: "neutro",
   // estado de empresa (Panel de Super-Admin)

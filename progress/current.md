@@ -4992,3 +4992,65 @@ migración. Tarea 71 `done`.
 
 **Pendiente**: no se verificó visualmente en navegador en esta sesión.
 Falta push (a pedido de la usuaria, no pushear hasta que avise).
+
+## 2026-09-21: dashboard "Salud" — monitoreo/observabilidad global (tarea 72)
+
+Pedido: "quiero tener dashboard de monitoreo y observabilidad de todos
+los servicioos o infraestrucutura que tiene la aplicacion, que me
+recomiendas... muestrame y dame ideas antes de hacer cualqueirc cosa."
+
+Antes de tocar código, investigué qué ya existía (para no reinventar):
+Sentry integrado en el backend pero **sin `SENTRY_DSN`** (no-op),
+`errores_backend` solo visible **por empresa** en el Super-Admin,
+`requests_lentos` (instrumentación de latencia, migración 83, umbral
+2000ms) capturándose desde hace tiempo **sin ninguna pantalla nunca**,
+`/health` y `/health/ready` ya existentes, y
+`docs/AUDITORIA_RESILIENCIA.md` + `docs/RUNBOOK_INCIDENTES.md` con el
+mapa completo de toda la infra real (Render/Vercel/Supabase/
+Cloudflare/Resend/Anthropic/Flow/WhatsApp/mindicador.cl/GitHub
+Actions/EAS) y las recomendaciones ya escritas pero no ejecutadas.
+
+Presenté 3 niveles (activar lo que ya existe / + panel propio en
+Super-Admin / + tendencias y alertas propias) — eligió el **nivel 2**.
+
+**Implementado**:
+- `GET /api/superadmin/salud-plataforma`: `errores_backend` GLOBAL
+  (últimos 50 + conteo 24h, con el nombre de la empresa por fila —
+  antes solo se veía acotado a una empresa a la vez),
+  `requests_lentos` GLOBAL (ídem — primera vez que esta tabla se
+  muestra en algún lugar de la app), estado en vivo de 6 proveedores
+  externos consultando sus status pages públicas (formato
+  Statuspage.io, `/api/v2/summary.json`, sin auth), cacheado 2 min en
+  memoria del proceso, más 3 proveedores sin API estándar (Flow,
+  WhatsApp/Meta, mindicador.cl) listados solo como link, y si
+  `SENTRY_DSN` está configurado o no.
+- Nueva página `/superadmin/salud`: 2 KPIs (errores/requests lentos
+  24h), grilla de proveedores con semáforo (reutiliza el `Badge`
+  compartido, se agregaron 4 tonos nuevos: operational/degraded/
+  outage/desconocido), banner de aviso si Sentry sigue sin configurar,
+  2 tablas (errores y requests lentos recientes, todas las empresas) y
+  link al runbook.
+- Nuevo ítem "Salud" en el nav de `SuperAdminShell`.
+
+**Verificación real**: probé con `curl` los 6 status pages en vivo —
+los 6 responden 200 con el shape `.status.indicator`/`.descripcion`
+esperado (incluido el redirect de `status.anthropic.com` →
+`status.claude.com`, que el fetch de Node sigue solo). No hice un
+end-to-end completo con dev server + sesión de Super-Admin real (no
+tengo un superadmin local autenticado en esta sesión) — la parte
+verdaderamente nueva/riesgosa (la integración externa) sí quedó
+probada en vivo; las queries a Supabase copian el patrón exacto de
+`/empresas/:id/salud`, ya probado en producción.
+
+`tsc` (backend+web) + `eslint` limpios, `verificar.sh` completo en
+verde. Sin migración. Tarea 72 `done`.
+
+**Pendiente de la usuaria, fuera de código (Nivel 1, no lo puedo hacer
+yo — son cuentas de terceros)**:
+1. Crear un proyecto gratis en sentry.io y cargar `SENTRY_DSN` en las
+   variables de entorno de Render.
+2. Crear una cuenta en UptimeRobot o Better Uptime (ambos con plan
+   gratis) y apuntar un monitor a `https://bitacora-cgt7.onrender.com/health/ready`
+   — es el que avisa de verdad si Supabase dejó de responder.
+
+Falta push (a pedido de la usuaria, no pushear hasta que avise).

@@ -233,6 +233,113 @@ superadminRouter.get(
   })
 );
 
+// ── Salud de la plataforma (dashboard de infraestructura/observabilidad) ──
+// A diferencia de /metricas (negocio: MRR, churn) y de "Errores
+// recientes" en la ficha de cada empresa (acotado a esa empresa), esto
+// es la vista GLOBAL: qué está fallando en toda la plataforma + el
+// estado que reporta cada proveedor externo del que depende Bitácora
+// (ver docs/AUDITORIA_RESILIENCIA.md, S1-S9). Pedido 21-sep-2026:
+// "quiero tener dashboard de monitoreo y observabilidad de todos los
+// servicios o infraestructura que tiene la aplicación".
+//
+// Los proveedores con status page en formato Statuspage.io exponen
+// /api/v2/summary.json públicamente, sin auth — se cachea 2 min en
+// memoria del proceso para no golpearlos en cada vez que se abre la
+// pantalla (un solo operador, tráfico bajo — no hace falta nada más
+// fino que esto, ej. Redis compartido).
+type EstadoProveedor = "operational" | "degraded" | "outage" | "desconocido";
+
+const PROVEEDORES_STATUSPAGE: { nombre: string; api: string; pagina: string }[] = [
+  { nombre: "Render (backend)", api: "https://status.render.com/api/v2/summary.json", pagina: "https://status.render.com" },
+  { nombre: "Vercel (web)", api: "https://www.vercel-status.com/api/v2/summary.json", pagina: "https://www.vercel-status.com" },
+  { nombre: "Supabase (DB / Auth / Storage)", api: "https://status.supabase.com/api/v2/summary.json", pagina: "https://status.supabase.com" },
+  { nombre: "Cloudflare (DNS / proxy)", api: "https://www.cloudflarestatus.com/api/v2/summary.json", pagina: "https://www.cloudflarestatus.com" },
+  { nombre: "Resend (correo)", api: "https://resend-status.com/api/v2/summary.json", pagina: "https://resend-status.com" },
+  { nombre: "Anthropic (Claude)", api: "https://status.anthropic.com/api/v2/summary.json", pagina: "https://status.anthropic.com" },
+];
+
+// Sin status page pública en formato estándar consultable acá — se
+// listan igual (con el link) para que el "¿qué proveedor puede estar
+// fallando?" del runbook quede completo en un solo lugar, aunque para
+// estos no se pueda mostrar un semáforo automático.
+const PROVEEDORES_SIN_MONITOREO_AUTOMATICO = [
+  { nombre: "Flow (pagos)", pagina: "https://status.flow.cl" },
+  { nombre: "WhatsApp / Meta Graph API", pagina: "https://metastatus.com" },
+  { nombre: "mindicador.cl", pagina: null },
+];
+
+function indicadorAEstado(indicador: string | undefined): EstadoProveedor {
+  if (indicador === "none") return "operational";
+  if (indicador === "minor") return "degraded";
+  if (indicador === "major" || indicador === "critical") return "outage";
+  return "desconocido";
+}
+
+type ProveedorConsultado = { nombre: string; estado: EstadoProveedor; descripcion: string | null; pagina: string };
+
+let cacheProveedores: { datos: ProveedorConsultado[]; en: number } | null = null;
+const PROVEEDORES_TTL_MS = 2 * 60 * 1000;
+
+async function consultarProveedores(): Promise<ProveedorConsultado[]> {
+  if (cacheProveedores && Date.now() - cacheProveedores.en < PROVEEDORES_TTL_MS) {
+    return cacheProveedores.datos;
+  }
+  const resultados = await Promise.allSettled(
+    PROVEEDORES_STATUSPAGE.map(async (p): Promise<ProveedorConsultado> => {
+      const res = await fetch(p.api, { signal: AbortSignal.timeout(5000) });
+      const body = (await res.json()) as { status?: { indicator?: string; description?: string } };
+      return { nombre: p.nombre, estado: indicadorAEstado(body.status?.indicator), descripcion: body.status?.description ?? null, pagina: p.pagina };
+    })
+  );
+  const datos = resultados.map((r, i) =>
+    r.status === "fulfilled"
+      ? r.value
+      : { nombre: PROVEEDORES_STATUSPAGE[i].nombre, estado: "desconocido" as EstadoProveedor, descripcion: null, pagina: PROVEEDORES_STATUSPAGE[i].pagina }
+  );
+  cacheProveedores = { datos, en: Date.now() };
+  return datos;
+}
+
+superadminRouter.get(
+  "/salud-plataforma",
+  requiereSuperAdmin,
+  ah<RequestConSuperAdmin>(async (req, res) => {
+    await registrarAuditoria(req.superAdminId!, "ver_salud_plataforma", { ip: req.ip ?? null });
+
+    const desde24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const [{ data: erroresRecientes }, { count: erroresUltimas24h }, { data: requestsLentos }, { count: requestsLentosUltimas24h }, proveedores] =
+      await Promise.all([
+        supabase
+          .from("errores_backend")
+          .select("id, ruta, metodo, mensaje, creado_en, empresa:empresas(nombre)")
+          .order("creado_en", { ascending: false })
+          .limit(50),
+        supabase.from("errores_backend").select("id", { count: "exact", head: true }).gte("creado_en", desde24h),
+        // requests_lentos (backend/src/instrumentacion.ts, migración 83) ya
+        // se venía guardando desde la auditoría de performance, pero nunca
+        // tuvo una pantalla — es la primera vez que se muestra.
+        supabase
+          .from("requests_lentos")
+          .select("id, ruta, metodo, ms, status_code, filas_devueltas, creado_en, empresa:empresas(nombre)")
+          .order("creado_en", { ascending: false })
+          .limit(50),
+        supabase.from("requests_lentos").select("id", { count: "exact", head: true }).gte("creado_en", desde24h),
+        consultarProveedores(),
+      ]);
+
+    res.json({
+      sentry_configurado: Boolean(env.SENTRY_DSN),
+      errores_ultimas_24h: erroresUltimas24h ?? 0,
+      errores_recientes: erroresRecientes ?? [],
+      requests_lentos_ultimas_24h: requestsLentosUltimas24h ?? 0,
+      requests_lentos: requestsLentos ?? [],
+      proveedores,
+      proveedores_sin_monitoreo: PROVEEDORES_SIN_MONITOREO_AUTOMATICO,
+      generado_en: new Date().toISOString(),
+    });
+  })
+);
+
 superadminRouter.get(
   "/empresas",
   requiereSuperAdmin,

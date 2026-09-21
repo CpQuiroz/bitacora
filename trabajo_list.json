@@ -1113,6 +1113,21 @@
       ],
       "status": "done",
       "resolution": "Implementado y verificado. Sin migración. No se verificó visualmente en navegador en esta sesión. Falta push (a pedido de la usuaria)."
+    },
+    {
+      "id": 72,
+      "name": "superadmin_dashboard_salud_plataforma",
+      "title": "Super-Admin: nueva pantalla \"Salud\" — dashboard global de monitoreo/observabilidad",
+      "description": "Pedido: \"quiero tener dashboard de monitoreo y observabilidad de todos los servicios o infraestructura que tiene la aplicacion\". Se investigó primero qué ya existía (Sentry integrado pero sin DSN, errores_backend solo visible por-empresa, requests_lentos capturado desde migración 83 pero SIN pantalla nunca, /health y /health/ready ya existentes, AUDITORIA_RESILIENCIA.md + RUNBOOK_INCIDENTES.md con el mapa completo de la infra). Se presentaron 3 niveles (activar lo existente / + panel propio / + tendencias y alertas) — eligió el nivel 2.",
+      "acceptance": [
+        "Nuevo endpoint GET /api/superadmin/salud-plataforma: errores_backend GLOBAL (últimos 50 + conteo 24h, con empresa por fila), requests_lentos GLOBAL (últimos 50 + conteo 24h — primera vez que esta tabla se muestra en algún lado), estado en vivo de 6 proveedores externos (Render/Vercel/Supabase/Cloudflare/Resend/Anthropic vía sus status pages públicas formato Statuspage.io /api/v2/summary.json, cacheado 2 min en memoria), lista de 3 proveedores sin API de status estándar (Flow/WhatsApp-Meta/mindicador.cl, solo como links), y si SENTRY_DSN está configurado o no",
+        "Nueva página web/src/app/superadmin/salud/page.tsx — KPIs de errores/requests lentos 24h, grilla de proveedores con semáforo (Badge reutilizado, 4 tonos nuevos: operational/degraded/outage/desconocido), banner de aviso si Sentry no está configurado, 2 tablas (errores recientes y requests lentos, todas las empresas), link al RUNBOOK_INCIDENTES.md",
+        "Nuevo link \"Salud\" en el nav de SuperAdminShell",
+        "Verificado con curl real contra los 6 status pages (todas responden 200 con el shape esperado .status.indicator/.status.description, incluido el redirect de status.anthropic.com → status.claude.com)",
+        "tsc (backend + web) + eslint limpios, verificar.sh completo en verde"
+      ],
+      "status": "done",
+      "resolution": "Implementado y verificado (tsc/eslint/curl a los 6 proveedores reales). Sin migración — errores_backend y requests_lentos ya existían. No se probó end-to-end con un dev server + sesión de Super-Admin real en esta sesión (falta un superadmin autenticado localmente); la parte de fetch a proveedores externos sí se verificó en vivo. Falta push (a pedido de la usuaria). Pendiente de la usuaria, fuera de código (Nivel 1): cargar SENTRY_DSN en Render y armar un monitor externo (UptimeRobot/Better Uptime) apuntando a /health/ready — son cuentas de terceros, no las puedo crear yo."
     }
   ]
 }
