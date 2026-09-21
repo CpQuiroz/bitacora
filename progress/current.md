@@ -4583,8 +4583,21 @@ nueva sin actualizar esa entrada. Corregido moviendo la exención al
 nuevo path.
 
 `tsc` de los 6 workspaces limpio, `verificar.sh` completo en verde
-(115 migraciones, 0 literales nuevos, audit:tenant 0). Tarea 59
-`blocked` — commiteado local, pendiente que la usuaria aplique la
-migración 115 antes de pushear. Item pendiente de la sesión: verificar
-visualmente el deploy en vivo (requiere login, ver nota arriba) y
-regenerar CONTEXTO_PROYECTO.md — quedan para después de este push.
+(115 migraciones, 0 literales nuevos, audit:tenant 0).
+
+**Migración 115 aplicada y verificada en prod** (misma sesión, poco
+después): `trabajos.tipo_id` único (columnas viejas ya no existen),
+solo queda la tabla `tipos_os_trabajo`, 2 trabajos reconectados
+correctamente a su tipo. Tarea 59 → `done`.
+
+**CONTEXTO_PROYECTO.md regenerado** (tarea aparte, mismo bloque de
+trabajo): nueva sección "Novedades del 20 al 21-sep" cubriendo la
+unificación + hora_visita de Levantamiento + menú Agenda + Tipos de
+documento + Personas/Perfiles/Plantillas + folios; migraciones
+112→115, tablas 87→88, mobile 1.10.7/vc48→1.10.8/vc49 (números
+corregidos, no solo el changelog).
+
+3 commits locales (`9d7a362` unificación, `baaea79` CONTEXTO_PROYECTO,
+más el de cierre de esta entrada) pusheados a `main` — Vercel/Render
+redespliegan solos. Pendiente real: build de APK nuevo (no pedido
+todavía) para que el código de mobile alcance al último push.

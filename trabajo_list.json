@@ -940,8 +940,8 @@
         "scripts/colores-permitidos.json: exención de paleta de datos movida al nuevo archivo",
         "tsc de los 6 workspaces limpio, verificar.sh completo en verde (115 migraciones, 0 literales nuevos, audit:tenant 0)"
       ],
-      "status": "blocked",
-      "resolution": "Implementación completa y commiteada localmente; bloqueada esperando que la usuaria aplique la migración 115 en prod antes de pushear."
+      "status": "done",
+      "resolution": "Migración 115 aplicada y verificada en prod: trabajos.tipo_id único (columnas viejas dropeadas), solo tipos_os_trabajo existe, 2 trabajos reconectados a su tipo correctamente."
     }
   ]
 }
