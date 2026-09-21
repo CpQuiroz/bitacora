@@ -4385,3 +4385,59 @@ verificación de bundle OK (prod). `.env` restaurado a dev. Copiado a
 `builds/bitacora-1.10.8.apk` (se borró el 1.10.7 anterior). Incluye
 folio de Cliente/Cobro en las pantallas de mobile (tarea 56, pusheado
 después del build 1.10.7).
+
+## 2026-09-21: Personas modal + Perfiles acordeón + Plantillas encabezado con niveles (tarea 57, EN CURSO — falta aplicar migración 113)
+
+Pedido de 3 mejoras de UI en Configuración web, con mockup mostrado y
+aprobado antes de tocar código (artifact 2c031f59-1ec3-4ac1-9ec4-283c548e75eb).
+
+**Personas**: el formulario "Invitar a alguien nuevo" (correo, nombre,
+rol, teléfono) estaba siempre expandido arriba de la lista del equipo
+— pasa a un botón que abre un Modal (mismo patrón ya establecido en
+Clientes/Levantamientos: botón "+ Nuevo…" → modal). No se cierra solo
+al invitar con éxito — se muestra "Invitación enviada" y el form queda
+listo para invitar a otra persona, cerrar automático haría desaparecer
+esa confirmación antes de verse.
+
+**Perfiles y permisos**: cada rol (Admin/Supervisor/Contador/
+Colaborador + custom) mostraba su grilla completa de módulos siempre
+abierta — con varios roles era mucho scroll. Pasa a acordeón: plegado
+por defecto (chevron ▸/▾), toggle independiente por rol (no exclusivo,
+podés tener varios abiertos). Uno con cambios sin guardar
+(`sucio(slug)`) queda expandido igual, marcado con un punto de color
+en el título — no tiene sentido esconder un cambio pendiente. Cuidado
+real: la primera versión anidaba el botón "Guardar cambios" DENTRO del
+`<button>` del header (HTML inválido, botones no se anidan) — se
+corrigió a dos elementos hermanos en un flex row antes de cerrar.
+
+**Plantillas → Texto de encabezado**: el cambio más grande de los 3.
+Era un `<input>` de una sola línea (ni siquiera admitía cortar
+renglones) y en el PDF/vista previa todo salía del mismo tamaño, sin
+jerarquía. Pasa a una lista de bloques con nivel (Título/Subtítulo/
+Texto chico/Párrafo) — se agregan con botones, se reordenan (↑/↓), se
+quitan. Aplica a los 4 tipos de plantilla (comparten el mismo campo).
+
+Requirió: migración 113 (`plantillas_documento.texto_encabezado`
+`text`→`jsonb`, patrón agregar-columna-nueva/backfill/borrar-vieja/
+renombrar para no perder lo que ya hubiera escrito cada empresa —
+verificado en prod: hoy no hay ninguna fila con contenido, cero riesgo
+real esta vez, igual se siguió el patrón seguro). Nuevo
+`sustituirVariablesEnBloques` en `packages/shared/src/plantillas.ts`
+(mismo reemplazo de variables, aplicado a cada bloque). Nuevo
+`bloquesEncabezado()` en `backend/src/pdfEstilo.ts` — un mapa de estilo
+por nivel (tamaño/peso/color), usado por `generarPdfOS.ts` y
+`generarPdfCotizacion.ts`; el nivel "parrafo" mantiene EXACTAMENTE el
+tamaño/color que tenía el texto plano de antes, para que una plantilla
+ya migrada (backfill a un solo bloque "parrafo") se vea idéntica a
+como estaba antes de este cambio — no hay una regresión visual
+silenciosa para nadie que ya tuviera algo escrito. Vista previa en
+vivo de la web actualizada con los mismos tamaños.
+
+Hallazgo de paso, dejado sin tocar (fuera de lo pedido): el encabezado
+de **Cobranza** no se usa en ningún correo/PDF real todavía — los
+avisos de cobro pendiente/vencido usan Configuración > Notificaciones,
+un sistema aparte (`notificaciones_config`/`mensajes_personalizados`).
+
+`tsc` de los 6 workspaces limpio, `verificar.sh` completo en verde
+(0 literales de color nuevos). Commit hecho LOCAL, sin pushear —
+pendiente que la usuaria aplique la migración 113.

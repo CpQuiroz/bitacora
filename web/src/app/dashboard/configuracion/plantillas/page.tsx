@@ -2,8 +2,16 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
-import type { PlantillaDocumento, PosicionLogo, SeccionPdfOS, TipoPlantilla, VariablePlantilla } from "@bitacora/shared";
-import { ETIQUETA_SECCION_PDF_OS, SECCIONES_PDF_OS, VARIABLES_COBRANZA, VARIABLES_COTIZACION, VARIABLES_OS, sustituirVariables } from "@bitacora/shared";
+import type { BloqueEncabezado, NivelEncabezado, PlantillaDocumento, PosicionLogo, SeccionPdfOS, TipoPlantilla, VariablePlantilla } from "@bitacora/shared";
+import {
+  ETIQUETA_SECCION_PDF_OS,
+  SECCIONES_PDF_OS,
+  VARIABLES_COBRANZA,
+  VARIABLES_COTIZACION,
+  VARIABLES_OS,
+  sustituirVariables,
+  sustituirVariablesEnBloques,
+} from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
 import { Button, Card, Input, LoadingState, Select, Textarea } from "@bitacora/ui/web";
 import { useConfiguracion } from "../ConfiguracionContext";
@@ -45,6 +53,123 @@ const TITULO_DOC: Record<TipoPlantilla, string> = {
   terminos_aceptacion: "Términos de Aceptación",
 };
 
+// "Texto de encabezado" con niveles (migración 113, 20-sep-2026) — antes
+// un <input> de una sola línea, sin poder ni cortar renglones. Ahora una
+// lista de bloques con nivel; cada nivel tiene su propio tamaño en el
+// PDF y en la vista previa (ver ESTILO_PREVIEW_NIVEL más abajo y
+// bloquesEncabezado() en backend/src/pdfEstilo.ts — mismo criterio
+// visual en los dos lados).
+const NIVELES_ENCABEZADO: { valor: NivelEncabezado; etiqueta: string }[] = [
+  { valor: "titulo", etiqueta: "Título" },
+  { valor: "subtitulo", etiqueta: "Subtítulo" },
+  { valor: "chico", etiqueta: "Texto chico" },
+  { valor: "parrafo", etiqueta: "Párrafo" },
+];
+
+const ESTILO_PREVIEW_NIVEL: Record<NivelEncabezado, string> = {
+  titulo: "ds-heading text-base text-gray-800",
+  subtitulo: "text-sm font-bold text-gray-800",
+  chico: "text-[10px] text-gray-500",
+  parrafo: "text-xs text-gray-500",
+};
+
+function EditorEncabezado({
+  bloques,
+  onCambiar,
+  variables,
+}: {
+  bloques: BloqueEncabezado[];
+  onCambiar: (bloques: BloqueEncabezado[]) => void;
+  variables: VariablePlantilla[];
+}) {
+  function agregar(nivel: NivelEncabezado) {
+    onCambiar([...bloques, { nivel, texto: "" }]);
+  }
+  function actualizarTexto(i: number, texto: string) {
+    onCambiar(bloques.map((b, idx) => (idx === i ? { ...b, texto } : b)));
+  }
+  function quitar(i: number) {
+    onCambiar(bloques.filter((_, idx) => idx !== i));
+  }
+  function mover(i: number, delta: number) {
+    const j = i + delta;
+    if (j < 0 || j >= bloques.length) return;
+    const next = [...bloques];
+    [next[i], next[j]] = [next[j], next[i]];
+    onCambiar(next);
+  }
+  function insertarVariable(clave: string) {
+    if (bloques.length === 0) {
+      onCambiar([{ nivel: "parrafo", texto: `{${clave}}` }]);
+      return;
+    }
+    const ultimo = bloques.length - 1;
+    onCambiar(bloques.map((b, idx) => (idx === ultimo ? { ...b, texto: `${b.texto}{${clave}}` } : b)));
+  }
+
+  return (
+    <div className="flex flex-col gap-ds-2">
+      <div className="flex flex-wrap gap-ds-2">
+        {NIVELES_ENCABEZADO.map((n) => (
+          <button
+            key={n.valor}
+            type="button"
+            onClick={() => agregar(n.valor)}
+            className="rounded-ds-md border border-dashed border-ds-divider px-ds-2 py-1 font-ds-body text-ds-caption font-semibold text-ds-text/70 hover:border-ds-brand hover:text-ds-brand"
+          >
+            + {n.etiqueta}
+          </button>
+        ))}
+      </div>
+      {bloques.length === 0 ? (
+        <p className="font-ds-body text-ds-caption text-ds-text/50">Sin bloques todavía — agregá uno de arriba.</p>
+      ) : (
+        <div className="flex flex-col gap-ds-2">
+          {bloques.map((b, i) => (
+            <div key={i} className="flex items-center gap-ds-2">
+              <span className="shrink-0 rounded-ds-pill bg-ds-accent2-100 px-ds-2 py-0.5 font-ds-body text-[10px] font-bold uppercase tracking-wide text-ds-accent2-800">
+                {NIVELES_ENCABEZADO.find((n) => n.valor === b.nivel)?.etiqueta ?? b.nivel}
+              </span>
+              <div className="flex-1">
+                <Input valor={b.texto} onCambio={(v) => actualizarTexto(i, v)} placeholder="Escribí el texto de este bloque…" />
+              </div>
+              <div className="flex shrink-0 gap-1">
+                <button
+                  type="button"
+                  onClick={() => mover(i, -1)}
+                  disabled={i === 0}
+                  className="rounded-ds-md border border-ds-divider px-1.5 py-1 text-ds-text/60 disabled:opacity-30"
+                  title="Subir"
+                >
+                  ↑
+                </button>
+                <button
+                  type="button"
+                  onClick={() => mover(i, 1)}
+                  disabled={i === bloques.length - 1}
+                  className="rounded-ds-md border border-ds-divider px-1.5 py-1 text-ds-text/60 disabled:opacity-30"
+                  title="Bajar"
+                >
+                  ↓
+                </button>
+                <button
+                  type="button"
+                  onClick={() => quitar(i)}
+                  className="rounded-ds-md border border-ds-divider px-1.5 py-1 text-ds-accent-700"
+                  title="Quitar bloque"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      <ChipsVariables variables={variables} onInsertar={insertarVariable} />
+    </div>
+  );
+}
+
 function ChipsVariables({ variables, onInsertar }: { variables: VariablePlantilla[]; onInsertar: (clave: string) => void }) {
   if (variables.length === 0) return null;
   return (
@@ -79,7 +204,7 @@ export default function PlantillasPage() {
   const [posicionLogo, setPosicionLogo] = useState<PosicionLogo>("izquierda");
   const [colorPrimario, setColorPrimario] = useState("#4338ca");
   const [colorSecundario, setColorSecundario] = useState("#0d9488");
-  const [textoEncabezado, setTextoEncabezado] = useState("");
+  const [textoEncabezado, setTextoEncabezado] = useState<BloqueEncabezado[]>([]);
   const [textoPie, setTextoPie] = useState("");
   const [mensajePredeterminado, setMensajePredeterminado] = useState("");
   const [terminosCondiciones, setTerminosCondiciones] = useState("");
@@ -110,7 +235,7 @@ export default function PlantillasPage() {
     setPosicionLogo(p.posicion_logo);
     setColorPrimario(p.color_primario || usuario.empresa.color_primario || "#4338ca");
     setColorSecundario(p.color_secundario || usuario.empresa.color_secundario || "#0d9488");
-    setTextoEncabezado(p.texto_encabezado ?? "");
+    setTextoEncabezado(p.texto_encabezado ?? []);
     setTextoPie(p.texto_pie ?? "");
     setMensajePredeterminado(p.mensaje_predeterminado ?? "");
     setTerminosCondiciones(p.terminos_condiciones ?? "");
@@ -249,8 +374,8 @@ export default function PlantillasPage() {
                 <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Textos</p>
                 <div className="flex flex-col gap-ds-4">
                   <div>
-                    <Input etiqueta="Texto de encabezado" valor={textoEncabezado} onCambio={setTextoEncabezado} />
-                    <ChipsVariables variables={variablesTab} onInsertar={(c) => setTextoEncabezado((v) => `${v}{${c}}`)} />
+                    <label className="mb-ds-1 block font-ds-body text-ds-caption font-medium text-ds-text/70">Texto de encabezado</label>
+                    <EditorEncabezado bloques={textoEncabezado} onCambiar={setTextoEncabezado} variables={variablesTab} />
                   </div>
                   <div>
                     <Input etiqueta="Texto de pie de página" valor={textoPie} onCambio={setTextoPie} />
@@ -318,7 +443,17 @@ export default function PlantillasPage() {
                 <h3 className="mt-0.5 text-lg font-bold" style={{ color: colorPrimario }}>
                   {TITULO_DOC[tab]}
                 </h3>
-                {textoEncabezado && <p className="mt-1 text-xs text-gray-500">{sustituirVariables(textoEncabezado, DATOS_EJEMPLO)}</p>}
+                {textoEncabezado.length > 0 && (
+                  <div className="mt-1 flex flex-col gap-0.5">
+                    {sustituirVariablesEnBloques(textoEncabezado, DATOS_EJEMPLO).map((b, i) =>
+                      b.texto ? (
+                        <p key={i} className={ESTILO_PREVIEW_NIVEL[b.nivel]}>
+                          {b.texto}
+                        </p>
+                      ) : null
+                    )}
+                  </div>
+                )}
 
                 {tab !== "terminos_aceptacion" && (
                   <div className="mt-4 overflow-hidden rounded-lg border" style={{ borderColor: "#e6e6ee" }}>

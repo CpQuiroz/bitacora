@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { useRolesDisponibles } from "@/lib/roles";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
+import { Modal } from "@/components/Modal";
 import { Button, Card, EmptyState, ErrorState, Input, LoadingState, Select, StatusBadge, Table, Tag } from "@bitacora/ui/web";
 
 // Ficha única de personas — reemplaza Flota → Colaboradores, Grupo y
@@ -32,7 +33,9 @@ export default function PersonasPage() {
   const rolesDisponibles = useRolesDisponibles();
   const etiquetaRol = (slug: string) => rolesDisponibles.find((r) => r.value === slug)?.label ?? slug;
 
-  // Invitar
+  // Invitar (20-sep-2026: detrás de un botón, no siempre expandido —
+  // mismo patrón "+ Nuevo…" → modal que Clientes/Levantamientos)
+  const [invitarAbierto, setInvitarAbierto] = useState(false);
   const [email, setEmail] = useState("");
   const [nombre, setNombre] = useState("");
   const [telefono, setTelefono] = useState("");
@@ -118,6 +121,9 @@ export default function PersonasPage() {
       setFormError(body.error ?? "No se pudo invitar");
       return;
     }
+    // No se cierra el modal solo: se muestra "Invitación enviada" y el
+    // formulario queda listo para invitar a otra persona más — cerrarlo
+    // solo de encima haría desaparecer esa confirmación antes de verla.
     setExito(`Invitación enviada a ${email}`);
     setEmail("");
     setNombre("");
@@ -161,59 +167,62 @@ export default function PersonasPage() {
 
   return (
     <DashboardShell usuario={usuario}>
-      <p className="ds-heading text-ds-h2 text-ds-text">Personas</p>
-      <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">El equipo de la empresa: identidad, acceso, datos laborales y documentos</p>
+      <div className="flex items-center justify-between gap-ds-3">
+        <div>
+          <p className="ds-heading text-ds-h2 text-ds-text">Personas</p>
+          <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">El equipo de la empresa: identidad, acceso, datos laborales y documentos</p>
+        </div>
+        {puedeGestionar && (
+          <Button iconoIzq={<Mail size={16} strokeWidth={2.75} />} onPress={() => setInvitarAbierto(true)}>
+            Invitar a alguien nuevo
+          </Button>
+        )}
+      </div>
 
       {puedeGestionar && (
-        <div className="my-ds-6">
-          <Card>
-            <p className="mb-ds-4 flex items-center gap-ds-2 font-ds-body text-ds-small font-semibold text-ds-text">
-              <Mail size={16} strokeWidth={2.75} className="text-ds-brand" />
-              Invitar a alguien nuevo
-            </p>
-            <form onSubmit={onInvitar} className="flex flex-col gap-ds-4">
-              <div className="grid gap-ds-4 sm:grid-cols-2">
-                <div className="sm:col-span-2">
-                  <Input etiqueta="Correo" tipo="email" requerido valor={email} onCambio={setEmail} />
-                </div>
-                <Input etiqueta="Nombre" requerido valor={nombre} onCambio={setNombre} />
-                <Select etiqueta="Rol" valor={rol} onCambio={setRol} opciones={rolesDisponibles.map((r) => ({ valor: r.value, etiqueta: r.label }))} />
-                {/* Solo tiene efecto real si Levantamientos está activo
-                    (decide quién ve esa sección en el móvil) — sin ese
-                    módulo, mostrarla es ruido sin función real. Antes era
-                    un desplegable de 5 opciones (Técnico/Chofer/
-                    Instalador/Administrativo/Otro) pero solo 2 de esas 5
-                    hacían algo (ver FUNCIONES_LEVANTAMIENTOS en shared) y
-                    nadie usó nunca las otras 3 en ninguna empresa real —
-                    se simplificó a lo que de verdad decide (20-sep-2026). */}
-                {rol === "colaborador" && ve("levantamientos") && (
-                  <div className="flex items-end pb-2.5">
-                    <label className="flex items-center gap-ds-2 font-ds-body text-ds-small text-ds-text">
-                      <input
-                        type="checkbox"
-                        checked={funcion !== ""}
-                        onChange={(e) => setFuncion(e.target.checked ? "tecnico" : "")}
-                        className="accent-[var(--ds-brand)]"
-                      />
-                      Ve Levantamientos en el celular
-                    </label>
-                  </div>
-                )}
-                <div className="sm:col-span-2">
-                  <Input etiqueta="Teléfono (opcional)" tipo="tel" placeholder="+56 9 1234 5678" valor={telefono} onCambio={setTelefono} />
-                  <p className="mt-ds-1 font-ds-body text-ds-caption text-ds-text/60">Con código de país. Sirve para que un chofer use el bot de WhatsApp.</p>
-                </div>
+        <Modal open={invitarAbierto} onClose={() => setInvitarAbierto(false)} title="Invitar a alguien nuevo">
+          <form onSubmit={onInvitar} className="flex flex-col gap-ds-4">
+            <div className="grid gap-ds-4 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <Input etiqueta="Correo" tipo="email" requerido valor={email} onCambio={setEmail} />
               </div>
-              {formError ? <p className="font-ds-body text-ds-small text-ds-accent-700">{formError}</p> : null}
-              {exito ? <p className="font-ds-body text-ds-small font-medium text-ds-accent2-800">{exito}</p> : null}
-              <div>
-                <Button tipo="submit" cargando={invitando}>
-                  Invitar
-                </Button>
+              <Input etiqueta="Nombre" requerido valor={nombre} onCambio={setNombre} />
+              <Select etiqueta="Rol" valor={rol} onCambio={setRol} opciones={rolesDisponibles.map((r) => ({ valor: r.value, etiqueta: r.label }))} />
+              {/* Solo tiene efecto real si Levantamientos está activo
+                  (decide quién ve esa sección en el móvil) — sin ese
+                  módulo, mostrarla es ruido sin función real. Antes era
+                  un desplegable de 5 opciones (Técnico/Chofer/
+                  Instalador/Administrativo/Otro) pero solo 2 de esas 5
+                  hacían algo (ver FUNCIONES_LEVANTAMIENTOS en shared) y
+                  nadie usó nunca las otras 3 en ninguna empresa real —
+                  se simplificó a lo que de verdad decide (20-sep-2026). */}
+              {rol === "colaborador" && ve("levantamientos") && (
+                <div className="flex items-end pb-2.5">
+                  <label className="flex items-center gap-ds-2 font-ds-body text-ds-small text-ds-text">
+                    <input
+                      type="checkbox"
+                      checked={funcion !== ""}
+                      onChange={(e) => setFuncion(e.target.checked ? "tecnico" : "")}
+                      className="accent-[var(--ds-brand)]"
+                    />
+                    Ve Levantamientos en el celular
+                  </label>
+                </div>
+              )}
+              <div className="sm:col-span-2">
+                <Input etiqueta="Teléfono (opcional)" tipo="tel" placeholder="+56 9 1234 5678" valor={telefono} onCambio={setTelefono} />
+                <p className="mt-ds-1 font-ds-body text-ds-caption text-ds-text/60">Con código de país. Sirve para que un chofer use el bot de WhatsApp.</p>
               </div>
-            </form>
-          </Card>
-        </div>
+            </div>
+            {formError ? <p className="font-ds-body text-ds-small text-ds-accent-700">{formError}</p> : null}
+            {exito ? <p className="font-ds-body text-ds-small font-medium text-ds-accent2-800">{exito}</p> : null}
+            <div>
+              <Button tipo="submit" cargando={invitando}>
+                Invitar
+              </Button>
+            </div>
+          </form>
+        </Modal>
       )}
 
       {error ? <ErrorState mensaje={error} /> : null}

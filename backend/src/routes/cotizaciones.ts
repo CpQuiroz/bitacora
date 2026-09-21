@@ -1,6 +1,6 @@
 import { Router } from "express";
 import type { EstadoPresupuesto, Presupuesto } from "@bitacora/shared";
-import { sustituirVariables } from "@bitacora/shared";
+import { sustituirVariables, sustituirVariablesEnBloques } from "@bitacora/shared";
 import { supabase } from "../supabase";
 import { crearOrdenServicio } from "../ordenes";
 import type { DatosCotizacionPdf } from "../generarPdfCotizacion";
@@ -504,7 +504,7 @@ export async function armarDatosPdfCotizacion(empresaId: string, cotizacionId: s
     empresaNombre: empresa?.nombre ?? "",
     empresaLogoUrl: empresa?.logo_url ?? null,
     colorPrimario: plantilla?.color_primario ?? empresa?.color_primario ?? null,
-    textoEncabezado: plantilla?.texto_encabezado ? sustituirVariables(plantilla.texto_encabezado, variables) : null,
+    textoEncabezado: plantilla?.texto_encabezado ? sustituirVariablesEnBloques(plantilla.texto_encabezado, variables) : null,
     textoPie: plantilla?.texto_pie ? sustituirVariables(plantilla.texto_pie, variables) : null,
     clienteId: cotizacion.cliente_id,
     numero: cotizacion.numero,

@@ -5,7 +5,8 @@
 // plantilla configurable con variables ya sustituidas.
 // ============================================================
 import PDFDocument from "pdfkit";
-import { PDF, regla, tituloSeccion } from "./pdfEstilo";
+import type { BloqueEncabezado } from "@bitacora/shared";
+import { ANCHO, M_IZQ, PDF, bloquesEncabezado, regla, tituloSeccion } from "./pdfEstilo";
 
 export type ItemCotizacionPdf = {
   descripcion: string;
@@ -17,7 +18,7 @@ export type DatosCotizacionPdf = {
   empresaNombre: string;
   empresaLogoUrl: string | null;
   colorPrimario: string | null;
-  textoEncabezado: string | null;
+  textoEncabezado: BloqueEncabezado[] | null;
   textoPie: string | null;
   numero: number | null;
   fecha: string;
@@ -76,10 +77,10 @@ export async function generarPdfCotizacion(datos: DatosCotizacionPdf): Promise<B
   regla(doc, 108, colorMarca, 2);
   doc.y = 120;
 
-  if (datos.textoEncabezado) {
-    doc.font("Helvetica").fontSize(9).fillColor(PDF.muted).text(datos.textoEncabezado, { width: 495 });
+  if (datos.textoEncabezado && datos.textoEncabezado.length > 0) {
+    bloquesEncabezado(doc, datos.textoEncabezado, M_IZQ, ANCHO);
     doc.fillColor(PDF.tinta);
-    doc.moveDown(0.8);
+    doc.moveDown(0.6);
   }
 
   // --- Datos de la cotización ---

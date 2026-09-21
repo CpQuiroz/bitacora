@@ -60,6 +60,14 @@ export type SeccionInforme = "financiero" | "ventas" | "operaciones" | "servicio
 export type TipoCuenta = "corriente" | "vista" | "ahorro";
 export type TipoPlantilla = "cotizacion" | "orden_servicio" | "cobranza" | "terminos_aceptacion";
 export type PosicionLogo = "izquierda" | "centro" | "derecha";
+// "Texto de encabezado" de una plantilla (migración 113, 20-sep-2026):
+// antes texto plano de una sola línea, sin jerarquía visual en el PDF/
+// vista previa. Ahora una lista de bloques con nivel — cada uno se
+// renderiza con su propio tamaño (pdfkit no tiene un motor de rich
+// text; esto es la versión más simple que sí distingue tamaños sin
+// meter una librería de edición de texto enriquecido).
+export type NivelEncabezado = "titulo" | "subtitulo" | "chico" | "parrafo";
+export type BloqueEncabezado = { nivel: NivelEncabezado; texto: string };
 export type ProveedorIntegracion = "webpay" | "flow" | "mercadopago" | "whatsapp" | "anthropic" | "google_document_ai";
 export type CategoriaIntegracion = "pagos" | "comunicacion" | "ia";
 export type TipoMensajePersonalizado =
@@ -1575,7 +1583,7 @@ export type PlantillaDocumento = {
   posicion_logo: PosicionLogo;
   color_primario: string | null;
   color_secundario: string | null;
-  texto_encabezado: string | null;
+  texto_encabezado: BloqueEncabezado[] | null;
   texto_pie: string | null;
   mensaje_predeterminado: string | null;
   terminos_condiciones: string | null;

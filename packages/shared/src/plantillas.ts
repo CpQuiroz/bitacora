@@ -1,3 +1,5 @@
+import type { BloqueEncabezado } from "./types";
+
 export type VariablePlantilla = { clave: string; etiqueta: string };
 
 export const VARIABLES_OS: VariablePlantilla[] = [
@@ -24,4 +26,15 @@ export const VARIABLES_COBRANZA: VariablePlantilla[] = VARIABLES_COTIZACION;
 // silencio, queda visible para corregirlo.
 export function sustituirVariables(texto: string, valores: Partial<Record<string, string>>): string {
   return texto.replace(/\{(\w+)\}/g, (coincidencia, clave: string) => valores[clave] ?? coincidencia);
+}
+
+// Mismo reemplazo, aplicado al texto de cada bloque del encabezado
+// (migración 113) — usado tanto por los generadores de PDF (backend)
+// como por la vista previa en vivo (web), para no duplicar el mapeo.
+export function sustituirVariablesEnBloques(
+  bloques: BloqueEncabezado[] | null,
+  valores: Partial<Record<string, string>>
+): BloqueEncabezado[] {
+  if (!bloques) return [];
+  return bloques.map((b) => ({ ...b, texto: sustituirVariables(b.texto, valores) }));
 }

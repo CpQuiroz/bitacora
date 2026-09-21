@@ -1,5 +1,13 @@
 import { Router } from "express";
-import { SECCIONES_PDF_OS, type PlantillaDocumento, type PosicionLogo, type SeccionPdfOS, type TipoPlantilla } from "@bitacora/shared";
+import {
+  SECCIONES_PDF_OS,
+  type BloqueEncabezado,
+  type NivelEncabezado,
+  type PlantillaDocumento,
+  type PosicionLogo,
+  type SeccionPdfOS,
+  type TipoPlantilla,
+} from "@bitacora/shared";
 import { supabase } from "../supabase";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
@@ -9,6 +17,26 @@ export const plantillasRouter = Router();
 
 const TIPOS: TipoPlantilla[] = ["cotizacion", "orden_servicio", "cobranza", "terminos_aceptacion"];
 const POSICIONES: PosicionLogo[] = ["izquierda", "centro", "derecha"];
+const NIVELES_ENCABEZADO: NivelEncabezado[] = ["titulo", "subtitulo", "chico", "parrafo"];
+const MAX_BLOQUES_ENCABEZADO = 20;
+
+// Migración 113 (20-sep-2026): texto_encabezado pasó de texto plano a
+// una lista de bloques con nivel. Validación estricta acá (a
+// diferencia de otros campos de texto libre de esta misma ruta) porque
+// el nivel decide el tamaño de fuente en el PDF — un valor inválido
+// rompería esa parte del render en vez de solo verse raro.
+function bloquesEncabezadoValidos(valor: unknown): valor is BloqueEncabezado[] | null {
+  if (valor === null) return true;
+  if (!Array.isArray(valor)) return false;
+  if (valor.length > MAX_BLOQUES_ENCABEZADO) return false;
+  return valor.every(
+    (b) =>
+      b &&
+      typeof b === "object" &&
+      typeof (b as { texto?: unknown }).texto === "string" &&
+      NIVELES_ENCABEZADO.includes((b as { nivel?: unknown }).nivel as NivelEncabezado)
+  );
+}
 
 function tipoValido(tipo: string): tipo is TipoPlantilla {
   return (TIPOS as string[]).includes(tipo);
@@ -103,7 +131,17 @@ plantillasRouter.patch(
       }
       cambios.color_secundario = color_secundario;
     }
-    if (texto_encabezado !== undefined) cambios.texto_encabezado = texto_encabezado?.trim() || null;
+    if (texto_encabezado !== undefined) {
+      if (!bloquesEncabezadoValidos(texto_encabezado)) {
+        res.status(400).json({ error: `texto_encabezado debe ser una lista de bloques {nivel, texto} con nivel en: ${NIVELES_ENCABEZADO.join(", ")}` });
+        return;
+      }
+      // Bloques con texto vacío no aportan nada al PDF — se descartan
+      // acá (no en el front) para que un "agregar bloque, no escribir
+      // nada, guardar" no deje basura invisible en la plantilla.
+      const bloquesLimpios = texto_encabezado?.filter((b) => b.texto.trim()) ?? null;
+      cambios.texto_encabezado = bloquesLimpios && bloquesLimpios.length > 0 ? bloquesLimpios : null;
+    }
     if (texto_pie !== undefined) cambios.texto_pie = texto_pie?.trim() || null;
     if (mensaje_predeterminado !== undefined) cambios.mensaje_predeterminado = mensaje_predeterminado?.trim() || null;
     if (terminos_condiciones !== undefined) cambios.terminos_condiciones = terminos_condiciones?.trim() || null;

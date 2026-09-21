@@ -1,7 +1,7 @@
 import { Router } from "express";
 import multer from "multer";
 import type { Anexo, CampoTipoTrabajo, CategoriaFotoOS, EstadoOS, EstadoTrabajo, ItemChecklist, OrdenServicio, Prioridad, SeccionPdfOS, TipoCheckin, TipoTrabajo, Trabajo } from "@bitacora/shared";
-import { CATEGORIAS_FOTO_OS, SECCIONES_PDF_OS, mapearCamposPersonalizados, sustituirVariables } from "@bitacora/shared";
+import { CATEGORIAS_FOTO_OS, SECCIONES_PDF_OS, mapearCamposPersonalizados, sustituirVariables, sustituirVariablesEnBloques } from "@bitacora/shared";
 import { supabase } from "../supabase";
 import { subirFirma, subirFoto, urlFirmada, subirPdfOS, descargarPdfOS, descargarFoto, borrarFoto, subirAnexo, urlFirmadaAnexo } from "../storage";
 import { analizarFoto, generarInformeOS, type ImagenInforme } from "../claude";
@@ -1499,7 +1499,7 @@ export async function armarDatosPdf(empresaId: string, trabajoId: string) {
     empresaLogoUrl: plantilla?.mostrar_logo === false ? null : empresa?.logo_url ?? null,
     seccionesVisibles,
     colorPrimario: plantilla?.color_primario ?? empresa?.color_primario ?? null,
-    textoEncabezado: plantilla?.texto_encabezado ? sustituirVariables(plantilla.texto_encabezado, variables) : null,
+    textoEncabezado: plantilla?.texto_encabezado ? sustituirVariablesEnBloques(plantilla.texto_encabezado, variables) : null,
     textoPie: plantilla?.texto_pie ? sustituirVariables(plantilla.texto_pie, variables) : null,
     clienteId: trabajo.cliente_id,
     folio: orden.folio,

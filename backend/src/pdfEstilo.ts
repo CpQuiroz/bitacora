@@ -31,6 +31,33 @@ export const ANCHO = M_DER - M_IZQ; // 495
 
 export type FilaDato = { etiqueta: string; valor: string | number | null | undefined };
 
+export type BloqueEncabezadoPdf = { nivel: "titulo" | "subtitulo" | "chico" | "parrafo"; texto: string };
+
+// "Texto de encabezado" de una plantilla (migración 113, 20-sep-2026) —
+// antes un texto plano de un solo tamaño (fontSize 9, PDF.muted); ahora
+// una lista de bloques con nivel, cada uno con su propio tamaño/peso/
+// color. "parrafo" mantiene el tamaño/color de antes a propósito — una
+// plantilla vieja migrada automáticamente a un solo bloque "parrafo" se
+// ve exactamente igual que antes de este cambio, sin sorpresas.
+const ESTILO_POR_NIVEL: Record<BloqueEncabezadoPdf["nivel"], { size: number; font: string; color: string }> = {
+  titulo: { size: 13, font: "Helvetica-Bold", color: PDF.tinta },
+  subtitulo: { size: 11, font: "Helvetica-Bold", color: PDF.tinta },
+  chico: { size: 8, font: "Helvetica", color: PDF.faint },
+  parrafo: { size: 9, font: "Helvetica", color: PDF.muted },
+};
+
+/** Dibuja los bloques del encabezado de una plantilla, cada uno con el
+ *  tamaño/peso que le corresponde a su nivel. Usado por el PDF de OS y
+ *  el de cotización — mismo criterio visual en los dos. */
+export function bloquesEncabezado(doc: Doc, bloques: BloqueEncabezadoPdf[], x: number, ancho: number): void {
+  for (const b of bloques) {
+    if (!b.texto.trim()) continue;
+    const estilo = ESTILO_POR_NIVEL[b.nivel] ?? ESTILO_POR_NIVEL.parrafo;
+    doc.font(estilo.font).fontSize(estilo.size).fillColor(estilo.color).text(b.texto, x, doc.y, { width: ancho });
+    doc.moveDown(0.2);
+  }
+}
+
 /** Título de sección "a secas": mayúsculas, espaciado, en el color de
  *  marca. Para secciones de prosa (descripción, observaciones). */
 export function tituloSeccion(doc: Doc, texto: string, colorMarca: string, x?: number) {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Shield } from "lucide-react";
+import { ChevronDown, ChevronRight, Shield } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { ETIQUETA_MODULO } from "@/lib/etiquetasModulo";
 import { Button, Card } from "@bitacora/ui/web";
@@ -19,6 +19,20 @@ export default function PerfilesPage() {
   // Estado editable: slug -> Set<modulo>
   const [edicion, setEdicion] = useState<Record<string, Set<string>>>({});
   const [guardando, setGuardando] = useState<string | null>(null);
+
+  // Acordeón (20-sep-2026) — plegado por defecto, cada rol se expande
+  // independiente (no exclusivo: podés tener varios abiertos a la vez).
+  // Uno con cambios sin guardar queda expandido igual, esté o no en este
+  // set — no tiene sentido esconder un cambio pendiente.
+  const [abiertos, setAbiertos] = useState<Set<string>>(new Set());
+  function alternarAbierto(slug: string) {
+    setAbiertos((prev) => {
+      const next = new Set(prev);
+      if (next.has(slug)) next.delete(slug);
+      else next.add(slug);
+      return next;
+    });
+  }
 
   const cargar = useCallback(async () => {
     setError(null);
@@ -110,42 +124,61 @@ export default function PerfilesPage() {
       {error ? <p className="font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
       {okMsg ? <p className="font-ds-body text-ds-small font-medium text-ds-accent2-800">{okMsg}</p> : null}
 
-      {data.roles.map((rol) => (
-        <Card key={rol.slug}>
-          <div className="mb-ds-4 flex items-center justify-between gap-ds-3">
-            <div>
-              <p className="font-ds-body text-ds-small font-semibold text-ds-text">{rol.nombre}</p>
-              <p className="font-ds-body text-ds-caption text-ds-text/60">
-                {rol.es_sistema ? "Perfil de sistema" : "Perfil personalizado"} · {rol.slug}
-              </p>
+      {data.roles.map((rol) => {
+        const expandido = abiertos.has(rol.slug) || sucio(rol.slug);
+        return (
+          <Card key={rol.slug}>
+            <div className="flex w-full items-center justify-between gap-ds-3">
+              <button
+                type="button"
+                onClick={() => alternarAbierto(rol.slug)}
+                className="flex flex-1 items-center gap-ds-2 text-left"
+              >
+                {expandido ? (
+                  <ChevronDown size={16} strokeWidth={2.75} className="shrink-0 text-ds-text/50" />
+                ) : (
+                  <ChevronRight size={16} strokeWidth={2.75} className="shrink-0 text-ds-text/50" />
+                )}
+                <div>
+                  <p className="flex items-center gap-ds-2 font-ds-body text-ds-small font-semibold text-ds-text">
+                    {rol.nombre}
+                    {sucio(rol.slug) && <span className="h-1.5 w-1.5 rounded-ds-pill bg-ds-brand" title="Cambios sin guardar" />}
+                  </p>
+                  <p className="font-ds-body text-ds-caption text-ds-text/60">
+                    {rol.es_sistema ? "Perfil de sistema" : "Perfil personalizado"} · {rol.slug}
+                  </p>
+                </div>
+              </button>
+              {sucio(rol.slug) && (
+                <Button onPress={() => guardar(rol.slug)} cargando={guardando === rol.slug}>
+                  Guardar cambios
+                </Button>
+              )}
             </div>
-            {sucio(rol.slug) && (
-              <Button onPress={() => guardar(rol.slug)} cargando={guardando === rol.slug}>
-                Guardar cambios
-              </Button>
+            {expandido && (
+              <div className="mt-ds-4 grid gap-ds-2 sm:grid-cols-2">
+                {catalogo.map((c) => {
+                  const marcado = (edicion[rol.slug] ?? new Set()).has(c.modulo);
+                  return (
+                    <label
+                      key={c.modulo}
+                      className={`flex items-center gap-ds-2 rounded-ds-md border px-ds-3 py-2 font-ds-body text-ds-small ${
+                        c.contratado ? "border-ds-divider text-ds-text" : "border-dashed border-ds-divider text-ds-text/60"
+                      }`}
+                    >
+                      <input type="checkbox" className="accent-[var(--ds-brand)]" checked={marcado} disabled={!c.contratado} onChange={() => toggle(rol.slug, c.modulo)} />
+                      <span>
+                        {ETIQUETA_MODULO[c.modulo] ?? c.modulo}
+                        {!c.contratado && <span className="ml-ds-1 text-ds-caption">(no incluido en tu plan)</span>}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
             )}
-          </div>
-          <div className="grid gap-ds-2 sm:grid-cols-2">
-            {catalogo.map((c) => {
-              const marcado = (edicion[rol.slug] ?? new Set()).has(c.modulo);
-              return (
-                <label
-                  key={c.modulo}
-                  className={`flex items-center gap-ds-2 rounded-ds-md border px-ds-3 py-2 font-ds-body text-ds-small ${
-                    c.contratado ? "border-ds-divider text-ds-text" : "border-dashed border-ds-divider text-ds-text/60"
-                  }`}
-                >
-                  <input type="checkbox" className="accent-[var(--ds-brand)]" checked={marcado} disabled={!c.contratado} onChange={() => toggle(rol.slug, c.modulo)} />
-                  <span>
-                    {ETIQUETA_MODULO[c.modulo] ?? c.modulo}
-                    {!c.contratado && <span className="ml-ds-1 text-ds-caption">(no incluido en tu plan)</span>}
-                  </span>
-                </label>
-              );
-            })}
-          </div>
-        </Card>
-      ))}
+          </Card>
+        );
+      })}
     </div>
   );
 }

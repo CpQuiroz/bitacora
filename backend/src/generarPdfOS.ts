@@ -11,9 +11,9 @@
 // Todo el layout sale de helpers genéricos de pdfEstilo.ts.
 // ============================================================
 import PDFDocument from "pdfkit";
-import type { CategoriaFotoOS, SeccionPdfOS } from "@bitacora/shared";
+import type { BloqueEncabezado, CategoriaFotoOS, SeccionPdfOS } from "@bitacora/shared";
 import { ETIQUETA_CATEGORIA_FOTO_OS } from "@bitacora/shared";
-import { ANCHO, M_DER, M_IZQ, PDF, abrirCaja, cajaGrilla, cajaLista, cerrarCaja, regla, tituloBarra, tituloSeccion } from "./pdfEstilo";
+import { ANCHO, M_DER, M_IZQ, PDF, abrirCaja, bloquesEncabezado, cajaGrilla, cajaLista, cerrarCaja, regla, tituloBarra, tituloSeccion } from "./pdfEstilo";
 
 export type ItemOSPdf = {
   descripcion: string;
@@ -25,7 +25,7 @@ export type DatosOSPdf = {
   empresaNombre: string;
   empresaLogoUrl: string | null;
   colorPrimario: string | null;
-  textoEncabezado: string | null;
+  textoEncabezado: BloqueEncabezado[] | null;
   textoPie: string | null;
   folio: number | null;
   fecha: string;
@@ -156,10 +156,10 @@ export async function generarPdfOS(datos: DatosOSPdf): Promise<Buffer> {
   regla(doc, 108, colorMarca, 2);
   doc.y = 120;
 
-  if (datos.textoEncabezado) {
-    doc.font("Helvetica").fontSize(9).fillColor(PDF.muted).text(datos.textoEncabezado, M_IZQ, doc.y, { width: ANCHO });
+  if (datos.textoEncabezado && datos.textoEncabezado.length > 0) {
+    bloquesEncabezado(doc, datos.textoEncabezado, M_IZQ, ANCHO);
     doc.fillColor(PDF.tinta);
-    doc.moveDown(0.8);
+    doc.moveDown(0.6);
   }
 
   // --- Informaciones del cliente ---

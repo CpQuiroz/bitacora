@@ -889,6 +889,24 @@
       ],
       "status": "done",
       "resolution": "Migración 112 confirmada aplicada en prod (folio en clientes/paquetes_sesiones/gastos/proveedores/facturas). Backend, web y mobile implementados y verificados en la entrada anterior de progress/current.md. Pusheado a main."
+    },
+    {
+      "id": 57,
+      "name": "personas_modal_perfiles_acordeon_encabezado_bloques",
+      "title": "Personas: invitar en modal · Perfiles: roles plegables · Plantillas: encabezado con niveles",
+      "description": "3 mejoras de UI en Configuración web, con mockup mostrado y aprobado antes de tocar código (artifact 2c031f59). Personas: el formulario de invitar pasa de estar siempre expandido a un botón + modal. Perfiles y permisos: los roles pasan a acordeón (plegados por defecto, se expanden solos si tienen cambios sin guardar). Plantillas: 'Texto de encabezado' pasa de un input de una línea a una lista de bloques con nivel (Título/Subtítulo/Texto chico/Párrafo), reordenables.",
+      "acceptance": [
+        "Personas: botón 'Invitar a alguien nuevo' abre un Modal (mismo patrón que Clientes/Levantamientos) — la lista del equipo queda arriba de todo",
+        "Perfiles y permisos: cada rol es un acordeón (chevron, plegado por defecto); uno con cambios sin guardar (sucio()) queda expandido igual, con un punto de color en el título",
+        "Migración 113: plantillas_documento.texto_encabezado pasa de text a jsonb (array de {nivel, texto}) — backfill de lo existente a un bloque 'parrafo' único, sin perder contenido — validada read-only, aplicada por la usuaria",
+        "Backend: PATCH /api/plantillas/:tipo valida la nueva forma de bloques; generarPdfOS.ts y generarPdfCotizacion.ts renderizan cada bloque con su propio tamaño/peso (bloquesEncabezado() en pdfEstilo.ts) — 'parrafo' mantiene el tamaño/color de antes a propósito, para que una plantilla migrada se vea igual que antes del cambio",
+        "routes/cotizaciones.ts y routes/trabajos.ts usan sustituirVariablesEnBloques (nueva, en packages/shared) en vez de sustituirVariables sobre un string",
+        "Web: editor de bloques (agregar/quitar/reordenar/nivel) en los 4 tipos de plantilla (cotización, OS, cobranza, términos) que comparten el mismo campo; vista previa en vivo actualizada con los mismos tamaños por nivel",
+        "Hallazgo de paso, no corregido (fuera de alcance, no se pidió): el encabezado de Cobranza hoy no se usa en ningún correo/PDF real — los avisos de cobro usan Configuración > Notificaciones, un sistema aparte",
+        "tsc de los 6 workspaces limpio, verificar.sh completo en verde, 0 literales de color nuevos"
+      ],
+      "status": "in_progress",
+      "resolution": null
     }
   ]
 }
