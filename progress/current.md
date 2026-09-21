@@ -4792,3 +4792,41 @@ Sin migración — cambio 100% mobile (`MasScreen.tsx`,
 `tsc` x6 limpio, `verificar.sh` completo en verde. Tarea 65 `done` —
 queda incluido en el próximo build de APK (no compilado todavía, el
 1.10.9 ya entregado es anterior a este fix).
+
+## 2026-09-21: sfarias no podía ingresar → fix en restablecer-password del Super-Admin (tarea 66)
+
+Investigando "no puedo ingresar con el usuario sfaria": Sergio Farias
+(sfarias@hidroservi.cl) nunca completó su invitación original —
+`email_confirmed_at` null, nunca definió contraseña, nunca inició
+sesión ni una vez — aunque ya existía un secreto TOTP para él
+(probablemente generado proactivamente por un admin vía el endpoint
+`activar-totp`, no prueba que él haya entrado). Confirmé antes de
+tocar nada que el flujo de invitación original sí se envió bien (si
+el envío de mail hubiera fallado, el código hace rollback y borra el
+usuario — como el usuario sigue existiendo, el mail salió).
+
+La usuaria eligió: restablecer la contraseña vía Super-Admin. Antes
+de decirle que lo hiciera, revisé el endpoint
+(`POST /api/superadmin/empresas/:id/usuarios/:usuarioId/restablecer-password`,
+`backend/src/superadmin/routes.ts`) y encontré un hueco real: llamaba
+a `supabase.auth.admin.updateUserById(id, { password })` sin
+`email_confirm`. Para un usuario que nunca confirmó el correo, un
+reset de contraseña solo no alcanza para poder entrar (Supabase Auth
+exige el email confirmado en el login normal) — el reset se vería
+"exitoso" pero Sergio seguiría sin poder entrar.
+
+**Fix**: se agregó `email_confirm: true` a esa misma llamada. Es
+seguro hacerlo ahí porque el propio Super-Admin ya está verificando
+la identidad de la empresa/usuario como paso previo al reset — no es
+una confirmación automática sin control humano.
+
+`tsc backend` limpio, `verificar.sh` completo en verde. Tarea 66
+`done`. **Pendiente de la usuaria**: no puedo ejecutar la acción yo
+mismo (requiere sesión de Super-Admin separada — no tengo una abierta
+y no debo ingresar la contraseña de Super-Admin). Instrucciones: ir a
+`/superadmin` → empresa Hidroservi → tarjeta "Equipo" → Sergio Farias
+→ "Restablecer contraseña" → confirmar el diálogo → copiar la
+contraseña temporal que se muestra una sola vez y pasársela a Sergio
+por su propio canal (no pegarla acá en el chat).
+
+Falta pushear este commit.

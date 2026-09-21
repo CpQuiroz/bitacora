@@ -1029,6 +1029,19 @@
       ],
       "status": "done",
       "resolution": "Implementado y verificado. Sin migración — cambio solo de mobile."
+    },
+    {
+      "id": 66,
+      "name": "superadmin_reset_password_confirma_email",
+      "title": "Super-Admin: Restablecer contraseña también confirma el email (email_confirm: true)",
+      "description": "Investigando por qué sfarias@hidroservi.cl no podía ingresar: nunca completó la invitación original (email_confirmed_at null, nunca definió contraseña ni inició sesión una sola vez) aunque ya tenía un secreto TOTP (probablemente generado proactivamente por un admin). La usuaria eligió resolverlo restableciendo la contraseña vía Super-Admin. Se detectó que ese endpoint (POST /api/superadmin/empresas/:id/usuarios/:usuarioId/restablecer-password) llamaba a supabase.auth.admin.updateUserById solo con {password} — sin email_confirm, un usuario que nunca confirmó el correo seguiría bloqueado en el login normal aunque tuviera contraseña nueva.",
+      "acceptance": [
+        "backend/src/superadmin/routes.ts: updateUserById ahora pasa también email_confirm: true junto con password",
+        "Comentario explicando por qué es seguro confirmarlo en este paso (el propio Super-Admin ya está verificando identidad antes de resetear)",
+        "tsc backend limpio"
+      ],
+      "status": "done",
+      "resolution": "Implementado. Pendiente: la usuaria ejecuta \"Restablecer contraseña\" para Sergio Farias desde /superadmin (Hidroservi > Equipo) y le pasa la contraseña temporal por su propio canal — no puedo hacerlo yo mismo (requiere sesión Super-Admin separada, y no debo ingresar contraseñas)."
     }
   ]
 }

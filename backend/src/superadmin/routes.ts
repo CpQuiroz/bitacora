@@ -568,7 +568,14 @@ superadminRouter.post(
     }
 
     const passwordTemporal = crypto.randomBytes(9).toString("base64url");
-    const { error } = await supabase.auth.admin.updateUserById(usuario.id, { password: passwordTemporal });
+    // email_confirm: true — hallazgo real (21-sep-2026): un usuario
+    // invitado que nunca completó el link de invitación (nunca definió
+    // contraseña, nunca confirmó el correo) seguía sin poder entrar
+    // aunque se le restableciera la contraseña acá, porque Supabase
+    // Auth exige el correo confirmado para el login normal. Confirmarlo
+    // en este mismo paso es seguro: el propio Super-Admin ya está
+    // verificando la identidad de la empresa/usuario antes de resetear.
+    const { error } = await supabase.auth.admin.updateUserById(usuario.id, { password: passwordTemporal, email_confirm: true });
     if (error) {
       res.status(500).json({ error: error.message });
       return;
