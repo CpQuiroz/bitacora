@@ -887,8 +887,8 @@
         "Mobile: folio en ClientesListaScreen, ClienteDetalleScreen (header + packs + cobros), CobrosListaScreen, CobroDetalleScreen",
         "tsc de los 6 workspaces limpio, verificar.sh completo en verde, 0 literales de color nuevos"
       ],
-      "status": "in_progress",
-      "resolution": null
+      "status": "done",
+      "resolution": "Migración 112 confirmada aplicada en prod (folio en clientes/paquetes_sesiones/gastos/proveedores/facturas). Backend, web y mobile implementados y verificados en la entrada anterior de progress/current.md. Pusheado a main."
     }
   ]
 }

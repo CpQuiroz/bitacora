@@ -4358,3 +4358,10 @@ que resolver eligiendo un proveedor por nombre).
 `tsc` de los 6 workspaces limpio, `verificar.sh` completo en verde
 (incluyendo 0 literales de color nuevos). Commit hecho LOCAL, sin
 pushear — pendiente que la usuaria aplique la migración 112.
+
+## 2026-09-20 (16): migración 112 confirmada — push
+
+Usuaria aplicó `112_folios_cliente_pack_gasto_proveedor_cobro.sql` en
+prod. Verificado read-only (`information_schema.columns`: `folio`
+integer/nullable ya existe en las 5 tablas). Pusheado el commit
+`9f5b45d` (que ya estaba listo, esperando esto). Tarea 56 cerrada.
