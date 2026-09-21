@@ -1100,6 +1100,19 @@
       ],
       "status": "done",
       "resolution": "Implementado y verificado (tsc + eslint + verificar.sh). Sin migración. No se verificó visualmente en navegador en esta sesión. Falta push (a pedido de la usuaria)."
+    },
+    {
+      "id": 71,
+      "name": "superadmin_quitar_flags_y_panel_minimalista",
+      "title": "Super-Admin: se quita Feature flags (beta) de la página + panel de restablecer contraseña más minimalista",
+      "description": "Pedido: \"quiero algo mas minimalista, y la opcion Feature flags (beta) quitalo por que no la usare\". Se preguntó qué parte necesitaba ser más minimalista (aclaración): el panel de restablecer contraseña recién agregado (tarea 70).",
+      "acceptance": [
+        "Card \"Feature flags (beta)\" y todo su estado/funciones (flags, nuevoFlag, guardandoFlag, errorFlag, flagsAbierto, cargarFlags, onActivarFlag, onDesactivarFlag) se quitan de la página — backend de feature-flags (rutas + tabla) no se toca, queda sin usar desde la UI",
+        "Panel de restablecer contraseña pasa de una caja con borde + título + 2 párrafos a una sola fila compacta: label corta + input + los 2 botones, sin caja ni texto explicativo largo",
+        "tsc + eslint de web limpios, verificar.sh completo en verde"
+      ],
+      "status": "done",
+      "resolution": "Implementado y verificado. Sin migración. No se verificó visualmente en navegador en esta sesión. Falta push (a pedido de la usuaria)."
     }
   ]
 }

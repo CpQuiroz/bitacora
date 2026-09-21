@@ -61,10 +61,11 @@ function formatearBytes(bytes: number): string {
 }
 
 // Cabecera clicable de una tarjeta retráctil (21-sep-2026, pedido: que
-// "Perfiles y permisos" y "Feature flags" arranquen colapsadas y se
-// desplieguen al tocarlas — antes ambas mostraban todo su contenido
-// siempre, aunque el Super-Admin casi nunca las toca). Solo pinta el
-// título + chevron; quien la usa decide qué envolver debajo con
+// "Perfiles y permisos" arranque colapsada y se despliegue al tocarla
+// — antes mostraba todo su contenido siempre, aunque el Super-Admin
+// casi nunca la toca; luego se extendió al resto de las tarjetas de la
+// página). Solo pinta el título + chevron; quien la usa decide qué
+// envolver debajo con
 // `abierto`.
 function CabeceraColapsable({
   titulo,
@@ -134,14 +135,12 @@ export default function SuperAdminSaludEmpresaPage() {
   const [okPerfiles, setOkPerfiles] = useState<string | null>(null);
   // Retráctiles (21-sep-2026) — arrancan cerradas, se abren al tocar el título.
   const [perfilesAbierto, setPerfilesAbierto] = useState(false);
-  const [flagsAbierto, setFlagsAbierto] = useState(false);
   // Resto de las tarjetas (21-sep-2026, mismo pedido extendido a "las
   // otras secciones que se puedan") — todas arrancan cerradas, igual
-  // que Perfiles/Feature flags. Quedan afuera "Editar identidad" (ya
-  // es condicional, solo aparece en modo edición) y las 4 tarjetitas de
-  // KPI de arriba (Última actividad/Usuarios/OS/Almacenamiento — son
-  // una sola línea, no tienen un cuerpo separado del título que valga
-  // la pena ocultar).
+  // que Perfiles. Quedan afuera "Editar identidad" (ya es condicional,
+  // solo aparece en modo edición) y las 4 tarjetitas de KPI de arriba
+  // (Última actividad/Usuarios/OS/Almacenamiento — son una sola línea,
+  // no tienen un cuerpo separado del título que valga la pena ocultar).
   const [consumoAbierto, setConsumoAbierto] = useState(false);
   const [erroresAbierto, setErroresAbierto] = useState(false);
   const [estadoAbierto, setEstadoAbierto] = useState(false);
@@ -199,11 +198,6 @@ export default function SuperAdminSaludEmpresaPage() {
   const [justificacionImp, setJustificacionImp] = useState("");
   const [iniciandoImp, setIniciandoImp] = useState(false);
   const [errorImp, setErrorImp] = useState<string | null>(null);
-
-  const [flags, setFlags] = useState<{ flag: string; activado: boolean; activado_en: string }[] | null>(null);
-  const [nuevoFlag, setNuevoFlag] = useState("");
-  const [guardandoFlag, setGuardandoFlag] = useState(false);
-  const [errorFlag, setErrorFlag] = useState<string | null>(null);
 
   const [accesos, setAccesos] = useState<
     { id: string; tipo: "correo" | "dominio"; valor: string; rol: string; creado_en: string }[] | null
@@ -303,11 +297,6 @@ export default function SuperAdminSaludEmpresaPage() {
     if (res.ok) setUsuarios(await res.json());
   }
 
-  async function cargarFlags() {
-    const res = await superadminFetch(`/api/superadmin/empresas/${params.id}/feature-flags`);
-    if (res.ok) setFlags(await res.json());
-  }
-
   async function cargarAccesos() {
     const res = await superadminFetch(`/api/superadmin/empresas/${params.id}/accesos`);
     if (res.ok) setAccesos((await res.json()).accesos ?? []);
@@ -333,7 +322,6 @@ export default function SuperAdminSaludEmpresaPage() {
     cargarPerfiles();
     cargarSuscripcion();
     cargarUsuarios();
-    cargarFlags();
     cargarRoles();
     cargarAccesos();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -359,38 +347,6 @@ export default function SuperAdminSaludEmpresaPage() {
     setNuevoCorreo("");
     setNuevoRol("colaborador");
     cargarUsuarios();
-  }
-
-  async function onActivarFlag(e: React.FormEvent) {
-    e.preventDefault();
-    setErrorFlag(null);
-    setGuardandoFlag(true);
-    const res = await superadminFetch(`/api/superadmin/empresas/${params.id}/feature-flags`, {
-      method: "POST",
-      body: JSON.stringify({ flag: nuevoFlag.trim().toLowerCase() }),
-    });
-    setGuardandoFlag(false);
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      setErrorFlag(body.error ?? "No se pudo activar el flag");
-      return;
-    }
-    setNuevoFlag("");
-    cargarFlags();
-  }
-
-  async function onDesactivarFlag(flag: string) {
-    setErrorFlag(null);
-    const res = await superadminFetch(`/api/superadmin/empresas/${params.id}/feature-flags/desactivar`, {
-      method: "POST",
-      body: JSON.stringify({ flag }),
-    });
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      setErrorFlag(body.error ?? "No se pudo desactivar el flag");
-      return;
-    }
-    cargarFlags();
   }
 
   async function onAgregarAcceso(e: React.FormEvent) {
@@ -1116,58 +1072,6 @@ export default function SuperAdminSaludEmpresaPage() {
           </Card>
 
           <Card className="mt-4">
-            <CabeceraColapsable titulo="Feature flags (beta)" abierto={flagsAbierto} onToggle={() => setFlagsAbierto((v) => !v)} />
-            {flagsAbierto && (
-              <>
-            <p className="mb-3 mt-2 text-sm text-muted">
-              Prende una funcionalidad en prueba para esta empresa antes de que esté disponible en el plan. Es un eje aparte de los
-              módulos contratados. El nombre es texto libre (minúsculas, números, <code>-</code> y <code>_</code>); el frontend lo
-              consulta desde <code>GET /api/me</code>.
-            </p>
-
-            {flags === null ? (
-              <p className="text-sm text-muted">Cargando…</p>
-            ) : flags.filter((f) => f.activado).length === 0 ? (
-              <p className="text-sm text-muted">Esta empresa no tiene ningún flag activo.</p>
-            ) : (
-              <div className="flex flex-col gap-2">
-                {flags
-                  .filter((f) => f.activado)
-                  .map((f) => (
-                    <div key={f.flag} className="flex items-center justify-between rounded-lg border border-border px-3 py-2 text-sm">
-                      <span className="font-mono text-foreground">{f.flag}</span>
-                      <Button type="button" variant="ghost" onClick={() => onDesactivarFlag(f.flag)}>
-                        Quitar
-                      </Button>
-                    </div>
-                  ))}
-              </div>
-            )}
-
-            <form onSubmit={onActivarFlag} className="mt-4 flex items-end gap-2">
-              <div className="flex-1">
-                <Label>Activar un flag nuevo</Label>
-                <Input
-                  type="text"
-                  value={nuevoFlag}
-                  onChange={(e) => setNuevoFlag(e.target.value)}
-                  placeholder="asistente_panel_fijo"
-                />
-              </div>
-              <Button type="submit" disabled={guardandoFlag || nuevoFlag.trim().length < 2}>
-                {guardandoFlag ? "Activando…" : "Activar"}
-              </Button>
-            </form>
-            {errorFlag && (
-              <div className="mt-3">
-                <ErrorText>{errorFlag}</ErrorText>
-              </div>
-            )}
-              </>
-            )}
-          </Card>
-
-          <Card className="mt-4">
             <CabeceraColapsable titulo="Correos y dominios autorizados" abierto={correosAbierto} onToggle={() => setCorreosAbierto((v) => !v)} />
             {correosAbierto && (
               <>
@@ -1322,46 +1226,35 @@ export default function SuperAdminSaludEmpresaPage() {
             )}
 
             {restablecerUsuario && (
-              <div className="mb-4 rounded-lg border border-border p-3">
-                <p className="text-sm font-semibold text-foreground">Restablecer la contraseña de {restablecerUsuario.nombre}</p>
-                <p className="mt-1 text-xs text-muted">
-                  La contraseña actual deja de funcionar de inmediato. Dejá el campo vacío para generar una temporal al azar, o
-                  escribí una vos mismo para dejarle una clave elegida (mínimo 8 caracteres).
-                </p>
-                <div className="mt-3">
-                  <Label>Contraseña personalizada (opcional)</Label>
+              <div className="mb-4 flex flex-wrap items-end gap-2">
+                <div className="min-w-[220px] flex-1">
+                  <Label>Contraseña para {restablecerUsuario.nombre} — vacío genera una automática</Label>
                   <Input
                     type="text"
                     value={passwordPersonalizada}
                     onChange={(e) => setPasswordPersonalizada(e.target.value)}
-                    placeholder="Dejar vacío para generar una automática"
-                    className="max-w-sm font-mono"
+                    placeholder="Mínimo 8 caracteres"
+                    className="max-w-xs font-mono"
                   />
                 </div>
-                {errorUsuarios && (
-                  <div className="mt-2">
-                    <ErrorText>{errorUsuarios}</ErrorText>
-                  </div>
-                )}
-                <div className="mt-3 flex gap-2">
-                  <Button
-                    type="button"
-                    disabled={restableciendoId === restablecerUsuario.id}
-                    onClick={() => onRestablecerPassword(restablecerUsuario.id, restablecerUsuario.nombre)}
-                  >
-                    {restableciendoId === restablecerUsuario.id ? "Restableciendo…" : "Restablecer"}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => {
-                      setRestablecerUsuario(null);
-                      setErrorUsuarios(null);
-                    }}
-                  >
-                    Cancelar
-                  </Button>
-                </div>
+                <Button
+                  type="button"
+                  disabled={restableciendoId === restablecerUsuario.id}
+                  onClick={() => onRestablecerPassword(restablecerUsuario.id, restablecerUsuario.nombre)}
+                >
+                  {restableciendoId === restablecerUsuario.id ? "Restableciendo…" : "Restablecer"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => {
+                    setRestablecerUsuario(null);
+                    setErrorUsuarios(null);
+                  }}
+                >
+                  Cancelar
+                </Button>
+                {errorUsuarios && <ErrorText>{errorUsuarios}</ErrorText>}
               </div>
             )}
 

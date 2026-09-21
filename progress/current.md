@@ -4969,3 +4969,26 @@ verde. Sin migración. Tarea 70 `done`.
 
 **Pendiente**: no se verificó visualmente en navegador en esta sesión.
 Falta push (a pedido de la usuaria, no pushear hasta que avise).
+
+## 2026-09-21: se quita Feature flags + panel de restablecer más minimalista (tarea 71)
+
+Pedido: "quiero algo mas minimalista, y la opcion Feature flags (beta)
+quitalo por que no la usare". Se preguntó a qué se refería con
+"minimalista" — respondió que al panel de restablecer contraseña
+(tarea 70, recién agregado).
+
+- Se quitó la Card "Feature flags (beta)" de la página entera, junto
+  con todo su estado y funciones (`flags`, `nuevoFlag`, `guardandoFlag`,
+  `errorFlag`, `flagsAbierto`, `cargarFlags`, `onActivarFlag`,
+  `onDesactivarFlag`). El backend de feature-flags (rutas + tabla) no
+  se tocó — queda sin usar desde la UI, no se borró la capacidad.
+- El panel de restablecer contraseña pasó de una caja con borde +
+  título en negrita + 2 párrafos explicativos a una sola fila
+  compacta: label corta + input + los 2 botones, sin caja ni texto
+  largo.
+
+`tsc` + `eslint` de web limpios, `verificar.sh` completo en verde. Sin
+migración. Tarea 71 `done`.
+
+**Pendiente**: no se verificó visualmente en navegador en esta sesión.
+Falta push (a pedido de la usuaria, no pushear hasta que avise).
