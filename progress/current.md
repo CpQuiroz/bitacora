@@ -4830,3 +4830,45 @@ contraseña temporal que se muestra una sola vez y pasársela a Sergio
 por su propio canal (no pegarla acá en el chat).
 
 Falta pushear este commit.
+
+## 2026-09-21: Pizarra (mobile) — vista Día/Semana (tarea 67)
+
+Pedido: "en pizarra quiero que se puedan ver las actividades del dia y
+de la semana". Pizarra (HoyScreen.tsx / services/hoy.ts) tenía el día
+fijo (`hoyISO()`) hardcodeado adentro — no había forma de ver más que
+hoy.
+
+**Cambios**:
+- `services/hoy.ts`: `cargarHoy` pasa a recibir `desde`/`hasta` (mismo
+  shape que ya tenía `listarTareasRango` para citas) en vez de un día
+  fijo interno. Cada `ItemHoy` gana `fecha: string | null` para poder
+  agruparlos por día en la vista Semana (null = levantamiento sin
+  fecha_visita, sigue "siempre visible" como antes).
+- `ScreenHeader` (packages/ui/src/native) gana un segundo prop opcional
+  `filtrosSecundarios` — segunda fila de chips, mismo look que
+  `filtros`. Necesario porque Pizarra ya usaba la única fila
+  (`filtros`) para Míos/Equipo; Día/Semana necesitaba su propio eje sin
+  pisarlo. Cambio puramente aditivo/opcional — no afecta a ninguna de
+  las ~30 pantallas que ya usan ScreenHeader.
+- `HoyScreen.tsx`: vista Día = comportamiento exacto de antes (lista
+  plana). Vista Semana agrupa por día (lunes a domingo de la semana
+  actual, mismo criterio visual que la vista Semana de Agenda) + dos
+  grupos más: "Atrasado" (levantamientos con fecha_visita antes del
+  lunes — no desaparecen solos, mismo criterio que una tarea vencida) y
+  "Sin fecha" (levantamientos sin fecha_visita, al final).
+- `mobile/src/lib/horario.ts` gana `claveFecha`/`lunesDe`/`sumarDias` —
+  mismo cálculo que ya tenía `AgendaScreen.tsx` de forma local (no se
+  tocó ese archivo, se dejó su copia como está para no arriesgar una
+  pantalla que no pedían tocar).
+- `AppTabs.tsx`: la precarga de caché "descargar el día al abrir" se
+  actualiza al nuevo signature de `cargarHoy`, sigue acotada solo a hoy
+  a propósito (no se pidió precargar toda la semana en segundo plano).
+
+`tsc` x6 limpio, `verificar.sh` completo en verde. Sin migración —
+100% packages/ui + mobile. Tarea 67 `done`.
+
+**Pendiente**: no hay emulador en esta sesión, así que no se pudo
+correr la app y mirarla — solo tsc + revisión de código. No está en
+ningún APK compilado (el 1.10.9 entregado es anterior). Falta que la
+usuaria lo pruebe en un dispositivo/simulador antes de dar por buena
+la UI, y decidir si vale la pena un build nuevo para eso.

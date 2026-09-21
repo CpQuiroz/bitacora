@@ -18,6 +18,14 @@ import { estadoOsDeTrabajo, formatearFolio } from "@bitacora/shared";
 // sola). Sin fecha_visita (no asignada, o levantamientos creados antes
 // de esta migración), sigue el comportamiento de siempre: aparece
 // pendiente sin día fijo, sin hora, al final.
+//
+// Vista Semana (21-sep-2026, pedido: "en Pizarra quiero ver las
+// actividades del día y de la semana") — cargarHoy() pasa de tener el
+// día fijo adentro a recibir un rango [desde, hasta] (mismo shape que
+// listarTareasRango, que ya lo aceptaba). Cada ítem ahora expone su
+// propia `fecha` para que la pantalla pueda agruparlos por día en la
+// vista Semana; en la vista Día, desde === hasta y el comportamiento
+// es idéntico al de antes.
 
 export type TipoItemHoy = "trabajo" | "cita" | "viaje" | "levantamiento";
 
@@ -25,6 +33,9 @@ export type ItemHoy = {
   tipo: TipoItemHoy;
   id: string;
   hora: string | null; // "HH:MM" — null = sin hora, va al final
+  // Fecha propia del ítem (YYYY-MM-DD) — null solo para levantamientos
+  // sin fecha_visita asignada (sin día fijo, ver comentario arriba).
+  fecha: string | null;
   titulo: string;
   subtitulo: string | null;
   estado: EstadoOS | string | null;
@@ -38,7 +49,7 @@ export type ItemHoy = {
   folio: string | null;
 };
 
-function hoyISO(): string {
+export function hoyISO(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
@@ -53,13 +64,19 @@ export type ResultadoHoy = { items: ItemHoy[]; desdeCache: boolean; guardadoEn?:
  * @param equipo  true = alcance de gestión (todo el equipo); false = solo lo propio.
  * @param incluirViajes  false si la empresa tiene el módulo "viajes" apagado.
  * @param incluirLevantamientos  true si el usuario ve la sección Levantamientos (FUNCIONES_LEVANTAMIENTOS).
+ * @param desde  primer día del rango a mostrar (YYYY-MM-DD) — vista Día: igual a `hasta`.
+ * @param hasta  último día del rango a mostrar (YYYY-MM-DD).
  */
-export async function cargarHoy(equipo: boolean, incluirViajes: boolean, incluirLevantamientos = false): Promise<ResultadoHoy> {
-  const dia = hoyISO();
-
+export async function cargarHoy(
+  equipo: boolean,
+  incluirViajes: boolean,
+  incluirLevantamientos: boolean,
+  desde: string,
+  hasta: string
+): Promise<ResultadoHoy> {
   const [rTrabajos, rCitas, rViajes, rLevantamientos] = await Promise.allSettled([
     listarTrabajos(equipo),
-    listarTareasRango(dia, dia),
+    listarTareasRango(desde, hasta),
     incluirViajes ? (equipo ? listarViajesEquipo() : listarViajesPropios()) : Promise.resolve(null),
     incluirLevantamientos ? listarMisLevantamientos() : Promise.resolve(null),
   ]);
@@ -73,11 +90,12 @@ export async function cargarHoy(equipo: boolean, incluirViajes: boolean, incluir
     desdeCache = desdeCache || r.desdeCache;
     if (r.desdeCache) guardadoEn = r.guardadoEn;
     for (const tr of r.trabajos) {
-      if (tr.fecha !== dia) continue;
+      if (tr.fecha < desde || tr.fecha > hasta) continue;
       items.push({
         tipo: "trabajo",
         id: tr.id,
         hora: hhmm(tr.hora_programada),
+        fecha: tr.fecha,
         titulo: tr.cliente,
         // El folio ahora se ve aparte (tag "OS-000X", ver HoyScreen) —
         // el subtítulo vuelve a ser solo la ubicación.
@@ -95,11 +113,12 @@ export async function cargarHoy(equipo: boolean, incluirViajes: boolean, incluir
     desdeCache = desdeCache || r.desdeCache;
     if (r.desdeCache && guardadoEn == null) guardadoEn = r.guardadoEn;
     for (const c of r.tareas) {
-      if (c.fecha !== dia) continue;
+      if (c.fecha < desde || c.fecha > hasta) continue;
       items.push({
         tipo: "cita",
         id: c.id,
         hora: hhmm(c.hora),
+        fecha: c.fecha,
         titulo: c.titulo || c.cliente?.nombre || "Cita",
         subtitulo: c.cliente?.nombre && c.titulo ? c.cliente.nombre : c.cliente?.direccion ?? null,
         estado: c.estado,
@@ -115,11 +134,12 @@ export async function cargarHoy(equipo: boolean, incluirViajes: boolean, incluir
     desdeCache = desdeCache || r.desdeCache;
     if (r.desdeCache && guardadoEn == null) guardadoEn = r.guardadoEn;
     for (const v of r.viajes) {
-      if (v.fecha !== dia) continue;
+      if (v.fecha < desde || v.fecha > hasta) continue;
       items.push({
         tipo: "viaje",
         id: v.id,
         hora: null,
+        fecha: v.fecha,
         titulo: v.cliente_info?.nombre ?? v.cliente ?? "Viaje",
         subtitulo: v.origen && v.destino ? `${v.origen} → ${v.destino}` : v.numero_guia ? `Guía ${v.numero_guia}` : null,
         estado: v.estado,
@@ -136,14 +156,18 @@ export async function cargarHoy(equipo: boolean, incluirViajes: boolean, incluir
     // al tablero de terreno.
     for (const lev of rLevantamientos.value) {
       if (!["creado", "asignado", "en_terreno"].includes(lev.estado)) continue;
-      // Con fecha (hoy o atrasada): se muestra. Con fecha futura: no
-      // acá — le toca a su propio día. Sin fecha: comportamiento de
-      // siempre, siempre visible.
-      if (lev.fecha_visita && lev.fecha_visita > dia) continue;
+      // Con fecha futura (fuera del rango pedido): no acá, le toca a su
+      // propio día/semana. Atrasada (antes de `desde`) u hoy: se
+      // muestra igual — no desaparece sola, mismo criterio que una
+      // tarea vencida (la pantalla la agrupa aparte si quedó antes del
+      // rango visible). Sin fecha: comportamiento de siempre, siempre
+      // visible (fecha: null).
+      if (lev.fecha_visita && lev.fecha_visita > hasta) continue;
       items.push({
         tipo: "levantamiento",
         id: lev.id,
         hora: hhmm(lev.hora_visita),
+        fecha: lev.fecha_visita ?? null,
         titulo: lev.cliente?.nombre ?? "Levantamiento",
         subtitulo: lev.descripcion_requerimiento,
         estado: lev.estado,

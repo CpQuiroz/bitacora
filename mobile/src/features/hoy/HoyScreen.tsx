@@ -1,13 +1,13 @@
-import { useCallback, useState } from "react";
-import { FlatList, RefreshControl, View } from "react-native";
-import { CalendarClock, Car, ClipboardList, Search, Sun } from "lucide-react-native";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { FlatList, RefreshControl, ScrollView, View } from "react-native";
+import { CalendarClock, Car, CalendarRange, ClipboardList, Search, Sun } from "lucide-react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { tokens } from "@bitacora/design-tokens";
 import { FUNCIONES_LEVANTAMIENTOS } from "@bitacora/shared";
 import { AsistenteButton, Card, EmptyState, ErrorState, ESPACIO_ASISTENTE_FLOTANTE, LoadingState, ScreenHeader, Skeleton, StatusBadge, Texto, useMarca } from "@bitacora/ui/native";
 import { OfflineBanner } from "../../components/OfflineBanner";
-import { formatearFechaLarga } from "../../lib/horario";
+import { claveFecha, formatearFechaLarga, lunesDe, sumarDias } from "../../lib/horario";
 import { useAuth } from "../auth/AuthContext";
 import { cargarHoy, type ItemHoy } from "../../services/hoy";
 import type { HoyStackParamList } from "../../shell/navigation/types";
@@ -51,6 +51,14 @@ const ETIQUETA_ESTADO: Record<string, string> = {
   en_terreno: "En terreno",
 };
 
+const DIAS_LARGO = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+
+type ModoPizarra = "dia" | "semana";
+// Recuerda el último modo elegido mientras la app sigue abierta — mismo
+// patrón que `ultimoModo` en AgendaScreen.tsx (Mes/Sem/Día).
+let ultimoModoPizarra: ModoPizarra = "dia";
+
 // "Hoy" siempre muestra la fecha del día como antetítulo del
 // ScreenHeader — misma fecha local que usa cargarHoy()/hoyISO(), no
 // UTC (toISOString se corre en día equivocado cerca de medianoche).
@@ -58,6 +66,12 @@ function fechaDeHoy(): string {
   const d = new Date();
   const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   return formatearFechaLarga(iso);
+}
+
+// "15–21 sep" (o "29 ago – 4 sep" si la semana cruza de mes).
+function rangoSemanaTexto(lunes: Date, domingo: Date): string {
+  if (lunes.getMonth() === domingo.getMonth()) return `${lunes.getDate()}–${domingo.getDate()} ${MESES[lunes.getMonth()].slice(0, 3)}`;
+  return `${lunes.getDate()} ${MESES[lunes.getMonth()].slice(0, 3)} – ${domingo.getDate()} ${MESES[domingo.getMonth()].slice(0, 3)}`;
 }
 
 // Sistema visual móvil v2 (13-sep-2026, tarea #21, piloto 2) — antes
@@ -72,6 +86,17 @@ function fechaDeHoy(): string {
 // ScreenHeader y la etiqueta de la tab bar (AppTabs.tsx) — el nombre
 // interno (route key "Hoy", este componente, services/hoy.ts) no se
 // tocó, no hacía falta.
+//
+// Vista Día/Semana (21-sep-2026, pedido: "en Pizarra quiero ver las
+// actividades del día y de la semana"). Día es exactamente el
+// comportamiento de siempre (lista plana de hoy). Semana agrupa por
+// día (mismo criterio visual que la vista Semana de Agenda) y agrega
+// dos grupos más: "Atrasado" (levantamientos con fecha_visita anterior
+// al lunes — no desaparecen solos, ver services/hoy.ts) y "Sin fecha"
+// (levantamientos sin fecha_visita asignada, siempre visibles). El
+// filtro Míos/Equipo ya ocupaba la fila de chips del ScreenHeader, así
+// que Día/Semana usa la segunda fila nueva (`filtrosSecundarios`,
+// agregada a ScreenHeader para este pedido).
 export function HoyScreen({ navigation }: NativeStackScreenProps<HoyStackParamList, "HoyInicio">) {
   const auth = useAuth();
   const marca = useMarca();
@@ -83,22 +108,39 @@ export function HoyScreen({ navigation }: NativeStackScreenProps<HoyStackParamLi
   const incluirLevantamientos = funcion != null && FUNCIONES_LEVANTAMIENTOS.includes(funcion);
 
   const [equipo, setEquipo] = useState(false);
+  const [modo, setModo] = useState<ModoPizarra>(ultimoModoPizarra);
   const [items, setItems] = useState<ItemHoy[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refrescando, setRefrescando] = useState(false);
   const [guardadoEn, setGuardadoEn] = useState<number | undefined>();
 
+  useEffect(() => {
+    ultimoModoPizarra = modo;
+  }, [modo]);
+
+  const hoyKey = claveFecha(new Date());
+  const { desde, hasta, lunes, domingo } = useMemo(() => {
+    if (modo === "dia") return { desde: hoyKey, hasta: hoyKey, lunes: undefined, domingo: undefined };
+    const l = lunesDe(new Date());
+    const d = sumarDias(l, 6);
+    return { desde: claveFecha(l), hasta: claveFecha(d), lunes: l, domingo: d };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modo, hoyKey]);
+
   const cargar = useCallback(async () => {
     setError(null);
     try {
-      const r = await cargarHoy(esGestion && equipo, incluirViajes, incluirLevantamientos);
+      const r = await cargarHoy(esGestion && equipo, incluirViajes, incluirLevantamientos, desde, hasta);
       setItems(r.items);
       setGuardadoEn(r.desdeCache ? r.guardadoEn : undefined);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "No se pudo cargar el día");
+      setError(e instanceof Error ? e.message : "No se pudo cargar la información");
     }
-  }, [esGestion, equipo, incluirViajes, incluirLevantamientos]);
+  }, [esGestion, equipo, incluirViajes, incluirLevantamientos, desde, hasta]);
 
+  useEffect(() => {
+    setItems(null);
+  }, [modo]);
   useFocusEffect(
     useCallback(() => {
       void cargar();
@@ -123,6 +165,29 @@ export function HoyScreen({ navigation }: NativeStackScreenProps<HoyStackParamLi
     }
   }
 
+  // Agrupación por día — solo se usa en modo "semana" (en "dia" se
+  // renderiza `items` directo, sin tocar este cálculo).
+  const { porDia, atrasados, sinFecha } = useMemo(() => {
+    const porDia = new Map<string, ItemHoy[]>();
+    const atrasados: ItemHoy[] = [];
+    const sinFecha: ItemHoy[] = [];
+    for (const it of items ?? []) {
+      if (it.fecha == null) {
+        sinFecha.push(it);
+        continue;
+      }
+      if (it.fecha < desde) {
+        atrasados.push(it);
+        continue;
+      }
+      if (!porDia.has(it.fecha)) porDia.set(it.fecha, []);
+      porDia.get(it.fecha)!.push(it);
+    }
+    return { porDia, atrasados, sinFecha };
+  }, [items, desde]);
+
+  const diasSemana = useMemo(() => (lunes ? Array.from({ length: 7 }, (_, i) => sumarDias(lunes, i)) : []), [lunes]);
+
   const filtros = esGestion
     ? {
         opciones: [
@@ -134,6 +199,17 @@ export function HoyScreen({ navigation }: NativeStackScreenProps<HoyStackParamLi
       }
     : undefined;
 
+  const filtrosSecundarios = {
+    opciones: [
+      { valor: "dia", etiqueta: "Día" },
+      { valor: "semana", etiqueta: "Semana" },
+    ],
+    valor: modo,
+    onCambio: (v: string) => setModo(v as ModoPizarra),
+  };
+
+  const antetitulo = modo === "dia" ? fechaDeHoy() : lunes && domingo ? rangoSemanaTexto(lunes, domingo) : "";
+
   // Esqueletos con la forma real de las tarjetas de la lista — nunca un
   // spinner de pantalla completa. El ScreenHeader se muestra igual
   // (misma fecha, mismos chips) para que la pantalla no "salte" al
@@ -141,7 +217,7 @@ export function HoyScreen({ navigation }: NativeStackScreenProps<HoyStackParamLi
   if (items === null && !error) {
     return (
       <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
-        <ScreenHeader antetitulo={fechaDeHoy()} titulo="Pizarra Digital" filtros={filtros} />
+        <ScreenHeader antetitulo={antetitulo} titulo="Pizarra Digital" filtros={filtros} filtrosSecundarios={filtrosSecundarios} />
         <View style={{ padding: tokens.space["4"], gap: tokens.space["3"] }}>
           <LoadingState>
             <Skeleton alto={72} radio={32} />
@@ -156,7 +232,7 @@ export function HoyScreen({ navigation }: NativeStackScreenProps<HoyStackParamLi
   if (error && !items) {
     return (
       <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
-        <ScreenHeader antetitulo={fechaDeHoy()} titulo="Pizarra Digital" filtros={filtros} />
+        <ScreenHeader antetitulo={antetitulo} titulo="Pizarra Digital" filtros={filtros} filtrosSecundarios={filtrosSecundarios} />
         <ErrorState mensaje={error} onReintentar={cargar} />
         <AsistenteButton visible={veAsistente} onPress={() => navigation.navigate("Asistente")} />
       </View>
@@ -165,72 +241,127 @@ export function HoyScreen({ navigation }: NativeStackScreenProps<HoyStackParamLi
 
   return (
     <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
-      <ScreenHeader antetitulo={fechaDeHoy()} titulo="Pizarra Digital" filtros={filtros} />
+      <ScreenHeader antetitulo={antetitulo} titulo="Pizarra Digital" filtros={filtros} filtrosSecundarios={filtrosSecundarios} />
       <OfflineBanner guardadoEn={guardadoEn} />
-      <FlatList
-        data={items ?? []}
-        keyExtractor={(item) => `${item.tipo}:${item.id}`}
-        contentContainerStyle={{
-          padding: tokens.space["4"],
-          paddingTop: tokens.space["2"],
-          paddingBottom: ESPACIO_ASISTENTE_FLOTANTE,
-          gap: tokens.space["3"],
-          flexGrow: 1,
-        }}
-        refreshControl={<RefreshControl refreshing={refrescando} onRefresh={onRefresh} tintColor={marca.base} />}
-        ListEmptyComponent={
-          <EmptyState
-            icono={<Sun size={32} strokeWidth={2.75} color={tokens.color.accent2Ramp["800"]} />}
-            titulo="Nada para hoy"
-            mensaje={equipo ? "El equipo no tiene nada agendado hoy." : "No tienes órdenes de servicio, citas ni viajes hoy."}
-          />
-        }
-        renderItem={({ item }) => {
-          const Icono = ICONO[item.tipo];
-          const color = COLOR_TIPO[item.tipo];
-          return (
-            <Card onPress={() => abrir(item)}>
-              <View style={{ flexDirection: "row", alignItems: "flex-start", gap: tokens.space["3"] }}>
-                <View style={{ width: 44, alignItems: "center", gap: 2 }}>
-                  <Texto tamano={tokens.size.caption} color={tokens.color.text} peso="semibold">
-                    {item.hora ?? "—"}
+      {modo === "dia" ? (
+        <FlatList
+          data={items ?? []}
+          keyExtractor={(item) => `${item.tipo}:${item.id}`}
+          contentContainerStyle={{
+            padding: tokens.space["4"],
+            paddingTop: tokens.space["2"],
+            paddingBottom: ESPACIO_ASISTENTE_FLOTANTE,
+            gap: tokens.space["3"],
+            flexGrow: 1,
+          }}
+          refreshControl={<RefreshControl refreshing={refrescando} onRefresh={onRefresh} tintColor={marca.base} />}
+          ListEmptyComponent={
+            <EmptyState
+              icono={<Sun size={32} strokeWidth={2.75} color={tokens.color.accent2Ramp["800"]} />}
+              titulo="Nada para hoy"
+              mensaje={equipo ? "El equipo no tiene nada agendado hoy." : "No tienes órdenes de servicio, citas ni viajes hoy."}
+            />
+          }
+          renderItem={({ item }) => <FilaItem item={item} onPress={() => abrir(item)} />}
+        />
+      ) : (
+        <ScrollView
+          contentContainerStyle={{ padding: tokens.space["4"], paddingTop: tokens.space["2"], paddingBottom: ESPACIO_ASISTENTE_FLOTANTE, gap: tokens.space["4"] }}
+          refreshControl={<RefreshControl refreshing={refrescando} onRefresh={onRefresh} tintColor={marca.base} />}
+        >
+          {(items?.length ?? 0) === 0 ? (
+            <EmptyState
+              icono={<CalendarRange size={32} strokeWidth={2.75} color={tokens.color.accent2Ramp["800"]} />}
+              titulo="Nada esta semana"
+              mensaje={equipo ? "El equipo no tiene nada agendado esta semana." : "No tienes nada agendado esta semana."}
+            />
+          ) : (
+            <>
+              {atrasados.length > 0 ? (
+                <View style={{ gap: tokens.space["2"] }}>
+                  <Texto tamano={tokens.size.h5} peso="semibold" color={tokens.color.accent}>
+                    Atrasado
                   </Texto>
-                  <Icono size={16} strokeWidth={2.75} color={color.texto} />
+                  {atrasados.map((it) => (
+                    <FilaItem key={`${it.tipo}:${it.id}`} item={it} onPress={() => abrir(it)} />
+                  ))}
                 </View>
-                <View style={{ flex: 1, gap: 2 }}>
-                  <Texto tamano={tokens.size.body} color={tokens.color.text} peso="semibold">
-                    {item.titulo}
-                  </Texto>
-                  {item.folio ? (
-                    <View
-                      style={{
-                        alignSelf: "flex-start",
-                        backgroundColor: color.fondo,
-                        borderRadius: 5,
-                        paddingHorizontal: 6,
-                        paddingVertical: 1,
-                      }}
-                    >
-                      <Texto tamano={tokens.size.micro} color={color.texto} peso="semibold">
-                        {item.folio}
-                      </Texto>
-                    </View>
-                  ) : null}
-                  {item.subtitulo ? (
-                    <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} numberOfLines={1}>
-                      {item.subtitulo}
+              ) : null}
+
+              {diasSemana.map((d) => {
+                const k = claveFecha(d);
+                const delDia = porDia.get(k) ?? [];
+                if (delDia.length === 0) return null;
+                return (
+                  <View key={k} style={{ gap: tokens.space["2"] }}>
+                    <Texto tamano={tokens.size.h5} peso="semibold" color={tokens.color.text} style={{ textTransform: "capitalize" }}>
+                      {k === hoyKey ? "Hoy" : `${DIAS_LARGO[d.getDay()]} ${d.getDate()}`}
                     </Texto>
-                  ) : null}
+                    {delDia.map((it) => (
+                      <FilaItem key={`${it.tipo}:${it.id}`} item={it} onPress={() => abrir(it)} />
+                    ))}
+                  </View>
+                );
+              })}
+
+              {sinFecha.length > 0 ? (
+                <View style={{ gap: tokens.space["2"] }}>
+                  <Texto tamano={tokens.size.h5} peso="semibold" color={`${tokens.color.text}99`}>
+                    Sin fecha
+                  </Texto>
+                  {sinFecha.map((it) => (
+                    <FilaItem key={`${it.tipo}:${it.id}`} item={it} onPress={() => abrir(it)} />
+                  ))}
                 </View>
-                {item.estado ? (
-                  <StatusBadge estado={String(item.estado)} etiqueta={ETIQUETA_ESTADO[String(item.estado)] ?? String(item.estado)} />
-                ) : null}
-              </View>
-            </Card>
-          );
-        }}
-      />
+              ) : null}
+            </>
+          )}
+        </ScrollView>
+      )}
       <AsistenteButton visible={veAsistente} onPress={() => navigation.navigate("Asistente")} />
     </View>
+  );
+}
+
+function FilaItem({ item, onPress }: { item: ItemHoy; onPress: () => void }) {
+  const Icono = ICONO[item.tipo];
+  const color = COLOR_TIPO[item.tipo];
+  return (
+    <Card onPress={onPress}>
+      <View style={{ flexDirection: "row", alignItems: "flex-start", gap: tokens.space["3"] }}>
+        <View style={{ width: 44, alignItems: "center", gap: 2 }}>
+          <Texto tamano={tokens.size.caption} color={tokens.color.text} peso="semibold">
+            {item.hora ?? "—"}
+          </Texto>
+          <Icono size={16} strokeWidth={2.75} color={color.texto} />
+        </View>
+        <View style={{ flex: 1, gap: 2 }}>
+          <Texto tamano={tokens.size.body} color={tokens.color.text} peso="semibold">
+            {item.titulo}
+          </Texto>
+          {item.folio ? (
+            <View
+              style={{
+                alignSelf: "flex-start",
+                backgroundColor: color.fondo,
+                borderRadius: 5,
+                paddingHorizontal: 6,
+                paddingVertical: 1,
+              }}
+            >
+              <Texto tamano={tokens.size.micro} color={color.texto} peso="semibold">
+                {item.folio}
+              </Texto>
+            </View>
+          ) : null}
+          {item.subtitulo ? (
+            <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} numberOfLines={1}>
+              {item.subtitulo}
+            </Texto>
+          ) : null}
+        </View>
+        {item.estado ? <StatusBadge estado={String(item.estado)} etiqueta={ETIQUETA_ESTADO[String(item.estado)] ?? String(item.estado)} /> : null}
+      </View>
+    </Card>
   );
 }

@@ -8,7 +8,7 @@ import { useMarca } from "@bitacora/ui/native";
 import { useAuth } from "../../features/auth/AuthContext";
 import { useRed } from "../../services/sync/NetworkProvider";
 import { preferencias } from "../../lib/preferencias";
-import { cargarHoy } from "../../services/hoy";
+import { cargarHoy, hoyISO } from "../../services/hoy";
 import type { TabKey } from "./types";
 import { HoyStack } from "./HoyStack";
 import { AgendaStack } from "./AgendaStack";
@@ -58,7 +58,9 @@ export function AppTabs() {
   const esGestion = auth.fase === "listo" && auth.usuario.rol !== "colaborador";
   useEffect(() => {
     // "Descargar el día al abrir": precarga el cache de Hoy al entrar.
-    if (preferencias().descargarDiaAlAbrir) void cargarHoy(false, true).catch(() => {});
+    // Solo el día de hoy — precargar también la semana no se pidió y
+    // multiplicaría los requests de esta precarga en segundo plano.
+    if (preferencias().descargarDiaAlAbrir) void cargarHoy(false, true, false, hoyISO(), hoyISO()).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [esGestion]);
 

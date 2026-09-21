@@ -60,3 +60,28 @@ export function fueraDeAnticipacion(fecha: string, hora: string, anticipacionHor
   const limite = new Date(ahora.getTime() + anticipacionHoras * 60 * 60 * 1000);
   return momento < limite;
 }
+
+// Helpers de rango de semana (21-sep-2026, Pizarra: vista Día/Semana) —
+// mismo cálculo que ya tenía AgendaScreen.tsx de forma local (lunesDe/
+// sumarDias/clave); se agregan acá para no triplicarlos al sumar un
+// segundo consumidor. AgendaScreen sigue con su propia copia (no se
+// tocó, no hacía falta para este pedido).
+
+/** Date → "2026-09-05" en hora LOCAL (no toISOString, que corre en UTC). */
+export function claveFecha(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/** El lunes de la semana que contiene `d` (semana lunes-domingo). */
+export function lunesDe(d: Date): Date {
+  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  x.setDate(x.getDate() - ((x.getDay() + 6) % 7));
+  return x;
+}
+
+/** `d` + `n` días (n puede ser negativo). */
+export function sumarDias(d: Date, n: number): Date {
+  const x = new Date(d);
+  x.setDate(x.getDate() + n);
+  return x;
+}

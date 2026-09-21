@@ -1042,6 +1042,22 @@
       ],
       "status": "done",
       "resolution": "Implementado. Pendiente: la usuaria ejecuta \"Restablecer contraseña\" para Sergio Farias desde /superadmin (Hidroservi > Equipo) y le pasa la contraseña temporal por su propio canal — no puedo hacerlo yo mismo (requiere sesión Super-Admin separada, y no debo ingresar contraseñas)."
+    },
+    {
+      "id": 67,
+      "name": "pizarra_vista_dia_semana",
+      "title": "Pizarra (mobile): toggle Día/Semana para ver las actividades del día o de la semana",
+      "description": "Pedido: \"en Pizarra quiero que se puedan ver las actividades del dia y de la semana\". Antes Pizarra (HoyScreen/services/hoy.ts) tenía el día fijo hardcodeado adentro (hoyISO()) — no había forma de ver más que hoy. Se generaliza a un rango [desde, hasta] (mismo shape que ya usaba listarTareasRango para citas) y se agrega un segundo toggle Día/Semana en el header, con vista Semana agrupada por día (mismo criterio visual que la vista Semana de Agenda).",
+      "acceptance": [
+        "ScreenHeader (packages/ui/src/native) gana un segundo prop opcional filtrosSecundarios — segunda fila de chips, mismo look que filtros; Pizarra lo usa para Día/Semana sin pisar el Míos/Equipo que ya usaba la fila filtros",
+        "services/hoy.ts: cargarHoy(equipo, incluirViajes, incluirLevantamientos, desde, hasta) — ItemHoy gana el campo fecha (string|null) para poder agrupar por día en la vista Semana",
+        "HoyScreen.tsx: vista Día sin cambios de comportamiento (flat list de hoy); vista Semana agrupa por día (lunes a domingo de la semana actual) + sección \"Atrasado\" (levantamientos con fecha_visita antes del lunes, no desaparecen solos) + sección \"Sin fecha\" (levantamientos sin fecha_visita, siempre visibles)",
+        "mobile/src/lib/horario.ts gana claveFecha/lunesDe/sumarDias (mismo cálculo que ya tenía AgendaScreen.tsx local, no se tocó ese archivo)",
+        "AppTabs.tsx: la precarga de caché \"descargar el día al abrir\" se actualiza al nuevo signature, sigue acotada solo a hoy (no precarga la semana)",
+        "tsc de los 6 workspaces limpio, verificar.sh completo en verde"
+      ],
+      "status": "done",
+      "resolution": "Implementado y verificado (tsc + verificar.sh). Sin migración — cambio de packages/ui + mobile. Pendiente: no incluido en ningún APK compilado todavía (el 1.10.9 ya entregado es anterior); falta build nuevo si se quiere probar en un dispositivo real, y falta verificación visual manual (sin emulador en esta sesión)."
     }
   ]
 }

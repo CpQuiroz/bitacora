@@ -29,9 +29,45 @@ export type PropsScreenHeader = {
   accion?: { icono: ReactNode; onPress: () => void; etiquetaAccesible?: string };
   /** Fila de chips pill debajo del título — selección simple (radio), no multi-selección. */
   filtros?: { opciones: OpcionFiltroHeader[]; valor: string; onCambio: (valor: string) => void };
+  /**
+   * Segunda fila de chips, debajo de `filtros` — mismo look, eje
+   * independiente (ej. Pizarra: `filtros` = Míos/Equipo, esto = Día/
+   * Semana). Opcional porque la gran mayoría de pantallas solo necesita
+   * un eje; agregado 21-sep-2026 en vez de que cada pantalla reinvente
+   * su propia fila de chips cuando necesita un segundo filtro.
+   */
+  filtrosSecundarios?: { opciones: OpcionFiltroHeader[]; valor: string; onCambio: (valor: string) => void };
 };
 
-export function ScreenHeader({ antetitulo, titulo, accion, filtros }: PropsScreenHeader) {
+function FilaChips({ marca, filtros }: { marca: ReturnType<typeof useMarca>; filtros: { opciones: OpcionFiltroHeader[]; valor: string; onCambio: (valor: string) => void } }) {
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: tokens.space["1"], paddingTop: tokens.space["1"], paddingBottom: 2 }}>
+      {filtros.opciones.map((o) => {
+        const activo = o.valor === filtros.valor;
+        return (
+          <Pressable
+            key={o.valor}
+            onPress={() => filtros.onCambio(o.valor)}
+            style={{
+              paddingHorizontal: tokens.space["2"],
+              paddingVertical: 6,
+              borderRadius: tokens.radius.pill,
+              backgroundColor: activo ? marca.suave : "transparent",
+              borderWidth: 1,
+              borderColor: activo ? marca.base : tokens.color.divider,
+            }}
+          >
+            <Texto tamano={tokens.size.small} color={activo ? marca.fuerte : tokens.color.text} peso={activo ? "semibold" : "medium"}>
+              {o.etiqueta}
+            </Texto>
+          </Pressable>
+        );
+      })}
+    </ScrollView>
+  );
+}
+
+export function ScreenHeader({ antetitulo, titulo, accion, filtros, filtrosSecundarios }: PropsScreenHeader) {
   const marca = useMarca();
   // Expo SDK 57 (RN 0.81) fuerza edge-to-edge en Android — el status bar
   // ya no reserva espacio solo: sin este padding, el reloj/íconos del
@@ -83,35 +119,8 @@ export function ScreenHeader({ antetitulo, titulo, accion, filtros }: PropsScree
         ) : null}
       </View>
 
-      {filtros ? (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ gap: tokens.space["1"], paddingTop: tokens.space["1"], paddingBottom: 2 }}
-        >
-          {filtros.opciones.map((o) => {
-            const activo = o.valor === filtros.valor;
-            return (
-              <Pressable
-                key={o.valor}
-                onPress={() => filtros.onCambio(o.valor)}
-                style={{
-                  paddingHorizontal: tokens.space["2"],
-                  paddingVertical: 6,
-                  borderRadius: tokens.radius.pill,
-                  backgroundColor: activo ? marca.suave : "transparent",
-                  borderWidth: 1,
-                  borderColor: activo ? marca.base : tokens.color.divider,
-                }}
-              >
-                <Texto tamano={tokens.size.small} color={activo ? marca.fuerte : tokens.color.text} peso={activo ? "semibold" : "medium"}>
-                  {o.etiqueta}
-                </Texto>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-      ) : null}
+      {filtros ? <FilaChips marca={marca} filtros={filtros} /> : null}
+      {filtrosSecundarios ? <FilaChips marca={marca} filtros={filtrosSecundarios} /> : null}
     </View>
   );
 }
