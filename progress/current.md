@@ -5232,8 +5232,10 @@ compra que genero cliente".
 `tsc` (shared+backend+web) + `eslint` limpios, `verificar.sh` completo
 en verde (119 migraciones). Tarea 76 `done`.
 
-**Pendiente**: no se verificó visualmente en navegador en esta sesión.
-No se tocó mobile — colaborador/técnico no crea OS ni tiene el módulo
-de gestión, el campo es de admin/supervisor. Falta que la usuaria
-aplique la migración 119 y confirme push.
+No se verificó visualmente en navegador en esta sesión. No se tocó
+mobile — colaborador/técnico no crea OS ni tiene el módulo de gestión,
+el campo es de admin/supervisor.
+
+**Actualización**: usuaria confirmó "Ya la corrí" — pusheado a main
+(`3ef6c39`).
 
