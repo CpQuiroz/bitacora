@@ -5110,3 +5110,6 @@ fallarían (tabla/función inexistentes en prod). Primero la migración,
 recién después el push. Tarea 73 `blocked` hasta que confirme que la
 corrió.
 
+**Actualización**: usuaria confirmó "Ya la corrí" — pusheado a main
+(`e332e3d`). Tarea 73 `done`.
+

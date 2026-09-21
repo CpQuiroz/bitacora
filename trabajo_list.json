@@ -1141,8 +1141,8 @@
         "4 gráficos nuevos en /superadmin/salud, reutilizando GraficoEvolucionSimple/GraficoEvolucionDoble (recharts, ya usados en /superadmin/resumen) — nada de componentes de gráfico nuevos",
         "tsc (shared+backend+web) + eslint limpios, verificar.sh completo en verde"
       ],
-      "status": "blocked",
-      "resolution": "Implementado y verificado por tipos/lint. BLOQUEADO en aplicar la migración 118 — no se ejecutó ningún comando de base de datos en esta sesión porque el CLI de Supabase estaba enlazado a PROD (yjbskbskyadxjooxngjv) y correr algo ahí sin que lo pida la usuaria viola la regla de \"prod solo lectura\". Falta que la usuaria corra: npx supabase db query --linked --project-ref yjbskbskyadxjooxngjv -f supabase/migrations/118_salud_tendencias_mensuales.sql, después npx supabase migration repair --status applied --linked 118. Falta push del código (a pedido de la usuaria, no pushear hasta que avise) — y push antes de la migración dejaría el endpoint devolviendo 500 en tendencia_mensual/storage_historico (tabla/función no existen todavía en prod), así que el orden importa: primero migración, después push."
+      "status": "done",
+      "resolution": "Implementado y verificado. Migración 118 aplicada por la usuaria y confirmada (\"Ya la corrí\"). Código pusheado a main."
     }
   ]
 }
