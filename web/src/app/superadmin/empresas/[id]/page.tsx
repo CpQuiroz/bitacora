@@ -6,7 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import type { EstadoEmpresa, Plan, Rubro, Suscripcion, SuscripcionCobro } from "@bitacora/shared";
 import { SuperAdminShell } from "@/components/SuperAdminShell";
 import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText, Textarea } from "@/components/ui";
-import { IconChevronLeft, IconShield } from "@/components/icons";
+import { IconChevronDown, IconChevronLeft, IconShield } from "@/components/icons";
 import { obtenerTokenSuperAdmin, superadminFetch } from "@/lib/superadminApi";
 import { guardarImpersonacion } from "@/lib/impersonacion";
 import { ETIQUETA_MODULO } from "@/lib/etiquetasModulo";
@@ -60,6 +60,21 @@ function formatearBytes(bytes: number): string {
   return `${(bytes / 1024 ** 3).toFixed(2)} GB`;
 }
 
+// Cabecera clicable de una tarjeta retráctil (21-sep-2026, pedido: que
+// "Perfiles y permisos" y "Feature flags" arranquen colapsadas y se
+// desplieguen al tocarlas — antes ambas mostraban todo su contenido
+// siempre, aunque el Super-Admin casi nunca las toca). Solo pinta el
+// título + chevron; quien la usa decide qué envolver debajo con
+// `abierto`.
+function CabeceraColapsable({ titulo, abierto, onToggle }: { titulo: string; abierto: boolean; onToggle: () => void }) {
+  return (
+    <button type="button" onClick={onToggle} className="flex w-full items-center justify-between gap-2 text-left">
+      <h2 className="text-sm font-semibold text-foreground">{titulo}</h2>
+      <IconChevronDown className={`h-4 w-4 shrink-0 text-muted transition-transform ${abierto ? "rotate-180" : ""}`} />
+    </button>
+  );
+}
+
 export default function SuperAdminSaludEmpresaPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -103,6 +118,9 @@ export default function SuperAdminSaludEmpresaPage() {
   const [guardandoPerfil, setGuardandoPerfil] = useState<string | null>(null);
   const [errorPerfiles, setErrorPerfiles] = useState<string | null>(null);
   const [okPerfiles, setOkPerfiles] = useState<string | null>(null);
+  // Retráctiles (21-sep-2026) — arrancan cerradas, se abren al tocar el título.
+  const [perfilesAbierto, setPerfilesAbierto] = useState(false);
+  const [flagsAbierto, setFlagsAbierto] = useState(false);
   const [suscripcion, setSuscripcion] = useState<{ prueba_termina_en: string | null; suscripcion: Suscripcion | null; cobros: SuscripcionCobro[] } | null>(
     null
   );
@@ -946,8 +964,10 @@ export default function SuperAdminSaludEmpresaPage() {
           </Card>
 
           <Card className="mt-4">
-            <h2 className="mb-2 text-sm font-semibold text-foreground">Perfiles y permisos (por rol)</h2>
-            <p className="mb-3 text-sm text-muted">
+            <CabeceraColapsable titulo="Perfiles y permisos (por rol)" abierto={perfilesAbierto} onToggle={() => setPerfilesAbierto((v) => !v)} />
+            {perfilesAbierto && (
+              <>
+            <p className="mb-3 mt-2 text-sm text-muted">
               Qué módulos ve cada rol de esta empresa en la app y la web. Es lo mismo que el Admin de la empresa ajusta en
               Configuración → Perfiles, pero desde acá. El rol <span className="font-medium text-foreground">Admin</span> siempre
               tiene acceso total; <span className="font-medium text-foreground">Configuración</span> y{" "}
@@ -1013,11 +1033,15 @@ export default function SuperAdminSaludEmpresaPage() {
                 <ErrorText>{errorPerfiles}</ErrorText>
               </div>
             )}
+              </>
+            )}
           </Card>
 
           <Card className="mt-4">
-            <h2 className="mb-2 text-sm font-semibold text-foreground">Feature flags (beta)</h2>
-            <p className="mb-3 text-sm text-muted">
+            <CabeceraColapsable titulo="Feature flags (beta)" abierto={flagsAbierto} onToggle={() => setFlagsAbierto((v) => !v)} />
+            {flagsAbierto && (
+              <>
+            <p className="mb-3 mt-2 text-sm text-muted">
               Prende una funcionalidad en prueba para esta empresa antes de que esté disponible en el plan. Es un eje aparte de los
               módulos contratados. El nombre es texto libre (minúsculas, números, <code>-</code> y <code>_</code>); el frontend lo
               consulta desde <code>GET /api/me</code>.
@@ -1060,6 +1084,8 @@ export default function SuperAdminSaludEmpresaPage() {
               <div className="mt-3">
                 <ErrorText>{errorFlag}</ErrorText>
               </div>
+            )}
+              </>
             )}
           </Card>
 

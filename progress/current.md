@@ -4872,3 +4872,41 @@ correr la app y mirarla — solo tsc + revisión de código. No está en
 ningún APK compilado (el 1.10.9 entregado es anterior). Falta que la
 usuaria lo pruebe en un dispositivo/simulador antes de dar por buena
 la UI, y decidir si vale la pena un build nuevo para eso.
+
+## 2026-09-21: dudas sobre módulos de Super-Admin — sin cambios de código (aclaración)
+
+"no se puede activar y desactivar todos los modulos, por ejemplo no
+aparecen la opcion dinero, cotizacion, cobro, gasto" — se investigó y
+NO es un bug: Cotizaciones/Cobros/Gastos nunca existieron como módulos
+separados, viven los 3 bajo un único módulo "Financiero" (backend:
+`requiereModulo("financiero")` protege las 3 rutas; web: los 3 ítems
+del grupo "Dinero" del sidebar apuntan al mismo módulo). Se preguntó
+si separarlos en 3 módulos independientes (cambio grande: shared +
+backend + sidebar + mobile + matriz de roles) o dejarlo como está —
+eligió dejarlo como está. Sin cambios de código.
+
+## 2026-09-21: Super-Admin — tarjetas retráctiles (tarea 68)
+
+Pedido: "quiero que perfiles y permisos, sean retractil y se vean
+cuando los presione" + "Feature flags (beta) no lo uso... podrias
+ocultarlo o quitarlo?". Se preguntó por Feature flags (ocultar vs.
+quitar del todo) — eligió ocultar/colapsar, mismo tratamiento que
+Perfiles.
+
+**Cambio**: nuevo componente local `CabeceraColapsable` (título +
+chevron que rota) en `web/src/app/superadmin/empresas/[id]/page.tsx`.
+Las tarjetas "Perfiles y permisos (por rol)" y "Feature flags (beta)"
+arrancan colapsadas y se despliegan al tocar el título. El resto de
+las tarjetas de la página (Módulos contratados, Correos y dominios
+autorizados, etc.) no se tocó — solo estas dos, que eran justo las que
+menos se usan. La carga de datos (`cargarPerfiles`/`cargarFlags`) sigue
+disparándose igual que antes al entrar a la página, sin importar si
+la tarjeta está abierta — solo cambia qué se muestra.
+
+`tsc` + `eslint` de web limpios, `verificar.sh` completo en verde. Sin
+migración — 100% web/superadmin. Tarea 68 `done`.
+
+**Pendiente**: no se verificó visualmente en un navegador en esta
+sesión (no había dev server ni backend local levantados) — solo
+tsc/eslint + revisión de la estructura JSX. Falta push (a pedido de la
+usuaria: no pushear hasta que avise).
