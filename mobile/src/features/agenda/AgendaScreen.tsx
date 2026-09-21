@@ -358,7 +358,7 @@ function FilaLevantamiento({ item, onPress }: { item: LevantamientoResumen; onPr
       }}
     >
       <Texto tamano={tokens.size.small} peso="semibold" color={`${tokens.color.text}66`} style={{ width: 46 }}>
-        --:--
+        {item.hora_visita ? item.hora_visita.slice(0, 5) : "--:--"}
       </Texto>
       <View style={{ flex: 1 }}>
         <Texto tamano={tokens.size.h5} peso="semibold" color={tokens.color.text} numberOfLines={1}>

@@ -69,6 +69,13 @@ export default function TiposOsPage() {
     ...sugerenciasRubro.map((s) => ({ nombre: s.valor, color: s.color ?? "#4338ca" })),
     ...SUGERIDOS.filter((s) => !sugerenciasRubro.some((r) => r.valor === s.nombre)),
   ];
+  // Sugerencias pendientes: solo las que todavía no corresponden a un tipo
+  // ya creado. Antes se ocultaba todo el bloque apenas existía un tipo
+  // (tipos.length === 0) — con eso, crear el primer sugerido escondía los
+  // demás. Ahora se muestra mientras queden sugerencias sin usar.
+  const sugeridosPendientes = sugeridosFinal.filter(
+    (s) => !(tipos ?? []).some((t) => t.nombre.trim().toLowerCase() === s.nombre.trim().toLowerCase())
+  );
 
   const filtrados = (tipos ?? []).filter((t) => {
     if (!mostrarInactivos && !t.activo) return false;
@@ -139,8 +146,14 @@ export default function TiposOsPage() {
   }
 
   async function onEliminar(id: string) {
+    setError(null);
     const res = await apiFetch(`/api/tipos-os/${id}`, { method: "DELETE" });
-    if (res.ok) cargar();
+    if (res.ok) {
+      cargar();
+      return;
+    }
+    const body = await res.json().catch(() => ({}));
+    setError(body.error ?? "No se pudo eliminar");
   }
 
   return (
@@ -155,11 +168,11 @@ export default function TiposOsPage() {
         </Button>
       </div>
 
-      {tipos !== null && tipos.length === 0 && (
+      {tipos !== null && sugeridosPendientes.length > 0 && (
         <Card>
           <p className="mb-ds-3 font-ds-body text-ds-small text-ds-text/70">Tipos sugeridos — clic para crear con un color predefinido:</p>
           <div className="flex flex-wrap gap-ds-2">
-            {sugeridosFinal.map((s) => (
+            {sugeridosPendientes.map((s) => (
               <button
                 key={s.nombre}
                 type="button"

@@ -905,8 +905,26 @@
         "Hallazgo de paso, no corregido (fuera de alcance, no se pidió): el encabezado de Cobranza hoy no se usa en ningún correo/PDF real — los avisos de cobro usan Configuración > Notificaciones, un sistema aparte",
         "tsc de los 6 workspaces limpio, verificar.sh completo en verde, 0 literales de color nuevos"
       ],
-      "status": "in_progress",
-      "resolution": null
+      "status": "blocked",
+      "resolution": "Implementación completa y commiteada localmente; bloqueada esperando que la usuaria aplique la migración 113 en prod antes de pushear."
+    },
+    {
+      "id": 58,
+      "name": "agenda_nuevo_menu_hora_visita_tipos_documento_eliminar",
+      "title": "Agenda: menú +Nuevo (Cita/OS/Levantamiento) · Levantamiento: hora de visita · Tipos de documento: eliminar + sugerencias",
+      "description": "Pedido de 4 partes (21-sep-2026), aprobado explícitamente solo para 1, 2 y 4 — la unificación Tipo de OS/Tipo de Trabajo (parte 3) queda excluida, requiere confirmación aparte. (1) Agenda web: el botón único 'Nueva Tarea' pasa a un menú '+ Nuevo' con Cita/Orden de servicio/Levantamiento — OS navega directo a /dashboard/ordenes/nueva (sin borrador, no hace falta volverA=agenda); Levantamiento navega a /dashboard/levantamientos?crear=1, que ahora abre el modal de crear solo con ese query param. (2) Levantamiento: hora_visita (migración 114, texto 'HH:MM' — mismo criterio que tareas.hora, no time) junto a fecha_visita, en Alta/Edición/Detalle (web) y en Pizarra + Agenda mobile (antes hardcodeaban hora: null / '--:--'). (4) Tipos de documento: agregado botón Eliminar (el backend ya tenía el DELETE con 23503→409 'desactivar', solo faltaba la UI, y el error ahora se muestra en vez de fallar en silencio); y en los 3 catálogos con sugerencias por rubro (Tipos de documento, Tipos de OS, Categorías de gasto) se corrigió el bug de que las sugerencias desaparecían apenas se creaba el primer tipo (gating cambiado de 'lista vacía' a 'quedan sugerencias sin usar').",
+      "acceptance": [
+        "Agenda web: menú '+ Nuevo' con Cita/OS/Levantamiento, gateado por módulo (ordenes_servicio / levantamientos) además de puedeGestionarAgenda",
+        "Migración 114: levantamientos.hora_visita text, validada read-only contra prod (pendiente que la usuaria la aplique)",
+        "Backend levantamientos.ts: HORA_REGEX valida hora_visita en POST y PATCH",
+        "Web levantamientos/page.tsx: hora_visita en formulario de alta, edición y detalle (junto a fecha_visita) y en la columna de la tabla",
+        "Mobile: hoy.ts (Pizarra) y AgendaScreen.tsx (FilaLevantamiento) muestran hora_visita en vez de hardcodear null/--:--",
+        "tipos-documento/page.tsx: botón Eliminar wireado al DELETE existente, error 409 mostrado (no silencioso)",
+        "tipos-documento/page.tsx, tipos-os/page.tsx, categorias-gastos/page.tsx: sugerencias visibles mientras queden pendientes, no solo cuando la lista está vacía; tipos-os además deja de tragarse el error de eliminar",
+        "tsc de los workspaces tocados limpio, verificar.sh completo en verde"
+      ],
+      "status": "done",
+      "resolution": "Implementado items 1, 2 y 4 (item 3 excluido, requiere confirmación aparte). tsc x6 limpio, verificar.sh completo en verde. Migración 114 validada read-only, pendiente que la usuaria la aplique en prod antes de pushear."
     }
   ]
 }

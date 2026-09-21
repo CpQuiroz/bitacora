@@ -38,6 +38,9 @@ import { siguienteFolioLevantamiento } from "../folios";
 
 export const levantamientosRouter = Router();
 
+// Mismo criterio que tareas.ts (Agenda) para hora_visita (migración 114).
+const HORA_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 },
@@ -181,9 +184,13 @@ levantamientosRouter.post(
       res.status(403).json({ error: "Solo un Admin puede crear un levantamiento" });
       return;
     }
-    const { cliente_id, tecnico_id, descripcion_requerimiento, fecha_visita } = req.body ?? {};
+    const { cliente_id, tecnico_id, descripcion_requerimiento, fecha_visita, hora_visita } = req.body ?? {};
     if (typeof cliente_id !== "string" || !cliente_id) {
       res.status(400).json({ error: "Falta cliente_id" });
+      return;
+    }
+    if (hora_visita !== undefined && hora_visita !== null && hora_visita !== "" && !HORA_REGEX.test(hora_visita)) {
+      res.status(400).json({ error: "hora_visita inválida (usa HH:MM)" });
       return;
     }
     const { data: cliente } = await supabase.from("clientes").select("id").eq("empresa_id", req.empresaId!).eq("id", cliente_id).maybeSingle();
@@ -214,10 +221,11 @@ levantamientosRouter.post(
         creado_por: req.userId!,
         estado: tecnicoValido ? "asignado" : "creado",
         descripcion_requerimiento: typeof descripcion_requerimiento === "string" ? descripcion_requerimiento.trim() || null : null,
-        // Fecha simple, sin hora (migración 111) — para eso ya está
-        // Agenda. Postgres rechaza un formato inválido (mismo criterio
-        // que trabajos.fecha, sin regex acá).
+        // Postgres rechaza un formato de fecha inválido (mismo criterio
+        // que trabajos.fecha, sin regex acá) — hora_visita sí se valida
+        // arriba (HORA_REGEX, migración 114).
         fecha_visita: typeof fecha_visita === "string" && fecha_visita ? fecha_visita : null,
+        hora_visita: typeof hora_visita === "string" && hora_visita ? hora_visita : null,
         folio,
       })
       .select()
@@ -264,8 +272,13 @@ levantamientosRouter.patch(
       return;
     }
 
-    const { cliente_id, tecnico_id, descripcion_requerimiento, fecha_visita } = req.body ?? {};
+    const { cliente_id, tecnico_id, descripcion_requerimiento, fecha_visita, hora_visita } = req.body ?? {};
     const cambios: Partial<Levantamiento> = { actualizado_en: new Date().toISOString() };
+
+    if (hora_visita !== undefined && hora_visita !== null && hora_visita !== "" && !HORA_REGEX.test(hora_visita)) {
+      res.status(400).json({ error: "hora_visita inválida (usa HH:MM)" });
+      return;
+    }
 
     if (cliente_id !== undefined) {
       if (typeof cliente_id !== "string" || !cliente_id) {
@@ -304,6 +317,10 @@ levantamientosRouter.patch(
 
     if (fecha_visita !== undefined) {
       cambios.fecha_visita = typeof fecha_visita === "string" && fecha_visita ? fecha_visita : null;
+    }
+
+    if (hora_visita !== undefined) {
+      cambios.hora_visita = typeof hora_visita === "string" && hora_visita ? hora_visita : null;
     }
 
     const { error } = await supabase.from("levantamientos").update(cambios).eq("id", lev.id);

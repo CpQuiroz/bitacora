@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Camera, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import type { Cliente, DetalleLevantamiento, EstadoLevantamiento, LevantamientoResumen, Usuario } from "@bitacora/shared";
 import { FUNCIONES_LEVANTAMIENTOS, formatearFolio } from "@bitacora/shared";
@@ -57,8 +57,9 @@ const ETIQUETA_ESTADO: Record<EstadoLevantamiento, string> = {
 
 // Módulo opt-in (empresa_modulos) — Admin crea, técnico completa en
 // terreno (mobile), Admin cotiza fuera de Bitácora y aprueba/rechaza.
-export default function LevantamientosPage() {
+function LevantamientosContenido() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [usuario, setUsuario] = useState<UsuarioShell | null>(null);
   const [levantamientos, setLevantamientos] = useState<LevantamientoResumen[] | null>(null);
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -70,6 +71,7 @@ export default function LevantamientosPage() {
   const [tecnicoId, setTecnicoId] = useState("");
   const [descripcion, setDescripcion] = useState("");
   const [fechaVisita, setFechaVisita] = useState("");
+  const [horaVisita, setHoraVisita] = useState("");
   const [guardando, setGuardando] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -84,6 +86,7 @@ export default function LevantamientosPage() {
   const [editTecnicoId, setEditTecnicoId] = useState("");
   const [editDescripcion, setEditDescripcion] = useState("");
   const [editFechaVisita, setEditFechaVisita] = useState("");
+  const [editHoraVisita, setEditHoraVisita] = useState("");
   const [guardandoEdicion, setGuardandoEdicion] = useState(false);
 
   const fileRef = useRef<HTMLInputElement>(null);
@@ -135,6 +138,15 @@ export default function LevantamientosPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Venimos del menú "+ Nuevo" de Agenda (?crear=1): abre el form directo
+  // y limpia el query param para que un refresh no lo reabra.
+  useEffect(() => {
+    if (searchParams.get("crear") !== "1") return;
+    setFormAbierto(true);
+    router.replace("/dashboard/levantamientos");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
   async function crear() {
     if (!clienteId) return setFormError("Elige un cliente");
     setGuardando(true);
@@ -146,6 +158,7 @@ export default function LevantamientosPage() {
         tecnico_id: tecnicoId || undefined,
         descripcion_requerimiento: descripcion,
         fecha_visita: fechaVisita || undefined,
+        hora_visita: horaVisita || undefined,
       }),
     });
     setGuardando(false);
@@ -159,6 +172,7 @@ export default function LevantamientosPage() {
     setTecnicoId("");
     setDescripcion("");
     setFechaVisita("");
+    setHoraVisita("");
     await cargarLevantamientos();
   }
 
@@ -184,6 +198,7 @@ export default function LevantamientosPage() {
     setEditTecnicoId(detalle.tecnico?.id ?? "");
     setEditDescripcion(detalle.descripcion_requerimiento ?? "");
     setEditFechaVisita(detalle.fecha_visita ?? "");
+    setEditHoraVisita(detalle.hora_visita ?? "");
     setEditando(true);
   }
 
@@ -197,6 +212,7 @@ export default function LevantamientosPage() {
         tecnico_id: editTecnicoId || null,
         descripcion_requerimiento: editDescripcion,
         fecha_visita: editFechaVisita || null,
+        hora_visita: editHoraVisita || null,
       }),
     });
     setGuardandoEdicion(false);
@@ -329,7 +345,10 @@ export default function LevantamientosPage() {
               { encabezado: "Creado", celda: (l) => new Date(l.creado_en).toLocaleDateString("es-CL") },
               {
                 encabezado: "Fecha de visita",
-                celda: (l) => (l.fecha_visita ? new Date(`${l.fecha_visita}T00:00:00`).toLocaleDateString("es-CL") : "—"),
+                celda: (l) =>
+                  l.fecha_visita
+                    ? new Date(`${l.fecha_visita}T00:00:00`).toLocaleDateString("es-CL") + (l.hora_visita ? ` · ${l.hora_visita}` : "")
+                    : "—",
               },
               { encabezado: "Cliente", celda: (l) => l.cliente?.nombre ?? "—" },
               { encabezado: "Técnico", celda: (l) => l.tecnico?.nombre ?? "Sin asignar" },
@@ -356,12 +375,15 @@ export default function LevantamientosPage() {
             opcionVacia="Asignar después"
             placeholder="Técnico o chofer asignado"
           />
-          <DatePicker
-            etiqueta="Fecha de visita (opcional)"
-            ayuda="Cuándo debe ir el técnico a evaluar en terreno. Sin fecha, aparece como pendiente sin día fijo."
-            valor={fechaVisita ? fechaDesdeString(fechaVisita) : null}
-            onCambio={(f) => setFechaVisita(f ? fmtLocal(f) : "")}
-          />
+          <div className="grid grid-cols-2 gap-ds-3">
+            <DatePicker
+              etiqueta="Fecha de visita (opcional)"
+              ayuda="Cuándo debe ir el técnico a evaluar en terreno. Sin fecha, aparece como pendiente sin día fijo."
+              valor={fechaVisita ? fechaDesdeString(fechaVisita) : null}
+              onCambio={(f) => setFechaVisita(f ? fmtLocal(f) : "")}
+            />
+            <Input etiqueta="Hora (opcional)" tipo="hora" valor={horaVisita} onCambio={setHoraVisita} />
+          </div>
           <div className="flex flex-col gap-1">
             <label className="text-ds-small font-medium text-ds-text/80">Qué necesita evaluar el técnico</label>
             <textarea
@@ -403,11 +425,14 @@ export default function LevantamientosPage() {
               <div className="flex flex-col gap-ds-3 rounded-ds-md border border-ds-divider p-ds-3">
                 <ComboboxCliente value={editClienteId} onChange={setEditClienteId} clientes={clientes} onClienteCreado={(c) => setClientes((prev) => [...prev, c])} />
                 <ComboboxResponsable value={editTecnicoId} onChange={setEditTecnicoId} equipo={tecnicos} opcionVacia="Sin asignar" placeholder="Técnico o chofer asignado" />
-                <DatePicker
-                  etiqueta="Fecha de visita (opcional)"
-                  valor={editFechaVisita ? fechaDesdeString(editFechaVisita) : null}
-                  onCambio={(f) => setEditFechaVisita(f ? fmtLocal(f) : "")}
-                />
+                <div className="grid grid-cols-2 gap-ds-3">
+                  <DatePicker
+                    etiqueta="Fecha de visita (opcional)"
+                    valor={editFechaVisita ? fechaDesdeString(editFechaVisita) : null}
+                    onCambio={(f) => setEditFechaVisita(f ? fmtLocal(f) : "")}
+                  />
+                  <Input etiqueta="Hora (opcional)" tipo="hora" valor={editHoraVisita} onCambio={setEditHoraVisita} />
+                </div>
                 <textarea
                   className="min-h-24 rounded-ds-md border border-ds-divider bg-ds-surface p-ds-3 text-ds-body text-ds-text outline-none focus-visible:ring-2 focus-visible:ring-ds-accent"
                   value={editDescripcion}
@@ -437,7 +462,9 @@ export default function LevantamientosPage() {
                   <div>
                     <span className="text-ds-text/60">Fecha de visita</span>
                     <p className="text-ds-text">
-                      {detalle.fecha_visita ? fechaDesdeString(detalle.fecha_visita).toLocaleDateString("es-CL") : "Sin fecha"}
+                      {detalle.fecha_visita
+                        ? fechaDesdeString(detalle.fecha_visita).toLocaleDateString("es-CL") + (detalle.hora_visita ? ` · ${detalle.hora_visita}` : "")
+                        : "Sin fecha"}
                     </p>
                   </div>
                 </div>
@@ -558,5 +585,15 @@ export default function LevantamientosPage() {
         )}
       </Modal>
     </DashboardShell>
+  );
+}
+
+// useSearchParams() necesita un boundary de Suspense para el build de
+// producción (si no, Next aborta con "missing-suspense-with-csr-bailout").
+export default function LevantamientosPage() {
+  return (
+    <Suspense fallback={null}>
+      <LevantamientosContenido />
+    </Suspense>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type {
   Cliente,
@@ -14,7 +14,7 @@ import type {
   Usuario,
 } from "@bitacora/shared";
 import { puedeVerModulo, formatearFolio } from "@bitacora/shared";
-import { Calendar, ChevronLeft, ChevronRight, ClipboardCheck, Plus, Wrench } from "lucide-react";
+import { Calendar, ChevronDown, ChevronLeft, ChevronRight, ClipboardCheck, Plus, Search, Wrench } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
@@ -159,6 +159,9 @@ function AgendaContenido() {
   const [modulosDeshabilitados, setModulosDeshabilitados] = useState<Modulo[]>([]);
   const [modulosVisibles, setModulosVisibles] = useState<Modulo[] | null>(null);
   const [vista, setVista] = useState<"mes" | "semana" | "dia">("mes");
+  // Menú "+ Nuevo" (Cita / OS / Levantamiento) del encabezado.
+  const [nuevoMenuAbierto, setNuevoMenuAbierto] = useState(false);
+  const nuevoMenuRef = useRef<HTMLDivElement>(null);
   const [fechaActual, setFechaActual] = useState(() => new Date());
   const [ordenes, setOrdenes] = useState<OrdenListado[] | null>(null);
   const [tareas, setTareas] = useState<TareaListado[] | null>(null);
@@ -262,6 +265,14 @@ function AgendaContenido() {
   useEffect(() => {
     cargar();
   }, [cargar]);
+
+  useEffect(() => {
+    function onClickFuera(e: MouseEvent) {
+      if (nuevoMenuRef.current && !nuevoMenuRef.current.contains(e.target as Node)) setNuevoMenuAbierto(false);
+    }
+    document.addEventListener("mousedown", onClickFuera);
+    return () => document.removeEventListener("mousedown", onClickFuera);
+  }, []);
 
   // Parte 2: volvimos de crear una OS (?reabrirTarea=1). Reabre el form
   // rápido con el borrador guardado + la OS recién creada vinculada, y
@@ -482,6 +493,19 @@ function AgendaContenido() {
     router.push(`/dashboard/ordenes/nueva?${q.toString()}`);
   }
 
+  // Menú "+ Nuevo" del encabezado — a diferencia de onCrearOSDesdeTarea
+  // (que salva un borrador de tarea en curso), estas van directo: no hay
+  // nada que preservar, así que no llevan ?volverA=agenda.
+  function abrirNuevaOSDesdeMenu() {
+    setNuevoMenuAbierto(false);
+    router.push("/dashboard/ordenes/nueva");
+  }
+
+  function abrirNuevoLevantamientoDesdeMenu() {
+    setNuevoMenuAbierto(false);
+    router.push("/dashboard/levantamientos?crear=1");
+  }
+
   function abrirEdicionTarea(t: TareaListado) {
     setTareaRapidaFecha(null);
     setTrabajoVinculado(null);
@@ -661,6 +685,8 @@ function AgendaContenido() {
       : puedeVerModulo(usuario.rol, m) && !modulosDeshabilitados.includes(m);
   const puedeGestionarAgenda = moduloVisible("agenda");
   const puedeAgendaPro = moduloVisible("agenda_pro");
+  const puedeCrearOS = moduloVisible("ordenes_servicio");
+  const puedeCrearLevantamiento = moduloVisible("levantamientos");
   const hoy = fmtLocal(new Date());
 
   const primerDiaMes = new Date(fechaActual.getFullYear(), fechaActual.getMonth(), 1);
@@ -788,9 +814,51 @@ function AgendaContenido() {
             ))}
           </div>
           {puedeGestionarAgenda && (
-            <Button variante="secundario" onPress={abrirNuevaTarea} iconoIzq={<ClipboardCheck size={16} strokeWidth={2.75} />}>
-              Nueva Tarea
-            </Button>
+            <div className="relative" ref={nuevoMenuRef}>
+              <Button
+                variante="secundario"
+                onPress={() => setNuevoMenuAbierto((v) => !v)}
+                iconoIzq={<Plus size={16} strokeWidth={2.75} />}
+                iconoDer={<ChevronDown size={14} strokeWidth={2.75} />}
+              >
+                Nuevo
+              </Button>
+              {nuevoMenuAbierto && (
+                <div className="absolute right-0 top-full z-10 mt-2 w-56 overflow-hidden rounded-lg border border-ds-divider bg-ds-surface py-1 shadow-ds-md">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNuevoMenuAbierto(false);
+                      abrirNuevaTarea();
+                    }}
+                    className="flex w-full items-center gap-2 px-4 py-2 font-ds-body text-sm text-ds-text hover:bg-ds-brand/[0.08] hover:text-ds-brand"
+                  >
+                    <ClipboardCheck size={16} strokeWidth={2.75} />
+                    Cita
+                  </button>
+                  {puedeCrearOS && (
+                    <button
+                      type="button"
+                      onClick={abrirNuevaOSDesdeMenu}
+                      className="flex w-full items-center gap-2 px-4 py-2 font-ds-body text-sm text-ds-text hover:bg-ds-brand/[0.08] hover:text-ds-brand"
+                    >
+                      <Wrench size={16} strokeWidth={2.75} />
+                      Orden de servicio
+                    </button>
+                  )}
+                  {puedeCrearLevantamiento && (
+                    <button
+                      type="button"
+                      onClick={abrirNuevoLevantamientoDesdeMenu}
+                      className="flex w-full items-center gap-2 px-4 py-2 font-ds-body text-sm text-ds-text hover:bg-ds-brand/[0.08] hover:text-ds-brand"
+                    >
+                      <Search size={16} strokeWidth={2.75} />
+                      Levantamiento
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>

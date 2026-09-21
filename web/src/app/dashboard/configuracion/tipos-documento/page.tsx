@@ -87,10 +87,28 @@ export default function TiposDocumentoPage() {
     if (res.ok) cargar();
   }
 
+  async function onEliminar(t: TipoDocumento) {
+    setError(null);
+    const res = await apiFetch(`/api/tipos-documento/${t.id}`, { method: "DELETE" });
+    if (res.ok) {
+      cargar();
+      return;
+    }
+    const body = await res.json().catch(() => ({}));
+    setError(body.error ?? "No se pudo eliminar");
+  }
+
   const sugeridosFinal = [
     ...sugerenciasRubro.map((s) => ({ nombre: s.valor, aplica_a: (s.aplica_a as AplicaDocumento) ?? "ambos" })),
     ...SUGERIDOS.filter((s) => !sugerenciasRubro.some((r) => r.valor === s.nombre)),
   ];
+  // Sugerencias pendientes: las que todavía no corresponden a un tipo ya
+  // creado. Antes se ocultaba todo el bloque apenas existía un tipo
+  // (tipos.length === 0) — con eso, crear el primer sugerido escondía los
+  // demás. Ahora el bloque se muestra mientras queden sugerencias sin usar.
+  const sugeridosPendientes = sugeridosFinal.filter(
+    (s) => !(tipos ?? []).some((t) => t.nombre.trim().toLowerCase() === s.nombre.trim().toLowerCase())
+  );
 
   return (
     <div className="flex flex-col gap-ds-6">
@@ -104,11 +122,11 @@ export default function TiposDocumentoPage() {
         </Button>
       </div>
 
-      {tipos !== null && tipos.length === 0 && (
+      {tipos !== null && sugeridosPendientes.length > 0 && (
         <Card>
           <p className="mb-ds-3 font-ds-body text-ds-small text-ds-text/70">Sugeridos — clic para crear:</p>
           <div className="flex flex-wrap gap-ds-2">
-            {sugeridosFinal.map((s) => (
+            {sugeridosPendientes.map((s) => (
               <button
                 key={s.nombre}
                 type="button"
@@ -154,7 +172,10 @@ export default function TiposDocumentoPage() {
           { header: "Aplica a", cell: (t) => <span className="text-ds-text/60">{APLICA.find((a) => a.valor === t.aplica_a)?.etiqueta}</span> },
           { header: "Estado", cell: (t) => <StatusBadge estado={t.activo ? "activo" : "inactivo"} /> },
         ]}
-        actions={[{ label: (t) => (t.activo ? "Desactivar" : "Activar"), onClick: onAlternarActivo, variant: "muted" }]}
+        actions={[
+          { label: (t) => (t.activo ? "Desactivar" : "Activar"), onClick: onAlternarActivo, variant: "muted" },
+          { label: "Eliminar", onClick: onEliminar, variant: "danger" },
+        ]}
         emptyState={{ icon: Paperclip, message: "Todavía no hay tipos de documento — usa los sugeridos de arriba o crea uno nuevo." }}
       />
     </div>

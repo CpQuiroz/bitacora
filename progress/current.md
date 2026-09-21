@@ -4441,3 +4441,72 @@ un sistema aparte (`notificaciones_config`/`mensajes_personalizados`).
 `tsc` de los 6 workspaces limpio, `verificar.sh` completo en verde
 (0 literales de color nuevos). Commit hecho LOCAL, sin pushear —
 pendiente que la usuaria aplique la migración 113.
+
+## 2026-09-21: Agenda +Nuevo · Levantamiento hora_visita · Tipos de documento eliminar+sugerencias (tarea 58, EN CURSO)
+
+Pedido de 4 partes; la usuaria aprobó explícitamente **1, 2 y 4** ("sí,
+dale con 1, 2 y 4") — la parte 3 (unificar Tipo de OS / Tipo de
+Trabajo) queda **excluida a propósito**, investigada pero no
+implementada, requiere confirmación aparte (son shapes genuinamente
+distintos — campos custom vs. color/checklist/duración — la
+unificación es una fusión de schema + repointing de FK + UI en web y
+mobile, mucho más grande que las otras 3).
+
+**1) Agenda web — menú "+ Nuevo"**: el botón único "Nueva Tarea" pasa
+a un dropdown (mismo patrón ya usado en `DashboardShell` para el menú
+de usuario — `useRef`+outside-click, `absolute right-0 top-full`) con
+3 opciones: Cita (igual que antes, `abrirNuevaTarea()`), Orden de
+servicio y Levantamiento. OS/Levantamiento gateadas también por módulo
+contratado (`moduloVisible("ordenes_servicio")`/`"levantamientos"`),
+no solo por `puedeGestionarAgenda`. A diferencia del escape-hatch ya
+existente `onCrearOSDesdeTarea` (que guarda un borrador de tarea en
+curso en sessionStorage antes de saltar), estas van directo sin
+`?volverA=agenda` — no hay nada que preservar. Levantamiento navega a
+`/dashboard/levantamientos?crear=1`, nuevo: ese query param abre el
+modal de crear solo (requirió envolver la página en `Suspense`, mismo
+patrón que `ordenes/nueva/page.tsx`, por `useSearchParams()`).
+
+**2) Levantamiento — hora_visita**: migración 114
+(`levantamientos.hora_visita`, **`text`, no `time`** — deliberado,
+mismo criterio que `tareas.hora` migración 36, para guardar
+literalmente "HH:MM" sin el sufijo de segundos que devuelve un `time`
+de Postgres al leer; validada read-only contra prod, rollback,
+PENDIENTE que la usuaria la aplique). Backend: `HORA_REGEX` (mismo
+regex que `tareas.ts`) valida en POST y PATCH de
+`routes/levantamientos.ts`. Web: `Input tipo="hora"` junto al
+`DatePicker` de fecha_visita en alta/edición, y en el detalle y la
+columna de la tabla se concatena "fecha · hora" cuando hay hora.
+Mobile: `hoy.ts` (Pizarra) y `AgendaScreen.tsx`
+(`FilaLevantamiento`) ya no hardcodean `hora: null`/`"--:--"` — leen
+`hora_visita` real. No se tocó la arquitectura de "levantamientos sin
+hora van en una sección fija arriba de la grilla horaria" en
+`VistaDia` (mobile) — sería un cambio más grande (moverlos adentro de
+la grilla junto a las citas) no pedido explícitamente.
+
+**4) Tipos de documento — eliminar + sugerencias**: el backend YA
+tenía `DELETE /api/tipos-documento/:id` con 409 "hay documentos que
+usan este tipo, desactívalo" (patrón `23503`) — solo faltaba el botón
+en la UI web, que además ahora muestra el error (antes, en el patrón
+gemelo de `centros-costo.tsx`/`onEliminar`, un 409 fallaba en
+silencio: `if (res.ok) cargar()` sin `else`). Bug de sugerencias:
+`tipos.length === 0` ocultaba TODO el bloque de sugerencias apenas se
+creaba el primer tipo — encontrado también, idéntico, en
+`tipos-os/page.tsx` y `categorias-gastos/page.tsx` (los 3 usan
+`sugerencias_rubro`). Fix aplicado a los 3: nuevo
+`sugeridos(Pendientes|Final)` filtra por nombre ya existente, el
+bloque se muestra mientras queden sugerencias sin usar, no solo con la
+lista vacía. De paso, `tipos-os.onEliminar` también dejó de tragarse
+el error (mismo fix que tipos-documento).
+
+Bug de tipos encontrado cerrando: `tsc backend`/`web`/`mobile` fallaban
+con "hora_visita no existe" pese a que `packages/shared/src/types.ts`
+ya lo tenía — `packages/shared/dist` estaba compilado de ANTES de este
+cambio (`npm run build -w packages/shared` no corre solo). Rebuildeado,
+`tsc` x6 limpio. `./verificar.sh` completo en verde (114 migraciones,
+0 literales nuevos, audit:tenant 0). Tarea 58 cerrada (`done`).
+
+Pendiente antes de pushear: que la usuaria aplique la migración 114 en
+prod (mismo comando que las anteriores — ver abajo). Tarea 57 (Personas/
+Perfiles/Plantillas) sigue `blocked` esperando la 113 — ambas migraciones
++ ambos commits locales se pueden pushear juntos una vez que la usuaria
+confirme que aplicó las dos.

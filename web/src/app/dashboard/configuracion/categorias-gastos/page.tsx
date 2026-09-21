@@ -102,14 +102,25 @@ export default function CategoriasGastosPage() {
   }
 
   async function onEliminar(id: string) {
+    setError(null);
     const res = await apiFetch(`/api/categorias-gasto/${id}`, { method: "DELETE" });
-    if (res.ok) cargar();
+    if (res.ok) {
+      cargar();
+      return;
+    }
+    const body = await res.json().catch(() => ({}));
+    setError(body.error ?? "No se pudo eliminar");
   }
 
   const sugeridasFinal = [
     ...sugerenciasRubro.map((s) => ({ nombre: s.valor, color: s.color ?? "#4338ca" })),
     ...SUGERIDAS.filter((s) => !sugerenciasRubro.some((r) => r.valor === s.nombre)),
   ];
+  // Ídem tipos-documento / tipos-os: mostrar mientras queden sugerencias
+  // sin usar, no solo cuando la lista está totalmente vacía.
+  const sugeridasPendientes = sugeridasFinal.filter(
+    (s) => !(categorias ?? []).some((c) => c.nombre.trim().toLowerCase() === s.nombre.trim().toLowerCase())
+  );
 
   return (
     <div className="flex flex-col gap-ds-6">
@@ -123,11 +134,11 @@ export default function CategoriasGastosPage() {
         </Button>
       </div>
 
-      {categorias !== null && categorias.length === 0 && (
+      {categorias !== null && sugeridasPendientes.length > 0 && (
         <Card>
           <p className="mb-ds-3 font-ds-body text-ds-small text-ds-text/70">Categorías sugeridas — clic para crear con un color predefinido:</p>
           <div className="flex flex-wrap gap-ds-2">
-            {sugeridasFinal.map((s) => (
+            {sugeridasPendientes.map((s) => (
               <button
                 key={s.nombre}
                 type="button"

@@ -143,7 +143,7 @@ export async function cargarHoy(equipo: boolean, incluirViajes: boolean, incluir
       items.push({
         tipo: "levantamiento",
         id: lev.id,
-        hora: null,
+        hora: hhmm(lev.hora_visita),
         titulo: lev.cliente?.nombre ?? "Levantamiento",
         subtitulo: lev.descripcion_requerimiento,
         estado: lev.estado,
