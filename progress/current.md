@@ -4691,3 +4691,38 @@ pushear.
 Migración 116 aplicada y verificada en prod (mismo día) — las 10
 columnas nuevas confirmadas (empresas, catalogo_items, os_items,
 presupuesto_items). Tarea 62 → `done`.
+
+## 2026-09-21: probé en vivo la 62, encontré + arreglé un bug real de borrado de OS (tarea 63)
+
+Probando la tarea 62 en vivo (Hidroservi, sesión real): activé el
+toggle, creé OS-0003 con costo/mayorista/minorista — todo funcionó
+(verificado: los 3 valores viven solo en la vista de edición, nunca en
+el detalle/PDF; recarga confirmó que persistieron en la base). La
+usuaria pidió borrar la OS de prueba.
+
+**No hay botón "Eliminar OS" en la web** (solo Editar) — llamé
+`DELETE /api/trabajos/:id` directo desde la consola del navegador, con
+el token de la sesión ya autenticada (nunca toqué contraseñas ni la
+base directo). Dio **500**: `ordenes_servicio_trabajo_id_fkey` viola
+la restricción — bug real, no algo que introdujo hoy. La dejé
+"Cancelada" (vía PATCH, acción ya soportada) para no forzar nada
+sobre prod a ciegas.
+
+**Investigado read-only antes de escribir el fix**: `ordenes_servicio_trabajo_id_fkey`
+es la ÚNICA llave foránea de `trabajos` sin regla de borrado
+(`confdeltype='a'`, NO ACTION) — bug latente desde la migración 04
+(20-ago-2026), que renombró `ordenes_servicio.viaje_id` -> `trabajo_id`
+y recreó la constraint sin `on delete cascade`. Nunca se disparó antes
+porque no existe ningún botón "Eliminar OS" en la web. Verifiqué que
+el resto de la cadena (`os_items`, `analisis_fotos`, `levantamientos`)
+ya tenía CASCADE/SET NULL correctos — este era el único eslabón roto.
+
+**Fix**: migración 117 (pendiente de aplicar, validada read-only)
+recrea la constraint con `ON DELETE CASCADE`. De paso, `trabajos.ts`
+DELETE /:id ahora atrapa `23503` y devuelve 409 con mensaje claro en
+vez de filtrar el error crudo de Postgres — mismo criterio que el
+resto del backend.
+
+`tsc` de los 6 workspaces limpio, `verificar.sh` completo en verde
+(117 migraciones). Tarea 63 `blocked` — commiteado local, pendiente
+que la usuaria aplique la migración 117.

@@ -986,6 +986,20 @@
       ],
       "status": "done",
       "resolution": "Migración 116 aplicada y verificada en prod: las 10 columnas nuevas confirmadas."
+    },
+    {
+      "id": 63,
+      "name": "fix_borrar_os_fk_sin_cascade",
+      "title": "Fix: borrar una OS daba 500 (ordenes_servicio.trabajo_id sin ON DELETE CASCADE)",
+      "description": "Encontrado probando en vivo la tarea 62 (creé una OS de prueba en Hidroservi y la usuaria pidió borrarla — no hay botón Eliminar en la web, así que llamé DELETE /api/trabajos/:id directo con la sesión ya autenticada del navegador y dio 500). Investigado read-only: ordenes_servicio_trabajo_id_fkey es la ÚNICA FK de trabajos sin regla de borrado (confdeltype='a', NO ACTION) — bug latente desde la migración 04 (renombró viaje_id->trabajo_id y recreó la constraint sin cascade). Nunca se disparó antes porque no hay UI que llame ese endpoint.",
+      "acceptance": [
+        "Migración 117: ordenes_servicio_trabajo_id_fkey recreada con ON DELETE CASCADE — validada read-only contra prod, pendiente de aplicar",
+        "trabajos.ts DELETE /:id: error 23503 ahora devuelve 409 con mensaje claro en vez de leakear el error crudo de Postgres (mismo criterio que el resto del backend)",
+        "Verificado read-only que ningún otro eslabón de la cadena (os_items, analisis_fotos, levantamientos) bloquea — todos ya tenían CASCADE/SET NULL correctos",
+        "tsc de los 6 workspaces limpio, verificar.sh completo en verde"
+      ],
+      "status": "blocked",
+      "resolution": "Implementación completa y commiteada localmente; bloqueada esperando que la usuaria aplique la migración 117 en prod antes de pushear."
     }
   ]
 }

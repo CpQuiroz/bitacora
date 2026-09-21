@@ -455,6 +455,14 @@ trabajosRouter.delete(
       .eq("id", req.params.id);
 
     if (error) {
+      // Restricción de llave foránea: alguna otra tabla todavía la
+      // referencia (ej. históricamente ordenes_servicio.trabajo_id, sin
+      // cascade — migración 117). Mismo criterio que el resto del
+      // backend: 409 con mensaje claro, nunca el error crudo de Postgres.
+      if (error.code === "23503") {
+        res.status(409).json({ error: "Esta orden de servicio está en uso y no se puede eliminar — cancélala en vez de eliminarla" });
+        return;
+      }
       res.status(500).json({ error: error.message });
       return;
     }
