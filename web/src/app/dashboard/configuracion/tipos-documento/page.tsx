@@ -29,6 +29,7 @@ export default function TiposDocumentoPage() {
   const [sugerenciasRubro, setSugerenciasRubro] = useState<SugerenciaRubro[]>([]);
 
   const [formAbierto, setFormAbierto] = useState(false);
+  const [editandoId, setEditandoId] = useState<string | null>(null);
   const [nombre, setNombre] = useState("");
   const [aplicaA, setAplicaA] = useState<AplicaDocumento>("ambos");
   const [guardando, setGuardando] = useState(false);
@@ -54,9 +55,17 @@ export default function TiposDocumentoPage() {
 
   function limpiarForm() {
     setFormAbierto(false);
+    setEditandoId(null);
     setNombre("");
     setAplicaA("ambos");
     setErrorForm(null);
+  }
+
+  function abrirEdicion(t: TipoDocumento) {
+    setEditandoId(t.id);
+    setNombre(t.nombre);
+    setAplicaA(t.aplica_a);
+    setFormAbierto(true);
   }
 
   async function crearRapido(s: { nombre: string; aplica_a: AplicaDocumento }) {
@@ -71,11 +80,14 @@ export default function TiposDocumentoPage() {
       return;
     }
     setGuardando(true);
-    const res = await apiFetch("/api/tipos-documento", { method: "POST", body: JSON.stringify({ nombre, aplica_a: aplicaA }) });
+    const body = JSON.stringify({ nombre, aplica_a: aplicaA });
+    const res = editandoId
+      ? await apiFetch(`/api/tipos-documento/${editandoId}`, { method: "PATCH", body })
+      : await apiFetch("/api/tipos-documento", { method: "POST", body });
     setGuardando(false);
     if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      setErrorForm(body.error ?? "No se pudo guardar");
+      const b = await res.json().catch(() => ({}));
+      setErrorForm(b.error ?? "No se pudo guardar");
       return;
     }
     limpiarForm();
@@ -143,7 +155,7 @@ export default function TiposDocumentoPage() {
 
       {formAbierto && (
         <Card>
-          <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Nuevo tipo de documento</p>
+          <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">{editandoId ? "Editar tipo de documento" : "Nuevo tipo de documento"}</p>
           <div className="grid gap-ds-4 sm:grid-cols-2">
             <Input etiqueta="Nombre" valor={nombre} onCambio={setNombre} />
             <Select
@@ -154,9 +166,12 @@ export default function TiposDocumentoPage() {
             />
           </div>
           {errorForm ? <p className="mt-ds-3 font-ds-body text-ds-small text-ds-accent-700">{errorForm}</p> : null}
-          <div className="mt-ds-4">
+          <div className="mt-ds-4 flex gap-ds-3">
             <Button onPress={onGuardar} cargando={guardando}>
               Guardar
+            </Button>
+            <Button variante="ghost" onPress={limpiarForm}>
+              Cancelar
             </Button>
           </div>
         </Card>
@@ -173,6 +188,7 @@ export default function TiposDocumentoPage() {
           { header: "Estado", cell: (t) => <StatusBadge estado={t.activo ? "activo" : "inactivo"} /> },
         ]}
         actions={[
+          { label: "Editar", onClick: abrirEdicion, variant: "brand" },
           { label: (t) => (t.activo ? "Desactivar" : "Activar"), onClick: onAlternarActivo, variant: "muted" },
           { label: "Eliminar", onClick: onEliminar, variant: "danger" },
         ]}

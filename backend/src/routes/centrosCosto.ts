@@ -53,6 +53,47 @@ centrosCostoRouter.post(
   })
 );
 
+centrosCostoRouter.patch(
+  "/:id",
+  requiereModulo("configuracion"),
+  ah<RequestConEmpresa>(async (req, res) => {
+    const { nombre, categoria_gasto_ids } = req.body ?? {};
+    const cambios: { nombre?: string; categoria_gasto_ids?: string[] } = {};
+    if (nombre !== undefined) {
+      if (typeof nombre !== "string" || !nombre.trim()) {
+        res.status(400).json({ error: "Falta nombre" });
+        return;
+      }
+      cambios.nombre = nombre.trim();
+    }
+    if (categoria_gasto_ids !== undefined) {
+      cambios.categoria_gasto_ids = Array.isArray(categoria_gasto_ids) ? categoria_gasto_ids.filter((id) => typeof id === "string") : [];
+    }
+    if (Object.keys(cambios).length === 0) {
+      res.status(400).json({ error: "Nada que actualizar" });
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("centros_costo")
+      .update(cambios)
+      .eq("empresa_id", req.empresaId!)
+      .eq("id", req.params.id)
+      .select()
+      .maybeSingle();
+
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    if (!data) {
+      res.status(404).json({ error: "Centro de costo no encontrado" });
+      return;
+    }
+    res.json(data);
+  })
+);
+
 centrosCostoRouter.delete(
   "/:id",
   requiereModulo("configuracion"),

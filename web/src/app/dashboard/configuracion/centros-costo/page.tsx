@@ -16,6 +16,7 @@ export default function CentrosCostoPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [formAbierto, setFormAbierto] = useState(false);
+  const [editandoId, setEditandoId] = useState<string | null>(null);
   const [nombre, setNombre] = useState("");
   const [seleccionadas, setSeleccionadas] = useState<Set<string>>(new Set());
   const [guardando, setGuardando] = useState(false);
@@ -45,6 +46,21 @@ export default function CentrosCostoPage() {
     });
   }
 
+  function limpiarForm() {
+    setFormAbierto(false);
+    setEditandoId(null);
+    setNombre("");
+    setSeleccionadas(new Set());
+    setErrorForm(null);
+  }
+
+  function abrirEdicion(c: CentroConCategorias) {
+    setEditandoId(c.id);
+    setNombre(c.nombre);
+    setSeleccionadas(new Set(c.categoria_gasto_ids));
+    setFormAbierto(true);
+  }
+
   async function onGuardar() {
     setErrorForm(null);
     if (!nombre.trim()) {
@@ -52,19 +68,17 @@ export default function CentrosCostoPage() {
       return;
     }
     setGuardando(true);
-    const res = await apiFetch("/api/centros-costo", {
-      method: "POST",
-      body: JSON.stringify({ nombre, categoria_gasto_ids: Array.from(seleccionadas) }),
-    });
+    const body = JSON.stringify({ nombre, categoria_gasto_ids: Array.from(seleccionadas) });
+    const res = editandoId
+      ? await apiFetch(`/api/centros-costo/${editandoId}`, { method: "PATCH", body })
+      : await apiFetch("/api/centros-costo", { method: "POST", body });
     setGuardando(false);
     if (!res.ok) {
       const b = await res.json().catch(() => ({}));
       setErrorForm(b.error ?? "No se pudo guardar");
       return;
     }
-    setFormAbierto(false);
-    setNombre("");
-    setSeleccionadas(new Set());
+    limpiarForm();
     cargar();
   }
 
@@ -75,7 +89,7 @@ export default function CentrosCostoPage() {
 
   const formulario = (
     <Card>
-      <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Nuevo centro de costo</p>
+      <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">{editandoId ? "Editar centro de costo" : "Nuevo centro de costo"}</p>
       <Input etiqueta="Nombre" valor={nombre} onCambio={setNombre} />
       {categorias.length > 0 && (
         <div className="mt-ds-4 flex flex-col gap-ds-1">
@@ -102,7 +116,7 @@ export default function CentrosCostoPage() {
         <Button onPress={onGuardar} cargando={guardando}>
           Guardar
         </Button>
-        <Button variante="ghost" onPress={() => setFormAbierto(false)}>
+        <Button variante="ghost" onPress={limpiarForm}>
           Cancelar
         </Button>
       </div>
@@ -145,7 +159,10 @@ export default function CentrosCostoPage() {
             { header: "Nombre", cell: (c) => <span className="font-medium text-ds-text">{c.nombre}</span> },
             { header: "Categorías", cell: (c) => <span className="text-ds-text/60">{c.categorias.length > 0 ? c.categorias.join(", ") : "—"}</span> },
           ]}
-          actions={[{ label: "Eliminar", onClick: (c) => onEliminar(c.id), variant: "danger" }]}
+          actions={[
+            { label: "Editar", onClick: abrirEdicion, variant: "brand" },
+            { label: "Eliminar", onClick: (c) => onEliminar(c.id), variant: "danger" },
+          ]}
           emptyState={{ icon: Layers, message: "Ningún centro de costo registrado." }}
         />
       )}

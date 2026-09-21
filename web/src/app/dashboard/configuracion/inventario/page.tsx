@@ -46,6 +46,7 @@ export default function InventarioPage() {
 
   const [unidades, setUnidades] = useState<UnidadMedida[] | null>(null);
   const [errorUnidades, setErrorUnidades] = useState<string | null>(null);
+  const [editandoUnidadId, setEditandoUnidadId] = useState<string | null>(null);
   const [nombreUnidad, setNombreUnidad] = useState("");
   const [abreviaturaUnidad, setAbreviaturaUnidad] = useState("");
   const [formUnidadAbierto, setFormUnidadAbierto] = useState(false);
@@ -104,6 +105,21 @@ export default function InventarioPage() {
     cargarUnidades();
   }
 
+  function limpiarFormUnidad() {
+    setFormUnidadAbierto(false);
+    setEditandoUnidadId(null);
+    setNombreUnidad("");
+    setAbreviaturaUnidad("");
+    setErrorFormUnidad(null);
+  }
+
+  function abrirEdicionUnidad(u: UnidadMedida) {
+    setEditandoUnidadId(u.id);
+    setNombreUnidad(u.nombre);
+    setAbreviaturaUnidad(u.abreviatura ?? "");
+    setFormUnidadAbierto(true);
+  }
+
   async function onGuardarUnidad() {
     setErrorFormUnidad(null);
     if (!nombreUnidad.trim()) {
@@ -111,19 +127,17 @@ export default function InventarioPage() {
       return;
     }
     setGuardandoUnidad(true);
-    const res = await apiFetch("/api/unidades-medida", {
-      method: "POST",
-      body: JSON.stringify({ nombre: nombreUnidad, abreviatura: abreviaturaUnidad }),
-    });
+    const body = JSON.stringify({ nombre: nombreUnidad, abreviatura: abreviaturaUnidad });
+    const res = editandoUnidadId
+      ? await apiFetch(`/api/unidades-medida/${editandoUnidadId}`, { method: "PATCH", body })
+      : await apiFetch("/api/unidades-medida", { method: "POST", body });
     setGuardandoUnidad(false);
     if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      setErrorFormUnidad(body.error ?? "No se pudo guardar");
+      const b = await res.json().catch(() => ({}));
+      setErrorFormUnidad(b.error ?? "No se pudo guardar");
       return;
     }
-    setFormUnidadAbierto(false);
-    setNombreUnidad("");
-    setAbreviaturaUnidad("");
+    limpiarFormUnidad();
     cargarUnidades();
   }
 
@@ -263,7 +277,7 @@ export default function InventarioPage() {
       <Card>
         <div className="mb-ds-4 flex flex-wrap items-center justify-between gap-ds-3">
           <p className="font-ds-body text-ds-small font-semibold text-ds-text">Unidades de medida</p>
-          <Button variante="secundario" onPress={() => setFormUnidadAbierto((v) => !v)}>
+          <Button variante="secundario" onPress={() => (formUnidadAbierto ? limpiarFormUnidad() : setFormUnidadAbierto(true))}>
             {formUnidadAbierto ? "Cancelar" : "Nueva unidad"}
           </Button>
         </div>
@@ -288,14 +302,18 @@ export default function InventarioPage() {
 
         {formUnidadAbierto && (
           <div className="mb-ds-4 rounded-ds-lg border border-ds-divider p-ds-4">
+            <p className="mb-ds-3 font-ds-body text-ds-small font-semibold text-ds-text">{editandoUnidadId ? "Editar unidad" : "Nueva unidad"}</p>
             <div className="grid gap-ds-4 sm:grid-cols-2">
               <Input etiqueta="Nombre" valor={nombreUnidad} onCambio={setNombreUnidad} />
               <Input etiqueta="Abreviatura" placeholder="kg, L, un…" valor={abreviaturaUnidad} onCambio={setAbreviaturaUnidad} />
             </div>
             {errorFormUnidad ? <p className="mt-ds-3 font-ds-body text-ds-small text-ds-accent-700">{errorFormUnidad}</p> : null}
-            <div className="mt-ds-4">
+            <div className="mt-ds-4 flex gap-ds-3">
               <Button onPress={onGuardarUnidad} cargando={guardandoUnidad}>
                 Guardar
+              </Button>
+              <Button variante="ghost" onPress={limpiarFormUnidad}>
+                Cancelar
               </Button>
             </div>
           </div>
@@ -310,7 +328,10 @@ export default function InventarioPage() {
             { header: "Nombre", cell: (u) => <span className="font-medium text-ds-text">{u.nombre}</span> },
             { header: "Abreviatura", cell: (u) => <span className="text-ds-text/60">{u.abreviatura ?? "—"}</span> },
           ]}
-          actions={[{ label: "Eliminar", onClick: (u) => onEliminarUnidad(u.id), variant: "danger" }]}
+          actions={[
+            { label: "Editar", onClick: abrirEdicionUnidad, variant: "brand" },
+            { label: "Eliminar", onClick: (u) => onEliminarUnidad(u.id), variant: "danger" },
+          ]}
           emptyState={{ icon: Layers, message: "Todavía no hay unidades — usa las sugeridas de arriba o crea una nueva." }}
         />
       </Card>

@@ -5113,3 +5113,35 @@ corrió.
 **Actualización**: usuaria confirmó "Ya la corrí" — pusheado a main
 (`e332e3d`). Tarea 73 `done`.
 
+## 2026-09-21: se agrega "Editar" a 3 catálogos simples (tarea 74)
+
+Pedido: "todo elemento creado, haciendo clic sobre el, debiera poder
+ver sus atributos o la opcion de editar que tengan, actualmente no lo
+tienes". Antes de tocar nada, se investigaron ~40 pantallas de listas
+del dashboard web (di mi opinión primero, sin aplicar nada, según lo
+pedido). Conclusión: la gran mayoría ya cumple el principio (página de
+detalle o modal de edición) — se confirmaron 3 gaps reales, los 3 con
+la misma causa: usan el componente compartido `DataTable` y a alguno
+se le olvidó cablear la acción "Editar" (solo tenía "Eliminar"),
+a diferencia de sus pantallas hermanas (Categorías de Gasto, Etapas de
+Cotización, Tipos de OS/Trabajo) que sí la tienen.
+
+**Arreglados** (mismo patrón exacto que ya usa Categorías de Gasto —
+`editandoId` + `abrirEdicion` + ternario POST/PATCH en el guardar +
+botón Cancelar que limpia el form — cero componentes nuevos):
+- **Tipos de Documento** — el backend ya aceptaba PATCH de
+  `nombre`/`aplica_a`/`activo`, solo faltaba el frontend.
+- **Centros de Costo** — no existía PATCH en absoluto; se agregó
+  `backend/src/routes/centrosCosto.ts` `PATCH /:id` (nombre +
+  `categoria_gasto_ids`) + el frontend.
+- **Configuración → Inventario → Unidades de Medida** — el backend ya
+  aceptaba PATCH, solo faltaba el frontend.
+
+`tsc` (backend+web) + `eslint` limpios, `verificar.sh` completo en
+verde. Sin migración (no se tocó ninguna tabla, solo se agregó una
+ruta). Tarea 74 `done`.
+
+**Pendiente**: no se verificó visualmente en navegador en esta sesión.
+Falta commitear/pushear (a confirmar con la usuaria el flujo de
+siempre).
+

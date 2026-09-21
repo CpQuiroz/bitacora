@@ -1143,6 +1143,21 @@
       ],
       "status": "done",
       "resolution": "Implementado y verificado. Migración 118 aplicada por la usuaria y confirmada (\"Ya la corrí\"). Código pusheado a main."
+    },
+    {
+      "id": 74,
+      "name": "fix_gaps_editar_3_catalogos_simples",
+      "title": "Se agrega \"Editar\" a 3 catálogos simples que solo tenían Eliminar (tipos-documento, centros-costo, unidades-medida)",
+      "description": "Pedido: \"debiera poder ver sus atributos o la opcion de editar\" — se investigó (~40 pantallas de listas) y se confirmaron 3 gaps reales (mismo componente DataTable, nunca se cableó la acción Editar, a diferencia de sus pantallas hermanas — Categorías de Gasto, Etapas de Cotización, Tipos de OS/Trabajo — que sí la tienen). El resto de la app ya cumple el principio (página de detalle o modal de edición).",
+      "acceptance": [
+        "Tipos de Documento: PATCH ya existía en el backend (nombre/aplica_a/activo) — solo faltaba el frontend. Se agregó editandoId + abrirEdicion + acción Editar en la tabla, mismo patrón que Categorías de Gasto",
+        "Centros de Costo: no existía PATCH — se agregó backend/src/routes/centrosCosto.ts PATCH /:id (nombre + categoria_gasto_ids) + frontend (editandoId + abrirEdicion + acción Editar)",
+        "Configuración > Inventario > Unidades de Medida: PATCH ya existía en el backend — solo faltaba el frontend (mismo patrón)",
+        "Los 3 reutilizan el patrón exacto ya usado en Categorías de Gasto (editandoId, abrirEdicion, ternario POST/PATCH en el guardar, botón Cancelar que limpia el form) — cero componentes nuevos",
+        "tsc (backend+web) + eslint limpios, verificar.sh completo en verde"
+      ],
+      "status": "done",
+      "resolution": "Implementado y verificado por tipos/lint. Sin migración (centros_costo ya tenía la columna, solo faltaba la ruta PATCH). No se verificó visualmente en navegador en esta sesión."
     }
   ]
 }
