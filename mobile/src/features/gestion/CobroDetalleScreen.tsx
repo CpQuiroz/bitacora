@@ -4,6 +4,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { ArrowLeft, ExternalLink } from "lucide-react-native";
 import type { MedioPago } from "@bitacora/shared";
+import { formatearFolio } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
 import { Button, Card, ErrorState, LoadingState, ScreenHeader, StatusBadge, Textarea, Texto, useMarca } from "@bitacora/ui/native";
 import { pesos } from "../../lib/plata";
@@ -114,7 +115,13 @@ export function CobroDetalleScreen({ route, navigation }: NativeStackScreenProps
 
   return (
     <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
-      <ScreenHeader antetitulo={cobro.cliente_info?.nombre ?? cobro.cliente} titulo={pesos(cobro.monto)} accion={volver} />
+      <ScreenHeader
+        antetitulo={
+          [formatearFolio("COB", cobro.folio), cobro.cliente_info?.nombre ?? cobro.cliente].filter(Boolean).join(" · ") || undefined
+        }
+        titulo={pesos(cobro.monto)}
+        accion={volver}
+      />
       <ScrollView contentContainerStyle={{ padding: tokens.space["6"], gap: tokens.space["4"], paddingBottom: tokens.space["8"] * 2 }}>
         <View style={{ alignSelf: "flex-start" }}>
           <StatusBadge estado={estadoMostrado} tonoForzado={estadoMostrado === "pendiente" ? "en_progreso" : undefined} />

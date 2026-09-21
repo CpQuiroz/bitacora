@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { ChevronLeft, MapPin, MessageCircle, Plus, Receipt, Tag, Wrench } from "lucide-react";
 import type { Cliente, Equipo, Factura, PaqueteSesionesConSaldo, Presupuesto, TipoPack, Trabajo, OrdenServicio } from "@bitacora/shared";
-import { estadoOsDeTrabajo, formatearRut, validarRut } from "@bitacora/shared";
+import { estadoOsDeTrabajo, formatearFolio, formatearRut, validarRut } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
@@ -187,7 +187,7 @@ export default function ClienteDetallePage() {
         id: `cobro-${f.id}`,
         tipo: "cobro" as const,
         fecha: f.fecha_emision,
-        titulo: `Cobro — ${formatMoneda(f.monto, usuario?.moneda ?? "CLP")}`,
+        titulo: `${formatearFolio("COB", f.folio) ? `${formatearFolio("COB", f.folio)} — ` : ""}Cobro — ${formatMoneda(f.monto, usuario?.moneda ?? "CLP")}`,
         badgeValue: f.estado,
         onClick: () => router.push("/dashboard/financiero/cobros"),
       })),
@@ -219,6 +219,11 @@ export default function ClienteDetallePage() {
         <>
           <div className="mb-ds-4 flex flex-wrap items-center justify-between gap-ds-3">
             <div>
+              {formatearFolio("CLI", cliente.folio) ? (
+                <p className="font-ds-body text-ds-caption font-semibold uppercase tracking-[0.08em] text-ds-text/60">
+                  {formatearFolio("CLI", cliente.folio)}
+                </p>
+              ) : null}
               <p className="ds-heading text-ds-h2 text-ds-text">{cliente.nombre}</p>
               <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">{cliente.direccion}</p>
             </div>

@@ -871,6 +871,24 @@
       ],
       "status": "done",
       "resolution": "Migración 111 confirmada aplicada en prod (fecha_visita date, nullable). Backend, web y mobile (Pizarra + Agenda) implementados y verificados en la entrada anterior de progress/current.md. Pusheado a main."
+    },
+    {
+      "id": 56,
+      "name": "folios_cliente_pack_gasto_proveedor_cobro",
+      "title": "Folio correlativo: Cliente, Pack de sesiones, Gasto, Proveedor, Cobro",
+      "description": "Pedido: darle un id/folio propio a Cliente, Pack de sesiones, Cobro, Gasto y Proveedor (Persona quedó afuera a pedido explícito — ya tiene RUT). Se investigó primero el modelo de packs (ya tenía la arquitectura de plantilla+clon que se pedía) y se presentó opinión antes de tocar código.",
+      "acceptance": [
+        "Migración 112: columnas siguiente_folio_X en empresas + funciones RPC + columna folio en clientes/paquetes_sesiones/gastos/proveedores/facturas — validada read-only, aplicada por la usuaria",
+        "Backend: folios.ts con 5 funciones nuevas; POST de clientes/proveedores/gastos/paquetes-sesiones/cobros (ambos caminos: manual y desde-trabajos vía generar_factura()) asignan folio al crear",
+        "Database.Functions en packages/shared/src/types.ts actualizado (las 5 RPC nuevas) — si no, tsc de backend falla",
+        "Prefijo COB (no FAC) para Cobro — es un registro interno, no una factura tributaria con folio SII/CAF",
+        "Importación masiva de clientes/proveedores (CSV) NO asigna folio a propósito — mismo criterio que filas históricas, no se justifica una reserva atómica por lote",
+        "Web: columna Folio en las tablas de Clientes, Proveedores, Gastos, Packs de sesiones y Cobros; folio en el detalle de Cliente y en la línea de tiempo de Cobros ahí",
+        "Mobile: folio en ClientesListaScreen, ClienteDetalleScreen (header + packs + cobros), CobrosListaScreen, CobroDetalleScreen",
+        "tsc de los 6 workspaces limpio, verificar.sh completo en verde, 0 literales de color nuevos"
+      ],
+      "status": "in_progress",
+      "resolution": null
     }
   ]
 }

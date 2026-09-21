@@ -5,6 +5,7 @@ import { notificarCliente } from "../notificarCliente";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
 import { idempotente } from "../idempotencia";
+import { siguienteFolioCobro } from "../folios";
 
 export const cobrosRouter = Router();
 
@@ -154,6 +155,11 @@ cobrosRouter.post(
       return;
     }
 
+    // Folio propio (migración 112) — prefijo "COB" (no "FAC": es un
+    // registro interno, no una factura tributaria con folio SII/CAF).
+    // formatearFolio, @bitacora/shared. Tolerante a error — ver folios.ts.
+    const folio = await siguienteFolioCobro(req.empresaId!);
+
     const { data, error } = await supabase
       .from("facturas")
       .insert({
@@ -165,6 +171,7 @@ cobrosRouter.post(
         fecha_vencimiento,
         medio_pago: medio_pago || null,
         estado: "pendiente",
+        folio,
       })
       .select("*, cliente_info:clientes(id, nombre)")
       .single();
@@ -220,6 +227,15 @@ cobrosRouter.post(
     if (error) {
       res.status(500).json({ error: error.message });
       return;
+    }
+
+    // generar_factura() (04_generalizacion.sql) es anterior al folio
+    // (migración 112) y no lo asigna — se completa acá con el mismo
+    // update puntual que ya se usa abajo para cliente_id, en vez de
+    // tocar esa función SQL vieja.
+    const folio = await siguienteFolioCobro(req.empresaId!);
+    if (folio != null) {
+      await supabase.from("facturas").update({ folio }).eq("id", facturaId);
     }
 
     // generar_factura() no conoce cliente_id (recibe solo texto) — se

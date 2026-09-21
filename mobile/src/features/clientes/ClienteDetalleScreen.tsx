@@ -4,6 +4,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { ArrowLeft, Banknote, HardHat, Mail, MessageCircle, Phone, Receipt } from "lucide-react-native";
 import type { PaqueteSesionesConSaldo, VentaConLineas } from "@bitacora/shared";
+import { formatearFolio } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
 import { Button, Card, ErrorState, ListRow, ListRowGrupo, LoadingState, ScreenHeader, Skeleton, StatusBadge, Texto, useMarca } from "@bitacora/ui/native";
 import { useRed } from "../../services/sync/NetworkProvider";
@@ -134,7 +135,13 @@ export function ClienteDetalleScreen({ route, navigation }: NativeStackScreenPro
 
   return (
     <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
-      <ScreenHeader antetitulo={cliente.rut ?? undefined} titulo={cliente.nombre} accion={volver} />
+      <ScreenHeader
+        antetitulo={
+          [formatearFolio("CLI", cliente.folio), cliente.rut].filter(Boolean).join(" · ") || undefined
+        }
+        titulo={cliente.nombre}
+        accion={volver}
+      />
       <ScrollView contentContainerStyle={{ padding: tokens.space["6"], gap: tokens.space["4"], paddingBottom: tokens.space["8"] * 3 }}>
         {/* Persona de contacto — solo si tiene valor, mismo criterio que
             el resto del sistema (estado real, no texto decorativo). */}
@@ -198,6 +205,7 @@ export function ClienteDetalleScreen({ route, navigation }: NativeStackScreenPro
                 <View style={{ gap: tokens.space["2"] }}>
                   <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
                     <Texto tamano={tokens.size.body} color={tokens.color.accent2Ramp["800"]} peso="semibold">
+                      {formatearFolio("PACK", p.folio) ? `${formatearFolio("PACK", p.folio)} · ` : ""}
                       {p.nombre}
                     </Texto>
                     <Texto tamano={tokens.size.body} color={tokens.color.accent2Ramp["800"]} peso="semibold" style={{ fontVariant: ["tabular-nums"] }}>
@@ -262,7 +270,7 @@ export function ClienteDetalleScreen({ route, navigation }: NativeStackScreenPro
                 <ListRow
                   key={f.id}
                   icono={<Banknote size={22} strokeWidth={2.25} color={tokens.color.accentRamp["700"]} />}
-                  titulo={pesos(f.monto)}
+                  titulo={formatearFolio("COB", f.folio) ? `${formatearFolio("COB", f.folio)} · ${pesos(f.monto)}` : pesos(f.monto)}
                   subtitulo={f.fecha_emision}
                   trailing={<StatusBadge estado={f.estado} tonoForzado={f.estado === "pendiente" ? "en_progreso" : undefined} />}
                 />

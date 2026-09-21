@@ -5,6 +5,7 @@ import { supabase } from "../supabase";
 import { subirComprobante, urlFirmadaComprobante } from "../storage";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
+import { siguienteFolioGasto } from "../folios";
 
 export const gastosRouter = Router();
 
@@ -127,6 +128,11 @@ gastosRouter.post(
 
     const estadoFinal: EstadoGasto = ESTADOS.includes(estado) ? estado : "pendiente";
 
+    // Folio propio (migración 112), formateado como "GTO-000X" solo al
+    // mostrarlo (formatearFolio, @bitacora/shared). Tolerante a error —
+    // ver folios.ts.
+    const folio = await siguienteFolioGasto(req.empresaId!);
+
     const { data, error } = await supabase
       .from("gastos")
       .insert({
@@ -141,6 +147,7 @@ gastosRouter.post(
         fecha,
         estado: estadoFinal,
         fecha_pago: estadoFinal === "pagado" ? fecha_pago || fecha : null,
+        folio,
       })
       .select()
       .single();

@@ -4,6 +4,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Truck } from "lucide-react";
 import type { CategoriaGasto, Proveedor } from "@bitacora/shared";
+import { formatearFolio } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
@@ -275,6 +276,7 @@ export default function ProveedoresPage() {
           claveFila={(p) => p.id}
           vacio={{ titulo: "Ningún proveedor coincide con la búsqueda" }}
           columnas={[
+            { encabezado: "Folio", celda: (p) => formatearFolio("PROV", p.folio) ?? "—" },
             { encabezado: "Nombre", celda: (p) => p.nombre },
             { encabezado: "Razón social", celda: (p) => p.razon_social || "—" },
             { encabezado: "RUT", celda: (p) => p.rut || "—" },

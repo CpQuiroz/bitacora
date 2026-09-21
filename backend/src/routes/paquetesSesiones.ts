@@ -4,6 +4,7 @@ import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
 import { requiereModulo } from "../permisos";
 import { calcularConsumoPorPaquete } from "../agendaPro";
+import { siguienteFolioPack } from "../folios";
 
 export const paquetesSesionesRouter = Router();
 
@@ -103,6 +104,11 @@ paquetesSesionesRouter.post(
       return;
     }
 
+    // Folio propio (migración 112), formateado como "PACK-000X" solo al
+    // mostrarlo (formatearFolio, @bitacora/shared). Tolerante a error —
+    // ver folios.ts.
+    const folio = await siguienteFolioPack(req.empresaId!);
+
     const { data, error } = await supabase
       .from("paquetes_sesiones")
       .insert({
@@ -117,6 +123,7 @@ paquetesSesionesRouter.post(
         precio_pagado: precio_pagado ?? null,
         fecha_compra: fechaCompraFinal,
         notas: notas?.trim() || null,
+        folio,
       })
       .select()
       .single();

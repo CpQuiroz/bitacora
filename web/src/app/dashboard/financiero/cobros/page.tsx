@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Plus, Receipt } from "lucide-react";
 import type { Cliente, EstadoFactura, Factura, MedioPago, Trabajo } from "@bitacora/shared";
+import { formatearFolio } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
@@ -392,6 +393,7 @@ function CobrosContenido() {
             <table className="w-full text-left text-ds-body">
               <thead>
                 <tr className="border-b border-ds-divider text-[11px] font-medium uppercase tracking-[0.08em] text-ds-text/60">
+                  <th className="px-ds-4 py-ds-3">Folio</th>
                   <th className="px-ds-4 py-ds-3">Cliente</th>
                   <th className="px-ds-4 py-ds-3 text-right">Monto</th>
                   <th className="px-ds-4 py-ds-3">Medio de pago</th>
@@ -405,6 +407,7 @@ function CobrosContenido() {
               <tbody>
                 {filtrados.map((c) => (
                   <tr key={c.id} className="border-b border-ds-text/[0.08] last:border-0 hover:bg-ds-text/[0.04]">
+                    <td className="px-ds-4 py-ds-3 text-ds-text/70">{formatearFolio("COB", c.folio) ?? "—"}</td>
                     <td className="px-ds-4 py-ds-3 font-medium text-ds-text">
                       <Link href={`/dashboard/financiero/cobros/${c.id}`} className="hover:text-ds-brand hover:underline">
                         {c.cliente}

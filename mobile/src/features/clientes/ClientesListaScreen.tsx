@@ -3,6 +3,7 @@ import { RefreshControl, ScrollView, View } from "react-native";
 import { Users } from "lucide-react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { formatearFolio } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
 import {
   AsistenteButton,
@@ -146,7 +147,7 @@ export function ClientesListaScreen({ navigation }: NativeStackScreenProps<Clien
                     </Texto>
                   }
                   titulo={item.nombre}
-                  subtitulo={item.rut ?? undefined}
+                  subtitulo={[formatearFolio("CLI", item.folio), item.rut].filter(Boolean).join(" · ") || undefined}
                   trailing={
                     <View style={{ alignItems: "flex-end", gap: 4 }}>
                       {item.tiene_pack ? <Tag tono="accent2">Con pack</Tag> : null}

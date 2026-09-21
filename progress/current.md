@@ -4299,3 +4299,62 @@ Usuaria aplicó `111_fecha_visita_levantamiento.sql` en prod. Verificado
 read-only (`information_schema.columns`: `fecha_visita date, nullable`
 ya existe). Pusheado el commit `51ee165` (que ya estaba listo,
 esperando esto). Tarea 55 cerrada.
+
+## 2026-09-20 (15): folios Cliente/Pack/Gasto/Proveedor/Cobro (tarea 56, EN CURSO — falta aplicar migración 112)
+
+Pedido largo y con varias partes: folio para Cliente, Pack de
+sesiones, Cobros, Gastos, Proveedor, Persona, Viaje — con la
+instrucción explícita "dame opiniones... antes de aplicar cualquier
+cosa" para packs en particular.
+
+**Hallazgo grande, antes de tocar nada**: investigué el modelo de
+packs pensando que había que rediseñarlo (plantilla vs. instancia
+única, clonar al asignar) — y **ya existe exactamente eso**:
+`TipoPack` (catálogo, sin saldo) → `PaqueteSesiones` (instancia del
+cliente, con saldo, snapshot inmutable del catálogo al vender) — y
+`NuevaCitaScreen.tsx` YA clona un `TipoPack` al vuelo si el cliente no
+tiene un pack con saldo. Se lo comuniqué a la usuaria antes de hacer
+nada — nada que rediseñar ahí, solo le faltaba folio como al resto.
+
+Con eso resuelto, until 2 preguntas puntuales (AskUserQuestion):
+Persona sin folio (ya tiene RUT — redundante) y confirmar el plan para
+las otras 5 con prefijos CLI-/PACK-/GTO-/PROV-/COB-. Viaje ya tenía
+folio de antes (migración 108) — nada que hacer ahí.
+
+**Migración 112**: mismo mecanismo de siempre (contador por empresa +
+función atómica) para Cliente/Pack/Gasto/Proveedor/Cobro. "Cobro" usa
+prefijo COB (no FAC): la tabla `facturas` es un registro interno, no
+una factura tributaria real con folio SII/CAF — evita esa confusión.
+Validada read-only contra prod (ciclo completo: pedir folio + escribir
++ rollback). Pendiente que la usuaria la aplique.
+
+**Backend**: `folios.ts` — 5 funciones nuevas. Asignación de folio en
+los 5 puntos de creación reales (clientes.ts, proveedores.ts,
+gastos.ts, paquetesSesiones.ts, cobros.ts). Cobros tiene 2 caminos de
+creación: el manual (insert directo, folio en la misma inserción) y
+"desde-trabajos" (vía `generar_factura()`, una función SQL vieja de
+04_generalizacion.sql que no se tocó — se le asigna folio con un
+update puntual después, mismo patrón que ya usaba ese código para
+completar cliente_id). Decisión deliberada: la importación masiva
+(CSV) de clientes/proveedores NO asigna folio — mismo criterio que las
+filas históricas, no se justifica el costo de una reserva atómica por
+lote de hasta 500 filas para algo que no se pidió explícitamente.
+
+**Web**: columna "Folio" en las tablas de Clientes, Proveedores,
+Gastos, Packs de sesiones (agenda/paquetes) y Cobros (esta última es
+una tabla armada a mano, no el componente Table compartido). Folio
+también en el header del detalle de Cliente y en la línea de tiempo de
+cobros ahí mismo.
+
+**Mobile**: folio en `ClientesListaScreen` (subtítulo, junto al RUT),
+`ClienteDetalleScreen` (antetítulo del header junto al RUT, tarjetas de
+packs, filas de cobros), `CobrosListaScreen` y `CobroDetalleScreen`.
+Gasto no tiene pantalla de lista en mobile (solo el formulario de
+creación) — nada que agregar ahí. Proveedor solo se usa vía picker de
+nombre (Nuevo gasto) — se dejó igual que Categoría, sin folio en el
+picker, mismo criterio que esa decisión anterior (no hay ambigüedad
+que resolver eligiendo un proveedor por nombre).
+
+`tsc` de los 6 workspaces limpio, `verificar.sh` completo en verde
+(incluyendo 0 literales de color nuevos). Commit hecho LOCAL, sin
+pushear — pendiente que la usuaria aplique la migración 112.

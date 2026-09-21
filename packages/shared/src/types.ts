@@ -82,6 +82,12 @@ export type Empresa = {
   siguiente_folio_cita: number;
   siguiente_folio_viaje: number;
   siguiente_folio_levantamiento: number;
+  // Migración 112 (20-sep-2026): Cliente/Pack/Gasto/Proveedor/Cobro.
+  siguiente_folio_cliente: number;
+  siguiente_folio_pack: number;
+  siguiente_folio_gasto: number;
+  siguiente_folio_proveedor: number;
+  siguiente_folio_cobro: number;
   color_primario: string | null;
   color_primario_foreground: string | null;
   color_secundario: string | null;
@@ -661,6 +667,9 @@ export type PaqueteSesiones = {
   fecha_compra: string;
   notas: string | null;
   creado_en: string;
+  // Folio correlativo por empresa (migración 112). Null en instancias
+  // creadas antes de esta migración, no se backfillea histórico.
+  folio: number | null;
 };
 
 export type PaqueteSesionesConSaldo = PaqueteSesiones & { saldo: number };
@@ -802,6 +811,9 @@ export type Cliente = {
   // más avisos", link en el pie de los correos).
   notificaciones_opt_out: boolean;
   creado_en: string;
+  // Folio correlativo por empresa (migración 112). Null en clientes
+  // creados antes de esta migración, no se backfillea histórico.
+  folio: number | null;
 };
 
 export type EntidadPortal = "trabajo" | "cotizacion" | "factura" | "tarea";
@@ -848,6 +860,11 @@ export type Factura = {
   valor_recibido: number | null;
   observaciones_pago: string | null;
   creado_en: string;
+  // Folio correlativo por empresa (migración 112) — prefijo "COB", no
+  // "FAC": es un registro interno de cobro, no una factura tributaria
+  // real con folio SII/CAF. Null en cobros creados antes de esta
+  // migración, no se backfillea histórico.
+  folio: number | null;
 };
 
 export type ItemChecklist = {
@@ -952,6 +969,9 @@ export type Gasto = {
   editado_por: string | null;
   editado_en: string | null;
   creado_en: string;
+  // Folio correlativo por empresa (migración 112). Null en gastos
+  // creados antes de esta migración, no se backfillea histórico.
+  folio: number | null;
 };
 
 export type Presupuesto = {
@@ -1270,6 +1290,9 @@ export type Proveedor = {
   categoria_gasto_id: string | null;
   activo: boolean;
   creado_en: string;
+  // Folio correlativo por empresa (migración 112). Null en proveedores
+  // creados antes de esta migración, no se backfillea histórico.
+  folio: number | null;
 };
 
 export type InformeGenerado = {
@@ -1919,6 +1942,26 @@ export type Database = {
         Returns: number;
       };
       siguiente_folio_levantamiento: {
+        Args: { p_empresa_id: string };
+        Returns: number;
+      };
+      siguiente_folio_cliente: {
+        Args: { p_empresa_id: string };
+        Returns: number;
+      };
+      siguiente_folio_pack: {
+        Args: { p_empresa_id: string };
+        Returns: number;
+      };
+      siguiente_folio_gasto: {
+        Args: { p_empresa_id: string };
+        Returns: number;
+      };
+      siguiente_folio_proveedor: {
+        Args: { p_empresa_id: string };
+        Returns: number;
+      };
+      siguiente_folio_cobro: {
         Args: { p_empresa_id: string };
         Returns: number;
       };

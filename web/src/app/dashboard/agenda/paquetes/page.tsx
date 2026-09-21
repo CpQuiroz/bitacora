@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Box, Plus } from "lucide-react";
 import type { Cliente, PaqueteSesionesConSaldo, TipoPack } from "@bitacora/shared";
+import { formatearFolio } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
@@ -178,6 +179,7 @@ export default function PaquetesSesionesPage() {
           claveFila={(p) => p.id}
           vacio={{ titulo: "Ningún paquete coincide con la búsqueda" }}
           columnas={[
+            { encabezado: "Folio", celda: (p) => formatearFolio("PACK", p.folio) ?? "—" },
             { encabezado: "Cliente", celda: (p) => p.cliente?.nombre ?? "—" },
             { encabezado: "Paquete", celda: (p) => p.nombre },
             { encabezado: "Saldo", celda: (p) => `${p.saldo} / ${p.cantidad_total}` },

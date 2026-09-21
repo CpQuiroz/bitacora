@@ -12,7 +12,18 @@ import { supabase } from "./supabase";
 // varios de los puntos de creación son flujos automáticos (bot de
 // WhatsApp, captura por webhook) donde perder el folio es mucho menos
 // grave que perder la fila entera — se loguea y sigue con folio null.
-async function siguienteFolio(fn: "siguiente_folio_cita" | "siguiente_folio_viaje" | "siguiente_folio_levantamiento", empresaId: string): Promise<number | null> {
+async function siguienteFolio(
+  fn:
+    | "siguiente_folio_cita"
+    | "siguiente_folio_viaje"
+    | "siguiente_folio_levantamiento"
+    | "siguiente_folio_cliente"
+    | "siguiente_folio_pack"
+    | "siguiente_folio_gasto"
+    | "siguiente_folio_proveedor"
+    | "siguiente_folio_cobro",
+  empresaId: string
+): Promise<number | null> {
   const { data, error } = await supabase.rpc(fn, { p_empresa_id: empresaId });
   if (error) {
     console.error(`${fn}:`, error.message);
@@ -24,3 +35,9 @@ async function siguienteFolio(fn: "siguiente_folio_cita" | "siguiente_folio_viaj
 export const siguienteFolioCita = (empresaId: string) => siguienteFolio("siguiente_folio_cita", empresaId);
 export const siguienteFolioViaje = (empresaId: string) => siguienteFolio("siguiente_folio_viaje", empresaId);
 export const siguienteFolioLevantamiento = (empresaId: string) => siguienteFolio("siguiente_folio_levantamiento", empresaId);
+// Migración 112 (20-sep-2026) — Cliente/Pack/Gasto/Proveedor/Cobro.
+export const siguienteFolioCliente = (empresaId: string) => siguienteFolio("siguiente_folio_cliente", empresaId);
+export const siguienteFolioPack = (empresaId: string) => siguienteFolio("siguiente_folio_pack", empresaId);
+export const siguienteFolioGasto = (empresaId: string) => siguienteFolio("siguiente_folio_gasto", empresaId);
+export const siguienteFolioProveedor = (empresaId: string) => siguienteFolio("siguiente_folio_proveedor", empresaId);
+export const siguienteFolioCobro = (empresaId: string) => siguienteFolio("siguiente_folio_cobro", empresaId);

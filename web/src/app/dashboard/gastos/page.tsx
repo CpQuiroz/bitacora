@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Paperclip, Plus, Wallet } from "lucide-react";
 import type { CategoriaGasto, CentroCosto, EstadoGasto, Gasto, Proveedor, Trabajo } from "@bitacora/shared";
+import { formatearFolio } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
@@ -390,6 +391,7 @@ export default function GastosPage() {
           claveFila={(g) => g.id}
           vacio={{ titulo: "Ningún gasto coincide con la búsqueda o el filtro" }}
           columnas={[
+            { encabezado: "Folio", celda: (g) => formatearFolio("GTO", g.folio) ?? "—" },
             { encabezado: "Fecha", celda: (g) => g.fecha },
             {
               encabezado: "Descripción",

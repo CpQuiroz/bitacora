@@ -5,6 +5,7 @@ import { supabase } from "../supabase";
 import { geocodificarDireccion } from "../geocodificar";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
+import { siguienteFolioCliente } from "../folios";
 
 export const clientesRouter = Router();
 
@@ -144,6 +145,14 @@ clientesRouter.post(
 
     const coords = dir ? await geocodificarDireccion(dir) : null;
 
+    // Folio propio (migración 112), formateado como "CLI-000X" solo al
+    // mostrarlo (formatearFolio, @bitacora/shared). Tolerante a error —
+    // ver folios.ts. (La importación masiva de /importar NO asigna
+    // folio a propósito — mismo criterio que las filas históricas, no
+    // se justifica el costo de una reserva atómica por lote para hasta
+    // 500 filas de una vez.)
+    const folio = await siguienteFolioCliente(req.empresaId!);
+
     const { data, error } = await supabase
       .from("clientes")
       .insert({
@@ -159,6 +168,7 @@ clientesRouter.post(
         notas: notas?.trim() || null,
         contacto_nombre: contacto_nombre?.trim() || null,
         fecha_nacimiento: fecha_nacimiento || null,
+        folio,
       })
       .select()
       .single();

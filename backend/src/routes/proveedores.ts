@@ -4,6 +4,7 @@ import { formatearRut, validarRut } from "@bitacora/shared";
 import { supabase } from "../supabase";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
+import { siguienteFolioProveedor } from "../folios";
 
 export const proveedoresRouter = Router();
 
@@ -56,6 +57,10 @@ proveedoresRouter.post(
       }
     }
 
+    // Folio propio (migración 112) — ver clientes.ts para el mismo
+    // criterio y por qué la importación masiva (más abajo) no lo asigna.
+    const folio = await siguienteFolioProveedor(req.empresaId!);
+
     const { data, error } = await supabase
       .from("proveedores")
       .insert({
@@ -66,6 +71,7 @@ proveedoresRouter.post(
         telefono: telefono?.trim() || null,
         correo: correo?.trim() || null,
         categoria_gasto_id: categoria_gasto_id || null,
+        folio,
       })
       .select("*, categoria:categorias_gasto(id, nombre, color)")
       .single();

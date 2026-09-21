@@ -5,7 +5,12 @@
 // folio/número plano que ya existía (OS) o se agregó (migración 108:
 // citas, viajes, levantamientos). El prefijo NUNCA se guarda en la
 // base de datos — se arma acá, siempre en el punto de mostrarlo.
-export type PrefijoFolio = "OS" | "CIT" | "VIA" | "LEV";
+// COB (no FAC): "facturas" acá es un registro interno de cobro, no una
+// factura tributaria real con folio SII/CAF — el prefijo evita esa
+// confusión (migración 112, 20-sep-2026). Persona (usuarios) queda
+// deliberadamente sin folio propio — ya tiene RUT como identificador
+// único.
+export type PrefijoFolio = "OS" | "CIT" | "VIA" | "LEV" | "CLI" | "PACK" | "GTO" | "PROV" | "COB";
 
 /**
  * @param folio null = todavía sin folio (fila creada antes de que

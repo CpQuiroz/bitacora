@@ -4,7 +4,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { MapPin, MessageCircle, Plus } from "lucide-react";
 import type { Cliente } from "@bitacora/shared";
-import { formatearRut, validarRut } from "@bitacora/shared";
+import { formatearFolio, formatearRut, validarRut } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
@@ -282,6 +282,7 @@ export default function ClientesPage() {
           onFilaClick={(c) => router.push(`/dashboard/registros/clientes/${c.id}`)}
           vacio={{ titulo: "Ningún cliente coincide con la búsqueda o el filtro" }}
           columnas={[
+            { encabezado: "Folio", celda: (c) => formatearFolio("CLI", c.folio) ?? "—" },
             { encabezado: "Nombre", celda: (c) => c.nombre },
             {
               encabezado: "Contacto",

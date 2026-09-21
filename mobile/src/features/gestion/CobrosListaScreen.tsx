@@ -3,6 +3,7 @@ import { RefreshControl, ScrollView, View } from "react-native";
 import { ArrowLeft, Banknote } from "lucide-react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { formatearFolio } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
 import {
   Button,
@@ -134,7 +135,11 @@ export function CobrosListaScreen({ navigation }: NativeStackScreenProps<MasStac
                 <ListRow
                   key={item.id}
                   icono={<Banknote size={22} strokeWidth={2.25} color={tokens.color.accentRamp["700"]} />}
-                  titulo={item.cliente_info?.nombre ?? item.cliente}
+                  titulo={
+                    formatearFolio("COB", item.folio)
+                      ? `${formatearFolio("COB", item.folio)} · ${item.cliente_info?.nombre ?? item.cliente}`
+                      : item.cliente_info?.nombre ?? item.cliente
+                  }
                   subtitulo={`Vence ${item.fecha_vencimiento}`}
                   trailing={
                     <View style={{ alignItems: "flex-end", gap: 4 }}>
