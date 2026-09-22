@@ -5588,3 +5588,39 @@ en el proyecto de dev no sirven (una sin orden de servicio asociada,
 cargados). Confianza por revisión de código: la grilla de fotos es
 literalmente la misma que ya usaba la sección de Fotos, solo movida de
 lugar y ahora comparte la numeración con el texto.
+
+## 2026-09-22 (7): Tarea 78 — desplegada a prod (con incidente de migración corregido)
+
+Usuaria pidió "pushea todo a prod". Antes de pushear se avisó que las
+migraciones 120/121/122 (Rendiciones) solo estaban en dev — nunca en
+prod — y que esta sesión no puede correr comandos de Supabase (CLI
+enlazado a prod). Se le dieron los comandos para aplicarlas ella misma.
+
+**Incidente real durante el proceso** (mi error, no de la usuaria): el
+primer comando que le pasé para prod (`supabase db query --project-ref
+<ref> -f ...`) omitía `--linked` — la sintaxis correcta, ya documentada
+en `docs/harness/convenciones.md`, es `--linked --project-ref <ref>`
+juntos. Las 3 líneas de `db query` fallaron con un error de sintaxis
+del CLI ANTES de conectarse a la base (no tocaron nada), pero la línea
+de `migration repair --status applied --linked 120 121 122` sí estaba
+bien escrita y corrió — dejando el tracking de prod diciendo "120/121/
+122 aplicadas" sin que el SQL real hubiera corrido. Mismo patrón que el
+incidente real del 1-sep-2026 (docs/PUESTA_EN_PRODUCCION.md).
+
+Se corrigió: como el error fue puramente de sintaxis del CLI (nunca
+llegó a tocar la base), no hizo falta revertir el `repair` — solo
+reejecutar los 3 `db query` con la sintaxis correcta. Se verificó con
+`supabase migration list --linked --project-ref yjbskbskyadxjooxngjv`
+que la columna Remote mostraba 120/121/122 antes de pushear, recién
+ahí se hizo `git push origin main` (7 commits, `71f6b66`).
+
+**Desplegado**: Rendiciones completa (backend+web+mobile+PDF+método de
+entrega) + el rediseño del PDF de OS (campos/fotos intercalados,
+numeración continua). Tarea 78 marcada `done` en trabajo_list.json.
+
+**Pendiente, sin bloquear lo anterior**:
+- Migración 112 (folios cliente/pack/gasto/proveedor/cobro) sigue sin
+  aplicarse en DEV — bug preexistente no relacionado con esta tarea,
+  bloquea probar "agregar gasto" en dev.
+- Descargar PDF de la rendición: no implementado en mobile (necesita
+  descarga a archivo + hoja de compartir, sin patrón existente).
