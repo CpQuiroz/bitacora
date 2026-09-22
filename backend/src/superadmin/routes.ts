@@ -22,6 +22,7 @@ import { cambiarPlanEmpresa } from "../planes";
 import { enviarInvitacion } from "../email";
 import { sembrarSugerenciasRubro } from "../seedRubro";
 import { hashPassword, verificarPassword } from "./passwords";
+import { obtenerEstadoAnthropic, obtenerEstadoResend, obtenerEstadoSupabase } from "./infra";
 import { generarSecretoTotp, otpauthUri, verificarCodigoTotp } from "../totp";
 import {
   crearTokenSuperAdmin,
@@ -340,6 +341,9 @@ superadminRouter.get(
       proveedores,
       { data: tendenciaMensual },
       { data: storageHistorico },
+      usoSupabase,
+      usoResend,
+      usoAnthropic,
     ] = await Promise.all([
       supabase
         .from("errores_backend")
@@ -360,6 +364,13 @@ superadminRouter.get(
       // Tendencia mensual (IA/OS/errores/requests lentos) — migración 118.
       supabase.rpc("superadmin_tendencia_mensual", { meses: 12 }),
       supabase.from("superadmin_storage_historico").select("mes, bytes_total").order("mes", { ascending: true }).limit(12),
+      // Uso de recursos real de la cuenta (no solo "¿está caído el
+      // proveedor?" como `proveedores` arriba) — pedido 22-sep-2026:
+      // "costos/facturación, uso de recursos". Cada uno independiente,
+      // nunca tumba el resto si falta la credencial o falla la llamada.
+      obtenerEstadoSupabase().catch((e) => ({ disponible: false as const, motivo: e instanceof Error ? e.message : String(e) })),
+      obtenerEstadoResend().catch((e) => ({ disponible: false as const, motivo: e instanceof Error ? e.message : String(e) })),
+      obtenerEstadoAnthropic().catch((e) => ({ disponible: false as const, motivo: e instanceof Error ? e.message : String(e) })),
     ]);
 
     res.json({
@@ -372,6 +383,7 @@ superadminRouter.get(
       proveedores_sin_monitoreo: PROVEEDORES_SIN_MONITOREO_AUTOMATICO,
       tendencia_mensual: tendenciaMensual ?? [],
       storage_historico: storageHistorico ?? [],
+      uso_recursos: { supabase: usoSupabase, resend: usoResend, anthropic: usoAnthropic },
       generado_en: new Date().toISOString(),
     });
   })

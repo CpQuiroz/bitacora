@@ -36,6 +36,18 @@ type RequestLentoFila = {
 
 type StorageHistoricoFila = { mes: string; bytes_total: number };
 
+// Uso real de recursos de la cuenta (distinto de `proveedores` arriba,
+// que solo dice "¿está caído el proveedor en general?") — pedido
+// 22-sep-2026: "costos/facturación, uso de recursos". Cada uno puede
+// no estar disponible (falta credencial o la API no lo expone en el
+// plan actual) sin afectar a los demás.
+type EstadoProyectoSupabase = { ref: string; nombre: string; region: string; estado: string; dbBytes: number | null; dbTexto: string | null };
+type UsoSupabase = { disponible: true; proyectos: EstadoProyectoSupabase[] } | { disponible: false; motivo: string };
+type UsoResend =
+  | { disponible: true; dominios: { nombre: string; estado: string; region: string }[]; ultimos30dias: number | null }
+  | { disponible: false; motivo: string };
+type UsoAnthropic = { disponible: true; dias: number } | { disponible: false; motivo: string };
+
 type SaludPlataforma = {
   sentry_configurado: boolean;
   errores_ultimas_24h: number;
@@ -46,6 +58,7 @@ type SaludPlataforma = {
   proveedores_sin_monitoreo: ProveedorSinMonitoreo[];
   tendencia_mensual: TendenciaMensual[];
   storage_historico: StorageHistoricoFila[];
+  uso_recursos: { supabase: UsoSupabase; resend: UsoResend; anthropic: UsoAnthropic };
   generado_en: string;
 };
 
@@ -181,6 +194,60 @@ export default function SuperAdminSaludPage() {
                 </div>
               </div>
             )}
+          </Card>
+
+          <Card>
+            <h2 className="mb-1 text-sm font-semibold text-foreground">Uso de recursos</h2>
+            <p className="mb-3 text-[11px] text-muted">Datos reales de tu cuenta en cada servicio — distinto de &ldquo;¿está caído?&rdquo; de arriba.</p>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div>
+                <p className="mb-2 text-xs font-medium text-foreground">Supabase</p>
+                {salud.uso_recursos.supabase.disponible ? (
+                  <div className="flex flex-col gap-2">
+                    {salud.uso_recursos.supabase.proyectos.map((p) => (
+                      <div key={p.ref} className="rounded-md border border-border px-2.5 py-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-medium text-foreground">{p.nombre}</span>
+                          <Badge value={p.estado === "ACTIVE_HEALTHY" ? "operational" : "desconocido"} label={p.estado} />
+                        </div>
+                        <p className="mt-1 text-[11px] text-muted">
+                          {p.region} · DB {p.dbTexto ?? "—"}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-muted">{salud.uso_recursos.supabase.motivo}</p>
+                )}
+              </div>
+              <div>
+                <p className="mb-2 text-xs font-medium text-foreground">Resend</p>
+                {salud.uso_recursos.resend.disponible ? (
+                  salud.uso_recursos.resend.dominios.length > 0 ? (
+                    <div className="flex flex-col gap-1.5">
+                      {salud.uso_recursos.resend.dominios.map((d) => (
+                        <div key={d.nombre} className="flex items-center justify-between gap-2 rounded-md border border-border px-2.5 py-2">
+                          <span className="text-xs text-foreground">{d.nombre}</span>
+                          <Badge value={d.estado === "verified" ? "operational" : "desconocido"} label={d.estado} />
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-muted">Sin dominios configurados.</p>
+                  )
+                ) : (
+                  <p className="text-[11px] text-muted">{salud.uso_recursos.resend.motivo}</p>
+                )}
+              </div>
+              <div>
+                <p className="mb-2 text-xs font-medium text-foreground">Anthropic (Claude)</p>
+                {salud.uso_recursos.anthropic.disponible ? (
+                  <p className="text-[11px] text-muted">{salud.uso_recursos.anthropic.dias} días de datos disponibles.</p>
+                ) : (
+                  <p className="text-[11px] text-muted">{salud.uso_recursos.anthropic.motivo}</p>
+                )}
+              </div>
+            </div>
           </Card>
 
           <div className="grid gap-4 lg:grid-cols-2">

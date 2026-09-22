@@ -87,6 +87,19 @@ export const env = {
   // id se pega acá.
   FLOW_PLAN_ID_BASICO: process.env.FLOW_PLAN_ID_BASICO ?? null,
   FLOW_PLAN_ID_PRO: process.env.FLOW_PLAN_ID_PRO ?? null,
+  // Panel de infraestructura del Super-Admin (22-sep-2026) — cada uno
+  // opcional: sin la credencial, ese servicio se omite del panel en vez
+  // de tirar error (ver superadmin/infra.ts). Nunca se exponen al
+  // cliente — el panel solo devuelve los números ya calculados.
+  // Personal Access Token de supabase.com/dashboard/account/tokens —
+  // DISTINTO del login de la CLI (npx supabase), que vive fuera de este
+  // .env, en la sesión de terminal de quien lo corre.
+  SUPABASE_MGMT_TOKEN: process.env.SUPABASE_MGMT_TOKEN ?? null,
+  // Admin API Key de console.anthropic.com/settings/admin-keys — para
+  // uso/costo de la organización. DISTINTA de ANTHROPIC_API_KEY (esa es
+  // la que ya usa el backend para llamar a Claude, no da acceso a
+  // reportes de uso).
+  ANTHROPIC_ADMIN_KEY: process.env.ANTHROPIC_ADMIN_KEY ?? null,
 };
 
 // Log de a qué proyecto Supabase se conecta este proceso — server.ts y
