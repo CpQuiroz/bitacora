@@ -8,6 +8,7 @@ import { apiJson } from "../../services/api";
 import { entrarConGoogle } from "./googleAuth";
 import { LogoMark } from "../../components/ui";
 import { PantallaAuth } from "./PantallaAuth";
+import { useActivarModoSuperAdmin } from "../superadmin/SuperAdminModeContext";
 import type { RootStackParamList } from "../../shell/navigation/types";
 
 // El botón de Google aparece solo cuando está configurado del lado
@@ -20,6 +21,7 @@ type RespuestaLogin =
 
 // PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export function LoginScreen({ navigation }: NativeStackScreenProps<RootStackParamList, "Login">) {
+  const activarModoSuperAdmin = useActivarModoSuperAdmin();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [cargando, setCargando] = useState(false);
@@ -125,6 +127,15 @@ export function LoginScreen({ navigation }: NativeStackScreenProps<RootStackPara
       >
         <Texto tamano={tokens.size.small} color={`${tokens.color.text}b3`}>
           ¿Olvidaste tu contraseña?
+        </Texto>
+      </Pressable>
+      <Pressable
+        hitSlop={10}
+        style={{ alignSelf: "center", paddingVertical: tokens.space["2"], minHeight: 44, justifyContent: "center" }}
+        onPress={activarModoSuperAdmin}
+      >
+        <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`}>
+          ¿Sos Super-Admin?
         </Texto>
       </Pressable>
     </PantallaAuth>

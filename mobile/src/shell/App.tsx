@@ -3,6 +3,7 @@ import { StatusBar } from "expo-status-bar";
 import { NavigationContainer } from "@react-navigation/native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AuthProvider, useAuth } from "../features/auth/AuthContext";
+import { SuperAdminGate } from "../features/superadmin/SuperAdminGate";
 import { NetworkProvider } from "../services/sync/NetworkProvider";
 import { useEffect } from "react";
 import { ProveedorMarca } from "@bitacora/ui/native";
@@ -86,15 +87,17 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <AuthProvider>
-        <NetworkProvider>
-          <ConTema>
-            <BloqueoBiometrico>
-              <NavegacionConTema />
-            </BloqueoBiometrico>
-          </ConTema>
-        </NetworkProvider>
-      </AuthProvider>
+      <SuperAdminGate>
+        <AuthProvider>
+          <NetworkProvider>
+            <ConTema>
+              <BloqueoBiometrico>
+                <NavegacionConTema />
+              </BloqueoBiometrico>
+            </ConTema>
+          </NetworkProvider>
+        </AuthProvider>
+      </SuperAdminGate>
     </SafeAreaProvider>
   );
 }
