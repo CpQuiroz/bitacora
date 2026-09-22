@@ -1049,6 +1049,9 @@ export type Rendicion = {
   empresa_id: string;
   folio: number | null;
   colaborador_id: string;
+  // Quién registró la rendición (siempre quien hizo el POST) —
+  // distinto de colaborador_id cuando gestión la carga por otro.
+  creado_por: string;
   periodo: PeriodoRendicion;
   fecha_inicio: string;
   fecha_termino: string;

@@ -10,6 +10,7 @@ import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
+import { GastosSubnav } from "@/components/GastosSubnav";
 import { SelectCrear } from "@/components/SelectCrear";
 import { Button, Card, Cifra, DatePicker, EmptyState, ErrorState, Input, LoadingState, Select, StatusBadge, Table, type TonoEstado } from "@bitacora/ui/web";
 import { InputMonto } from "@/components/InputMonto";
@@ -218,6 +219,7 @@ export default function GastosPage() {
 
   return (
     <DashboardShell usuario={usuario}>
+      <GastosSubnav activo="gastos" />
       <div className="mb-ds-6 flex flex-wrap items-center justify-between gap-ds-3">
         <div>
           <p className="ds-heading text-ds-h2 text-ds-text">Gastos</p>

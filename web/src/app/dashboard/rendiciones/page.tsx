@@ -1,16 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { HandCoins } from "lucide-react";
-import type { EstadoRendicion, Rendicion } from "@bitacora/shared";
+import { HandCoins, Plus } from "lucide-react";
+import type { EstadoRendicion, PeriodoRendicion, Rendicion, Usuario } from "@bitacora/shared";
 import { formatearFolio } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Card, EmptyState, ErrorState, LoadingState, Select, StatusBadge, Table, type TonoEstado } from "@bitacora/ui/web";
+import { GastosSubnav } from "@/components/GastosSubnav";
+import { InputMonto } from "@/components/InputMonto";
+import { Button, Card, DatePicker, EmptyState, ErrorState, LoadingState, Select, StatusBadge, Table, type TonoEstado } from "@bitacora/ui/web";
 
 type RendicionConDatos = Rendicion & {
   colaborador: { id: string; nombre: string } | null;
@@ -36,49 +38,108 @@ const TONO_ESTADO: Record<EstadoRendicion, TonoEstado> = {
 
 const ETIQUETA_PERIODO: Record<string, string> = { diario: "Diario", semanal: "Semanal" };
 
-// PASO 6 (sistema de diseño). Fondo por rendir / caja chica —
-// pedido 21-sep-2026. Sin formulario de creación acá a propósito: una
-// rendición nace en el celular del colaborador (Más → Rendiciones);
-// la web es donde gestión revisa/aprueba (ver [id]/page.tsx).
+const HOY = () => new Date().toISOString().slice(0, 10);
+
+// PASO 6 (sistema de diseño). Fondo por rendir / caja chica.
+// Pedido 22-sep-2026: se agrega creación desde la web (antes solo
+// nacía en el celular) — gestión puede crearla a nombre de cualquier
+// colaborador, un colaborador solo a nombre propio (lo valida el
+// backend igual). El detalle ([id]/page.tsx) es donde se cargan los
+// gastos con foto, se edita y se elimina mientras sigue en borrador.
 export default function RendicionesPage() {
   const router = useRouter();
   const [usuario, setUsuario] = useState<UsuarioShell | null>(null);
+  const [rol, setRol] = useState<string | null>(null);
   const [rendiciones, setRendiciones] = useState<RendicionConDatos[] | null>(null);
+  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [filtroEstado, setFiltroEstado] = useState<"todos" | EstadoRendicion>("todos");
 
+  const [formAbierto, setFormAbierto] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [guardando, setGuardando] = useState(false);
+  const [colaboradorId, setColaboradorId] = useState("");
+  const [periodo, setPeriodo] = useState<PeriodoRendicion>("semanal");
+  const [fechaInicio, setFechaInicio] = useState(() => HOY());
+  const [fechaTermino, setFechaTermino] = useState(() => HOY());
+  const [montoEntregado, setMontoEntregado] = useState("");
+
+  async function cargar() {
+    const { data } = await supabase.auth.getSession();
+    if (!data.session) {
+      router.replace("/login");
+      return;
+    }
+    const [resMe, resRendiciones] = await Promise.all([apiFetch("/api/me"), apiFetch("/api/rendiciones")]);
+    if (resMe.ok) {
+      const { usuario: u } = await resMe.json();
+      if (u) {
+        setRol(u.rol);
+        setUsuario({
+          nombre: u.nombre,
+          rol: u.rol,
+          empresaNombre: u.empresa?.nombre ?? "",
+          empresaLogoUrl: u.empresa?.logo_url ?? null,
+          colorPrimario: u.empresa?.color_primario ?? null,
+          tema: u.empresa?.tema ?? "faena",
+          colorPrimarioForeground: u.empresa?.color_primario_foreground ?? null,
+          colorSecundario: u.empresa?.color_secundario ?? null,
+          fuente: u.empresa?.fuente ?? null,
+          moneda: u.empresa?.moneda ?? "CLP",
+        });
+        if (u.rol !== "colaborador") {
+          const resUsuarios = await apiFetch("/api/usuarios");
+          if (resUsuarios.ok) setUsuarios((await resUsuarios.json()).filter((x: Usuario) => x.activo));
+        }
+      }
+    }
+    if (!resRendiciones.ok) {
+      setError("No se pudieron cargar las rendiciones");
+      return;
+    }
+    setRendiciones(await resRendiciones.json());
+  }
+
   useEffect(() => {
-    (async () => {
-      const { data } = await supabase.auth.getSession();
-      if (!data.session) {
-        router.replace("/login");
-        return;
-      }
-      const [resMe, resRendiciones] = await Promise.all([apiFetch("/api/me"), apiFetch("/api/rendiciones")]);
-      if (resMe.ok) {
-        const { usuario: u } = await resMe.json();
-        if (u)
-          setUsuario({
-            nombre: u.nombre,
-            rol: u.rol,
-            empresaNombre: u.empresa?.nombre ?? "",
-            empresaLogoUrl: u.empresa?.logo_url ?? null,
-            colorPrimario: u.empresa?.color_primario ?? null,
-            tema: u.empresa?.tema ?? "faena",
-            colorPrimarioForeground: u.empresa?.color_primario_foreground ?? null,
-            colorSecundario: u.empresa?.color_secundario ?? null,
-            fuente: u.empresa?.fuente ?? null,
-            moneda: u.empresa?.moneda ?? "CLP",
-          });
-      }
-      if (!resRendiciones.ok) {
-        setError("No se pudieron cargar las rendiciones");
-        return;
-      }
-      setRendiciones(await resRendiciones.json());
-    })();
+    cargar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  function abrirNueva() {
+    setColaboradorId("");
+    setPeriodo("semanal");
+    setFechaInicio(HOY());
+    setFechaTermino(HOY());
+    setMontoEntregado("");
+    setFormError(null);
+    setFormAbierto(true);
+  }
+
+  async function onSubmit(e: FormEvent) {
+    e.preventDefault();
+    setFormError(null);
+    setGuardando(true);
+    const res = await apiFetch("/api/rendiciones", {
+      method: "POST",
+      body: JSON.stringify({
+        colaborador_id: colaboradorId || undefined,
+        periodo,
+        fecha_inicio: fechaInicio,
+        fecha_termino: fechaTermino,
+        monto_entregado: montoEntregado,
+      }),
+    });
+    setGuardando(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setFormError(body.error ?? "No se pudo crear la rendición");
+      return;
+    }
+    const nueva = await res.json();
+    // Directo al detalle: ahí se cargan los gastos con foto (mismo
+    // formulario que un colaborador vería en el celular).
+    router.push(`/dashboard/rendiciones/${nueva.id}`);
+  }
 
   if (!usuario) return null;
 
@@ -94,11 +155,17 @@ export default function RendicionesPage() {
 
   return (
     <DashboardShell usuario={usuario}>
-      <div className="mb-ds-6">
-        <p className="ds-heading text-ds-h2 text-ds-text">Rendiciones</p>
-        <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">
-          Fondo por rendir entregado a colaboradores, reconciliado contra sus gastos de terreno
-        </p>
+      <GastosSubnav activo="rendiciones" />
+      <div className="mb-ds-6 flex flex-wrap items-center justify-between gap-ds-3">
+        <div>
+          <p className="ds-heading text-ds-h2 text-ds-text">Rendiciones</p>
+          <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">
+            Fondo por rendir entregado a colaboradores, reconciliado contra sus gastos de terreno
+          </p>
+        </div>
+        <Button iconoIzq={<Plus size={16} strokeWidth={2.75} />} onPress={() => (formAbierto ? setFormAbierto(false) : abrirNueva())}>
+          Nueva rendición
+        </Button>
       </div>
 
       <div className="mb-ds-6 grid gap-ds-4 sm:grid-cols-3">
@@ -115,6 +182,52 @@ export default function RendicionesPage() {
           <p className="mt-ds-1 font-ds-body text-ds-h5 font-semibold text-ds-text">{formatMoneda(totales.saldo, usuario.moneda)}</p>
         </Card>
       </div>
+
+      {formAbierto && (
+        <div className="mb-ds-6">
+          <Card>
+            <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Nueva rendición</p>
+            <form onSubmit={onSubmit} className="flex flex-col gap-ds-4">
+              <div className="grid gap-ds-4 sm:grid-cols-2">
+                {rol !== "colaborador" && (
+                  <div className="sm:col-span-2">
+                    <Select
+                      etiqueta="Colaborador"
+                      valor={colaboradorId}
+                      onCambio={setColaboradorId}
+                      opciones={[{ valor: "", etiqueta: "A mi nombre" }, ...usuarios.map((u) => ({ valor: u.id, etiqueta: u.nombre }))]}
+                    />
+                  </div>
+                )}
+                <Select
+                  etiqueta="Período"
+                  valor={periodo}
+                  onCambio={(v) => setPeriodo(v as PeriodoRendicion)}
+                  opciones={[
+                    { valor: "diario", etiqueta: "Diario" },
+                    { valor: "semanal", etiqueta: "Semanal" },
+                  ]}
+                />
+                <div className="flex flex-col gap-ds-1">
+                  <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Monto entregado</label>
+                  <InputMonto required value={montoEntregado} onChange={setMontoEntregado} moneda={usuario.moneda} />
+                </div>
+                <DatePicker etiqueta="Fecha de inicio" valor={aFecha(fechaInicio)} onCambio={(f) => setFechaInicio(aTexto(f))} />
+                <DatePicker etiqueta="Fecha de término" valor={aFecha(fechaTermino)} onCambio={(f) => setFechaTermino(aTexto(f))} />
+              </div>
+              {formError ? <p className="font-ds-body text-ds-small text-ds-accent-700">{formError}</p> : null}
+              <div className="flex gap-ds-2">
+                <Button tipo="submit" cargando={guardando}>
+                  Crear y agregar gastos
+                </Button>
+                <Button variante="ghost" onPress={() => setFormAbierto(false)}>
+                  Cancelar
+                </Button>
+              </div>
+            </form>
+          </Card>
+        </div>
+      )}
 
       <div className="mb-ds-4 max-w-xs">
         <Select
@@ -137,7 +250,12 @@ export default function RendicionesPage() {
         <EmptyState
           icono={<HandCoins size={28} strokeWidth={2.75} />}
           titulo="Todavía no hay rendiciones"
-          mensaje="Se crean desde el celular (Más → Rendiciones)."
+          mensaje="Creá la primera con el botón de arriba, o se cargan desde el celular (Más → Rendiciones)."
+          accion={
+            <Button iconoIzq={<Plus size={16} strokeWidth={2.75} />} onPress={abrirNueva}>
+              Nueva rendición
+            </Button>
+          }
         />
       ) : null}
       {rendiciones && rendiciones.length > 0 && filtradas.length === 0 ? (
@@ -171,4 +289,19 @@ export default function RendicionesPage() {
       )}
     </DashboardShell>
   );
+}
+
+// DatePicker (packages/ui) trabaja con Date, el estado de este archivo
+// con texto ISO — mismo par de helpers que gastos/page.tsx.
+function aFecha(texto: string): Date | null {
+  if (!texto) return null;
+  const [y, m, d] = texto.split("-").map(Number);
+  return new Date(y, (m || 1) - 1, d || 1);
+}
+function aTexto(fecha: Date | null): string {
+  if (!fecha) return "";
+  const y = fecha.getFullYear();
+  const m = String(fecha.getMonth() + 1).padStart(2, "0");
+  const d = String(fecha.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }

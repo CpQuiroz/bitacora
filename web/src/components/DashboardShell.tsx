@@ -20,7 +20,6 @@ import {
   ChevronRight,
   ClipboardCheck,
   CreditCard,
-  HandCoins,
   HelpCircle,
   Home,
   Layers,
@@ -92,10 +91,11 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/dashboard/financiero/cotizaciones", label: "Cotizaciones", icon: Tag, modulo: "financiero" },
       { href: "/dashboard/financiero/cobros", label: "Cobros", icon: Receipt, modulo: "financiero" },
+      // Rendiciones (fondo por rendir/caja chica) vive DENTRO de Gastos
+      // como subsección (tabs en la página, ver GastosSubnav) — a
+      // propósito no tiene ítem propio acá, para no duplicar "Dinero"
+      // con una quinta entrada.
       { href: "/dashboard/gastos", label: "Gastos", icon: Wallet, modulo: "financiero" },
-      // Rendiciones (fondo por rendir/caja chica, 21-sep-2026) — reusa
-      // el mismo módulo "financiero" que el resto del grupo.
-      { href: "/dashboard/rendiciones", label: "Rendiciones", icon: HandCoins, modulo: "financiero" },
       // Remuneraciones deja de ser grupo de primer nivel: se usa una vez
       // al mes. Parámetros de remuneración pasa a Configuración.
       { href: "/dashboard/remuneraciones", label: "Liquidaciones", icon: CreditCard, modulo: "remuneraciones" },
@@ -369,6 +369,9 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
     // Configuración enlaza a /cuenta pero debe verse activo en cualquiera
     // de sus subsecciones (seguridad, empresa, plantillas, etc.).
     if (href === "/dashboard/configuracion/cuenta") return pathname.startsWith("/dashboard/configuracion");
+    // Rendiciones es subsección de Gastos (ver GastosSubnav) — sin ítem
+    // propio en el nav, así que el de Gastos queda activo ahí también.
+    if (href === "/dashboard/gastos") return pathname.startsWith("/dashboard/gastos") || pathname.startsWith("/dashboard/rendiciones");
     return pathname.startsWith(href);
   }
 

@@ -7,13 +7,17 @@
   17 — levantamientos_cola_offline, 1 — eslint_web_next16, 2 — ci_verificar,
   4 — smoke_backend, 8 — sistema_diseno (Paso 7), 3 — rotar_deploy_hook_render
 - **Cerrada también:** 18 — storybook_packages_ui
-- **En curso ahora:** tarea 5 (e2e_mantencion_pdf_prod) — esperando que la usuaria
-  inicie sesión en prod en el navegador (no toco credenciales); ver política.
+- **Nota (2026-09-22):** este header no se actualizó desde el 11-sep; el
+  historial de abajo siguió creciendo con ~60 tareas más (ver
+  `trabajo_list.json` para el estado real). Tarea 5 (e2e_mantencion_pdf_prod)
+  se cerró el 14-sep (ver entrada "tarea 5 CERRADA" más abajo).
 - **Pausada:** 8 — sistema_diseno (pending, no abandonada — retomar cuando la
   usuaria lo pida; ver `docs/design-system.md` §"Seams que quedan fuera de
   este pedido" para el estado exacto donde quedó)
-- **Inicio tarea 9:** 2026-09-11
-- **Agente:** Claude Sonnet 5 (directo)
+- **Único bloqueo real pendiente:** tarea 78 — rendiciones_fondo_por_rendir
+  (`blocked` a propósito: migración 120 aplicada en dev, falta probar el
+  flujo completo en dev y decidir pushear/aplicar a prod)
+- **Agente:** Claude Opus 5 (directo)
 
 ## 2026-09-11: tarea 9 — Edición de Viajes (Admin/Supervisor) + fotos inicio/término OS
 
@@ -5357,3 +5361,85 @@ aplicar a prod y pushear.
 Sigue sin pushear — falta que pruebe el flujo (web + mobile) contra dev
 antes de decidir si esto pasa a prod.
 
+
+## 2026-09-22: tarea 78 (Rendiciones) — migración 120 en realidad NO estaba en dev
+
+Al retomar la tarea 78 para probar el flujo en el navegador, se verificó
+directo en la base de dev (proyecto `pruwvpnlvrvgtmpetlsr`) y la migración
+120 **no estaba aplicada** (no existía tabla `rendiciones`, ni
+`gastos.rendicion_id`/`viaje_id`, ni `empresas.siguiente_folio_rendicion`;
+`supabase_migrations.schema_migrations` llegaba solo hasta la versión 74).
+Esto contradice la nota anterior ("usuaria confirmó: ya la corrí en dev").
+
+Se aplicó ahora vía `apply_migration` (MCP Supabase) contra
+`pruwvpnlvrvgtmpetlsr` y se verificó que la tabla/columnas existen. Falta
+correr `supabase migration repair --status applied --linked 120` con la
+CLI local para que el tracking quede consistente (no se hizo en esta
+sesión, solo se aplicó el DDL).
+
+También: se mató un proceso `tsx watch` huérfano (PID 91658, corriendo
+desde el 4-sep sin puerto abierto, no era el backend real) y se reseteó la
+password de la cuenta de prueba `prueba@bitacora.app` (admin, Transportes
+Itineris) vía Admin API para que la usuaria pueda loguearse en
+`localhost:3000` y probar Rendiciones a mano.
+
+**Siguiente paso:** la usuaria prueba el flujo completo en el navegador
+(crear rendición → agregar gasto → enviar sin comprobante debe bloquear →
+subir comprobante → enviar → aprobar/rechazar/liquidar) y reporta
+hallazgos.
+
+## 2026-09-22 (2): Rendiciones — subsección de Gastos + CRUD completo en web
+
+Pedido de la usuaria después de ver la página en el navegador: "quiero que
+rendiciones sea una subsección de gastos... la página no permite crear, ni
+agregar imágenes, ni detalle, ni eliminar ni editar, debe estar asociada a
+la persona que lo crea y debe tener id". El diseño original (PASO 6,
+tarea 78) dejaba la creación deliberadamente solo en mobile — se revierte
+ese criterio a pedido explícito.
+
+**Migración 121** (`rendiciones_creado_por.sql`, aplicada y verificada en
+dev): `rendiciones.creado_por uuid not null references usuarios(id)` —
+quién hizo el POST, separado de `colaborador_id` (a quién pertenece).
+Backfill = colaborador_id para las filas existentes.
+
+**Backend** (`backend/src/routes/rendiciones.ts`):
+- POST / setea `creado_por: req.userId!`.
+- POST /:id/items gana `upload.single("comprobante")` opcional (antes no
+  aceptaba archivo a propósito — el mobile lo hacía en dos pasos por la
+  cola offline; la web no tiene ese problema, puede mandarlo inline igual
+  que POST /api/gastos).
+- PATCH /:id se separó en dos ramas por la forma del body: si viene
+  `accion`/`saldo_liquidado` es la revisión de gestión (como antes); si no,
+  es edición de datos base (colaborador_id, periodo, fechas, monto) por el
+  dueño (colaborador_id o creado_por) o gestión, solo mientras
+  estado='borrador'.
+- Nuevo DELETE /:id (solo borrador, por dueño/creador o gestión — borra
+  sus gastos con ella, no quedan huérfanos).
+- Nuevo DELETE /:id/items/:gastoId (quita un gasto de una rendición en
+  borrador — hard delete a propósito, el gasto se creó específicamente
+  para esa rendición).
+
+**Web:**
+- `DashboardShell.tsx`: se saca el ítem "Rendiciones" de NAV_GROUPS/Dinero.
+- Nuevo `GastosSubnav.tsx`: tabs Gastos/Rendiciones (mismo patrón de pill
+  que ya usaba `informes/gastos/page.tsx`), montado arriba de ambas
+  páginas.
+- `rendiciones/page.tsx`: botón "Nueva rendición" + formulario inline
+  (período, fechas, monto, colaborador si sos gestión) — al crear,
+  redirige al detalle para cargar los gastos.
+- `rendiciones/[id]/page.tsx`: botones Editar/Enviar a revisión/Eliminar
+  en el header (solo si estado='borrador' y sos dueño/creador o gestión);
+  formulario de "Agregar gasto" con foto (categoría, proveedor,
+  descripción, monto, fecha, comprobante) + Editar/Quitar por fila —
+  mismo scope de campos que el formulario mobile (NuevoGastoScreen).
+
+`verificar.sh` completo (con tsc de mobile + tests, no solo `--rapido`) en
+verde. Se reinició el backend dev (corre con `tsx watch`, no hot-reload
+del binario en sí para cambios de import nuevos como multer/subirComprobante
+en un router nuevo — se mató el proceso viejo y quedó uno solo limpio en
+:8080).
+
+**Siguiente paso:** la usuaria prueba el flujo completo en el navegador
+(crear rendición → agregar/editar/quitar gastos con foto → enviar →
+aprobar/rechazar/liquidar → editar/eliminar en borrador) y reporta
+hallazgos. Sigue sin decidirse el push a prod.
