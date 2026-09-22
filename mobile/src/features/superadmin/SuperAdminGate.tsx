@@ -5,6 +5,7 @@ import { SuperAdminAuthProvider, useSuperAdminAuth } from "./SuperAdminAuthConte
 import { SuperAdminLoginScreen } from "./SuperAdminLoginScreen";
 import { SuperAdminNavigator } from "./SuperAdminNavigator";
 import { ProveedorModoSuperAdmin } from "./SuperAdminModeContext";
+import { BloqueoBiometricoSuperAdmin } from "./BloqueoBiometricoSuperAdmin";
 
 // Envuelve TODA la app (App.tsx, por fuera de AuthProvider) — decide
 // si se muestra el flujo normal de empresa (children) o el de
@@ -28,10 +29,12 @@ function SuperAdminGateInner({ children }: { children: ReactNode }) {
 
   if (auth.fase === "listo") {
     return (
-      <NavigationContainer>
-        <SuperAdminNavigator />
-        <StatusBar style="dark" />
-      </NavigationContainer>
+      <BloqueoBiometricoSuperAdmin>
+        <NavigationContainer>
+          <SuperAdminNavigator />
+          <StatusBar style="dark" />
+        </NavigationContainer>
+      </BloqueoBiometricoSuperAdmin>
     );
   }
 

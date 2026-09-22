@@ -1,10 +1,10 @@
 import { useCallback, useState } from "react";
-import { RefreshControl, ScrollView, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { Building2, LogOut } from "lucide-react-native";
+import { Building2, LogOut, Plus } from "lucide-react-native";
 import { tokens } from "@bitacora/design-tokens";
-import { EmptyState, Input, ListRow, ListRowGrupo, LoadingState, ScreenHeader, StatusBadge, Texto, type TonoEstado } from "@bitacora/ui/native";
+import { EmptyState, Input, ListRow, ListRowGrupo, LoadingState, ScreenHeader, StatusBadge, Texto, useMarca, type TonoEstado } from "@bitacora/ui/native";
 import { listarEmpresasSuperAdmin, type EmpresaSuperAdmin } from "../../services/superadmin";
 import { useSuperAdminAuth } from "./SuperAdminAuthContext";
 import type { SuperAdminStackParamList } from "./types";
@@ -75,6 +75,34 @@ export function SuperAdminEmpresasListScreen({ navigation }: NativeStackScreenPr
           {auth.fase === "listo" ? `Conectado como ${auth.yo.nombre}` : ""}
         </Texto>
       </ScrollView>
+      <FabNuevaEmpresa onPress={() => navigation.navigate("NuevaEmpresa")} />
     </View>
+  );
+}
+
+function FabNuevaEmpresa({ onPress }: { onPress: () => void }) {
+  const marca = useMarca();
+  return (
+    <Pressable
+      onPress={onPress}
+      style={{
+        position: "absolute",
+        right: 18,
+        bottom: 24,
+        width: 56,
+        height: 56,
+        borderRadius: tokens.radius.pill,
+        backgroundColor: marca.base,
+        alignItems: "center",
+        justifyContent: "center",
+        shadowColor: marca.base,
+        shadowOpacity: 0.35,
+        shadowRadius: 12,
+        shadowOffset: { width: 0, height: 6 },
+        elevation: 6,
+      }}
+    >
+      <Plus size={26} strokeWidth={2.5} color={tokens.color.bg} />
+    </Pressable>
   );
 }

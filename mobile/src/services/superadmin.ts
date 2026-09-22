@@ -11,7 +11,7 @@
 // siempre firman con el token de Supabase del usuario de empresa. Este
 // archivo es su equivalente mínimo para el token de super-admin.
 import * as SecureStore from "expo-secure-store";
-import type { EstadoEmpresa, Modulo, Plan } from "@bitacora/shared";
+import type { EstadoEmpresa, Modulo, Plan, Rubro } from "@bitacora/shared";
 
 const FALLBACK = "http://localhost:8080";
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? FALLBACK;
@@ -100,6 +100,35 @@ export async function listarEmpresasSuperAdmin(busqueda?: string): Promise<Empre
   const qs = busqueda?.trim() ? `?busqueda=${encodeURIComponent(busqueda.trim())}` : "";
   const r = await apiSuperAdmin<EmpresaSuperAdmin[]>(`/api/superadmin/empresas${qs}`);
   return r.ok ? r.data : [];
+}
+
+export type BorradorEmpresa = {
+  nombre: string;
+  rubro: Rubro;
+  rut: string;
+  giro: string;
+  telefono_empresa: string;
+  direccion_calle: string;
+  admin_nombre: string;
+  admin_correo: string;
+};
+
+export async function crearEmpresaSuperAdmin(b: BorradorEmpresa): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  const r = await apiSuperAdmin<{ empresa: { id: string } }>("/api/superadmin/empresas", {
+    method: "POST",
+    body: JSON.stringify({
+      nombre: b.nombre.trim(),
+      rubro: b.rubro,
+      rut: b.rut.trim() || undefined,
+      giro: b.giro.trim() || undefined,
+      telefono_empresa: b.telefono_empresa.trim() || undefined,
+      direccion_calle: b.direccion_calle.trim() || undefined,
+      admin_nombre: b.admin_nombre.trim(),
+      admin_correo: b.admin_correo.trim(),
+    }),
+  });
+  if (!r.ok) return { ok: false, error: r.error };
+  return { ok: true, id: r.data.empresa.id };
 }
 
 export async function cambiarEstadoEmpresa(id: string, estado: EstadoEmpresa): Promise<{ ok: true } | { ok: false; error: string }> {
