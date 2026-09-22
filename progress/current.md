@@ -5528,3 +5528,27 @@ confianza por revisión de código, mismo criterio que el PDF de OS.
 
 Sigue sin decidirse push a prod (tarea 78 completa: método de entrega +
 PDF, más lo que ya había construido `bitacora-7c` — CRUD web completo).
+
+## 2026-09-22 (5): Rendiciones — comprobantes embebidos en el PDF
+
+Aclaración de la usuaria sobre "¿se pueden agregar imágenes a la
+rendición?": no era un pedido nuevo de foto general, sino que las fotos
+de los comprobantes de cada gasto aparezcan DENTRO del PDF (antes el
+PDF solo mostraba "Sí/No tiene comprobante" en la tabla).
+
+`generarPdfRendicion.ts`: nueva sección "Comprobantes" al final del PDF
+— grilla de fotos con su fecha/categoría/monto debajo de cada una,
+mismo patrón exacto que la sección de Fotos de `generarPdfOS.ts`
+(ancho 155, alto 110, wrap a la fila siguiente, salto de página si no
+entra). `armarDatosPdfRendicion` (rendiciones.ts) resuelve la URL
+firmada de cada `comprobante_url` vía `urlFirmadaComprobante` (storage.ts)
+antes de pasarla al generador, que la descarga igual que el logo de la
+empresa.
+
+`tsc` (6 workspaces) + tests + `verificar.sh` en verde. Probado contra
+dev: el endpoint sigue devolviendo 200/application/pdf sin romper nada
+en el caso sin comprobantes (REND-0003, mismo tamaño de antes). **No se
+pudo probar la imagen embebida en sí de punta a punta** — requiere
+poder agregar un gasto con foto a una rendición, bloqueado por la
+migración 112 pendiente en dev (ver nota anterior). Confianza por
+revisión de código: reusa textual el patrón ya probado de OS.

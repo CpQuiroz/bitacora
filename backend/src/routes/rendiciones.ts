@@ -2,7 +2,7 @@ import { Router } from "express";
 import multer from "multer";
 import type { EstadoRendicion, MetodoEntregaRendicion, PeriodoRendicion, Rendicion } from "@bitacora/shared";
 import { supabase } from "../supabase";
-import { subirComprobante } from "../storage";
+import { subirComprobante, urlFirmadaComprobante } from "../storage";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
 import { siguienteFolioRendicion } from "../folios";
@@ -166,6 +166,13 @@ async function armarDatosPdfRendicion(empresaId: string, id: string): Promise<Da
   const totalGastado = (gastos ?? []).reduce((acc, g) => acc + Number(g.monto), 0);
   const r = rendicion as unknown as Rendicion & { colaborador: { nombre: string } | null; aprobador: { nombre: string } | null };
 
+  // URL firmada de cada comprobante — se resuelve acá (necesita acceso
+  // al storage) y se pasa ya lista al generador, que solo la descarga
+  // (mismo criterio que el logo de la empresa).
+  const comprobanteUrls = await Promise.all(
+    (gastos ?? []).map((g) => (g.comprobante_url ? urlFirmadaComprobante(g.comprobante_url) : Promise.resolve(null)))
+  );
+
   return {
     empresaNombre: empresa?.nombre ?? "",
     empresaLogoUrl: empresa?.logo_url ?? null,
@@ -177,13 +184,14 @@ async function armarDatosPdfRendicion(empresaId: string, id: string): Promise<Da
     fechaTermino: r.fecha_termino,
     metodoEntregaTexto: ETIQUETA_METODO_ENTREGA_PDF[r.metodo_entrega] ?? r.metodo_entrega,
     montoEntregado: Number(r.monto_entregado),
-    items: (gastos ?? []).map((g) => ({
+    items: (gastos ?? []).map((g, i) => ({
       fecha: g.fecha,
       categoria: g.categoria,
       descripcion: g.descripcion,
       proveedor: (g as unknown as { proveedor_info: { nombre: string } | null }).proveedor_info?.nombre ?? null,
       monto: Number(g.monto),
       tieneComprobante: Boolean(g.comprobante_url),
+      comprobanteUrl: comprobanteUrls[i],
     })),
     totalGastado,
     saldo: Number(r.monto_entregado) - totalGastado,

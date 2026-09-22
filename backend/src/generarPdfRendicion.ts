@@ -8,7 +8,7 @@
 // real (el volumen no lo justifica).
 // ============================================================
 import PDFDocument from "pdfkit";
-import { ANCHO, M_IZQ, PDF, regla, tituloSeccion } from "./pdfEstilo";
+import { ANCHO, M_IZQ, PDF, regla, tituloBarra, tituloSeccion } from "./pdfEstilo";
 
 export type ItemGastoRendicionPdf = {
   fecha: string;
@@ -17,6 +17,10 @@ export type ItemGastoRendicionPdf = {
   proveedor: string | null;
   monto: number;
   tieneComprobante: boolean;
+  // URL firmada (ya resuelta por armarDatosPdfRendicion) — se descarga
+  // acá mismo, igual que el logo, para embeber la foto real del
+  // comprobante en el PDF (no solo un "Sí/No" en la tabla).
+  comprobanteUrl: string | null;
 };
 
 export type DatosRendicionPdf = {
@@ -52,7 +56,10 @@ async function descargar(url: string): Promise<Buffer | null> {
 }
 
 export async function generarPdfRendicion(datos: DatosRendicionPdf): Promise<Buffer> {
-  const logoBuffer = datos.empresaLogoUrl ? await descargar(datos.empresaLogoUrl) : null;
+  const [logoBuffer, ...comprobanteBuffers] = await Promise.all([
+    datos.empresaLogoUrl ? descargar(datos.empresaLogoUrl) : Promise.resolve(null),
+    ...datos.items.map((it) => (it.comprobanteUrl ? descargar(it.comprobanteUrl) : Promise.resolve(null))),
+  ]);
   const colorMarca = datos.colorPrimario ?? PDF.marca;
 
   const doc = new PDFDocument({ size: "A4", margin: 50 });
@@ -152,6 +159,46 @@ export async function generarPdfRendicion(datos: DatosRendicionPdf): Promise<Buf
       .fillColor(datos.saldo < 0 ? PDF.danger : PDF.tinta)
       .text(`Saldo: ${monto(datos.saldo)}`, { width: 495, align: "right" });
     doc.moveDown(1);
+  }
+
+  // --- Comprobantes: la foto real de cada gasto que tenga una, en
+  // grilla — mismo patrón que la sección de Fotos del PDF de OS
+  // (generarPdfOS.ts). Se saltea a página nueva si no entra.
+  const conFoto = datos.items
+    .map((it, i) => ({ it, buf: comprobanteBuffers[i] }))
+    .filter((x): x is { it: ItemGastoRendicionPdf; buf: Buffer } => x.buf !== null);
+  if (conFoto.length > 0) {
+    if (doc.y > 600) doc.addPage();
+    tituloBarra(doc, `Comprobantes (${conFoto.length})`, colorMarca);
+    doc.moveDown(0.3);
+
+    let x = M_IZQ;
+    let filaY = doc.y;
+    const anchoFoto = 155;
+    for (const { it, buf } of conFoto) {
+      if (x + anchoFoto > 545) {
+        x = M_IZQ;
+        filaY += 135;
+      }
+      if (filaY > 620) {
+        doc.addPage();
+        filaY = doc.y;
+        x = M_IZQ;
+      }
+      try {
+        doc.image(buf, x, filaY, { width: anchoFoto, height: 110, fit: [anchoFoto, 110] });
+      } catch {
+        // comprobante corrupto o formato no soportado por pdfkit — se omite
+      }
+      doc
+        .font("Helvetica")
+        .fontSize(7.5)
+        .fillColor(PDF.faint)
+        .text(`${it.fecha} · ${it.categoria} · ${monto(it.monto)}`, x, filaY + 113, { width: anchoFoto });
+      doc.fillColor(PDF.tinta);
+      x += anchoFoto + 15;
+    }
+    doc.y = filaY + 135;
   }
 
   doc.end();
