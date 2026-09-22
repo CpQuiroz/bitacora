@@ -5352,3 +5352,8 @@ DEV, pruebe el flujo completo (crear rendición → agregar gastos con
 foto → enviar → aprobar/rechazar desde la web) y recién ahí decida si
 aplicar a prod y pushear.
 
+**Actualización**: usuaria confirmó "Ya la corrí en dev" — migración
+120 aplicada en el proyecto Supabase de dev (`pruwvpnlvrvgtmpetlsr`).
+Sigue sin pushear — falta que pruebe el flujo (web + mobile) contra dev
+antes de decidir si esto pasa a prod.
+

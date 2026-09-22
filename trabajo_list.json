@@ -1216,7 +1216,7 @@
         "tsc (6 workspaces) + eslint + audit:tenant + verificar.sh completo en verde"
       ],
       "status": "blocked",
-      "resolution": "Implementado y verificado por tipos/lint/audit de tenant. BLOQUEADO a propósito: el prompt pide explícitamente no aplicar la migración a prod todavía — falta que la usuaria la corra en DEV primero, pruebe el flujo completo (web + mobile) y recién ahí decida pushear/aplicar a prod. No se corrieron tests nuevos (no se pidió). No se verificó visualmente en ningún entorno en esta sesión."
+      "resolution": "Implementado y verificado por tipos/lint/audit de tenant. BLOQUEADO a propósito: el prompt pide explícitamente no aplicar la migración a prod todavía — falta que la usuaria la corra en DEV primero, pruebe el flujo completo (web + mobile) y recién ahí decida pushear/aplicar a prod. No se corrieron tests nuevos (no se pidió). No se verificó visualmente en ningún entorno en esta sesión. Actualización: usuaria confirmó \"Ya la corrí en dev\" — migración 120 aplicada en el proyecto Supabase de dev. Sigue bloqueada para prod hasta que se pruebe el flujo y se decida pushear."
     }
   ]
 }
