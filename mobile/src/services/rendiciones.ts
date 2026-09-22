@@ -1,4 +1,4 @@
-import type { Gasto, PeriodoRendicion, Rendicion } from "@bitacora/shared";
+import type { Gasto, MetodoEntregaRendicion, PeriodoRendicion, Rendicion } from "@bitacora/shared";
 import { apiJson } from "./api";
 import { encolarComprobante, type BorradorGasto, type Foto } from "./gastos";
 
@@ -38,6 +38,7 @@ export type BorradorRendicion = {
   fecha_inicio: string;
   fecha_termino: string;
   monto_entregado: string; // solo dígitos (InputMonto)
+  metodo_entrega: MetodoEntregaRendicion;
 };
 
 export async function crearRendicion(b: BorradorRendicion): Promise<{ ok: true; rendicion: Rendicion } | { ok: false; error: string }> {
@@ -48,6 +49,7 @@ export async function crearRendicion(b: BorradorRendicion): Promise<{ ok: true; 
       fecha_inicio: b.fecha_inicio,
       fecha_termino: b.fecha_termino,
       monto_entregado: Number(b.monto_entregado || 0),
+      metodo_entrega: b.metodo_entrega,
     }),
   });
   if (res.ok) return { ok: true, rendicion: res.data };

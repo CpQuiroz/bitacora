@@ -4,7 +4,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeft, Paperclip, Pencil, Plus, Send, Sliders, Trash2 } from "lucide-react";
-import type { CategoriaGasto, EstadoRendicion, Gasto, PeriodoRendicion, Proveedor, Rendicion, Usuario } from "@bitacora/shared";
+import type { CategoriaGasto, EstadoRendicion, Gasto, MetodoEntregaRendicion, PeriodoRendicion, Proveedor, Rendicion, Usuario } from "@bitacora/shared";
 import { formatearFolio } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
@@ -43,6 +43,7 @@ const TONO_ESTADO: Record<EstadoRendicion, TonoEstado> = {
 };
 
 const ETIQUETA_PERIODO: Record<string, string> = { diario: "Diario", semanal: "Semanal" };
+const ETIQUETA_METODO_ENTREGA: Record<string, string> = { efectivo: "Efectivo", transferencia: "Transferencia" };
 const HOY = () => new Date().toISOString().slice(0, 10);
 
 // PASO 6 (sistema de diseño). Aprobar/Rechazar reusa PanelAcciones
@@ -79,6 +80,7 @@ export default function DetalleRendicionPage() {
   const [edFechaInicio, setEdFechaInicio] = useState(() => HOY());
   const [edFechaTermino, setEdFechaTermino] = useState(() => HOY());
   const [edMonto, setEdMonto] = useState("");
+  const [edMetodoEntrega, setEdMetodoEntrega] = useState<MetodoEntregaRendicion>("efectivo");
   const [edError, setEdError] = useState<string | null>(null);
   const [edGuardando, setEdGuardando] = useState(false);
 
@@ -218,6 +220,7 @@ export default function DetalleRendicionPage() {
     setEdFechaInicio(detalle.fecha_inicio);
     setEdFechaTermino(detalle.fecha_termino);
     setEdMonto(String(detalle.monto_entregado));
+    setEdMetodoEntrega(detalle.metodo_entrega);
     setEdError(null);
     setEditando(true);
   }
@@ -234,6 +237,7 @@ export default function DetalleRendicionPage() {
         fecha_inicio: edFechaInicio,
         fecha_termino: edFechaTermino,
         monto_entregado: edMonto,
+        metodo_entrega: edMetodoEntrega,
       }),
     });
     setEdGuardando(false);
@@ -351,7 +355,7 @@ export default function DetalleRendicionPage() {
               <p className="ds-heading text-ds-h2 text-ds-text">{formatearFolio("REND", detalle.folio) ?? "Rendición"}</p>
               <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">
                 {detalle.colaborador?.nombre ?? "—"} · {ETIQUETA_PERIODO[detalle.periodo] ?? detalle.periodo} · {detalle.fecha_inicio} a{" "}
-                {detalle.fecha_termino}
+                {detalle.fecha_termino} · {ETIQUETA_METODO_ENTREGA[detalle.metodo_entrega] ?? detalle.metodo_entrega}
               </p>
             </div>
             <div className="flex items-center gap-ds-2">
@@ -402,6 +406,15 @@ export default function DetalleRendicionPage() {
                       opciones={[
                         { valor: "diario", etiqueta: "Diario" },
                         { valor: "semanal", etiqueta: "Semanal" },
+                      ]}
+                    />
+                    <Select
+                      etiqueta="Método de entrega"
+                      valor={edMetodoEntrega}
+                      onCambio={(v) => setEdMetodoEntrega(v as MetodoEntregaRendicion)}
+                      opciones={[
+                        { valor: "efectivo", etiqueta: "Efectivo" },
+                        { valor: "transferencia", etiqueta: "Transferencia" },
                       ]}
                     />
                     <div className="flex flex-col gap-ds-1">

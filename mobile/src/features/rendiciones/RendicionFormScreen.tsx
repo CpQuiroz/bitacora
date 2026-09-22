@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Alert, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import type { PeriodoRendicion } from "@bitacora/shared";
+import type { MetodoEntregaRendicion, PeriodoRendicion } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
 import { Button, SelectorDias, Texto, useMarca } from "@bitacora/ui/native";
 import { InputMonto } from "../../components/InputMonto";
@@ -18,11 +18,17 @@ const PERIODOS: { valor: PeriodoRendicion; label: string }[] = [
   { valor: "semanal", label: "Semanal" },
 ];
 
+const METODOS_ENTREGA: { valor: MetodoEntregaRendicion; label: string }[] = [
+  { valor: "efectivo", label: "Efectivo" },
+  { valor: "transferencia", label: "Transferencia" },
+];
+
 const VACIO: BorradorRendicion = {
   periodo: "semanal",
   fecha_inicio: clave(new Date()),
   fecha_termino: clave(new Date()),
   monto_entregado: "",
+  metodo_entrega: "efectivo",
 };
 
 // "Nueva rendición" (Más → Rendiciones → +, 21-sep-2026) — registra el
@@ -62,7 +68,18 @@ export function RendicionFormScreen({ navigation }: NativeStackScreenProps<MasSt
           </Texto>
           <View style={{ flexDirection: "row", gap: tokens.space["2"] }}>
             {PERIODOS.map((p) => (
-              <PeriodoChip key={p.valor} activo={p.valor === b.periodo} label={p.label} onPress={() => set("periodo", p.valor)} />
+              <Chip key={p.valor} activo={p.valor === b.periodo} label={p.label} onPress={() => set("periodo", p.valor)} />
+            ))}
+          </View>
+        </View>
+
+        <View style={{ gap: tokens.space["1"] * 1.5 }}>
+          <Texto tamano={tokens.size.small} peso="medium" color={`${tokens.color.text}99`}>
+            Método de entrega
+          </Texto>
+          <View style={{ flexDirection: "row", gap: tokens.space["2"] }}>
+            {METODOS_ENTREGA.map((m) => (
+              <Chip key={m.valor} activo={m.valor === b.metodo_entrega} label={m.label} onPress={() => set("metodo_entrega", m.valor)} />
             ))}
           </View>
         </View>
@@ -98,7 +115,7 @@ export function RendicionFormScreen({ navigation }: NativeStackScreenProps<MasSt
   );
 }
 
-function PeriodoChip({ activo, label, onPress }: { activo: boolean; label: string; onPress: () => void }) {
+function Chip({ activo, label, onPress }: { activo: boolean; label: string; onPress: () => void }) {
   const marca = useMarca();
   return (
     <Pressable

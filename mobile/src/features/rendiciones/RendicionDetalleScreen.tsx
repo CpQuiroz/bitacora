@@ -26,6 +26,7 @@ const TONO_ESTADO: Record<EstadoRendicion, TonoEstado> = {
 };
 
 const ETIQUETA_PERIODO: Record<string, string> = { diario: "Diario", semanal: "Semanal" };
+const ETIQUETA_METODO_ENTREGA: Record<string, string> = { efectivo: "Efectivo", transferencia: "Transferencia" };
 
 // Detalle de una rendición (Más → Rendiciones → tocar una) — "Agregar
 // gasto" reusa el formulario de Nuevo Gasto (NuevoGastoScreen) con
@@ -103,7 +104,8 @@ export function RendicionDetalleScreen({ navigation, route }: NativeStackScreenP
       <ScrollView contentContainerStyle={{ padding: tokens.space["4"], gap: tokens.space["4"], paddingBottom: tokens.space["8"] }}>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
           <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
-            {ETIQUETA_PERIODO[detalle.periodo] ?? detalle.periodo} · {detalle.fecha_inicio} a {detalle.fecha_termino}
+            {ETIQUETA_PERIODO[detalle.periodo] ?? detalle.periodo} · {detalle.fecha_inicio} a {detalle.fecha_termino} ·{" "}
+            {ETIQUETA_METODO_ENTREGA[detalle.metodo_entrega] ?? detalle.metodo_entrega}
             {detalle.colaborador ? ` · ${detalle.colaborador.nombre}` : ""}
           </Texto>
           <StatusBadge estado={detalle.estado} etiqueta={ETIQUETA_ESTADO[detalle.estado]} tonoForzado={TONO_ESTADO[detalle.estado]} />

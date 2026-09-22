@@ -4,7 +4,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { HandCoins, Plus } from "lucide-react";
-import type { EstadoRendicion, PeriodoRendicion, Rendicion, Usuario } from "@bitacora/shared";
+import type { EstadoRendicion, MetodoEntregaRendicion, PeriodoRendicion, Rendicion, Usuario } from "@bitacora/shared";
 import { formatearFolio } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
@@ -37,6 +37,7 @@ const TONO_ESTADO: Record<EstadoRendicion, TonoEstado> = {
 };
 
 const ETIQUETA_PERIODO: Record<string, string> = { diario: "Diario", semanal: "Semanal" };
+const ETIQUETA_METODO_ENTREGA: Record<string, string> = { efectivo: "Efectivo", transferencia: "Transferencia" };
 
 const HOY = () => new Date().toISOString().slice(0, 10);
 
@@ -63,6 +64,7 @@ export default function RendicionesPage() {
   const [fechaInicio, setFechaInicio] = useState(() => HOY());
   const [fechaTermino, setFechaTermino] = useState(() => HOY());
   const [montoEntregado, setMontoEntregado] = useState("");
+  const [metodoEntrega, setMetodoEntrega] = useState<MetodoEntregaRendicion>("efectivo");
 
   async function cargar() {
     const { data } = await supabase.auth.getSession();
@@ -111,6 +113,7 @@ export default function RendicionesPage() {
     setFechaInicio(HOY());
     setFechaTermino(HOY());
     setMontoEntregado("");
+    setMetodoEntrega("efectivo");
     setFormError(null);
     setFormAbierto(true);
   }
@@ -127,6 +130,7 @@ export default function RendicionesPage() {
         fecha_inicio: fechaInicio,
         fecha_termino: fechaTermino,
         monto_entregado: montoEntregado,
+        metodo_entrega: metodoEntrega,
       }),
     });
     setGuardando(false);
@@ -208,6 +212,15 @@ export default function RendicionesPage() {
                     { valor: "semanal", etiqueta: "Semanal" },
                   ]}
                 />
+                <Select
+                  etiqueta="Método de entrega"
+                  valor={metodoEntrega}
+                  onCambio={(v) => setMetodoEntrega(v as MetodoEntregaRendicion)}
+                  opciones={[
+                    { valor: "efectivo", etiqueta: "Efectivo" },
+                    { valor: "transferencia", etiqueta: "Transferencia" },
+                  ]}
+                />
                 <div className="flex flex-col gap-ds-1">
                   <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Monto entregado</label>
                   <InputMonto required value={montoEntregado} onChange={setMontoEntregado} moneda={usuario.moneda} />
@@ -278,6 +291,7 @@ export default function RendicionesPage() {
             },
             { encabezado: "Colaborador", celda: (r) => r.colaborador?.nombre ?? "—" },
             { encabezado: "Período", celda: (r) => `${ETIQUETA_PERIODO[r.periodo] ?? r.periodo} · ${r.fecha_inicio} a ${r.fecha_termino}` },
+            { encabezado: "Entrega", celda: (r) => ETIQUETA_METODO_ENTREGA[r.metodo_entrega] ?? r.metodo_entrega },
             { encabezado: "Entregado", clase: "text-right", celda: (r) => formatMoneda(r.monto_entregado, usuario.moneda) },
             { encabezado: "Saldo", clase: "text-right", celda: (r) => formatMoneda(r.saldo, usuario.moneda) },
             {

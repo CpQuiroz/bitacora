@@ -1038,6 +1038,9 @@ export type Gasto = {
 
 export type PeriodoRendicion = "diario" | "semanal";
 export type EstadoRendicion = "borrador" | "enviada" | "aprobada" | "rechazada";
+// Cómo el jefe le entregó el fondo al colaborador — dato informativo,
+// no exige comprobante (migración 122, 22-sep-2026).
+export type MetodoEntregaRendicion = "efectivo" | "transferencia";
 
 // Fondo por rendir / caja chica: plata entregada en efectivo a un
 // colaborador para gastos de terreno, reconciliada contra sus gastos
@@ -1056,6 +1059,7 @@ export type Rendicion = {
   fecha_inicio: string;
   fecha_termino: string;
   monto_entregado: number;
+  metodo_entrega: MetodoEntregaRendicion;
   estado: EstadoRendicion;
   aprobado_por: string | null;
   fecha_aprobacion: string | null;

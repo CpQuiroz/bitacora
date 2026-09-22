@@ -5443,3 +5443,51 @@ en un router nuevo — se mató el proceso viejo y quedó uno solo limpio en
 (crear rendición → agregar/editar/quitar gastos con foto → enviar →
 aprobar/rechazar/liquidar → editar/eliminar en borrador) y reporta
 hallazgos. Sigue sin decidirse el push a prod.
+
+## 2026-09-22 (3): Rendiciones — método de entrega (efectivo/transferencia)
+
+Sesión aparte ("Probar la app") retoma la tarea 78 mientras se probaba el
+flujo en el navegador. Bug real encontrado y corregido antes de este
+punto: `GET /api/rendiciones` (listado) rompía 500 — PostgREST no podía
+resolver `colaborador:usuarios(id, nombre)` por ambigüedad (dos FK a
+`usuarios`: `colaborador_id` y `aprobado_por`); se corrigió con
+`usuarios!rendiciones_colaborador_id_fkey`, igual que ya hacía el detalle.
+
+Pedido de la usuaria tras ver el mockup (artifact): el jefe le entrega el
+fondo al chofer en **efectivo o por transferencia** — dato informativo,
+sin comprobante, elegido por quien crea la rendición.
+
+**Migración 122** (`rendiciones_metodo_entrega.sql`, NO aplicada a dev
+todavía — falta que la usuaria la corra): `rendiciones.metodo_entrega
+text not null default 'efectivo' check (in ('efectivo','transferencia'))`.
+Backfill = 'efectivo' para filas existentes.
+
+**Backend**: `MetodoEntregaRendicion` en `packages/shared` + campo en
+`Rendicion`. `POST /` valida y guarda `metodo_entrega` (default 'efectivo'
+si no viene, por compat). `PATCH /:id` (rama edición de datos base) lo
+deja editable mientras sigue en 'borrador', mismo criterio que periodo/
+monto_entregado.
+
+**Web**: Select "Método de entrega" en el formulario de crear y en el de
+editar (junto a Período); columna "Entrega" en la tabla del listado;
+visible en la línea de metadata del detalle.
+
+**Mobile**: chip de método de entrega en `RendicionFormScreen` (junto al
+de período, mismo componente reusado — renombrado de `PeriodoChip` a
+`Chip` porque ahora sirve para ambos); visible en `RendicionDetalleScreen`.
+
+`tsc` (todos los workspaces, incluido mobile completo) + `verificar.sh`
+en verde. Probado en el navegador contra dev: el formulario, el Select y
+la validación funcionan; el submit real falla con un error limpio
+("Could not find the 'metodo_entrega' column...") porque la migración 122
+todavía no está aplicada en dev — **siguiente paso: la usuaria corre la
+migración 122 en dev**, recién ahí se puede probar creación end-to-end.
+
+**Nota de coordinación**: esta sesión y `bitacora-7c` (la sesión
+interactiva de la usuaria) trabajaron sobre los mismos archivos de
+Rendiciones en paralelo, sin worktree. `bitacora-7c` ya había construido
+y commiteado (`e021a8b`) el CRUD completo en web (crear/editar/eliminar
+rendición + agregar/editar/quitar gastos, `GastosSubnav`, migración 121
+`creado_por`) antes de que esta sesión empezara a tocar código — se
+verificó ese estado vía `git log`/`git show` antes de construir encima,
+para no duplicar ni pisar ese trabajo.

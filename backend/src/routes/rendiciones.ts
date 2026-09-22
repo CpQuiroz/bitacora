@@ -1,6 +1,6 @@
 import { Router } from "express";
 import multer from "multer";
-import type { EstadoRendicion, PeriodoRendicion, Rendicion } from "@bitacora/shared";
+import type { EstadoRendicion, MetodoEntregaRendicion, PeriodoRendicion, Rendicion } from "@bitacora/shared";
 import { supabase } from "../supabase";
 import { subirComprobante } from "../storage";
 import type { RequestConEmpresa } from "../empresa";
@@ -32,6 +32,7 @@ const upload = multer({
 export const rendicionesRouter = Router();
 
 const PERIODOS: PeriodoRendicion[] = ["diario", "semanal"];
+const METODOS_ENTREGA: MetodoEntregaRendicion[] = ["efectivo", "transferencia"];
 
 const esGestion = (req: RequestConEmpresa) => req.rol !== "colaborador";
 
@@ -131,7 +132,7 @@ rendicionesRouter.get(
 rendicionesRouter.post(
   "/",
   ah<RequestConEmpresa>(async (req, res) => {
-    const { colaborador_id, periodo, fecha_inicio, fecha_termino, monto_entregado } = req.body ?? {};
+    const { colaborador_id, periodo, fecha_inicio, fecha_termino, monto_entregado, metodo_entrega } = req.body ?? {};
 
     // Un colaborador solo registra su propia rendición; asignarla a
     // otro (ej. el admin la carga por él) es tarea de gestión.
@@ -157,6 +158,14 @@ rendicionesRouter.post(
       res.status(400).json({ error: "monto_entregado inválido" });
       return;
     }
+    // Cómo el jefe le entregó el fondo — dato informativo, sin
+    // comprobante (migración 122). "efectivo" por defecto para no
+    // romper a un cliente viejo que todavía no manda este campo.
+    const metodoEntregaFinal = metodo_entrega ?? "efectivo";
+    if (!METODOS_ENTREGA.includes(metodoEntregaFinal)) {
+      res.status(400).json({ error: `metodo_entrega debe ser uno de: ${METODOS_ENTREGA.join(", ")}` });
+      return;
+    }
 
     const folio = await siguienteFolioRendicion(req.empresaId!);
 
@@ -173,6 +182,7 @@ rendicionesRouter.post(
         fecha_inicio,
         fecha_termino,
         monto_entregado: montoNum,
+        metodo_entrega: metodoEntregaFinal,
       })
       .select()
       .single();
@@ -401,7 +411,8 @@ rendicionesRouter.patch(
       return;
     }
 
-    const { accion, motivo_rechazo, saldo_liquidado, colaborador_id, periodo, fecha_inicio, fecha_termino, monto_entregado } = req.body ?? {};
+    const { accion, motivo_rechazo, saldo_liquidado, colaborador_id, periodo, fecha_inicio, fecha_termino, monto_entregado, metodo_entrega } =
+      req.body ?? {};
     const esRevision = accion !== undefined || saldo_liquidado !== undefined;
     const cambios: Partial<Rendicion> = {};
 
@@ -483,6 +494,13 @@ rendicionesRouter.patch(
           return;
         }
         cambios.monto_entregado = montoNum;
+      }
+      if (metodo_entrega !== undefined) {
+        if (!METODOS_ENTREGA.includes(metodo_entrega)) {
+          res.status(400).json({ error: `metodo_entrega debe ser uno de: ${METODOS_ENTREGA.join(", ")}` });
+          return;
+        }
+        cambios.metodo_entrega = metodo_entrega;
       }
     }
 
