@@ -7,6 +7,8 @@ import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
 import { siguienteFolioRendicion } from "../folios";
 import { resolverCategoria, existeEnTabla } from "./gastos";
+import { generarPdfEnWorker } from "../pdfWorkerPool";
+import type { DatosRendicionPdf } from "../generarPdfRendicion";
 
 // Mismos límites/formatos que gastos.ts — un comprobante de rendición
 // es el mismo tipo de archivo que uno de gasto normal.
@@ -126,6 +128,95 @@ rendicionesRouter.get(
       total_gastado: totalGastado,
       saldo: Number(rendicion.monto_entregado) - totalGastado,
     });
+  })
+);
+
+const ETIQUETA_PERIODO_PDF: Record<PeriodoRendicion, string> = { diario: "Diario", semanal: "Semanal" };
+const ETIQUETA_METODO_ENTREGA_PDF: Record<MetodoEntregaRendicion, string> = { efectivo: "Efectivo", transferencia: "Transferencia" };
+const ETIQUETA_ESTADO_PDF: Record<EstadoRendicion, string> = {
+  borrador: "Borrador",
+  enviada: "Enviada — esperando revisión",
+  aprobada: "Aprobada",
+  rechazada: "Rechazada",
+};
+
+// Junta todo lo necesario para el PDF de una rendición — misma
+// consulta que GET /:id (colaborador/aprobador + gastos), solo que
+// mapeada a las etiquetas ya traducidas que espera generarPdfRendicion.
+// No se cachea (a diferencia de Cotización/Liquidación): una rendición
+// sigue cambiando hasta que se envía/aprueba, así que siempre se genera
+// al vuelo con los datos actuales.
+async function armarDatosPdfRendicion(empresaId: string, id: string): Promise<DatosRendicionPdf | null> {
+  const { data: rendicion } = await supabase
+    .from("rendiciones")
+    .select("*, colaborador:usuarios!rendiciones_colaborador_id_fkey(id, nombre), aprobador:usuarios!rendiciones_aprobado_por_fkey(id, nombre)")
+    .eq("empresa_id", empresaId)
+    .eq("id", id)
+    .maybeSingle();
+  if (!rendicion) return null;
+
+  const { data: empresa } = await supabase.from("empresas").select("nombre, logo_url, color_primario").eq("id", empresaId).single();
+  const { data: gastos } = await supabase
+    .from("gastos")
+    .select("*, proveedor_info:proveedores(id, nombre)")
+    .eq("empresa_id", empresaId)
+    .eq("rendicion_id", id)
+    .order("fecha", { ascending: true });
+
+  const totalGastado = (gastos ?? []).reduce((acc, g) => acc + Number(g.monto), 0);
+  const r = rendicion as unknown as Rendicion & { colaborador: { nombre: string } | null; aprobador: { nombre: string } | null };
+
+  return {
+    empresaNombre: empresa?.nombre ?? "",
+    empresaLogoUrl: empresa?.logo_url ?? null,
+    colorPrimario: empresa?.color_primario ?? null,
+    folioTexto: r.folio != null ? `REND-${String(r.folio).padStart(4, "0")}` : id.slice(0, 8),
+    colaboradorNombre: r.colaborador?.nombre ?? "—",
+    periodoTexto: ETIQUETA_PERIODO_PDF[r.periodo] ?? r.periodo,
+    fechaInicio: r.fecha_inicio,
+    fechaTermino: r.fecha_termino,
+    metodoEntregaTexto: ETIQUETA_METODO_ENTREGA_PDF[r.metodo_entrega] ?? r.metodo_entrega,
+    montoEntregado: Number(r.monto_entregado),
+    items: (gastos ?? []).map((g) => ({
+      fecha: g.fecha,
+      categoria: g.categoria,
+      descripcion: g.descripcion,
+      proveedor: (g as unknown as { proveedor_info: { nombre: string } | null }).proveedor_info?.nombre ?? null,
+      monto: Number(g.monto),
+      tieneComprobante: Boolean(g.comprobante_url),
+    })),
+    totalGastado,
+    saldo: Number(r.monto_entregado) - totalGastado,
+    estadoTexto: ETIQUETA_ESTADO_PDF[r.estado] ?? r.estado,
+    aprobadorNombre: r.aprobador?.nombre ?? null,
+    fechaAprobacion: r.fecha_aprobacion,
+    motivoRechazo: r.motivo_rechazo,
+  };
+}
+
+rendicionesRouter.get(
+  "/:id/pdf",
+  ah<RequestConEmpresa>(async (req, res) => {
+    const rendicion = await obtenerRendicion(req.empresaId!, req.params.id);
+    if (!rendicion) {
+      res.status(404).json({ error: "Rendición no encontrada" });
+      return;
+    }
+    if (!esGestion(req) && rendicion.colaborador_id !== req.userId) {
+      res.status(403).json({ error: "No podés ver el PDF de una rendición que no es tuya" });
+      return;
+    }
+
+    const datos = await armarDatosPdfRendicion(req.empresaId!, req.params.id);
+    if (!datos) {
+      res.status(404).json({ error: "Rendición no encontrada" });
+      return;
+    }
+
+    const pdf = await generarPdfEnWorker<DatosRendicionPdf>("rendicion", datos);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename="${datos.folioTexto}.pdf"`);
+    res.send(pdf);
   })
 );
 

@@ -5491,3 +5491,40 @@ rendición + agregar/editar/quitar gastos, `GastosSubnav`, migración 121
 `creado_por`) antes de que esta sesión empezara a tocar código — se
 verificó ese estado vía `git log`/`git show` antes de construir encima,
 para no duplicar ni pisar ese trabajo.
+
+## 2026-09-22 (4): Rendiciones — descarga de PDF
+
+Pedido de la usuaria tras ver el mockup: "¿la rendición se puede
+convertir a pdf?" — se confirmó factible reusando el mismo patrón que
+Cotización (pdfkit, en memoria, generado al vuelo — NO se cachea como
+Cotización/Liquidación, porque una rendición sigue cambiando hasta que
+se envía/aprueba).
+
+**Nuevo**: `backend/src/generarPdfRendicion.ts` (encabezado con logo/color
+de marca de la empresa, datos de la rendición, tabla de gastos con
+columna "¿tiene comprobante?", totales, estado + aprobación/motivo de
+rechazo). Registrado en `pdfWorkerPool.ts`/`workers/pdfWorker.ts` (tipo
+"rendicion") — corre en worker_thread como el resto de los PDF, no
+bloquea el event loop. Nueva ruta `GET /api/rendiciones/:id/pdf`
+(rendiciones.ts) con el mismo gate de acceso que `GET /:id`
+(colaborador solo lo suyo, gestión todas).
+
+**Web**: botón "Descargar PDF" en el detalle (visible siempre, no solo
+en borrador) — fetch con blob + `window.open`, mismo patrón que
+`verComprobante`.
+
+**Mobile**: NO se implementó en esta pasada — abrir un PDF autenticado
+ahí requiere descargar a archivo + hoja de compartir (Linking.openURL
+no sirve con Authorization header), no hay ningún patrón existente para
+reusar. Queda pendiente si se pide explícitamente.
+
+`tsc` (6 workspaces) + tests + `verificar.sh` completo en verde.
+Probado en el navegador contra dev: `GET /api/rendiciones/:id/pdf`
+devuelve 200, `Content-Type: application/pdf`, header `%PDF-` válido,
+55 KB para una rendición sin gastos (REND-0003). Verificación visual
+completa del layout no se hizo (limitación ya documentada: el visor de
+Chrome usa blob: URLs que las herramientas de captura no pueden leer) —
+confianza por revisión de código, mismo criterio que el PDF de OS.
+
+Sigue sin decidirse push a prod (tarea 78 completa: método de entrega +
+PDF, más lo que ya había construido `bitacora-7c` — CRUD web completo).

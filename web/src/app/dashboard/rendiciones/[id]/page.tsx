@@ -3,7 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ChevronLeft, Paperclip, Pencil, Plus, Send, Sliders, Trash2 } from "lucide-react";
+import { ChevronLeft, Download, Paperclip, Pencil, Plus, Send, Sliders, Trash2 } from "lucide-react";
 import type { CategoriaGasto, EstadoRendicion, Gasto, MetodoEntregaRendicion, PeriodoRendicion, Proveedor, Rendicion, Usuario } from "@bitacora/shared";
 import { formatearFolio } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
@@ -143,6 +143,14 @@ export default function DetalleRendicionPage() {
     cargar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id]);
+
+  async function descargarPdf() {
+    const res = await apiFetch(`/api/rendiciones/${params.id}/pdf`);
+    if (!res.ok) return;
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
 
   async function verComprobante(gastoId: string) {
     const res = await apiFetch(`/api/gastos/${gastoId}/comprobante`);
@@ -360,6 +368,9 @@ export default function DetalleRendicionPage() {
             </div>
             <div className="flex items-center gap-ds-2">
               <StatusBadge estado={detalle.estado} etiqueta={ETIQUETA_ESTADO[detalle.estado]} tonoForzado={TONO_ESTADO[detalle.estado]} />
+              <Button variante="secundario" iconoIzq={<Download size={16} strokeWidth={2.75} />} onPress={descargarPdf}>
+                Descargar PDF
+              </Button>
               {permisoEditar && (
                 <>
                   <Button variante="secundario" iconoIzq={<Pencil size={16} strokeWidth={2.75} />} onPress={() => (editando ? setEditando(false) : abrirEdicion())}>
