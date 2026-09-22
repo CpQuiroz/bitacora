@@ -5552,3 +5552,39 @@ pudo probar la imagen embebida en sí de punta a punta** — requiere
 poder agregar un gasto con foto a una rendición, bloqueado por la
 migración 112 pendiente en dev (ver nota anterior). Confianza por
 revisión de código: reusa textual el patrón ya probado de OS.
+
+## 2026-09-22 (6): PDF de OS — campos y fotos intercalados, numeración continua
+
+Pedido de la usuaria (compartió un PDF de referencia, el mismo informe
+Hidroservi/2Workers ya mencionado en el comentario de la migración 105):
+que el PDF de la OS numere texto y foto en una sola secuencia continua
+"N) Etiqueta" en el orden real del formulario — antes se juntaba TODO
+el texto en una grilla de 2 columnas y las fotos se imprimían aparte,
+después, sin compartir la numeración ni respetar el orden real.
+
+Confirmado antes de tocar nada: definir campos tipo "Foto" ya se puede
+desde Configuración > Tipos de OS/Trabajo (no hacía falta nada nuevo
+ahí) — lo que faltaba era el lado del PDF.
+
+**`generarPdfOS.ts`**: `DatosOSPdf.camposPersonalizados` +
+`camposFoto` (dos listas separadas) → un solo `camposCombinados:
+CampoCombinadoOSPdf[]` (`{tipo:"texto", etiqueta, valor} |
+{tipo:"foto", etiqueta, fotos}`). Nuevo render: recorre la lista en
+orden, "N) Etiqueta" en negrita/color de marca + valor o grilla de
+fotos debajo (mismo ancho/alto/wrap que ya usaba la sección de Fotos);
+los campos de texto vacíos ("—") se saltean sin consumir número, los
+de foto siempre se muestran (avisan "Sin foto todavía." si falta).
+
+**`trabajos.ts` (`armarDatosPdf`)**: arma `camposCombinados` iterando
+`tipoTrabajo.campos` en su orden real (antes se separaba en dos pasadas
+independientes, perdiendo el orden entre texto y foto) — sigue usando
+`mapearCamposPersonalizados` como único punto de formateo de texto,
+ahora llamado campo por campo.
+
+`tsc` (6 workspaces) + tests + `verificar.sh` en verde. **No se pudo
+probar en vivo contra una OS real de dev** — las 2 únicas OS de prueba
+en el proyecto de dev no sirven (una sin orden de servicio asociada,
+"No se pudo cargar"; ninguna tiene campos tipo foto con datos reales
+cargados). Confianza por revisión de código: la grilla de fotos es
+literalmente la misma que ya usaba la sección de Fotos, solo movida de
+lugar y ahora comparte la numeración con el texto.

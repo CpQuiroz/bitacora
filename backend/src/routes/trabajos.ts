@@ -10,7 +10,7 @@ import { crearOrdenServicio, obtenerOCrearOrden, checklistDeTipoOs } from "../or
 import { enviarEncuestaSatisfaccion, enviarPdfOS } from "../email";
 import { env } from "../env";
 import { generarPdfEnWorker } from "../pdfWorkerPool";
-import type { DatosOSPdf } from "../generarPdfOS";
+import type { CampoCombinadoOSPdf, DatosOSPdf } from "../generarPdfOS";
 import { notificar, notificarGerencia } from "../notificar";
 import { notificarCliente } from "../notificarCliente";
 import { aplicarDescuentoInventarioSiCorresponde, revertirStockPorOS } from "../inventario";
@@ -1530,16 +1530,25 @@ export async function armarDatosPdf(empresaId: string, trabajoId: string) {
 
   const colaboradorNombre = (trabajo as unknown as { responsable: { nombre: string } | null }).responsable?.nombre ?? "—";
   const tipoTrabajo = (trabajo as unknown as { tipo: { nombre: string; campos: CampoTipoTrabajo[] } | null }).tipo;
-  const camposPersonalizados = mapearCamposPersonalizados(tipoTrabajo?.campos, trabajo.datos as Record<string, unknown>);
-  // Campos tipo "foto" del formulario (migración 105) — se pasan aparte
-  // porque su valor son fotos reales, no texto (mapearCamposPersonalizados
-  // los excluye a propósito). Orden preservado: el mismo de tipos_os_trabajo.campos.
-  const camposFotoBrutos = (tipoTrabajo?.campos ?? []).filter((c) => c.tipo === "foto");
-  const camposFoto = await Promise.all(
-    camposFotoBrutos.map(async (c) => ({
-      etiqueta: c.etiqueta,
-      fotos: await Promise.all((fotosPorCampo.get(c.clave) ?? []).map((key) => urlFirmada(key, 15))),
-    }))
+  // Campos del tipo de trabajo, texto y foto intercalados en el mismo
+  // orden en que la empresa los definió (pedido 22-sep-2026, informe de
+  // referencia Hidroservi/2Workers) — antes se separaban en dos listas
+  // (camposPersonalizados/camposFoto), perdiendo el orden real entre
+  // ambos tipos. mapearCamposPersonalizados sigue siendo el único punto
+  // de formateo de texto (Sí/No, "—"), solo que ahora se llama campo
+  // por campo para poder intercalarlo con las fotos.
+  const datosTrabajo = trabajo.datos as Record<string, unknown>;
+  const camposCombinados = await Promise.all(
+    (tipoTrabajo?.campos ?? []).map(async (c): Promise<CampoCombinadoOSPdf> => {
+      if (c.tipo === "foto") {
+        return {
+          tipo: "foto",
+          etiqueta: c.etiqueta,
+          fotos: await Promise.all((fotosPorCampo.get(c.clave) ?? []).map((key) => urlFirmada(key, 15))),
+        };
+      }
+      return { tipo: "texto", etiqueta: c.etiqueta, valor: mapearCamposPersonalizados([c], datosTrabajo)[0].valor };
+    })
   );
   const checklist = ((orden.checklist ?? []) as ItemChecklist[]).map((c) => ({
     item: c.item,
@@ -1581,8 +1590,7 @@ export async function armarDatosPdf(empresaId: string, trabajoId: string) {
     colaboradorNombre,
     tipoTrabajoNombre: tipoTrabajo?.nombre ?? null,
     descripcion: trabajo.descripcion,
-    camposPersonalizados,
-    camposFoto,
+    camposCombinados,
     checklist,
     checkInAt: orden.check_in_at ?? null,
     checkOutAt: orden.check_out_at ?? null,

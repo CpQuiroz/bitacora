@@ -21,6 +21,10 @@ export type ItemOSPdf = {
   precio_unitario: number;
 };
 
+export type CampoCombinadoOSPdf =
+  | { tipo: "texto"; etiqueta: string; valor: string }
+  | { tipo: "foto"; etiqueta: string; fotos: string[] };
+
 export type DatosOSPdf = {
   empresaNombre: string;
   empresaLogoUrl: string | null;
@@ -45,13 +49,14 @@ export type DatosOSPdf = {
   colaboradorNombre: string;
   tipoTrabajoNombre: string | null;
   descripcion: string | null;
-  camposPersonalizados: { etiqueta: string; valor: string }[];
-  // Campos tipo "foto" del formulario del tipo de trabajo (migración
-  // 105) — se imprimen aparte, justo después de la grilla de campos,
-  // uno a uno con su propio título (el mismo criterio que el informe de
-  // referencia de Hidroservi/2Workers: la foto va en el punto exacto
-  // del formulario donde la empresa la puso, no en una galería aparte).
-  camposFoto: { etiqueta: string; fotos: string[] }[];
+  // Campos del tipo de trabajo (texto y foto intercalados, en el mismo
+  // orden en que la empresa los definió en Configuración > Tipos de
+  // OS/Trabajo) — pedido 22-sep-2026, según un informe de referencia de
+  // Hidroservi/2Workers: antes el texto se juntaba en una sola grilla y
+  // las fotos se imprimían todas después, sin una numeración continua
+  // real. Ahora es una sola lista numerada N) Etiqueta / valor-o-foto(s),
+  // en el orden exacto del formulario.
+  camposCombinados: CampoCombinadoOSPdf[];
   // Qué secciones muestra el PDF (migración 106, Configuración >
   // Plantillas > Orden de servicio). Siempre completo (armarDatosPdf en
   // trabajos.ts ya rellena las claves ausentes con `true`).
@@ -107,8 +112,8 @@ async function descargar(url: string): Promise<Buffer | null> {
 export async function generarPdfOS(datos: DatosOSPdf): Promise<Buffer> {
   // Fotos de los campos tipo "foto" del formulario — aplanadas para
   // descargarlas todas junto con el resto, después se reagrupan por
-  // campo (mismo índice que datos.camposFoto).
-  const camposFotoUrls = datos.camposFoto.flatMap((c) => c.fotos);
+  // campo (mismo índice, preservando el orden de datos.camposCombinados).
+  const camposFotoUrls = datos.camposCombinados.filter((c) => c.tipo === "foto").flatMap((c) => c.fotos);
 
   const [logoBuffer, firmaBuffer, firmaTecnicoBuffer, ...resto] = await Promise.all([
     datos.empresaLogoUrl ? descargar(datos.empresaLogoUrl) : Promise.resolve(null),
@@ -128,15 +133,14 @@ export async function generarPdfOS(datos: DatosOSPdf): Promise<Buffer> {
     .map((buf, i) => ({ buf, categoria: datos.fotos[i]?.categoria ?? null }))
     .filter((f): f is { buf: Buffer; categoria: CategoriaFotoOS | null } => f.buf !== null);
 
-  // Reagrupa camposFotoBuffers (plano) por campo, preservando el orden.
-  const camposFotoConBuffers: { etiqueta: string; buffers: Buffer[] }[] = [];
-  {
-    let i = 0;
-    for (const c of datos.camposFoto) {
-      const buffers = c.fotos.map(() => camposFotoBuffers[i++]).filter((b): b is Buffer => b !== null);
-      camposFotoConBuffers.push({ etiqueta: c.etiqueta, buffers });
-    }
-  }
+  // Reagrupa camposFotoBuffers (plano) de vuelta dentro de
+  // datos.camposCombinados, preservando el orden original texto+foto.
+  let iFoto = 0;
+  const camposCombinadosConBuffers = datos.camposCombinados.map((c) => {
+    if (c.tipo !== "foto") return c;
+    const buffers = c.fotos.map(() => camposFotoBuffers[iFoto++]).filter((b): b is Buffer => b !== null);
+    return { ...c, buffers };
+  });
 
   const doc = new PDFDocument({ size: "A4", margin: 50 });
   const chunks: Buffer[] = [];
@@ -207,23 +211,36 @@ export async function generarPdfOS(datos: DatosOSPdf): Promise<Buffer> {
     doc.moveDown(1);
   }
 
-  // --- Campos del tipo de trabajo (numerados, en grilla) + campos foto ---
-  if (datos.seccionesVisibles.campos) {
-    if (datos.camposPersonalizados.length > 0) {
-      cajaGrilla(doc, "Campos del tipo de trabajo", datos.camposPersonalizados, colorMarca, { numerada: true });
-    }
+  // --- Campos del tipo de trabajo: una sola lista numerada N) Etiqueta
+  // con el valor o la(s) foto(s) debajo, en el orden exacto en que la
+  // empresa armó el formulario (mismo criterio que el informe de
+  // referencia de Hidroservi/2Workers, 22-sep-2026) — texto y foto ya
+  // no van en bloques separados, se intercalan tal cual se definieron.
+  // Los campos de texto sin valor ("—") se omiten (no consumen número,
+  // igual que antes); los de foto siempre se muestran (avisan si falta
+  // la foto en vez de desaparecer).
+  if (datos.seccionesVisibles.campos && camposCombinadosConBuffers.length > 0) {
+    let n = 1;
+    for (const c of camposCombinadosConBuffers) {
+      if (c.tipo === "texto" && (c.valor === "—" || c.valor.trim() === "")) continue;
 
-    // Campos tipo "foto" del formulario — cada uno con su propio
-    // título, justo después de la grilla (mismo lugar donde la empresa
-    // los puso al armar el tipo de trabajo).
-    for (const c of camposFotoConBuffers) {
-      if (doc.y > 640) doc.addPage();
+      if (doc.y > 660) doc.addPage();
       doc
         .font("Helvetica-Bold")
-        .fontSize(7.5)
-        .fillColor(PDF.muted)
-        .text(c.etiqueta.toUpperCase(), M_IZQ, doc.y, { characterSpacing: 0.6, width: ANCHO });
-      doc.moveDown(0.3);
+        .fontSize(10)
+        .fillColor(colorMarca)
+        .text(`${n}) ${c.etiqueta}`, M_IZQ, doc.y, { width: ANCHO });
+      doc.moveDown(0.25);
+      n++;
+
+      if (c.tipo === "texto") {
+        doc.font("Helvetica").fontSize(9.5).fillColor(PDF.tinta).text(c.valor, M_IZQ, doc.y, { width: ANCHO });
+        doc.moveDown(0.7);
+        continue;
+      }
+
+      // tipo "foto": grilla de imágenes (mismo ancho/alto que la
+      // galería de Fotos más abajo), o el aviso si todavía no hay foto.
       if (c.buffers.length === 0) {
         doc.font("Helvetica").fontSize(9).fillColor(PDF.faint).text("Sin foto todavía.", M_IZQ, doc.y, { width: ANCHO });
         doc.fillColor(PDF.tinta);
