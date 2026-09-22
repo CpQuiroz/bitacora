@@ -5624,3 +5624,25 @@ numeración continua). Tarea 78 marcada `done` en trabajo_list.json.
   bloquea probar "agregar gasto" en dev.
 - Descargar PDF de la rendición: no implementado en mobile (necesita
   descarga a archivo + hoja de compartir, sin patrón existente).
+
+## 2026-09-22 (8): Migración 112 aplicada en dev + flujo Rendiciones probado 100% de punta a punta
+
+Migración 112 corrida en dev (mismo mecanismo `--linked --project-ref`).
+Verificado con un `POST /api/gastos` real: `folio` ya existe y funciona
+(folio 1, primera vez).
+
+Con eso desbloqueado, se probó el flujo completo de Rendiciones contra
+dev por API (sesión real de Carlos Quiroz/Transportes Itineris):
+crear rendición (transferencia, $200.000) → agregar gasto con foto real
+adjunta (multipart, Combustible $42.000) → enviar (bloqueó el segundo
+intento con 409 "ya fue enviada", correcto) → detalle muestra saldo
+$158.000 (200.000-42.000, calculado bien) → PDF (200, application/pdf,
+tamaño creció respecto al de una rendición sin gastos, consistente con
+la foto embebida) → aprobar (200, estado "aprobada", aprobado_por y
+fecha_aprobacion seteados).
+
+**Los 2 pendientes que quedaban de la tarea 78 están resueltos**: la
+migración 112 ya no bloquea nada, y el ciclo completo de Rendiciones
+(crear/agregar/enviar/aprobar/PDF) funciona de punta a punta en dev.
+Sigue pendiente, sin bloquear: el botón de descargar PDF en mobile (no
+implementado, sin patrón existente para PDF autenticado ahí).
