@@ -5726,3 +5726,68 @@ contra dev — todos 200, sin regresiones.
 Ningún archivo de código se tocó en este catch-up — solo estado de la
 base de dev. Prod sigue en su propio timeline (nunca tuvo 105/112/115/
 119, y no los necesita hasta que se pida esa feature ahí).
+
+## 2026-09-22 (11): Super-Admin — app mobile Fase 1 + monitoreo de uso de recursos
+
+Pedido: app mobile de superadmin con buenas prácticas ("ver recursos y
+gestionar clientes"), luego ampliado con huella + crear empresas +
+panel de monitoreo de infra (Vercel/Cloudflare/Supabase/etc).
+
+**Mobile — Fase 1 del panel de Super-Admin** (identidad separada del
+usuario de empresa, nunca se mezclan):
+- `services/superadmin.ts`: fetch propio (no reusa apiJson — ese firma
+  con el token de Supabase de empresa), token guardado en
+  `expo-secure-store` (nueva dependencia, cifrado en el dispositivo).
+- `features/superadmin/`: SuperAdminAuthContext, SuperAdminGate (envuelve
+  toda la app, decide qué flujo mostrar), SuperAdminModeContext (el
+  único puente entre las dos identidades), SuperAdminLoginScreen
+  (correo+password+TOTP), EmpresasListScreen, EmpresaDetalleScreen
+  (estado/plan con confirmación, toggle de módulos), NuevaEmpresaScreen
+  (mismo endpoint que "Nueva empresa" en la web).
+- Entrada oculta: 7 toques en el título "Bitácora" del login normal
+  (pedido explícito, antes había un link visible) — mismo patrón que
+  "tocar 7 veces el build number" de Android.
+- Huella obligatoria al abrir el panel (BloqueoBiometricoSuperAdmin) —
+  a diferencia del bloqueo de empresa (opt-in), este NO lo es: el
+  token da acceso a TODOS los clientes.
+- 3 builds locales (gradlew, cuota EAS Free agotada este mes) para
+  llevarlo a un dispositivo real: v1.10.10 (Rendiciones+PDF OS),
+  v1.10.11 (superadmin fase 1), v1.10.12 (gesto de 7 toques) —
+  distribuidos por HTTP local (servidor Python en la Mac + WiFi, ya
+  que el APK de 40 MB supera el límite de SendUserFile).
+
+**Incidente de paso**: la cuenta de super-admin se bloqueó por 5
+intentos fallidos durante las pruebas — se explicó el mecanismo
+(15 min de bloqueo automático, o SQL Editor de Supabase sin CLI) como
+vía de desbloqueo self-service para el futuro.
+
+**Monitoreo de infraestructura**: se descubrió que ya existía "Salud"
+(pedida 21-sep, antes de esta sesión) monitoreando el estado PÚBLICO
+de 6 proveedores (¿está caído?, via status pages, sin auth). Lo pedido
+ahora es complementario: uso REAL de la propia cuenta (costos/
+recursos). Se integró como `uso_recursos` en la respuesta existente de
+`/api/superadmin/salud-plataforma` (no una ruta nueva) — nuevo módulo
+`backend/src/superadmin/infra.ts`:
+- Supabase (Management API, `SUPABASE_MGMT_TOKEN` nuevo): funciona
+  completo — lista proyectos + tamaño real de cada DB (query SQL de
+  solo lectura, `pg_database_size`). Probado en vivo: prod y dev, 20 MB
+  cada una.
+- Resend: la key que se generó es "Sending access" — necesita
+  regenerarse con "Full access" para poder leer dominios/envíos.
+- Anthropic: la key que se generó es la normal de inferencia — necesita
+  una Admin API Key de console.anthropic.com/settings/admin-keys
+  (`ANTHROPIC_ADMIN_KEY` nuevo).
+- Vercel, Render, Cloudflare: quedan pendientes — necesitan sus propios
+  tokens, no se generaron todavía en esta sesión.
+
+Las 3 credenciales (Supabase Mgmt Token, Resend, Anthropic — esta
+última con el permiso equivocado) quedaron guardadas en `backend/.env`
+local (gitignored, confirmado antes de escribir) — nunca en el repo.
+
+`tsc` (6 workspaces) + tests + eslint + verificar.sh en verde en cada
+paso. Todo commiteado y pusheado a main.
+
+**Pendiente**: regenerar Resend (Full access) y Anthropic (Admin Key)
+con los permisos correctos; tokens de Vercel/Render/Cloudflare para
+sumar esos 3 al panel; nuevo build mobile (v1.10.13) si se quiere ver
+huella+crear empresa en el celular.
