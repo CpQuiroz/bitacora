@@ -5689,3 +5689,40 @@ como dato de prueba inofensivo en dev (Transportes Itineris), igual
 que las 3 rendiciones de prueba de antes.
 
 **Con esto, el punto 2 (probar el PDF de OS en vivo) queda cerrado.**
+
+## 2026-09-22 (10): Catch-up completo de migraciones en dev (75-118)
+
+Pedido de la usuaria ("arreglemos todo") tras destapar que dev venía
+con gaps sueltos (105, 112, 115, 119 ya resueltos antes de esto).
+
+Se aplicaron, en orden, las 41 migraciones del rango 75-118 que
+todavía no se habían confirmado (saltando 105/112/115, ya hechas):
+75-104, 106-111, 113-114, 116-118. Resultado: 17 ya estaban aplicadas
+de antes (error esperado "already exists", sin tocar nada) y 23 se
+aplicaron recién ahora.
+
+**Un caso real, no un simple "ya existía"**: la migración 99
+(`indices_fk_performance`, 69 índices en un solo archivo/transacción)
+falló completa porque 3 de sus líneas apuntaban a `tipos_os` y a
+`trabajos.tipo_os_id`/`tipo_trabajo_id` — objetos que la migración 115
+(aplicada hoy, antes, fuera de orden) ya había eliminado al unificar
+Tipo de OS + Tipo de Trabajo. Como el runner manda el archivo entero
+como un solo bloque transaccional, UNA línea rota abortó los otros 68
+índices también. Se armó una copia ajustada **solo para dev**
+(sin tocar el archivo del repo, que sigue siendo correcto para su
+contexto histórico — en prod la 99 corre antes de que exista la 115,
+nunca va a chocar): se sacaron las 3 líneas obsoletas y se corrigió el
+nombre de tabla en una cuarta (`tipos_trabajo` → `tipos_os_trabajo`,
+sigue siendo un índice válido y necesario, solo con el nombre nuevo).
+
+`migration repair --status applied --linked` corrido con las 41
+versiones de una sola vez, para que el tracking de dev quede al día
+(seguía abandonado desde la 74).
+
+**Verificación final**: smoke test de 14 endpoints reales del backend
+contra dev — todos 200, sin regresiones.
+
+**Dev queda al día con el repo hasta la migración 122 inclusive.**
+Ningún archivo de código se tocó en este catch-up — solo estado de la
+base de dev. Prod sigue en su propio timeline (nunca tuvo 105/112/115/
+119, y no los necesita hasta que se pida esa feature ahí).
