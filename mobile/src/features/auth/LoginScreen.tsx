@@ -19,6 +19,15 @@ type RespuestaLogin =
   | { requiere_codigo: true; ticket: string; metodo: "totp" | "email" }
   | { requiere_codigo?: false; access_token: string; refresh_token: string };
 
+// Toques seguidos sobre el título para entrar a Super-Admin — mismo
+// truco que "tocar 7 veces el número de compilación" de los ajustes
+// de Android: nada visible en la pantalla, solo funciona si sabés el
+// gesto (22-sep-2026, pedido explícito: "esconder el botón... algo que
+// solo yo lo sepa"). Antes había un link "¿Sos Super-Admin?" a la
+// vista de cualquiera.
+const TOQUES_SUPERADMIN = 7;
+const VENTANA_TOQUES_MS = 3000;
+
 // PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export function LoginScreen({ navigation }: NativeStackScreenProps<RootStackParamList, "Login">) {
   const activarModoSuperAdmin = useActivarModoSuperAdmin();
@@ -29,6 +38,17 @@ export function LoginScreen({ navigation }: NativeStackScreenProps<RootStackPara
   const [lento, setLento] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const timerLento = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const toques = useRef<{ cantidad: number; ultimoEn: number }>({ cantidad: 0, ultimoEn: 0 });
+
+  function onTocarTitulo() {
+    const ahora = Date.now();
+    const dentroDeVentana = ahora - toques.current.ultimoEn < VENTANA_TOQUES_MS;
+    toques.current = { cantidad: dentroDeVentana ? toques.current.cantidad + 1 : 1, ultimoEn: ahora };
+    if (toques.current.cantidad >= TOQUES_SUPERADMIN) {
+      toques.current = { cantidad: 0, ultimoEn: 0 };
+      activarModoSuperAdmin();
+    }
+  }
 
   useEffect(() => {
     return () => {
@@ -73,9 +93,11 @@ export function LoginScreen({ navigation }: NativeStackScreenProps<RootStackPara
     <PantallaAuth>
       <View style={{ alignItems: "center", gap: tokens.space["2"], marginBottom: tokens.space["4"] }}>
         <LogoMark size={56} />
-        <Texto tamano={tokens.size.h3} color={tokens.color.text} style={{ fontFamily: FUENTE_NATIVE.heading }}>
-          Bitácora
-        </Texto>
+        <Pressable onPress={onTocarTitulo}>
+          <Texto tamano={tokens.size.h3} color={tokens.color.text} style={{ fontFamily: FUENTE_NATIVE.heading }}>
+            Bitácora
+          </Texto>
+        </Pressable>
         <Texto tamano={tokens.size.small} color={`${tokens.color.text}b3`}>
           App de trabajo en terreno
         </Texto>
@@ -127,15 +149,6 @@ export function LoginScreen({ navigation }: NativeStackScreenProps<RootStackPara
       >
         <Texto tamano={tokens.size.small} color={`${tokens.color.text}b3`}>
           ¿Olvidaste tu contraseña?
-        </Texto>
-      </Pressable>
-      <Pressable
-        hitSlop={10}
-        style={{ alignSelf: "center", paddingVertical: tokens.space["2"], minHeight: 44, justifyContent: "center" }}
-        onPress={activarModoSuperAdmin}
-      >
-        <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`}>
-          ¿Sos Super-Admin?
         </Texto>
       </Pressable>
     </PantallaAuth>
