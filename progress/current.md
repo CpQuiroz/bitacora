@@ -5646,3 +5646,46 @@ migración 112 ya no bloquea nada, y el ciclo completo de Rendiciones
 (crear/agregar/enviar/aprobar/PDF) funciona de punta a punta en dev.
 Sigue pendiente, sin bloquear: el botón de descargar PDF en mobile (no
 implementado, sin patrón existente para PDF autenticado ahí).
+
+## 2026-09-22 (9): PDF de OS con campos/fotos intercalados — verificado visualmente
+
+Para terminar de probar el punto 2 (PDF de OS), se armó un tipo de
+trabajo de prueba en dev con campos mixtos (selección, foto, foto,
+texto, texto, foto×3, texto) — mismo orden y contenido que el informe
+de referencia Hidroservi/2Workers que compartió la usuaria — y un
+trabajo/OS con esos datos + 5 fotos subidas.
+
+En el camino se destaparon 2 migraciones más faltantes en dev, ambas
+necesarias para esta prueba puntual (no perseguidas más allá de esto):
+- **105** (`campo_foto_tipo_trabajo`): `analisis_fotos.campo_clave` —
+  sin esto, ni una foto de campo tipo "Foto" se puede subir.
+- **119** (`orden_compra_cliente`): columna en `ordenes_servicio` — sin
+  esto, ninguna OS se puede crear (la crea automáticamente el POST de
+  trabajos).
+
+**Hallazgo de fondo**: el tracking de migraciones de dev
+(`supabase_migrations.schema_migrations`) está abandonado desde la
+**74** — confirmado con una consulta directa a esa tabla (no el `migration
+list` del CLI, que compara como texto y da un resultado ilegible para
+NN de 3 dígitos, bug ya documentado). Todo lo de 75 en adelante nunca
+quedó registrado ahí, esté aplicado o no en el schema real. **No se
+persiguió el resto del rango (75-122, sin contar 105/112/115/119/120/
+121/122 ya aplicadas hoy)** — queda como posible auditoría aparte, a
+pedido explícito, no se asumió que hiciera falta.
+
+**Verificación final**: se generó el PDF directo en el proceso (script
+descartable `backend/src/scripts/pruebaPdfOS.ts`, llamando
+`armarDatosPdf`+`generarPdfOS` sin pasar por HTTP, para poder guardarlo
+en disco y leerlo con el visor de PDF — se borró después de usarlo, no
+se commiteó). **Confirmado visualmente**: numeración continua 1-7,
+texto y foto intercalados en el orden real definido, grilla de 3 fotos
+en fila con wrap correcto en el campo "Registro fotográfico final" —
+igual al PDF de referencia.
+
+**Limpieza**: tipo de trabajo de prueba eliminado. El trabajo/OS de
+prueba no se pudo eliminar (409, ya tiene una OS asociada — mismo
+criterio "cancelar en vez de eliminar" del resto de la app) y queda
+como dato de prueba inofensivo en dev (Transportes Itineris), igual
+que las 3 rendiciones de prueba de antes.
+
+**Con esto, el punto 2 (probar el PDF de OS en vivo) queda cerrado.**
