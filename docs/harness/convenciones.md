@@ -74,7 +74,14 @@ ejecuta nada.
 
 ## Mobile
 
-- Bump `mobile/app.json` `version` + `android.versionCode` en cada build EAS.
+- Bump `mobile/app.json` `version` + `android.versionCode` en cada build.
+- **Builds: solo locales por ahora** (decisión de la usuaria, 23-sep-2026 —
+  "ya no haremos build en EAS, los haremos local por unas semanas"). No
+  lanzar `eas build`. El build local se hace en la Mac, usuario `cquiroz`
+  (`expo prebuild` + `gradlew assembleRelease`, `.env` con los valores de
+  prod de `eas.json` → `build.preview.env` durante el build y restaurado
+  a dev después). La llave de firma es la de ese usuario: un APK firmado
+  en otra máquina/usuario no se instala encima del existente.
 - Fotos y archivos: `multipart/form-data`, nunca base64 en JSON.
 
 ## Tests

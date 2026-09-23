@@ -13,6 +13,7 @@ import {
   listarVehiculos,
   obtenerHistorialEquipo,
   obtenerMantencionInicio,
+  obtenerPlantillaMantencion,
   type MantencionInicio,
   type MantencionResumen,
 } from "../../services/mantencion";
@@ -49,6 +50,16 @@ export function MantencionVehiculoScreen({ navigation }: NativeStackScreenProps<
   useEffect(() => {
     if (puedeCambiar) void listarVehiculos().then(setVehiculos);
   }, [puedeCambiar]);
+
+  // Cantidad real de ítems del checklist diario — antes decía "35 ítems"
+  // fijo en el código, pero la plantilla vigente (migración 101) tiene 13
+  // y es editable en Configuración > Checklists. Misma fuente (con caché
+  // y fallback offline) que usa ChecklistMantencionScreen al abrirlo.
+  const [itemsDiario, setItemsDiario] = useState<number | null>(null);
+  useEffect(() => {
+    void obtenerPlantillaMantencion("diario").then((p) => setItemsDiario(p.secciones.reduce((n, sec) => n + sec.preguntas.length, 0)));
+  }, []);
+  const textoItems = itemsDiario != null ? `${itemsDiario} ítems · ` : "";
 
   const cargar = useCallback(async () => {
     try {
@@ -148,7 +159,7 @@ export function MantencionVehiculoScreen({ navigation }: NativeStackScreenProps<
           <View style={{ flexDirection: "row", gap: tokens.space["3"] }}>
             <BotonGrande
               titulo="Checklist diario"
-              sub={hizoDiarioHoy ? "35 ítems · ya lo hiciste hoy" : "35 ítems · aún no lo haces hoy"}
+              sub={hizoDiarioHoy ? `${textoItems}ya lo hiciste hoy` : `${textoItems}aún no lo haces hoy`}
               icono={<CheckCheck size={17} strokeWidth={2.5} color={marca.base} />}
               color={marca.base}
               fondo={`${marca.base}1f`}

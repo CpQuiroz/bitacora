@@ -1,11 +1,12 @@
 import { Router } from "express";
 import multer from "multer";
-import type { Documento, EntidadDocumento, Rol } from "@bitacora/shared";
-import { estadoDocumento, puedeVerModulo } from "@bitacora/shared";
+import type { Documento, EntidadDocumento } from "@bitacora/shared";
+import { estadoDocumento } from "@bitacora/shared";
 import { supabase } from "../supabase";
 import { subirDocumento, urlFirmadaDocumento } from "../storage";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
+import { rolPuedeVerModulo } from "../roles";
 
 export const documentosRouter = Router();
 
@@ -24,9 +25,12 @@ const upload = multer({
 // Un colaborador siempre puede ver/editar SUS PROPIOS documentos (sin el
 // módulo "flota", igual criterio que /api/usuarios/me) — para cualquier
 // otra entidad (otro colaborador, o un vehículo) hace falta el módulo.
-function autorizado(req: RequestConEmpresa, entidadTipo: EntidadDocumento, entidadId: string): boolean {
+// rolPuedeVerModulo (roles dinámicos de la tabla `roles` + overrides por
+// empresa) y no puedeVerModulo (matriz semilla fija): antes un rol
+// personalizado con "flota" recibía 403 acá (23-sep-2026).
+async function autorizado(req: RequestConEmpresa, entidadTipo: EntidadDocumento, entidadId: string): Promise<boolean> {
   if (entidadTipo === "colaborador" && entidadId === req.userId) return true;
-  return puedeVerModulo((req.rol ?? "colaborador") as Rol, "flota");
+  return rolPuedeVerModulo(req.rol ?? "colaborador", "flota", req.empresaId);
 }
 
 const ENTIDADES: EntidadDocumento[] = ["colaborador", "vehiculo"];
@@ -39,7 +43,7 @@ documentosRouter.get(
       res.status(400).json({ error: "Faltan entidad_tipo/entidad_id" });
       return;
     }
-    if (!autorizado(req, entidad_tipo as EntidadDocumento, entidad_id)) {
+    if (!(await autorizado(req, entidad_tipo as EntidadDocumento, entidad_id))) {
       res.status(403).json({ error: "No tienes permiso para ver estos documentos" });
       return;
     }
@@ -68,7 +72,7 @@ documentosRouter.get(
 documentosRouter.get(
   "/por-vencer",
   ah<RequestConEmpresa>(async (req, res) => {
-    if (!puedeVerModulo((req.rol ?? "colaborador") as Rol, "flota")) {
+    if (!(await rolPuedeVerModulo(req.rol ?? "colaborador", "flota", req.empresaId))) {
       res.status(403).json({ error: "No tienes permiso para acceder a este módulo" });
       return;
     }
@@ -115,7 +119,7 @@ documentosRouter.post(
       res.status(400).json({ error: "Falta entidad_id" });
       return;
     }
-    if (!autorizado(req, entidad_tipo, entidad_id)) {
+    if (!(await autorizado(req, entidad_tipo, entidad_id))) {
       res.status(403).json({ error: "No tienes permiso para agregar este documento" });
       return;
     }
@@ -160,7 +164,7 @@ documentosRouter.post(
 async function documentoAutorizado(req: RequestConEmpresa, id: string): Promise<Documento | null> {
   const { data } = await supabase.from("documentos").select("*").eq("empresa_id", req.empresaId!).eq("id", id).maybeSingle();
   if (!data) return null;
-  if (!autorizado(req, data.entidad_tipo, data.entidad_id)) return null;
+  if (!(await autorizado(req, data.entidad_tipo, data.entidad_id))) return null;
   return data;
 }
 

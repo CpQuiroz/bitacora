@@ -1599,6 +1599,27 @@
         "Pendiente: la usuaria corre la migración 128 en dev y prod; después validar el índice con EXPLAIN ANALYZE (regla del proyecto) antes de cerrar"
       ],
       "resolution": "Código + migración 128 aplicada por la usuaria en dev y prod (verificado: 9 columnas, RLS on, 1 policy, índice, tracking 128 en prod). EXPLAIN ANALYZE en prod con la consulta real (empresa+equipo+rango semanal, order fecha desc): Index Scan using eventos_flota_equipo_fecha_idx con las 4 condiciones en Index Cond + Incremental Sort presorted por fecha, 0.18 ms. verificar.sh en verde."
+    },
+    {
+      "id": 107,
+      "name": "ventas_supervisor",
+      "title": "Ventas: Supervisor puede registrar ventas",
+      "status": "done",
+      "resolution": "ACCIONES_POR_ROL.supervisor += registrar_venta (semilla) + migración 129 (roles.acciones del rol de sistema supervisor, idempotente). Pendiente: la usuaria corre la 129 en dev y prod. Colaborador sigue sin la acción. verificar.sh en verde."
+    },
+    {
+      "id": 108,
+      "name": "infra_vercel_render_cloudflare",
+      "title": "Panel Salud: uso de recursos de Vercel, Render y Cloudflare",
+      "status": "done",
+      "resolution": "backend/src/superadmin/infra.ts: obtenerEstadoVercel (proyectos + último deploy prod), obtenerEstadoRender (servicios + plan + último deploy), obtenerEstadoCloudflare (zonas + requests/bytes 7 días vía GraphQL, best-effort). Env opcionales VERCEL_TOKEN/VERCEL_TEAM_ID/RENDER_API_KEY/CLOUDFLARE_API_TOKEN. Web: 3 bloques nuevos en Salud > Uso de recursos. No probado contra las APIs reales (sin tokens en esta sesión). verificar.sh en verde."
+    },
+    {
+      "id": 109,
+      "name": "detalles_menores_flota",
+      "title": "Detalles menores: '35 ítems' fijo en Mantención y permisos fijos en Documentos",
+      "status": "done",
+      "resolution": "MantencionVehiculoScreen cuenta los ítems reales de la plantilla del checklist diario (obtenerPlantillaMantencion, con caché/fallback). documentos.ts usa rolPuedeVerModulo (roles dinámicos) en vez de puedeVerModulo (matriz semilla). verificar.sh en verde."
     }
   ]
 }

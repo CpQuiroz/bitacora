@@ -100,6 +100,12 @@ export const env = {
   // la que ya usa el backend para llamar a Claude, no da acceso a
   // reportes de uso).
   ANTHROPIC_ADMIN_KEY: process.env.ANTHROPIC_ADMIN_KEY ?? null,
+  // Panel de infraestructura (23-sep-2026) — opcionales, cada uno
+  // habilita su bloque en Super-Admin > Salud > "Uso de recursos".
+  VERCEL_TOKEN: process.env.VERCEL_TOKEN ?? null,
+  VERCEL_TEAM_ID: process.env.VERCEL_TEAM_ID ?? null,
+  RENDER_API_KEY: process.env.RENDER_API_KEY ?? null,
+  CLOUDFLARE_API_TOKEN: process.env.CLOUDFLARE_API_TOKEN ?? null,
 };
 
 // Log de a qué proyecto Supabase se conecta este proceso — server.ts y

@@ -53,7 +53,7 @@ Las canónicas están en `AGENTS.md` §3. Recordatorio de las que más se pisan:
 - **Prod DB:** solo lecturas; las migraciones a prod las corre el humano.
 - **web/ y mobile/** tienen su propio `AGENTS.md` con avisos de framework
   (Next 16, Expo 57) — leelos antes de tocar esas carpetas.
-- **EAS builds** solo a pedido; bump de versión en `mobile/app.json`.
+- **Builds mobile** solo a pedido y, por ahora, **solo locales** (no `eas build`); bump de versión en `mobile/app.json`. Ver `docs/harness/convenciones.md` §Mobile.
 - **Deploy** = push a `main` (Vercel + Render auto).
 - **Sistema de diseño** (tokens, `packages/ui`, convenciones de color/
   espaciado/tipografía): `docs/design-system.md` es la fuente de verdad.

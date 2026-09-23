@@ -44,3 +44,15 @@ usuaria antes de tocar código. Decisiones de la usuaria:
   0.18 ms). (Nota previa:) código listo, verificar.sh en
   verde. **Bloqueo**: la usuaria corre la migración 128 en dev y prod;
   después validar el índice con EXPLAIN ANALYZE y cerrar la tarea.
+
+## 23-sep-2026 — ronda post-merge PR #1
+
+PR #1 mergeado a main por pedido de la usuaria; deploys Render (live) y
+Vercel (READY) verificados. Hidroservi: cerrado, se deja como está.
+- Tarea 107: Supervisor registra ventas (migración 129 — la corre la usuaria).
+- Tarea 108: panel Salud con Vercel/Render/Cloudflare (faltan los tokens).
+- Tarea 109: detalles menores ("35 ítems", Documentos con roles dinámicos).
+- Decisión: builds mobile solo locales por unas semanas (usuario cquiroz);
+  documentado en convenciones.md, CLAUDE.md y AGENTS.md.
+- Maqueta (no aplicada) de "Registrar venta" desde una cita, con productos
+  filtrados por categoría de empresa — enviada como imagen.

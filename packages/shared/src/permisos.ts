@@ -88,7 +88,7 @@ export type Accion = (typeof ACCIONES)[number];
 
 export const ACCIONES_POR_ROL: Record<Rol, Accion[]> = {
   admin: [...ACCIONES],
-  supervisor: ["config_agenda_pro", "ver_dashboard"],
+  supervisor: ["config_agenda_pro", "ver_dashboard", "registrar_venta"],
   contador: ["ver_dashboard"],
   colaborador: [],
 };
