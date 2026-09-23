@@ -38,6 +38,9 @@ planRouter.get(
 
     res.json({
       planActual: empresa?.plan ?? "trial",
+      // Fecha de término del trial — la pantalla "Mi plan" de mobile
+      // (23-sep-2026) muestra los días que quedan.
+      pruebaTerminaEn: empresa?.prueba_termina_en ?? null,
       trialVencido,
       proDisponible: Boolean(env.FLOW_PLAN_ID_PRO),
       modulosBasico: MODULOS_BASICO,

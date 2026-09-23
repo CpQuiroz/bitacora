@@ -1648,6 +1648,13 @@
       "title": "Mobile: Asistente más abajo, chips de Agenda en scroll, botón 'Nueva OS' neutro",
       "status": "done",
       "resolution": "Feedback de la usuaria al probar 1.10.16. OFFSET_ASISTENTE_FLOTANTE 96→72 (baja también el FAB '+' de Agenda). Chips Cita/OS/Levantamiento en ScrollView horizontal con el ⓘ fijo a la derecha. 'Nueva orden de servicio' con variante secundario (neutro, opción b). Agenda mobile estaba congelada: tocada por pedido explícito. verificar.sh en verde; requiere build mobile."
+    },
+    {
+      "id": 113,
+      "name": "mobile_mi_plan_solo_lectura",
+      "title": "Mobile: pantalla 'Mi plan' (solo lectura, solo Admin)",
+      "status": "done",
+      "resolution": "Decisión de la usuaria pensando en Google Play: mobile solo MUESTRA plan/estado de pago/próximo cobro/últimos cobros; contratar, cambiar de plan y pagar siguen en la web (Play Billing / anti-steering). Más → Administración → 'Mi plan', visible solo con la acción gestionar_plan. Backend: GET /api/plan devuelve además pruebaTerminaEn. Mobile 1.10.17 (vc 58). verificar.sh en verde."
     }
   ]
 }

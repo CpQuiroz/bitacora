@@ -5,6 +5,7 @@ import {
   ChevronRight,
   CircleUser,
   ClipboardList,
+  CreditCard,
   FileChartColumn,
   HardHat,
   Receipt,
@@ -173,6 +174,11 @@ export function MasScreen({ navigation }: NativeStackScreenProps<MasStackParamLi
   // Fase 5.3 (23-sep-2026) — historial propio, self-service, sin gate
   // de módulo (mismo criterio que /api/mis-trabajos).
   administracion.push({ titulo: "Mis trabajos", Icono: ClipboardList, ir: () => navigation.navigate("MisTrabajos") });
+  // "Mi plan" (23-sep-2026) — solo lectura, solo quien gestiona el plan
+  // (hoy Admin). El pago/cambio de plan sigue en la web (Google Play).
+  if (acciones.includes("gestionar_plan")) {
+    administracion.push({ titulo: "Mi plan", Icono: CreditCard, ir: () => navigation.navigate("MiPlan") });
+  }
 
   // --- Cuenta ---
   const cuenta: Item[] = [

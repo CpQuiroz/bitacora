@@ -67,6 +67,8 @@ export type MasStackParamList = {
   LevantamientoDetalle: { id: string };
   // Fase 5.3 — historial de levantamientos/OS terminados del colaborador.
   MisTrabajos: undefined;
+  // "Mi plan" (23-sep-2026) — solo lectura, solo Admin (gestionar_plan).
+  MiPlan: undefined;
   CobrosLista: undefined;
   CobroForm: undefined;
   CobroDetalle: { cobroId: string };

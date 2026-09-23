@@ -22,6 +22,7 @@ import { EventosFlotaScreen } from "../../features/mantencion/EventosFlotaScreen
 import { LevantamientosListScreen } from "../../features/levantamientos/LevantamientosListScreen";
 import { LevantamientoDetalleScreen } from "../../features/levantamientos/LevantamientoDetalleScreen";
 import { MisTrabajosScreen } from "../../features/mis-trabajos/MisTrabajosScreen";
+import { MiPlanScreen } from "../../features/plan/MiPlanScreen";
 import { TrabajosStack } from "./TrabajosStack";
 import { ViajesStack } from "./ViajesStack";
 
@@ -59,6 +60,7 @@ export function MasStack() {
       <Stack.Screen name="Levantamientos" component={LevantamientosListScreen} options={{ headerShown: false }} />
       <Stack.Screen name="LevantamientoDetalle" component={LevantamientoDetalleScreen} options={{ headerShown: false }} />
       <Stack.Screen name="MisTrabajos" component={MisTrabajosScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="MiPlan" component={MiPlanScreen} options={{ headerShown: false }} />
       <Stack.Screen name="CobrosLista" component={CobrosListaScreen} options={{ headerShown: false }} />
       <Stack.Screen name="CobroForm" component={CobroFormScreen} options={{ title: "Nuevo cobro", presentation: "modal" }} />
       {/* CobroDetalleScreen dibuja su propio ScreenHeader — mismo criterio. */}
