@@ -18,13 +18,18 @@ const TERRACOTA = tokens.color.accent;
 const FOREGROUND = resolverMarca(TERRACOTA).foreground;
 
 // Huella real del botón en la variante "flotante" — distancia desde el
-// borde inferior de la pantalla (110) + su propio alto (48). Bug real
+// borde inferior de la pantalla (96) + su propio alto (48). Bug real
 // (14-sep-2026): Hoy y Más adivinaban un paddingBottom para su lista sin
 // este número (35 y 140 respectivamente, los dos insuficientes) y el
 // botón tapaba la última fila. Toda pantalla que use la variante
 // "flotante" debe sumar ESPACIO_ASISTENTE_FLOTANTE al padding inferior
 // de su contenido scrolleable — nunca adivinar un valor a mano.
-const OFFSET_ASISTENTE_FLOTANTE = 110;
+// Bajado de 110 a 96 (23-sep-2026, pedido explícito: quedaba muy
+// arriba, molestaba la visual) — exportado (antes solo el derivado
+// ESPACIO_ASISTENTE_FLOTANTE) para que el FAB de Agenda, que se
+// alinea a propósito con este botón, lo use en vez de repetir el
+// número a mano.
+export const OFFSET_ASISTENTE_FLOTANTE = 96;
 const ALTO_ASISTENTE_FLOTANTE = 48;
 export const ESPACIO_ASISTENTE_FLOTANTE = OFFSET_ASISTENTE_FLOTANTE + ALTO_ASISTENTE_FLOTANTE + tokens.space["4"]; // 110 + 48 + ~18 de aire
 
@@ -48,7 +53,7 @@ export function AsistenteButton({ visible = true, variante = "flotante", onPress
   }
 
   return (
-    <View style={{ position: "absolute", right: 18, bottom: 110 }}>
+    <View style={{ position: "absolute", right: 18, bottom: OFFSET_ASISTENTE_FLOTANTE }}>
       <Pressable
         onPress={onPress}
         accessibilityRole="button"

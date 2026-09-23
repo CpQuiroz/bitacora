@@ -12,6 +12,7 @@ import {
   ErrorState,
   ESPACIO_ASISTENTE_FLOTANTE,
   LoadingState,
+  OFFSET_ASISTENTE_FLOTANTE,
   ScreenHeader,
   Texto,
   useMarca,
@@ -330,7 +331,7 @@ export function AgendaScreen({ navigation }: NativeStackScreenProps<AgendaStackP
         style={{
           position: "absolute",
           left: 18,
-          bottom: 110,
+          bottom: OFFSET_ASISTENTE_FLOTANTE,
           width: 50,
           height: 50,
           borderRadius: tokens.radius.pill,

@@ -1247,6 +1247,19 @@
       ],
       "status": "done",
       "resolution": "Investigacion primero: la Agenda web (vista Mes) YA tenia el patron 1 clic/doble clic completo desde el 7-sep (cc4dcaa8) - se confirmo con la usuaria via AskUserQuestion que el pedido real era el calendario MOBILE (Mas -> Agenda), no el web. Implementado: useManejadorTapDia (helper de doble-tap manual, RN no trae onDoubleTap nativo) aplicado solo a VistaMes (VistaSemana cambia de vista en el primer tap, agregar el gesto ahi degradaria el tap simple con un delay - mismo alcance que la web, que tampoco lo tiene en Semana). GrillaAccesos extrae la grilla de QuickAccessCard (antes solo en Accesos rapidos) para reusarla en Administracion sin duplicar el JSX. tsc + verificar.sh en verde."
+    },
+    {
+      "id": 81,
+      "name": "asistente_button_offset_visual",
+      "title": "Mobile: bajar un poco el boton flotante del Asistente (molestaba la visual)",
+      "description": "Pedido: el boton Asistente (flotante, comun a Hoy/Agenda/Mas/etc.) quedaba muy arriba y molestaba la visual un poco; se pidio bajarlo/subirlo un poco, sin indicar direccion exacta. Se confirmo con la usuaria via AskUserQuestion que es un ajuste global (todas las pantallas), no de una sola.",
+      "acceptance": [
+        "AsistenteButton.tsx: OFFSET_ASISTENTE_FLOTANTE baja de 110 a 96 (modesto, un poco mas cerca de la tab bar) y se exporta (antes solo el derivado ESPACIO_ASISTENTE_FLOTANTE)",
+        "AgendaScreen.tsx: el FAB de Nueva cita, que se alinea a proposito con el Asistente (mismo alto, espejado), usa el mismo OFFSET_ASISTENTE_FLOTANTE importado en vez de repetir 110 a mano — quedan siempre sincronizados",
+        "tsc (6 workspaces incl. ui) + verificar.sh en verde"
+      ],
+      "status": "done",
+      "resolution": "AskUserQuestion confirmo que es ajuste global (componente compartido por todas las pantallas). OFFSET_ASISTENTE_FLOTANTE 110 -> 96 en AsistenteButton.tsx (packages/ui/src/native), exportado desde el index de ui/native. AgendaScreen.tsx (unico lugar que repetia el mismo 110 a mano para su FAB espejado) ahora importa la constante en vez de un numero magico duplicado — quedan sincronizados por diseno, no por casualidad. tsc + verificar.sh en verde."
     }
   ]
 }

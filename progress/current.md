@@ -5899,3 +5899,23 @@ packs / Informes).
 
 **Pendiente**: build mobile v1.10.14 (acumula: huella+crear empresa,
 tarea 79, tarea 80) — no armado todavía, esperando pedido explícito.
+
+## 23-sep-2026 — tarea 81: bajar el botón flotante del Asistente
+
+Pedido: "El asistente puede colocarlo un poco mas abajo o arriba, ahi
+molesta la visual un poco" — sin especificar pantalla ni dirección.
+`AsistenteButton` es un componente COMPARTIDO (posición fija absoluta,
+usado en Hoy/Agenda/Más y donde más aparezca) — usé `AskUserQuestion`
+para confirmar que era un ajuste global antes de tocarlo, ya que
+moverlo afecta todas las pantallas a la vez.
+
+- `OFFSET_ASISTENTE_FLOTANTE` (packages/ui/src/native/AsistenteButton.tsx):
+  110 → 96 — ahora exportado (antes quedaba privado al archivo, solo
+  se exportaba el derivado `ESPACIO_ASISTENTE_FLOTANTE`).
+- `AgendaScreen.tsx`: su FAB de "Nueva cita" se alinea a propósito con
+  el Asistente (mismo alto, espejado) — antes repetía `bottom: 110` a
+  mano; ahora importa la misma constante, así los dos quedan
+  sincronizados por diseño en vez de por dos números iguales por
+  casualidad.
+- `tsc` (6 workspaces, incluye `ui`) + `verificar.sh` en verde. Tarea
+  81 cerrada.
