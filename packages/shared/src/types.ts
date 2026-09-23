@@ -180,6 +180,10 @@ export type SuperAdmin = {
   bloqueado_hasta: string | null;
   ultimo_login_en: string | null;
   creado_en: string;
+  // Estilo propio para ver su panel (migración 127). Opcional en el
+  // tipo porque /me lo lee con select("*") y tolera que la columna
+  // todavía no exista en una base sin la migración.
+  tema?: "faena" | "taller" | "confianza";
 };
 
 export type SuperAdminAuditoria = {

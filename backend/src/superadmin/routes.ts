@@ -39,6 +39,9 @@ const RUBROS: Rubro[] = ["transporte", "servicio_tecnico", "cosmetologia", "otro
 
 export const superadminRouter = Router();
 
+// Valores válidos de empresas.tema y super_admins.tema (109/110/127).
+const TEMAS_EMPRESA: Empresa["tema"][] = ["faena", "taller", "confianza"];
+
 const MAX_INTENTOS = 5;
 const BLOQUEO_MS = 15 * 60 * 1000;
 
@@ -123,12 +126,42 @@ superadminRouter.get(
   "/me",
   requiereSuperAdmin,
   ah<RequestConSuperAdmin>(async (req, res) => {
-    const { data } = await supabase.from("super_admins").select("correo, nombre, ultimo_login_en, creado_en").eq("id", req.superAdminId!).maybeSingle();
+    // select("*") y no una lista con "tema": si la migración 127 todavía
+    // no corrió en esa base, pedir la columna explícita haría fallar /me
+    // (y mobile cierra la sesión del Super-Admin ante un /me fallido).
+    const { data } = await supabase.from("super_admins").select("*").eq("id", req.superAdminId!).maybeSingle();
     if (!data) {
       res.status(404).json({ error: "No encontrado" });
       return;
     }
-    res.json(data);
+    res.json({
+      correo: data.correo,
+      nombre: data.nombre,
+      ultimo_login_en: data.ultimo_login_en,
+      creado_en: data.creado_en,
+      tema: data.tema ?? "faena",
+    });
+  })
+);
+
+// Estilo visual propio del Super-Admin (super_admins.tema, migración
+// 127) — preferencia personal para ver su panel en web y mobile,
+// independiente del tema de cualquier empresa.
+superadminRouter.patch(
+  "/me/tema",
+  requiereSuperAdmin,
+  ah<RequestConSuperAdmin>(async (req, res) => {
+    const { tema } = req.body ?? {};
+    if (typeof tema !== "string" || !TEMAS_EMPRESA.includes(tema as Empresa["tema"])) {
+      res.status(400).json({ error: `tema debe ser uno de: ${TEMAS_EMPRESA.join(", ")}` });
+      return;
+    }
+    const { error } = await supabase.from("super_admins").update({ tema: tema as Empresa["tema"] }).eq("id", req.superAdminId!);
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    res.json({ tema });
   })
 );
 
@@ -1220,8 +1253,6 @@ superadminRouter.get(
 // mismo valor que su admin elige en Configuración > Empresa; acá el
 // Super-Admin lo puede fijar sin depender del cliente. Web y mobile lo
 // leen de /api/mi-empresa, así que el cambio se ve en ambas apps.
-const TEMAS_EMPRESA: Empresa["tema"][] = ["faena", "taller", "confianza"];
-
 superadminRouter.patch(
   "/empresas/:id/tema",
   requiereSuperAdmin,

@@ -79,12 +79,18 @@ export async function loginSuperAdmin(
   return { ok: true };
 }
 
-export type SuperAdminYo = { correo: string; nombre: string; ultimo_login_en: string | null; creado_en: string };
+export type SuperAdminYo = { correo: string; nombre: string; ultimo_login_en: string | null; creado_en: string; tema: Empresa["tema"] };
 
 export async function obtenerSuperAdminYo(): Promise<{ ok: true; yo: SuperAdminYo } | { ok: false; error: string; status: number }> {
   const r = await apiSuperAdmin<SuperAdminYo>("/api/superadmin/me");
   if (!r.ok) return { ok: false, error: r.error, status: r.status };
   return { ok: true, yo: r.data };
+}
+
+// Estilo propio del Super-Admin (super_admins.tema, migración 127).
+export async function cambiarMiTemaSuperAdmin(tema: Empresa["tema"]): Promise<{ ok: true } | { ok: false; error: string }> {
+  const r = await apiSuperAdmin("/api/superadmin/me/tema", { method: "PATCH", body: JSON.stringify({ tema }) });
+  return r.ok ? { ok: true } : { ok: false, error: r.error };
 }
 
 export type EmpresaSuperAdmin = {

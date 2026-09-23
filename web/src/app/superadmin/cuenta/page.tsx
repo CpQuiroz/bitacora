@@ -4,16 +4,27 @@ import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { SuperAdminShell } from "@/components/SuperAdminShell";
-import { Button, Card, ErrorText, Input, Label, PageHeader } from "@/components/ui";
+import { Button, Card, ErrorText, Input, Label, PageHeader, Select } from "@/components/ui";
 import { IconChevronLeft } from "@/components/icons";
 import { obtenerTokenSuperAdmin, superadminFetch } from "@/lib/superadminApi";
+import { guardarTemaSuperAdmin, type TemaSuperAdmin } from "@/lib/superadminTema";
 
-type Cuenta = { correo: string; nombre: string; ultimo_login_en: string | null; creado_en: string };
+type Cuenta = { correo: string; nombre: string; ultimo_login_en: string | null; creado_en: string; tema: TemaSuperAdmin };
+
+const TEMAS: { value: TemaSuperAdmin; label: string }[] = [
+  { value: "faena", label: "Faena (por defecto)" },
+  { value: "taller", label: "Taller" },
+  { value: "confianza", label: "Confianza" },
+];
 
 export default function SuperAdminCuentaPage() {
   const router = useRouter();
   const [cuenta, setCuenta] = useState<Cuenta | null>(null);
   const [errorCarga, setErrorCarga] = useState<string | null>(null);
+
+  // Estilo propio
+  const [guardandoTema, setGuardandoTema] = useState(false);
+  const [errorTema, setErrorTema] = useState<string | null>(null);
 
   // Cambiar contraseña
   const [passActual, setPassActual] = useState("");
@@ -50,6 +61,21 @@ export default function SuperAdminCuentaPage() {
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  async function onCambiarTema(nuevo: TemaSuperAdmin) {
+    if (!cuenta || nuevo === cuenta.tema) return;
+    setErrorTema(null);
+    setGuardandoTema(true);
+    const res = await superadminFetch("/api/superadmin/me/tema", { method: "PATCH", body: JSON.stringify({ tema: nuevo }) });
+    setGuardandoTema(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setErrorTema(body.error ?? "No se pudo cambiar el estilo");
+      return;
+    }
+    setCuenta({ ...cuenta, tema: nuevo });
+    guardarTemaSuperAdmin(nuevo);
+  }
 
   async function onCambiarPassword(e: FormEvent) {
     e.preventDefault();
@@ -131,6 +157,29 @@ export default function SuperAdminCuentaPage() {
                 </p>
               </div>
             </div>
+          </Card>
+
+          <Card>
+            <h2 className="mb-1 text-sm font-semibold text-foreground">Mi estilo</h2>
+            <p className="mb-3 text-xs text-muted">
+              Cómo ves vos el Panel de Super-Admin, en web y en mobile. No cambia el estilo de ninguna empresa (eso se elige en cada
+              empresa).
+            </p>
+            <div className="max-w-xs">
+              <Label>Tema</Label>
+              <Select value={cuenta.tema} disabled={guardandoTema} onChange={(e) => onCambiarTema(e.target.value as TemaSuperAdmin)}>
+                {TEMAS.map((t) => (
+                  <option key={t.value} value={t.value}>
+                    {t.label}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            {errorTema && (
+              <div className="mt-3">
+                <ErrorText>{errorTema}</ErrorText>
+              </div>
+            )}
           </Card>
 
           <Card>

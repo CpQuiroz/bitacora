@@ -6589,3 +6589,23 @@ solo el admin en Configuración > Empresa — sin migración nueva.
 Aclaración a la usuaria: el panel de uso de recursos está en
 Super-Admin > **Salud** > "Uso de recursos" (no "Empresas >
 Infraestructura", como decía el comentario de `backend/.env.example`).
+
+## 23-sep-2026 — tarea 98: Super-Admin elige su propio estilo
+
+Pedido: "en el super admin también quiero que elija su propio estilo".
+Preferencia PERSONAL (no de empresa), guardada en la cuenta para que
+sea la misma en web y mobile:
+
+- Migración 127 `super_admins.tema` (idempotente, default 'faena').
+  **Pendiente de la usuaria: correrla en dev y prod** antes de mergear
+  (CI `check-migraciones-prod` falla hasta entonces).
+- Backend: `GET /me` devuelve `tema` usando `select("*")` — si la 127
+  no corrió, cae a "faena" en vez de romper `/me` (mobile cierra la
+  sesión del Super-Admin ante un /me fallido). `PATCH /me/tema` nuevo.
+- Web: `SuperAdminShell` pone `data-tema` (copia en localStorage para
+  no parpadear + evento para actualizar sin recargar,
+  `web/src/lib/superadminTema.ts`); selector "Mi estilo" en Mi cuenta.
+- Mobile: `SuperAdminGate` aplica `aplicarTemaMobile` + `key={tema}`
+  (mismo mecanismo que `NavegacionConTema`); chips "Mi estilo" en la
+  lista de Empresas. Requiere build EAS.
+- `verificar.sh` en verde. Tarea 98 cerrada.

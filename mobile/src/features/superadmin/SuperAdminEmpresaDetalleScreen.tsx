@@ -241,7 +241,7 @@ export function SuperAdminEmpresaDetalleScreen({ route, navigation }: NativeStac
   );
 }
 
-function Chip({
+export function Chip({
   activo,
   label,
   onPress,

@@ -6,18 +6,28 @@ import { Building2, LogOut, Plus } from "lucide-react-native";
 import { tokens } from "@bitacora/design-tokens";
 import { EmptyState, Input, ListRow, ListRowGrupo, LoadingState, ScreenHeader, StatusBadge, Texto, useMarca, type TonoEstado } from "@bitacora/ui/native";
 import { listarEmpresasSuperAdmin, type EmpresaSuperAdmin } from "../../services/superadmin";
+import type { Empresa } from "@bitacora/shared";
 import { useSuperAdminAuth } from "./SuperAdminAuthContext";
+import { Chip } from "./SuperAdminEmpresaDetalleScreen";
 import type { SuperAdminStackParamList } from "./types";
 
 const ETIQUETA_ESTADO: Record<string, string> = { activa: "Activa", suspendida: "Suspendida", dada_de_baja: "Dada de baja" };
 const TONO_ESTADO: Record<string, TonoEstado> = { activa: "completado", suspendida: "en_progreso", dada_de_baja: "cancelado" };
 const ETIQUETA_PLAN: Record<string, string> = { trial: "Trial", basico: "Básico", pro: "Pro" };
+const TEMAS: { valor: Empresa["tema"]; label: string }[] = [
+  { valor: "faena", label: "Faena" },
+  { valor: "taller", label: "Taller" },
+  { valor: "confianza", label: "Confianza" },
+];
 
 // Fase 1 del panel de Super-Admin en mobile — lista de todas las
 // empresas (mismo endpoint que el panel web, GET /api/superadmin/empresas).
 // A propósito no cachea nada localmente (ver SuperAdminAuthContext).
 export function SuperAdminEmpresasListScreen({ navigation }: NativeStackScreenProps<SuperAdminStackParamList, "EmpresasLista">) {
   const auth = useSuperAdminAuth();
+  const marca = useMarca();
+  const [guardandoTema, setGuardandoTema] = useState(false);
+  const [errorTema, setErrorTema] = useState<string | null>(null);
   const [empresas, setEmpresas] = useState<EmpresaSuperAdmin[] | null>(null);
   const [busqueda, setBusqueda] = useState("");
   const [refrescando, setRefrescando] = useState(false);
@@ -33,6 +43,15 @@ export function SuperAdminEmpresasListScreen({ navigation }: NativeStackScreenPr
     setRefrescando(true);
     await cargar(busqueda);
     setRefrescando(false);
+  }
+
+  async function onCambiarTema(tema: Empresa["tema"]) {
+    if (auth.fase !== "listo" || tema === auth.yo.tema) return;
+    setGuardandoTema(true);
+    setErrorTema(null);
+    const r = await auth.cambiarTema(tema);
+    setGuardandoTema(false);
+    if (!r.ok) setErrorTema(r.error);
   }
 
   function onCambiarBusqueda(v: string) {
@@ -70,6 +89,24 @@ export function SuperAdminEmpresasListScreen({ navigation }: NativeStackScreenPr
             ))}
           </ListRowGrupo>
         )}
+
+        {auth.fase === "listo" ? (
+          <View style={{ gap: tokens.space["2"] }}>
+            <Texto tamano={tokens.size.small} peso="semibold" color={`${tokens.color.text}99`}>
+              Mi estilo
+            </Texto>
+            <View style={{ flexDirection: "row", gap: tokens.space["2"], flexWrap: "wrap" }}>
+              {TEMAS.map((t) => (
+                <Chip key={t.valor} marca={marca} activo={t.valor === auth.yo.tema} label={t.label} onPress={() => onCambiarTema(t.valor)} cargando={guardandoTema} />
+              ))}
+            </View>
+            {errorTema ? (
+              <Texto tamano={tokens.size.small} color={tokens.color.accentRamp["700"]}>
+                {errorTema}
+              </Texto>
+            ) : null}
+          </View>
+        ) : null}
 
         <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`} style={{ textAlign: "center" }}>
           {auth.fase === "listo" ? `Conectado como ${auth.yo.nombre}` : ""}

@@ -1514,6 +1514,21 @@
       ],
       "status": "done",
       "resolution": "Nuevo PATCH /api/superadmin/empresas/:id/tema (valida faena/taller/confianza, audita cambiar_tema_empresa). GET /empresas y /empresas/:id/salud devuelven tema. Web: tarjeta \"Tema visual\" en Super-Admin > Empresas > [empresa]. Mobile: chips de tema en SuperAdminEmpresaDetalleScreen (visible recién con un build EAS nuevo). Sin migración: empresas.tema ya existía. Los usuarios de la empresa ven el cambio al recargar/volver a abrir la app. verificar.sh en verde."
+    },
+    {
+      "id": 98,
+      "name": "superadmin_tema_propio",
+      "title": "Super-Admin elige su propio estilo visual (web + mobile)",
+      "description": "Pedido: 'en el super admin también quiero que elija su propio estilo'. Preferencia personal del Super-Admin, guardada en su cuenta (super_admins.tema) para que sea la misma en web y mobile; independiente del tema de las empresas (tarea 97).",
+      "acceptance": [
+        "Migración 127: super_admins.tema (faena/taller/confianza, default faena, idempotente)",
+        "Backend: GET /api/superadmin/me devuelve tema (select * tolerante a base sin la 127); PATCH /api/superadmin/me/tema",
+        "Web: SuperAdminShell aplica data-tema; 'Mi estilo' en Super-Admin > Mi cuenta",
+        "Mobile: SuperAdminGate aplica aplicarTemaMobile + remonta con key; chips 'Mi estilo' en la lista de Empresas",
+        "verificar.sh en verde"
+      ],
+      "status": "done",
+      "resolution": "Implementado y verificar.sh en verde. Pendiente de la usuaria: correr la migración 127 en dev y prod antes de mergear a main (el CI check-migraciones-prod lo exige). Mobile requiere build EAS nuevo para verse."
     }
   ]
 }
