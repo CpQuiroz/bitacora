@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { ScrollView, View } from "react-native";
+import { Alert, ScrollView, View } from "react-native";
 import {
   Banknote,
   ChevronRight,
   CircleUser,
   FileChartColumn,
-  HandCoins,
   HardHat,
   Receipt,
   RefreshCw,
@@ -125,13 +124,24 @@ export function MasScreen({ navigation }: NativeStackScreenProps<MasStackParamLi
   accesos.push({ titulo: "Mantención", Icono: Wrench, ir: () => navigation.navigate("MantencionVehiculo") });
   if (visibles.includes("financiero")) {
     accesos.push({ titulo: "Cobros", Icono: Banknote, badge: cobros?.vencidos || undefined, ir: () => navigation.navigate("CobrosLista") });
-    // Sigue siendo el formulario de alta rápida (no hay lista de
-    // gastos en el móvil) — se deja "Nuevo gasto", no "Gastos", para no
-    // prometer una vista que no existe.
-    accesos.push({ titulo: "Nuevo gasto", Icono: Receipt, ir: () => navigation.navigate("GastoForm") });
-    // Rendiciones (fondo por rendir/caja chica, 21-sep-2026) — mismo
-    // gate que Cobros/Gasto (módulo "financiero").
-    accesos.push({ titulo: "Rendiciones", Icono: HandCoins, ir: () => navigation.navigate("RendicionesLista") });
+    // Gasto suelto (alta rápida — sigue sin existir una lista de gastos
+    // en el móvil, a propósito) y Rendiciones (fondo por rendir/caja
+    // chica, 21-sep-2026) son la misma familia que en web (GastosSubnav:
+    // Rendiciones es subsección de Gastos) — antes eran 2 tarjetas
+    // sueltas sin relación visible entre sí (pedido explícito 22-sep-2026
+    // tras confundirse por la separación). Se unen en una sola tarjeta
+    // "Gastos" que ofrece las 2 acciones, en vez de construir la lista
+    // de gastos que se decidió no tener.
+    accesos.push({
+      titulo: "Gastos",
+      Icono: Receipt,
+      ir: () =>
+        Alert.alert("Gastos", "¿Qué querés hacer?", [
+          { text: "Nuevo gasto", onPress: () => navigation.navigate("GastoForm") },
+          { text: "Rendiciones", onPress: () => navigation.navigate("RendicionesLista") },
+          { text: "Cancelar", style: "cancel" },
+        ]),
+    });
   }
   if (veLevantamientos) {
     accesos.push({ titulo: "Levantamientos", Icono: Search, ir: () => navigation.navigate("Levantamientos") });

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Alert, Image, Pressable, ScrollView, View } from "react-native";
+import { Alert, Image, Modal, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Camera } from "lucide-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -14,13 +14,17 @@ import { useAuth } from "../auth/AuthContext";
 import { elegirFotos } from "../../lib/imagen";
 import { listarTrabajos, type TrabajoLista } from "../../services/trabajos";
 import {
+  actualizarGasto,
   crearCategoriaGasto,
   crearGasto,
   crearProveedor,
+  encolarComprobante,
   encolarGasto,
   listarCategoriasGasto,
   listarCentrosCosto,
   listarProveedores,
+  obtenerComprobanteUrl,
+  obtenerGasto,
   type BorradorGasto,
   type Foto,
 } from "../../services/gastos";
@@ -59,6 +63,12 @@ export function NuevoGastoScreen({ navigation, route }: NativeStackScreenProps<M
   // ser obligatoria (una rendición sin respaldo fotográfico no sirve
   // para la reconciliación) — ver guardar() más abajo.
   const rendicionId = route.params?.rendicionId;
+  // Editar/ver un gasto ya existente (RendicionDetalleScreen → tocar
+  // una fila, 22-sep-2026) — mismo formulario, precargado; soloLectura
+  // cuando la rendición ya no está en borrador o quien mira no puede
+  // editarla (ver puedeEditar en esa pantalla).
+  const gastoId = route.params?.gastoId;
+  const soloLectura = Boolean(route.params?.soloLectura);
   // Pantalla modal (presentation: "modal" en MasStack.tsx) — no vive
   // dentro del pager de AppTabs.tsx, así que no hereda el fix de
   // paddingBottom de la tab bar (ver ese archivo, 20-sep-2026). Necesita
@@ -73,13 +83,50 @@ export function NuevoGastoScreen({ navigation, route }: NativeStackScreenProps<M
   const [trabajos, setTrabajos] = useState<TrabajoLista[]>([]);
   const [foto, setFoto] = useState<Foto | null>(null);
   const [guardando, setGuardando] = useState(false);
+  // Foto ya subida de un gasto existente (URL firmada) — distinta de
+  // `foto` (una recién elegida en el celular, todavía sin subir).
+  // `null` mientras carga o si el gasto no tiene comprobante todavía
+  // (la foto puede seguir en la cola de sincronización).
+  const [fotoExistenteUrl, setFotoExistenteUrl] = useState<string | null>(null);
+  const [cargandoGasto, setCargandoGasto] = useState(Boolean(gastoId));
+  const [verFotoGrande, setVerFotoGrande] = useState(false);
 
   const [b, setB] = useState<BorradorGasto>(VACIO);
   const set = <K extends keyof BorradorGasto>(k: K, v: BorradorGasto[K]) => setB((p) => ({ ...p, [k]: v }));
 
   useEffect(() => {
-    navigation.setOptions({ title: rendicionId ? "Agregar gasto" : "Nuevo gasto" });
-  }, [navigation, rendicionId]);
+    navigation.setOptions({ title: gastoId ? (soloLectura ? "Gasto" : "Editar gasto") : rendicionId ? "Agregar gasto" : "Nuevo gasto" });
+  }, [navigation, rendicionId, gastoId, soloLectura]);
+
+  useEffect(() => {
+    if (!gastoId) return;
+    let activo = true;
+    (async () => {
+      const [rGasto, url] = await Promise.all([obtenerGasto(gastoId), obtenerComprobanteUrl(gastoId)]);
+      if (!activo) return;
+      if (rGasto.ok) {
+        const g = rGasto.gasto;
+        setB({
+          descripcion: g.descripcion ?? "",
+          monto: String(g.monto ?? ""),
+          categoria_gasto_id: g.categoria_gasto_id ?? "",
+          centro_costo_id: g.centro_costo_id ?? "",
+          proveedor_id: g.proveedor_id ?? "",
+          trabajo_id: g.trabajo_id ?? "",
+          fecha: g.fecha,
+          estado: g.estado,
+          fecha_pago: g.fecha_pago ?? clave(new Date()),
+        });
+      } else {
+        Alert.alert("No se pudo cargar el gasto", rGasto.error);
+      }
+      setFotoExistenteUrl(url);
+      setCargandoGasto(false);
+    })();
+    return () => {
+      activo = false;
+    };
+  }, [gastoId]);
 
   useEffect(() => {
     Promise.all([listarCategoriasGasto(), listarCentrosCosto(), listarProveedores(), listarTrabajos(true)]).then(
@@ -125,6 +172,27 @@ export function NuevoGastoScreen({ navigation, route }: NativeStackScreenProps<M
 
     const volver = () => navigation.goBack();
 
+    if (gastoId) {
+      if (!foto && !fotoExistenteUrl) return Alert.alert("Falta la foto", "Un gasto de rendición siempre necesita comprobante.");
+      // Igual que "agregar gasto": sin cola para la edición en sí
+      // (necesita conexión). La foto nueva, si la hay, sí va por la
+      // cola de siempre.
+      if (!enLinea) return Alert.alert("Sin conexión", "Necesitás conexión para guardar los cambios.");
+      setGuardando(true);
+      const r = await actualizarGasto(gastoId, b);
+      if (!r.ok) {
+        setGuardando(false);
+        return Alert.alert("No se pudo guardar", r.error);
+      }
+      if (foto) await encolarComprobante(gastoId, foto);
+      setGuardando(false);
+      return Alert.alert(
+        "Cambios guardados",
+        foto ? "La foto nueva se está subiendo y se reintenta sola si falla." : "Listo.",
+        [{ text: "Listo", onPress: volver }]
+      );
+    }
+
     if (rendicionId) {
       if (!foto) return Alert.alert("Falta la foto", "Un gasto de rendición siempre necesita comprobante.");
       // Sin cola offline para la creación en sí (mismo criterio que
@@ -169,10 +237,44 @@ export function NuevoGastoScreen({ navigation, route }: NativeStackScreenProps<M
     Alert.alert("Guardado sin conexión", "Se enviará cuando vuelvas a tener señal.", [{ text: "Listo", onPress: volver }]);
   }
 
-  if (categorias === null) {
+  if (categorias === null || cargandoGasto) {
     return (
       <View style={{ flex: 1, backgroundColor: tokens.color.bg, padding: tokens.space["4"] }}>
         <LoadingState />
+      </View>
+    );
+  }
+
+  const fotoVisor = foto?.uri ?? fotoExistenteUrl;
+
+  if (soloLectura) {
+    return (
+      <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
+        <ScrollView contentContainerStyle={{ padding: tokens.space["4"], gap: tokens.space["4"], paddingBottom: tokens.space["8"] + insets.bottom }}>
+          <CampoLectura etiqueta="Categoría" valor={categorias.find((c) => c.id === b.categoria_gasto_id)?.nombre ?? "—"} />
+          <CampoLectura etiqueta="Monto" valor={`$${Number(b.monto || 0).toLocaleString("es-CL")}`} />
+          {b.descripcion ? <CampoLectura etiqueta="Descripción" valor={b.descripcion} /> : null}
+          <CampoLectura etiqueta="Fecha" valor={b.fecha} />
+          <View style={{ gap: tokens.space["1"] * 1.5 }}>
+            <Texto tamano={tokens.size.small} peso="medium" color={`${tokens.color.text}99`}>
+              Foto del comprobante
+            </Texto>
+            {fotoExistenteUrl ? (
+              <Pressable onPress={() => setVerFotoGrande(true)}>
+                <Image
+                  source={{ uri: fotoExistenteUrl }}
+                  style={{ width: "100%", height: 220, borderRadius: tokens.radius.md, backgroundColor: tokens.color.surface }}
+                  resizeMode="cover"
+                />
+              </Pressable>
+            ) : (
+              <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
+                Todavía se está subiendo — volvé a entrar en un rato.
+              </Texto>
+            )}
+          </View>
+        </ScrollView>
+        <VisorFotoGrande visible={verFotoGrande} url={fotoVisor} onCerrar={() => setVerFotoGrande(false)} />
       </View>
     );
   }
@@ -283,20 +385,44 @@ export function NuevoGastoScreen({ navigation, route }: NativeStackScreenProps<M
             de guardar). */}
         {foto ? (
           <View style={{ gap: tokens.space["2"] }}>
-            <Image source={{ uri: foto.uri }} style={{ width: "100%", height: 220, borderRadius: tokens.radius.md, backgroundColor: tokens.color.surface }} resizeMode="cover" />
+            <Pressable onPress={() => setVerFotoGrande(true)}>
+              <Image source={{ uri: foto.uri }} style={{ width: "100%", height: 220, borderRadius: tokens.radius.md, backgroundColor: tokens.color.surface }} resizeMode="cover" />
+            </Pressable>
             <View style={{ flexDirection: "row", gap: tokens.space["2"] }}>
               <View style={{ flex: 1 }}>
                 <Button variante="secundario" bloque onPress={adjuntarFoto}>
                   Cambiar
                 </Button>
               </View>
-              <View style={{ flex: 1 }}>
-                <Button variante="peligro" bloque onPress={() => setFoto(null)}>
-                  Quitar
-                </Button>
-              </View>
+              {/* "Quitar" solo tiene sentido si no hay una foto ya
+                  subida atrás — si la hay, sacar la nueva simplemente
+                  vuelve a mostrar esa (gastoId, edición). */}
+              {!gastoId ? (
+                <View style={{ flex: 1 }}>
+                  <Button variante="peligro" bloque onPress={() => setFoto(null)}>
+                    Quitar
+                  </Button>
+                </View>
+              ) : null}
             </View>
           </View>
+        ) : gastoId && fotoExistenteUrl ? (
+          <View style={{ gap: tokens.space["2"] }}>
+            <Pressable onPress={() => setVerFotoGrande(true)}>
+              <Image
+                source={{ uri: fotoExistenteUrl }}
+                style={{ width: "100%", height: 220, borderRadius: tokens.radius.md, backgroundColor: tokens.color.surface }}
+                resizeMode="cover"
+              />
+            </Pressable>
+            <Button variante="secundario" bloque onPress={adjuntarFoto}>
+              Cambiar foto
+            </Button>
+          </View>
+        ) : gastoId ? (
+          <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
+            La foto todavía se está subiendo — volvé a entrar en un rato para verla o cambiarla.
+          </Texto>
         ) : (
           <Pressable
             onPress={adjuntarFoto}
@@ -328,10 +454,44 @@ export function NuevoGastoScreen({ navigation, route }: NativeStackScreenProps<M
         }}
       >
         <Button tamano="lg" bloque onPress={guardar} cargando={guardando}>
-          Registrar gasto
+          {gastoId ? "Guardar cambios" : "Registrar gasto"}
         </Button>
       </View>
+
+      <VisorFotoGrande visible={verFotoGrande} url={fotoVisor} onCerrar={() => setVerFotoGrande(false)} />
     </View>
+  );
+}
+
+// Detalle de un campo en modo solo-lectura (gasto de una rendición ya
+// enviada/aprobada/rechazada, o mirado por alguien que no puede
+// editarlo) — mismo estilo de etiqueta que el resto del formulario,
+// sin el input.
+function CampoLectura({ etiqueta, valor }: { etiqueta: string; valor: string }) {
+  return (
+    <View style={{ gap: tokens.space["1"] * 1.5 }}>
+      <Texto tamano={tokens.size.small} peso="medium" color={`${tokens.color.text}99`}>
+        {etiqueta}
+      </Texto>
+      <Texto tamano={tokens.size.body} color={tokens.color.text}>
+        {valor}
+      </Texto>
+    </View>
+  );
+}
+
+// Foto a pantalla completa al tocar la miniatura — mismo patrón que
+// FotosSection.tsx (trabajos), para no inventar uno nuevo.
+function VisorFotoGrande({ visible, url, onCerrar }: { visible: boolean; url: string | null; onCerrar: () => void }) {
+  return (
+    <Modal visible={visible && Boolean(url)} transparent animationType="fade" onRequestClose={onCerrar}>
+      <Pressable
+        onPress={onCerrar}
+        style={{ flex: 1, backgroundColor: `${tokens.color.neutral["900"]}d9`, alignItems: "center", justifyContent: "center", padding: 16 }}
+      >
+        {url ? <Image source={{ uri: url }} resizeMode="contain" style={{ width: "100%", height: "80%" }} /> : null}
+      </Pressable>
+    </Modal>
   );
 }
 

@@ -64,8 +64,12 @@ export type MasStackParamList = {
   CobroForm: undefined;
   CobroDetalle: { cobroId: string };
   // GastoForm con rendicionId: mismo formulario, foto obligatoria y el
-  // gasto queda asociado a esa rendición (Más → Rendiciones).
-  GastoForm: { rendicionId?: string } | undefined;
+  // gasto queda asociado a esa rendición (Más → Rendiciones). Con
+  // gastoId en vez de crear edita uno ya existente (tocando una fila en
+  // RendicionDetalleScreen) — soloLectura lo abre en modo ver-nomás
+  // cuando la rendición ya no está en borrador o el usuario no puede
+  // editarla (22-sep-2026).
+  GastoForm: { rendicionId?: string; gastoId?: string; soloLectura?: boolean } | undefined;
   RendicionesLista: undefined;
   RendicionForm: undefined;
   RendicionDetalle: { id: string };

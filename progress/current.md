@@ -5791,3 +5791,80 @@ paso. Todo commiteado y pusheado a main.
 con los permisos correctos; tokens de Vercel/Render/Cloudflare para
 sumar esos 3 al panel; nuevo build mobile (v1.10.13) si se quiere ver
 huella+crear empresa en el celular.
+
+## 23-sep-2026 — build v1.10.13, Resend Full access, tarea 79
+
+**Build mobile v1.10.13** (huella super-admin + crear empresa, del
+23-sep): 3 intentos en background matados por el entorno antes de
+terminar — el primero y el segundo antes de siquiera arrancar
+`gradlew` (causa real: el script mandaba la salida de gradle a través
+de `| tail -40`, que retiene TODO hasta EOF — el log quedaba sin
+escribir nada por minutos y algo lo interpretó como colgado); se sacó
+el pipe para que la salida de gradle fluya en vivo apenas se genera.
+El 3er intento con el fix ya llegó lejos (~74 KB de log, cerca del
+final) antes de que igual lo mataran — probablemente un límite de
+tiempo/recursos del entorno para tareas en background, no un problema
+del build. El 4to intento se corrió en *foreground* con el timeout
+máximo del tool (600s) — al tocar el límite el propio harness lo pasó
+a background solo, sin matarlo, y terminó solo (`BUILD SUCCESSFUL in
+10m 20s`). Cada vez que quedó cortado a mitad de camino, `.env` quedó
+pisado con los valores de prod (el `trap RESTORE_ENV EXIT` del script
+no corre ante un kill externo) — se restauró a mano a dev antes de
+reintentar, cada vez. APK 39 MB, verificación de entorno en verde
+(prod real, sin restos de dev). Distribuido por el mismo servidor HTTP
+local de siempre.
+
+**Resend, Full access**: la usuaria NO generó una key nueva — editó
+los permisos de la misma key existente en el dashboard de Resend. Se
+probó en vivo contra `/domains` sin tocar `backend/.env` (la key ya
+estaba guardada) — `HTTP 200`, ya lista el dominio
+`transportesitineris.cl` verificado. Con esto el panel de Salud ya
+puede mostrar datos reales de Resend. Sigue pendiente Anthropic (Admin
+Key real) y Vercel/Render/Cloudflare.
+
+**Tarea 79 — editar/ver foto del gasto propio en una rendición +
+agrupar Gastos/Rendiciones en el menú Más** (pedido explícito: "si
+creé el gasto incluido en app mobile, como creador igual debiera poder
+modificarlo y ver la foto que subí"):
+
+- Investigación primero (sin tocar código, a pedido): confirmado que
+  en `RendicionDetalleScreen.tsx` las filas de "Gastos incluidos" eran
+  `ListRow` sin `onPress` — no se podía entrar a ninguna. El backend
+  YA tenía todo lo necesario sin tocarlo: `PATCH /api/gastos/:id`
+  (bloquea con 409 en cuanto la rendición deja "borrador" — migración
+  120) y `GET /api/gastos/:id/comprobante` (URL firmada de la foto).
+  Sobre la 2da pregunta ("¿no era subopción de Gastos?"): confirmado
+  que en WEB Rendiciones sí es subsección de Gastos (`GastosSubnav`,
+  comentario explícito en el código), pero en MOBILE quedó como
+  tarjeta suelta en la grilla de Accesos rápidos — no por diseño
+  deliberado, sino porque mobile nunca tuvo pantalla de "lista de
+  Gastos" (solo "Nuevo gasto", alta rápida) para anidar Rendiciones
+  cuando se agregó (21-sep).
+- Implementado, con aprobación ("avanza con los dos"):
+  - `services/gastos.ts`: `obtenerGasto`, `obtenerComprobanteUrl`,
+    `actualizarGasto` (PATCH JSON — la foto nueva, si la hay, se
+    encola aparte con `encolarComprobante` ya existente, nunca
+    multipart inline, mismo motivo documentado en `crearGasto`).
+  - `RendicionDetalleScreen.tsx`: cada fila de gasto ahora navega a
+    `GastoForm` con `{ gastoId, rendicionId, soloLectura: !puedeEditar }`
+    (reusa exactamente la regla `puedeEditar` que ya existía para
+    "Agregar gasto"/"Enviar").
+  - `NuevoGastoScreen.tsx` (ahora también edita, no solo crea): con
+    `gastoId` precarga el formulario + la foto actual (URL firmada);
+    `soloLectura` renderiza una vista de detalle aparte (campos +
+    foto agrandable con `VisorFotoGrande`, mismo patrón de
+    `FotosSection.tsx`) en vez de reusar el form con inputs
+    deshabilitados. Guardar hace PATCH; "Quitar" foto no se ofrece
+    cuando ya hay una subida atrás (el backend no soporta "borrar"
+    comprobante, solo reemplazarlo).
+  - `types.ts`: `GastoForm` suma `gastoId?`/`soloLectura?`.
+  - `MasScreen.tsx`: "Nuevo gasto" + "Rendiciones" (2 tarjetas sueltas
+    en la grilla) se unen en una sola tarjeta "Gastos" que abre un
+    `Alert.alert` con las 2 acciones — sin construir la lista de
+    gastos que mobile decidió no tener a propósito.
+- Sin cambios de backend (todo lo necesario ya existía).
+- `tsc` (6 workspaces) + `verificar.sh` completo en verde.
+
+**Pendiente**: nuevo build mobile (v1.10.14) para ver esto en el
+celular; Anthropic Admin Key + tokens Vercel/Render/Cloudflare
+(sin cambios desde la entrada anterior).

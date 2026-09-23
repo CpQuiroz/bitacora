@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { Alert, ScrollView, View } from "react-native";
-import { ArrowLeft, Paperclip, Plus } from "lucide-react-native";
+import { ArrowLeft, ChevronRight, Paperclip, Plus } from "lucide-react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { EstadoRendicion } from "@bitacora/shared";
@@ -32,7 +32,12 @@ const ETIQUETA_METODO_ENTREGA: Record<string, string> = { efectivo: "Efectivo", 
 // gasto" reusa el formulario de Nuevo Gasto (NuevoGastoScreen) con
 // rendicionId fijo y foto obligatoria; "Enviar rendición" la bloquea
 // para seguir agregando (el backend además exige que todos los gastos
-// ya tengan su comprobante subido).
+// ya tengan su comprobante subido). Tocar un gasto ya agregado abre el
+// mismo formulario en modo edición (gastoId) para corregirlo y ver la
+// foto que se subió — de solo lectura si la rendición ya no está en
+// borrador o el que mira no es el dueño ni gestión (22-sep-2026,
+// pedido explícito: "si creé el gasto igual debiera poder
+// modificarlo").
 export function RendicionDetalleScreen({ navigation, route }: NativeStackScreenProps<MasStackParamList, "RendicionDetalle">) {
   const auth = useAuth();
   const [detalle, setDetalle] = useState<DetalleRendicion | null>(null);
@@ -142,10 +147,18 @@ export function RendicionDetalleScreen({ navigation, route }: NativeStackScreenP
                   icono={g.comprobante_url ? <Paperclip size={20} strokeWidth={2.25} color={tokens.color.accentRamp["700"]} /> : undefined}
                   titulo={g.categoria_info?.nombre ?? g.categoria}
                   subtitulo={[g.fecha, g.descripcion, !g.comprobante_url ? "Sin comprobante todavía" : null].filter(Boolean).join(" · ")}
+                  // Tocable siempre — el dueño (o gestión) quiere poder
+                  // revisar la foto que subió y corregirse si se
+                  // equivocó; una vez que la rendición deja "borrador"
+                  // se abre igual pero solo para mirar (soloLectura).
+                  onPress={() => navigation.navigate("GastoForm", { gastoId: g.id, rendicionId: detalle.id, soloLectura: !puedeEditar })}
                   trailing={
-                    <Texto tamano={tokens.size.body} peso="semibold" color={tokens.color.text} style={{ fontVariant: ["tabular-nums"] }}>
-                      ${Number(g.monto).toLocaleString("es-CL")}
-                    </Texto>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                      <Texto tamano={tokens.size.body} peso="semibold" color={tokens.color.text} style={{ fontVariant: ["tabular-nums"] }}>
+                        ${Number(g.monto).toLocaleString("es-CL")}
+                      </Texto>
+                      <ChevronRight size={18} strokeWidth={2.25} color={`${tokens.color.text}66`} />
+                    </View>
                   }
                 />
               ))}

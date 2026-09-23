@@ -123,6 +123,58 @@ export async function crearGasto(b: BorradorGasto, foto?: Foto): Promise<Resulta
   return { ok: true, gasto: res.data, comprobantePendiente };
 }
 
+export type ResultadoGasto = { ok: true; gasto: Gasto } | { ok: false; error: string };
+
+/** Trae un gasto puntual (RendicionDetalleScreen → tocar una fila para
+ * editarla o solo verla). */
+export async function obtenerGasto(id: string): Promise<ResultadoGasto> {
+  const res = await apiJson<Gasto>(`/api/gastos/${id}`);
+  if (res.ok) return { ok: true, gasto: res.data };
+  return { ok: false, error: res.error };
+}
+
+/** URL firmada de la foto del comprobante — `null` si el gasto todavía
+ * no tiene uno (típico: la foto sigue en la cola de sincronización,
+ * ver encolarComprobante) o si el gasto no existe. */
+export async function obtenerComprobanteUrl(id: string): Promise<string | null> {
+  const res = await apiJson<{ url: string }>(`/api/gastos/${id}/comprobante`);
+  return res.ok ? res.data.url : null;
+}
+
+// A diferencia de cuerpoGasto (POST, donde un campo opcional vacío
+// simplemente no se manda), acá SÍ hay que mandar explícitamente el
+// valor vacío de cada relación opcional cuando corresponde — el
+// backend (gastos.ts PATCH) solo la limpia si la key llega presente
+// (`!== undefined`); si se omitiera igual que en el POST, "sacar" un
+// centro de costo/proveedor/OS ya asignado no tendría efecto.
+function cuerpoGastoActualizado(b: BorradorGasto) {
+  return {
+    descripcion: b.descripcion.trim(),
+    monto: Number(b.monto || 0),
+    categoria_gasto_id: b.categoria_gasto_id,
+    centro_costo_id: b.centro_costo_id,
+    proveedor_id: b.proveedor_id,
+    trabajo_id: b.trabajo_id,
+    fecha: b.fecha,
+    estado: b.estado,
+    fecha_pago: b.estado === "pagado" ? b.fecha_pago || b.fecha : undefined,
+  };
+}
+
+/**
+ * Edita un gasto ya existente (JSON, requiere conexión — mismo criterio
+ * que "agregar gasto" a una rendición, sin cola para esto). La foto NO
+ * se manda acá: si el usuario elige una nueva, el caller la encola
+ * aparte con encolarComprobante — mismo motivo que crearGasto (nunca
+ * multipart inline, para no duplicar la subida si el encolado de
+ * respaldo también corriera).
+ */
+export async function actualizarGasto(id: string, b: BorradorGasto): Promise<ResultadoGasto> {
+  const res = await apiJson<Gasto>(`/api/gastos/${id}`, { method: "PATCH", body: JSON.stringify(cuerpoGastoActualizado(b)) });
+  if (res.ok) return { ok: true, gasto: res.data };
+  return { ok: false, error: res.error };
+}
+
 export function encolarComprobante(gastoId: string, foto: Foto) {
   return encolar({
     etiqueta: "Comprobante de gasto",
