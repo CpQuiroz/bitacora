@@ -6249,7 +6249,49 @@ Migración 125: `analisis_fotos.descripcion`; `ordenes_servicio`:
   mismo criterio que otras pantallas mobile grandes de la sesión sin
   esa posibilidad. `tsc` (6 workspaces) + `verificar.sh` en verde.
 
-Sigo con la parte 3/3: versionado de PDF con Informe IA (3.3).
+### Fase 3, parte 3/3 (versionado de PDF con IA) — tarea 89, FASE 3 COMPLETA
+
+Antes de asumir que había que "proteger" la v1, leí `obtenerPdfOS` —
+**ya era inmutable por diseño existente**: cachea `pdf_url` la primera
+vez que hay `firma_url` y nunca regenera después, sin que yo tuviera
+que tocar nada ahí. Solo agregué el camino nuevo y separado para v2+:
+
+- `PATCH /:id/informe-ia` — guarda el texto ya editado por el Admin,
+  sin volver a llamar a Claude (eso sigue siendo el `POST` existente).
+- `GET /:id/pdf-versiones` — historial completo, con una fila
+  sintética "v1 (original)" al final para no tener que pedir 2 cosas
+  distintas desde el frontend.
+- `POST /:id/pdf-versiones` — genera el PDF con el `informe_ia` actual,
+  nunca toca `pdf_url`/v1, numera `version = última + 1` (arranca en 2).
+- Web (`ordenes/[id]/page.tsx`): el texto pasa de `<pre>` de solo
+  lectura a un `Textarea` editable + "Guardar cambios" + "Generar
+  versión del PDF" (deshabilitado si hay cambios sin guardar) +
+  historial de versiones con link de descarga cada una.
+
+**Encontrado de paso**: hay un `Database` type compartido
+(`packages/shared/src/types.ts`) que mapea cada tabla real a su tipo
+TS — una tabla nueva sin esa entrada rompe `tsc` con errores confusos
+("never") en cualquier query a ella, no un problema de config. Agregué
+`os_pdf_versiones: Tabla<OsPdfVersion>` — quedó anotado para la
+próxima vez que se agregue una tabla.
+
+Intenté probar el insert real contra dev — confirmó que la migración
+125 todavía no está corrida ahí (esperado, la corre la usuaria).
+
+`tsc` (6 workspaces) + `verificar.sh` en verde.
+
+## FASE 3 completa (3.1, 3.2, 3.3, 3.4) — resumen
+
+- 3.1 fotos con descripción (OS) — backend + PDF.
+- 3.2 sin firma dibujada del colaborador (acreditado por sesión),
+  RUT del cliente automático, "cliente no disponible".
+- 3.3 versionado de PDF con Informe IA revisable.
+- 3.4 flujo de OS a 3 pasos (Iniciar/Ejecutar/Cerrar) en mobile +
+  llegada/salida visible en el detalle web.
+
+**Pendiente de la usuaria**: correr la migración 125 en dev y prod.
+**Pendiente de mí**: seguir con la Fase 4 (Levantamiento: Admin agrega
+materiales) cuando se pida.
 
 ## 23-sep-2026 — tarea 81: bajar el botón flotante del Asistente
 

@@ -1374,6 +1374,21 @@
       ],
       "status": "done",
       "resolution": "Reutilizado al maximo lo existente: CamposDinamicos y FotosSection sin cambios (solo se les cambio cuando son editables segun el paso), LienzoFirma sin cambios, la logica de check-in optimista igual que antes. El paso se resuelve 100% de datos ya existentes (check_in_at/check_out.hecho) -- una OS a mitad de camino con el flujo viejo abre directo en el paso correcto sin ningun backfill ni mapeo de estados, tal como pedia 3.4c. Encontre y preserve \"Registrar venta\" (se habia perdido en el primer borrador del rediseno, lo repuse antes de cerrar). No se hizo prueba visual en vivo del mobile (no hay infra de simulador/device en este entorno) -- verificado por tsc + revision de codigo cuidadosa, mismo criterio que el resto de pantallas mobile grandes de esta sesion sin ese tipo de prueba disponible. tsc + verificar.sh en verde."
+    },
+    {
+      "id": 89,
+      "name": "fase3_versionado_pdf_informe_ia",
+      "title": "FASE 3 (parte 3/3): versionado de PDF con Informe IA revisable",
+      "description": "3.3: Admin puede revisar/editar el texto del Informe IA antes de empaquetarlo en una version nueva del PDF (v1 original firmada intacta; v2, v3... con la seccion de IA). Historial de versiones visible.",
+      "acceptance": [
+        "Tabla os_pdf_versiones (migracion 125, ya escrita en la tarea 87) -- v1 sigue siendo ordenes_servicio.pdf_url, YA era inmutable por diseno existente (obtenerPdfOS cachea la primera vez que hay firma_url y nunca regenera, confirmado leyendo el codigo antes de asumir que habia que protegerla)",
+        "Backend: nuevo PATCH /:id/informe-ia (guarda texto editado sin llamar a Claude de nuevo), GET /:id/pdf-versiones (lista, incluye v1 sintetica), POST /:id/pdf-versiones (genera PDF nuevo con el informe_ia actual, nunca toca pdf_url/v1, numera version=ultima+1 empezando en 2)",
+        "Database type compartido (packages/shared/types.ts) necesitaba la entrada os_pdf_versiones: Tabla<OsPdfVersion> -- sin eso tsc fallaba con \"never\" en toda query a la tabla nueva (encontrado y corregido)",
+        "Web ordenes/[id]/page.tsx: el texto del informe pasa de <pre> de solo lectura a un Textarea editable + Guardar cambios (PATCH) + Generar version del PDF (deshabilitado si hay cambios sin guardar) + lista de historial de versiones con link de descarga cada una",
+        "tsc (6 workspaces) + verificar.sh en verde"
+      ],
+      "status": "done",
+      "resolution": "Se confirmo leyendo obtenerPdfOS (trabajos.ts) que v1 YA era inmutable por diseno (cachea pdf_url la primera vez tras la firma, nunca regenera) -- no hizo falta proteger nada ahi, solo agregar el camino NUEVO y separado para v2+. Intento de prueba en vivo del insert a os_pdf_versiones confirmo que la migracion 125 todavia no esta corrida en dev (error \"table not found in schema cache\", esperado -- la corre la usuaria). Encontrado de paso un patron real de este repo: hay un Database type compartido (packages/shared/types.ts) que mapea cada tabla a su tipo TS -- una tabla nueva sin esa entrada rompe tsc con errores confusos (\"never\") en cualquier query, no solo un tsc mal configurado. tsc + verificar.sh en verde. Fase 3 completa (3.1, 3.2, 3.3, 3.4 todas cerradas)."
     }
   ]
 }

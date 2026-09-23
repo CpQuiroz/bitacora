@@ -1965,6 +1965,7 @@ export type Database = {
       clientes: Tabla<Cliente>;
       facturas: Tabla<Factura>;
       ordenes_servicio: Tabla<OrdenServicio>;
+      os_pdf_versiones: Tabla<OsPdfVersion>;
       inventario: Tabla<Inventario>;
       gastos_fijos: Tabla<GastoFijo>;
       analisis_fotos: Tabla<AnalisisFoto>;

@@ -1944,3 +1944,142 @@ trabajosRouter.post(
     res.json(actualizado);
   })
 );
+
+// Fase 3.3 (23-sep-2026, pedido explícito): el Admin puede revisar y
+// corregir el texto que generó la IA ANTES de empaquetarlo en una
+// versión nueva del PDF — esto solo guarda el texto, sin volver a
+// llamar a Claude (eso sigue siendo POST /:id/informe-ia). Mismo
+// guard de rol que generarlo.
+trabajosRouter.patch(
+  "/:id/informe-ia",
+  ah<RequestConEmpresa>(async (req, res) => {
+    const rol = req.rol ?? "colaborador";
+    const puedeEditar = (rol === "admin" || rol === "supervisor") && (await rolPuedeVerModulo(rol, "informe_ia", req.empresaId!));
+    if (!puedeEditar) {
+      res.status(403).json({ error: "Solo el administrador — o un supervisor con el módulo de Informes IA habilitado — puede editar este informe." });
+      return;
+    }
+    const { informe_ia } = req.body ?? {};
+    if (typeof informe_ia !== "string") {
+      res.status(400).json({ error: "Falta informe_ia" });
+      return;
+    }
+    const orden = await ordenDeTrabajo(req.empresaId!, req.params.id);
+    if (!orden) {
+      res.status(404).json({ error: "Este trabajo todavía no tiene una orden de servicio" });
+      return;
+    }
+    const { data, error } = await supabase
+      .from("ordenes_servicio")
+      .update({ informe_ia: informe_ia.trim() || null })
+      .eq("empresa_id", req.empresaId!)
+      .eq("id", orden.id)
+      .select()
+      .single();
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    res.json(data);
+  })
+);
+
+// Historial de versiones del PDF (Fase 3.3) — la v1 (la original,
+// firmada, `ordenes_servicio.pdf_url`) NUNCA se toca (ya era así de
+// antes: obtenerPdfOS la cachea la primera vez y siempre devuelve esos
+// mismos bytes) — se agrega como una fila sintética v1 al final de
+// esta lista para que el historial se vea completo sin que el
+// frontend tenga que pedir 2 cosas distintas.
+trabajosRouter.get(
+  "/:id/pdf-versiones",
+  ah<RequestConEmpresa>(async (req, res) => {
+    const orden = await ordenDeTrabajo(req.empresaId!, req.params.id);
+    if (!orden) {
+      res.status(404).json({ error: "Este trabajo todavía no tiene una orden de servicio" });
+      return;
+    }
+    const { data, error } = await supabase
+      .from("os_pdf_versiones")
+      .select("id, version, pdf_url, informe_ia, creado_en")
+      .eq("empresa_id", req.empresaId!)
+      .eq("orden_servicio_id", orden.id)
+      .order("version", { ascending: false });
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    type VersionPdf = { id: string; version: number; informeIA: string | null; creadoEn: string | null; url: string };
+    const versiones: VersionPdf[] = await Promise.all(
+      (data ?? []).map(async (f): Promise<VersionPdf> => ({ id: f.id, version: f.version, informeIA: f.informe_ia, creadoEn: f.creado_en, url: await urlFirmada(f.pdf_url, 15) }))
+    );
+    if (orden.pdf_url) {
+      versiones.push({ id: "v1", version: 1, informeIA: null, creadoEn: orden.finalizada_en ?? null, url: await urlFirmada(orden.pdf_url, 15) });
+    }
+    versiones.sort((a, b) => b.version - a.version);
+    res.json(versiones);
+  })
+);
+
+// Genera una versión NUEVA del PDF con el Informe IA actual (ya
+// generado/revisado/editado) — nunca pisa la v1 (pdf_url), que sigue
+// siendo la original firmada e inmutable. Mismo guard de rol que
+// generar/editar el informe: es quien decide qué texto queda impreso.
+trabajosRouter.post(
+  "/:id/pdf-versiones",
+  ah<RequestConEmpresa>(async (req, res) => {
+    const rol = req.rol ?? "colaborador";
+    const puede = (rol === "admin" || rol === "supervisor") && (await rolPuedeVerModulo(rol, "informe_ia", req.empresaId!));
+    if (!puede) {
+      res.status(403).json({ error: "Solo el administrador — o un supervisor con el módulo de Informes IA habilitado — puede generar una versión nueva del PDF." });
+      return;
+    }
+    const orden = await ordenDeTrabajo(req.empresaId!, req.params.id);
+    if (!orden) {
+      res.status(404).json({ error: "Este trabajo todavía no tiene una orden de servicio" });
+      return;
+    }
+    if (!orden.firma_url && !orden.cliente_no_disponible) {
+      res.status(409).json({ error: "La orden de servicio todavía no está cerrada" });
+      return;
+    }
+    if (!orden.informe_ia) {
+      res.status(400).json({ error: "Generá o escribí el Informe con IA antes de crear una versión nueva del PDF" });
+      return;
+    }
+    const datosPdf = await armarDatosPdf(req.empresaId!, req.params.id);
+    if (!datosPdf) {
+      res.status(404).json({ error: "Trabajo u orden de servicio no encontrada" });
+      return;
+    }
+    const pdf = await generarPdfEnWorker<DatosOSPdf>("os", datosPdf);
+    const key = await subirPdfOS(req.empresaId!, req.params.id, pdf);
+
+    const { data: ultima } = await supabase
+      .from("os_pdf_versiones")
+      .select("version")
+      .eq("empresa_id", req.empresaId!)
+      .eq("orden_servicio_id", orden.id)
+      .order("version", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const siguienteVersion = (ultima?.version ?? 1) + 1;
+
+    const { data, error } = await supabase
+      .from("os_pdf_versiones")
+      .insert({
+        empresa_id: req.empresaId!,
+        orden_servicio_id: orden.id,
+        version: siguienteVersion,
+        pdf_url: key,
+        informe_ia: orden.informe_ia,
+        creado_por: req.userId ?? null,
+      })
+      .select("id, version, informe_ia, creado_en")
+      .single();
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    res.status(201).json({ id: data.id, version: data.version, informeIA: data.informe_ia, creadoEn: data.creado_en, url: await urlFirmada(key, 15) });
+  })
+);

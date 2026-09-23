@@ -51,6 +51,9 @@ type DetalleOS = Trabajo & {
   fotos: AnalisisFotoConUrl[];
 };
 
+// Fase 3.3 — GET /api/trabajos/:id/pdf-versiones (ver trabajos.ts).
+type VersionPdf = { id: string; version: number; informeIA: string | null; creadoEn: string | null; url: string };
+
 // PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 // Seams conocidos: DashboardShell (fuera de este bucket) y
 // CatalogoSelectorModal (compartido con Catálogo/Cotizaciones, 5
@@ -71,6 +74,16 @@ export default function DetalleOrdenServicioPage() {
 
   const [generandoInforme, setGenerandoInforme] = useState(false);
   const [errorInforme, setErrorInforme] = useState<string | null>(null);
+  // Fase 3.3 (23-sep-2026, pedido explícito): el Admin revisa/edita el
+  // texto que generó la IA ANTES de empaquetarlo en una versión nueva
+  // del PDF — separado de detalle.orden.informe_ia (el guardado real)
+  // para no perder lo que se está tipeando si el fetch de abajo
+  // recarga el detalle por otro motivo mientras se edita.
+  const [informeEditado, setInformeEditado] = useState("");
+  const [guardandoInforme, setGuardandoInforme] = useState(false);
+  const [versiones, setVersiones] = useState<VersionPdf[] | null>(null);
+  const [generandoVersion, setGenerandoVersion] = useState(false);
+  const [errorVersion, setErrorVersion] = useState<string | null>(null);
   const [modulosVisibles, setModulosVisibles] = useState<string[]>([]);
   // Migración 116 — ver nota en ordenes/nueva/page.tsx.
   const [preciosAvanzados, setPreciosAvanzados] = useState(false);
@@ -124,9 +137,26 @@ export default function DetalleOrdenServicioPage() {
     setDetalle(await resDetalle.json());
   }, [params.id, router]);
 
+  // Fase 3.3 — historial de versiones del PDF.
+  const cargarVersiones = useCallback(async () => {
+    const res = await apiFetch(`/api/trabajos/${params.id}/pdf-versiones`);
+    if (res.ok) setVersiones(await res.json());
+  }, [params.id]);
+
   useEffect(() => {
     cargar();
   }, [cargar]);
+
+  // Fase 3.3 — sincroniza el texto editable cuando cambia lo guardado
+  // de verdad (recién cargado, o después de Generar/Guardar), y trae
+  // el historial de versiones una vez que ya se sabe si la OS está
+  // cerrada (antes de eso no puede haber ninguna versión creada).
+  useEffect(() => {
+    setInformeEditado(detalle?.orden?.informe_ia ?? "");
+  }, [detalle?.orden?.informe_ia]);
+  useEffect(() => {
+    if (detalle?.orden?.firma_url_firmada || detalle?.orden?.cliente_no_disponible) void cargarVersiones();
+  }, [detalle?.orden?.firma_url_firmada, detalle?.orden?.cliente_no_disponible, cargarVersiones]);
 
   async function onDescargarPdf() {
     setDescargando(true);
@@ -149,6 +179,40 @@ export default function DetalleOrdenServicioPage() {
       return;
     }
     await cargar();
+  }
+
+  // Fase 3.3 — guarda el texto tal como quedó editado (sin volver a
+  // llamar a la IA, eso es onGenerarInforme arriba).
+  async function onGuardarInforme() {
+    setErrorInforme(null);
+    setGuardandoInforme(true);
+    const res = await apiFetch(`/api/trabajos/${params.id}/informe-ia`, {
+      method: "PATCH",
+      body: JSON.stringify({ informe_ia: informeEditado }),
+    });
+    setGuardandoInforme(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setErrorInforme(body.error ?? "No se pudo guardar");
+      return;
+    }
+    await cargar();
+  }
+
+  // v1 (la original firmada) NO se pisa nunca — cada click acá crea
+  // una fila NUEVA en el historial, con el texto de informeEditado ya
+  // guardado (ver onGuardarInforme).
+  async function onGenerarVersion() {
+    setErrorVersion(null);
+    setGenerandoVersion(true);
+    const res = await apiFetch(`/api/trabajos/${params.id}/pdf-versiones`, { method: "POST" });
+    setGenerandoVersion(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setErrorVersion(body.error ?? "No se pudo generar la versión");
+      return;
+    }
+    await cargarVersiones();
   }
 
   async function onEnviarEmail(e: FormEvent) {
@@ -682,14 +746,71 @@ export default function DetalleOrdenServicioPage() {
                     deshabilitado={generandoInforme}
                   />
                 </div>
-                {errorInforme ? <p className="font-ds-body text-ds-small text-ds-accent-700">{errorInforme}</p> : null}
+                {errorInforme ? <p className="mb-ds-2 font-ds-body text-ds-small text-ds-accent-700">{errorInforme}</p> : null}
                 {detalle.orden.informe_ia ? (
-                  <pre className="whitespace-pre-wrap font-ds-body text-ds-small leading-relaxed text-ds-text">{detalle.orden.informe_ia}</pre>
+                  <div className="flex flex-col gap-ds-3">
+                    <Textarea
+                      etiqueta="Texto del informe — revisalo y corregilo antes de generar una versión del PDF"
+                      filas={8}
+                      valor={informeEditado}
+                      onCambio={setInformeEditado}
+                      deshabilitado={generandoInforme}
+                    />
+                    <div className="flex flex-wrap gap-ds-2">
+                      <Button
+                        variante="secundario"
+                        onPress={onGuardarInforme}
+                        cargando={guardandoInforme}
+                        deshabilitado={informeEditado === (detalle.orden.informe_ia ?? "")}
+                      >
+                        Guardar cambios
+                      </Button>
+                      {(detalle.orden.firma_url_firmada || detalle.orden.cliente_no_disponible) && (
+                        <Button
+                          onPress={onGenerarVersion}
+                          cargando={generandoVersion}
+                          deshabilitado={informeEditado !== (detalle.orden.informe_ia ?? "")}
+                        >
+                          Generar versión del PDF con este informe
+                        </Button>
+                      )}
+                    </div>
+                    {informeEditado !== (detalle.orden.informe_ia ?? "") ? (
+                      <p className="font-ds-body text-ds-caption text-ds-text/60">Guardá los cambios antes de generar la versión.</p>
+                    ) : null}
+                  </div>
                 ) : !errorInforme ? (
                   <p className="font-ds-body text-ds-small text-ds-text/60">
                     Redacta un informe técnico a partir de los datos medidos, el checklist, las observaciones y las
                     fotos de esta OS. Si escribís qué revisar, la IA analiza las fotos con ese foco.
                   </p>
+                ) : null}
+
+                {/* Historial de versiones (Fase 3.3) — v1 es siempre la
+                    original firmada, inmutable; nunca se pisa. */}
+                {versiones && versiones.length > 0 ? (
+                  <div className="mt-ds-4 border-t border-ds-divider pt-ds-3">
+                    <p className="mb-ds-2 font-ds-body text-ds-caption font-semibold uppercase tracking-[0.06em] text-ds-text/60">
+                      Versiones del PDF
+                    </p>
+                    {errorVersion ? <p className="mb-ds-2 font-ds-body text-ds-small text-ds-accent-700">{errorVersion}</p> : null}
+                    <div className="flex flex-col gap-ds-1">
+                      {versiones.map((v) => (
+                        <a
+                          key={v.id}
+                          href={v.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-between gap-ds-2 rounded-ds-sm px-ds-2 py-ds-1 font-ds-body text-ds-small text-ds-text hover:bg-ds-neutral-100"
+                        >
+                          <span className="font-medium">v{v.version}{v.version === 1 ? " (original)" : ""}</span>
+                          <span className="text-ds-caption text-ds-text/60">
+                            {v.creadoEn ? new Date(v.creadoEn).toLocaleString("es-CL", { dateStyle: "short", timeStyle: "short" }) : "—"}
+                          </span>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
                 ) : null}
               </Card>
             </div>
