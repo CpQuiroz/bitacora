@@ -6052,6 +6052,71 @@ cada ítem) — la validación nueva ya impide que se repita, pero no
 tocó los datos existentes en prod. Correr la migración 124 en dev y
 prod.
 
+**Update**: migración 124 corrida y repareada por la usuaria en dev y
+prod, confirmado con la salida de `migration repair`. Tarea 84 100%
+cerrada.
+
+## 23-sep-2026 — pedido grande de 7 fases (colaborador/OS/agenda/etc.)
+
+La usuaria pegó un spec grande y muy estructurado: 7 fases (bug
+crítico Levantamiento, permisos de Colaborador, rediseño del flujo de
+OS a 3 pasos + firmas + versiones de PDF con IA, más materiales en
+Levantamiento por Admin, vista "Mis trabajos" del Colaborador +
+gastos/rendición + equipos asignados, filtro por tipo + leyenda de
+colores en Agenda, reordenar el menú Inventario). Dado el tamaño real
+(esto es semanas de trabajo, no una sesión), se ejecuta **FASE 1 sola
+primero** y se reporta antes de seguir con el resto — no se asume luz
+verde automática para las fases 2-7, varias tienen decisiones de
+producto/UX consecuentes (sacar la firma del técnico, rediseñar toda
+la OS) que conviene confirmar explícitamente antes de tocar código.
+
+### Fase 1.1 — bug "Marcar cotizado externamente" siempre falla
+
+Reproducido en vivo contra dev (Chrome, no solo lectura de código):
+avancé un levantamiento real a `completado_tecnico` (script de
+service-role, dev) y until hice clic en "Marcar cotizado externamente"
+— **funcionó perfecto, sin error**. El bug NO está en el backend.
+
+Causa raíz real, en `web/src/lib/api.ts` (`apiFetch`):
+- `seguroReintentar` solo cubría GET/HEAD/con-Idempotency-Key. Un
+  PATCH sin key (como `/cotizado`) tenía **0 reintentos y solo 20s de
+  timeout** — insuficiente para un cold-start de Render (30-60s, ya
+  documentado en el propio comentario del archivo). "Marcar cotizado"
+  es una acción de Admin poco frecuente — por eso el backend seguido
+  ya estaba dormido de nuevo cuando la usaban, y por eso "siempre".
+- Bug secundario encontrado de paso: con 0 reintentos, la rama de
+  mensaje "El servidor no está respondiendo bien" era matemáticamente
+  inalcanzable (código muerto) — el usuario solo podía ver JAMÁS otra
+  cosa que el mensaje de timeout/red, nunca un mensaje distinto.
+
+Fix: `PATCH`/`DELETE` son idempotentes por convención en este backend
+(fijan un valor absoluto o borran una fila — nunca crean como `POST`)
+— se suman al set seguro de reintentar, igual que ya hace mobile para
+todos los métodos. Mensajes de red vs. timeout ahora sí diferenciados
+(`esSeguroReintentar`/`mensajeFalloRed`, funciones puras, testeables
+sin mockear Supabase/Next). **Mobile auditado** (`services/api.ts`):
+ya diferenciaba red/timeout/4xx/5xx y ya reintentaba sin filtrar por
+método — no tenía este bug, sin cambios ahí.
+
+Tests: `web/src/lib/api.test.ts` (6 casos — web no tiene runner propio,
+corre con `npx tsx --env-file=web/.env.local --test web/src/lib/api.test.ts`)
++ 1 test nuevo en `backend/src/server.smoke.test.ts` (la ruta sigue
+existiendo y exige auth). `tsc` (6 workspaces) + `verificar.sh` en
+verde (backend ahora 5 tests). Sin migraciones.
+
+**Archivos modificados**: `web/src/lib/api.ts`,
+`web/src/lib/api.test.ts` (nuevo), `backend/src/server.smoke.test.ts`.
+
+**Cómo probarlo**: en Levantamientos, con uno en estado "Completado
+por el técnico", click "Marcar cotizado externamente" — pasa a
+"Cotizado (Externo)" sin error. Para forzar el escenario de cold-start
+real habría que probar contra prod después de ~15+ min de inactividad
+del backend (no reproducible localmente).
+
+Tarea 85 cerrada. **Pendiente: confirmar con la usuaria cómo seguir
+con las fases 2-7** antes de tocar permisos/OS/agenda — no se avanzó
+solo.
+
 ## 23-sep-2026 — tarea 81: bajar el botón flotante del Asistente
 
 Pedido: "El asistente puede colocarlo un poco mas abajo o arriba, ahi

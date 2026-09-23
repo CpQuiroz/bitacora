@@ -94,3 +94,21 @@ test("GET /api/whatsapp/webhook — token equivocado, 403", async () => {
   const res = await fetch(`${baseUrl}/api/whatsapp/webhook?hub.mode=subscribe&hub.verify_token=otro&hub.challenge=x`);
   assert.equal(res.status, 403);
 });
+
+// Bug real (23-sep-2026): "Marcar cotizado externamente" en
+// Levantamientos siempre mostraba el mensaje genérico de servidor
+// iniciando/desconectado — la causa raíz estaba en el retry del
+// frontend (ver web/src/lib/api.ts), no en esta ruta, pero no había
+// NINGÚN test que confirmara que /:id/cotizado sigue existiendo y
+// exigiendo auth — si alguien la renombra o la borra por error a
+// futuro, este test lo detecta al toque (401 real de requiereAuth,
+// sin tocar Supabase, mismo criterio que /api/me arriba).
+test("PATCH /api/levantamientos/:id/cotizado sin token — 401 (la ruta existe y exige auth)", async () => {
+  const { baseUrl } = await arrancar();
+  const res = await fetch(`${baseUrl}/api/levantamientos/00000000-0000-0000-0000-000000000000/cotizado`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ referencia_externa: "test" }),
+  });
+  assert.equal(res.status, 401);
+});

@@ -1308,6 +1308,23 @@
       ],
       "status": "done",
       "resolution": "Los 3 pedidos implementados. El hallazgo mas importante fue el del bug 1 1: se comprobo con un script de solo lectura (service role, NO CLI de supabase) contra prod que 9 de los 10 items del catalogo tienen unidad=\"1\" -- una unidad de medida real mal nombrada, probablemente creada por error via el combobox \"crear al vuelo\". El codigo de render ({cantidad} {unidad}) siempre estuvo bien. Se agrego una validacion que rechaza nombres de unidad puramente numericos para que no se pueda volver a crear una unidad asi -- la correccion de los datos ya existentes en prod (renombrar esa unidad, o reasignar cada item a la unidad correcta) se le explico a la usuaria en el chat, no se escribio directamente en la base de prod. Direccion y descripcion de foto implementadas en shared/backend/web/mobile con migracion 124. Verificado en vivo con Chrome contra dev (direccion real de un cliente ya aparece como link a Maps). tsc + verificar.sh en verde."
+    },
+    {
+      "id": 85,
+      "name": "fase1_bug_marcar_cotizado_reintento_web",
+      "title": "FASE 1 (spec grande de colaborador/OS/agenda): bug critico Marcar cotizado externamente siempre falla",
+      "description": "Primera fase de un pedido de 7 fases (colaborador/permisos, OS flujo 3 pasos, levantamiento, vista colaborador, agenda filtros/colores, menu inventario). Se ejecuta fase 1 sola y se reporta antes de seguir, dado el tamano total del pedido.",
+      "acceptance": [
+        "Reproducido en vivo (Chrome contra dev, no solo lectura de codigo): el endpoint PATCH /:id/cotizado funciona correctamente end-to-end -- el bug no esta en el backend",
+        "Causa raiz real identificada en web/src/lib/api.ts: PATCH sin Idempotency-Key tenia 0 reintentos y solo 20s de timeout (insuficiente para un cold-start de Render de 30-60s, documentado en el propio comentario del archivo) -- Marcar cotizado es una accion de Admin poco frecuente, por eso caia siempre",
+        "Bug secundario encontrado de paso: con 0 reintentos, la rama de mensaje \"El servidor no esta respondiendo bien\" era codigo muerto inalcanzable -- solo se veia siempre el mensaje de timeout/red",
+        "Fix: PATCH y DELETE (idempotentes por convencion en este backend) se suman al set seguro de reintentar, igual que ya hace mobile para todos los metodos; mensajes de red vs timeout diferenciados de verdad (esSeguroReintentar/mensajeFalloRed, funciones puras testeables)",
+        "Mobile auditado (services/api.ts): ya diferenciaba red/timeout/4xx/5xx y ya reintentaba sin filtrar por metodo -- no tenia este bug, sin cambios",
+        "Tests agregados: web/src/lib/api.test.ts (6 casos, corre con tsx --test, web no tiene runner propio) + 1 test nuevo en backend/src/server.smoke.test.ts confirmando que la ruta sigue existiendo y exige auth",
+        "tsc (6 workspaces) + verificar.sh en verde (backend ahora 5 tests)"
+      ],
+      "status": "done",
+      "resolution": "Reproduccion en vivo contra dev (Chrome, avanzando un levantamiento real a completado_tecnico via script de servicio-role de solo escritura en DEV) confirmo que el endpoint funciona perfecto -- descartando bug de backend. Analisis de codigo probo matematicamente que el mensaje generico solo puede salir de un throw real de fetch() (nunca de una respuesta real del servidor), y que PATCH sin Idempotency-Key tenia cero reintentos y 20s de timeout -- insuficiente para un cold-start de Render documentado en el propio archivo como 30-60s. Se extendio el set de metodos seguros de reintentar a PATCH/DELETE (idempotentes por convencion: fijan un valor absoluto o borran, nunca crean like POST) y se diferenciaron los mensajes red/timeout de verdad. Mobile ya lo hacia bien, auditado sin cambios. Tests agregados en ambos lados. tsc + verificar.sh en verde."
     }
   ]
 }
