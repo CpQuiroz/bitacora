@@ -76,8 +76,8 @@ const ACCESOS: { href: string; label: string; icon: typeof Briefcase; modulo: Mo
   { href: "/dashboard/ordenes", label: "Órdenes de servicio", icon: ClipboardCheck, modulo: "ordenes_servicio" },
   { href: "/dashboard/registros/clientes", label: "Clientes", icon: MapPin, modulo: "registros" },
   { href: "/dashboard/rutas", label: "Rutas", icon: Route, modulo: "rutas" },
-  { href: "/dashboard/financiero/cobros", label: "Cobros", icon: Receipt, modulo: "financiero" },
-  { href: "/dashboard/financiero/cotizaciones", label: "Cotizaciones", icon: Tag, modulo: "financiero" },
+  { href: "/dashboard/financiero/cobros", label: "Cobros", icon: Receipt, modulo: "cobros" },
+  { href: "/dashboard/financiero/cotizaciones", label: "Cotizaciones", icon: Tag, modulo: "cotizaciones" },
   { href: "/dashboard/gastos", label: "Gastos", icon: Wallet, modulo: "financiero" },
   { href: "/dashboard/informe", label: "Informe con IA", icon: Sparkle, modulo: "informe_ia" },
 ];
@@ -222,7 +222,7 @@ export default function DashboardPage() {
         <div>
           <p className="font-ds-body text-ds-small font-medium text-ds-brand">{usuario.empresa.nombre}</p>
           <p className="mt-ds-1 ds-heading text-ds-h2 text-ds-text">Hola, {usuario.nombre.split(" ")[0]}</p>
-          {puedeVer("ordenes_servicio") || puedeVer("financiero") ? (
+          {puedeVer("ordenes_servicio") || puedeVer("cotizaciones") ? (
             <div className="mt-ds-3 flex flex-wrap gap-ds-2">
               {puedeVer("ordenes_servicio") ? (
                 <Link href="/dashboard/ordenes/nueva">
@@ -231,7 +231,7 @@ export default function DashboardPage() {
                   </Button>
                 </Link>
               ) : null}
-              {puedeVer("financiero") ? (
+              {puedeVer("cotizaciones") ? (
                 <Link href="/dashboard/financiero/cotizaciones/nueva">
                   <Button variante="secundario" tamano="sm" iconoIzq={<Plus size={16} strokeWidth={2.75} />}>
                     Nueva Cotización

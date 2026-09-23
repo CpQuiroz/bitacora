@@ -99,7 +99,7 @@ export function MasScreen({ navigation }: NativeStackScreenProps<MasStackParamLi
   const [cobros, setCobros] = useState<{ vencidos: number; monto: number } | null>(null);
 
   const cargarCobros = useCallback(async () => {
-    if (!visibles.includes("financiero")) return;
+    if (!visibles.includes("cobros")) return;
     try {
       const r = await listarCobros();
       const venc = r.cobros.filter((c) => estaVencido(c));
@@ -122,8 +122,14 @@ export function MasScreen({ navigation }: NativeStackScreenProps<MasStackParamLi
     accesos.push({ titulo: "Viajes", Icono: Route, ir: () => navigation.navigate("Viajes") });
   }
   accesos.push({ titulo: "Mantención", Icono: Wrench, ir: () => navigation.navigate("MantencionVehiculo") });
-  if (visibles.includes("financiero")) {
+  // Dinero, separado en 3 módulos activables independientemente desde
+  // el 23-sep-2026 (antes "financiero" bundleaba los 3 — pedido
+  // explícito: una empresa puede necesitar solo Gastos, sin Cobros ni
+  // Cotización). Ver packages/shared/src/permisos.ts.
+  if (visibles.includes("cobros")) {
     accesos.push({ titulo: "Cobros", Icono: Banknote, badge: cobros?.vencidos || undefined, ir: () => navigation.navigate("CobrosLista") });
+  }
+  if (visibles.includes("financiero")) {
     // Gasto suelto (alta rápida — sigue sin existir una lista de gastos
     // en el móvil, a propósito) y Rendiciones (fondo por rendir/caja
     // chica, 21-sep-2026) son la misma familia que en web (GastosSubnav:

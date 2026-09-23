@@ -5900,6 +5900,69 @@ packs / Informes).
 **Pendiente**: build mobile v1.10.14 (acumula: huella+crear empresa,
 tarea 79, tarea 80) — no armado todavía, esperando pedido explícito.
 
+## 23-sep-2026 (tarde) — build v1.10.14 armado y distribuido
+
+`BUILD SUCCESSFUL` (11m17s), env verificado en prod real (39 MB),
+`.env` restaurado solo a dev al terminar. Copiado a
+`$CLAUDE_JOB_DIR/tmp/apk-share/bitacora-1.10.14.apk`, distribuido por
+el mismo servidor HTTP local de siempre. `mobile/app.json` en
+1.10.14/versionCode 55, commiteado y pusheado.
+
+## 23-sep-2026 — tarea 82: dividir el módulo financiero en 3
+
+Pedido: "los módulos de dinero se puedan activar y desactivar
+independientemente, ya que para un cliente solo requiero gastos y no
+cotización ni cobros." Investigación confirmó el bundle real:
+`requiereModulo("financiero")` gateaba `/api/cobros`, `/api/cotizaciones`,
+`/api/gastos` y `/api/rendiciones` los 4 a la vez en `server.ts` — todo
+o nada, en web, mobile y backend por igual.
+
+- **`packages/shared/src/permisos.ts`**: `MODULOS` suma `"cotizaciones"`
+  y `"cobros"`. Decisión: NO renombrar `"financiero"` (evita migrar
+  datos de `empresa_modulos`/`roles` por algo cosmético) — pasa a
+  significar solo Gastos/Rendiciones. Ninguno de los 2 nuevos entra a
+  `MODULOS_OPCIONALES`, quedan base-tier (ON por defecto vía
+  `moduloActivadoPorDefecto`) — **sin backfill necesario en
+  `empresa_modulos`**, nadie pierde acceso silenciosamente.
+- **Migración 123** (`123_dividir_modulo_financiero.sql`): el único
+  backfill real necesario — `roles.modulos` es un snapshot `text[]`
+  guardado por fila (migración 71), no se recalcula solo. Todo rol
+  (de sistema o creado a mano por una empresa) que ya tenía
+  `"financiero"` recibe `"cobros"`+`"cotizaciones"` también, para no
+  revocarle acceso (admin no lo necesita — siempre ve todo, sin pasar
+  por esta tabla). **Pendiente que la usuaria la corra en dev y
+  prod** (mismo flujo de siempre: `db query --linked --project-ref`).
+- **`server.ts`**: `/api/cobros` → `requiereModulo("cobros")`,
+  `/api/cotizaciones` → `requiereModulo("cotizaciones")`. `/api/gastos`
+  y `/api/rendiciones` sin cambios.
+- **Web**: `DashboardShell.tsx` (nav "Dinero") y `dashboard/page.tsx`
+  (accesos rápidos + botón "Nueva Cotización") separan el módulo de
+  Cobros/Cotizaciones del de Gastos.
+- **Mobile**: `MasScreen.tsx` — tarjeta Cobros gateada por `"cobros"`;
+  tarjeta Gastos (fusionada con Rendiciones en la tarea 79) sigue
+  gateada por `"financiero"`.
+- **`etiquetasModulo.ts`** (web) + su duplicado deliberado en mobile
+  (`SuperAdminEmpresaDetalleScreen.tsx`): label de `financiero` pasa a
+  "Gastos y rendiciones" (el id no cambia), más labels para los 2
+  nuevos — esto solo alimenta automáticamente el Panel de Super-Admin
+  (roles + toggle por empresa) y Configuración > Perfiles/Plan, los 4
+  ya eran 100% dinámicos vía `MODULOS`/`MODULOS_DELEGABLES_POR_EMPRESA`
+  — **nada hardcodeado que tocar ahí**.
+- **Deliberadamente sin tocar**: el tab "Financiero" del detalle de
+  cliente (agrupa cotizaciones+cobros de ESE cliente — es una vista,
+  no un permiso) y el "Resumen financiero"/KPIs del Dashboard
+  analítico (gateado por la acción `ver_dashboard`, no por módulo —
+  mismo criterio que Informes, que tampoco se gatea por financiero).
+- `packages/shared` reconstruido (`npm run build` → `dist/`) — sin eso
+  `tsc` de backend/web/mobile fallaba con el tipo `Modulo` viejo
+  (consumen el `.d.ts` compilado, no `src/` directo).
+- `tsc` (6 workspaces) + `verificar.sh` en verde. Tarea 82 cerrada.
+
+**Pendiente**: la usuaria corre la migración 123 en dev y luego prod
+(comando de siempre); build mobile nuevo si quiere ver el split
+reflejado ahí (hoy Cobros solo se ve/oculta según el módulo — no hay
+UI nueva que mostrar, así que no es urgente).
+
 ## 23-sep-2026 — tarea 81: bajar el botón flotante del Asistente
 
 Pedido: "El asistente puede colocarlo un poco mas abajo o arriba, ahi

@@ -13,7 +13,20 @@ export const MODULOS = [
   "viajes",
   "registros",
   "rutas",
+  // Dinero — hasta el 23-sep-2026 un solo módulo "financiero" bundleaba
+  // Cotizaciones + Cobros + Gastos/Rendiciones, todo o nada. Pedido
+  // explícito: una empresa puede necesitar solo Gastos, sin Cotización
+  // ni Cobros. Se separan en 3 activables independientemente —
+  // "financiero" NO se renombra (evita una migración de datos en
+  // `roles`/`empresa_modulos` para algo que es solo cosmético) y pasa a
+  // significar Gastos/Rendiciones en particular; "cobros" y
+  // "cotizaciones" nacen nuevos. Ver migración 123 (roles.ts guarda la
+  // lista de módulos de cada rol como snapshot en la tabla `roles`, no
+  // se recalcula sola — todo rol que ya tenía "financiero" necesita que
+  // se le sumen los 2 nuevos ahí para no perder acceso).
   "financiero",
+  "cotizaciones",
+  "cobros",
   "informes",
   "informe_ia",
   "asistente",
@@ -43,7 +56,7 @@ export type Modulo = (typeof MODULOS)[number];
 export const PERMISOS_POR_ROL: Record<Rol, Modulo[]> = {
   admin: [...MODULOS],
   supervisor: ["agenda", "ordenes_servicio", "viajes", "registros", "rutas", "flota", "agenda_pro"],
-  contador: ["financiero", "informes", "remuneraciones"],
+  contador: ["financiero", "cotizaciones", "cobros", "informes", "remuneraciones"],
   // El colaborador ve su Agenda (calendario + tareas asignadas). El
   // resto de su trabajo en terreno vive en la app móvil.
   colaborador: ["agenda"],

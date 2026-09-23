@@ -313,7 +313,7 @@ app.post("/api/consentimiento", requiereAuth, ah<RequestConUsuario>(async (req, 
 }));
 
 app.use("/api/trabajos", requiereAuth, requiereEmpresa, trabajosRouter);
-app.use("/api/cobros", requiereAuth, requiereEmpresa, requiereModulo("financiero"), cobrosRouter);
+app.use("/api/cobros", requiereAuth, requiereEmpresa, requiereModulo("cobros"), cobrosRouter);
 app.use("/api/informe", requiereAuth, requiereEmpresa, requiereModulo("informe_ia"), informeRouter);
 app.use("/api/tipos-os-trabajo", requiereAuth, requiereEmpresa, tiposOsTrabajoRouter);
 app.use("/api/usuarios", requiereAuth, requiereEmpresa, usuariosRouter);
@@ -338,7 +338,7 @@ app.use("/api/dashboard", requiereAuth, requiereEmpresa, dashboardRouter);
 app.use("/api/informes", requiereAuth, requiereEmpresa, requiereModulo("informes"), informesRouter);
 app.use("/api/gastos", requiereAuth, requiereEmpresa, requiereModulo("financiero"), gastosRouter);
 app.use("/api/rendiciones", requiereAuth, requiereEmpresa, requiereModulo("financiero"), rendicionesRouter);
-app.use("/api/cotizaciones", requiereAuth, requiereEmpresa, requiereModulo("financiero"), cotizacionesRouter);
+app.use("/api/cotizaciones", requiereAuth, requiereEmpresa, requiereModulo("cotizaciones"), cotizacionesRouter);
 app.use("/api/plantillas", requiereAuth, requiereEmpresa, plantillasRouter);
 app.use("/api/checklists", requiereAuth, requiereEmpresa, checklistsRouter);
 app.use("/api/integraciones", requiereAuth, requiereEmpresa, integracionesRouter);

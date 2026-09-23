@@ -1260,6 +1260,24 @@
       ],
       "status": "done",
       "resolution": "AskUserQuestion confirmo que es ajuste global (componente compartido por todas las pantallas). OFFSET_ASISTENTE_FLOTANTE 110 -> 96 en AsistenteButton.tsx (packages/ui/src/native), exportado desde el index de ui/native. AgendaScreen.tsx (unico lugar que repetia el mismo 110 a mano para su FAB espejado) ahora importa la constante en vez de un numero magico duplicado — quedan sincronizados por diseno, no por casualidad. tsc + verificar.sh en verde."
+    },
+    {
+      "id": 82,
+      "name": "dividir_modulo_financiero_cobros_cotizaciones",
+      "title": "Dividir el modulo financiero en 3 activables independientes: Gastos/Rendiciones, Cobros, Cotizaciones",
+      "description": "Pedido explicito: una empresa necesita solo Gastos, sin Cotizacion ni Cobros. El modulo financiero bundleaba las 3 cosas (todo o nada) en web, mobile y backend (mismo requiereModulo(\"financiero\") gateaba /api/cobros, /api/cotizaciones, /api/gastos y /api/rendiciones a la vez).",
+      "acceptance": [
+        "packages/shared/src/permisos.ts: MODULOS suma cotizaciones y cobros (financiero NO se renombra, pasa a significar solo Gastos/Rendiciones); ninguno de los 2 nuevos entra a MODULOS_OPCIONALES (quedan base-tier, ON por defecto, sin necesidad de backfill en empresa_modulos)",
+        "migracion 123: roles.modulos (snapshot text[] por rol, no se recalcula solo) suma cobros+cotizaciones a todo rol que ya tenia financiero, para no revocarle acceso a nadie (admin no necesita esto, siempre ve todo)",
+        "backend/src/server.ts: /api/cobros -> requiereModulo(\"cobros\"), /api/cotizaciones -> requiereModulo(\"cotizaciones\"); /api/gastos y /api/rendiciones sin cambios (financiero)",
+        "web: DashboardShell.tsx (nav) y dashboard/page.tsx (accesos + botones Nueva OS/Nueva Cotizacion) separan el modulo de Cobros/Cotizaciones del de Gastos",
+        "mobile MasScreen.tsx: tarjeta Cobros gateada por cobros, tarjeta Gastos (fusionada con Rendiciones en la tarea 79) sigue gateada por financiero",
+        "etiquetasModulo.ts (web) y su duplicado en mobile SuperAdminEmpresaDetalleScreen.tsx: financiero renombrado a Gastos y rendiciones en el label (no en el id), mas labels para cotizaciones/cobros -- alimenta automaticamente Super-Admin (roles y toggle por empresa) y Configuracion > Perfiles/Plan, todos dinamicos via MODULOS/MODULOS_DELEGABLES_POR_EMPRESA, sin listas hardcodeadas que tocar",
+        "packages/shared reconstruido (dist/) para que backend/web/mobile vean el tipo Modulo actualizado",
+        "tsc (6 workspaces) + verificar.sh en verde"
+      ],
+      "status": "done",
+      "resolution": "Investigacion primero confirmo el bundle real: requiereModulo(\"financiero\") en server.ts gateaba /api/cobros, /api/cotizaciones, /api/gastos y /api/rendiciones al mismo tiempo -- la separacion es 100% correcta. Se opto por NO renombrar \"financiero\" (evita migrar datos de empresa_modulos/roles por algo cosmetico) y sumar \"cobros\"+\"cotizaciones\" como modulos nuevos, base-tier (fuera de MODULOS_OPCIONALES -> ON por defecto via moduloActivadoPorDefecto, sin backfill de empresa_modulos). El unico backfill real necesario fue roles.modulos (snapshot por fila, no se recalcula solo) -- migracion 123, pendiente de que la usuaria la corra en dev y prod. Verificado que Super-Admin (roles y toggle por empresa), Configuracion > Perfiles y Configuracion > Plan son 100% dinamicos (MODULOS/MODULOS_DELEGABLES_POR_EMPRESA/ETIQUETA_MODULO) -- nada hardcodeado que actualizar ahi. Dejado deliberadamente sin tocar: el tab \"Financiero\" del detalle de cliente (agrupa cotizaciones+cobros de ESE cliente, es una vista, no un permiso) y el \"Resumen financiero\"/KPIs del Dashboard analitico (gateado por la accion ver_dashboard, no por modulo -- igual criterio que Informes, que tampoco se gatea por financiero). packages/shared reconstruido (dist/) -- sin eso tsc de backend/web/mobile fallaba con el tipo Modulo viejo. tsc (6 workspaces) + verificar.sh en verde."
     }
   ]
 }

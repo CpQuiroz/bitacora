@@ -7,7 +7,11 @@ export const ETIQUETA_MODULO: Record<string, string> = {
   viajes: "Viajes",
   registros: "Registros",
   rutas: "Rutas",
-  financiero: "Financiero",
+  // Dinero, separado en 3 desde el 23-sep-2026 (antes un solo
+  // "financiero" bundleaba las 3 cosas) — ver packages/shared/src/permisos.ts.
+  financiero: "Gastos y rendiciones",
+  cotizaciones: "Cotizaciones",
+  cobros: "Cobros",
   informes: "Informes",
   informe_ia: "Informe con IA",
   asistente: "Asistente",

@@ -89,8 +89,8 @@ const NAV_GROUPS: NavGroup[] = [
   {
     titulo: "Dinero",
     items: [
-      { href: "/dashboard/financiero/cotizaciones", label: "Cotizaciones", icon: Tag, modulo: "financiero" },
-      { href: "/dashboard/financiero/cobros", label: "Cobros", icon: Receipt, modulo: "financiero" },
+      { href: "/dashboard/financiero/cotizaciones", label: "Cotizaciones", icon: Tag, modulo: "cotizaciones" },
+      { href: "/dashboard/financiero/cobros", label: "Cobros", icon: Receipt, modulo: "cobros" },
       // Rendiciones (fondo por rendir/caja chica) vive DENTRO de Gastos
       // como subsección (tabs en la página, ver GastosSubnav) — a
       // propósito no tiene ítem propio acá, para no duplicar "Dinero"
