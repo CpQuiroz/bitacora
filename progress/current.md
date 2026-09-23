@@ -60,3 +60,5 @@ Vercel (READY) verificados. Hidroservi: cerrado, se deja como está.
   Causa: extensión del navegador que reescribía el preflight CORS sin
   PATCH ("Method PATCH is not allowed" + errores de content.js). En
   incógnito funciona. PR #3 (error visible + auditoría) mergeado.
+- Tarea 111 (pending, deuda técnica): proteger main en GitHub (ruleset
+  con verificar requerido, sin check-migraciones) y evaluar repo privado.
