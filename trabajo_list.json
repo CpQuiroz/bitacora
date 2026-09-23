@@ -1499,6 +1499,21 @@
       ],
       "status": "done",
       "resolution": "Los colores semanticos son un bloque nuevo e independiente de la marca por tenant (no varian entre los 3 temas de empresa, a diferencia de accent/accent2) -- reusa los mismos valores hex que ya tenia el sistema de tokens VIEJO (globals.css --danger/--warning) para que ambos sistemas (viejo y nuevo) muestren el mismo rojo/amarillo. El cambio en MAPA_ESTADO_TONO (una sola linea por estado) propaga el fix a TODOS los usos existentes de StatusBadge con esos estados sin tocar cada pantalla -- salvo los que forzaban tonoForzado a mano, que se limpiaron. No se migro TONO_SUSCRIPCION (plan/page.tsx) ni otros mapeos locales de estados no relacionados a documentos/vencimiento -- fuera de alcance de este pedido. tsc + verificar.sh en verde."
+    },
+    {
+      "id": 97,
+      "name": "superadmin_tema_por_empresa",
+      "title": "Super-Admin elige el tema visual (Faena/Taller/Confianza) de cada empresa",
+      "description": "Pedido: 'agregale al superadmin que pueda elegir el estilo que quiere para ver la app en web y mobile'. Confirmado con AskUserQuestion: por empresa (no global). empresas.tema ya existe (migraciones 109/110) y lo elige el admin en Configuración > Empresa; se agrega la misma elección al panel Super-Admin (web + mobile).",
+      "acceptance": [
+        "Backend: PATCH /api/superadmin/empresas/:id/tema valida contra los 3 temas y audita",
+        "GET /empresas y /empresas/:id/salud devuelven tema",
+        "Web: selector 'Tema visual' en Super-Admin > Empresas > [empresa]",
+        "Mobile: chips de tema en SuperAdminEmpresaDetalleScreen",
+        "verificar.sh en verde"
+      ],
+      "status": "done",
+      "resolution": "Nuevo PATCH /api/superadmin/empresas/:id/tema (valida faena/taller/confianza, audita cambiar_tema_empresa). GET /empresas y /empresas/:id/salud devuelven tema. Web: tarjeta \"Tema visual\" en Super-Admin > Empresas > [empresa]. Mobile: chips de tema en SuperAdminEmpresaDetalleScreen (visible recién con un build EAS nuevo). Sin migración: empresas.tema ya existía. Los usuarios de la empresa ven el cambio al recargar/volver a abrir la app. verificar.sh en verde."
     }
   ]
 }

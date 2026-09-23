@@ -1,6 +1,6 @@
 import { Router } from "express";
 import crypto from "node:crypto";
-import type { Accion, EstadoEmpresa, Modulo, Plan, Rol, Rubro } from "@bitacora/shared";
+import type { Accion, Empresa, EstadoEmpresa, Modulo, Plan, Rol, Rubro } from "@bitacora/shared";
 import { ACCIONES, MODULOS, MODULOS_DELEGABLES_POR_EMPRESA, moduloActivadoPorDefecto, formatearRut, validarRut } from "@bitacora/shared";
 import {
   invalidarCacheRoles,
@@ -397,7 +397,7 @@ superadminRouter.get(
 
     let query = supabase
       .from("empresas")
-      .select("id, nombre, plan, estado, creado_en")
+      .select("id, nombre, plan, estado, tema, creado_en")
       .order("creado_en", { ascending: false });
     if (busqueda) query = query.ilike("nombre", `%${busqueda}%`);
 
@@ -1151,7 +1151,7 @@ superadminRouter.get(
   requiereSuperAdmin,
   ah<RequestConSuperAdmin>(async (req, res) => {
     const empresaId = req.params.id;
-    const { data: empresa } = await supabase.from("empresas").select("id, nombre, estado, plan, rut, rubro, dada_de_baja_en").eq("id", empresaId).maybeSingle();
+    const { data: empresa } = await supabase.from("empresas").select("id, nombre, estado, plan, rut, rubro, tema, dada_de_baja_en").eq("id", empresaId).maybeSingle();
     if (!empresa) {
       res.status(404).json({ error: "Empresa no encontrada" });
       return;
@@ -1213,6 +1213,49 @@ superadminRouter.get(
       errores_recientes: erroresRecientes ?? [],
       almacenamiento_incluye_avatares: usoStorage.incluyeAvatares,
     });
+  })
+);
+
+// Tema visual de una empresa (empresas.tema, migraciones 109/110) — el
+// mismo valor que su admin elige en Configuración > Empresa; acá el
+// Super-Admin lo puede fijar sin depender del cliente. Web y mobile lo
+// leen de /api/mi-empresa, así que el cambio se ve en ambas apps.
+const TEMAS_EMPRESA: Empresa["tema"][] = ["faena", "taller", "confianza"];
+
+superadminRouter.patch(
+  "/empresas/:id/tema",
+  requiereSuperAdmin,
+  ah<RequestConSuperAdmin>(async (req, res) => {
+    const { tema } = req.body ?? {};
+    if (typeof tema !== "string" || !TEMAS_EMPRESA.includes(tema as Empresa["tema"])) {
+      res.status(400).json({ error: `tema debe ser uno de: ${TEMAS_EMPRESA.join(", ")}` });
+      return;
+    }
+
+    const { data: actual } = await supabase.from("empresas").select("nombre, tema").eq("id", req.params.id).maybeSingle();
+    if (!actual) {
+      res.status(404).json({ error: "Empresa no encontrada" });
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("empresas")
+      .update({ tema: tema as Empresa["tema"] })
+      .eq("id", req.params.id)
+      .select("id, tema")
+      .single();
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+
+    await registrarAuditoria(req.superAdminId!, "cambiar_tema_empresa", {
+      empresaId: req.params.id,
+      ip: req.ip ?? null,
+      detalle: `${actual.nombre}: ${actual.tema} → ${tema}`,
+    });
+
+    res.json(data);
   })
 );
 

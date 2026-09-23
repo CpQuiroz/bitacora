@@ -6569,3 +6569,23 @@ cerrar las Fases 1-7 ("vencido" se ve gris en casi toda la app,
 **Pendiente de mí**: Agenda sin paridad entre plataformas (web no
 muestra Levantamiento, mobile no muestra OS) — pedido explícito de
 arreglar, siguiente.
+
+## 23-sep-2026 — tarea 97: Super-Admin elige el tema visual por empresa
+
+Pedido: "agregale al superadmin que pueda elegir el estilo que quiere
+para ver la app en web y mobile". Aclarado con AskUserQuestion: **por
+empresa** (no global ni solo para el Super-Admin). `empresas.tema`
+(faena/taller/confianza, migraciones 109/110) ya existía y lo elegía
+solo el admin en Configuración > Empresa — sin migración nueva.
+
+- Backend: `PATCH /api/superadmin/empresas/:id/tema` (mismo patrón que
+  `/estado` y `/plan`, audita `cambiar_tema_empresa`); `GET /empresas`
+  y `GET /empresas/:id/salud` ahora devuelven `tema`.
+- Web: tarjeta "Tema visual" en Super-Admin > Empresas > [empresa].
+- Mobile: chips de tema en `SuperAdminEmpresaDetalleScreen` (requiere
+  build EAS nuevo para verse).
+- `verificar.sh` en verde. Tarea 97 cerrada.
+
+Aclaración a la usuaria: el panel de uso de recursos está en
+Super-Admin > **Salud** > "Uso de recursos" (no "Empresas >
+Infraestructura", como decía el comentario de `backend/.env.example`).
