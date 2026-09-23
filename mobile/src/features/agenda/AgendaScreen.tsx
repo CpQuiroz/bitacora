@@ -95,7 +95,10 @@ export function AgendaScreen({ navigation }: NativeStackScreenProps<AgendaStackP
   const marca = useMarca();
   const auth = useAuth();
   const esGestion = auth.fase === "listo" && auth.usuario.rol !== "colaborador";
-  const veAsistente = auth.fase === "listo" && auth.modulosVisibles.includes("asistente");
+  // Asistente IA: exclusivo de Admin (Fase 2.2, 23-sep-2026) — mismo
+  // criterio que MasScreen/HoyScreen/ClientesListaScreen; el backend
+  // (requiereRol("admin")) es la protección real.
+  const veAsistente = auth.fase === "listo" && auth.usuario.rol === "admin" && auth.modulosVisibles.includes("asistente");
   // Levantamientos con fecha_visita (migración 111, 20-sep-2026) — mismo
   // criterio de visibilidad que ya usa Pizarra (mobile/src/features/hoy/
   // HoyScreen.tsx): por función, no por rol. Si la empresa no tiene el

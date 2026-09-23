@@ -630,7 +630,14 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
         </main>
       </div>
 
-      {moduloVisible("asistente") && <AsistenteChat />}
+      {/* Asistente IA: exclusivo de Admin (Fase 2.2, 23-sep-2026) — el
+          rol se chequea acá ADEMÁS del módulo, no en su lugar, para
+          que ningún caso de borde (un rol viejo con "asistente" ya
+          metido en su lista base, de antes de esta restricción) llegue
+          a mostrar el botón. El backend (server.ts, requiereRol("admin"))
+          es la protección real — esto es solo para no ofrecer un botón
+          que de todas formas va a devolver 403. */}
+      {usuario.rol === "admin" && moduloVisible("asistente") && <AsistenteChat />}
       </div>
     </>
   );

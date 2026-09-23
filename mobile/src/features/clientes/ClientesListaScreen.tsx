@@ -44,7 +44,10 @@ function iniciales(nombre: string): string {
 export function ClientesListaScreen({ navigation }: NativeStackScreenProps<ClientesStackParamList, "ClientesLista">) {
   const auth = useAuth();
   const esGestion = auth.fase === "listo" && auth.usuario.rol !== "colaborador";
-  const veAsistente = auth.fase === "listo" && auth.modulosVisibles.includes("asistente");
+  // Asistente IA: exclusivo de Admin (Fase 2.2, 23-sep-2026) — mismo
+  // criterio que MasScreen/HoyScreen/AgendaScreen; el backend
+  // (requiereRol("admin")) es la protección real.
+  const veAsistente = auth.fase === "listo" && auth.usuario.rol === "admin" && auth.modulosVisibles.includes("asistente");
   const [clientes, setClientes] = useState<ClienteConActividad[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refrescando, setRefrescando] = useState(false);

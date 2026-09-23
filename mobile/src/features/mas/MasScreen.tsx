@@ -94,7 +94,11 @@ export function MasScreen({ navigation }: NativeStackScreenProps<MasStackParamLi
   // sección ni le aparecía en el celular).
   const funcion = listo ? auth.usuario.funcion : null;
   const veLevantamientos = (funcion != null && FUNCIONES_LEVANTAMIENTOS.includes(funcion)) || (listo && auth.usuario.rol === "admin");
-  const veAsistente = visibles.includes("asistente");
+  // Asistente IA: exclusivo de Admin (Fase 2.2, 23-sep-2026) — el rol
+  // se chequea ADEMÁS del módulo, mismo criterio y mismo motivo que
+  // DashboardShell.tsx (web): el backend (requiereRol("admin")) es la
+  // protección real, esto evita ofrecer un botón que igual daría 403.
+  const veAsistente = listo && auth.usuario.rol === "admin" && visibles.includes("asistente");
 
   const [cobros, setCobros] = useState<{ vencidos: number; monto: number } | null>(null);
 

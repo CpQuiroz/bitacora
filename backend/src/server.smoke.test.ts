@@ -112,3 +112,25 @@ test("PATCH /api/levantamientos/:id/cotizado sin token — 401 (la ruta existe y
   });
   assert.equal(res.status, 401);
 });
+
+// Fase 2 (23-sep-2026): Clientes ahora filtra por rol — sin token
+// sigue siendo 401 antes de llegar a ese filtro (requiereAuth corta
+// primero). El filtro en sí (visibilidad de Colaborador) necesita
+// datos reales de empresa_id/responsable_id — se verificó a mano
+// contra dev con un script de servicio, no acá (este archivo no toca
+// Supabase de verdad, ver comentario de arriba).
+test("GET /api/clientes sin token — 401", async () => {
+  const { baseUrl } = await arrancar();
+  const res = await fetch(`${baseUrl}/api/clientes`);
+  assert.equal(res.status, 401);
+});
+
+// Fase 2.2: Asistente IA exclusivo de Admin — requiereRol("admin") va
+// ANTES de requiereEmpresa en la cadena de middlewares reales, así que
+// sin token esto sigue siendo 401 (requiereAuth), no 403 — confirma
+// que la ruta no se rompió al agregar el nuevo requiereRol.
+test("GET /api/asistente sin token — 401 (la ruta sigue montada tras agregar requiereRol)", async () => {
+  const { baseUrl } = await arrancar();
+  const res = await fetch(`${baseUrl}/api/asistente`);
+  assert.equal(res.status, 401);
+});

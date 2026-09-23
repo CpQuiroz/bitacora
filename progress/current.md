@@ -6113,9 +6113,66 @@ por el técnico", click "Marcar cotizado externamente" — pasa a
 real habría que probar contra prod después de ~15+ min de inactividad
 del backend (no reproducible localmente).
 
-Tarea 85 cerrada. **Pendiente: confirmar con la usuaria cómo seguir
-con las fases 2-7** antes de tocar permisos/OS/agenda — no se avanzó
-solo.
+Tarea 85 cerrada. Confirmado con la usuaria vía preguntas: seguir en
+orden fase por fase, y las decisiones de producto de 3.2/3.4 (sacar
+firma del técnico, flujo de OS a 3 pasos) tal cual están en el pedido.
+
+### Fase 2.1 — Colaborador solo ve sus clientes
+
+Reusé el eje que YA existía en `trabajos.ts` para su propio listado
+(`if (req.rol === "colaborador") query.eq("responsable_id", req.userId!)`)
+— nueva función `clienteIdsVisiblesParaColaborador` (empresa_id +
+responsable_id de `trabajos` UNION tecnico_id de `levantamientos`,
+cualquier estado) aplicada a `GET /` y `GET /:id` de
+`backend/src/routes/clientes.ts`. Web (`ComboboxCliente` + listado) y
+mobile (`listarClientes`) pegan a esos mismos 2 endpoints — cubre
+listados, detalle, búsquedas (filtran en memoria sobre la lista ya
+acotada) y selectores sin tocar ningún frontend.
+
+Verificado con datos reales de dev (script de solo lectura): "Pedro
+Chofer QA" (rol `colaborador`) ve **1 de 3** clientes de su empresa —
+exactamente el vinculado a su levantamiento asignado.
+
+### Fase 2.2 — Asistente IA exclusivo de Admin
+
+Doble capa, a propósito:
+- **Backend (la protección real)**: `server.ts` monta `/api/asistente`
+  con `requiereRol("admin")` además de `requiereModulo("asistente")`
+  — 403 duro para cualquier no-admin, sin importar si algún rol viejo
+  ya tenía "asistente" delegado o metido en su lista base de antes de
+  este fix.
+- **`MODULOS_DELEGABLES_POR_EMPRESA`** (`packages/shared/permisos.ts`):
+  "asistente" ya no es delegable — Configuración > Perfiles y el
+  Panel de Super-Admin dejan de ofrecerlo como opción (dinámico, sin
+  tocar esas pantallas).
+- **UI oculta en los 2 lados** (defensa en profundidad, no la
+  protección real): web (`DashboardShell`, chequea
+  `usuario.rol === "admin"` además del módulo) y mobile (4 pantallas
+  con el mismo botón flotante: `MasScreen`/`HoyScreen`/
+  `AgendaScreen`/`ClientesListaScreen`, mismo chequeo agregado a las 4).
+
+Tests: 2 smoke tests nuevos (`GET /api/clientes` y `GET /api/asistente`
+sin token → 401, confirman que las rutas siguen montadas tras los
+cambios). `tsc` (6 workspaces) + `verificar.sh` en verde (backend
+ahora 7 tests). Sin migraciones.
+
+**Archivos modificados**: `backend/src/routes/clientes.ts`,
+`backend/src/server.ts`, `packages/shared/src/permisos.ts`,
+`web/src/components/DashboardShell.tsx`,
+`mobile/src/features/mas/MasScreen.tsx`,
+`mobile/src/features/hoy/HoyScreen.tsx`,
+`mobile/src/features/agenda/AgendaScreen.tsx`,
+`mobile/src/features/clientes/ClientesListaScreen.tsx`,
+`backend/src/server.smoke.test.ts`.
+
+**Cómo probarlo**: logueado como un usuario `colaborador` con algún
+levantamiento u OS asignado — en Clientes (web o mobile) solo aparecen
+los suyos; el botón/chat del Asistente no aparece en ninguna pantalla
+y `GET /api/asistente` devuelve 403 si se llama directo.
+
+Tarea 86 cerrada. Sigo con Fase 3 (bug OS: fotos con descripción,
+firmas, versiones de PDF con IA, flujo de 3 pasos) — la más grande de
+las 7.
 
 ## 23-sep-2026 — tarea 81: bajar el botón flotante del Asistente
 

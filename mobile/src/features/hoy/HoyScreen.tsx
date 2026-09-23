@@ -102,7 +102,10 @@ export function HoyScreen({ navigation }: NativeStackScreenProps<HoyStackParamLi
   const marca = useMarca();
   const esGestion = auth.fase === "listo" && auth.usuario.rol !== "colaborador";
   const incluirViajes = auth.fase === "listo" && !auth.modulosDeshabilitados.includes("viajes");
-  const veAsistente = auth.fase === "listo" && auth.modulosVisibles.includes("asistente");
+  // Asistente IA: exclusivo de Admin (Fase 2.2, 23-sep-2026) — mismo
+  // criterio que MasScreen/AgendaScreen/ClientesListaScreen; el backend
+  // (requiereRol("admin")) es la protección real.
+  const veAsistente = auth.fase === "listo" && auth.usuario.rol === "admin" && auth.modulosVisibles.includes("asistente");
   // Mismo eje que en MasScreen.tsx: usuarios.funcion, no rol/módulo.
   const funcion = auth.fase === "listo" ? auth.usuario.funcion : null;
   const incluirLevantamientos = funcion != null && FUNCIONES_LEVANTAMIENTOS.includes(funcion);

@@ -65,10 +65,17 @@ export const PERMISOS_POR_ROL: Record<Rol, Modulo[]> = {
 // Módulos que el Admin de una empresa puede activar/desactivar por rol
 // dentro de SU empresa (tabla empresa_rol_modulos, migración 75).
 // Se excluyen `configuracion` y `gestion_control`: delegarlos permitiría
-// que un rol operativo edite la empresa o gestione usuarios/roles —
+// que un rol operativo edite la empresa o gestione usuarios/usuarios —
 // esos siguen definidos solo por el Super-Admin en la plantilla global.
+// `asistente` se excluye desde el 23-sep-2026 (pedido explícito, Fase
+// 2.2): es exclusivo de Admin sin excepción — si quedara delegable,
+// un Admin de empresa podría (a propósito o por error) prendérselo a
+// un Colaborador desde Configuración > Perfiles, esquivando el
+// requiereRol("admin") que ya lo protege en el backend (server.ts) del
+// lado de la EMPRESA, no del lado del Super-Admin (que sigue viendo
+// todos los módulos igual, admin siempre pasa cualquier chequeo de rol).
 export const MODULOS_DELEGABLES_POR_EMPRESA: Modulo[] = MODULOS.filter(
-  (m) => m !== "configuracion" && m !== "gestion_control"
+  (m) => m !== "configuracion" && m !== "gestion_control" && m !== "asistente"
 );
 
 // Capacidades sensibles delegables a un rol (además de sus módulos). El

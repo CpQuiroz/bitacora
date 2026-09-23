@@ -9,6 +9,30 @@ import { siguienteFolioCliente } from "../folios";
 
 export const clientesRouter = Router();
 
+// FASE 2.1 (23-sep-2026, pedido explícito) — un Colaborador (rol
+// "colaborador": técnico/chofer/etc., NO Admin/Supervisor/Contador)
+// solo debe ver los clientes vinculados a una OS o Levantamiento que
+// tuvo asignado, en cualquier momento (activo o ya cerrado — "activos
+// + los de su historial"). Mismo eje que ya usa trabajos.ts para su
+// propio listado (`if (req.rol === "colaborador") query.eq("responsable_id",
+// req.userId!)`) — se reusa ese criterio, no se inventa uno nuevo.
+// Único punto de filtro: GET / y GET /:id de ESTE router — web
+// (ComboboxCliente, listado) y mobile (listarClientes) pegan los dos
+// contra los mismos 2 endpoints, así que alcanza con filtrar acá para
+// cubrir listados, detalle, búsquedas (filtran en memoria sobre la
+// lista ya acotada) y selectores a la vez, sin duplicar la regla en
+// cada frontend.
+async function clienteIdsVisiblesParaColaborador(empresaId: string, userId: string): Promise<Set<string>> {
+  const [{ data: trabajos }, { data: levantamientos }] = await Promise.all([
+    supabase.from("trabajos").select("cliente_id").eq("empresa_id", empresaId).eq("responsable_id", userId),
+    supabase.from("levantamientos").select("cliente_id").eq("empresa_id", empresaId).eq("tecnico_id", userId),
+  ]);
+  const ids = new Set<string>();
+  for (const t of trabajos ?? []) if (t.cliente_id) ids.add(t.cliente_id);
+  for (const l of levantamientos ?? []) if (l.cliente_id) ids.add(l.cliente_id);
+  return ids;
+}
+
 clientesRouter.get(
   "/",
   ah<RequestConEmpresa>(async (req, res) => {
@@ -31,10 +55,16 @@ clientesRouter.get(
       return;
     }
 
+    let clientesVisibles = clientes ?? [];
+    if (req.rol === "colaborador") {
+      const visibles = await clienteIdsVisiblesParaColaborador(req.empresaId!, req.userId!);
+      clientesVisibles = clientesVisibles.filter((c) => visibles.has(c.id));
+    }
+
     const resumenPorCliente = new Map((resumen ?? []).map((r) => [r.cliente_id, r]));
 
     res.json(
-      (clientes ?? []).map((c) => {
+      clientesVisibles.map((c) => {
         const r = resumenPorCliente.get(c.id);
         return {
           ...c,
@@ -67,6 +97,13 @@ clientesRouter.get(
     if (!cliente) {
       res.status(404).json({ error: "Cliente no encontrado" });
       return;
+    }
+    if (req.rol === "colaborador") {
+      const visibles = await clienteIdsVisiblesParaColaborador(req.empresaId!, req.userId!);
+      if (!visibles.has(cliente.id)) {
+        res.status(403).json({ error: "No tienes acceso a este cliente" });
+        return;
+      }
     }
 
     const [{ data: trabajos }, { data: presupuestos }, { data: facturas }, { data: facturasPorNombre }, { data: equipos }] = await Promise.all([

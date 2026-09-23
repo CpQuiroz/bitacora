@@ -65,7 +65,7 @@ import { documentosRouter } from "./routes/documentos";
 import { mfaRouter } from "./routes/mfa";
 import { authLoginRouter } from "./routes/authLogin";
 import { limitarLogin, limitarEncuestaPublica } from "./rateLimiters";
-import { modulosDeshabilitadosDeEmpresa, featureFlagsDeEmpresa, modulosVisiblesDeUsuario, requiereModulo } from "./permisos";
+import { modulosDeshabilitadosDeEmpresa, featureFlagsDeEmpresa, modulosVisiblesDeUsuario, requiereModulo, requiereRol } from "./permisos";
 import { accionesDeRol, rolExigeMfa } from "./roles";
 import { resolverAccesoParaLogin, aprovisionarUsuario } from "./accesosAutorizados";
 import { revisarCumpleanosClientes } from "./cumpleanosClientes";
@@ -362,7 +362,14 @@ app.use("/api/catalogo", requiereAuth, requiereEmpresa, catalogoRouter);
 app.use("/api/inventario", requiereAuth, requiereEmpresa, inventarioRouter);
 app.use("/api/unidades-medida", requiereAuth, requiereEmpresa, unidadesMedidaRouter);
 app.use("/api/proveedores", requiereAuth, requiereEmpresa, proveedoresRouter);
-app.use("/api/asistente", requiereAuth, requiereEmpresa, requiereModulo("asistente"), asistenteRouter);
+// FASE 2.2 (23-sep-2026, pedido explícito): el Asistente IA es solo
+// para Admin, sin excepción — requiereRol("admin") además del gate de
+// módulo (empresa_modulos sigue decidiendo si la empresa lo tiene
+// contratado). A diferencia de requiereModulo, esto NO se puede
+// esquivar delegando el módulo "asistente" a otro rol desde
+// Configuración > Perfiles o el Panel de Super-Admin — ver también
+// permisos.ts (MODULOS_DELEGABLES_POR_EMPRESA ya no lo incluye).
+app.use("/api/asistente", requiereAuth, requiereEmpresa, requiereRol("admin"), requiereModulo("asistente"), asistenteRouter);
 app.use("/api/notificaciones-feed", requiereAuth, requiereEmpresa, notificacionesFeedRouter);
 app.use("/api/notificaciones-cliente", requiereAuth, requiereEmpresa, notificacionesClienteRouter);
 app.use("/api/viajes", requiereAuth, requiereEmpresa, requiereModulo("viajes"), viajesRouter);
