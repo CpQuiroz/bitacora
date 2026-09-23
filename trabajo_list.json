@@ -1468,6 +1468,19 @@
       ],
       "status": "done",
       "resolution": "Diagnostico (6.1) reveló un gap de paridad real entre plataformas (ninguna Agenda muestra los 3 tipos juntos) -- no se intento cerrar ese gap (habria sido construir una integracion nueva entera, fuera de alcance de \"agregar filtros\"), se documento como hallazgo/deuda tecnica en el reporte final. Bug real de color=tipo encontrado y corregido en BarrasDia + 4 spots de iconos invertidos en la web. Centralizado en packages/shared/agendaColores.ts, consumido por ambas plataformas via imports (no duplicando la decision de que icono/color va con que). Filtros combinables + persistentes + con cantidades en ambas plataformas. Leyenda generada de las mismas constantes en ambas. tsc + verificar.sh en verde."
+    },
+    {
+      "id": 95,
+      "name": "fase7_menu_inventario_analisis",
+      "title": "FASE 7: menú web Inventario — análisis (sin cambios de código)",
+      "description": "Analizar que hace \"Recursos -> Inventario\" y que mas hay en \"Recursos\"; decidir si Inventario debe moverse al bloque \"Datos\" junto a Catalogo (si maneja stock con movimientos) o fusionarse dentro de Catalogo como pestaña/columna (si es solo una lista); nunca a Configuracion; si \"Recursos\" queda vacio o con 1 solo item, reubicar y eliminar el grupo.",
+      "acceptance": [
+        "Confirmado leyendo inventario.ts (backend) e inventario/page.tsx (web) que Inventario administra stock CON movimientos reales: tabla inventario_movimientos (entrada/salida/ajuste, stock_resultante, motivo, origen), endpoint POST /api/inventario/movimientos, UI con SKUs/cantidad total/sin stock/formulario de ajuste -- no es una lista estatica",
+        "Confirmado en DashboardShell.tsx que \"Recursos\" ya tiene 4 items (Equipos, Inventario, Catalogo, Proveedores) -- Inventario ya esta INMEDIATAMENTE junto a Catalogo en el mismo grupo, no en Configuracion, no hay ninguna referencia a Inventario en Configuracion ni ruta vieja/duplicada buscando en todo web/src",
+        "Decision: NINGÚN cambio de codigo -- \"Recursos\" ya funciona como el bloque \"Datos\" que pedia el punto 7.1 (Inventario y Catalogo ya son vecinos ahi), y con 4 items no queda vacio ni con 1 solo item por sacar nada de ahi. El grupo no se renombra a \"Datos\" (cambio cosmetico sin pedido explicito, \"Recursos\" ya cumple la funcion) ni se tocan permisos (los 4 items ya comparten el mismo gate modulo=\"registros\", sin anomalia)"
+      ],
+      "status": "done",
+      "resolution": "Fase de solo diagnostico -- se leyo el backend (inventario.ts) y el frontend (inventario/page.tsx) antes de tocar nada, y se confirmo que Inventario YA satisface el estado objetivo que pedia el punto 7.1 (stock con movimientos, vecino de Catalogo, nunca en Configuracion). No se encontro ninguna ruta vieja, duplicado, ni anomalia de permisos que justificara un cambio. Sin diff de código para esta fase."
     }
   ]
 }

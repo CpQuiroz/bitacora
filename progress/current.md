@@ -6475,7 +6475,37 @@ generadas de las mismas constantes del módulo compartido.
 
 `tsc` (6 workspaces) + `verificar.sh` en verde. Tarea 94 cerrada.
 
-**Pendiente de mí**: Fase 7 (menú web Inventario) — última fase.
+## 23-sep-2026 — tarea 95: FASE 7 (menú web Inventario — análisis)
+
+Pedido: analizar "Recursos → Inventario" y decidir si debe moverse
+(stock con movimientos → junto a Catálogo) o fusionarse (lista simple
+→ dentro de Catálogo), nunca a Configuración.
+
+- Leído `inventario.ts` (backend) e `inventario/page.tsx` (web) ANTES
+  de tocar nada: Inventario administra stock CON movimientos reales
+  (tabla `inventario_movimientos`: entrada/salida/ajuste,
+  `stock_resultante`, motivo, origen; endpoint
+  `POST /api/inventario/movimientos`; UI con SKUs/cantidad total/sin
+  stock/formulario de ajuste) — no es una lista estática.
+- `DashboardShell.tsx`: "Recursos" ya tiene 4 items (Equipos,
+  **Inventario**, **Catálogo**, Proveedores) — Inventario ya está
+  INMEDIATAMENTE junto a Catálogo, en el mismo grupo. Nada en
+  Configuración, ninguna ruta vieja/duplicada (buscado en todo
+  `web/src`).
+- **Decisión: ningún cambio de código.** "Recursos" ya funciona como
+  el bloque "Datos" que pedía 7.1 — Inventario y Catálogo ya son
+  vecinos ahí. Con 4 items no queda vacío ni con 1 solo ítem. No se
+  renombra "Recursos" a "Datos" (cambio cosmético sin pedido
+  explícito, la función ya está cumplida) ni se tocan permisos (los 4
+  items ya comparten el mismo gate `modulo="registros"`, sin
+  anomalía).
+- Tarea 95 cerrada. Sin diff de código para esta fase — solo
+  diagnóstico.
+
+**Las 7 fases del pedido original están completas.** Falta el cierre
+final: resumen general, diagrama OS anterior vs. nuevo (ya dado en
+texto durante la Fase 3), diagnóstico 6.1, decisión 7.1, riesgos/deuda
+técnica — se entrega ahora en el reporte al usuario.
 
 ## 23-sep-2026 — tarea 81: bajar el botón flotante del Asistente
 
