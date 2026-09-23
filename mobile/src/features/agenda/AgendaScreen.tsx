@@ -1,13 +1,21 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, RefreshControl, ScrollView, View } from "react-native";
-import { ChevronLeft, ChevronRight, Plus, CalendarX2 } from "lucide-react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Calendar, ChevronLeft, ChevronRight, Plus, CalendarX2, Info, Search } from "lucide-react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import type { EstadoTarea } from "@bitacora/shared";
-import { FUNCIONES_LEVANTAMIENTOS, formatearFolio } from "@bitacora/shared";
+import type { EstadoAgendaUnificado, EstadoTarea, TipoEventoAgenda } from "@bitacora/shared";
+import {
+  estadoAgendaDeLevantamiento,
+  ETIQUETA_ESTADO_AGENDA,
+  ETIQUETA_TIPO_AGENDA,
+  FUNCIONES_LEVANTAMIENTOS,
+  formatearFolio,
+} from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
 import {
   AsistenteButton,
+  Dialog,
   EmptyState,
   ErrorState,
   ESPACIO_ASISTENTE_FLOTANTE,
@@ -55,6 +63,27 @@ function colorEstado(estado: EstadoTarea, marca: Marca): string {
   if (estado === "confirmada") return tokens.color.accentRamp["700"];
   return marca.base;
 }
+
+// Fase 6.3 (23-sep-2026, pedido explícito) — mismo vocabulario visual
+// que colorEstado (arriba), pero por el EstadoAgendaUnificado
+// compartido (packages/shared/agendaColores.ts): "agendado" y
+// "cancelado" quedan iguales entre cita/levantamiento, "en_progreso" y
+// "completado" también — solo colorEstado(cita) distingue además
+// pendiente/confirmada dentro de "agendado" (matiz de urgencia
+// deliberado, documentado arriba, no se tocó). Antes el levantamiento
+// en BarrasDia usaba SIEMPRE accent2 sin importar su estado real — el
+// bug de "color=tipo" que 6.3 pedía encontrar y corregir.
+function colorPorEstadoAgenda(estado: EstadoAgendaUnificado, marca: Marca): string {
+  if (estado === "completado") return tokens.color.accent2Ramp["700"];
+  if (estado === "cancelado") return tokens.color.neutral["500"];
+  if (estado === "en_progreso") return tokens.color.accentRamp["700"];
+  return marca.base; // agendado
+}
+
+const CLAVE_FILTRO_TIPO = "agenda:filtro-tipo";
+// OS no aparece en la Agenda mobile hoy (ver diagnóstico 6.1) — solo
+// cita/levantamiento tienen ícono acá.
+const ICONO_TIPO: Record<"cita" | "levantamiento", typeof Calendar> = { cita: Calendar, levantamiento: Search };
 
 type Modo = "mes" | "semana" | "dia";
 let ultimoModo: Modo = "mes";
@@ -117,10 +146,33 @@ export function AgendaScreen({ navigation }: NativeStackScreenProps<AgendaStackP
   const [error, setError] = useState<string | null>(null);
   const [refrescando, setRefrescando] = useState(false);
   const [guardadoEn, setGuardadoEn] = useState<number | undefined>();
+  // Fase 6.2 — filtro por tipo (Cita/Levantamiento; OS no aparece en la
+  // Agenda mobile hoy, ver diagnóstico 6.1). Vacío = todos. Se recuerda
+  // entre sesiones (AsyncStorage).
+  const [tipoFiltro, setTipoFiltro] = useState<Set<TipoEventoAgenda>>(new Set());
+  const [leyendaAbierta, setLeyendaAbierta] = useState(false);
 
   useEffect(() => {
     ultimoModo = modo;
   }, [modo]);
+
+  useEffect(() => {
+    AsyncStorage.getItem(CLAVE_FILTRO_TIPO)
+      .then((raw) => {
+        if (raw) setTipoFiltro(new Set(JSON.parse(raw)));
+      })
+      .catch(() => {});
+  }, []);
+
+  function alternarTipoFiltro(tipo: TipoEventoAgenda) {
+    setTipoFiltro((prev) => {
+      const next = new Set(prev);
+      if (next.has(tipo)) next.delete(tipo);
+      else next.add(tipo);
+      void AsyncStorage.setItem(CLAVE_FILTRO_TIPO, JSON.stringify([...next]));
+      return next;
+    });
+  }
 
   const anclaDate = useMemo(() => new Date(ancla + "T00:00:00"), [ancla]);
 
@@ -169,15 +221,19 @@ export function AgendaScreen({ navigation }: NativeStackScreenProps<AgendaStackP
     setRefrescando(false);
   }
 
+  const muestraCitas = tipoFiltro.size === 0 || tipoFiltro.has("cita");
+  const muestraLevantamientos = tipoFiltro.size === 0 || tipoFiltro.has("levantamiento");
+
   const porDia = useMemo(() => {
     const m = new Map<string, TareaConDatos[]>();
+    if (!muestraCitas) return m;
     for (const x of tareas ?? []) {
       if (!m.has(x.fecha)) m.set(x.fecha, []);
       m.get(x.fecha)!.push(x);
     }
     for (const arr of m.values()) arr.sort((a, b) => (a.hora ?? "99").localeCompare(b.hora ?? "99"));
     return m;
-  }, [tareas]);
+  }, [tareas, muestraCitas]);
 
   // Solo los agendados (con fecha_visita) — sin fecha_visita no
   // aparecen acá (ver Pizarra, sin día fijo) — sería engañoso ponerlos
@@ -190,13 +246,14 @@ export function AgendaScreen({ navigation }: NativeStackScreenProps<AgendaStackP
   // 23-sep-2026, pedido explícito: "no debería desaparecer").
   const porDiaLevantamientos = useMemo(() => {
     const m = new Map<string, LevantamientoResumen[]>();
+    if (!muestraLevantamientos) return m;
     for (const lev of levantamientos) {
       if (!lev.fecha_visita) continue;
       if (!m.has(lev.fecha_visita)) m.set(lev.fecha_visita, []);
       m.get(lev.fecha_visita)!.push(lev);
     }
     return m;
-  }, [levantamientos]);
+  }, [levantamientos, muestraLevantamientos]);
 
   function mover(delta: number) {
     if (modo === "dia") setAncla(clave(sumarDias(anclaDate, delta)));
@@ -285,6 +342,40 @@ export function AgendaScreen({ navigation }: NativeStackScreenProps<AgendaStackP
         </Pressable>
       </View>
 
+      {/* Fase 6.2/6.4 — chips de tipo (Cita/Levantamiento, combinable
+          con Mes/Sem/Día del ScreenHeader) + botón de leyenda. */}
+      <View style={{ flexDirection: "row", alignItems: "center", gap: tokens.space["2"], paddingHorizontal: tokens.space["4"], paddingBottom: tokens.space["2"] }}>
+        {(["cita", ...(incluirLevantamientos ? (["levantamiento"] as const) : [])] as TipoEventoAgenda[]).map((t) => {
+          const Icono = ICONO_TIPO[t as "cita" | "levantamiento"];
+          const activo = tipoFiltro.has(t);
+          return (
+            <Pressable
+              key={t}
+              onPress={() => alternarTipoFiltro(t)}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 4,
+                borderRadius: tokens.radius.pill,
+                borderWidth: 1,
+                borderColor: activo ? marca.base : tokens.color.divider,
+                backgroundColor: activo ? `${marca.base}1a` : "transparent",
+                paddingHorizontal: tokens.space["3"],
+                paddingVertical: 4,
+              }}
+            >
+              <Icono size={12} strokeWidth={2.5} color={activo ? marca.base : `${tokens.color.text}99`} />
+              <Texto tamano={tokens.size.caption} peso="semibold" color={activo ? marca.base : `${tokens.color.text}99`}>
+                {ETIQUETA_TIPO_AGENDA[t]}
+              </Texto>
+            </Pressable>
+          );
+        })}
+        <Pressable onPress={() => setLeyendaAbierta(true)} hitSlop={8} style={{ marginLeft: "auto" }}>
+          <Info size={18} strokeWidth={2.25} color={`${tokens.color.text}80`} />
+        </Pressable>
+      </View>
+
       {modo === "mes" ? (
         <VistaMes
           anclaDate={anclaDate}
@@ -354,24 +445,62 @@ export function AgendaScreen({ navigation }: NativeStackScreenProps<AgendaStackP
       >
         <Plus size={26} color={marca.foreground} />
       </Pressable>
+
+      {/* Fase 6.4 — leyenda, generada del mismo módulo compartido que
+          los chips/colores de arriba (packages/shared/agendaColores). */}
+      <Dialog abierto={leyendaAbierta} onCerrar={() => setLeyendaAbierta(false)} titulo="Leyenda">
+        <View style={{ gap: tokens.space["4"] }}>
+          <View style={{ gap: tokens.space["2"] }}>
+            <Texto tamano={tokens.size.caption} peso="semibold" color={`${tokens.color.text}80`} style={{ textTransform: "uppercase", letterSpacing: 1 }}>
+              Color = estado
+            </Texto>
+            {(["agendado", "en_progreso", "completado", "cancelado"] as const).map((estado) => (
+              <View key={estado} style={{ flexDirection: "row", alignItems: "center", gap: tokens.space["2"] }}>
+                <View style={{ width: 12, height: 12, borderRadius: 3, backgroundColor: colorPorEstadoAgenda(estado, marca) }} />
+                <Texto tamano={tokens.size.small} color={tokens.color.text}>
+                  {ETIQUETA_ESTADO_AGENDA[estado]}
+                </Texto>
+              </View>
+            ))}
+          </View>
+          <View style={{ gap: tokens.space["2"] }}>
+            <Texto tamano={tokens.size.caption} peso="semibold" color={`${tokens.color.text}80`} style={{ textTransform: "uppercase", letterSpacing: 1 }}>
+              Ícono = tipo
+            </Texto>
+            {(["cita", "levantamiento"] as const).map((t) => {
+              const Icono = ICONO_TIPO[t];
+              return (
+                <View key={t} style={{ flexDirection: "row", alignItems: "center", gap: tokens.space["2"] }}>
+                  <Icono size={14} strokeWidth={2.5} color={tokens.color.text} />
+                  <Texto tamano={tokens.size.small} color={tokens.color.text}>
+                    {ETIQUETA_TIPO_AGENDA[t]}
+                  </Texto>
+                </View>
+              );
+            })}
+          </View>
+        </View>
+      </Dialog>
     </View>
   );
 }
 
 // ---------------------------------------------------------------------------
 
-// Levantamientos usan siempre el mismo color (accent2, "LEV" en el
-// resto de la app) — acá la barra distingue TIPO, no estado; el estado
-// de la cita ya lo hace colorEstado.
-function BarrasDia({ citas, levantamientos = 0, marca }: { citas: TareaConDatos[]; levantamientos?: number; marca: Marca }) {
+// Cada bar(r)ita por su propio estado (color=estado, ver
+// colorPorEstadoAgenda arriba) — antes el levantamiento siempre salía
+// en accent2 sin importar si estaba activo, completado o rechazado.
+function BarrasDia({ citas, levantamientos = [], marca }: { citas: TareaConDatos[]; levantamientos?: LevantamientoResumen[]; marca: Marca }) {
   return (
     <View style={{ flexDirection: "row", gap: 2, marginTop: 3, height: 4 }}>
       {citas.slice(0, 3).map((c) => (
         <View key={c.id} style={{ width: 10, height: 4, borderRadius: 1, backgroundColor: colorEstado(c.estado, marca) }} />
       ))}
-      {levantamientos > 0 && citas.length < 3 ? (
-        <View style={{ width: 10, height: 4, borderRadius: 1, backgroundColor: tokens.color.accent2Ramp["700"] }} />
-      ) : null}
+      {citas.length < 3
+        ? levantamientos.slice(0, 3 - citas.length).map((l) => (
+            <View key={l.id} style={{ width: 10, height: 4, borderRadius: 1, backgroundColor: colorPorEstadoAgenda(estadoAgendaDeLevantamiento(l.estado), marca) }} />
+          ))
+        : null}
     </View>
   );
 }
@@ -380,8 +509,9 @@ function BarrasDia({ citas, levantamientos = 0, marca }: { citas: TareaConDatos[
 // filtro que Pizarra SÍ aplica) — acá no se oculta, solo se atenúa.
 const LEVANTAMIENTO_TERMINADO = ["completado_tecnico", "cotizado_externo", "aprobado", "rechazado"];
 
-function FilaLevantamiento({ item, onPress }: { item: LevantamientoResumen; onPress: () => void }) {
+function FilaLevantamiento({ item, onPress, marca }: { item: LevantamientoResumen; onPress: () => void; marca: Marca }) {
   const terminado = LEVANTAMIENTO_TERMINADO.includes(item.estado);
+  const IconoTipo = ICONO_TIPO.levantamiento;
   return (
     <Pressable
       onPress={onPress}
@@ -399,16 +529,19 @@ function FilaLevantamiento({ item, onPress }: { item: LevantamientoResumen; onPr
         {item.hora_visita ? item.hora_visita.slice(0, 5) : "--:--"}
       </Texto>
       <View style={{ flex: 1 }}>
-        <Texto tamano={tokens.size.h5} peso="semibold" color={tokens.color.text} numberOfLines={1}>
-          {item.cliente?.nombre ?? "Levantamiento"}
-        </Texto>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+          <IconoTipo size={13} strokeWidth={2.5} color={`${tokens.color.text}80`} />
+          <Texto tamano={tokens.size.h5} peso="semibold" color={tokens.color.text} numberOfLines={1}>
+            {item.cliente?.nombre ?? "Levantamiento"}
+          </Texto>
+        </View>
         <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`} numberOfLines={1}>
           {formatearFolio("LEV", item.folio) ? `${formatearFolio("LEV", item.folio)} · ` : ""}
           {terminado ? "Completado" : item.descripcion_requerimiento ?? "Evaluar en terreno"}
         </Texto>
       </View>
       <View
-        style={{ width: 4, alignSelf: "stretch", borderRadius: 2, backgroundColor: terminado ? tokens.color.neutral["500"] : tokens.color.accent2Ramp["700"] }}
+        style={{ width: 4, alignSelf: "stretch", borderRadius: 2, backgroundColor: colorPorEstadoAgenda(estadoAgendaDeLevantamiento(item.estado), marca) }}
       />
     </Pressable>
   );
@@ -513,7 +646,7 @@ function VistaMes({
                     {cd.getDate()}
                   </Texto>
                 </View>
-                <BarrasDia citas={porDia.get(k) ?? []} levantamientos={porDiaLevantamientos.get(k)?.length ?? 0} marca={marca} />
+                <BarrasDia citas={porDia.get(k) ?? []} levantamientos={porDiaLevantamientos.get(k) ?? []} marca={marca} />
               </Pressable>
             );
           })}
@@ -535,7 +668,7 @@ function VistaMes({
         ) : (
           <>
             {levDelDia.map((l) => (
-              <FilaLevantamiento key={l.id} item={l} onPress={() => onLevantamiento(l)} />
+              <FilaLevantamiento key={l.id} item={l} onPress={() => onLevantamiento(l)} marca={marca} />
             ))}
             {delDia.map((c) => (
               <FilaCita key={c.id} item={c} esGestion={esGestion} onPress={() => onCita(c)} marca={marca} />
@@ -607,7 +740,7 @@ function VistaSemana({
               <Texto tamano={tokens.size.h5} color={tokens.color.text} style={{ fontVariant: ["tabular-nums"] }}>
                 {d.getDate()}
               </Texto>
-              <BarrasDia citas={porDia.get(k) ?? []} levantamientos={porDiaLevantamientos.get(k)?.length ?? 0} marca={marca} />
+              <BarrasDia citas={porDia.get(k) ?? []} levantamientos={porDiaLevantamientos.get(k) ?? []} marca={marca} />
             </Pressable>
           );
         })}
@@ -628,7 +761,7 @@ function VistaSemana({
                   {k === hoyKey ? "Hoy" : `${DIAS_LARGO[d.getDay()].slice(0, 3)} ${d.getDate()}`}
                 </Texto>
                 {(porDiaLevantamientos.get(k) ?? []).map((l) => (
-                  <FilaLevantamiento key={l.id} item={l} onPress={() => onLevantamiento(l)} />
+                  <FilaLevantamiento key={l.id} item={l} onPress={() => onLevantamiento(l)} marca={marca} />
                 ))}
                 {(porDia.get(k) ?? []).map((c) => (
                   <FilaCita key={c.id} item={c} esGestion={esGestion} onPress={() => onCita(c)} marca={marca} />
@@ -723,7 +856,7 @@ function VistaDia({
       {levantamientos.length > 0 ? (
         <View style={{ paddingHorizontal: tokens.space["4"], paddingTop: tokens.space["2"], paddingBottom: tokens.space["1"], borderBottomWidth: 1, borderBottomColor: tokens.color.divider }}>
           {levantamientos.map((l) => (
-            <FilaLevantamiento key={l.id} item={l} onPress={() => onLevantamiento(l)} />
+            <FilaLevantamiento key={l.id} item={l} onPress={() => onLevantamiento(l)} marca={marca} />
           ))}
         </View>
       ) : null}
@@ -837,9 +970,12 @@ function FilaCita({ item, esGestion, onPress, marca }: { item: TareaConDatos; es
         {item.hora ? item.hora.slice(0, 5) : "--:--"}
       </Texto>
       <View style={{ flex: 1 }}>
-        <Texto tamano={tokens.size.h5} peso="semibold" color={tokens.color.text} numberOfLines={1}>
-          {item.titulo}
-        </Texto>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+          <ICONO_TIPO.cita size={13} strokeWidth={2.5} color={`${tokens.color.text}80`} />
+          <Texto tamano={tokens.size.h5} peso="semibold" color={tokens.color.text} numberOfLines={1}>
+            {item.titulo}
+          </Texto>
+        </View>
         <Texto tamano={tokens.size.small} color={tokens.color.text + "99"} numberOfLines={1}>
           {formatearFolio("CIT", item.folio) ? `${formatearFolio("CIT", item.folio)} · ` : ""}
           {item.cliente?.nombre ?? "Sin cliente"}

@@ -1453,6 +1453,21 @@
       ],
       "status": "done",
       "resolution": "Historial combinado (trabajos+levantamientos) en un solo endpoint nuevo, sin modulo, mismo criterio que mis-viajes. Reutilizado ScreenHeader.filtros/filtrosSecundarios (mobile) para los chips de tipo/dias -- ya existia ese soporte de 2 filas, no hizo falta un componente nuevo. Encontrado y cerrado un hueco de permisos real en el camino (PDF de OS sin chequeo de dueño) al construir el acceso al PDF desde el historial -- mismo principio de la Fase 2 (restriccion en backend, no en UI), aplicado a un endpoint que no había tocado antes. Bug real de Agenda (levantamientos completados desaparecian del calendario) encontrado y corregido -- se atenuan en vez de ocultarse, mismo tratamiento visual que cancelada/no_asistio ya usaban. tsc + verificar.sh en verde."
+    },
+    {
+      "id": 94,
+      "name": "fase6_agenda_filtro_tipo_leyenda",
+      "title": "FASE 6: Agenda — filtro por tipo + leyenda de colores (diagnóstico + centralización)",
+      "description": "6.1 diagnostico de que significa cada color hoy, donde se define, consistencia web/mobile. 6.2 chips de filtro por tipo. 6.3 una dimension por atributo (color=estado, icono+etiqueta=tipo), centralizado en un modulo compartido. 6.4 leyenda visible.",
+      "acceptance": [
+        "6.1: DIAGNOSTICO -- web Agenda muestra Cita+OS (color=estado via estadoAgendaDe/ESTADO_TAREA_A_AGENDA, sin levantamientos en absoluto, solo un boton de acceso a crear uno). Mobile Agenda muestra Cita+Levantamiento (NO muestra OS/trabajos -- gap de paridad real entre plataformas, ninguna de las dos muestra los 3 tipos juntos). Bug real encontrado: BarrasDia (mobile, mini-barras del mes) pintaba el levantamiento SIEMPRE en accent2 sin importar su estado (tipo pisando a estado) -- colisionaba visualmente con una cita \"completada\" (mismo accent2Ramp700). 3 spots en la web (dia/semana/mes) tenian iconos cita/OS invertidos entre si (ClipboardCheck para cita, Wrench para OS) respecto a la asignacion nueva centralizada",
+        "6.3: nuevo packages/shared/agendaColores.ts -- TONO_ESTADO_AGENDA, ETIQUETA_ESTADO_AGENDA, ETIQUETA_TIPO_AGENDA, ICONO_TIPO_AGENDA (nombre de icono, no el componente -- cada plataforma resuelve su import), estadoAgendaDeTarea/OS/Levantamiento. Web: reemplazadas las copias locales (ESTADOS_AGENDA/ESTADO_TAREA_A_AGENDA/estadoAgendaDe) por el modulo compartido; los 3 spots con iconos invertidos corregidos. Mobile: BarrasDia ahora colorea el levantamiento por SU estado real (colorPorEstadoAgenda + estadoAgendaDeLevantamiento); FilaCita/FilaLevantamiento con icono de tipo. colorEstado(cita) en mobile NO se tocó -- distingue pendiente/confirmada dentro de \"agendado\" a proposito (matiz de urgencia documentado, no es el bug que pedia 6.3), documentado como divergencia deliberada",
+        "6.2: chips de tipo, multi-select (vacio=todos), combinable con el filtro de estado existente (AND, solo en web -- mobile no tenia filtro de estado antes de esta fase), cantidades por tipo, recordado entre sesiones (localStorage web / AsyncStorage mobile), solo tipos disponibles: web omite el chip \"OS\" sin el modulo ordenes_servicio; \"Levantamiento\" no aparece en ninguna plataforma porque ninguna lo filtra hoy salvo mobile que si lo tiene",
+        "6.4: leyenda -- web: seccion colapsable (boton \"Leyenda\" con chevron) arriba de los chips; mobile: boton \"i\" que abre un Dialog (bottom sheet). Ambas generadas de las mismas constantes del modulo compartido, no hardcodeadas de nuevo",
+        "tsc (6 workspaces) + verificar.sh en verde"
+      ],
+      "status": "done",
+      "resolution": "Diagnostico (6.1) reveló un gap de paridad real entre plataformas (ninguna Agenda muestra los 3 tipos juntos) -- no se intento cerrar ese gap (habria sido construir una integracion nueva entera, fuera de alcance de \"agregar filtros\"), se documento como hallazgo/deuda tecnica en el reporte final. Bug real de color=tipo encontrado y corregido en BarrasDia + 4 spots de iconos invertidos en la web. Centralizado en packages/shared/agendaColores.ts, consumido por ambas plataformas via imports (no duplicando la decision de que icono/color va con que). Filtros combinables + persistentes + con cantidades en ambas plataformas. Leyenda generada de las mismas constantes en ambas. tsc + verificar.sh en verde."
     }
   ]
 }

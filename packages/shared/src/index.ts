@@ -10,4 +10,5 @@ export * from "./limites";
 export * from "./liquidacionChile";
 export * from "./legales";
 export * from "./estadosCita";
+export * from "./agendaColores";
 export * from "./ciudadesChile";

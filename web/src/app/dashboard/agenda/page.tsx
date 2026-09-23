@@ -13,8 +13,8 @@ import type {
   Trabajo,
   Usuario,
 } from "@bitacora/shared";
-import { puedeVerModulo, formatearFolio } from "@bitacora/shared";
-import { Calendar, ChevronDown, ChevronLeft, ChevronRight, ClipboardCheck, Plus, Search, Wrench } from "lucide-react";
+import { puedeVerModulo, formatearFolio, estadoAgendaDeOS, estadoAgendaDeTarea, ETIQUETA_ESTADO_AGENDA, ETIQUETA_TIPO_AGENDA, TONO_ESTADO_AGENDA, type EstadoAgendaUnificado, type TipoEventoAgenda } from "@bitacora/shared";
+import { Calendar, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, ClipboardCheck, Info, Plus, Search, Wrench } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
@@ -35,11 +35,16 @@ type TareaListado = Tarea & {
   responsable: { nombre: string } | null;
 };
 
-type EstadoAgenda = "agendado" | "en_progreso" | "completado" | "cancelado";
+// Fase 6.3 (23-sep-2026, pedido explícito): estado→tono y tipo→ícono/
+// etiqueta viven en @bitacora/shared (agendaColores.ts) — una sola
+// fuente para web y mobile. Antes este archivo tenía su propia copia
+// suelta (ESTADOS_AGENDA/ESTADO_TAREA_A_AGENDA/estadoAgendaDe) con la
+// misma semántica pero duplicada.
+type EstadoAgenda = EstadoAgendaUnificado;
 
 type EventoAgenda = {
   id: string;
-  tipo: "os" | "tarea";
+  tipo: TipoEventoAgenda;
   fecha: string;
   hora: string | null;
   estadoAgenda: EstadoAgenda;
@@ -48,16 +53,9 @@ type EventoAgenda = {
   origen: OrdenListado | TareaListado;
 };
 
-// tono: mismos 4 tonos que ya usa StatusBadge en el resto de la web
-// (en_progreso/completado/cerrado/cancelado) — "agendado" no tiene un
-// tono propio en ese sistema, se mapea a "cerrado" (neutro, distinto de
-// "cancelado" por el matiz del gris, no por un color de marca aparte).
-const ESTADOS_AGENDA: { valor: EstadoAgenda; etiqueta: string; tono: TonoEstado }[] = [
-  { valor: "agendado", etiqueta: "Agendado", tono: "cerrado" },
-  { valor: "en_progreso", etiqueta: "En progreso", tono: "en_progreso" },
-  { valor: "completado", etiqueta: "Completado", tono: "completado" },
-  { valor: "cancelado", etiqueta: "Cancelado", tono: "cancelado" },
-];
+const ESTADOS_AGENDA: { valor: EstadoAgenda; etiqueta: string; tono: TonoEstado }[] = (
+  Object.keys(ETIQUETA_ESTADO_AGENDA) as EstadoAgendaUnificado[]
+).map((valor) => ({ valor, etiqueta: ETIQUETA_ESTADO_AGENDA[valor], tono: TONO_ESTADO_AGENDA[valor] }));
 
 // Mismas clases que StatusBadge arma internamente — necesarias acá
 // porque las celdas del mes/semana necesitan el ícono adentro del chip
@@ -74,28 +72,12 @@ function estadoInfo(estado: EstadoAgenda) {
   return ESTADOS_AGENDA.find((x) => x.valor === estado)!;
 }
 
-const ESTADO_TAREA_A_AGENDA: Record<EstadoTarea, EstadoAgenda> = {
-  pendiente: "agendado",
-  confirmada: "agendado",
-  completada: "completado",
-  cancelada: "cancelado",
-  no_asistio: "cancelado",
-  cancelada_anticipada: "cancelado",
-};
-
 const PRIORIDADES: Prioridad[] = ["alta", "media", "baja"];
 
-// Estado "de agenda" derivado — no es una columna propia, se calcula a
-// partir de trabajos.estado + ordenes_servicio.estado_os, que ya cubren
-// exactamente esta semántica (evita duplicar un enum nuevo en la DB).
-function estadoAgendaDe(t: OrdenListado): EstadoAgenda {
-  if (t.estado === "cancelado") return "cancelado";
-  if (t.orden?.estado_os === "en_proceso") return "en_progreso";
-  if (t.estado === "completado" || t.orden?.estado_os === "completada" || t.orden?.estado_os === "firmada") {
-    return "completado";
-  }
-  return "agendado";
-}
+// Ícono por tipo (6.3: color=estado, ícono+etiqueta=tipo — Levantamiento
+// no se muestra hoy en la Agenda web, ver diagnóstico 6.1, así que acá
+// solo hacen falta "os"/"cita").
+const ICONO_TIPO: Record<TipoEventoAgenda, typeof Calendar> = { cita: Calendar, os: ClipboardCheck, levantamiento: Search };
 
 function eventoDeOrden(o: OrdenListado): EventoAgenda {
   return {
@@ -103,7 +85,7 @@ function eventoDeOrden(o: OrdenListado): EventoAgenda {
     tipo: "os",
     fecha: o.fecha,
     hora: o.hora_programada,
-    estadoAgenda: estadoAgendaDe(o),
+    estadoAgenda: estadoAgendaDeOS(o.estado, o.orden?.estado_os ?? null),
     titulo: o.cliente_info?.nombre ?? o.cliente,
     subtitulo: o.responsable?.nombre ?? "—",
     origen: o,
@@ -115,10 +97,10 @@ function eventoDeTarea(t: TareaListado): EventoAgenda {
   const folio = formatearFolio("CIT", t.folio);
   return {
     id: t.id,
-    tipo: "tarea",
+    tipo: "cita",
     fecha: t.fecha,
     hora: t.hora,
-    estadoAgenda: ESTADO_TAREA_A_AGENDA[t.estado],
+    estadoAgenda: estadoAgendaDeTarea(t.estado),
     titulo: t.titulo,
     subtitulo: folio ? `${folio} · ${subtituloBase}` : subtituloBase,
     origen: t,
@@ -148,6 +130,7 @@ const NOMBRES_DIA_CORTOS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 // Borrador de "nueva tarea rápida" que se guarda antes de saltar a crear
 // una OS, para reabrir el formulario con los datos al volver (Parte 2).
 const CLAVE_BORRADOR = "agenda:borrador-tarea";
+const CLAVE_FILTRO_TIPO = "agenda:filtro-tipo";
 
 function AgendaContenido() {
   const router = useRouter();
@@ -167,7 +150,25 @@ function AgendaContenido() {
   const [tareas, setTareas] = useState<TareaListado[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [filtros, setFiltros] = useState<Set<EstadoAgenda>>(new Set());
+  // Fase 6.2 — filtro por tipo, combinable con el de estado (AND).
+  // Vacío = todos (mismo criterio que `filtros`). Se recuerda entre
+  // sesiones (localStorage, mismo patrón que CLAVE_COLAPSADO del
+  // sidebar) — Levantamiento no está acá porque la Agenda web no lo
+  // muestra hoy (ver diagnóstico 6.1).
+  const [tipoFiltros, setTipoFiltros] = useState<Set<TipoEventoAgenda>>(new Set());
+  const [leyendaAbierta, setLeyendaAbierta] = useState(false);
   const [diaSeleccionado, setDiaSeleccionado] = useState<string | null>(null);
+
+  useEffect(() => {
+    const guardado = window.localStorage.getItem(CLAVE_FILTRO_TIPO);
+    if (guardado) {
+      try {
+        setTipoFiltros(new Set(JSON.parse(guardado)));
+      } catch {
+        /* localStorage corrupto — se ignora, queda "todos" */
+      }
+    }
+  }, []);
 
   const [formTareaAbierto, setFormTareaAbierto] = useState(false);
   const [tareaEditandoId, setTareaEditandoId] = useState<string | null>(null);
@@ -330,9 +331,30 @@ function AgendaContenido() {
   }, [ordenes, tareas]);
 
   const eventosFiltrados = useMemo(() => {
-    if (filtros.size === 0) return eventos;
-    return eventos.filter((e) => filtros.has(e.estadoAgenda));
+    return eventos.filter((e) => (filtros.size === 0 || filtros.has(e.estadoAgenda)) && (tipoFiltros.size === 0 || tipoFiltros.has(e.tipo)));
+  }, [eventos, filtros, tipoFiltros]);
+
+  // Cuántos hay de cada tipo en el rango cargado (antes de aplicar el
+  // propio filtro de tipo, así el chip no "se cierra sobre sí mismo") —
+  // se muestra junto a la etiqueta, mismo pedido que los de estado.
+  const conteoPorTipo = useMemo(() => {
+    const m = new Map<TipoEventoAgenda, number>();
+    for (const e of eventos) {
+      if (filtros.size > 0 && !filtros.has(e.estadoAgenda)) continue;
+      m.set(e.tipo, (m.get(e.tipo) ?? 0) + 1);
+    }
+    return m;
   }, [eventos, filtros]);
+
+  function alternarTipoFiltro(tipo: TipoEventoAgenda) {
+    setTipoFiltros((prev) => {
+      const next = new Set(prev);
+      if (next.has(tipo)) next.delete(tipo);
+      else next.add(tipo);
+      window.localStorage.setItem(CLAVE_FILTRO_TIPO, JSON.stringify([...next]));
+      return next;
+    });
+  }
 
   const eventosPorDia = useMemo(() => {
     const mapa = new Map<string, EventoAgenda[]>();
@@ -852,7 +874,7 @@ function AgendaContenido() {
                     }}
                     className="flex w-full items-center gap-2 px-4 py-2 font-ds-body text-sm text-ds-text hover:bg-ds-brand/[0.08] hover:text-ds-brand"
                   >
-                    <ClipboardCheck size={16} strokeWidth={2.75} />
+                    <ICONO_TIPO.cita size={16} strokeWidth={2.75} />
                     Cita
                   </button>
                   {puedeCrearOS && (
@@ -861,7 +883,7 @@ function AgendaContenido() {
                       onClick={abrirNuevaOSDesdeMenu}
                       className="flex w-full items-center gap-2 px-4 py-2 font-ds-body text-sm text-ds-text hover:bg-ds-brand/[0.08] hover:text-ds-brand"
                     >
-                      <Wrench size={16} strokeWidth={2.75} />
+                      <ICONO_TIPO.os size={16} strokeWidth={2.75} />
                       Orden de servicio
                     </button>
                   )}
@@ -1032,6 +1054,79 @@ function AgendaContenido() {
             )}
           </div>
 
+          {/* Fase 6.2 — segunda fila de chips, eje independiente (tipo,
+              no estado) — mismo look que la fila de arriba. Solo los
+              tipos con módulo activo (OS necesita "ordenes_servicio";
+              Cita no tiene gate propio, si se llegó a esta página el
+              módulo Agenda ya está activo). */}
+          <div className="mb-ds-4 flex flex-wrap items-center gap-ds-2 border-t border-ds-divider pt-ds-3">
+            {(["cita", "os"] as TipoEventoAgenda[])
+              .filter((t) => t !== "os" || puedeCrearOS)
+              .map((t) => {
+                const Icono = ICONO_TIPO[t];
+                const activo = tipoFiltros.has(t);
+                return (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => alternarTipoFiltro(t)}
+                    className={`flex items-center gap-1.5 rounded-ds-pill border px-ds-3 py-1 font-ds-body text-ds-caption font-medium transition-colors ${
+                      activo ? "border-ds-brand bg-ds-brand/10 text-ds-brand" : "border-ds-divider text-ds-text/70 hover:border-ds-text/30"
+                    }`}
+                  >
+                    <Icono size={13} strokeWidth={2.5} />
+                    {ETIQUETA_TIPO_AGENDA[t]}
+                    <span className="tabular-nums text-ds-text/50">{conteoPorTipo.get(t) ?? 0}</span>
+                  </button>
+                );
+              })}
+            {tipoFiltros.size > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setTipoFiltros(new Set());
+                  window.localStorage.removeItem(CLAVE_FILTRO_TIPO);
+                }}
+                className="font-ds-body text-ds-caption font-medium text-ds-text/60 hover:text-ds-brand"
+              >
+                Limpiar
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setLeyendaAbierta((v) => !v)}
+              className="ml-auto flex items-center gap-1 font-ds-body text-ds-caption font-medium text-ds-text/60 hover:text-ds-brand"
+            >
+              <Info size={13} strokeWidth={2.5} />
+              Leyenda
+              {leyendaAbierta ? <ChevronUp size={13} strokeWidth={2.5} /> : <ChevronDown size={13} strokeWidth={2.5} />}
+            </button>
+          </div>
+
+          {leyendaAbierta && (
+            <div className="mb-ds-4 flex flex-wrap items-center gap-ds-4 rounded-ds-md bg-ds-neutral-100 px-ds-3 py-ds-2">
+              <div className="flex flex-wrap items-center gap-ds-2">
+                {ESTADOS_AGENDA.map((e) => (
+                  <span key={e.valor} className={`rounded-ds-pill px-ds-2 py-0.5 font-ds-body text-ds-micro font-medium ${CLASE_CHIP[e.tono]}`}>
+                    {e.etiqueta}
+                  </span>
+                ))}
+              </div>
+              <div className="h-4 w-px bg-ds-divider" />
+              <div className="flex flex-wrap items-center gap-ds-3">
+                {(["cita", "os"] as TipoEventoAgenda[]).map((t) => {
+                  const Icono = ICONO_TIPO[t];
+                  return (
+                    <span key={t} className="flex items-center gap-1 font-ds-body text-ds-micro text-ds-text/70">
+                      <Icono size={13} strokeWidth={2.5} />
+                      {ETIQUETA_TIPO_AGENDA[t]}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           <div className="flex items-center justify-between">
             <button
               type="button"
@@ -1107,11 +1202,10 @@ function AgendaContenido() {
                             key={`${e.tipo}-${e.id}`}
                             className={`flex items-center gap-1 truncate rounded-ds-sm px-1.5 py-0.5 font-ds-body text-[11px] font-medium ${CLASE_CHIP[est.tono]}`}
                           >
-                            {e.tipo === "tarea" ? (
-                              <ClipboardCheck size={12} strokeWidth={2.75} className="shrink-0" />
-                            ) : (
-                              <Wrench size={12} strokeWidth={2.75} className="shrink-0" />
-                            )}
+                            {(() => {
+                              const Icono = ICONO_TIPO[e.tipo];
+                              return <Icono size={12} strokeWidth={2.75} className="shrink-0" />;
+                            })()}
                             <span className="truncate">
                               {e.hora ? `${e.hora} ` : ""}
                               {e.titulo}
@@ -1177,11 +1271,12 @@ function AgendaContenido() {
                       >
                         <div className="min-w-0">
                           <p className="flex items-center gap-1.5 truncate font-ds-body text-ds-small font-medium text-ds-text">
-                            {e.tipo === "tarea" ? (
-                              <ClipboardCheck size={14} strokeWidth={2.75} className="shrink-0 text-ds-text/60" />
-                            ) : (
-                              <Wrench size={14} strokeWidth={2.75} className="shrink-0 text-ds-text/60" />
-                            )}
+                            {/* Ícono = tipo, no estado (6.3) — antes esto usaba
+                                ClipboardCheck/Wrench al revés de ICONO_TIPO. */}
+                            {(() => {
+                              const Icono = ICONO_TIPO[e.tipo];
+                              return <Icono size={14} strokeWidth={2.75} className="shrink-0 text-ds-text/60" />;
+                            })()}
                             {e.titulo}
                           </p>
                           <p className="font-ds-body text-ds-caption text-ds-text/60">
@@ -1245,11 +1340,10 @@ function AgendaContenido() {
                             className={`flex w-full flex-col items-start gap-0.5 overflow-hidden rounded-ds-md px-ds-2 py-1.5 text-left font-ds-body text-ds-caption transition-opacity hover:opacity-80 ${CLASE_CHIP[est.tono]}`}
                           >
                             <span className="flex items-center gap-1 font-medium">
-                              {e.tipo === "tarea" ? (
-                                <ClipboardCheck size={12} strokeWidth={2.75} className="shrink-0" />
-                              ) : (
-                                <Wrench size={12} strokeWidth={2.75} className="shrink-0" />
-                              )}
+                              {(() => {
+                                const Icono = ICONO_TIPO[e.tipo];
+                                return <Icono size={12} strokeWidth={2.75} className="shrink-0" />;
+                              })()}
                               {e.hora ?? "Sin hora"}
                             </span>
                             <span className="w-full truncate">{e.titulo}</span>
@@ -1291,11 +1385,10 @@ function AgendaContenido() {
                 >
                   <div className="min-w-0">
                     <p className="flex items-center gap-1.5 truncate font-ds-body text-ds-body font-medium text-ds-text">
-                      {e.tipo === "tarea" ? (
-                        <ClipboardCheck size={14} strokeWidth={2.75} className="shrink-0 text-ds-text/60" />
-                      ) : (
-                        <Wrench size={14} strokeWidth={2.75} className="shrink-0 text-ds-text/60" />
-                      )}
+                      {(() => {
+                        const Icono = ICONO_TIPO[e.tipo];
+                        return <Icono size={14} strokeWidth={2.75} className="shrink-0 text-ds-text/60" />;
+                      })()}
                       {e.titulo}
                     </p>
                     <p className="font-ds-body text-ds-caption text-ds-text/60">

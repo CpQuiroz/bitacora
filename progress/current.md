@@ -6433,8 +6433,49 @@ en web) — pero ninguna mostraba documentos ni alertas de vencimiento.
   absoluto, solo un acceso directo a crear uno.
 - `tsc` (6 workspaces) + `verificar.sh` en verde. Tarea 93 cerrada.
 
-**Pendiente de mí**: Fase 6 (Agenda: filtro por tipo + leyenda de
-colores) y Fase 7 (menú web Inventario) — últimas 2 fases.
+## 23-sep-2026 — tarea 94: FASE 6 (Agenda: filtro por tipo + leyenda)
+
+**6.1 diagnóstico** (antes de tocar nada):
+- Web Agenda: muestra Cita+OS (color=estado, vía `estadoAgendaDe`/
+  `ESTADO_TAREA_A_AGENDA`, locales al archivo). NO muestra
+  levantamientos — solo un botón de acceso directo a crearlos.
+- Mobile Agenda: muestra Cita+Levantamiento. NO muestra OS/trabajos.
+- **Gap de paridad real**: ninguna de las 2 plataformas muestra los 3
+  tipos juntos — no se intentó cerrar (sería construir una
+  integración nueva entera, fuera de alcance de "agregar filtros").
+  Reportado como hallazgo.
+- **Bug real encontrado**: `BarrasDia` (mobile, mini-barras del mes)
+  pintaba el levantamiento SIEMPRE en accent2 sin importar su estado
+  — "tipo" pisando a "estado", colisionaba visualmente con una cita
+  "completada" (mismo color).
+- **4 spots más con íconos invertidos** (web: día/semana/mes ×3 + menú
+  "+ Nuevo"): "Cita" mostraba `ClipboardCheck` y "OS" mostraba
+  `Wrench`, al revés de la asignación que se centralizó.
+
+**6.3 centralización**: nuevo `packages/shared/agendaColores.ts`
+(`TONO_ESTADO_AGENDA`, `ETIQUETA_ESTADO_AGENDA`,
+`ETIQUETA_TIPO_AGENDA`, `ICONO_TIPO_AGENDA` — nombre de ícono, cada
+plataforma resuelve su propio import lucide —, `estadoAgendaDeTarea`/
+`OS`/`Levantamiento`). Web: reemplazadas las copias locales; los 4
+spots de íconos invertidos corregidos. Mobile: `BarrasDia` colorea el
+levantamiento por su estado real; `FilaCita`/`FilaLevantamiento` con
+ícono de tipo. `colorEstado(cita)` en mobile NO se tocó — distingue
+pendiente/confirmada dentro de "agendado" a propósito (matiz de
+urgencia documentado, no es el bug que pedía 6.3) — divergencia
+deliberada, documentada.
+
+**6.2 filtros**: chips de tipo, multi-select (vacío=todos), combinable
+con el filtro de estado (web, AND), cantidades por tipo, recordado
+entre sesiones (localStorage web / AsyncStorage mobile), solo tipos
+con módulo activo (web omite "OS" sin `ordenes_servicio`).
+
+**6.4 leyenda**: web, sección colapsable ("Leyenda" + chevron) sobre
+los chips; mobile, botón "ⓘ" → `Dialog` (bottom sheet). Ambas
+generadas de las mismas constantes del módulo compartido.
+
+`tsc` (6 workspaces) + `verificar.sh` en verde. Tarea 94 cerrada.
+
+**Pendiente de mí**: Fase 7 (menú web Inventario) — última fase.
 
 ## 23-sep-2026 — tarea 81: bajar el botón flotante del Asistente
 
