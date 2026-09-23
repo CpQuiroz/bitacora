@@ -11,7 +11,7 @@
 // siempre firman con el token de Supabase del usuario de empresa. Este
 // archivo es su equivalente mínimo para el token de super-admin.
 import * as SecureStore from "expo-secure-store";
-import type { EstadoEmpresa, Modulo, Plan, Rubro } from "@bitacora/shared";
+import type { Empresa, EstadoEmpresa, Modulo, Plan, Rubro } from "@bitacora/shared";
 
 const FALLBACK = "http://localhost:8080";
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? FALLBACK;
@@ -79,7 +79,7 @@ export async function loginSuperAdmin(
   return { ok: true };
 }
 
-export type SuperAdminYo = { correo: string; nombre: string; ultimo_login_en: string | null; creado_en: string };
+export type SuperAdminYo = { correo: string; nombre: string; ultimo_login_en: string | null; creado_en: string; tema: Empresa["tema"] };
 
 export async function obtenerSuperAdminYo(): Promise<{ ok: true; yo: SuperAdminYo } | { ok: false; error: string; status: number }> {
   const r = await apiSuperAdmin<SuperAdminYo>("/api/superadmin/me");
@@ -87,11 +87,18 @@ export async function obtenerSuperAdminYo(): Promise<{ ok: true; yo: SuperAdminY
   return { ok: true, yo: r.data };
 }
 
+// Estilo propio del Super-Admin (super_admins.tema, migración 127).
+export async function cambiarMiTemaSuperAdmin(tema: Empresa["tema"]): Promise<{ ok: true } | { ok: false; error: string }> {
+  const r = await apiSuperAdmin("/api/superadmin/me/tema", { method: "PATCH", body: JSON.stringify({ tema }) });
+  return r.ok ? { ok: true } : { ok: false, error: r.error };
+}
+
 export type EmpresaSuperAdmin = {
   id: string;
   nombre: string;
   plan: Plan;
   estado: EstadoEmpresa;
+  tema: Empresa["tema"];
   creado_en: string;
   cantidad_usuarios: number;
 };
@@ -138,6 +145,11 @@ export async function cambiarEstadoEmpresa(id: string, estado: EstadoEmpresa): P
 
 export async function cambiarPlanEmpresa(id: string, plan: Plan): Promise<{ ok: true } | { ok: false; error: string }> {
   const r = await apiSuperAdmin(`/api/superadmin/empresas/${id}/plan`, { method: "PATCH", body: JSON.stringify({ plan }) });
+  return r.ok ? { ok: true } : { ok: false, error: r.error };
+}
+
+export async function cambiarTemaEmpresa(id: string, tema: Empresa["tema"]): Promise<{ ok: true } | { ok: false; error: string }> {
+  const r = await apiSuperAdmin(`/api/superadmin/empresas/${id}/tema`, { method: "PATCH", body: JSON.stringify({ tema }) });
   return r.ok ? { ok: true } : { ok: false, error: r.error };
 }
 

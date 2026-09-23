@@ -9,7 +9,7 @@ import type { AnalisisFoto, CatalogoItem, Cliente, OrdenServicio, OsItem, Trabaj
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { abrirPdfOS } from "@/lib/descargarPdf";
-import { formatearCLP, formatearFolio } from "@bitacora/shared";
+import { CATEGORIAS_FOTO_OS, ETIQUETA_CATEGORIA_FOTO_OS, formatearCLP, formatearFolio } from "@bitacora/shared";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Button, Card, Cifra, DatePicker, Input, Select, StatusBadge, Table, Textarea } from "@bitacora/ui/web";
 import { InputMonto } from "@/components/InputMonto";
@@ -639,7 +639,7 @@ export default function DetalleOrdenServicioPage() {
                 ) : null}
                 {detalle.orden?.observaciones_cierre ? (
                   <div className="sm:col-span-2">
-                    <p className="text-ds-caption text-ds-text/60">Observaciones de cierre</p>
+                    <p className="text-ds-caption text-ds-text/60">Comentarios del técnico</p>
                     <p className="text-ds-text">{detalle.orden.observaciones_cierre}</p>
                   </div>
                 ) : null}
@@ -709,16 +709,29 @@ export default function DetalleOrdenServicioPage() {
                   <Camera size={16} strokeWidth={2.75} className="text-ds-brand" />
                   Fotos
                 </p>
-                <div className="grid gap-ds-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {detalle.fotos.map((f) => (
-                    <div key={f.id} className="overflow-hidden rounded-ds-md border border-ds-divider">
-                      <div className="relative h-40 w-full">
-                        {/* URL firmada (vence) — sin optimizer, con lazy-load igual. */}
-                        <Image src={f.url} alt={f.resumen ?? "Foto de la OS"} fill unoptimized className="object-cover" />
-                      </div>
-                      {f.resumen ? <p className="p-ds-2 font-ds-body text-ds-caption text-ds-text/60">{f.resumen}</p> : null}
-                    </div>
-                  ))}
+                {/* Agrupadas por categoría con una franja entre grupos
+                    (pedido 23-sep-2026) — mismo orden que en mobile. Antes
+                    era una grilla plana sin categoría ni descripción. */}
+                <div className="flex flex-col gap-ds-6">
+                  {GRUPOS_FOTO.map((g) => {
+                    const delGrupo = detalle.fotos.filter((f) =>
+                      (CATEGORIAS_FOTO_OS as readonly string[]).includes(f.categoria ?? "") ? f.categoria === g.valor : g.valor === null
+                    );
+                    if (delGrupo.length === 0) return null;
+                    return (
+                      <section key={g.texto} className="border-t-2 border-ds-divider pt-ds-3">
+                        <p className="mb-ds-3 flex items-center justify-between font-ds-body text-ds-caption font-semibold uppercase tracking-wide text-ds-text/70">
+                          {g.texto}
+                          <span className="font-normal text-ds-text/50">{delGrupo.length}</span>
+                        </p>
+                        <div className="grid gap-ds-4 sm:grid-cols-2 lg:grid-cols-3">
+                          {delGrupo.map((f) => (
+                            <FotoOS key={f.id} foto={f} trabajoId={detalle.id} editable={detalle.orden?.estado_os !== "firmada"} />
+                          ))}
+                        </div>
+                      </section>
+                    );
+                  })}
                 </div>
               </Card>
             </div>
@@ -901,5 +914,61 @@ export default function DetalleOrdenServicioPage() {
         </>
       ) : null}
     </DashboardShell>
+  );
+}
+
+// General primero, después las 4 categorías en su orden de trabajo.
+const GRUPOS_FOTO: { valor: string | null; texto: string }[] = [
+  { valor: null, texto: "General" },
+  ...CATEGORIAS_FOTO_OS.map((c) => ({ valor: c, texto: ETIQUETA_CATEGORIA_FOTO_OS[c] })),
+];
+
+// Foto de la OS con descripción editable (analisis_fotos.descripcion,
+// migración 125 — sale debajo de la foto en el PDF). Se guarda al salir
+// del campo; el backend la bloquea si la OS ya está firmada.
+function FotoOS({ foto, trabajoId, editable }: { foto: AnalisisFotoConUrl; trabajoId: string; editable: boolean }) {
+  const [descripcion, setDescripcion] = useState(foto.descripcion ?? "");
+  const [guardada, setGuardada] = useState(foto.descripcion ?? "");
+  const [estado, setEstado] = useState<"idle" | "guardando" | "ok" | "error">("idle");
+
+  async function guardar() {
+    if (descripcion.trim() === guardada) return;
+    setEstado("guardando");
+    const res = await apiFetch(`/api/trabajos/${trabajoId}/fotos/${foto.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ descripcion: descripcion.trim() }),
+    });
+    setEstado(res.ok ? "ok" : "error");
+    if (res.ok) setGuardada(descripcion.trim());
+  }
+
+  return (
+    <div className="overflow-hidden rounded-ds-md border border-ds-divider">
+      <div className="relative h-40 w-full">
+        {/* URL firmada (vence) — sin optimizer, con lazy-load igual. */}
+        <Image src={foto.url} alt={foto.descripcion ?? foto.resumen ?? "Foto de la OS"} fill unoptimized className="object-cover" />
+      </div>
+      <div className="flex flex-col gap-ds-1 p-ds-2">
+        {editable ? (
+          <textarea
+            value={descripcion}
+            onChange={(e) => {
+              setDescripcion(e.target.value);
+              setEstado("idle");
+            }}
+            onBlur={() => void guardar()}
+            rows={2}
+            placeholder="Descripción de la foto"
+            className="w-full resize-none rounded-ds-sm border border-ds-divider bg-ds-surface px-ds-2 py-1 font-ds-body text-ds-caption text-ds-text"
+          />
+        ) : foto.descripcion ? (
+          <p className="font-ds-body text-ds-caption text-ds-text">{foto.descripcion}</p>
+        ) : null}
+        {estado === "guardando" ? <p className="font-ds-body text-ds-caption text-ds-text/50">Guardando…</p> : null}
+        {estado === "ok" ? <p className="font-ds-body text-ds-caption text-ds-text/50">Guardado</p> : null}
+        {estado === "error" ? <p className="font-ds-body text-ds-caption text-ds-danger">No se pudo guardar</p> : null}
+        {foto.resumen ? <p className="font-ds-body text-ds-caption text-ds-text/60">{foto.resumen}</p> : null}
+      </div>
+    </div>
   );
 }

@@ -82,7 +82,7 @@ export default function PortalOrdenDetallePage() {
             )}
             {orden.orden?.observaciones_cierre && (
               <div className="mt-4 border-t border-border pt-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted">Observaciones de cierre</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted">Comentarios del técnico</p>
                 <p className="mt-1 text-sm text-foreground">{orden.orden.observaciones_cierre}</p>
               </div>
             )}

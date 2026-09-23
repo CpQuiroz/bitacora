@@ -9,6 +9,10 @@
 //     color fijo (accent2), sin importar su estado real — "tipo"
 //     estaba pisando a "estado" en ese único punto (el bug que 6.3
 //     pedía encontrar).
+// Actualización (23-sep-2026, tarea 99): paridad cerrada — web muestra
+// Levantamiento (GET /api/levantamientos?desde&hasta sobre fecha_visita)
+// y mobile muestra OS (GET /api/ordenes-servicio?desde&hasta). Las 2
+// plataformas muestran los 3 tipos.
 //
 // Regla del diseño (6.3): una dimensión por atributo.
 //   COLOR      = estado (4 tonos, los mismos 4 de siempre: agendado/

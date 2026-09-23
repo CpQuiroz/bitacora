@@ -3,13 +3,14 @@ import { Alert, Pressable, ScrollView, Switch, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { ArrowLeft } from "lucide-react-native";
-import type { EstadoEmpresa, Modulo, Plan } from "@bitacora/shared";
+import type { Empresa, EstadoEmpresa, Modulo, Plan } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
 import { LoadingState, ScreenHeader, Texto, useMarca } from "@bitacora/ui/native";
 import {
   cambiarEstadoEmpresa,
   cambiarModuloEmpresa,
   cambiarPlanEmpresa,
+  cambiarTemaEmpresa,
   listarEmpresasSuperAdmin,
   obtenerModulosEmpresa,
   type EmpresaSuperAdmin,
@@ -53,6 +54,12 @@ const PLANES: { valor: Plan; label: string }[] = [
   { valor: "basico", label: "Básico" },
   { valor: "pro", label: "Pro" },
 ];
+// Mismas 3 opciones que Configuración > Empresa > "Tema visual" (web).
+const TEMAS: { valor: Empresa["tema"]; label: string }[] = [
+  { valor: "faena", label: "Faena" },
+  { valor: "taller", label: "Taller" },
+  { valor: "confianza", label: "Confianza" },
+];
 
 // Fase 1 del panel de Super-Admin en mobile — detalle básico: estado y
 // plan (con confirmación, son cambios sensibles que afectan lo que la
@@ -67,6 +74,7 @@ export function SuperAdminEmpresaDetalleScreen({ route, navigation }: NativeStac
   const [modulos, setModulos] = useState<ModuloEstado[] | null>(null);
   const [guardandoEstado, setGuardandoEstado] = useState(false);
   const [guardandoPlan, setGuardandoPlan] = useState(false);
+  const [guardandoTema, setGuardandoTema] = useState(false);
   const [moduloGuardando, setModuloGuardando] = useState<Modulo | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -96,6 +104,16 @@ export function SuperAdminEmpresaDetalleScreen({ route, navigation }: NativeStac
         },
       },
     ]);
+  }
+
+  async function onCambiarTema(nuevo: Empresa["tema"]) {
+    if (!empresa || nuevo === empresa.tema) return;
+    setGuardandoTema(true);
+    setError(null);
+    const r = await cambiarTemaEmpresa(empresaId, nuevo);
+    setGuardandoTema(false);
+    if (!r.ok) return setError(r.error);
+    await cargar();
   }
 
   async function onCambiarPlan(nuevo: Plan) {
@@ -176,6 +194,20 @@ export function SuperAdminEmpresaDetalleScreen({ route, navigation }: NativeStac
           </Texto>
         </View>
 
+        <View style={{ gap: tokens.space["2"] }}>
+          <Texto tamano={tokens.size.small} peso="semibold" color={`${tokens.color.text}99`}>
+            Tema visual
+          </Texto>
+          <View style={{ flexDirection: "row", gap: tokens.space["2"], flexWrap: "wrap" }}>
+            {TEMAS.map((t) => (
+              <Chip key={t.valor} marca={marca} activo={t.valor === empresa.tema} label={t.label} onPress={() => onCambiarTema(t.valor)} cargando={guardandoTema} />
+            ))}
+          </View>
+          <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`}>
+            Estilo con que los usuarios de la empresa ven la app, en web y mobile.
+          </Texto>
+        </View>
+
         <View style={{ gap: tokens.space["1"] }}>
           <Texto tamano={tokens.size.small} peso="semibold" color={`${tokens.color.text}99`} style={{ marginBottom: tokens.space["1"] }}>
             Módulos
@@ -209,7 +241,7 @@ export function SuperAdminEmpresaDetalleScreen({ route, navigation }: NativeStac
   );
 }
 
-function Chip({
+export function Chip({
   activo,
   label,
   onPress,

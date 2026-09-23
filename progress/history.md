@@ -47,3 +47,115 @@ Formato:
 - **Verificación:** `npm run audit:tenant` → "Sin hallazgos.", exit 0.
   `./verificar.sh` verde (paso 7 en [OK], 0 hallazgos).
 - **Cierre:** #7 `done`. Baseline de aislamiento = 0.
+
+## 2026-09-11 → 2026-09-23 — Sesiones acumuladas (tareas 1–6, 8–98)
+- **Agente:** varios (Claude, directo y con subagentes)
+- **Plan:** `progress/current.md` no se vació al cerrar cada sesión y
+  llegó a ~6.600 líneas. Se archivó completo, sin editar, en
+  `progress/archivo/current_2026-09-11_a_2026-09-23.md` (detalle de
+  cada tarea, decisiones, incidentes y comandos usados).
+- **Cambios:** tareas cerradas en ese período (estado real en
+  `trabajo_list.json`):
+  - #1 Arreglar eslint en web (Next 16)
+  - #2 Workflow de CI que corre verificar.sh en cada push/PR
+  - #3 Rotar la key del deploy hook de Render expuesta
+  - #4 Smoke test de arranque del backend + 2-3 endpoints críticos
+  - #5 E2E en prod: Mantención de flota + rediseño de PDF de OS
+  - #6 Regenerar CONTEXTO_PROYECTO.md
+  - #8 Sistema de diseño unificado (tokens + packages/ui) y re-migración
+  - #9 Edición de Viajes (Admin/Supervisor) + fotos inicio/término en OS
+  - #10 Flujo de mantención de equipo: bug real de subida + detalle con fotos editables
+  - #11 Bug real (prod): sync de fotos se apila y el registro nunca se crea
+  - #12 Regresión real del fix 11: 'Reintentar ahora' bloqueado en silencio
+  - #13 Elegir foto de galería (no solo cámara) + eliminar en todas las pantallas de fotos
+  - #14 Módulo Levantamientos — Paso 0 (auditoría, sin código)
+  - #15 Módulo Levantamientos — implementación (Pasos 1-5)
+  - #16 Levantamientos (web): Admin puede editar, subir/eliminar fotos y eliminar el levantamiento
+  - #17 Levantamientos (mobile): agregar cola offline — corrige una simplificación apurada
+  - #18 Storybook para packages/ui
+  - #19 Checklist distinto para mantención diaria vs. programa (6 meses) + PDF completo
+  - #20 Bug real: banner "Sin conexión" falso con señal real (5G, 4 barras)
+  - #21 Sistema visual movil v2 -- Paso 0 (auditoria) + primitivas + piloto Mas
+  - #22 Sistema visual movil v2 -- piloto 2: Hoy
+  - #23 Sistema visual movil v2 -- piloto 3: detalle de OS (TrabajoDetalleScreen)
+  - #24 URGENTE: reparar deploy de Render roto desde el 9-sep
+  - #25 Sistema visual movil v2 -- piloto 4 (ultimo): ficha de cliente
+  - #26 Persona de contacto en Clientes (contacto_nombre)
+  - #27 Estandarizar campos de dinero/ciudad/hora/fecha (web + mobile)
+  - #28 Firma rota (mobile), folio de OS invisible en Hoy, naming Trabajo->OS
+  - #29 Fotos de viaje y mantención atoradas en la cola (nunca llegan al backend)
+  - #30 Migrar Agenda/Clientes al sistema visual v2, conectar color_secundario, arreglar gap del Portal del Cliente y el boton Asistente
+  - #31 Migrar TODAS las pantallas mobile restantes al sistema visual v2 (homologar toda la app)
+  - #32 Optimizar GET /api/clientes -- mover agregados a SQL (RPC clientes_resumen)
+  - #33 Optimizar #2 de la revision de rendimiento -- descuento/reversion de stock en 1 RPC atomica
+  - #34 Optimizar #3 de la revision de rendimiento -- revisarCobrosCliente en 1 query batch
+  - #35 Hallazgo menor de la revision de rendimiento -- <img> a next/image en todo el web
+  - #36 Documentar el problema estructural de numeracion de migraciones (sin renumerar)
+  - #37 Migrar informes/secciones/*.tsx y componentes.tsx al sistema visual v2
+  - #38 Parte A -- tipo de campo 'foto' en Tipos de trabajo (fotos incrustadas en el formulario de OS)
+  - #39 Parte B -- que secciones muestra el informe/PDF de OS (configurable por empresa)
+  - #40 Etapas de cotizacion configurables por empresa (pendiente grande, retomado)
+  - #41 Distinguir tipo de item en la Pizarra + folio propio por tipo (OS/CIT/VIA/LEV)
+  - #42 Deslizar entre las 4 pestanas (Pizarra/Agenda/Clientes/Mas)
+  - #43 Migrar web/dashboard/agenda/page.tsx al sistema de diseno ds- (hallazgo 2)
+  - #44 Tema visual 'Taller' (punto 7, antes solo maqueta) + duracion de cita configurable en empresa
+  - #45 Informes personalizados -- v1 acotada (catalogo de widgets existentes + tabla nueva)
+  - #46 Resolver las vulnerabilidades pendientes de npm audit (deferidas de sesiones anteriores)
+  - #47 Icono nuevo (libro azul) + tema "Confianza" (investigacion de mercado con imagenes antes)
+  - #48 CRITICO: el build de produccion en Vercel llevaba ~1 dia roto (recharts sin @reduxjs/toolkit)
+  - #49 Fix: flash de pantalla vacia al entrar a /dashboard/levantamientos
+  - #50 Fix safe-area inferior (Android edge-to-edge) + componente compartido QuickAccessCard
+  - #51 Tema (colores) por empresa en mobile + selector en Perfil + build APK
+  - #52 Nuevo gasto: reordenar descripción/foto + mostrar folio de OS en el picker
+  - #53 Levantamiento: header + folio · Nuevo gasto: crear proveedor/categoría · Selector de día: hoy marcado
+  - #54 Sidebar web: Levantamientos antes que Órdenes de servicio
+  - #55 Levantamiento: fecha de visita + aparece en Pizarra y Agenda (mobile) si está asignado
+  - #56 Folio correlativo: Cliente, Pack de sesiones, Gasto, Proveedor, Cobro
+  - #57 Personas: invitar en modal · Perfiles: roles plegables · Plantillas: encabezado con niveles
+  - #58 Agenda: menú +Nuevo (Cita/OS/Levantamiento) · Levantamiento: hora de visita · Tipos de documento: eliminar + sugerencias
+  - #59 Unificar Tipo de OS y Tipo de Trabajo en un solo catálogo (Tipo de OS/Trabajo)
+  - #60 Portal del cliente movido a Configuración · fix: toggle de Inventario quedaba pegado en 'sin productos'
+  - #61 Form rápido de Nueva Tarea (Agenda): agrega 'Crear Levantamiento' junto a 'Crear Orden de Servicio'
+  - #62 Costo, precio mayorista y precio minorista (opcional por empresa) en Catálogo, OS y Cotización
+  - #63 Fix: borrar una OS daba 500 (ordenes_servicio.trabajo_id sin ON DELETE CASCADE)
+  - #64 Build local APK 1.10.9 (versionCode 50)
+  - #65 Mobile: el Admin ve Levantamientos en 'Más' (antes solo función Técnico/Chofer)
+  - #66 Super-Admin: Restablecer contraseña también confirma el email (email_confirm: true)
+  - #67 Pizarra (mobile): toggle Día/Semana para ver las actividades del día o de la semana
+  - #68 Super-Admin (empresa): "Perfiles y permisos" y "Feature flags (beta)" pasan a ser retráctiles, colapsadas por defecto
+  - #69 Super-Admin (empresa): el resto de las tarjetas también pasan a ser retráctiles
+  - #70 Super-Admin: "Equipo" abierta por defecto + opción de contraseña personalizada al restablecer
+  - #71 Super-Admin: se quita Feature flags (beta) de la página + panel de restablecer contraseña más minimalista
+  - #72 Super-Admin: nueva pantalla "Salud" — dashboard global de monitoreo/observabilidad
+  - #73 Salud (Super-Admin): 4 gráficos mensuales — IA, OS creadas, errores/requests lentos, storage
+  - #74 Se agrega "Editar" a 3 catálogos simples que solo tenían Eliminar (tipos-documento, centros-costo, unidades-medida)
+  - #75 Se agrega el botón "Eliminar orden de servicio" a la ficha de OS (backend ya lo soportaba)
+  - #76 La OS gana un campo "Orden de compra del cliente" (referencia libre, siempre visible en el PDF)
+  - #77 La ficha de OS muestra "Cliente" como su propio campo en Detalle (antes solo aparecía chico en el subtítulo)
+  - #78 Feature completa: Rendiciones (fondo por rendir / caja chica) — migración + backend + web + mobile
+  - #79 Mobile: editar/ver foto del gasto propio en una rendición en borrador + agrupar Gastos/Rendiciones en el menú Más
+  - #80 Mobile: doble tap en Agenda (Mes) para nueva cita + grupo Administración de Más con iconos grandes
+  - #81 Mobile: bajar un poco el boton flotante del Asistente (molestaba la visual)
+  - #82 Dividir el modulo financiero en 3 activables independientes: Gastos/Rendiciones, Cobros, Cotizaciones
+  - #83 Migrar la landing publica y el Logo compartido al sistema de diseno (se sentian dos apps distintas)
+  - #84 Levantamientos: direccion del cliente + investigar bug 1 1 en materiales + descripcion por foto
+  - #85 FASE 1 (spec grande de colaborador/OS/agenda): bug critico Marcar cotizado externamente siempre falla
+  - #86 FASE 2 (spec grande): Colaborador solo ve sus clientes; Asistente IA exclusivo de Admin
+  - #87 FASE 3 (parte 1/2 - backend+PDF): fotos con descripcion en OS, sacar firma del colaborador, cliente no disponible
+  - #88 FASE 3 (parte 2/3): flujo de OS a 3 pasos en mobile (Iniciar/Ejecutar/Cerrar) + llegada/salida visible en web
+  - #89 FASE 3 (parte 3/3): versionado de PDF con Informe IA revisable
+  - #90 FASE 4: Admin agrega materiales a un levantamiento ya completado por el técnico
+  - #91 FASE 5.1: colaborador solo ve sus propios gastos (Gastos y Rendición)
+  - #92 FASE 5.2: colaborador ve su equipo/vehículo asignado con documentos y alertas de vencimiento
+  - #93 FASE 5.3: "Mis trabajos" (historial), Agenda gris para completados, Admin ve historial ajeno
+  - #94 FASE 6: Agenda — filtro por tipo + leyenda de colores (diagnóstico + centralización)
+  - #95 FASE 7: menú web Inventario — análisis (sin cambios de código)
+  - #96 Sistema de diseño: tonos "peligro"/"advertencia" reales (cierra deuda técnica de la Fase 5.2/6)
+  - #97 Super-Admin elige el tema visual (Faena/Taller/Confianza) de cada empresa
+  - #98 Super-Admin elige su propio estilo visual (web + mobile)
+- **Verificación:** cada tarea cerró con `./verificar.sh` en verde (ver
+  el archivo archivado y `resolution` en `trabajo_list.json`).
+- **Cierre:** 98/98 tareas `done`. Migraciones 123–127 aplicadas en dev
+  y prod (verificado 23-sep). Pendientes que no son código: unidad "1"
+  de Hidroservi (la corrige un admin de esa empresa); build EAS cuando
+  se pida. Siguiente tarea de código: paridad de Agenda web/mobile.

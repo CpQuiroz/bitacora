@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import type { CatalogoItem, Cliente, Equipo, Prioridad, TipoOsTrabajo, Usuario } from "@bitacora/shared";
+import type { CatalogoItem, Cliente, Equipo, Prioridad, Usuario } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
@@ -19,15 +19,7 @@ import {
 } from "@/components/ui";
 import { InputMonto } from "@/components/InputMonto";
 import { IconClipboardCheck, IconPlus } from "@/components/icons";
-import dynamic from "next/dynamic";
-import type { Parada } from "@/components/MapaRutas";
-// Leaflet ~148 KB — carga aparte (AUDITORIA_PERFORMANCE_COSTOS.md #7).
-const MapaRutas = dynamic(() => import("@/components/MapaRutas").then((m) => m.MapaRutas), {
-  ssr: false,
-  loading: () => <div className="h-64 animate-pulse rounded-lg bg-surface" />,
-});
 import { CatalogoSelectorModal, type ItemSeleccionadoCatalogo } from "@/components/CatalogoSelectorModal";
-import { SelectCrear } from "@/components/SelectCrear";
 import { ComboboxCliente } from "@/components/ComboboxCliente";
 import { ComboboxResponsable } from "@/components/ComboboxResponsable";
 import { ComboboxEquipo } from "@/components/ComboboxEquipo";
@@ -52,7 +44,6 @@ function NuevaOrdenServicioContenido() {
   const [usuario, setUsuario] = useState<UsuarioShell | null>(null);
   const [equipo, setEquipo] = useState<Usuario[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
-  const [tipos, setTipos] = useState<TipoOsTrabajo[]>([]);
   // Bloque C — activos (maquinaria/vehículos) del cliente, no
   // confundir con "equipo" de arriba (colaboradores).
   const [equipos, setEquipos] = useState<Equipo[]>([]);
@@ -68,8 +59,6 @@ function NuevaOrdenServicioContenido() {
   // ficha ya trae el cliente puesto).
   const [clienteId, setClienteId] = useState(() => searchParams.get("cliente_id") ?? "");
   const [responsableId, setResponsableId] = useState("");
-  const [tipoId, setTipoId] = useState("");
-  const [datosDinamicos, setDatosDinamicos] = useState<Record<string, string>>({});
   const [descripcion, setDescripcion] = useState("");
   const [ordenCompraCliente, setOrdenCompraCliente] = useState("");
   const [fecha, setFecha] = useState(() => new Date().toISOString().slice(0, 10));
@@ -89,11 +78,10 @@ function NuevaOrdenServicioContenido() {
         router.replace("/login");
         return;
       }
-      const [resMe, resEquipo, resClientes, resTipos, resEquipos, resCatalogo] = await Promise.all([
+      const [resMe, resEquipo, resClientes, resEquipos, resCatalogo] = await Promise.all([
         apiFetch("/api/me"),
         apiFetch("/api/usuarios"),
         apiFetch("/api/clientes"),
-        apiFetch("/api/tipos-os-trabajo"),
         apiFetch("/api/equipos"),
         apiFetch("/api/catalogo"),
       ]);
@@ -110,10 +98,6 @@ function NuevaOrdenServicioContenido() {
         if (lista.length > 0) setResponsableId(lista[0].id);
       }
       if (resClientes.ok) setClientes(await resClientes.json());
-      if (resTipos.ok) {
-        const lista: TipoOsTrabajo[] = await resTipos.json();
-        setTipos(lista.filter((t) => t.activo));
-      }
       if (resEquipos.ok) setEquipos(await resEquipos.json());
       if (resCatalogo.ok) setCatalogo(await resCatalogo.json());
     })();
@@ -142,7 +126,6 @@ function NuevaOrdenServicioContenido() {
   }
 
   const clienteSeleccionado = clientes.find((c) => c.id === clienteId);
-  const tipoSeleccionado = tipos.find((t) => t.id === tipoId);
   // Stock actual de un ítem del catálogo, solo si es un producto con
   // control de stock. null = no aplica (servicio, kit, o ítem manual).
   function stockDe(catalogoItemId: string | null): number | null {
@@ -183,8 +166,6 @@ function NuevaOrdenServicioContenido() {
         cliente_id: clienteId,
         equipo_id: equipoIdOS || undefined,
         responsable_id: responsableId,
-        tipo_id: tipoId || undefined,
-        datos: Object.keys(datosDinamicos).length > 0 ? datosDinamicos : undefined,
         descripcion: descripcion.trim(),
         orden_compra_cliente: ordenCompraCliente.trim() || undefined,
         fecha,
@@ -228,19 +209,6 @@ function NuevaOrdenServicioContenido() {
   }
 
   if (!usuario) return null;
-
-  const paradaPreview: Parada[] =
-    clienteSeleccionado && clienteSeleccionado.lat != null && clienteSeleccionado.lng != null
-      ? [
-          {
-            trabajo_id: "preview",
-            cliente_nombre: clienteSeleccionado.nombre,
-            direccion: clienteSeleccionado.direccion,
-            lat: clienteSeleccionado.lat,
-            lng: clienteSeleccionado.lng,
-          },
-        ]
-      : [];
 
   return (
     <DashboardShell usuario={usuario}>
@@ -319,47 +287,8 @@ function NuevaOrdenServicioContenido() {
                   />
                 </div>
               )}
-              <div className="sm:col-span-2">
-                <Label>Tipo de OS/Trabajo</Label>
-                <SelectCrear<TipoOsTrabajo>
-                  value={tipoId}
-                  onChange={(id) => {
-                    setTipoId(id);
-                    setDatosDinamicos({});
-                  }}
-                  opciones={tipos}
-                  endpoint="/api/tipos-os-trabajo"
-                  placeholder="Sin tipo específico"
-                  etiquetaCrear="+ Crear tipo de OS/Trabajo"
-                  onCreado={(nuevo) => setTipos((prev) => [...prev, nuevo])}
-                  gestionHref="/dashboard/configuracion/tipos-os-trabajo"
-                  gestionLabel="Configurar tipos de OS/Trabajo →"
-                />
-                <p className="mt-1 text-xs text-muted">Qué tipo de OS es — define los datos a medir en terreno y su clasificación (color, checklist, tiempo estimado) en el listado.</p>
-              </div>
-              {tipoSeleccionado && tipoSeleccionado.campos.length > 0 && (
-                <div className="grid gap-3 rounded-lg bg-surface-sunken p-3 sm:col-span-2 sm:grid-cols-2">
-                  <p className="text-xs font-medium text-muted sm:col-span-2">Datos medidos — {tipoSeleccionado.nombre}</p>
-                  {tipoSeleccionado.campos.map((campo) => (
-                    <div key={campo.clave}>
-                      <Label>{campo.etiqueta}</Label>
-                      <Input
-                        type={campo.tipo === "numero" ? "number" : campo.tipo === "fecha" ? "date" : "text"}
-                        value={datosDinamicos[campo.clave] ?? ""}
-                        onChange={(e) => setDatosDinamicos((prev) => ({ ...prev, [campo.clave]: e.target.value }))}
-                      />
-                    </div>
-                  ))}
-                  <p className="text-xs text-muted sm:col-span-2">Opcional — el técnico también puede completarlos en terreno.</p>
-                </div>
-              )}
             </div>
 
-            {paradaPreview.length > 0 && (
-              <div className="mt-4">
-                <MapaRutas paradas={paradaPreview} />
-              </div>
-            )}
           </Card>
 
           <Card>

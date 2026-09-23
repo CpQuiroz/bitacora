@@ -4,6 +4,7 @@ import { estadoDocumento } from "@bitacora/shared";
 import { supabase } from "../supabase";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
+import { rolPuedeVerModulo } from "../roles";
 
 export const equiposRouter = Router();
 
@@ -57,6 +58,28 @@ export async function equipoAsignadoAColaborador(empresaId: string, colaboradorI
     .maybeSingle();
   return (data as unknown as { equipo: Equipo } | null)?.equipo ?? null;
 }
+
+// Permisos de escritura (23-sep-2026) — antes NINGÚN handler de este
+// router chequeaba permisos: cualquier usuario autenticado de la
+// empresa (incluido un colaborador) podía crear/editar equipos y
+// asignar/desasignar vehículos. Las lecturas siguen abiertas a propósito
+// (mobile las usa en Viajes y Mantención para elegir equipo/vehículo).
+//   · Vehículo (categoría "Vehículo" o con patente) → módulo "flota".
+//   · Cualquier otro equipo → "registros" (donde vive Equipos en el menú
+//     web) o "flota".
+function esVehiculo(e: { categoria?: unknown; patente?: unknown } | null | undefined): boolean {
+  if (!e) return false;
+  return e.categoria === "Vehículo" || (typeof e.patente === "string" && e.patente.trim() !== "");
+}
+
+async function puedeEscribirEquipo(req: RequestConEmpresa, vehiculo: boolean): Promise<boolean> {
+  const rol = req.rol ?? "colaborador";
+  if (await rolPuedeVerModulo(rol, "flota", req.empresaId)) return true;
+  return !vehiculo && (await rolPuedeVerModulo(rol, "registros", req.empresaId));
+}
+
+const SIN_PERMISO_EQUIPOS = "No tienes permiso para modificar equipos";
+const SIN_PERMISO_FLOTA = "No tienes permiso para gestionar vehículos de la flota";
 
 equiposRouter.get(
   "/",
@@ -196,6 +219,12 @@ equiposRouter.post(
   ah<RequestConEmpresa>(async (req, res) => {
     const { cliente_id, nombre, marca, modelo, numero_serie, categoria, notas, patente, anio, tipo_vehiculo, capacidad_carga, garantia_vencimiento } = req.body ?? {};
 
+    const vehiculo = esVehiculo({ categoria, patente });
+    if (!(await puedeEscribirEquipo(req, vehiculo))) {
+      res.status(403).json({ error: vehiculo ? SIN_PERMISO_FLOTA : SIN_PERMISO_EQUIPOS });
+      return;
+    }
+
     // cliente_id ahora es opcional — sin cliente significa "activo
     // propio de la empresa" (ej. un vehículo de la flota propia).
     if (cliente_id) {
@@ -274,6 +303,11 @@ equiposRouter.post(
     }
     if (filas.length > 500) {
       res.status(400).json({ error: "Máximo 500 filas por importación — dividí el archivo en partes más chicas" });
+      return;
+    }
+    const traeVehiculos = (filas as { categoria?: unknown; patente?: unknown }[]).some((f) => esVehiculo(f));
+    if (!(await puedeEscribirEquipo(req, traeVehiculos))) {
+      res.status(403).json({ error: traeVehiculos ? SIN_PERMISO_FLOTA : SIN_PERMISO_EQUIPOS });
       return;
     }
 
@@ -356,6 +390,18 @@ equiposRouter.patch(
   ah<RequestConEmpresa>(async (req, res) => {
     const { cliente_id, nombre, marca, modelo, numero_serie, categoria, notas, activo, patente, anio, tipo_vehiculo, capacidad_carga, garantia_vencimiento } = req.body ?? {};
     const cambios: Partial<Equipo> = {};
+
+    const { data: actual } = await supabase.from("equipos").select("categoria, patente").eq("empresa_id", req.empresaId!).eq("id", req.params.id).maybeSingle();
+    if (!actual) {
+      res.status(404).json({ error: "Equipo no encontrado" });
+      return;
+    }
+    // Vehículo antes O después del cambio → hace falta "flota".
+    const vehiculo = esVehiculo(actual) || esVehiculo({ categoria, patente });
+    if (!(await puedeEscribirEquipo(req, vehiculo))) {
+      res.status(403).json({ error: vehiculo ? SIN_PERMISO_FLOTA : SIN_PERMISO_EQUIPOS });
+      return;
+    }
 
     if (cliente_id !== undefined) {
       if (cliente_id) {
@@ -447,6 +493,10 @@ equiposRouter.get(
 equiposRouter.post(
   "/:id/asignar",
   ah<RequestConEmpresa>(async (req, res) => {
+    if (!(await rolPuedeVerModulo(req.rol ?? "colaborador", "flota", req.empresaId))) {
+      res.status(403).json({ error: SIN_PERMISO_FLOTA });
+      return;
+    }
     const { colaborador_id, desde } = req.body ?? {};
     if (typeof colaborador_id !== "string" || !colaborador_id.trim()) {
       res.status(400).json({ error: "Falta colaborador_id" });
@@ -496,6 +546,10 @@ equiposRouter.post(
 equiposRouter.post(
   "/:id/desasignar",
   ah<RequestConEmpresa>(async (req, res) => {
+    if (!(await rolPuedeVerModulo(req.rol ?? "colaborador", "flota", req.empresaId))) {
+      res.status(403).json({ error: SIN_PERMISO_FLOTA });
+      return;
+    }
     const { error, count } = await supabase
       .from("vehiculo_asignaciones")
       .update({ hasta: new Date().toISOString().slice(0, 10) }, { count: "exact" })

@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, RefreshControl, ScrollView, View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Calendar, ChevronLeft, ChevronRight, Plus, CalendarX2, Info, Search } from "lucide-react-native";
+import { Calendar, ChevronLeft, ChevronRight, ClipboardCheck, Plus, CalendarX2, Info, Search } from "lucide-react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { EstadoAgendaUnificado, EstadoTarea, TipoEventoAgenda } from "@bitacora/shared";
 import {
   estadoAgendaDeLevantamiento,
+  estadoAgendaDeOS,
   ETIQUETA_ESTADO_AGENDA,
   ETIQUETA_TIPO_AGENDA,
   FUNCIONES_LEVANTAMIENTOS,
@@ -28,7 +29,7 @@ import {
 } from "@bitacora/ui/native";
 import { OfflineBanner } from "../../components/OfflineBanner";
 import { useAuth } from "../auth/AuthContext";
-import { listarTareasRango, type TareaConDatos } from "../../services/agenda";
+import { listarOSRango, listarTareasRango, type OSAgenda, type TareaConDatos } from "../../services/agenda";
 import { listarMisLevantamientos, type LevantamientoResumen } from "../../services/levantamientos";
 import type { AgendaStackParamList } from "../../shell/navigation/types";
 
@@ -81,9 +82,9 @@ function colorPorEstadoAgenda(estado: EstadoAgendaUnificado, marca: Marca): stri
 }
 
 const CLAVE_FILTRO_TIPO = "agenda:filtro-tipo";
-// OS no aparece en la Agenda mobile hoy (ver diagnóstico 6.1) — solo
-// cita/levantamiento tienen ícono acá.
-const ICONO_TIPO: Record<"cita" | "levantamiento", typeof Calendar> = { cita: Calendar, levantamiento: Search };
+// Ícono por tipo — mismos que ICONO_TIPO_AGENDA (packages/shared). OS
+// entra en la Agenda mobile desde el 23-sep-2026 (paridad con la web).
+const ICONO_TIPO: Record<TipoEventoAgenda, typeof Calendar> = { cita: Calendar, os: ClipboardCheck, levantamiento: Search };
 
 type Modo = "mes" | "semana" | "dia";
 let ultimoModo: Modo = "mes";
@@ -135,6 +136,9 @@ export function AgendaScreen({ navigation }: NativeStackScreenProps<AgendaStackP
   // (Promise.allSettled más abajo), no rompe la agenda de citas.
   const funcion = auth.fase === "listo" ? auth.usuario.funcion : null;
   const incluirLevantamientos = funcion != null && FUNCIONES_LEVANTAMIENTOS.includes(funcion);
+  // OS (paridad con la Agenda web, 23-sep-2026): solo si la empresa
+  // tiene el módulo; el backend ya limita a un colaborador a las suyas.
+  const incluirOS = auth.fase === "listo" && auth.modulosVisibles.includes("ordenes_servicio");
 
   const hoy = new Date();
   const hoyKey = clave(hoy);
@@ -143,12 +147,12 @@ export function AgendaScreen({ navigation }: NativeStackScreenProps<AgendaStackP
   const [ancla, setAncla] = useState(hoyKey);
   const [tareas, setTareas] = useState<TareaConDatos[] | null>(null);
   const [levantamientos, setLevantamientos] = useState<LevantamientoResumen[]>([]);
+  const [ordenes, setOrdenes] = useState<OSAgenda[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [refrescando, setRefrescando] = useState(false);
   const [guardadoEn, setGuardadoEn] = useState<number | undefined>();
-  // Fase 6.2 — filtro por tipo (Cita/Levantamiento; OS no aparece en la
-  // Agenda mobile hoy, ver diagnóstico 6.1). Vacío = todos. Se recuerda
-  // entre sesiones (AsyncStorage).
+  // Fase 6.2 — filtro por tipo (Cita/OS/Levantamiento). Vacío = todos.
+  // Se recuerda entre sesiones (AsyncStorage).
   const [tipoFiltro, setTipoFiltro] = useState<Set<TipoEventoAgenda>>(new Set());
   const [leyendaAbierta, setLeyendaAbierta] = useState(false);
 
@@ -201,13 +205,18 @@ export function AgendaScreen({ navigation }: NativeStackScreenProps<AgendaStackP
               .then(setLevantamientos)
               .catch(() => setLevantamientos([]))
           : Promise.resolve(setLevantamientos([])),
+        incluirOS
+          ? listarOSRango(desde, hasta)
+              .then(setOrdenes)
+              .catch(() => setOrdenes([]))
+          : Promise.resolve(setOrdenes([])),
       ]);
       setTareas(r.tareas);
       setGuardadoEn(r.desdeCache ? r.guardadoEn : undefined);
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo cargar la agenda");
     }
-  }, [desde, hasta, incluirLevantamientos]);
+  }, [desde, hasta, incluirLevantamientos, incluirOS]);
 
   useEffect(() => {
     setTareas(null);
@@ -223,6 +232,7 @@ export function AgendaScreen({ navigation }: NativeStackScreenProps<AgendaStackP
 
   const muestraCitas = tipoFiltro.size === 0 || tipoFiltro.has("cita");
   const muestraLevantamientos = tipoFiltro.size === 0 || tipoFiltro.has("levantamiento");
+  const muestraOS = tipoFiltro.size === 0 || tipoFiltro.has("os");
 
   const porDia = useMemo(() => {
     const m = new Map<string, TareaConDatos[]>();
@@ -255,6 +265,17 @@ export function AgendaScreen({ navigation }: NativeStackScreenProps<AgendaStackP
     return m;
   }, [levantamientos, muestraLevantamientos]);
 
+  const porDiaOS = useMemo(() => {
+    const m = new Map<string, OSAgenda[]>();
+    if (!muestraOS) return m;
+    for (const o of ordenes) {
+      if (!m.has(o.fecha)) m.set(o.fecha, []);
+      m.get(o.fecha)!.push(o);
+    }
+    for (const arr of m.values()) arr.sort((a, b) => (a.hora_programada ?? "99").localeCompare(b.hora_programada ?? "99"));
+    return m;
+  }, [ordenes, muestraOS]);
+
   function mover(delta: number) {
     if (modo === "dia") setAncla(clave(sumarDias(anclaDate, delta)));
     else if (modo === "semana") setAncla(clave(sumarDias(anclaDate, delta * 7)));
@@ -277,11 +298,15 @@ export function AgendaScreen({ navigation }: NativeStackScreenProps<AgendaStackP
 
   const abrirCita = (item: TareaConDatos) => navigation.navigate("TareaDetalle", { tareaId: item.id, titulo: item.titulo });
   const abrirLevantamiento = (item: LevantamientoResumen) => navigation.navigate("LevantamientoDetalle", { id: item.id });
+  const abrirOS = (item: OSAgenda) =>
+    navigation.navigate("Trabajos", { screen: "TrabajoDetalle", params: { trabajoId: item.id, titulo: item.cliente_info?.nombre ?? item.cliente } });
   const nuevaCita = (fecha?: string) => navigation.navigate("NuevaCita", { fecha: fecha && fecha >= hoyKey ? fecha : undefined });
   const verDia = (k: string) => {
     setAncla(k);
     setModo("dia");
   };
+
+  const tiposVisibles: TipoEventoAgenda[] = ["cita", ...(incluirOS ? (["os"] as const) : []), ...(incluirLevantamientos ? (["levantamiento"] as const) : [])];
 
   const filtrosModo = {
     opciones: [
@@ -342,11 +367,11 @@ export function AgendaScreen({ navigation }: NativeStackScreenProps<AgendaStackP
         </Pressable>
       </View>
 
-      {/* Fase 6.2/6.4 — chips de tipo (Cita/Levantamiento, combinable
+      {/* Fase 6.2/6.4 — chips de tipo (Cita/OS/Levantamiento, combinable
           con Mes/Sem/Día del ScreenHeader) + botón de leyenda. */}
       <View style={{ flexDirection: "row", alignItems: "center", gap: tokens.space["2"], paddingHorizontal: tokens.space["4"], paddingBottom: tokens.space["2"] }}>
-        {(["cita", ...(incluirLevantamientos ? (["levantamiento"] as const) : [])] as TipoEventoAgenda[]).map((t) => {
-          const Icono = ICONO_TIPO[t as "cita" | "levantamiento"];
+        {tiposVisibles.map((t) => {
+          const Icono = ICONO_TIPO[t];
           const activo = tipoFiltro.has(t);
           return (
             <Pressable
@@ -383,10 +408,12 @@ export function AgendaScreen({ navigation }: NativeStackScreenProps<AgendaStackP
           anclaKey={ancla}
           porDia={porDia}
           porDiaLevantamientos={porDiaLevantamientos}
+          porDiaOS={porDiaOS}
           onDia={(k) => setAncla(k)}
           onNuevaCita={nuevaCita}
           onCita={abrirCita}
           onLevantamiento={abrirLevantamiento}
+          onOS={abrirOS}
           esGestion={esGestion}
           refrescando={refrescando}
           onRefresh={onRefresh}
@@ -398,9 +425,11 @@ export function AgendaScreen({ navigation }: NativeStackScreenProps<AgendaStackP
           hoyKey={hoyKey}
           porDia={porDia}
           porDiaLevantamientos={porDiaLevantamientos}
+          porDiaOS={porDiaOS}
           onDia={verDia}
           onCita={abrirCita}
           onLevantamiento={abrirLevantamiento}
+          onOS={abrirOS}
           esGestion={esGestion}
           refrescando={refrescando}
           onRefresh={onRefresh}
@@ -413,9 +442,11 @@ export function AgendaScreen({ navigation }: NativeStackScreenProps<AgendaStackP
           hoyKey={hoyKey}
           citas={porDia.get(ancla) ?? []}
           levantamientos={porDiaLevantamientos.get(ancla) ?? []}
+          ordenes={porDiaOS.get(ancla) ?? []}
           onDia={(k) => setAncla(k)}
           onCita={abrirCita}
           onLevantamiento={abrirLevantamiento}
+          onOS={abrirOS}
           marca={marca}
         />
       )}
@@ -467,7 +498,7 @@ export function AgendaScreen({ navigation }: NativeStackScreenProps<AgendaStackP
             <Texto tamano={tokens.size.caption} peso="semibold" color={`${tokens.color.text}80`} style={{ textTransform: "uppercase", letterSpacing: 1 }}>
               Ícono = tipo
             </Texto>
-            {(["cita", "levantamiento"] as const).map((t) => {
+            {tiposVisibles.map((t) => {
               const Icono = ICONO_TIPO[t];
               return (
                 <View key={t} style={{ flexDirection: "row", alignItems: "center", gap: tokens.space["2"] }}>
@@ -490,18 +521,70 @@ export function AgendaScreen({ navigation }: NativeStackScreenProps<AgendaStackP
 // Cada bar(r)ita por su propio estado (color=estado, ver
 // colorPorEstadoAgenda arriba) — antes el levantamiento siempre salía
 // en accent2 sin importar si estaba activo, completado o rechazado.
-function BarrasDia({ citas, levantamientos = [], marca }: { citas: TareaConDatos[]; levantamientos?: LevantamientoResumen[]; marca: Marca }) {
+function BarrasDia({
+  citas,
+  levantamientos = [],
+  ordenes = [],
+  marca,
+}: {
+  citas: TareaConDatos[];
+  levantamientos?: LevantamientoResumen[];
+  ordenes?: OSAgenda[];
+  marca: Marca;
+}) {
+  // Hasta 3 barritas por día, en orden cita → OS → levantamiento.
+  const colores = [
+    ...citas.map((c) => ({ id: c.id, color: colorEstado(c.estado, marca) })),
+    ...ordenes.map((o) => ({ id: o.id, color: colorPorEstadoAgenda(estadoAgendaDeOS(o.estado, o.orden?.estado_os ?? null), marca) })),
+    ...levantamientos.map((l) => ({ id: l.id, color: colorPorEstadoAgenda(estadoAgendaDeLevantamiento(l.estado), marca) })),
+  ].slice(0, 3);
   return (
     <View style={{ flexDirection: "row", gap: 2, marginTop: 3, height: 4 }}>
-      {citas.slice(0, 3).map((c) => (
-        <View key={c.id} style={{ width: 10, height: 4, borderRadius: 1, backgroundColor: colorEstado(c.estado, marca) }} />
+      {colores.map((b) => (
+        <View key={b.id} style={{ width: 10, height: 4, borderRadius: 1, backgroundColor: b.color }} />
       ))}
-      {citas.length < 3
-        ? levantamientos.slice(0, 3 - citas.length).map((l) => (
-            <View key={l.id} style={{ width: 10, height: 4, borderRadius: 1, backgroundColor: colorPorEstadoAgenda(estadoAgendaDeLevantamiento(l.estado), marca) }} />
-          ))
-        : null}
     </View>
+  );
+}
+
+// OS en el calendario (paridad con la web). Terminada/cancelada se
+// atenúa igual que un levantamiento terminado — sigue en su día.
+function FilaOS({ item, onPress, marca }: { item: OSAgenda; onPress: () => void; marca: Marca }) {
+  const estado = estadoAgendaDeOS(item.estado, item.orden?.estado_os ?? null);
+  const terminada = estado === "completado" || estado === "cancelado";
+  const IconoTipo = ICONO_TIPO.os;
+  const folio = formatearFolio("OS", item.orden?.folio);
+  return (
+    <Pressable
+      onPress={onPress}
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        gap: tokens.space["3"],
+        paddingVertical: tokens.space["2"] * 1.25,
+        borderBottomWidth: 1,
+        borderBottomColor: tokens.color.divider,
+        opacity: terminada ? 0.55 : 1,
+      }}
+    >
+      <Texto tamano={tokens.size.small} peso="semibold" color={tokens.color.text} style={{ width: 46, fontVariant: ["tabular-nums"] }}>
+        {item.hora_programada ? item.hora_programada.slice(0, 5) : "--:--"}
+      </Texto>
+      <View style={{ flex: 1 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+          <IconoTipo size={13} strokeWidth={2.5} color={`${tokens.color.text}80`} />
+          <Texto tamano={tokens.size.h5} peso="semibold" color={tokens.color.text} numberOfLines={1}>
+            {item.cliente_info?.nombre ?? item.cliente}
+          </Texto>
+        </View>
+        <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`} numberOfLines={1}>
+          {folio ? `${folio} · ` : ""}
+          {ETIQUETA_ESTADO_AGENDA[estado]}
+          {item.responsable?.nombre ? ` · ${item.responsable.nombre}` : ""}
+        </Texto>
+      </View>
+      <View style={{ width: 4, alignSelf: "stretch", borderRadius: 2, backgroundColor: colorPorEstadoAgenda(estado, marca) }} />
+    </Pressable>
   );
 }
 
@@ -553,10 +636,12 @@ function VistaMes({
   anclaKey,
   porDia,
   porDiaLevantamientos,
+  porDiaOS,
   onDia,
   onNuevaCita,
   onCita,
   onLevantamiento,
+  onOS,
   esGestion,
   refrescando,
   onRefresh,
@@ -567,10 +652,12 @@ function VistaMes({
   anclaKey: string;
   porDia: Map<string, TareaConDatos[]>;
   porDiaLevantamientos: Map<string, LevantamientoResumen[]>;
+  porDiaOS: Map<string, OSAgenda[]>;
   onDia: (k: string) => void;
   onNuevaCita: (k: string) => void;
   onCita: (c: TareaConDatos) => void;
   onLevantamiento: (l: LevantamientoResumen) => void;
+  onOS: (o: OSAgenda) => void;
   esGestion: boolean;
   refrescando: boolean;
   onRefresh: () => void;
@@ -588,6 +675,7 @@ function VistaMes({
 
   const delDia = porDia.get(anclaKey) ?? [];
   const levDelDia = porDiaLevantamientos.get(anclaKey) ?? [];
+  const osDelDia = porDiaOS.get(anclaKey) ?? [];
   const d = new Date(anclaKey + "T00:00:00");
 
   return (
@@ -646,7 +734,7 @@ function VistaMes({
                     {cd.getDate()}
                   </Texto>
                 </View>
-                <BarrasDia citas={porDia.get(k) ?? []} levantamientos={porDiaLevantamientos.get(k) ?? []} marca={marca} />
+                <BarrasDia citas={porDia.get(k) ?? []} ordenes={porDiaOS.get(k) ?? []} levantamientos={porDiaLevantamientos.get(k) ?? []} marca={marca} />
               </Pressable>
             );
           })}
@@ -661,12 +749,15 @@ function VistaMes({
         <Texto tamano={tokens.size.caption} color={tokens.color.text + "66"}>
           Doble toque en un día del calendario para agendar una cita nueva.
         </Texto>
-        {delDia.length === 0 && levDelDia.length === 0 ? (
+        {delDia.length === 0 && levDelDia.length === 0 && osDelDia.length === 0 ? (
           <Texto tamano={tokens.size.small} color={tokens.color.text + "99"}>
-            Sin citas este día.
+            Sin eventos este día.
           </Texto>
         ) : (
           <>
+            {osDelDia.map((o) => (
+              <FilaOS key={o.id} item={o} onPress={() => onOS(o)} marca={marca} />
+            ))}
             {levDelDia.map((l) => (
               <FilaLevantamiento key={l.id} item={l} onPress={() => onLevantamiento(l)} marca={marca} />
             ))}
@@ -687,25 +778,31 @@ function VistaSemana({
   onDia,
   onCita,
   onLevantamiento,
+  onOS,
   esGestion,
   refrescando,
   onRefresh,
   marca,
   porDiaLevantamientos,
+  porDiaOS,
 }: {
   dias: Date[];
   hoyKey: string;
   porDia: Map<string, TareaConDatos[]>;
   porDiaLevantamientos: Map<string, LevantamientoResumen[]>;
+  porDiaOS: Map<string, OSAgenda[]>;
   onDia: (k: string) => void;
   onCita: (c: TareaConDatos) => void;
   onLevantamiento: (l: LevantamientoResumen) => void;
+  onOS: (o: OSAgenda) => void;
   esGestion: boolean;
   refrescando: boolean;
   onRefresh: () => void;
   marca: Marca;
 }) {
-  const conCitas = dias.map(clave).filter((k) => (porDia.get(k)?.length ?? 0) > 0 || (porDiaLevantamientos.get(k)?.length ?? 0) > 0);
+  const conCitas = dias
+    .map(clave)
+    .filter((k) => (porDia.get(k)?.length ?? 0) > 0 || (porDiaLevantamientos.get(k)?.length ?? 0) > 0 || (porDiaOS.get(k)?.length ?? 0) > 0);
   return (
     <>
       <View
@@ -740,7 +837,7 @@ function VistaSemana({
               <Texto tamano={tokens.size.h5} color={tokens.color.text} style={{ fontVariant: ["tabular-nums"] }}>
                 {d.getDate()}
               </Texto>
-              <BarrasDia citas={porDia.get(k) ?? []} levantamientos={porDiaLevantamientos.get(k) ?? []} marca={marca} />
+              <BarrasDia citas={porDia.get(k) ?? []} ordenes={porDiaOS.get(k) ?? []} levantamientos={porDiaLevantamientos.get(k) ?? []} marca={marca} />
             </Pressable>
           );
         })}
@@ -751,7 +848,7 @@ function VistaSemana({
         refreshControl={<RefreshControl refreshing={refrescando} onRefresh={onRefresh} />}
       >
         {conCitas.length === 0 ? (
-          <EmptyState icono={<CalendarX2 size={32} strokeWidth={2.75} color={tokens.color.accent2Ramp["800"]} />} titulo="Sin citas esta semana" mensaje="Toca + para agendar una." />
+          <EmptyState icono={<CalendarX2 size={32} strokeWidth={2.75} color={tokens.color.accent2Ramp["800"]} />} titulo="Sin eventos esta semana" mensaje="Toca + para agendar una." />
         ) : (
           conCitas.map((k) => {
             const d = new Date(k + "T00:00:00");
@@ -760,6 +857,9 @@ function VistaSemana({
                 <Texto tamano={tokens.size.h5} peso="semibold" color={tokens.color.text} style={{ textTransform: "capitalize" }}>
                   {k === hoyKey ? "Hoy" : `${DIAS_LARGO[d.getDay()].slice(0, 3)} ${d.getDate()}`}
                 </Texto>
+                {(porDiaOS.get(k) ?? []).map((o) => (
+                  <FilaOS key={o.id} item={o} onPress={() => onOS(o)} marca={marca} />
+                ))}
                 {(porDiaLevantamientos.get(k) ?? []).map((l) => (
                   <FilaLevantamiento key={l.id} item={l} onPress={() => onLevantamiento(l)} marca={marca} />
                 ))}
@@ -781,9 +881,11 @@ function VistaDia({
   hoyKey,
   citas,
   levantamientos,
+  ordenes,
   onDia,
   onCita,
   onLevantamiento,
+  onOS,
   marca,
 }: {
   anclaDate: Date;
@@ -791,9 +893,11 @@ function VistaDia({
   hoyKey: string;
   citas: TareaConDatos[];
   levantamientos: LevantamientoResumen[];
+  ordenes: OSAgenda[];
   onDia: (k: string) => void;
   onCita: (c: TareaConDatos) => void;
   onLevantamiento: (l: LevantamientoResumen) => void;
+  onOS: (o: OSAgenda) => void;
   marca: Marca;
 }) {
   const scrollRef = useRef<ScrollView>(null);
@@ -849,12 +953,14 @@ function VistaDia({
         })}
       </View>
 
-      {/* Levantamientos agendados este día: sin hora (fecha_visita es
-          solo fecha), así que no entran en la grilla horaria de abajo —
-          van fijos arriba, mismo criterio que un evento "todo el día"
-          en un calendario. */}
-      {levantamientos.length > 0 ? (
+      {/* OS y levantamientos del día: van fijos arriba, fuera de la
+          grilla horaria (que es de citas, con duración). Levantamientos
+          no tienen hora; las OS muestran su hora programada en la fila. */}
+      {levantamientos.length > 0 || ordenes.length > 0 ? (
         <View style={{ paddingHorizontal: tokens.space["4"], paddingTop: tokens.space["2"], paddingBottom: tokens.space["1"], borderBottomWidth: 1, borderBottomColor: tokens.color.divider }}>
+          {ordenes.map((o) => (
+            <FilaOS key={o.id} item={o} onPress={() => onOS(o)} marca={marca} />
+          ))}
           {levantamientos.map((l) => (
             <FilaLevantamiento key={l.id} item={l} onPress={() => onLevantamiento(l)} marca={marca} />
           ))}

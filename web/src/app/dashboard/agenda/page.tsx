@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import type {
   Cliente,
   EstadoTarea,
+  Levantamiento,
   Modulo,
   OrdenServicio,
   PaqueteSesionesConSaldo,
@@ -13,7 +14,7 @@ import type {
   Trabajo,
   Usuario,
 } from "@bitacora/shared";
-import { puedeVerModulo, formatearFolio, estadoAgendaDeOS, estadoAgendaDeTarea, ETIQUETA_ESTADO_AGENDA, ETIQUETA_TIPO_AGENDA, TONO_ESTADO_AGENDA, type EstadoAgendaUnificado, type TipoEventoAgenda } from "@bitacora/shared";
+import { puedeVerModulo, formatearFolio, estadoAgendaDeLevantamiento, estadoAgendaDeOS, estadoAgendaDeTarea, ETIQUETA_ESTADO_AGENDA, ETIQUETA_TIPO_AGENDA, TONO_ESTADO_AGENDA, type EstadoAgendaUnificado, type TipoEventoAgenda } from "@bitacora/shared";
 import { Calendar, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, ClipboardCheck, Info, Plus, Search, Wrench } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
@@ -35,6 +36,12 @@ type TareaListado = Tarea & {
   responsable: { nombre: string } | null;
 };
 
+// GET /api/levantamientos (con ?desde&hasta sobre fecha_visita).
+type LevantamientoListado = Levantamiento & {
+  cliente: { id: string; nombre: string } | null;
+  tecnico: { id: string; nombre: string } | null;
+};
+
 // Fase 6.3 (23-sep-2026, pedido explícito): estado→tono y tipo→ícono/
 // etiqueta viven en @bitacora/shared (agendaColores.ts) — una sola
 // fuente para web y mobile. Antes este archivo tenía su propia copia
@@ -50,7 +57,7 @@ type EventoAgenda = {
   estadoAgenda: EstadoAgenda;
   titulo: string;
   subtitulo: string;
-  origen: OrdenListado | TareaListado;
+  origen: OrdenListado | TareaListado | LevantamientoListado;
 };
 
 const ESTADOS_AGENDA: { valor: EstadoAgenda; etiqueta: string; tono: TonoEstado }[] = (
@@ -79,9 +86,8 @@ function estadoInfo(estado: EstadoAgenda) {
 
 const PRIORIDADES: Prioridad[] = ["alta", "media", "baja"];
 
-// Ícono por tipo (6.3: color=estado, ícono+etiqueta=tipo — Levantamiento
-// no se muestra hoy en la Agenda web, ver diagnóstico 6.1, así que acá
-// solo hacen falta "os"/"cita").
+// Ícono por tipo (6.3: color=estado, ícono+etiqueta=tipo). Levantamiento
+// entra en la Agenda web desde el 23-sep-2026 (paridad con mobile).
 const ICONO_TIPO: Record<TipoEventoAgenda, typeof Calendar> = { cita: Calendar, os: ClipboardCheck, levantamiento: Search };
 
 function eventoDeOrden(o: OrdenListado): EventoAgenda {
@@ -109,6 +115,23 @@ function eventoDeTarea(t: TareaListado): EventoAgenda {
     titulo: t.titulo,
     subtitulo: folio ? `${folio} · ${subtituloBase}` : subtituloBase,
     origen: t,
+  };
+}
+
+// Solo levantamientos con fecha_visita llegan acá (ver cargar) — sin
+// fecha no tienen un día donde dibujarse (mismo criterio que mobile).
+function eventoDeLevantamiento(l: LevantamientoListado): EventoAgenda {
+  const folio = formatearFolio("LEV", l.folio);
+  const detalle = l.tecnico?.nombre ?? l.descripcion_requerimiento ?? "Sin técnico asignado";
+  return {
+    id: l.id,
+    tipo: "levantamiento",
+    fecha: l.fecha_visita!,
+    hora: l.hora_visita,
+    estadoAgenda: estadoAgendaDeLevantamiento(l.estado),
+    titulo: l.cliente?.nombre ?? "Levantamiento",
+    subtitulo: folio ? `${folio} · ${detalle}` : detalle,
+    origen: l,
   };
 }
 
@@ -153,13 +176,13 @@ function AgendaContenido() {
   const [fechaActual, setFechaActual] = useState(() => new Date());
   const [ordenes, setOrdenes] = useState<OrdenListado[] | null>(null);
   const [tareas, setTareas] = useState<TareaListado[] | null>(null);
+  const [levantamientos, setLevantamientos] = useState<LevantamientoListado[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [filtros, setFiltros] = useState<Set<EstadoAgenda>>(new Set());
   // Fase 6.2 — filtro por tipo, combinable con el de estado (AND).
   // Vacío = todos (mismo criterio que `filtros`). Se recuerda entre
   // sesiones (localStorage, mismo patrón que CLAVE_COLAPSADO del
-  // sidebar) — Levantamiento no está acá porque la Agenda web no lo
-  // muestra hoy (ver diagnóstico 6.1).
+  // sidebar).
   const [tipoFiltros, setTipoFiltros] = useState<Set<TipoEventoAgenda>>(new Set());
   const [leyendaAbierta, setLeyendaAbierta] = useState(false);
   const [diaSeleccionado, setDiaSeleccionado] = useState<string | null>(null);
@@ -226,9 +249,12 @@ function AgendaContenido() {
       hasta = fechaActual;
     }
     const params = new URLSearchParams({ desde: fmtLocal(desde), hasta: fmtLocal(hasta) });
-    const [resOrdenes, resTareas] = await Promise.all([
+    const [resOrdenes, resTareas, resLevantamientos] = await Promise.all([
       apiFetch(`/api/ordenes-servicio?${params.toString()}`),
       apiFetch(`/api/tareas?${params.toString()}`),
+      // Tolerante a error a propósito: sin el módulo (403) o sin permiso
+      // de ver levantamientos, la agenda de citas/OS sigue igual.
+      apiFetch(`/api/levantamientos?${params.toString()}`).catch(() => null),
     ]);
     if (!resOrdenes.ok) {
       setError("No se pudieron cargar las órdenes de servicio");
@@ -236,6 +262,12 @@ function AgendaContenido() {
     }
     setOrdenes(await resOrdenes.json());
     if (resTareas.ok) setTareas(await resTareas.json());
+    if (resLevantamientos?.ok) {
+      const lista: LevantamientoListado[] = await resLevantamientos.json();
+      setLevantamientos(lista.filter((l) => l.fecha_visita));
+    } else {
+      setLevantamientos([]);
+    }
   }, [fechaActual, vista]);
 
   useEffect(() => {
@@ -332,8 +364,8 @@ function AgendaContenido() {
   }, []);
 
   const eventos = useMemo(() => {
-    return [...(ordenes ?? []).map(eventoDeOrden), ...(tareas ?? []).map(eventoDeTarea)];
-  }, [ordenes, tareas]);
+    return [...(ordenes ?? []).map(eventoDeOrden), ...(tareas ?? []).map(eventoDeTarea), ...levantamientos.map(eventoDeLevantamiento)];
+  }, [ordenes, tareas, levantamientos]);
 
   const eventosFiltrados = useMemo(() => {
     return eventos.filter((e) => (filtros.size === 0 || filtros.has(e.estadoAgenda)) && (tipoFiltros.size === 0 || tipoFiltros.has(e.tipo)));
@@ -611,6 +643,8 @@ function AgendaContenido() {
   function abrirEvento(e: EventoAgenda) {
     if (e.tipo === "os") {
       router.push(`/dashboard/ordenes/${e.id}`);
+    } else if (e.tipo === "levantamiento") {
+      router.push(`/dashboard/levantamientos?id=${e.id}`);
     } else {
       abrirEdicionTarea(e.origen as TareaListado);
     }
@@ -1061,12 +1095,12 @@ function AgendaContenido() {
 
           {/* Fase 6.2 — segunda fila de chips, eje independiente (tipo,
               no estado) — mismo look que la fila de arriba. Solo los
-              tipos con módulo activo (OS necesita "ordenes_servicio";
-              Cita no tiene gate propio, si se llegó a esta página el
+              tipos con módulo activo (OS necesita "ordenes_servicio",
+              Levantamiento necesita "levantamientos"; Cita no tiene gate propio, si se llegó a esta página el
               módulo Agenda ya está activo). */}
           <div className="mb-ds-4 flex flex-wrap items-center gap-ds-2 border-t border-ds-divider pt-ds-3">
-            {(["cita", "os"] as TipoEventoAgenda[])
-              .filter((t) => t !== "os" || puedeCrearOS)
+            {(["cita", "os", "levantamiento"] as TipoEventoAgenda[])
+              .filter((t) => (t !== "os" || puedeCrearOS) && (t !== "levantamiento" || puedeCrearLevantamiento))
               .map((t) => {
                 const Icono = ICONO_TIPO[t];
                 const activo = tipoFiltros.has(t);
@@ -1119,7 +1153,7 @@ function AgendaContenido() {
               </div>
               <div className="h-4 w-px bg-ds-divider" />
               <div className="flex flex-wrap items-center gap-ds-3">
-                {(["cita", "os"] as TipoEventoAgenda[]).map((t) => {
+                {(["cita", "os", "levantamiento"] as TipoEventoAgenda[]).map((t) => {
                   const Icono = ICONO_TIPO[t];
                   return (
                     <span key={t} className="flex items-center gap-1 font-ds-body text-ds-micro text-ds-text/70">

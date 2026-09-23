@@ -1,4 +1,4 @@
-import type { Cliente, EstadoTarea, Prioridad, Tarea, Usuario } from "@bitacora/shared";
+import type { Cliente, EstadoOS, EstadoTarea, EstadoTrabajo, Prioridad, Tarea, Usuario } from "@bitacora/shared";
 import { apiFetch, apiJson } from "./api";
 import { encolar } from "./sync/queue";
 import { guardarCache, leerCache } from "./sync/cache";
@@ -26,6 +26,32 @@ export async function listarTareasRango(desde: string, hasta: string): Promise<L
   const cache = await leerCache<TareaConDatos[]>(clave);
   if (cache) return { tareas: cache.datos, desdeCache: true, guardadoEn: cache.guardadoEn };
   throw new Error(res.error);
+}
+
+// OS en el calendario (paridad con la Agenda web, 23-sep-2026). Mismo
+// endpoint que la web (GET /api/ordenes-servicio?desde&hasta): el
+// backend ya limita a un colaborador a sus propias OS. Tolerante a
+// error a propósito — si falla, la agenda de citas sigue funcionando.
+export type OSAgenda = {
+  id: string;
+  fecha: string;
+  hora_programada: string | null;
+  cliente: string;
+  estado: EstadoTrabajo;
+  cliente_info: { nombre: string } | null;
+  responsable: { nombre: string } | null;
+  orden: { folio: number | null; estado_os: EstadoOS } | null;
+};
+
+export async function listarOSRango(desde: string, hasta: string): Promise<OSAgenda[]> {
+  const clave = `agenda:os:${desde}`;
+  const res = await apiJson<OSAgenda[]>(`/api/ordenes-servicio?desde=${desde}&hasta=${hasta}`);
+  if (res.ok) {
+    await guardarCache(clave, res.data);
+    return res.data;
+  }
+  const cache = await leerCache<OSAgenda[]>(clave);
+  return cache?.datos ?? [];
 }
 
 export type DetalleTarea = { tarea: TareaConDatos; desdeCache: boolean; guardadoEn?: number };

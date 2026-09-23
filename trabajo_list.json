@@ -1499,6 +1499,106 @@
       ],
       "status": "done",
       "resolution": "Los colores semanticos son un bloque nuevo e independiente de la marca por tenant (no varian entre los 3 temas de empresa, a diferencia de accent/accent2) -- reusa los mismos valores hex que ya tenia el sistema de tokens VIEJO (globals.css --danger/--warning) para que ambos sistemas (viejo y nuevo) muestren el mismo rojo/amarillo. El cambio en MAPA_ESTADO_TONO (una sola linea por estado) propaga el fix a TODOS los usos existentes de StatusBadge con esos estados sin tocar cada pantalla -- salvo los que forzaban tonoForzado a mano, que se limpiaron. No se migro TONO_SUSCRIPCION (plan/page.tsx) ni otros mapeos locales de estados no relacionados a documentos/vencimiento -- fuera de alcance de este pedido. tsc + verificar.sh en verde."
+    },
+    {
+      "id": 97,
+      "name": "superadmin_tema_por_empresa",
+      "title": "Super-Admin elige el tema visual (Faena/Taller/Confianza) de cada empresa",
+      "description": "Pedido: 'agregale al superadmin que pueda elegir el estilo que quiere para ver la app en web y mobile'. Confirmado con AskUserQuestion: por empresa (no global). empresas.tema ya existe (migraciones 109/110) y lo elige el admin en Configuración > Empresa; se agrega la misma elección al panel Super-Admin (web + mobile).",
+      "acceptance": [
+        "Backend: PATCH /api/superadmin/empresas/:id/tema valida contra los 3 temas y audita",
+        "GET /empresas y /empresas/:id/salud devuelven tema",
+        "Web: selector 'Tema visual' en Super-Admin > Empresas > [empresa]",
+        "Mobile: chips de tema en SuperAdminEmpresaDetalleScreen",
+        "verificar.sh en verde"
+      ],
+      "status": "done",
+      "resolution": "Nuevo PATCH /api/superadmin/empresas/:id/tema (valida faena/taller/confianza, audita cambiar_tema_empresa). GET /empresas y /empresas/:id/salud devuelven tema. Web: tarjeta \"Tema visual\" en Super-Admin > Empresas > [empresa]. Mobile: chips de tema en SuperAdminEmpresaDetalleScreen (visible recién con un build EAS nuevo). Sin migración: empresas.tema ya existía. Los usuarios de la empresa ven el cambio al recargar/volver a abrir la app. verificar.sh en verde."
+    },
+    {
+      "id": 98,
+      "name": "superadmin_tema_propio",
+      "title": "Super-Admin elige su propio estilo visual (web + mobile)",
+      "description": "Pedido: 'en el super admin también quiero que elija su propio estilo'. Preferencia personal del Super-Admin, guardada en su cuenta (super_admins.tema) para que sea la misma en web y mobile; independiente del tema de las empresas (tarea 97).",
+      "acceptance": [
+        "Migración 127: super_admins.tema (faena/taller/confianza, default faena, idempotente)",
+        "Backend: GET /api/superadmin/me devuelve tema (select * tolerante a base sin la 127); PATCH /api/superadmin/me/tema",
+        "Web: SuperAdminShell aplica data-tema; 'Mi estilo' en Super-Admin > Mi cuenta",
+        "Mobile: SuperAdminGate aplica aplicarTemaMobile + remonta con key; chips 'Mi estilo' en la lista de Empresas",
+        "verificar.sh en verde"
+      ],
+      "status": "done",
+      "resolution": "Implementado y verificar.sh en verde. Pendiente de la usuaria: correr la migración 127 en dev y prod antes de mergear a main (el CI check-migraciones-prod lo exige). Mobile requiere build EAS nuevo para verse."
+    },
+    {
+      "id": 99,
+      "name": "agenda_paridad_web_mobile",
+      "title": "Agenda: paridad web/mobile (web muestra Levantamientos, mobile muestra OS)",
+      "description": "Gap detectado en el diagnóstico 6.1 (tarea 94) y pedido explícito de arreglar: web Agenda mostraba Cita+OS, mobile Cita+Levantamiento. Ahora ambas muestran los 3 tipos.",
+      "acceptance": [
+        "Backend: GET /api/levantamientos acepta ?desde&hasta sobre fecha_visita (sin params, igual que antes)",
+        "Web Agenda: levantamientos con fecha_visita como eventos (color=estado vía estadoAgendaDeLevantamiento), chip de tipo gated por módulo 'levantamientos', leyenda con los 3 tipos; click abre /dashboard/levantamientos?id=... (nuevo deep-link al detalle)",
+        "Mobile Agenda: OS vía GET /api/ordenes-servicio?desde&hasta (cache offline), gated por módulo 'ordenes_servicio'; FilaOS + barritas + chip + leyenda; abre TrabajoDetalle vía TrabajosStack anidado en AgendaStack",
+        "verificar.sh en verde"
+      ],
+      "status": "done",
+      "resolution": "Implementado, verificar.sh en verde (tsc 6 workspaces, tests, eslint). No probado contra la app real en esta sesión (sin backend/credenciales locales). Mobile requiere build EAS. Mobile Agenda estaba 'congelada' en CLAUDE.md, se tocó por pedido explícito de la usuaria ('Ejecuta tu lado ambas tareas')."
+    },
+    {
+      "id": 100,
+      "name": "os_fotos_grupos_descripcion",
+      "title": "OS: fotos agrupadas por categoría con divisor + descripción editable por foto",
+      "status": "done",
+      "resolution": "Mobile FotosSection: una sección por categoría (General, Equipo a intervenir, Inicio, Durante, Término) con franja divisoria, descripción visible bajo cada foto y editable en el visor (encolarDescripcionFoto → PATCH /api/trabajos/:id/fotos/:fotoId, ya existía). Web ordenes/[id]: misma agrupación + descripción editable (guarda al salir del campo, solo si la OS no está firmada). Renombrar categorías: pendiente de confirmación de la usuaria. verificar.sh en verde; no probado contra la app real en esta sesión."
+    },
+    {
+      "id": 101,
+      "name": "os_comentarios_tecnico",
+      "title": "OS: comentarios del técnico debajo de las fotos",
+      "status": "done",
+      "resolution": "observaciones_cierre se movió del paso 3 (bajo la firma) al paso 2, debajo de las fotos, con autoguardado (PATCH /api/trabajos/:id/observaciones nuevo, por la cola offline). Ahora también queda registrado en el cierre 'cliente no disponible'. /firma ya no lo pisa si no viene. Etiqueta 'Comentarios del técnico' en web, portal y PDF. verificar.sh en verde; no probado contra la app real en esta sesión."
+    },
+    {
+      "id": 102,
+      "name": "pdf_os_informe_bajo_fotos",
+      "title": "PDF OS: informe técnico IA debajo de las imágenes",
+      "status": "done",
+      "resolution": "generarPdfOS.ts: el bloque 'Informe técnico' pasó de ir tras 'Observaciones de cierre' (antes de ítems/checklist/fotos) a ir después de la galería de fotos, antes de las firmas, con salto de página si el título quedaría huérfano. verificar.sh en verde; no probado contra la app real en esta sesión."
+    },
+    {
+      "id": 103,
+      "name": "equipos_permisos_escritura",
+      "title": "Seguridad: permisos de escritura en /api/equipos",
+      "status": "done",
+      "resolution": "Antes ningún handler chequeaba permisos (cualquier colaborador podía crear/editar equipos y asignar vehículos). Ahora: vehículos → módulo flota; otros equipos → registros o flota; asignar/desasignar → flota. Lecturas sin cambios (las usa mobile). verificar.sh en verde; no probado contra la app real en esta sesión."
+    },
+    {
+      "id": 104,
+      "name": "os_quitar_tipo_y_mapa_creacion",
+      "title": "Nueva OS: quitar 'Tipo de OS/Trabajo' y el mapa; Rutas: quitar 'Tipo de tarea'",
+      "status": "done",
+      "resolution": "Decisión de la usuaria tras explicarle para qué sirve (en prod ningún tipo tiene campos ni checklist; 2 de 7 OS con tipo). web ordenes/nueva: sin selector de tipo, sin 'Datos medidos', sin preview de MapaRutas. web rutas/nueva: sin 'Tipo de tarea' ni sus campos. Backend sin cambios (tipo_id ya era opcional). Configuración > Tipos de OS/Trabajo y el PATCH tipo_id siguen existiendo. verificar.sh en verde."
+    },
+    {
+      "id": 105,
+      "name": "ventas_solo_admin",
+      "title": "Ventas: solo Admin puede registrar ventas (acción registrar_venta)",
+      "status": "done",
+      "resolution": "Pedido: 'de momento solo el Admin puede registrar venta, más adelante activamos otros roles; el chofer/colaborador no debiera poder'. Nueva acción 'registrar_venta' en ACCIONES (admin la tiene siempre; ningún otro rol por defecto; delegable desde Super-Admin > Roles sin tocar código ni migración). POST /api/ventas con requiereAccion('registrar_venta') — antes no chequeaba nada. Mobile: botón 'Registrar venta' oculto sin la acción (ClienteDetalle, TrabajoDetalle). verificar.sh en verde."
+    },
+    {
+      "id": 106,
+      "name": "flota_eventos_semanales",
+      "title": "Flota: eventos semanales por vehículo (tipos fijos)",
+      "status": "done",
+      "acceptance": [
+        "Migración 128 eventos_flota (tipo fijo con CHECK, fecha, descripción, km, reportado_por) + RLS + índice (empresa_id, equipo_id, fecha desc)",
+        "Backend /api/equipos/:equipoId/eventos GET/POST (gestión flota o chofer asignado; POST idempotente por id) y DELETE (solo gestión flota)",
+        "Web: pestaña 'Eventos' en la ficha del vehículo, vista por semana con formulario",
+        "Mobile: botón 'Eventos de la semana' en Mantención → EventosFlotaScreen (cola offline)",
+        "Pendiente: la usuaria corre la migración 128 en dev y prod; después validar el índice con EXPLAIN ANALYZE (regla del proyecto) antes de cerrar"
+      ],
+      "resolution": "Código + migración 128 aplicada por la usuaria en dev y prod (verificado: 9 columnas, RLS on, 1 policy, índice, tracking 128 en prod). EXPLAIN ANALYZE en prod con la consulta real (empresa+equipo+rango semanal, order fecha desc): Index Scan using eventos_flota_equipo_fecha_idx con las 4 condiciones en Index Cond + Incremental Sort presorted por fecha, 0.18 ms. verificar.sh en verde."
     }
   ]
 }

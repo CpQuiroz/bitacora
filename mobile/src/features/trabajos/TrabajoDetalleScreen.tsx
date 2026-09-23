@@ -6,7 +6,7 @@ import type { EstadoTrabajo, ItemChecklist } from "@bitacora/shared";
 import { estadoOsDeTrabajo, formatearFolio } from "@bitacora/shared";
 import { ArrowLeft, ChevronRight, Navigation, Phone, type LucideIcon } from "lucide-react-native";
 import { tokens } from "@bitacora/design-tokens";
-import { Button, ErrorState, LoadingState, ScreenHeader, Skeleton, StatusBadge, Texto, useMarca } from "@bitacora/ui/native";
+import { Button, ErrorState, LoadingState, ScreenHeader, Skeleton, StatusBadge, Textarea, Texto, useMarca } from "@bitacora/ui/native";
 import { OfflineBanner } from "../../components/OfflineBanner";
 import { useRed } from "../../services/sync/NetworkProvider";
 import { useAuth } from "../auth/AuthContext";
@@ -16,9 +16,11 @@ import {
   encolarCheckin,
   encolarClienteNoDisponible,
   encolarDatos,
+  encolarDescripcionFoto,
   encolarFinalizar,
   encolarFirma,
   encolarFoto,
+  encolarObservaciones,
   obtenerDetalle,
   type DetalleTrabajo,
 } from "../../services/trabajos";
@@ -127,6 +129,11 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
   // cambio vino de que el usuario tipeó algo (onCambiar), nunca por el
   // set inicial al cargar el detalle.
   const formTocado = useRef(false);
+  // Comentarios del técnico (observaciones_cierre) — mismo criterio de
+  // "tocado": la recarga periódica (fotos procesando, cada 8 s) no pisa
+  // lo que el técnico está escribiendo.
+  const [observaciones, setObservaciones] = useState("");
+  const observacionesTocadas = useRef(false);
   const fotosPorCampo = useMemo(() => {
     const mapa: Record<string, DetalleTrabajo["fotos"]> = {};
     for (const f of detalle?.fotos ?? []) {
@@ -143,6 +150,7 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
       setDetalle(d);
       setDatosForm(Object.fromEntries(Object.entries(d.trabajo.datos ?? {}).map(([k, v]) => [k, String(v ?? "")])));
       formTocado.current = false;
+      if (!observacionesTocadas.current) setObservaciones(d.orden?.observaciones_cierre ?? "");
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo cargar el trabajo");
     }
@@ -244,6 +252,20 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
     );
   }
 
+  async function guardarObservaciones() {
+    if (!observacionesTocadas.current) return;
+    await encolarObservaciones(trabajoId, observaciones.trim());
+    observacionesTocadas.current = false;
+  }
+
+  // Autoguardado de los comentarios, mismo debounce que el formulario.
+  useEffect(() => {
+    if (!observacionesTocadas.current) return;
+    const t = setTimeout(() => void guardarObservaciones(), 1500);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [observaciones]);
+
   async function guardarDatos() {
     setGuardandoDatos(true);
     await encolarDatos(trabajoId, datosForm);
@@ -271,12 +293,13 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
         const ubic = await ubicacionActual();
         await encolarCheckin(trabajoId, "Check-out", ubic);
       }
+      // 1b) Comentarios del técnico que hayan quedado sin autoguardar.
+      await guardarObservaciones();
       // 2) Firma del encargado, o "cliente no disponible".
       if (payload.tipo === "firma") {
         await encolarFirma(trabajoId, {
           firma_base64: payload.firma_base64,
           firmante_nombre: payload.firmante_nombre,
-          observaciones_cierre: payload.observaciones_cierre,
         });
       } else {
         await encolarClienteNoDisponible(trabajoId, payload.motivo, payload.foto);
@@ -435,6 +458,13 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
             editable={!finalizada && paso === 2}
             onAgregar={(archivo, categoria) => void encolarFoto(trabajoId, archivo, categoria)}
             onQuitarPendiente={descartar}
+            onDescripcion={async (fotoId, texto) => {
+              await encolarDescripcionFoto(trabajoId, fotoId, texto);
+              // Optimista: la cola la sincroniza; se ve al instante.
+              setDetalle((prev) =>
+                prev ? { ...prev, fotos: prev.fotos.map((f) => (f.id === fotoId ? { ...f, descripcion: texto || null } : f)) } : prev
+              );
+            }}
             onEliminar={async (fotoId) => {
               const res = await eliminarFoto(trabajoId, fotoId);
               if (!res.ok) {
@@ -444,6 +474,31 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
               void cargar();
             }}
           />
+        ) : null}
+
+        {/* Comentarios del técnico — debajo de las fotos (23-sep-2026).
+            Antes era "Observación (opcional)" bajo la firma del paso 3,
+            y no existía en el cierre "cliente no disponible". */}
+        {!finalizada && paso === 2 ? (
+          <Textarea
+            etiqueta="Comentarios del técnico"
+            placeholder="Observaciones sobre el trabajo realizado"
+            filas={4}
+            valor={observaciones}
+            onCambio={(v) => {
+              observacionesTocadas.current = true;
+              setObservaciones(v);
+            }}
+          />
+        ) : finalizada && orden?.observaciones_cierre ? (
+          <View style={{ gap: tokens.space["1"] }}>
+            <Texto tamano={tokens.size.small} peso="semibold" color={`${tokens.color.text}99`}>
+              Comentarios del técnico
+            </Texto>
+            <Texto tamano={tokens.size.body} color={tokens.color.text}>
+              {orden.observaciones_cierre}
+            </Texto>
+          </View>
         ) : null}
 
         {!finalizada && paso === 2 ? (
@@ -469,7 +524,7 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
         {/* Registrar venta — independiente de en qué paso esté el
             cierre, se puede hacer en cualquier momento antes de
             finalizar (igual que en el flujo anterior). */}
-        {!finalizada && trabajo.cliente_id ? (
+        {!finalizada && trabajo.cliente_id && auth.fase === "listo" && auth.acciones.includes("registrar_venta") ? (
           <Button
             variante="secundario"
             bloque

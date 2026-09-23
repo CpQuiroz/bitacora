@@ -19,7 +19,7 @@ function duracion(a: string | null | undefined, b: string | null | undefined): s
 }
 
 export type ConfirmarCierrePayload =
-  | { tipo: "firma"; firma_base64: string; firmante_nombre: string; observaciones_cierre: string }
+  | { tipo: "firma"; firma_base64: string; firmante_nombre: string }
   | { tipo: "no_disponible"; motivo: string; foto: { uri: string; name: string; type: string } };
 
 // Paso 3 — CERRAR (Fase 3.4, 23-sep-2026, pedido explícito). Antes
@@ -44,7 +44,6 @@ export function CierreFirma({
 }) {
   const marca = useMarca();
   const [nombre, setNombre] = useState("");
-  const [observaciones, setObservaciones] = useState("");
   const lienzo = useRef<LienzoFirmaHandle>(null);
 
   const [clienteNoDisponible, setClienteNoDisponible] = useState(false);
@@ -72,7 +71,7 @@ export function CierreFirma({
     if (!nombre.trim()) return Alert.alert("Falta un dato", "Escribe el nombre del encargado.");
     const base64 = await lienzo.current?.capturar();
     if (!base64) return Alert.alert("Falta la firma", "Pide al encargado que firme en el recuadro.");
-    await onConfirmar({ tipo: "firma", firma_base64: base64, firmante_nombre: nombre.trim(), observaciones_cierre: observaciones.trim() });
+    await onConfirmar({ tipo: "firma", firma_base64: base64, firmante_nombre: nombre.trim() });
   }
 
   // Ya cerrada — muestra lo que quedó guardado, sin edición.
@@ -98,11 +97,6 @@ export function CierreFirma({
           <Texto tamano={tokens.size.body} color={tokens.color.text}>
             Firma registrada ✓{orden.firmante_nombre ? ` — ${orden.firmante_nombre}` : ""}
           </Texto>
-          {orden.observaciones_cierre ? (
-            <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
-              Obs: {orden.observaciones_cierre}
-            </Texto>
-          ) : null}
         </Card>
       );
     }
@@ -162,7 +156,6 @@ export function CierreFirma({
         <View style={{ gap: tokens.space["2"] }}>
           <Input etiqueta="Nombre del encargado" valor={nombre} onCambio={setNombre} />
           <LienzoFirma ref={lienzo} />
-          <Textarea etiqueta="Observación (opcional)" filas={2} valor={observaciones} onCambio={setObservaciones} />
         </View>
       )}
 

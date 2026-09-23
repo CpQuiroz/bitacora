@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ActivityIndicator, Alert, Image, Modal, Pressable, ScrollView, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { AlertCircle, AlertTriangle, Camera, RefreshCw, Trash2, X } from "lucide-react-native";
 import { CATEGORIAS_FOTO_OS, ETIQUETA_CATEGORIA_FOTO_OS, type CategoriaFotoOS } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
-import { Texto, useMarca } from "@bitacora/ui/native";
+import { Button, Textarea, Texto, useMarca } from "@bitacora/ui/native";
 import { comprimirImagen } from "../../../lib/imagen";
 import type { FotoConUrl } from "../../../services/trabajos";
 
@@ -14,6 +14,7 @@ const MAX = 6;
 const LADO = 76;
 
 // La categoría activa se aplica a cada foto nueva hasta que se cambie.
+// El mismo orden define los grupos de la galería (General primero).
 const OPCIONES_CAT: { valor: CategoriaFotoOS | null; texto: string }[] = [
   { valor: null, texto: "General" },
   ...CATEGORIAS_FOTO_OS.map((c) => ({ valor: c, texto: ETIQUETA_CATEGORIA_FOTO_OS[c] })),
@@ -27,6 +28,7 @@ export function FotosSection({
   onAgregar,
   onQuitarPendiente,
   onEliminar,
+  onDescripcion,
 }: {
   fotos: FotoConUrl[];
   pendientes?: FotoPendiente[];
@@ -34,12 +36,29 @@ export function FotosSection({
   onAgregar: (archivo: { uri: string; name: string; type: string }, categoria: CategoriaFotoOS | null) => void;
   onQuitarPendiente?: (id: string) => void;
   onEliminar?: (fotoId: string) => Promise<void> | void;
+  // Descripción editable por foto (analisis_fotos.descripcion, migración
+  // 125) — sale debajo de la foto en el PDF.
+  onDescripcion?: (fotoId: string, descripcion: string) => Promise<void> | void;
 }) {
   const marca = useMarca();
   const [ocupado, setOcupado] = useState(false);
   const [abierta, setAbierta] = useState<FotoConUrl | null>(null);
   const [categoria, setCategoria] = useState<CategoriaFotoOS | null>(null);
   const [eliminando, setEliminando] = useState(false);
+  const [descripcion, setDescripcion] = useState("");
+  const [guardandoDesc, setGuardandoDesc] = useState(false);
+
+  useEffect(() => {
+    setDescripcion(abierta?.descripcion ?? "");
+  }, [abierta]);
+
+  async function guardarDescripcion() {
+    if (!abierta || !onDescripcion) return;
+    setGuardandoDesc(true);
+    await onDescripcion(abierta.id, descripcion.trim());
+    setGuardandoDesc(false);
+    setAbierta(null);
+  }
 
   async function eliminar() {
     if (!abierta || !onEliminar) return;
@@ -134,94 +153,130 @@ export function FotosSection({
         </ScrollView>
       ) : null}
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: tokens.space["2"] }}>
-        {pendientes.map((p) => (
-          <View key={p.id} style={[cuadro, { overflow: "hidden", borderWidth: 1, borderColor: tokens.color.divider }]}>
-            {p.uri ? <Image source={{ uri: p.uri }} style={{ width: "100%", height: "100%", opacity: 0.6 }} /> : null}
-            <View style={{ position: "absolute", left: 3, bottom: 3 }}>
-              {p.fallida ? (
-                <AlertCircle size={16} strokeWidth={2.75} color={tokens.color.accentRamp["700"]} />
-              ) : (
-                <RefreshCw size={15} strokeWidth={2.75} color={marca.base} />
-              )}
-            </View>
-            {/* Bug real (14-sep-2026): antes solo se podía quitar una foto
-                pendiente con un long-press sin ningún ícono ni pista visual
-                — indistinguible de "no se puede". Botón visible, mismo
-                lugar que el "Eliminar foto" de una foto ya subida. */}
-            {onQuitarPendiente ? (
-              <Pressable
-                onPress={() => onQuitarPendiente(p.id)}
-                hitSlop={6}
-                style={{
-                  position: "absolute",
-                  right: 3,
-                  top: 3,
-                  width: 20,
-                  height: 20,
-                  borderRadius: 10,
-                  backgroundColor: `${tokens.color.neutral["900"]}b3`,
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <X size={13} strokeWidth={3} color={tokens.color.neutral["100"]} />
-              </Pressable>
-            ) : null}
-          </View>
-        ))}
-        {fotos.map((f) => (
-          <Pressable key={f.id} onPress={() => setAbierta(f)}>
-            <View style={[cuadro, { overflow: "hidden", borderWidth: 1, borderColor: tokens.color.divider }]}>
-              <Image source={{ uri: f.url }} style={{ width: "100%", height: "100%" }} />
-              {f.estado === "procesando" ? (
-                <View
+      {/* Fotos subiendo (todavía sin categoría confirmada por el servidor). */}
+      {pendientes.length > 0 ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: tokens.space["2"] }}>
+          {pendientes.map((p) => (
+            <View key={p.id} style={[cuadro, { overflow: "hidden", borderWidth: 1, borderColor: tokens.color.divider }]}>
+              {p.uri ? <Image source={{ uri: p.uri }} style={{ width: "100%", height: "100%", opacity: 0.6 }} /> : null}
+              <View style={{ position: "absolute", left: 3, bottom: 3 }}>
+                {p.fallida ? (
+                  <AlertCircle size={16} strokeWidth={2.75} color={tokens.color.accentRamp["700"]} />
+                ) : (
+                  <RefreshCw size={15} strokeWidth={2.75} color={marca.base} />
+                )}
+              </View>
+              {/* Bug real (14-sep-2026): antes solo se podía quitar una foto
+                  pendiente con un long-press sin ningún ícono ni pista visual
+                  — indistinguible de "no se puede". Botón visible, mismo
+                  lugar que el "Eliminar foto" de una foto ya subida. */}
+              {onQuitarPendiente ? (
+                <Pressable
+                  onPress={() => onQuitarPendiente(p.id)}
+                  hitSlop={6}
                   style={{
                     position: "absolute",
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
+                    right: 3,
+                    top: 3,
+                    width: 20,
+                    height: 20,
+                    borderRadius: 10,
+                    backgroundColor: `${tokens.color.neutral["900"]}b3`,
                     alignItems: "center",
                     justifyContent: "center",
-                    backgroundColor: "rgba(255,255,255,0.4)",
                   }}
                 >
-                  <ActivityIndicator size="small" color={`${tokens.color.text}99`} />
-                </View>
-              ) : null}
-              {f.alerta ? (
-                <View style={{ position: "absolute", right: 3, top: 3 }}>
-                  <AlertTriangle size={15} strokeWidth={2.75} color={tokens.color.accentRamp["700"]} />
-                </View>
+                  <X size={13} strokeWidth={3} color={tokens.color.neutral["100"]} />
+                </Pressable>
               ) : null}
             </View>
-          </Pressable>
-        ))}
-        {editable && total < MAX ? (
-          <Pressable onPress={agregar} disabled={ocupado}>
-            <View
-              style={[
-                cuadro,
-                {
-                  backgroundColor: tokens.color.surface,
-                  borderWidth: 1.5,
-                  borderStyle: "dashed",
-                  borderColor: tokens.color.divider,
-                  alignItems: "center",
-                  justifyContent: "center",
-                },
-              ]}
-            >
-              {ocupado ? (
-                <ActivityIndicator size="small" color={`${tokens.color.text}99`} />
-              ) : (
-                <Camera size={22} strokeWidth={2.75} color={`${tokens.color.text}99`} />
-              )}
+          ))}
+        </ScrollView>
+      ) : null}
+
+      {/* Una sección por categoría, con franja divisoria entre grupos
+          (pedido 23-sep-2026) — antes todas las fotos iban en una sola
+          fila, sin indicar a qué categoría pertenecía cada una. */}
+      {OPCIONES_CAT.map((o) => {
+        // Una categoría desconocida (o null) cae en "General".
+        const delGrupo = fotos.filter((f) =>
+          (CATEGORIAS_FOTO_OS as readonly string[]).includes(f.categoria ?? "") ? f.categoria === o.valor : o.valor === null
+        );
+        const esActiva = editable && categoria === o.valor;
+        if (delGrupo.length === 0 && !esActiva) return null;
+        return (
+          <View key={o.texto} style={{ gap: tokens.space["2"], borderTopWidth: 2, borderTopColor: tokens.color.divider, paddingTop: tokens.space["2"] }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+              <Texto tamano={tokens.size.caption} peso="semibold" color={esActiva ? marca.base : `${tokens.color.text}99`} style={{ textTransform: "uppercase", letterSpacing: 0.6 }}>
+                {o.texto}
+              </Texto>
+              <Texto tamano={tokens.size.caption} color={`${tokens.color.text}66`} style={{ fontVariant: ["tabular-nums"] }}>
+                {delGrupo.length}
+              </Texto>
             </View>
-          </Pressable>
-        ) : null}
-      </ScrollView>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: tokens.space["2"] }}>
+              {delGrupo.map((f) => (
+                <View key={f.id} style={{ width: LADO, gap: 2 }}>
+                  <Pressable onPress={() => setAbierta(f)}>
+                    <View style={[cuadro, { overflow: "hidden", borderWidth: 1, borderColor: tokens.color.divider }]}>
+                      <Image source={{ uri: f.url }} style={{ width: "100%", height: "100%" }} />
+                      {f.estado === "procesando" ? (
+                        <View
+                          style={{
+                            position: "absolute",
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            alignItems: "center",
+                            justifyContent: "center",
+                            backgroundColor: "rgba(255,255,255,0.4)",
+                          }}
+                        >
+                          <ActivityIndicator size="small" color={`${tokens.color.text}99`} />
+                        </View>
+                      ) : null}
+                      {f.alerta ? (
+                        <View style={{ position: "absolute", right: 3, top: 3 }}>
+                          <AlertTriangle size={15} strokeWidth={2.75} color={tokens.color.accentRamp["700"]} />
+                        </View>
+                      ) : null}
+                    </View>
+                  </Pressable>
+                  {f.descripcion ? (
+                    <Texto tamano={10} color={`${tokens.color.text}99`} numberOfLines={2}>
+                      {f.descripcion}
+                    </Texto>
+                  ) : null}
+                </View>
+              ))}
+              {esActiva && total < MAX ? (
+                <Pressable onPress={agregar} disabled={ocupado}>
+                  <View
+                    style={[
+                      cuadro,
+                      {
+                        backgroundColor: tokens.color.surface,
+                        borderWidth: 1.5,
+                        borderStyle: "dashed",
+                        borderColor: tokens.color.divider,
+                        alignItems: "center",
+                        justifyContent: "center",
+                      },
+                    ]}
+                  >
+                    {ocupado ? (
+                      <ActivityIndicator size="small" color={`${tokens.color.text}99`} />
+                    ) : (
+                      <Camera size={22} strokeWidth={2.75} color={`${tokens.color.text}99`} />
+                    )}
+                  </View>
+                </Pressable>
+              ) : null}
+            </ScrollView>
+          </View>
+        );
+      })}
 
       {total === 0 ? (
         <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
@@ -242,7 +297,21 @@ export function FotosSection({
         >
           {abierta ? (
             <>
-              <Image source={{ uri: abierta.url }} resizeMode="contain" style={{ width: "100%", height: "70%" }} />
+              <Image source={{ uri: abierta.url }} resizeMode="contain" style={{ width: "100%", height: editable && onDescripcion ? "50%" : "70%" }} />
+              {editable && onDescripcion ? (
+                <View onStartShouldSetResponder={() => true} style={{ width: "100%", marginTop: 12, gap: 8 }}>
+                  <View style={{ backgroundColor: tokens.color.surface, borderRadius: tokens.radius.md, padding: 8 }}>
+                    <Textarea etiqueta="Descripción de la foto" placeholder="Ej.: filtro con sedimento antes del cambio" filas={2} valor={descripcion} onCambio={setDescripcion} />
+                  </View>
+                  <Button onPress={() => void guardarDescripcion()} cargando={guardandoDesc}>
+                    Guardar descripción
+                  </Button>
+                </View>
+              ) : abierta.descripcion ? (
+                <Texto tamano={tokens.size.body} color={tokens.color.neutral["100"]} style={{ marginTop: 12, textAlign: "center" }}>
+                  {abierta.descripcion}
+                </Texto>
+              ) : null}
               {abierta.resumen ? (
                 <Texto tamano={tokens.size.body} color={tokens.color.neutral["100"]} style={{ marginTop: 12, textAlign: "center" }}>
                   {abierta.resumen}

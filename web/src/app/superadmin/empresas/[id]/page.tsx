@@ -3,7 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import type { EstadoEmpresa, Plan, Rubro, Suscripcion, SuscripcionCobro } from "@bitacora/shared";
+import type { Empresa, EstadoEmpresa, Plan, Rubro, Suscripcion, SuscripcionCobro } from "@bitacora/shared";
 import { SuperAdminShell } from "@/components/SuperAdminShell";
 import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText, Textarea } from "@/components/ui";
 import { IconChevronDown, IconChevronLeft, IconShield } from "@/components/icons";
@@ -19,9 +19,15 @@ const RUBROS: { value: Rubro; label: string }[] = [
   { value: "cosmetologia", label: "Cosmetología / belleza" },
   { value: "otro", label: "Otro" },
 ];
+// Mismas 3 opciones que Configuración > Empresa > "Tema visual".
+const TEMAS: { value: Empresa["tema"]; label: string }[] = [
+  { value: "faena", label: "Faena (por defecto)" },
+  { value: "taller", label: "Taller" },
+  { value: "confianza", label: "Confianza" },
+];
 
 type Salud = {
-  empresa: { id: string; nombre: string; estado: EstadoEmpresa; plan: Plan; rut: string | null; rubro: Rubro; dada_de_baja_en: string | null };
+  empresa: { id: string; nombre: string; estado: EstadoEmpresa; plan: Plan; rut: string | null; rubro: Rubro; tema: Empresa["tema"]; dada_de_baja_en: string | null };
   ultima_actividad: string | null;
   usuarios_activos_mes: number;
   os_creadas_mes: number;
@@ -111,6 +117,9 @@ export default function SuperAdminSaludEmpresaPage() {
   const [rubroEdit, setRubroEdit] = useState<Rubro>("otro");
   const [guardandoIdentidad, setGuardandoIdentidad] = useState(false);
   const [errorIdentidad, setErrorIdentidad] = useState<string | null>(null);
+
+  const [guardandoTema, setGuardandoTema] = useState(false);
+  const [errorTema, setErrorTema] = useState<string | null>(null);
 
   const [planSeleccionado, setPlanSeleccionado] = useState<Plan>("trial");
   const [guardandoEstado, setGuardandoEstado] = useState(false);
@@ -584,6 +593,23 @@ export default function SuperAdminSaludEmpresaPage() {
     cargar();
   }
 
+  async function onCambiarTema(nuevo: Empresa["tema"]) {
+    if (!salud || nuevo === salud.empresa.tema) return;
+    setErrorTema(null);
+    setGuardandoTema(true);
+    const res = await superadminFetch(`/api/superadmin/empresas/${params.id}/tema`, {
+      method: "PATCH",
+      body: JSON.stringify({ tema: nuevo }),
+    });
+    setGuardandoTema(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setErrorTema(body.error ?? "No se pudo cambiar el tema");
+      return;
+    }
+    cargar();
+  }
+
   async function onCambiarEstado(nuevo: EstadoEmpresa) {
     if (!confirm(`¿Cambiar el estado a "${nuevo.replaceAll("_", " ")}"?`)) return;
     setErrorEstado(null);
@@ -720,6 +746,32 @@ export default function SuperAdminSaludEmpresaPage() {
               </div>
             </Card>
           )}
+
+          <Card className="my-6">
+            <h2 className="mb-1 text-sm font-semibold text-foreground">Tema visual</h2>
+            <p className="mb-3 text-xs text-muted">
+              Estilo con que todos los usuarios de la empresa ven la app, en web y mobile. Es el mismo valor que su admin puede cambiar en
+              Configuración &gt; Empresa.
+            </p>
+            <div className="max-w-xs">
+              <Select
+                value={salud.empresa.tema}
+                disabled={guardandoTema}
+                onChange={(e) => onCambiarTema(e.target.value as Empresa["tema"])}
+              >
+                {TEMAS.map((t) => (
+                  <option key={t.value} value={t.value}>
+                    {t.label}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            {errorTema && (
+              <div className="mt-3">
+                <ErrorText>{errorTema}</ErrorText>
+              </div>
+            )}
+          </Card>
 
           <div className="my-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Card>

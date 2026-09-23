@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
-import { cerrarSesionSuperAdmin, obtenerSuperAdminYo, obtenerTokenSuperAdmin, type SuperAdminYo } from "../../services/superadmin";
+import type { Empresa } from "@bitacora/shared";
+import { cambiarMiTemaSuperAdmin, cerrarSesionSuperAdmin, obtenerSuperAdminYo, obtenerTokenSuperAdmin, type SuperAdminYo } from "../../services/superadmin";
 
 // Identidad separada del AuthContext de empresa (ver services/superadmin.ts)
 // — su propio "fase", su propio storage, nunca se mezclan.
@@ -8,6 +9,8 @@ type EstadoSuperAdmin = { fase: "cargando" } | { fase: "sin-sesion" } | { fase: 
 type SuperAdminAuthContexto = EstadoSuperAdmin & {
   refrescar: () => Promise<void>;
   cerrarSesion: () => Promise<void>;
+  // Estilo propio del Super-Admin — SuperAdminGate lo aplica a todo el panel.
+  cambiarTema: (tema: Empresa["tema"]) => Promise<{ ok: true } | { ok: false; error: string }>;
 };
 
 const Ctx = createContext<SuperAdminAuthContexto | null>(null);
@@ -47,7 +50,13 @@ export function SuperAdminAuthProvider({ children }: { children: ReactNode }) {
     setEstado({ fase: "sin-sesion" });
   }, []);
 
-  return <Ctx.Provider value={{ ...estado, refrescar: resolver, cerrarSesion }}>{children}</Ctx.Provider>;
+  const cambiarTema = useCallback(async (tema: Empresa["tema"]) => {
+    const r = await cambiarMiTemaSuperAdmin(tema);
+    if (r.ok) setEstado((e) => (e.fase === "listo" ? { fase: "listo", yo: { ...e.yo, tema } } : e));
+    return r;
+  }, []);
+
+  return <Ctx.Provider value={{ ...estado, refrescar: resolver, cerrarSesion, cambiarTema }}>{children}</Ctx.Provider>;
 }
 
 export function useSuperAdminAuth(): SuperAdminAuthContexto {

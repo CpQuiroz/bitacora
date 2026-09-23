@@ -180,6 +180,10 @@ export type SuperAdmin = {
   bloqueado_hasta: string | null;
   ultimo_login_en: string | null;
   creado_en: string;
+  // Estilo propio para ver su panel (migración 127). Opcional en el
+  // tipo porque /me lo lee con select("*") y tolera que la columna
+  // todavía no exista en una base sin la migración.
+  tema?: "faena" | "taller" | "confianza";
 };
 
 export type SuperAdminAuditoria = {
@@ -1724,7 +1728,7 @@ export const ETIQUETA_SECCION_PDF_OS: Record<SeccionPdfOS, string> = {
   campos: "Campos del formulario",
   checklist: "Checklist de la visita",
   fotos: "Fotos",
-  observaciones: "Observaciones de cierre",
+  observaciones: "Comentarios del técnico",
   informe_ia: "Informe técnico (IA)",
   items: "Ítems y materiales",
   firma_tecnico: "Firma del técnico",
@@ -2026,6 +2030,7 @@ export type Database = {
       planes_mantencion: Tabla<PlanMantencion>;
       registros_mantencion_equipo: Tabla<RegistroMantencionEquipo>;
       registro_mantencion_fotos: Tabla<RegistroMantencionFoto>;
+      eventos_flota: Tabla<EventoFlota>;
       levantamientos: Tabla<Levantamiento>;
       levantamiento_materiales: Tabla<LevantamientoMaterial>;
       levantamiento_fotos: Tabla<LevantamientoFoto>;
@@ -2186,3 +2191,35 @@ export type Database = {
     };
   };
 };
+
+// Eventos semanales de flota (migración 128, 23-sep-2026) — hechos
+// sueltos sobre un vehículo (cambio de luz, pinchazo...), N por semana.
+// Lista FIJA de tipos (decisión de la usuaria); el CHECK de la tabla la
+// replica — agregar un tipo = migración + esta lista.
+export const TIPOS_EVENTO_FLOTA = ["luz", "neumatico", "frenos", "aceite_fluidos", "bateria", "golpe_dano", "limpieza", "otro"] as const;
+export type TipoEventoFlota = (typeof TIPOS_EVENTO_FLOTA)[number];
+export const ETIQUETA_TIPO_EVENTO_FLOTA: Record<TipoEventoFlota, string> = {
+  luz: "Luz / ampolleta",
+  neumatico: "Neumático",
+  frenos: "Frenos",
+  aceite_fluidos: "Aceite / fluidos",
+  bateria: "Batería",
+  golpe_dano: "Golpe / daño",
+  limpieza: "Limpieza",
+  otro: "Otro",
+};
+
+export type EventoFlota = {
+  id: string;
+  empresa_id: string;
+  equipo_id: string;
+  tipo: TipoEventoFlota;
+  fecha: string;
+  descripcion: string | null;
+  kilometraje: number | null;
+  reportado_por: string | null;
+  creado_en: string;
+};
+
+export type EventoFlotaConAutor = EventoFlota & { autor: { nombre: string } | null };
+

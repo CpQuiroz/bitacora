@@ -909,6 +909,41 @@ trabajosRouter.get(
   })
 );
 
+// Comentarios del técnico sobre el trabajo realizado (ordenes_servicio.
+// observaciones_cierre). Se edita en el paso "Ejecutar", debajo de las
+// fotos, independiente de la firma — así también queda guardado cuando
+// el cierre es "cliente no disponible" (pedido 23-sep-2026).
+trabajosRouter.patch(
+  "/:id/observaciones",
+  ah<RequestConEmpresa>(async (req, res) => {
+    const { observaciones_cierre } = req.body ?? {};
+    if (typeof observaciones_cierre !== "string") {
+      res.status(400).json({ error: "Falta observaciones_cierre" });
+      return;
+    }
+    if (!(await trabajoExiste(req.empresaId!, req.params.id))) {
+      res.status(404).json({ error: "Trabajo no encontrado" });
+      return;
+    }
+    if (await trabajoBloqueado(req.empresaId!, req.params.id)) {
+      res.status(409).json({ error: "La orden de servicio ya fue finalizada y no se puede editar" });
+      return;
+    }
+    const orden = await obtenerOCrearOrden(req.empresaId!, req.params.id);
+    // tenant-ok: trabajoExiste() arriba ya validó empresa_id; orden sale
+    // de obtenerOCrearOrden() sobre ese mismo trabajo ya validado.
+    const { error } = await supabase
+      .from("ordenes_servicio")
+      .update({ observaciones_cierre: observaciones_cierre.trim() || null })
+      .eq("id", orden.id);
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    res.json({ ok: true });
+  })
+);
+
 // Guarda la firma del cliente al cerrar la orden de servicio (viene
 // como PNG en base64, capturado del lienzo de firma en la app).
 trabajosRouter.post(
@@ -943,7 +978,10 @@ trabajosRouter.post(
         firma_url: key,
         firmante_nombre: firmante_nombre?.trim() || null,
         firmante_documento: firmante_documento?.trim() || null,
-        observaciones_cierre: observaciones_cierre?.trim() || null,
+        // Desde el 23-sep-2026 el comentario del técnico se guarda aparte
+        // (PATCH /:id/observaciones, debajo de las fotos) — solo se pisa
+        // acá si un caller viejo todavía lo manda junto con la firma.
+        ...(typeof observaciones_cierre === "string" ? { observaciones_cierre: observaciones_cierre.trim() || null } : {}),
       })
       .eq("id", orden.id)
       .select()
