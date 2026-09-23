@@ -1590,7 +1590,7 @@
       "id": 106,
       "name": "flota_eventos_semanales",
       "title": "Flota: eventos semanales por vehículo (tipos fijos)",
-      "status": "in_progress",
+      "status": "done",
       "acceptance": [
         "Migración 128 eventos_flota (tipo fijo con CHECK, fecha, descripción, km, reportado_por) + RLS + índice (empresa_id, equipo_id, fecha desc)",
         "Backend /api/equipos/:equipoId/eventos GET/POST (gestión flota o chofer asignado; POST idempotente por id) y DELETE (solo gestión flota)",
@@ -1598,7 +1598,7 @@
         "Mobile: botón 'Eventos de la semana' en Mantención → EventosFlotaScreen (cola offline)",
         "Pendiente: la usuaria corre la migración 128 en dev y prod; después validar el índice con EXPLAIN ANALYZE (regla del proyecto) antes de cerrar"
       ],
-      "resolution": "Código listo y verificar.sh en verde. Falta migración 128 (usuaria) + EXPLAIN ANALYZE del índice."
+      "resolution": "Código + migración 128 aplicada por la usuaria en dev y prod (verificado: 9 columnas, RLS on, 1 policy, índice, tracking 128 en prod). EXPLAIN ANALYZE en prod con la consulta real (empresa+equipo+rango semanal, order fecha desc): Index Scan using eventos_flota_equipo_fecha_idx con las 4 condiciones en Index Cond + Incremental Sort presorted por fecha, 0.18 ms. verificar.sh en verde."
     }
   ]
 }
