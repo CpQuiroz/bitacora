@@ -11,6 +11,7 @@ import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Button, Card, EmptyState, Input, StatusBadge, Textarea } from "@bitacora/ui/web";
 import { RegistrosMantencion } from "./RegistrosMantencion";
+import { EventosFlota } from "./EventosFlota";
 
 type TrabajoConOrden = Trabajo & { orden: Pick<OrdenServicio, "folio" | "estado_os"> | null };
 type EquipoDetalle = Equipo & {
@@ -19,7 +20,7 @@ type EquipoDetalle = Equipo & {
   historico_mantenciones: TrabajoConOrden[];
 };
 
-type Tab = "datos" | "plan" | "historico_os" | "mantencion";
+type Tab = "datos" | "plan" | "historico_os" | "mantencion" | "eventos";
 
 // PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export default function EquipoDetallePage() {
@@ -90,7 +91,12 @@ export default function EquipoDetallePage() {
       { id: "datos", label: "Datos básicos" },
       { id: "plan", label: "Plan de mantención" },
       { id: "historico_os", label: "Histórico de OS" },
-      ...(esVehiculo ? ([{ id: "mantencion" as Tab, label: "Mantención" }]) : []),
+      ...(esVehiculo
+        ? [
+            { id: "mantencion" as Tab, label: "Mantención" },
+            { id: "eventos" as Tab, label: "Eventos" },
+          ]
+        : []),
     ],
     [esVehiculo]
   );
@@ -310,6 +316,12 @@ export default function EquipoDetallePage() {
       {tab === "mantencion" && esVehiculo && (
         <div className="mt-ds-6">
           <RegistrosMantencion equipo={equipo} puedeGestionar={puedeGestionar} />
+        </div>
+      )}
+
+      {tab === "eventos" && esVehiculo && equipo && (
+        <div className="mt-ds-6">
+          <EventosFlota equipo={equipo} puedeGestionar={puedeGestionar} />
         </div>
       )}
     </DashboardShell>

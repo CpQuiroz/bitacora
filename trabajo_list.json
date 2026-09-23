@@ -1585,6 +1585,20 @@
       "title": "Ventas: solo Admin puede registrar ventas (acción registrar_venta)",
       "status": "done",
       "resolution": "Pedido: 'de momento solo el Admin puede registrar venta, más adelante activamos otros roles; el chofer/colaborador no debiera poder'. Nueva acción 'registrar_venta' en ACCIONES (admin la tiene siempre; ningún otro rol por defecto; delegable desde Super-Admin > Roles sin tocar código ni migración). POST /api/ventas con requiereAccion('registrar_venta') — antes no chequeaba nada. Mobile: botón 'Registrar venta' oculto sin la acción (ClienteDetalle, TrabajoDetalle). verificar.sh en verde."
+    },
+    {
+      "id": 106,
+      "name": "flota_eventos_semanales",
+      "title": "Flota: eventos semanales por vehículo (tipos fijos)",
+      "status": "in_progress",
+      "acceptance": [
+        "Migración 128 eventos_flota (tipo fijo con CHECK, fecha, descripción, km, reportado_por) + RLS + índice (empresa_id, equipo_id, fecha desc)",
+        "Backend /api/equipos/:equipoId/eventos GET/POST (gestión flota o chofer asignado; POST idempotente por id) y DELETE (solo gestión flota)",
+        "Web: pestaña 'Eventos' en la ficha del vehículo, vista por semana con formulario",
+        "Mobile: botón 'Eventos de la semana' en Mantención → EventosFlotaScreen (cola offline)",
+        "Pendiente: la usuaria corre la migración 128 en dev y prod; después validar el índice con EXPLAIN ANALYZE (regla del proyecto) antes de cerrar"
+      ],
+      "resolution": "Código listo y verificar.sh en verde. Falta migración 128 (usuaria) + EXPLAIN ANALYZE del índice."
     }
   ]
 }

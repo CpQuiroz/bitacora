@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { Pressable, ScrollView, View } from "react-native";
-import { ArrowLeft, Car, CheckCheck, Wrench } from "lucide-react-native";
+import { ArrowLeft, Car, CheckCheck, ClipboardList, Wrench } from "lucide-react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { DocumentoVehiculoAsignado, Equipo } from "@bitacora/shared";
@@ -161,6 +161,21 @@ export function MantencionVehiculoScreen({ navigation }: NativeStackScreenProps<
               color={tokens.color.accentRamp["700"]}
               fondo={tokens.color.accentRamp["200"]}
               onPress={() => irAChecklist("programa")}
+            />
+          </View>
+        ) : null}
+
+        {/* Eventos semanales (migración 128, 23-sep-2026): lo que le pasó
+            al camión en la semana — luz, neumático, golpe… */}
+        {vehiculo ? (
+          <View style={{ flexDirection: "row" }}>
+            <BotonGrande
+              titulo="Eventos de la semana"
+              sub="Luz, neumático, frenos, golpe…"
+              icono={<ClipboardList size={17} strokeWidth={2.5} color={tokens.color.accent2Ramp["800"]} />}
+              color={tokens.color.accent2Ramp["800"]}
+              fondo={tokens.color.accent2Ramp["200"]}
+              onPress={() => navigation.navigate("EventosFlota", { equipoId: vehiculo.id, patente: vehiculo.patente ?? null })}
             />
           </View>
         ) : null}

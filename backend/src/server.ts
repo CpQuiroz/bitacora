@@ -41,6 +41,7 @@ import { cotizacionEtapasRouter } from "./routes/cotizacionEtapas";
 import { notificacionesRouter } from "./routes/notificaciones";
 import { encuestaPublicaRouter } from "./routes/encuestaPublica";
 import { equiposRouter } from "./routes/equipos";
+import { eventosFlotaRouter } from "./routes/eventosFlota";
 import { planesMantencionRouter } from "./routes/planesMantencion";
 import { registrosMantencionRouter } from "./routes/registrosMantencion";
 import { levantamientosRouter } from "./routes/levantamientos";
@@ -352,6 +353,8 @@ app.use("/api/equipos", requiereAuth, requiereEmpresa, equiposRouter);
 // requiereModulo (igual que equipos): la autorización es por handler
 // (gestionar flota vs. chofer del vehículo). Ver routes/registrosMantencion.ts.
 app.use("/api/equipos", requiereAuth, requiereEmpresa, registrosMantencionRouter);
+// Eventos semanales de flota (migración 128) — mismo criterio por handler.
+app.use("/api/equipos", requiereAuth, requiereEmpresa, eventosFlotaRouter);
 // Sin requiereModulo a nivel de router (igual que registrosMantencion):
 // el técnico asignado (usuarios.funcion, no rol) necesita pasar por acá
 // aunque su rol "colaborador" no vea el módulo — cada handler valida

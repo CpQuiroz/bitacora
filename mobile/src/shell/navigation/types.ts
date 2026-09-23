@@ -61,6 +61,8 @@ export type MasStackParamList = {
   ChecklistMantencion: { equipoId: string; tipo: "diario" | "programa"; patente: string | null };
   MantencionHistorial: { equipoId: string; patente: string | null };
   MantencionDetalle: { equipoId: string; registroId: string };
+  // Eventos semanales de flota (migración 128, 23-sep-2026).
+  EventosFlota: { equipoId: string; patente: string | null };
   Levantamientos: undefined;
   LevantamientoDetalle: { id: string };
   // Fase 5.3 — historial de levantamientos/OS terminados del colaborador.

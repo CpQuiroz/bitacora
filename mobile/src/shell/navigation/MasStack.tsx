@@ -18,6 +18,7 @@ import { MantencionVehiculoScreen } from "../../features/mantencion/MantencionVe
 import { ChecklistMantencionScreen } from "../../features/mantencion/ChecklistMantencionScreen";
 import { MantencionHistorialScreen } from "../../features/mantencion/MantencionHistorialScreen";
 import { MantencionDetalleScreen } from "../../features/mantencion/MantencionDetalleScreen";
+import { EventosFlotaScreen } from "../../features/mantencion/EventosFlotaScreen";
 import { LevantamientosListScreen } from "../../features/levantamientos/LevantamientosListScreen";
 import { LevantamientoDetalleScreen } from "../../features/levantamientos/LevantamientoDetalleScreen";
 import { MisTrabajosScreen } from "../../features/mis-trabajos/MisTrabajosScreen";
@@ -54,6 +55,7 @@ export function MasStack() {
       <Stack.Screen name="ChecklistMantencion" component={ChecklistMantencionScreen} options={{ headerShown: false }} />
       <Stack.Screen name="MantencionHistorial" component={MantencionHistorialScreen} options={{ headerShown: false }} />
       <Stack.Screen name="MantencionDetalle" component={MantencionDetalleScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="EventosFlota" component={EventosFlotaScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Levantamientos" component={LevantamientosListScreen} options={{ headerShown: false }} />
       <Stack.Screen name="LevantamientoDetalle" component={LevantamientoDetalleScreen} options={{ headerShown: false }} />
       <Stack.Screen name="MisTrabajos" component={MisTrabajosScreen} options={{ headerShown: false }} />

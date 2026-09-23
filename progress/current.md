@@ -39,3 +39,6 @@ usuaria antes de tocar código. Decisiones de la usuaria:
   nombres actuales; T5 al revés de lo pedido originalmente: solo Admin
   vende (tarea 105, acción `registrar_venta`); T6 construir con tipos
   fijos (en curso).
+- Tarea 106 (flota, eventos semanales): código listo, verificar.sh en
+  verde. **Bloqueo**: la usuaria corre la migración 128 en dev y prod;
+  después validar el índice con EXPLAIN ANALYZE y cerrar la tarea.
