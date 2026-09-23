@@ -1278,6 +1278,21 @@
       ],
       "status": "done",
       "resolution": "Investigacion primero confirmo el bundle real: requiereModulo(\"financiero\") en server.ts gateaba /api/cobros, /api/cotizaciones, /api/gastos y /api/rendiciones al mismo tiempo -- la separacion es 100% correcta. Se opto por NO renombrar \"financiero\" (evita migrar datos de empresa_modulos/roles por algo cosmetico) y sumar \"cobros\"+\"cotizaciones\" como modulos nuevos, base-tier (fuera de MODULOS_OPCIONALES -> ON por defecto via moduloActivadoPorDefecto, sin backfill de empresa_modulos). El unico backfill real necesario fue roles.modulos (snapshot por fila, no se recalcula solo) -- migracion 123, pendiente de que la usuaria la corra en dev y prod. Verificado que Super-Admin (roles y toggle por empresa), Configuracion > Perfiles y Configuracion > Plan son 100% dinamicos (MODULOS/MODULOS_DELEGABLES_POR_EMPRESA/ETIQUETA_MODULO) -- nada hardcodeado que actualizar ahi. Dejado deliberadamente sin tocar: el tab \"Financiero\" del detalle de cliente (agrupa cotizaciones+cobros de ESE cliente, es una vista, no un permiso) y el \"Resumen financiero\"/KPIs del Dashboard analitico (gateado por la accion ver_dashboard, no por modulo -- igual criterio que Informes, que tampoco se gatea por financiero). packages/shared reconstruido (dist/) -- sin eso tsc de backend/web/mobile fallaba con el tipo Modulo viejo. tsc (6 workspaces) + verificar.sh en verde."
+    },
+    {
+      "id": 83,
+      "name": "landing_y_logo_migrados_sistema_diseno",
+      "title": "Migrar la landing publica y el Logo compartido al sistema de diseno (se sentian dos apps distintas)",
+      "description": "Pedido: la landing (app.transportesitineris.cl) y despues el login se sienten como dos apps distintas. Diagnostico: 2 causas reales. (1) Logo.tsx (compartido por TODA la app: DashboardShell, SuperAdminShell, PortalShell, AuthLayout, landing) nunca se migro al PASO 6 del sistema de diseno -- usaba --brand (#14314f, azul marino fijo) en vez de --ds-brand (terracota, #c67139, la variable que los shells SI pisan con el color_primario del tenant). (2) La landing (web/src/app/page.tsx) era la unica pantalla de toda la app que jamas paso por la migracion: Tailwind crudo (bg-brand, text-foreground) en vez de @bitacora/ui/web + tokens ds-*.",
+      "acceptance": [
+        "Logo.tsx / LogoMark: fill-ds-brand + var(--ds-brand-foreground) + text-ds-text + font-ds-body en vez de fill-brand/var(--brand-foreground)/text-foreground",
+        "web/src/app/page.tsx reescrita con Button/Card de @bitacora/ui/web, iconos lucide-react (antes @/components/icons), y clases ds-* (ds-heading, font-ds-body, bg-ds-bg, bg-ds-brand/15, etc.) -- mismo copy/contenido, solo cambia el tratamiento visual",
+        "Verificado visualmente con Chrome: landing y login comparten fondo, logo, tipografia y botones",
+        "scripts/check-colores.mjs sin literales nuevos (0 nuevos, baseline se mantiene en 3)",
+        "tsc (6 workspaces) + eslint web + verificar.sh en verde"
+      ],
+      "status": "done",
+      "resolution": "Diagnostico confirmado leyendo globals.css (--brand: #14314f) vs packages/design-tokens/tokens.css (--ds-brand: #c67139) y DashboardShell.tsx (pisa --ds-brand con el color_primario del tenant, NUNCA --brand) -- el logo quedaba fijo en azul marino en TODA la app (incluido el propio sidebar del dashboard), sin que nadie lo notara por ser un detalle chico. Se corrigio Logo.tsx (fix de 1 archivo, mejora todas las pantallas a la vez) y se reescribio page.tsx completo. Verificado en vivo con Chrome (localhost:3000) comparando landing vs login lado a lado -- ya comparten fondo/logo/tipografia/botones. Fuera de alcance a proposito (se menciona pero no se toca): el resto del Portal del Cliente y el Panel de Super-Admin todavia usan el otro sistema legado (web/src/components/ui.tsx, ~20 archivos) -- es un gap mas grande, no lo que se pidio esta vez. tsc + eslint + check-colores + verificar.sh en verde."
     }
   ]
 }

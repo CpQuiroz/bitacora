@@ -5963,6 +5963,50 @@ o nada, en web, mobile y backend por igual.
 reflejado ahí (hoy Cobros solo se ve/oculta según el módulo — no hay
 UI nueva que mostrar, así que no es urgente).
 
+**Update**: migración 123 corrida y repareada por la usuaria en dev
+y prod — confirmado con la salida de `migration repair`, tracking
+sincronizado en las 2 bases. Tarea 82 100% cerrada.
+
+## 23-sep-2026 — tarea 83: landing + Logo migrados al sistema de diseño
+
+Pedido: "esta pantalla [la landing, app.transportesitineris.cl] y
+luego el login se siente como si fuera dos app distintas, revisalo."
+
+Diagnóstico (2 causas reales, no solo "falta estilo"):
+1. **`Logo.tsx`** — compartido por TODA la app (`DashboardShell`,
+   `SuperAdminShell`, `PortalShell`, `AuthLayout`, landing) — nunca
+   pasó por el PASO 6 del sistema de diseño. Usaba `--brand` (azul
+   marino fijo, `#14314f`, en `globals.css`) en vez de `--ds-brand`
+   (terracota, `#c67139`, la variable que `DashboardShell` SÍ pisa con
+   `empresas.color_primario` de cada tenant — confirmado leyendo su
+   código). En la práctica el logo quedaba **siempre azul marino en
+   toda la app**, incluso dentro del propio dashboard — nadie lo notó
+   por ser un detalle chico en la esquina.
+2. **`web/src/app/page.tsx`** (la landing) — la única pantalla de toda
+   la app que jamás se migró: Tailwind crudo (`bg-brand`,
+   `text-foreground`, `@/components/icons`) en vez de
+   `@bitacora/ui/web` + tokens `ds-*`. `docs/design-system.md` nunca la
+   menciona — confirmado que quedó fuera del barrido original.
+
+Arreglado:
+- `Logo.tsx`/`LogoMark`: `fill-ds-brand` + `var(--ds-brand-foreground)`
+  + `text-ds-text` + `font-ds-body` — 1 archivo, mejora TODAS las
+  pantallas que lo usan de una vez.
+- `page.tsx` reescrita con `Button`/`Card` de `@bitacora/ui/web`,
+  iconos `lucide-react` y clases `ds-*` — mismo copy/contenido de
+  siempre, solo cambia el tratamiento visual.
+- Verificado en vivo con Chrome (`localhost:3000/` vs `/login`, lado a
+  lado): ya comparten fondo, logo, tipografía (Caprasimo/Figtree) y
+  botones.
+- `scripts/check-colores.mjs`: 0 literales nuevos. `tsc` (6
+  workspaces) + eslint web + `verificar.sh` en verde.
+
+**Fuera de alcance a propósito** (mencionado, no tocado): el resto del
+Portal del Cliente y el Panel de Super-Admin (~20 archivos) todavía
+usan el otro sistema legado (`web/src/components/ui.tsx`) — es un gap
+más grande que el pedido de esta vez, queda anotado para si se pide
+después. Tarea 83 cerrada.
+
 ## 23-sep-2026 — tarea 81: bajar el botón flotante del Asistente
 
 Pedido: "El asistente puede colocarlo un poco mas abajo o arriba, ahi
