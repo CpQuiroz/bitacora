@@ -1728,7 +1728,7 @@ export const ETIQUETA_SECCION_PDF_OS: Record<SeccionPdfOS, string> = {
   campos: "Campos del formulario",
   checklist: "Checklist de la visita",
   fotos: "Fotos",
-  observaciones: "Observaciones de cierre",
+  observaciones: "Comentarios del técnico",
   informe_ia: "Informe técnico (IA)",
   items: "Ítems y materiales",
   firma_tecnico: "Firma del técnico",

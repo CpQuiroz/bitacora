@@ -7,7 +7,8 @@
 //
 // Nivel de detalle de informe de campo profesional: bloques en caja
 // para datos del cliente / de la tarea / campos del tipo de trabajo,
-// checklist con estado y hora, galería de fotos y bloque de firma.
+// checklist con estado y hora, galería de fotos, informe técnico (IA)
+// debajo de las fotos y bloque de firma.
 // Todo el layout sale de helpers genéricos de pdfEstilo.ts.
 // ============================================================
 import PDFDocument from "pdfkit";
@@ -285,13 +286,8 @@ export async function generarPdfOS(datos: DatosOSPdf): Promise<Buffer> {
   }
 
   if (datos.seccionesVisibles.observaciones && datos.observacionesCierre) {
-    tituloSeccion(doc, "Observaciones de cierre", colorMarca, M_IZQ);
+    tituloSeccion(doc, "Comentarios del técnico", colorMarca, M_IZQ);
     doc.font("Helvetica").fontSize(10).fillColor(PDF.tinta).text(datos.observacionesCierre, M_IZQ, doc.y, { width: ANCHO });
-    doc.moveDown(1);
-  }
-  if (datos.seccionesVisibles.informe_ia && datos.informeIA) {
-    tituloSeccion(doc, "Informe técnico", colorMarca, M_IZQ);
-    doc.font("Helvetica").fontSize(10).fillColor(PDF.tinta).text(datos.informeIA, M_IZQ, doc.y, { width: ANCHO });
     doc.moveDown(1);
   }
 
@@ -393,6 +389,18 @@ export async function generarPdfOS(datos: DatosOSPdf): Promise<Buffer> {
       doc.moveDown(0.4);
     }
     doc.moveDown(0.5);
+  }
+
+  // --- Informe técnico (IA) — va DEBAJO de las imágenes (pedido
+  // 23-sep-2026): el informe se genera a partir del análisis de las
+  // fotos, así que se lee después de verlas. Antes iba justo después de
+  // "Observaciones de cierre", arriba de ítems/checklist/fotos. El salto
+  // previo evita que el título quede solo al pie de una página.
+  if (datos.seccionesVisibles.informe_ia && datos.informeIA) {
+    if (doc.y > 700) doc.addPage();
+    tituloSeccion(doc, "Informe técnico", colorMarca, M_IZQ);
+    doc.font("Helvetica").fontSize(10).fillColor(PDF.tinta).text(datos.informeIA, M_IZQ, doc.y, { width: ANCHO });
+    doc.moveDown(1);
   }
 
   // --- Ejecutor: firma dibujada (OS de antes de la Fase 3.2, back-

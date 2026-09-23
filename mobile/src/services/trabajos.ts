@@ -174,6 +174,19 @@ export function encolarFoto(
   });
 }
 
+// Descripción de una foto ya subida (analisis_fotos.descripcion,
+// migración 125 — el backend ya tenía el PATCH, faltaba la pantalla).
+// Por la cola offline: queda guardada aunque no haya señal.
+export function encolarDescripcionFoto(trabajoId: string, fotoId: string, descripcion: string) {
+  return encolar({
+    etiqueta: "Descripción de foto",
+    recurso: `trabajo:${trabajoId}`,
+    path: `/api/trabajos/${trabajoId}/fotos/${fotoId}`,
+    method: "PATCH",
+    body: { descripcion },
+  });
+}
+
 /** Elimina una foto ya subida de la OS. Solo mientras no esté finalizada
  * (mismo guard que `editable` en la pantalla — el backend igual lo valida). */
 export async function eliminarFoto(trabajoId: string, fotoId: string): Promise<{ ok: true } | { ok: false; error: string }> {
@@ -208,16 +221,26 @@ export function encolarFirmaTecnico(
 // cliente (armarDatosPdf/generarPdfOS.ts) en vez de este campo. Se
 // deja opcional en la función, no en el backend, por si algún caller
 // viejo lo sigue mandando.
-export function encolarFirma(
-  trabajoId: string,
-  payload: { firma_base64: string; firmante_nombre: string; observaciones_cierre: string }
-) {
+export function encolarFirma(trabajoId: string, payload: { firma_base64: string; firmante_nombre: string }) {
   return encolar({
     etiqueta: "Firma del cliente",
     recurso: `trabajo:${trabajoId}`,
     path: `/api/trabajos/${trabajoId}/firma`,
     method: "POST",
     body: payload,
+  });
+}
+
+// Comentarios del técnico (observaciones_cierre) — paso Ejecutar,
+// debajo de las fotos (23-sep-2026). Por la cola offline, igual que los
+// datos del formulario: queda guardado aunque no haya señal.
+export function encolarObservaciones(trabajoId: string, observaciones_cierre: string) {
+  return encolar({
+    etiqueta: "Comentarios del técnico",
+    recurso: `trabajo:${trabajoId}`,
+    path: `/api/trabajos/${trabajoId}/observaciones`,
+    method: "PATCH",
+    body: { observaciones_cierre },
   });
 }
 

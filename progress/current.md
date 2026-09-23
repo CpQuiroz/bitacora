@@ -23,3 +23,15 @@ mobile figura como congelada en CLAUDE.md — se tocó por este pedido.
   anidado en `AgendaStack` (mismo patrón que Hoy).
 - `verificar.sh` en verde. No probado contra la app real en esta
   sesión. Mobile requiere build EAS.
+
+## 23-sep-2026 — pedido de 6 mejoras (OS, PDF, ventas, flota)
+
+Análisis previo con 4 subagentes Explore (solo lectura), reportado a la
+usuaria antes de tocar código. Decisiones de la usuaria:
+- T1 (quitar tipo de OS): pidió explicación antes de decidir — NO aplicado.
+- T2 (fotos): aplicar; nombres de categorías → confirmar antes. Aplicado
+  con los nombres actuales (tarea 100).
+- T3 (comentarios): mover debajo de fotos (tarea 101).
+- T4 (PDF): aplicado (tarea 102).
+- T5 (ventas) y T6 (flota): no los marcó en el alcance — pendiente
+  confirmar. Sí marcó cerrar permisos de Equipos (tarea 103).

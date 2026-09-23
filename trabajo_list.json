@@ -1543,6 +1543,34 @@
       ],
       "status": "done",
       "resolution": "Implementado, verificar.sh en verde (tsc 6 workspaces, tests, eslint). No probado contra la app real en esta sesión (sin backend/credenciales locales). Mobile requiere build EAS. Mobile Agenda estaba 'congelada' en CLAUDE.md, se tocó por pedido explícito de la usuaria ('Ejecuta tu lado ambas tareas')."
+    },
+    {
+      "id": 100,
+      "name": "os_fotos_grupos_descripcion",
+      "title": "OS: fotos agrupadas por categoría con divisor + descripción editable por foto",
+      "status": "done",
+      "resolution": "Mobile FotosSection: una sección por categoría (General, Equipo a intervenir, Inicio, Durante, Término) con franja divisoria, descripción visible bajo cada foto y editable en el visor (encolarDescripcionFoto → PATCH /api/trabajos/:id/fotos/:fotoId, ya existía). Web ordenes/[id]: misma agrupación + descripción editable (guarda al salir del campo, solo si la OS no está firmada). Renombrar categorías: pendiente de confirmación de la usuaria. verificar.sh en verde; no probado contra la app real en esta sesión."
+    },
+    {
+      "id": 101,
+      "name": "os_comentarios_tecnico",
+      "title": "OS: comentarios del técnico debajo de las fotos",
+      "status": "done",
+      "resolution": "observaciones_cierre se movió del paso 3 (bajo la firma) al paso 2, debajo de las fotos, con autoguardado (PATCH /api/trabajos/:id/observaciones nuevo, por la cola offline). Ahora también queda registrado en el cierre 'cliente no disponible'. /firma ya no lo pisa si no viene. Etiqueta 'Comentarios del técnico' en web, portal y PDF. verificar.sh en verde; no probado contra la app real en esta sesión."
+    },
+    {
+      "id": 102,
+      "name": "pdf_os_informe_bajo_fotos",
+      "title": "PDF OS: informe técnico IA debajo de las imágenes",
+      "status": "done",
+      "resolution": "generarPdfOS.ts: el bloque 'Informe técnico' pasó de ir tras 'Observaciones de cierre' (antes de ítems/checklist/fotos) a ir después de la galería de fotos, antes de las firmas, con salto de página si el título quedaría huérfano. verificar.sh en verde; no probado contra la app real en esta sesión."
+    },
+    {
+      "id": 103,
+      "name": "equipos_permisos_escritura",
+      "title": "Seguridad: permisos de escritura en /api/equipos",
+      "status": "done",
+      "resolution": "Antes ningún handler chequeaba permisos (cualquier colaborador podía crear/editar equipos y asignar vehículos). Ahora: vehículos → módulo flota; otros equipos → registros o flota; asignar/desasignar → flota. Lecturas sin cambios (las usa mobile). verificar.sh en verde; no probado contra la app real en esta sesión."
     }
   ]
 }
