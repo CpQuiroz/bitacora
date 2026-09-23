@@ -14,6 +14,7 @@ import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Button, Card, Input, LoadingState, Select, StatusBadge } from "@bitacora/ui/web";
 import { InputMonto } from "@/components/InputMonto";
 import { DocumentoForm } from "@/components/DocumentoForm";
+import { HistorialTrabajos } from "@/components/HistorialTrabajos";
 
 // Ficha única de una persona. Cada pestaña conserva el gate de módulo
 // que tenía su pantalla original:
@@ -22,7 +23,7 @@ import { DocumentoForm } from "@/components/DocumentoForm";
 //   Datos laborales   → "remuneraciones"
 //   Documentos        → "flota"
 
-type PestanaId = "identidad" | "acceso" | "laboral" | "documentos";
+type PestanaId = "identidad" | "acceso" | "laboral" | "documentos" | "historial";
 
 type AuditoriaFila = AuditoriaUsuario & {
   usuario_afectado: { nombre: string } | null;
@@ -298,6 +299,10 @@ export default function PersonaFichaPage() {
       { id: "acceso", label: "Acceso y permisos", visible: ve("gestion_control") },
       { id: "laboral", label: "Datos laborales", visible: ve("remuneraciones") },
       { id: "documentos", label: "Documentos", visible: ve("flota") },
+      // Fase 5.3c (23-sep-2026, pedido explícito): Admin ve el historial
+      // de cualquier colaborador desde su ficha. Sin gate de módulo —
+      // mismo criterio que /api/mis-trabajos (self-service).
+      { id: "historial", label: "Historial de trabajos", visible: true },
     ] as { id: PestanaId; label: string; visible: boolean }[]
   ).filter((p) => p.visible);
 
@@ -590,6 +595,13 @@ export default function PersonaFichaPage() {
       {pestanaActiva === "documentos" && ve("flota") && (
         <div className="my-ds-6">
           <DocumentoForm entidadTipo="colaborador" entidadId={persona.id} />
+        </div>
+      )}
+
+      {/* ── Historial de trabajos (Fase 5.3c) ── */}
+      {pestanaActiva === "historial" && (
+        <div className="my-ds-6">
+          <HistorialTrabajos colaboradorId={persona.id} />
         </div>
       )}
     </DashboardShell>

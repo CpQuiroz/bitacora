@@ -21,6 +21,7 @@ import {
   ClipboardCheck,
   CreditCard,
   HelpCircle,
+  History,
   Home,
   Layers,
   LogOut,
@@ -75,6 +76,11 @@ const NAV_GROUPS: NavGroup[] = [
       // Módulos apagables, cada uno con su propio gate.
       { href: "/dashboard/rutas", label: "Rutas", icon: Route, modulo: "rutas" },
       { href: "/dashboard/viajes", label: "Viajes", icon: Truck, modulo: "viajes" },
+      // Historial de lo propio (Fase 5.3, 23-sep-2026) — self-service,
+      // sin módulo (mismo criterio que /api/mis-trabajos): no depende
+      // de si la empresa activó Levantamientos/OS como módulos
+      // completos, solo de que el usuario tenga trabajos asignados.
+      { href: "/dashboard/mis-trabajos", label: "Mis trabajos", icon: History, modulo: null },
     ],
   },
   {

@@ -4,6 +4,7 @@ import {
   Banknote,
   ChevronRight,
   CircleUser,
+  ClipboardList,
   FileChartColumn,
   HardHat,
   Receipt,
@@ -169,6 +170,9 @@ export function MasScreen({ navigation }: NativeStackScreenProps<MasStackParamLi
   if (acciones.includes("ver_dashboard") && visibles.includes("informes")) {
     administracion.push({ titulo: "Informes", Icono: FileChartColumn, ir: () => navigation.navigate("Informes") });
   }
+  // Fase 5.3 (23-sep-2026) — historial propio, self-service, sin gate
+  // de módulo (mismo criterio que /api/mis-trabajos).
+  administracion.push({ titulo: "Mis trabajos", Icono: ClipboardList, ir: () => navigation.navigate("MisTrabajos") });
 
   // --- Cuenta ---
   const cuenta: Item[] = [

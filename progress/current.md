@@ -6403,8 +6403,38 @@ en web) — pero ninguna mostraba documentos ni alertas de vencimiento.
   check-colores: no son literales nuevos, son tokens ya definidos en
   `globals.css`). Tarea 92 cerrada.
 
-**Pendiente de mí**: seguir con 5.3 ("Mis trabajos" + Agenda gris +
-Admin ve historial de cualquier colaborador), después Fase 6 y 7.
+## 23-sep-2026 — tarea 93: FASE 5.3 ("Mis trabajos" + Agenda + perfil)
+
+- Backend: `misTrabajos.ts` (`GET /api/mis-trabajos`, sin
+  `requiereModulo`, mismo criterio que `mis-viajes`) — combina
+  `trabajos`+`ordenes_servicio` y `levantamientos`, solo "terminados",
+  ventana de días (30/90), búsqueda por cliente, tipo, paginación.
+- **Hallazgo de seguridad real** (al construir el acceso al PDF desde
+  el historial): `GET /:id/pdf`, `/:id/pdf-versiones` y
+  `POST /:id/pdf/enviar` en `trabajos.ts` no tenían NINGÚN chequeo de
+  dueño para colaborador — cualquiera con el módulo podía pedir el PDF
+  de una OS ajena adivinando el id. Cerrado con
+  `colaboradorPuedeVerPdf()`.
+- Web: `HistorialTrabajos` (compartido) en `/dashboard/mis-trabajos`
+  (nuevo ítem de menú, sin gate de módulo) y en la pestaña nueva
+  "Historial de trabajos" de `personas/[id]/page.tsx` (5.3c, siempre
+  visible).
+- Mobile: `MisTrabajosScreen` (Más → Administración), reusa
+  `ScreenHeader.filtros`/`filtrosSecundarios` (ya existía ese soporte
+  de 2 filas de chips, no hizo falta un componente nuevo).
+- **5.3b, bug real encontrado**: `AgendaScreen.tsx` (mobile) — un
+  levantamiento completado DESAPARECÍA del día en el calendario
+  (filtro a `creado/asignado/en_terreno`). Corregido: ya no filtra por
+  estado; `FilaLevantamiento` atenúa (opacity 0.55, barra gris) los
+  terminados y muestra "Completado" — mismo tratamiento que
+  cancelada/no_asistio ya usaban en citas. Pizarra (`hoy.ts`) SIGUE
+  filtrando por estado a propósito (es "solo lo activo") — no se
+  tocó. Web Agenda no tenía este bug — no muestra levantamientos en
+  absoluto, solo un acceso directo a crear uno.
+- `tsc` (6 workspaces) + `verificar.sh` en verde. Tarea 93 cerrada.
+
+**Pendiente de mí**: Fase 6 (Agenda: filtro por tipo + leyenda de
+colores) y Fase 7 (menú web Inventario) — últimas 2 fases.
 
 ## 23-sep-2026 — tarea 81: bajar el botón flotante del Asistente
 

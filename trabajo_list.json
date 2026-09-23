@@ -1436,6 +1436,23 @@
       ],
       "status": "done",
       "resolution": "Encontrado un desajuste real entre el pedido explícito (\"vencido rojo, por vencer amarillo\") y el sistema de diseño nuevo (@bitacora/ui, StatusBadge/TonoEstado): no tiene un tono rojo/amarillo propio, solo 4 tonos ligados a la marca de cada empresa -- \"vencido\" ya cae en tono \"cancelado\" (gris), no rojo, en todo el resto de la app (ej. Flota → Documentos por vencer). En mobile (ya migrado al sistema nuevo) se reusó ese mismo StatusBadge por consistencia. En perfil/page.tsx (web, todavía con el sistema de tokens viejo que SÍ tiene --danger/--warning/--success reales en globals.css) se usaron esos colores semánticos tal cual -- ahí sí queda literalmente rojo/amarillo como se pidió. Documentado como inconsistencia de plataforma en el reporte final, no resuelta de raíz (requeriría agregar tonos danger/warning al sistema de diseño nuevo, fuera del alcance de este pedido). tsc + verificar.sh en verde."
+    },
+    {
+      "id": 93,
+      "name": "fase5_3_mis_trabajos_historial",
+      "title": "FASE 5.3: \"Mis trabajos\" (historial), Agenda gris para completados, Admin ve historial ajeno",
+      "description": "Historial de levantamientos/OS terminados para el colaborador (web+mobile, default 30 dias extendible a 90, solo lectura, PDF ultima version, busqueda por cliente, filtro por tipo, paginacion backend). Ademas: 5.3b Agenda mobile dejaba de mostrar un levantamiento en cuanto se completaba (bug real encontrado); 5.3c Admin ve el historial de cualquier colaborador desde su ficha.",
+      "acceptance": [
+        "Backend: nuevo router misTrabajos.ts (GET /api/mis-trabajos), sin requiereModulo (mismo criterio que /api/mis-viajes) -- combina trabajos+ordenes_servicio y levantamientos, filtra por responsable_id/tecnico_id = colaborador (o ?colaborador_id= si quien pide es gestion), solo estados \"terminados\", ventana de dias (30 default, 90 max), busqueda por cliente, tipo, paginacion en memoria",
+        "Hallazgo de seguridad real (no relacionado a la Fase 2, encontrado al construir el acceso a PDF desde el historial): GET /:id/pdf, /:id/pdf-versiones y POST /:id/pdf/enviar en trabajos.ts no tenian NINGUN chequeo de dueño para colaborador (a diferencia del resto de ese router) -- cualquiera con el modulo podia pedir el PDF de una OS ajena adivinando el id. Cerrado con colaboradorPuedeVerPdf()",
+        "Web: componente compartido HistorialTrabajos (usado en /dashboard/mis-trabajos -- nuevo item de menu, sin gate de modulo -- y en la pestaña nueva \"Historial de trabajos\" de personas/[id]/page.tsx)",
+        "Mobile: MisTrabajosScreen (Mas -> Administracion), ScreenHeader con 2 filas de chips (tipo + dias), reusa el mismo patron que Levantamientos/Rendiciones",
+        "5.3b: AgendaScreen.tsx (mobile) -- porDiaLevantamientos ya NO filtra por estado (antes solo dejaba creado/asignado/en_terreno, un levantamiento completado desaparecia del dia en el calendario). FilaLevantamiento ahora atenua (opacity 0.55, barra gris) los terminados y muestra \"Completado\" -- mismo tratamiento que ya tenian cancelada/no_asistio en citas. Pizarra (hoy.ts) SIGUE filtrando por estado a proposito -- esa es \"solo lo activo\", no se tocó. Web Agenda no tenia este bug (no muestra levantamientos en absoluto, solo un boton de acceso directo a crear uno)",
+        "5.3c: pestaña \"Historial de trabajos\" en personas/[id]/page.tsx (siempre visible, sin gate de modulo) con HistorialTrabajos colaboradorId={persona.id}",
+        "tsc (6 workspaces) + verificar.sh en verde"
+      ],
+      "status": "done",
+      "resolution": "Historial combinado (trabajos+levantamientos) en un solo endpoint nuevo, sin modulo, mismo criterio que mis-viajes. Reutilizado ScreenHeader.filtros/filtrosSecundarios (mobile) para los chips de tipo/dias -- ya existia ese soporte de 2 filas, no hizo falta un componente nuevo. Encontrado y cerrado un hueco de permisos real en el camino (PDF de OS sin chequeo de dueño) al construir el acceso al PDF desde el historial -- mismo principio de la Fase 2 (restriccion en backend, no en UI), aplicado a un endpoint que no había tocado antes. Bug real de Agenda (levantamientos completados desaparecian del calendario) encontrado y corregido -- se atenuan en vez de ocultarse, mismo tratamiento visual que cancelada/no_asistio ya usaban. tsc + verificar.sh en verde."
     }
   ]
 }

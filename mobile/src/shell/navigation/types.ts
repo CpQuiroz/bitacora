@@ -60,6 +60,8 @@ export type MasStackParamList = {
   MantencionDetalle: { equipoId: string; registroId: string };
   Levantamientos: undefined;
   LevantamientoDetalle: { id: string };
+  // Fase 5.3 — historial de levantamientos/OS terminados del colaborador.
+  MisTrabajos: undefined;
   CobrosLista: undefined;
   CobroForm: undefined;
   CobroDetalle: { cobroId: string };

@@ -179,15 +179,19 @@ export function AgendaScreen({ navigation }: NativeStackScreenProps<AgendaStackP
     return m;
   }, [tareas]);
 
-  // Solo los agendados (con fecha_visita) y todavía pendientes de algo
-  // del técnico — mismo filtro de estado que Pizarra (hoy.ts). Sin
-  // fecha_visita no aparecen acá (ver Pizarra, sin día fijo) — sería
-  // engañoso ponerlos en un día cualquiera del calendario.
+  // Solo los agendados (con fecha_visita) — sin fecha_visita no
+  // aparecen acá (ver Pizarra, sin día fijo) — sería engañoso ponerlos
+  // en un día cualquiera del calendario. A diferencia de Pizarra
+  // (hoy.ts, que SÍ filtra por estado — esa es "solo lo activo" a
+  // propósito), Agenda es el calendario histórico completo: un
+  // levantamiento terminado (completado_tecnico/cotizado_externo/
+  // aprobado/rechazado) sigue en su día, atenuado — antes desaparecía
+  // del calendario en cuanto el técnico lo completaba (Fase 5.3b,
+  // 23-sep-2026, pedido explícito: "no debería desaparecer").
   const porDiaLevantamientos = useMemo(() => {
     const m = new Map<string, LevantamientoResumen[]>();
     for (const lev of levantamientos) {
       if (!lev.fecha_visita) continue;
-      if (!["creado", "asignado", "en_terreno"].includes(lev.estado)) continue;
       if (!m.has(lev.fecha_visita)) m.set(lev.fecha_visita, []);
       m.get(lev.fecha_visita)!.push(lev);
     }
@@ -372,7 +376,12 @@ function BarrasDia({ citas, levantamientos = 0, marca }: { citas: TareaConDatos[
   );
 }
 
+// "Terminado" = ya no espera nada del técnico (mismo criterio que el
+// filtro que Pizarra SÍ aplica) — acá no se oculta, solo se atenúa.
+const LEVANTAMIENTO_TERMINADO = ["completado_tecnico", "cotizado_externo", "aprobado", "rechazado"];
+
 function FilaLevantamiento({ item, onPress }: { item: LevantamientoResumen; onPress: () => void }) {
+  const terminado = LEVANTAMIENTO_TERMINADO.includes(item.estado);
   return (
     <Pressable
       onPress={onPress}
@@ -383,6 +392,7 @@ function FilaLevantamiento({ item, onPress }: { item: LevantamientoResumen; onPr
         paddingVertical: tokens.space["2"] * 1.25,
         borderBottomWidth: 1,
         borderBottomColor: tokens.color.divider,
+        opacity: terminado ? 0.55 : 1,
       }}
     >
       <Texto tamano={tokens.size.small} peso="semibold" color={`${tokens.color.text}66`} style={{ width: 46 }}>
@@ -394,10 +404,12 @@ function FilaLevantamiento({ item, onPress }: { item: LevantamientoResumen; onPr
         </Texto>
         <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`} numberOfLines={1}>
           {formatearFolio("LEV", item.folio) ? `${formatearFolio("LEV", item.folio)} · ` : ""}
-          {item.descripcion_requerimiento ?? "Evaluar en terreno"}
+          {terminado ? "Completado" : item.descripcion_requerimiento ?? "Evaluar en terreno"}
         </Texto>
       </View>
-      <View style={{ width: 4, alignSelf: "stretch", borderRadius: 2, backgroundColor: tokens.color.accent2Ramp["700"] }} />
+      <View
+        style={{ width: 4, alignSelf: "stretch", borderRadius: 2, backgroundColor: terminado ? tokens.color.neutral["500"] : tokens.color.accent2Ramp["700"] }}
+      />
     </Pressable>
   );
 }

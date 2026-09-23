@@ -51,6 +51,7 @@ import { proveedoresRouter } from "./routes/proveedores";
 import { asistenteRouter } from "./routes/asistente";
 import { viajesRouter } from "./routes/viajes";
 import { misViajesRouter } from "./routes/misViajes";
+import { misTrabajosRouter } from "./routes/misTrabajos";
 import { accesosRouter } from "./routes/accesos";
 import { empresaRolesRouter } from "./routes/empresaRoles";
 import { remuneracionesRouter } from "./routes/remuneraciones";
@@ -376,6 +377,10 @@ app.use("/api/viajes", requiereAuth, requiereEmpresa, requiereModulo("viajes"), 
 // Viajes propios de un colaborador (app móvil / bot) — sin requiereModulo,
 // scopeado a chofer_id = usuario autenticado. Ver routes/misViajes.ts.
 app.use("/api/mis-viajes", requiereAuth, requiereEmpresa, misViajesRouter);
+// "Mis trabajos" (Fase 5.3) — historial de levantamientos/OS
+// terminados del colaborador, mismo criterio que mis-viajes: sin
+// requiereModulo, self-service. Ver routes/misTrabajos.ts.
+app.use("/api/mis-trabajos", requiereAuth, requiereEmpresa, misTrabajosRouter);
 // Remuneraciones (liquidaciones de sueldo) — módulo opt-in, apagado por
 // defecto, lo enciende el Super-Admin. Roles admin/contador.
 app.use("/api/remuneraciones", requiereAuth, requiereEmpresa, requiereModulo("remuneraciones"), remuneracionesRouter);

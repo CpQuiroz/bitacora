@@ -76,6 +76,18 @@ async function usuarioExiste(empresaId: string, usuarioId: string) {
   return Boolean(data);
 }
 
+// Fase 5.3 (23-sep-2026, pedido explícito): un colaborador accede al
+// PDF (última versión) de SUS trabajos desde "Mis trabajos" — pero
+// GET /:id/pdf y /:id/pdf-versiones no tenían ningún chequeo de
+// dueño (a diferencia del resto del router, que sí escopea por
+// responsable_id para colaborador) — cualquiera con el módulo podía
+// pedir el PDF de una OS ajena adivinando el id. Cerrado acá.
+async function colaboradorPuedeVerPdf(req: RequestConEmpresa, trabajoId: string): Promise<boolean> {
+  if (req.rol !== "colaborador") return true;
+  const { data } = await supabase.from("trabajos").select("responsable_id").eq("empresa_id", req.empresaId!).eq("id", trabajoId).maybeSingle();
+  return data?.responsable_id === req.userId;
+}
+
 async function ordenDeTrabajo(empresaId: string, trabajoId: string) {
   const { data } = await supabase
     .from("ordenes_servicio")
@@ -1774,6 +1786,10 @@ async function obtenerPdfOS(
 trabajosRouter.get(
   "/:id/pdf",
   ah<RequestConEmpresa>(async (req, res) => {
+    if (!(await colaboradorPuedeVerPdf(req, req.params.id))) {
+      res.status(403).json({ error: "No puedes ver el PDF de un trabajo que no es tuyo" });
+      return;
+    }
     const datos = await armarDatosPdf(req.empresaId!, req.params.id);
     if (!datos) {
       res.status(404).json({ error: "Trabajo u orden de servicio no encontrada" });
@@ -1789,6 +1805,10 @@ trabajosRouter.get(
 trabajosRouter.post(
   "/:id/pdf/enviar",
   ah<RequestConEmpresa>(async (req, res) => {
+    if (!(await colaboradorPuedeVerPdf(req, req.params.id))) {
+      res.status(403).json({ error: "No puedes enviar el PDF de un trabajo que no es tuyo" });
+      return;
+    }
     const { destinatario } = req.body ?? {};
     if (typeof destinatario !== "string" || !destinatario.trim()) {
       res.status(400).json({ error: "Falta destinatario" });
@@ -1993,6 +2013,10 @@ trabajosRouter.patch(
 trabajosRouter.get(
   "/:id/pdf-versiones",
   ah<RequestConEmpresa>(async (req, res) => {
+    if (!(await colaboradorPuedeVerPdf(req, req.params.id))) {
+      res.status(403).json({ error: "No puedes ver el PDF de un trabajo que no es tuyo" });
+      return;
+    }
     const orden = await ordenDeTrabajo(req.empresaId!, req.params.id);
     if (!orden) {
       res.status(404).json({ error: "Este trabajo todavía no tiene una orden de servicio" });
