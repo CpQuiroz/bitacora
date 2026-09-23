@@ -3,9 +3,9 @@ import { Pressable, ScrollView, View } from "react-native";
 import { ArrowLeft, Car, CheckCheck, Wrench } from "lucide-react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import type { Equipo } from "@bitacora/shared";
+import type { DocumentoVehiculoAsignado, Equipo } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
-import { Card, EmptyState, ErrorState, LoadingState, ScreenHeader, StatusBadge, Texto, useMarca } from "@bitacora/ui/native";
+import { Card, EmptyState, ErrorState, LoadingState, ScreenHeader, StatusBadge, Texto, type TonoEstado, useMarca } from "@bitacora/ui/native";
 import { PickerBuscable } from "../../components/ui";
 import { useAuth } from "../auth/AuthContext";
 import type { MasStackParamList } from "../../shell/navigation/types";
@@ -70,6 +70,11 @@ export function MantencionVehiculoScreen({ navigation }: NativeStackScreenProps<
 
   const vehiculo = override ?? inicio?.vehiculo ?? null;
   const registros = override ? registrosOverride : (inicio?.registros ?? []);
+  // Fase 5.2: documentos del vehículo asignado (con alerta de
+  // vencimiento) — solo para "mi camión", no al probar otro con el
+  // selector de abajo (ese es un dato de Flota completa, no de
+  // /me/vehiculo).
+  const documentos = override ? [] : (inicio?.vehiculo?.documentos ?? []);
 
   const volver = { icono: <ArrowLeft size={20} strokeWidth={2.5} color={tokens.color.text} />, onPress: () => navigation.goBack(), etiquetaAccesible: "Volver" };
 
@@ -193,6 +198,19 @@ export function MantencionVehiculoScreen({ navigation }: NativeStackScreenProps<
           </Card>
         ) : null}
 
+        {vehiculo && documentos.length > 0 ? (
+          <Card>
+            <Texto tamano={tokens.size.body} peso="semibold" color={tokens.color.text} style={{ marginBottom: tokens.space["1"] }}>
+              Documentos del camión
+            </Texto>
+            <View style={{ borderTopWidth: 1, borderTopColor: tokens.color.divider }}>
+              {documentos.map((d) => (
+                <FilaDocumento key={d.id} d={d} />
+              ))}
+            </View>
+          </Card>
+        ) : null}
+
         {puedeCambiar ? (
           <PickerBuscable
             etiqueta="Cambiar de camión"
@@ -230,6 +248,41 @@ function FilaRegistro({ r }: { r: MantencionResumen }) {
       ) : (
         <StatusBadge estado="ok" etiqueta="OK" tonoForzado="completado" />
       )}
+    </View>
+  );
+}
+
+// "por_vencer" no está en MAPA_ESTADO_TONO (ambiguo a propósito, ver
+// tipos.ts) — mismo forzado que ya usa la web (Flota → Documentos por
+// vencer) para el mismo dato, así queda consistente entre plataformas.
+// El sistema de diseño no tiene un tono "rojo" propio (marca por
+// empresa, sin literal fuera de packages/design-tokens) — "vencido" ya
+// cae en MAPA_ESTADO_TONO como "cancelado", el tono más urgente que
+// hay disponible.
+const TONO_FORZADO_DOCUMENTO: Partial<Record<string, TonoEstado>> = { por_vencer: "en_progreso" };
+
+function FilaDocumento({ d }: { d: DocumentoVehiculoAsignado }) {
+  return (
+    <View
+      style={{ flexDirection: "row", alignItems: "center", gap: tokens.space["3"], paddingVertical: tokens.space["3"], borderBottomWidth: 1, borderBottomColor: tokens.color.divider }}
+    >
+      <View style={{ flex: 1, gap: 2 }}>
+        <Texto tamano={tokens.size.small} color={tokens.color.text} numberOfLines={1}>
+          {d.tipo?.nombre ?? "Documento"}
+        </Texto>
+        {d.fecha_vencimiento ? (
+          <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`}>
+            Vence {fechaCorta(d.fecha_vencimiento)}
+          </Texto>
+        ) : null}
+      </View>
+      {d.estado ? (
+        <StatusBadge
+          estado={d.estado}
+          etiqueta={d.estado === "vencido" ? "Vencido" : d.estado === "por_vencer" ? "Por vencer" : "Vigente"}
+          tonoForzado={TONO_FORZADO_DOCUMENTO[d.estado]}
+        />
+      ) : null}
     </View>
   );
 }

@@ -1,5 +1,6 @@
 import type {
   Equipo,
+  EquipoAsignadoConDocumentos,
   ItemChecklistMantencion,
   RespuestaChecklistMantencion,
   TipoRegistroMantencion,
@@ -28,7 +29,7 @@ export type MantencionResumen = {
 };
 
 export type MantencionInicio = {
-  vehiculo: Equipo | null;
+  vehiculo: EquipoAsignadoConDocumentos | null;
   registros: MantencionResumen[];
 };
 

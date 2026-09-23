@@ -1420,6 +1420,22 @@
       ],
       "status": "done",
       "resolution": "Antes de tocar nada se leyó rendiciones.ts completo (654 líneas) y se confirmó que ya implementaba todo lo pedido en 5.1 con ownership correcto en cada endpoint (esGestion pattern). El único hueco real estaba en gastos.ts (lista plana, pre-existente, sin ningún filtro de rol) -- se agregó esGestion local + idsRendicionesPropias() y se aplicó en GET /, GET /:id, GET /:id/comprobante y PATCH /:id. tsc + verificar.sh en verde."
+    },
+    {
+      "id": 92,
+      "name": "fase5_2_equipos_vehiculos_alertas_vencimiento",
+      "title": "FASE 5.2: colaborador ve su equipo/vehículo asignado con documentos y alertas de vencimiento",
+      "description": "Ya existía /api/usuarios/me/vehiculo (self-service, sin módulo flota) y las pantallas que lo consumen (mobile MantencionVehiculoScreen, web perfil/page.tsx) -- pero ninguna mostraba los documentos del vehículo ni sus alertas de vencimiento (vencido/por vencer).",
+      "acceptance": [
+        "Backend: documentosDeVehiculo() (usuarios.ts) embebe los documentos del vehículo asignado, con estado (estadoDocumento, mismo umbral de 30 días que ya usa toda la app -- no hay umbral configurable en Configuración, así que no se inventó uno) en /me/vehiculo y /me/vehiculo/registros-mantencion",
+        "A propósito NO se abrió /api/documentos?entidad_tipo=vehiculo a colaboradores sin módulo flota -- eso seguiría permitiendo editar/subir documentos del vehículo, no solo verlos",
+        "packages/shared: DocumentoVehiculoAsignado + EquipoAsignadoConDocumentos",
+        "Mobile (MantencionVehiculoScreen): card \"Documentos del camión\" con StatusBadge por documento",
+        "Web (perfil/page.tsx): mismo listado -- esta página sigue con el sistema de tokens viejo (globals.css: --danger/--warning/--success), así que el estado se muestra con esos colores semánticos reales en vez de StatusBadge (que no tiene tono rojo propio, solo tonos por marca)",
+        "tsc (6 workspaces) + verificar.sh en verde, incluye check-colores (no son literales nuevos, son tokens ya definidos en globals.css)"
+      ],
+      "status": "done",
+      "resolution": "Encontrado un desajuste real entre el pedido explícito (\"vencido rojo, por vencer amarillo\") y el sistema de diseño nuevo (@bitacora/ui, StatusBadge/TonoEstado): no tiene un tono rojo/amarillo propio, solo 4 tonos ligados a la marca de cada empresa -- \"vencido\" ya cae en tono \"cancelado\" (gris), no rojo, en todo el resto de la app (ej. Flota → Documentos por vencer). En mobile (ya migrado al sistema nuevo) se reusó ese mismo StatusBadge por consistencia. En perfil/page.tsx (web, todavía con el sistema de tokens viejo que SÍ tiene --danger/--warning/--success reales en globals.css) se usaron esos colores semánticos tal cual -- ahí sí queda literalmente rojo/amarillo como se pidió. Documentado como inconsistencia de plataforma en el reporte final, no resuelta de raíz (requeriría agregar tonos danger/warning al sistema de diseño nuevo, fuera del alcance de este pedido). tsc + verificar.sh en verde."
     }
   ]
 }

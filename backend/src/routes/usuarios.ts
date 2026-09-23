@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import { Router } from "express";
 import multer from "multer";
 import type { FuncionColaborador, Rol, Usuario } from "@bitacora/shared";
+import { estadoDocumento } from "@bitacora/shared";
 import { supabase } from "../supabase";
 import { empresaPuedeUsarRol, rolesDeEmpresa } from "../roles";
 import { subirFotoPerfil } from "../storage";
@@ -371,13 +372,40 @@ usuariosRouter.get(
   })
 );
 
+// Fase 5.2 (23-sep-2026, pedido explícito): documentos del vehículo
+// asignado, con estado (vencido/por_vencer/vigente) — mismo criterio
+// que ya usa /api/documentos (estadoDocumento, sin umbral configurable
+// en Configuración: no existe tal ajuste hoy, así que se reusa el
+// mismo de siempre, 30 días, en vez de inventar uno nuevo). Ambos
+// endpoints de abajo lo embeben en su respuesta, y NO como acceso
+// nuevo a /api/documentos?entidad_tipo=vehiculo — ese endpoint sigue
+// exigiendo el módulo "flota" para esa entidad (autorizado() en
+// documentos.ts), a propósito: no le abrimos al colaborador un canal
+// para editar/subir documentos del vehículo, solo lectura acá.
+async function documentosDeVehiculo(empresaId: string, equipoId: string) {
+  const { data } = await supabase
+    .from("documentos")
+    .select("id, numero, fecha_emision, fecha_vencimiento, tipo:tipos_documento(nombre)")
+    .eq("empresa_id", empresaId)
+    .eq("entidad_tipo", "vehiculo")
+    .eq("entidad_id", equipoId)
+    .order("fecha_vencimiento", { ascending: true, nullsFirst: false });
+  return (data ?? []).map((d) => ({ ...d, estado: estadoDocumento(d.fecha_vencimiento) }));
+}
+
 // Vehículo actualmente asignado al usuario logueado — self-service, sin
 // el módulo "flota" (un colaborador no puede listar TODOS los
 // vehículos, pero sí necesita ver el suyo).
 usuariosRouter.get(
   "/me/vehiculo",
   ah<RequestConEmpresa>(async (req, res) => {
-    res.json(await equipoAsignadoAColaborador(req.empresaId!, req.userId!));
+    const vehiculo = await equipoAsignadoAColaborador(req.empresaId!, req.userId!);
+    if (!vehiculo) {
+      res.json(null);
+      return;
+    }
+    const documentos = await documentosDeVehiculo(req.empresaId!, vehiculo.id);
+    res.json({ ...vehiculo, documentos });
   })
 );
 
@@ -392,6 +420,8 @@ usuariosRouter.get(
       res.json({ vehiculo: null, registros: [] });
       return;
     }
+    const documentos = await documentosDeVehiculo(req.empresaId!, vehiculo.id);
+    const vehiculoConDocumentos = { ...vehiculo, documentos };
     const limite = Math.min(Number(req.query.limite) || 10, 100);
     const { data, error } = await supabase
       .from("registros_mantencion_equipo")
@@ -421,7 +451,7 @@ usuariosRouter.get(
         con_novedades: Array.isArray(r.checklist) && r.checklist.some((i: { respuesta?: string }) => i?.respuesta === "no"),
       };
     });
-    res.json({ vehiculo, registros });
+    res.json({ vehiculo: vehiculoConDocumentos, registros });
   })
 );
 

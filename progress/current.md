@@ -6354,10 +6354,57 @@ rendición) no filtraba por colaborador — cualquier rol con
   comentario ya existente en `MasScreen.tsx`).
 - `tsc` (6 workspaces) + `verificar.sh` en verde. Tarea 91 cerrada.
 
-**Pendiente de mí**: seguir con 5.2 (Equipos/vehículos con alertas de
-vencimiento) y 5.3 ("Mis trabajos" + Agenda gris + Admin ve historial
-de cualquier colaborador) — interrumpido por un pedido de build de
-mobile, vuelvo después.
+## 23-sep-2026 — build local de mobile (EAS Free agotó su cuota mensual)
+
+Pedido: "haz un build de la app mobile con todo lo que tienes hasta el
+momento." `eas build` devolvió "This account has used its Android
+builds from the Free plan this month" (reset 1-oct). Fallback: build
+local (ver memoria `build-android-local` — toolchain ya estaba
+instalado del 6-sep).
+
+- Bump versión 1.10.14 → 1.10.15 (versionCode 56), commit propio.
+- `.env` sobrescrito temporalmente con los valores de prod (`eas.json`
+  → `build.preview.env`: Render + Supabase prod) antes del
+  `gradlew assembleRelease`, restaurado a dev inmediatamente después.
+- Verificado con `strings` sobre el bundle Hermes extraído del APK:
+  cero matches de `localhost:8080`/`pruwvpnlvrvgtmpetlsr`, sí aparecen
+  `bitacora-cgt7.onrender.com` y `yjbskbskyadxjooxngjv.supabase.co`.
+- APK en `builds/bitacora-1.10.15.apk` (gitignored, ~40 MB,
+  arm64-v8a). No se pudo enviar por chat (pasa el límite de 30 MB) —
+  la usuaria lo toma directo del path en su Mac.
+
+## 23-sep-2026 — tarea 92: FASE 5.2 (Equipos/vehículos con alertas)
+
+Ya existía `/api/usuarios/me/vehiculo` (self-service) y las pantallas
+que lo consumen (`MantencionVehiculoScreen` en mobile, `perfil/page.tsx`
+en web) — pero ninguna mostraba documentos ni alertas de vencimiento.
+
+- Backend: `documentosDeVehiculo()` embebe los documentos del vehículo
+  asignado (con `estadoDocumento`, mismo umbral de 30 días que ya usa
+  toda la app) en ambos endpoints `/me/vehiculo*`. A propósito NO se
+  abrió `/api/documentos?entidad_tipo=vehiculo` a colaboradores sin
+  módulo `flota` — seguiría permitiendo editar/subir documentos, no
+  solo verlos.
+- `packages/shared`: `DocumentoVehiculoAsignado` + `EquipoAsignadoConDocumentos`.
+- Mobile: card "Documentos del camión" con `StatusBadge`.
+- Web (`perfil/page.tsx`): mismo listado, pero con colores
+  `text-danger`/`text-warning` reales — esta página sigue con el
+  sistema de tokens viejo (`globals.css`), que a diferencia del nuevo
+  (`StatusBadge`/`TonoEstado`, sin tono rojo/amarillo propio) sí tiene
+  danger/warning/success semánticos.
+- **Inconsistencia detectada, no resuelta**: en el resto de la app
+  (mobile, Flota → Documentos por vencer en web) "vencido" se ve GRIS
+  (tono "cancelado"), no rojo — el sistema de diseño nuevo no tiene un
+  tono de alarma propio, solo tonos ligados a la marca de cada
+  empresa. Agregar un tono danger/warning real ahí es cambio de
+  sistema de diseño, fuera del alcance de este pedido — reportado como
+  deuda técnica.
+- `tsc` (6 workspaces) + `verificar.sh` en verde (incluye
+  check-colores: no son literales nuevos, son tokens ya definidos en
+  `globals.css`). Tarea 92 cerrada.
+
+**Pendiente de mí**: seguir con 5.3 ("Mis trabajos" + Agenda gris +
+Admin ve historial de cualquier colaborador), después Fase 6 y 7.
 
 ## 23-sep-2026 — tarea 81: bajar el botón flotante del Asistente
 

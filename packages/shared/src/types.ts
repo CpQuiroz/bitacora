@@ -1169,6 +1169,21 @@ export type Equipo = {
   garantia_vencimiento: string | null;
 };
 
+// Fase 5.2 (23-sep-2026): documento de un vehículo, tal como lo
+// embeben /api/usuarios/me/vehiculo y /me/vehiculo/registros-mantencion
+// para la vista self-service del colaborador (nunca /api/documentos
+// completo — ese sigue exigiendo el módulo "flota").
+export type DocumentoVehiculoAsignado = {
+  id: string;
+  numero: string | null;
+  fecha_emision: string | null;
+  fecha_vencimiento: string | null;
+  tipo: { nombre: string } | null;
+  estado: EstadoDocumento | null;
+};
+
+export type EquipoAsignadoConDocumentos = Equipo & { documentos: DocumentoVehiculoAsignado[] };
+
 // Plan de Mantención Preventiva de un equipo — solo CRUD por ahora.
 // TODO: decisión pendiente — generar automáticamente una OS cuando
 // proxima_fecha se cumple. No implementado, requiere definir con qué
