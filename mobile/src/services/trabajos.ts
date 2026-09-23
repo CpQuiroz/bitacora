@@ -202,9 +202,15 @@ export function encolarFirmaTecnico(
   });
 }
 
+// firmante_documento ya no se pide en la pantalla (Fase 3.2,
+// 23-sep-2026: "el RUT se toma del cliente asociado a la OS, no
+// pedirlo") — el PDF ahora imprime el RUT real de la ficha del
+// cliente (armarDatosPdf/generarPdfOS.ts) en vez de este campo. Se
+// deja opcional en la función, no en el backend, por si algún caller
+// viejo lo sigue mandando.
 export function encolarFirma(
   trabajoId: string,
-  payload: { firma_base64: string; firmante_nombre: string; firmante_documento: string; observaciones_cierre: string }
+  payload: { firma_base64: string; firmante_nombre: string; observaciones_cierre: string }
 ) {
   return encolar({
     etiqueta: "Firma del cliente",
@@ -212,6 +218,22 @@ export function encolarFirma(
     path: `/api/trabajos/${trabajoId}/firma`,
     method: "POST",
     body: payload,
+  });
+}
+
+// "Cliente no disponible" (Fase 3.4b, 23-sep-2026) — alternativa a la
+// firma cuando no hay nadie que firme: motivo + foto de evidencia.
+// Mismo criterio que encolarFoto: foto SIEMPRE por la cola, nunca un
+// intento inline antes (ver el comentario largo de crearViaje en
+// services/viajes.ts para el motivo completo).
+export function encolarClienteNoDisponible(trabajoId: string, motivo: string, foto: { uri: string; name: string; type: string }) {
+  return encolar({
+    etiqueta: "Cliente no disponible",
+    recurso: `trabajo:${trabajoId}`,
+    path: `/api/trabajos/${trabajoId}/cliente-no-disponible`,
+    method: "POST",
+    body: { motivo },
+    archivo: { ...foto, campo: "foto" },
   });
 }
 

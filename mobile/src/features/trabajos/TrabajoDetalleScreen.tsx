@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Linking, Platform, Pressable, ScrollView, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -14,17 +14,18 @@ import { ubicacionActual } from "../../lib/geo";
 import {
   eliminarFoto,
   encolarCheckin,
+  encolarClienteNoDisponible,
   encolarDatos,
   encolarFinalizar,
   encolarFirma,
-  encolarFirmaTecnico,
   encolarFoto,
   obtenerDetalle,
   type DetalleTrabajo,
 } from "../../services/trabajos";
 import { CamposDinamicos } from "./components/CamposDinamicos";
 import { FotosSection } from "./components/FotosSection";
-import { CierreFirma } from "./components/CierreFirma";
+import { CierreFirma, type ConfirmarCierrePayload } from "./components/CierreFirma";
+import { IndicadorPasos } from "./components/IndicadorPasos";
 import type { TrabajosStackParamList } from "../../shell/navigation/types";
 
 const ETIQUETA_OS: Record<string, string> = {
@@ -69,23 +70,27 @@ function Fila({ etiqueta, valor, onPress, Icono }: { etiqueta: string; valor: st
   );
 }
 
-// Sistema visual móvil v2 (13-sep-2026, tarea #21, piloto 3) — antes
-// PASO 6 del sistema de diseño ya la había migrado a @bitacora/ui/native
-// + Lucide, pero con el header nativo del stack + un bloque de
-// cabecera armado a mano. Ahora usa ScreenHeader (antetítulo="OS N°
-// X", título=cliente, `accion`="volver" — el único caso real de
-// pantalla de detalle en este rollout, para el que se diseñó esa prop
-// en el Paso 2) y el header nativo se apaga en TrabajosStack.tsx.
-// StatusBadge/fecha/"Editar datos" no entran en el contrato de
-// ScreenHeader (no tiene lugar para un badge ni una segunda línea) —
-// se quedan como su propio bloque debajo, mismo criterio que ya se
-// usó en "Hoy" para no forzar contenido que no calza.
+// Sistema visual móvil v2 (13-sep-2026, tarea #21, piloto 3).
 //
-// Deliberadamente SIN AsistenteButton flotante acá: esta es una
-// pantalla de trabajo activo con sus propios botones primarios fijos
-// abajo (Check-out/Registrar venta) — un botón flotante en la misma
-// esquina competiría por el mismo espacio. Si se quiere de todos
-// modos, es agregar 2 líneas.
+// Flujo simplificado de 3 pasos (Fase 3.4, 23-sep-2026, pedido
+// explícito — reemplaza al flujo anterior de checklist/fotos/firma
+// todo junto en una sola pantalla larga, sin orden forzado):
+//   1. INICIAR — un botón, registra check-in (hora + GPS, o "sin
+//      ubicación" si no hay permiso/señal — se puede seguir igual).
+//   2. EJECUTAR — checklist + fotos con detalle + materiales, en una
+//      sola pantalla, autoguardado.
+//   3. CERRAR — resumen → nombre del encargado + firma (o "cliente no
+//      disponible": motivo + foto) → Confirmar. Al confirmar: check-
+//      out automático + firma/no-disponible + /finalizar, en cadena.
+//
+// Migración de OS en curso (Fase 3.4c): NO hay backfill ni mapeo de
+// estados — el paso que corresponde se DERIVA de los mismos datos de
+// siempre (check_in_at/check_out_at), así una OS que ya tenía check-in
+// (o incluso check-out) hecho con el flujo VIEJO antes de este cambio
+// abre directo en el paso que le toca, sin perder nada ya capturado.
+// `pasoOverride` es solo la navegación manual (Continuar/Volver)
+// dentro de la MISMA sesión — se resetea si se recarga la pantalla,
+// volviendo a derivarse de los datos reales.
 export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenProps<TrabajosStackParamList, "TrabajoDetalle">) {
   const { trabajoId, titulo: tituloRuta } = route.params;
   const auth = useAuth();
@@ -115,8 +120,13 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
   const [error, setError] = useState<string | null>(null);
   const [datosForm, setDatosForm] = useState<Record<string, string>>({});
   const [guardandoDatos, setGuardandoDatos] = useState(false);
-  const [marcando, setMarcando] = useState<"Check-in" | "Check-out" | null>(null);
-  const [finalizando, setFinalizando] = useState(false);
+  const [marcando, setMarcando] = useState<"Check-in" | null>(null);
+  const [confirmando, setConfirmando] = useState(false);
+  const [pasoOverride, setPasoOverride] = useState<2 | 3 | null>(null);
+  // Autoguardado del formulario (Fase 3.4b) — solo dispara si el
+  // cambio vino de que el usuario tipeó algo (onCambiar), nunca por el
+  // set inicial al cargar el detalle.
+  const formTocado = useRef(false);
   const fotosPorCampo = useMemo(() => {
     const mapa: Record<string, DetalleTrabajo["fotos"]> = {};
     for (const f of detalle?.fotos ?? []) {
@@ -132,6 +142,7 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
       const d = await obtenerDetalle(trabajoId);
       setDetalle(d);
       setDatosForm(Object.fromEntries(Object.entries(d.trabajo.datos ?? {}).map(([k, v]) => [k, String(v ?? "")])));
+      formTocado.current = false;
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo cargar el trabajo");
     }
@@ -185,7 +196,7 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
   // galería general — se muestran junto al campo en CamposDinamicos.
   const fotos = fotosTodas.filter((f) => !f.campo_clave);
   const cli = trabajo.cliente_info;
-  const finalizada = Boolean(orden?.finalizada_en) || finalizando;
+  const finalizada = Boolean(orden?.finalizada_en) || confirmando;
   const checklist: ItemChecklist[] = orden?.checklist ?? [];
   const checkIn = checklist.find((c) => c.item === "Check-in");
   const checkOut = checklist.find((c) => c.item === "Check-out");
@@ -194,6 +205,11 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
   const direccion = cli?.direccion || trabajo.ubicacion;
   const coords = cli?.lat != null && cli?.lng != null ? { lat: cli.lat, lng: cli.lng } : null;
   const checkInAt = orden?.check_in_at ?? checkIn?.hora ?? null;
+
+  // Paso derivado de los datos reales (nunca de un estado aparte) —
+  // ver el comentario largo arriba del componente.
+  const pasoBase: 1 | 2 | 3 = !checkInAt ? 1 : checkOut?.hecho ? 3 : 2;
+  const paso: 1 | 2 | 3 = pasoOverride ?? pasoBase;
 
   function abrirMapa() {
     const destino = coords ? `${coords.lat},${coords.lng}` : encodeURIComponent(direccion ?? "");
@@ -205,13 +221,13 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
     Linking.openURL(url!);
   }
 
-  async function marcar(item: "Check-in" | "Check-out") {
-    setMarcando(item);
+  async function marcarCheckIn() {
+    setMarcando("Check-in");
     const ubic = await ubicacionActual();
     if (!ubic) {
-      Alert.alert("Sin ubicación", `Se registrará el ${item.toLowerCase()} sin coordenadas (permiso denegado o GPS no disponible).`);
+      Alert.alert("Sin ubicación", "Se registrará la llegada sin coordenadas (permiso denegado o GPS no disponible).");
     }
-    await encolarCheckin(trabajoId, item, ubic);
+    await encolarCheckin(trabajoId, "Check-in", ubic);
     setMarcando(null);
     setDetalle((prev) =>
       prev
@@ -219,10 +235,9 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
             ...prev,
             orden: {
               ...(prev.orden ?? ({} as NonNullable<DetalleTrabajo["orden"]>)),
-              checklist: [...(prev.orden?.checklist ?? []).filter((c) => c.item !== item), { item, hecho: true, hora: new Date().toISOString() }],
-              ...(item === "Check-in" && ubic
-                ? { check_in_at: new Date().toISOString(), check_in_lat: ubic.lat, check_in_lng: ubic.lng, check_in_precision: ubic.precision_m }
-                : {}),
+              checklist: [...(prev.orden?.checklist ?? []).filter((c) => c.item !== "Check-in"), { item: "Check-in", hecho: true, hora: new Date().toISOString() }],
+              check_in_at: new Date().toISOString(),
+              ...(ubic ? { check_in_lat: ubic.lat, check_in_lng: ubic.lng, check_in_precision: ubic.precision_m } : {}),
             } as DetalleTrabajo["orden"],
           }
         : prev
@@ -233,27 +248,60 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
     setGuardandoDatos(true);
     await encolarDatos(trabajoId, datosForm);
     setGuardandoDatos(false);
-    Alert.alert("Guardado", enLinea ? "Datos guardados." : "Se enviarán cuando haya conexión.");
   }
 
-  async function finalizar() {
-    setFinalizando(true);
-    await encolarFinalizar(trabajoId);
-    // Bug real (13-sep): este mensaje era SIEMPRE el mismo, sin mirar
-    // `enLinea` — decía "si estás sin conexión..." incluso con señal
-    // perfecta, mismo hallazgo que motivó sacar isInternetReachable de
-    // NetworkProvider.tsx. Mismo patrón que ya usa guardarDatos() arriba.
-    Alert.alert(
-      "Orden de servicio finalizada",
-      enLinea ? "Quedó cerrado." : "Quedó cerrado. Se enviará a la oficina apenas vuelvas a tener señal.",
-      [{ text: "Listo", onPress: () => navigation.goBack() }]
-    );
+  // Autoguardado (Fase 3.4b, "autoguardado continuo") — debounced,
+  // solo si el usuario tocó algo. La cola offline (encolarDatos) ya
+  // garantiza que quede guardado localmente y se sincronice solo al
+  // recuperar señal — no hace falta nada nuevo para eso acá.
+  useEffect(() => {
+    if (!formTocado.current || paso !== 2) return;
+    const t = setTimeout(() => void guardarDatos(), 1500);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [datosForm]);
+
+  async function confirmarCierre(payload: ConfirmarCierrePayload) {
+    setConfirmando(true);
+    try {
+      // 1) Check-out automático — salvo que ya estuviera hecho de
+      // antes (OS en curso con el flujo viejo, donde salida y firma
+      // eran pasos separados).
+      if (!checkOut?.hecho) {
+        const ubic = await ubicacionActual();
+        await encolarCheckin(trabajoId, "Check-out", ubic);
+      }
+      // 2) Firma del encargado, o "cliente no disponible".
+      if (payload.tipo === "firma") {
+        await encolarFirma(trabajoId, {
+          firma_base64: payload.firma_base64,
+          firmante_nombre: payload.firmante_nombre,
+          observaciones_cierre: payload.observaciones_cierre,
+        });
+      } else {
+        await encolarClienteNoDisponible(trabajoId, payload.motivo, payload.foto);
+      }
+      // 3) Cierre real.
+      await encolarFinalizar(trabajoId);
+      Alert.alert(
+        "Orden de servicio cerrada",
+        enLinea ? "Quedó cerrada." : "Quedó cerrada. Se enviará a la oficina apenas vuelvas a tener señal.",
+        [{ text: "Listo", onPress: () => navigation.goBack() }]
+      );
+    } finally {
+      setConfirmando(false);
+    }
   }
 
   return (
     <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
       <ScreenHeader antetitulo={formatearFolio("OS", orden?.folio) ?? undefined} titulo={cli?.nombre ?? trabajo.cliente} accion={volver} />
       <OfflineBanner guardadoEn={detalle.desdeCache ? detalle.guardadoEn : undefined} />
+      {!finalizada ? (
+        <View style={{ paddingTop: tokens.space["2"] }}>
+          <IndicadorPasos pasoActual={paso} />
+        </View>
+      ) : null}
       <ScrollView contentContainerStyle={{ padding: tokens.space["6"], gap: tokens.space["4"], paddingBottom: tokens.space["8"] * 3 }}>
         {/* Estado + fecha + editar — no entran en ScreenHeader (sin lugar
             para badge ni segunda línea), quedan como su propio bloque. */}
@@ -274,46 +322,7 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
           ) : null}
         </View>
 
-        {/* Bloque de foco — el único con el fondo de marca */}
-        <View style={{ backgroundColor: marca.suave, borderRadius: 32, padding: tokens.space["6"], gap: tokens.space["3"] }}>
-          {checkInAt ? (
-            <>
-              <Texto tamano={tokens.size.caption} color={`${marca.fuerte}b3`} style={{ letterSpacing: 1.2 }}>
-                CHECK-IN REGISTRADO
-              </Texto>
-              <View style={{ flexDirection: "row", alignItems: "baseline", gap: tokens.space["3"] }}>
-                <Texto tamano={30} color={marca.fuerte} style={{ fontVariant: ["tabular-nums"] }}>
-                  {new Date(checkInAt).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })}
-                </Texto>
-                <Texto tamano={tokens.size.body} color={`${marca.fuerte}b3`}>
-                  {haceCuanto(checkInAt)}
-                </Texto>
-              </View>
-              <View style={{ borderTopWidth: 1, borderTopColor: `${marca.fuerte}26`, paddingTop: tokens.space["3"] }}>
-                <Texto tamano={tokens.size.caption} color={`${marca.fuerte}b3`} style={{ fontVariant: ["tabular-nums"] }}>
-                  {orden?.check_in_precision != null ? `Precisión GPS ±${Math.round(orden.check_in_precision)} m` : "Precisión GPS no disponible"}
-                  {orden?.check_in_lat != null && orden?.check_in_lng != null
-                    ? `  ·  ${orden.check_in_lat.toFixed(5)}, ${orden.check_in_lng.toFixed(5)}`
-                    : ""}
-                </Texto>
-              </View>
-            </>
-          ) : (
-            <>
-              <Texto tamano={tokens.size.caption} color={`${marca.fuerte}b3`} style={{ letterSpacing: 1.2 }}>
-                SIN CHECK-IN
-              </Texto>
-              <Texto tamano={tokens.size.body} color={marca.fuerte}>
-                Marca tu llegada para empezar el trabajo.
-              </Texto>
-              <Button cargando={marcando === "Check-in"} deshabilitado={finalizada} onPress={() => marcar("Check-in")}>
-                Marcar check-in
-              </Button>
-            </>
-          )}
-        </View>
-
-        {/* Filas de datos */}
+        {/* Datos de contacto/servicio — contexto visible en los 3 pasos. */}
         <View style={{ borderTopWidth: 1, borderTopColor: tokens.color.divider }}>
           <Fila etiqueta="Servicio" valor={trabajo.tipo?.nombre ?? trabajo.descripcion ?? "—"} />
           {direccion ? <Fila etiqueta="Dirección" valor={direccion} onPress={abrirMapa} Icono={Navigation} /> : null}
@@ -342,7 +351,7 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
           </View>
         ) : null}
 
-        {finalizada ? (
+        {finalizada && !confirmando ? (
           <View style={{ backgroundColor: tokens.color.accent2Ramp["200"], borderRadius: tokens.radius.md, padding: tokens.space["3"] }}>
             <Texto tamano={tokens.size.small} color={tokens.color.accent2Ramp["800"]} peso="semibold">
               Orden de servicio finalizada — ya no se puede editar
@@ -350,15 +359,60 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
           </View>
         ) : null}
 
-        {trabajo.tipo ? (
+        {/* ---------- Paso 1 — INICIAR ---------- */}
+        {!finalizada && paso === 1 ? (
+          <View style={{ backgroundColor: marca.suave, borderRadius: 32, padding: tokens.space["6"], gap: tokens.space["3"] }}>
+            <Texto tamano={tokens.size.caption} color={`${marca.fuerte}b3`} style={{ letterSpacing: 1.2 }}>
+              SIN INICIAR
+            </Texto>
+            <Texto tamano={tokens.size.body} color={marca.fuerte}>
+              Marca tu llegada para empezar el trabajo.
+            </Texto>
+            <Button tamano="lg" cargando={marcando === "Check-in"} onPress={marcarCheckIn}>
+              Marcar llegada
+            </Button>
+          </View>
+        ) : null}
+
+        {/* ---------- Paso 2 — EJECUTAR (y resumen de llegada si ya se pasó) ---------- */}
+        {finalizada || paso >= 2 ? (
+          <View style={{ backgroundColor: marca.suave, borderRadius: 32, padding: tokens.space["6"], gap: tokens.space["3"] }}>
+            <Texto tamano={tokens.size.caption} color={`${marca.fuerte}b3`} style={{ letterSpacing: 1.2 }}>
+              LLEGADA REGISTRADA
+            </Texto>
+            <View style={{ flexDirection: "row", alignItems: "baseline", gap: tokens.space["3"] }}>
+              <Texto tamano={30} color={marca.fuerte} style={{ fontVariant: ["tabular-nums"] }}>
+                {checkInAt ? new Date(checkInAt).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" }) : "—"}
+              </Texto>
+              {checkInAt ? (
+                <Texto tamano={tokens.size.body} color={`${marca.fuerte}b3`}>
+                  {haceCuanto(checkInAt)}
+                </Texto>
+              ) : null}
+            </View>
+            <View style={{ borderTopWidth: 1, borderTopColor: `${marca.fuerte}26`, paddingTop: tokens.space["3"] }}>
+              <Texto tamano={tokens.size.caption} color={`${marca.fuerte}b3`} style={{ fontVariant: ["tabular-nums"] }}>
+                {orden?.check_in_precision != null ? `Precisión GPS ±${Math.round(orden.check_in_precision)} m` : "Sin ubicación registrada"}
+                {orden?.check_in_lat != null && orden?.check_in_lng != null
+                  ? `  ·  ${orden.check_in_lat.toFixed(5)}, ${orden.check_in_lng.toFixed(5)}`
+                  : ""}
+              </Texto>
+            </View>
+          </View>
+        ) : null}
+
+        {(finalizada || paso === 2) && trabajo.tipo ? (
           <CamposDinamicos
             nombre={trabajo.tipo.nombre}
             campos={trabajo.tipo.campos}
             valores={datosForm}
-            onCambiar={(k, v) => setDatosForm((p) => ({ ...p, [k]: v }))}
+            onCambiar={(k, v) => {
+              formTocado.current = true;
+              setDatosForm((p) => ({ ...p, [k]: v }));
+            }}
             onGuardar={guardarDatos}
             guardando={guardandoDatos}
-            editable={!finalizada}
+            editable={!finalizada && paso === 2}
             fotosPorCampo={fotosPorCampo}
             fotosPendientesPorCampo={fotosPendientesPorCampo}
             onAgregarFoto={(clave, archivo) => void encolarFoto(trabajoId, archivo, null, clave)}
@@ -374,60 +428,63 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
           />
         ) : null}
 
-        {/* Fotos */}
-        <FotosSection
-          fotos={fotos}
-          pendientes={fotosPendientes}
-          editable={!finalizada}
-          onAgregar={(archivo, categoria) => void encolarFoto(trabajoId, archivo, categoria)}
-          onQuitarPendiente={descartar}
-          onEliminar={async (fotoId) => {
-            const res = await eliminarFoto(trabajoId, fotoId);
-            if (!res.ok) {
-              Alert.alert("No se pudo eliminar", res.error);
-              return;
+        {finalizada || paso === 2 ? (
+          <FotosSection
+            fotos={fotos}
+            pendientes={fotosPendientes}
+            editable={!finalizada && paso === 2}
+            onAgregar={(archivo, categoria) => void encolarFoto(trabajoId, archivo, categoria)}
+            onQuitarPendiente={descartar}
+            onEliminar={async (fotoId) => {
+              const res = await eliminarFoto(trabajoId, fotoId);
+              if (!res.ok) {
+                Alert.alert("No se pudo eliminar", res.error);
+                return;
+              }
+              void cargar();
+            }}
+          />
+        ) : null}
+
+        {!finalizada && paso === 2 ? (
+          <Button tamano="lg" bloque onPress={() => setPasoOverride(3)}>
+            Continuar
+          </Button>
+        ) : null}
+
+        {/* ---------- Paso 3 — CERRAR ---------- */}
+        {finalizada || paso === 3 ? (
+          <>
+            {!finalizada ? (
+              <Pressable onPress={() => setPasoOverride(2)} style={{ alignSelf: "flex-start" }}>
+                <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`} style={{ textDecorationLine: "underline" }}>
+                  ← Volver a Ejecutar
+                </Texto>
+              </Pressable>
+            ) : null}
+            <CierreFirma orden={orden} editable={!finalizada} confirmando={confirmando} onConfirmar={confirmarCierre} />
+          </>
+        ) : null}
+
+        {/* Registrar venta — independiente de en qué paso esté el
+            cierre, se puede hacer en cualquier momento antes de
+            finalizar (igual que en el flujo anterior). */}
+        {!finalizada && trabajo.cliente_id ? (
+          <Button
+            variante="secundario"
+            bloque
+            onPress={() =>
+              navigation.navigate("RegistrarVenta", {
+                origenTipo: "os",
+                origenId: trabajoId,
+                clienteId: trabajo.cliente_id!,
+                clienteNombre: cli?.nombre ?? trabajo.cliente,
+                folio: orden?.folio ?? null,
+              })
             }
-            void cargar();
-          }}
-        />
-
-        <CierreFirma
-          orden={orden}
-          editable={!finalizada}
-          onFirmar={(p) => encolarFirma(trabajoId, p)}
-          onFirmarTecnico={(p) => encolarFirmaTecnico(trabajoId, p)}
-          onCerrar={finalizar}
-          onGuardarSinFirmar={() =>
-            Alert.alert("Guardado sin firmar", "La OS sigue abierta hasta que el cliente firme. Tus notas quedaron en pantalla.")
-          }
-        />
-
-        {/* Pie de acciones */}
-        {!finalizada ? (
-          <View style={{ gap: tokens.space["2"], marginTop: tokens.space["2"] }}>
-            {checkIn?.hecho && !checkOut?.hecho ? (
-              <Button tamano="lg" bloque cargando={marcando === "Check-out"} onPress={() => marcar("Check-out")}>
-                Registrar salida y firmar
-              </Button>
-            ) : null}
-            {trabajo.cliente_id ? (
-              <Button
-                variante="secundario"
-                bloque
-                onPress={() =>
-                  navigation.navigate("RegistrarVenta", {
-                    origenTipo: "os",
-                    origenId: trabajoId,
-                    clienteId: trabajo.cliente_id!,
-                    clienteNombre: cli?.nombre ?? trabajo.cliente,
-                    folio: orden?.folio ?? null,
-                  })
-                }
-              >
-                Registrar venta
-              </Button>
-            ) : null}
-          </View>
+          >
+            Registrar venta
+          </Button>
         ) : null}
       </ScrollView>
     </View>

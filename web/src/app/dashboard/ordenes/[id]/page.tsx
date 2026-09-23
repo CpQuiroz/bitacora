@@ -499,6 +499,62 @@ export default function DetalleOrdenServicioPage() {
                   <p className="text-ds-caption text-ds-text/60">Dirección</p>
                   <p className="font-medium text-ds-text">{detalle.ubicacion ?? detalle.cliente_info?.direccion ?? "—"}</p>
                 </div>
+                {/* Llegada/salida del colaborador (Fase 3.4d, 23-sep-2026,
+                    pedido explícito: "Admin sigue viendo los tiempos de
+                    llegada/salida y la ubicación en el detalle de la
+                    OS") — no existía en esta pantalla todavía, aunque el
+                    dato (check_in/check_out) se venía guardando desde la
+                    migración 64. */}
+                {detalle.orden?.check_in_at ? (
+                  <div>
+                    <p className="text-ds-caption text-ds-text/60">Llegada</p>
+                    <p className="font-medium text-ds-text">
+                      {new Date(detalle.orden.check_in_at).toLocaleString("es-CL", { dateStyle: "short", timeStyle: "short" })}
+                    </p>
+                    <p className="text-ds-caption text-ds-text/60">
+                      {detalle.orden.check_in_lat != null && detalle.orden.check_in_lng != null ? (
+                        <a
+                          href={`https://www.google.com/maps?q=${detalle.orden.check_in_lat},${detalle.orden.check_in_lng}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="underline hover:text-ds-brand"
+                        >
+                          {detalle.orden.check_in_lat.toFixed(5)}, {detalle.orden.check_in_lng.toFixed(5)}
+                        </a>
+                      ) : detalle.orden.check_in_sin_ubicacion ? (
+                        "Sin ubicación"
+                      ) : null}
+                    </p>
+                  </div>
+                ) : null}
+                {detalle.orden?.check_out_at ? (
+                  <div>
+                    <p className="text-ds-caption text-ds-text/60">Salida</p>
+                    <p className="font-medium text-ds-text">
+                      {new Date(detalle.orden.check_out_at).toLocaleString("es-CL", { dateStyle: "short", timeStyle: "short" })}
+                    </p>
+                    <p className="text-ds-caption text-ds-text/60">
+                      {detalle.orden.check_out_lat != null && detalle.orden.check_out_lng != null ? (
+                        <a
+                          href={`https://www.google.com/maps?q=${detalle.orden.check_out_lat},${detalle.orden.check_out_lng}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="underline hover:text-ds-brand"
+                        >
+                          {detalle.orden.check_out_lat.toFixed(5)}, {detalle.orden.check_out_lng.toFixed(5)}
+                        </a>
+                      ) : detalle.orden.check_out_sin_ubicacion ? (
+                        "Sin ubicación"
+                      ) : null}
+                    </p>
+                  </div>
+                ) : null}
+                {detalle.orden?.cliente_no_disponible ? (
+                  <div className="sm:col-span-2">
+                    <p className="text-ds-caption text-ds-text/60">Cliente no disponible al cierre</p>
+                    <p className="text-ds-text">{detalle.orden.cliente_no_disponible_motivo ?? "—"}</p>
+                  </div>
+                ) : null}
                 {detalle.descripcion ? (
                   <div className="sm:col-span-2">
                     <p className="text-ds-caption text-ds-text/60">Descripción</p>

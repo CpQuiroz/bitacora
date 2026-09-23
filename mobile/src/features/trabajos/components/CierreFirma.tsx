@@ -1,9 +1,10 @@
 import { useRef, useState } from "react";
-import { Alert, Image, View } from "react-native";
+import { Alert, Image, Pressable, View } from "react-native";
+import { Camera } from "lucide-react-native";
 import { tokens } from "@bitacora/design-tokens";
 import { Button, Card, Input, Textarea, Texto, useMarca } from "@bitacora/ui/native";
 import { LienzoFirma, type LienzoFirmaHandle } from "../../../components/LienzoFirma";
-import { useAuth } from "../../auth/AuthContext";
+import { elegirFotos } from "../../../lib/imagen";
 import type { OrdenConFirma } from "../../../services/trabajos";
 
 function hhmm(iso: string | null | undefined): string {
@@ -17,120 +18,106 @@ function duracion(a: string | null | undefined, b: string | null | undefined): s
   return min < 60 ? `${min} min` : `${Math.floor(min / 60)} h ${min % 60} min`;
 }
 
-// PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
+export type ConfirmarCierrePayload =
+  | { tipo: "firma"; firma_base64: string; firmante_nombre: string; observaciones_cierre: string }
+  | { tipo: "no_disponible"; motivo: string; foto: { uri: string; name: string; type: string } };
+
+// Paso 3 — CERRAR (Fase 3.4, 23-sep-2026, pedido explícito). Antes
+// pedía firma dibujada del técnico + nombre/"cargo o RUT" tipeado del
+// cliente. Ahora: el técnico ya quedó acreditado por su sesión (ver
+// bloqueEjecutor en generarPdfOS.ts) — acá solo se pide "Nombre del
+// encargado" + su firma (el RUT sale de la ficha del cliente, no se
+// pide más), o "Cliente no disponible" (motivo + foto) si no hay
+// nadie que firme. El check-out + /finalizar los dispara el padre
+// (TrabajoDetalleScreen) al confirmar — ya no son pasos separados que
+// el técnico tenga que acordarse de hacer antes.
 export function CierreFirma({
   orden,
   editable,
-  onFirmar,
-  onFirmarTecnico,
-  onCerrar,
-  onGuardarSinFirmar,
+  confirmando,
+  onConfirmar,
 }: {
   orden: OrdenConFirma | null;
   editable: boolean;
-  onFirmar: (p: { firma_base64: string; firmante_nombre: string; firmante_documento: string; observaciones_cierre: string }) => void | Promise<void>;
-  onFirmarTecnico?: (p: { firma_base64: string; tecnico_nombre: string; tecnico_documento: string }) => void | Promise<void>;
-  onCerrar?: () => void;
-  onGuardarSinFirmar?: (observaciones: string) => void;
+  confirmando: boolean;
+  onConfirmar: (payload: ConfirmarCierrePayload) => void | Promise<void>;
 }) {
   const marca = useMarca();
-  const auth = useAuth();
   const [nombre, setNombre] = useState("");
-  const [cargo, setCargo] = useState("");
   const [observaciones, setObservaciones] = useState("");
-  const [cerrando, setCerrando] = useState(false);
   const lienzo = useRef<LienzoFirmaHandle>(null);
 
-  // Firma del técnico (opcional, va en el PDF) — el nombre sale de la
-  // cuenta con la que está logueado quien firma, no se vuelve a pedir
-  // a mano (19-sep-2026): quién hizo el trabajo ya quedó registrado al
-  // asignar la OS, pedir nombre/RUT tipeados acá era una fricción sin
-  // verificación real. El RUT se sacó directo (mismo motivo, sin uso).
-  const tecNombre = auth.fase === "listo" ? auth.usuario.nombre : "";
-  const [guardandoTec, setGuardandoTec] = useState(false);
-  const lienzoTec = useRef<LienzoFirmaHandle>(null);
-  const tecFirmado = Boolean(orden?.firma_tecnico_url || orden?.firma_tecnico_url_firmada);
-
-  async function guardarFirmaTecnico() {
-    if (!onFirmarTecnico) return;
-    const base64 = await lienzoTec.current?.capturar();
-    if (!base64) return Alert.alert("Falta la firma", "Firma en el recuadro.");
-    setGuardandoTec(true);
-    try {
-      await onFirmarTecnico({ firma_base64: base64, tecnico_nombre: tecNombre, tecnico_documento: "" });
-    } finally {
-      setGuardandoTec(false);
-    }
-  }
-
-  const salidaHecha = Boolean(orden?.check_out_at);
+  const [clienteNoDisponible, setClienteNoDisponible] = useState(false);
+  const [motivo, setMotivo] = useState("");
+  const [fotoEvidencia, setFotoEvidencia] = useState<{ uri: string; name: string; type: string } | null>(null);
 
   const cajas = [
-    { k: "Entrada", v: hhmm(orden?.check_in_at), activa: false },
-    { k: "Salida", v: hhmm(orden?.check_out_at), activa: !salidaHecha },
-    { k: "Total", v: duracion(orden?.check_in_at, orden?.check_out_at), activa: false },
+    { k: "Entrada", v: hhmm(orden?.check_in_at) },
+    { k: "Salida", v: hhmm(orden?.check_out_at) },
+    { k: "Total", v: duracion(orden?.check_in_at, orden?.check_out_at) },
   ];
 
-  async function firmarYCerrar() {
-    if (!nombre.trim()) return Alert.alert("Falta un dato", "Escribe el nombre de quien firma.");
-    const base64 = await lienzo.current?.capturar();
-    if (!base64) return Alert.alert("Falta la firma", "Pide al cliente que firme en el recuadro.");
-    setCerrando(true);
-    try {
-      await onFirmar({
-        firma_base64: base64,
-        firmante_nombre: nombre.trim(),
-        firmante_documento: cargo.trim(),
-        observaciones_cierre: observaciones.trim(),
-      });
-      onCerrar?.();
-    } finally {
-      setCerrando(false);
+  async function elegirEvidencia() {
+    const [elegida] = await elegirFotos({ titulo: "Foto de evidencia" });
+    if (elegida) setFotoEvidencia(elegida);
+  }
+
+  async function confirmar() {
+    if (clienteNoDisponible) {
+      if (!motivo.trim()) return Alert.alert("Falta el motivo", "Explica por qué el cliente no está disponible.");
+      if (!fotoEvidencia) return Alert.alert("Falta la foto", "Agrega una foto de evidencia.");
+      await onConfirmar({ tipo: "no_disponible", motivo: motivo.trim(), foto: fotoEvidencia });
+      return;
     }
+    if (!nombre.trim()) return Alert.alert("Falta un dato", "Escribe el nombre del encargado.");
+    const base64 = await lienzo.current?.capturar();
+    if (!base64) return Alert.alert("Falta la firma", "Pide al encargado que firme en el recuadro.");
+    await onConfirmar({ tipo: "firma", firma_base64: base64, firmante_nombre: nombre.trim(), observaciones_cierre: observaciones.trim() });
+  }
+
+  // Ya cerrada — muestra lo que quedó guardado, sin edición.
+  if (!editable) {
+    if (orden?.cliente_no_disponible) {
+      return (
+        <Card>
+          <Texto tamano={tokens.size.body} color={tokens.color.text} peso="semibold">
+            Cliente no disponible
+          </Texto>
+          {orden.cliente_no_disponible_motivo ? (
+            <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`} style={{ marginTop: 4 }}>
+              {orden.cliente_no_disponible_motivo}
+            </Texto>
+          ) : null}
+        </Card>
+      );
+    }
+    if (orden?.firma_url_firmada) {
+      return (
+        <Card>
+          <Image source={{ uri: orden.firma_url_firmada }} resizeMode="contain" style={{ width: "100%", height: 120, marginBottom: tokens.space["2"] }} />
+          <Texto tamano={tokens.size.body} color={tokens.color.text}>
+            Firma registrada ✓{orden.firmante_nombre ? ` — ${orden.firmante_nombre}` : ""}
+          </Texto>
+          {orden.observaciones_cierre ? (
+            <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
+              Obs: {orden.observaciones_cierre}
+            </Texto>
+          ) : null}
+        </Card>
+      );
+    }
+    return (
+      <Texto tamano={tokens.size.body} color={`${tokens.color.text}99`}>
+        Sin firma registrada.
+      </Texto>
+    );
   }
 
   return (
     <View style={{ gap: tokens.space["3"] }}>
-      {/* Firma del técnico — opcional, queda en el PDF */}
-      {onFirmarTecnico ? (
-        <View style={{ gap: tokens.space["2"] }}>
-          <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`} peso="semibold" style={{ textTransform: "uppercase" }}>
-            Firma del técnico
-          </Texto>
-          {tecFirmado ? (
-            <Card>
-              {orden?.firma_tecnico_url_firmada ? (
-                <Image source={{ uri: orden.firma_tecnico_url_firmada }} resizeMode="contain" style={{ width: "100%", height: 90, marginBottom: tokens.space["2"] }} />
-              ) : null}
-              <Texto tamano={tokens.size.body} color={tokens.color.text}>
-                Firma del técnico registrada ✓{orden?.tecnico_firmante_nombre ? ` — ${orden.tecnico_firmante_nombre}` : ""}
-              </Texto>
-            </Card>
-          ) : editable ? (
-            <>
-              <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
-                {tecNombre || "Sin nombre en tu cuenta"}
-              </Texto>
-              <LienzoFirma ref={lienzoTec} />
-              <Button variante="secundario" onPress={guardarFirmaTecnico} cargando={guardandoTec}>
-                Guardar firma del técnico
-              </Button>
-              <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
-                Opcional. Va en el PDF junto a la firma del cliente.
-              </Texto>
-            </>
-          ) : (
-            <Texto tamano={tokens.size.body} color={`${tokens.color.text}99`}>
-              Sin firma del técnico.
-            </Texto>
-          )}
-        </View>
-      ) : null}
-
       <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`} peso="semibold" style={{ textTransform: "uppercase" }}>
-        Cierre y firma del cliente
+        Resumen
       </Texto>
-
       <View style={{ flexDirection: "row", gap: tokens.space["2"] }}>
         {cajas.map((c) => (
           <View
@@ -139,8 +126,8 @@ export function CierreFirma({
               flex: 1,
               borderRadius: tokens.radius.md,
               borderWidth: 1,
-              borderColor: c.activa ? marca.base : tokens.color.divider,
-              backgroundColor: c.activa ? `${marca.base}14` : tokens.color.surface,
+              borderColor: tokens.color.divider,
+              backgroundColor: tokens.color.surface,
               padding: tokens.space["3"],
               gap: 2,
             }}
@@ -155,60 +142,40 @@ export function CierreFirma({
         ))}
       </View>
 
-      {orden?.firma_url_firmada ? (
-        <Card>
-          <Image source={{ uri: orden.firma_url_firmada }} resizeMode="contain" style={{ width: "100%", height: 120, marginBottom: tokens.space["2"] }} />
-          <Texto tamano={tokens.size.body} color={tokens.color.text}>
-            Firma registrada ✓{orden.firmante_nombre ? ` — ${orden.firmante_nombre}` : ""}
-          </Texto>
-          {orden.firmante_documento ? (
-            <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
-              {orden.firmante_documento}
-            </Texto>
-          ) : null}
-          {orden.observaciones_cierre ? (
-            <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
-              Obs: {orden.observaciones_cierre}
-            </Texto>
-          ) : null}
-        </Card>
-      ) : editable ? (
-        <>
-          <LienzoFirma ref={lienzo} />
-          <Input etiqueta="Nombre de quien firma" valor={nombre} onCambio={setNombre} />
-          <Input etiqueta="Cargo o RUT de quien firma" valor={cargo} onCambio={setCargo} />
-          <Textarea etiqueta="Observación para el cliente" filas={2} valor={observaciones} onCambio={setObservaciones} />
-
-          <View style={{ backgroundColor: tokens.color.accentRamp["100"], borderRadius: tokens.radius.md, padding: tokens.space["3"] }}>
-            <Texto tamano={tokens.size.caption} color={tokens.color.accentRamp["800"]}>
-              Al firmar se descuenta el stock de los productos de la OS y la orden queda firmada. Sin señal, queda en la cola y
-              se envía al recuperar conexión.
-            </Texto>
-          </View>
-
-          <Button tamano="lg" bloque onPress={firmarYCerrar} cargando={cerrando} deshabilitado={!salidaHecha}>
-            Firmar y cerrar
-          </Button>
-          {!salidaHecha ? (
-            <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} style={{ textAlign: "center" }}>
-              Registra la salida para poder cerrar.
-            </Texto>
-          ) : onGuardarSinFirmar ? (
-            <Texto
-              onPress={() => onGuardarSinFirmar(observaciones.trim())}
-              tamano={tokens.size.small}
-              color={`${tokens.color.text}99`}
-              style={{ textAlign: "center", textDecorationLine: "underline" }}
-            >
-              Guardar sin firmar
-            </Texto>
-          ) : null}
-        </>
-      ) : (
-        <Texto tamano={tokens.size.body} color={`${tokens.color.text}99`}>
-          Sin firma registrada.
+      <Pressable onPress={() => setClienteNoDisponible((v) => !v)} style={{ alignSelf: "flex-start" }}>
+        <Texto tamano={tokens.size.small} color={marca.base} peso="semibold" style={{ textDecorationLine: "underline" }}>
+          {clienteNoDisponible ? "← Sí hay alguien que firma" : "El cliente no está disponible"}
         </Texto>
+      </Pressable>
+
+      {clienteNoDisponible ? (
+        <View style={{ gap: tokens.space["2"] }}>
+          <Textarea etiqueta="Motivo" placeholder="Ej.: no había nadie en el domicilio a la hora acordada" filas={3} valor={motivo} onCambio={setMotivo} />
+          {fotoEvidencia ? (
+            <Image source={{ uri: fotoEvidencia.uri }} style={{ width: "100%", height: 160, borderRadius: tokens.radius.md, backgroundColor: tokens.color.neutral["200"] }} resizeMode="cover" />
+          ) : null}
+          <Button variante="secundario" iconoIzq={<Camera size={16} strokeWidth={2.5} />} onPress={elegirEvidencia}>
+            {fotoEvidencia ? "Cambiar foto de evidencia" : "Agregar foto de evidencia"}
+          </Button>
+        </View>
+      ) : (
+        <View style={{ gap: tokens.space["2"] }}>
+          <Input etiqueta="Nombre del encargado" valor={nombre} onCambio={setNombre} />
+          <LienzoFirma ref={lienzo} />
+          <Textarea etiqueta="Observación (opcional)" filas={2} valor={observaciones} onCambio={setObservaciones} />
+        </View>
       )}
+
+      <View style={{ backgroundColor: tokens.color.accentRamp["100"], borderRadius: tokens.radius.md, padding: tokens.space["3"] }}>
+        <Texto tamano={tokens.size.caption} color={tokens.color.accentRamp["800"]}>
+          Al confirmar se registra la salida, se descuenta el stock de los productos de la OS y la orden queda cerrada. Sin
+          señal, queda en la cola y se envía al recuperar conexión.
+        </Texto>
+      </View>
+
+      <Button tamano="lg" bloque onPress={confirmar} cargando={confirmando}>
+        Confirmar y cerrar
+      </Button>
     </View>
   );
 }

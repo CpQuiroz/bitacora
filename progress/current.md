@@ -6216,9 +6216,40 @@ Migración 125: `analisis_fotos.descripcion`; `ordenes_servicio`:
 `backend/src/generarPdfOS.ts`, `mobile/src/services/trabajos.ts`
 (tipo `ClienteContacto` + `rut`).
 
-Sigo con la parte 2/2: el rediseño de la pantalla mobile a 3 pasos
-(3.4, la reescritura grande) y el versionado de PDF con Informe IA
-(3.3).
+### Fase 3, parte 2/3 (mobile 3 pasos + web check-in) — tarea 88
+
+- **`IndicadorPasos.tsx`** (nuevo) — 1-2-3 visual, sin lógica.
+- **`CierreFirma.tsx`** reescrito — sin firma dibujada del técnico
+  (queda acreditado por sesión, tarea 87); cliente solo pide "Nombre
+  del encargado" (sin RUT/cargo); toggle "Cliente no disponible"
+  (motivo + foto) como alternativa a la firma.
+- **`TrabajoDetalleScreen.tsx`** reescrito — el paso (1/2/3) se
+  deriva de `checkInAt`/`checkOut.hecho` (datos que YA existían),
+  nunca de un estado nuevo — una OS a mitad de camino con el flujo
+  viejo abre directo en el paso que le corresponde, sin backfill ni
+  mapeo (3.4c cumplido por diseño, no por migración). Autoguardado del
+  formulario (debounce 1.5s, solo si el usuario tipeó algo — la cola
+  offline ya garantizaba lo demás). `confirmarCierre()` encadena
+  check-out automático (si no estaba hecho) → firma o "cliente no
+  disponible" → `/finalizar`, en la misma acción de "Confirmar".
+  Reutilicé `CamposDinamicos`/`FotosSection`/`LienzoFirma` tal cual,
+  solo cambiando cuándo son editables según el paso — y **recuperé
+  "Registrar venta"**, que se me había caído en el primer borrador
+  del rediseño antes de cerrar (lo noté al revisar contra el original).
+- **`services/trabajos.ts`**: `encolarFirma` ya no pide
+  `firmante_documento`; nueva `encolarClienteNoDisponible` (multipart
+  por la cola, mismo patrón que las fotos).
+- **Web** (`ordenes/[id]/page.tsx`, 3.4d): nuevo bloque Llegada/Salida
+  con hora + link a Maps (o "Sin ubicación") + "Cliente no disponible
+  al cierre" si aplica — **no existía esta info en la pantalla**
+  (confirmé con un grep antes de asumir que solo había que
+  "mantenerla" — había que agregarla).
+- **Sin prueba visual en vivo del mobile** — este entorno no tiene
+  simulador/dispositivo; verificado por `tsc` + revisión cuidadosa,
+  mismo criterio que otras pantallas mobile grandes de la sesión sin
+  esa posibilidad. `tsc` (6 workspaces) + `verificar.sh` en verde.
+
+Sigo con la parte 3/3: versionado de PDF con Informe IA (3.3).
 
 ## 23-sep-2026 — tarea 81: bajar el botón flotante del Asistente
 

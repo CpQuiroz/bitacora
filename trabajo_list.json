@@ -1358,6 +1358,22 @@
       ],
       "status": "done",
       "resolution": "Verificado con un PDF real generado de punta a punta (no solo lectura de codigo): foto con descripcion debajo, bloque Ejecutado por mostrando GPS del check-in y sin ubicacion en el check-out, RUT real del cliente en la firma de conformidad. audit:tenant encontro 1 hallazgo real (el nuevo endpoint cliente-no-disponible sin empresa_id explicito en el update) y se corrigio antes de cerrar. Pendiente para la parte 2/2 de esta fase: el rediseno de la pantalla mobile a 3 pasos (3.4) que consume estos campos nuevos, y el versionado de PDF con IA (3.3)."
+    },
+    {
+      "id": 88,
+      "name": "fase3_flujo_os_3_pasos_mobile_y_web_checkin",
+      "title": "FASE 3 (parte 2/3): flujo de OS a 3 pasos en mobile (Iniciar/Ejecutar/Cerrar) + llegada/salida visible en web",
+      "description": "3.4: reemplaza la pantalla larga de OS en mobile por 3 pasos con indicador visible: Iniciar (check-in, 1 boton), Ejecutar (checklist+fotos+materiales, autoguardado), Cerrar (resumen + nombre del encargado+firma o Cliente no disponible + Confirmar -> check-out automatico + firma/no-disponible + finalizar encadenados). 3.4c: sin migracion, el paso se deriva de check_in_at/check_out_at existentes. 3.4d: web ahora muestra llegada/salida+GPS en el detalle de la OS (no existia).",
+      "acceptance": [
+        "Nuevo componente IndicadorPasos.tsx (1-2-3 visual, sin logica de negocio)",
+        "CierreFirma.tsx reescrito: sin firma dibujada del tecnico (acreditado por sesion, ver tarea 87), cliente solo pide Nombre del encargado (sin RUT/cargo), toggle Cliente no disponible (motivo+foto) como alternativa",
+        "TrabajoDetalleScreen.tsx reescrito: paso derivado de checkInAt/checkOut.hecho (sin estado nuevo en DB, sin mapeo, compatible con OS en curso del flujo viejo); autoguardado del formulario (debounce 1.5s, solo si el usuario tipeo algo); Continuar/Volver entre paso 2 y 3; confirmarCierre() encadena check-out automatico (si no estaba hecho) + firma o cliente-no-disponible + finalizar; Registrar venta preservado (no se perdio del rediseno)",
+        "services/trabajos.ts: encolarFirma ya no pide firmante_documento; nueva encolarClienteNoDisponible (multipart via la cola, mismo patron que fotos)",
+        "web ordenes/[id]/page.tsx: nuevo bloque Llegada/Salida con hora + link a Maps si hay GPS o Sin ubicacion si no, + Cliente no disponible al cierre si aplica -- no existia esta info en la pantalla",
+        "tsc (6 workspaces) + verificar.sh en verde"
+      ],
+      "status": "done",
+      "resolution": "Reutilizado al maximo lo existente: CamposDinamicos y FotosSection sin cambios (solo se les cambio cuando son editables segun el paso), LienzoFirma sin cambios, la logica de check-in optimista igual que antes. El paso se resuelve 100% de datos ya existentes (check_in_at/check_out.hecho) -- una OS a mitad de camino con el flujo viejo abre directo en el paso correcto sin ningun backfill ni mapeo de estados, tal como pedia 3.4c. Encontre y preserve \"Registrar venta\" (se habia perdido en el primer borrador del rediseno, lo repuse antes de cerrar). No se hizo prueba visual en vivo del mobile (no hay infra de simulador/device en este entorno) -- verificado por tsc + revision de codigo cuidadosa, mismo criterio que el resto de pantallas mobile grandes de esta sesion sin ese tipo de prueba disponible. tsc + verificar.sh en verde."
     }
   ]
 }
