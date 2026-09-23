@@ -58,8 +58,10 @@ Monorepo (npm workspaces):
 - **Prod DB:** el agente hace solo lecturas (`supabase db query --linked
   --project-ref yjbskbskyadxjooxngjv`). Las migraciones a prod las corre el
   humano. Ver `docs/PUESTA_EN_PRODUCCION.md`.
-- **Builds EAS (mobile):** solo cuando el humano los pide. Bump
-  `mobile/app.json` `version` + `android.versionCode` en cada build.
+- **Builds mobile:** solo cuando el humano los pide y, por ahora, **solo
+  locales** (no `eas build`, decisión del 23-sep-2026 — ver
+  `docs/harness/convenciones.md` §Mobile). Bump `mobile/app.json`
+  `version` + `android.versionCode` en cada build.
 - **Secretos:** el agente nunca teclea passwords, keys ni tokens en formularios
   ni los commitea. Los `.env` reales están gitignoreados.
 - Si una herramienta falla de forma inesperada, **no improvises un

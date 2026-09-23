@@ -47,6 +47,12 @@ type UsoResend =
   | { disponible: true; dominios: { nombre: string; estado: string; region: string }[]; ultimos30dias: number | null }
   | { disponible: false; motivo: string };
 type UsoAnthropic = { disponible: true; dias: number } | { disponible: false; motivo: string };
+// Vercel / Render / Cloudflare (23-sep-2026) — backend/src/superadmin/infra.ts.
+type NoDisponible = { disponible: false; motivo: string };
+type UltimoDeploy = { estado: string; fecha: string } | null;
+type UsoVercel = { disponible: true; proyectos: { nombre: string; framework: string | null; ultimoDeploy: (NonNullable<UltimoDeploy> & { url: string | null }) | null }[] } | NoDisponible;
+type UsoRender = { disponible: true; servicios: { nombre: string; tipo: string; plan: string | null; suspendido: boolean; ultimoDeploy: UltimoDeploy }[] } | NoDisponible;
+type UsoCloudflare = { disponible: true; zonas: { nombre: string; estado: string; plan: string | null; requests7d: number | null; bytes7d: number | null }[] } | NoDisponible;
 
 type SaludPlataforma = {
   sentry_configurado: boolean;
@@ -58,7 +64,9 @@ type SaludPlataforma = {
   proveedores_sin_monitoreo: ProveedorSinMonitoreo[];
   tendencia_mensual: TendenciaMensual[];
   storage_historico: StorageHistoricoFila[];
-  uso_recursos: { supabase: UsoSupabase; resend: UsoResend; anthropic: UsoAnthropic };
+  // vercel/render/cloudflare opcionales: un backend todavía sin este
+  // deploy no los manda — la tarjeta lo trata como "no disponible".
+  uso_recursos: { supabase: UsoSupabase; resend: UsoResend; anthropic: UsoAnthropic; vercel?: UsoVercel; render?: UsoRender; cloudflare?: UsoCloudflare };
   generado_en: string;
 };
 
@@ -247,6 +255,9 @@ export default function SuperAdminSaludPage() {
                   <p className="text-[11px] text-muted">{salud.uso_recursos.anthropic.motivo}</p>
                 )}
               </div>
+              <BloqueVercel uso={salud.uso_recursos.vercel} />
+              <BloqueRender uso={salud.uso_recursos.render} />
+              <BloqueCloudflare uso={salud.uso_recursos.cloudflare} />
             </div>
           </Card>
 
@@ -377,3 +388,111 @@ export default function SuperAdminSaludPage() {
     </SuperAdminShell>
   );
 }
+
+// ---------------------------------------------------------------
+// Vercel / Render / Cloudflare en "Uso de recursos" (23-sep-2026).
+// ---------------------------------------------------------------
+const OK_DEPLOY = ["READY", "live"];
+const FALLA_DEPLOY = ["ERROR", "CANCELED", "build_failed", "update_failed", "canceled", "pre_deploy_failed"];
+
+function badgeDeploy(estado: string): "operational" | "degraded" | "outage" | "desconocido" {
+  if (OK_DEPLOY.includes(estado)) return "operational";
+  if (FALLA_DEPLOY.includes(estado)) return "outage";
+  return "degraded"; // en curso (BUILDING, build_in_progress, ...)
+}
+
+function fechaCorta(iso: string): string {
+  return new Date(iso).toLocaleString("es-CL", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+}
+
+function SinDatos({ uso, variable }: { uso: NoDisponible | undefined; variable: string }) {
+  return <p className="text-[11px] text-muted">{uso?.motivo ?? `Falta ${variable} (o el backend todavía no tiene este deploy)`}</p>;
+}
+
+function BloqueVercel({ uso }: { uso: UsoVercel | undefined }) {
+  return (
+    <div>
+      <p className="mb-2 text-xs font-medium text-foreground">Vercel (web)</p>
+      {uso?.disponible ? (
+        <div className="flex flex-col gap-2">
+          {uso.proyectos.map((p) => (
+            <div key={p.nombre} className="rounded-md border border-border px-2.5 py-2">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-medium text-foreground">{p.nombre}</span>
+                {p.ultimoDeploy ? <Badge value={badgeDeploy(p.ultimoDeploy.estado)} label={p.ultimoDeploy.estado} /> : null}
+              </div>
+              <p className="mt-1 text-[11px] text-muted">
+                {p.framework ?? "—"} · {p.ultimoDeploy ? `último deploy ${fechaCorta(p.ultimoDeploy.fecha)}` : "sin deploys de producción"}
+              </p>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <SinDatos uso={uso as NoDisponible | undefined} variable="VERCEL_TOKEN" />
+      )}
+    </div>
+  );
+}
+
+function BloqueRender({ uso }: { uso: UsoRender | undefined }) {
+  return (
+    <div>
+      <p className="mb-2 text-xs font-medium text-foreground">Render (backend)</p>
+      {uso?.disponible ? (
+        <div className="flex flex-col gap-2">
+          {uso.servicios.map((sv) => (
+            <div key={sv.nombre} className="rounded-md border border-border px-2.5 py-2">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-medium text-foreground">{sv.nombre}</span>
+                {sv.suspendido ? (
+                  <Badge value="outage" label="Suspendido" />
+                ) : sv.ultimoDeploy ? (
+                  <Badge value={badgeDeploy(sv.ultimoDeploy.estado)} label={sv.ultimoDeploy.estado} />
+                ) : null}
+              </div>
+              <p className="mt-1 text-[11px] text-muted">
+                {sv.tipo}
+                {sv.plan ? ` · plan ${sv.plan}` : ""}
+                {sv.ultimoDeploy ? ` · último deploy ${fechaCorta(sv.ultimoDeploy.fecha)}` : ""}
+              </p>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <SinDatos uso={uso as NoDisponible | undefined} variable="RENDER_API_KEY" />
+      )}
+    </div>
+  );
+}
+
+function BloqueCloudflare({ uso }: { uso: UsoCloudflare | undefined }) {
+  return (
+    <div>
+      <p className="mb-2 text-xs font-medium text-foreground">Cloudflare (DNS / proxy)</p>
+      {uso?.disponible ? (
+        uso.zonas.length > 0 ? (
+          <div className="flex flex-col gap-2">
+            {uso.zonas.map((z) => (
+              <div key={z.nombre} className="rounded-md border border-border px-2.5 py-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-medium text-foreground">{z.nombre}</span>
+                  <Badge value={z.estado === "active" ? "operational" : "degraded"} label={z.estado} />
+                </div>
+                <p className="mt-1 text-[11px] text-muted">
+                  {z.plan ?? "—"}
+                  {z.requests7d != null ? ` · ${formatearEntero(z.requests7d)} requests (7 días)` : " · sin permiso de Analytics"}
+                  {z.bytes7d != null ? ` · ${formatearBytes(z.bytes7d)}` : ""}
+                </p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-[11px] text-muted">Sin zonas en la cuenta.</p>
+        )
+      ) : (
+        <SinDatos uso={uso as NoDisponible | undefined} variable="CLOUDFLARE_API_TOKEN" />
+      )}
+    </div>
+  );
+}
+

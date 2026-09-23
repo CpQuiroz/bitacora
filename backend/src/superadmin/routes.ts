@@ -22,7 +22,7 @@ import { cambiarPlanEmpresa } from "../planes";
 import { enviarInvitacion } from "../email";
 import { sembrarSugerenciasRubro } from "../seedRubro";
 import { hashPassword, verificarPassword } from "./passwords";
-import { obtenerEstadoAnthropic, obtenerEstadoResend, obtenerEstadoSupabase } from "./infra";
+import { obtenerEstadoAnthropic, obtenerEstadoCloudflare, obtenerEstadoRender, obtenerEstadoResend, obtenerEstadoSupabase, obtenerEstadoVercel } from "./infra";
 import { generarSecretoTotp, otpauthUri, verificarCodigoTotp } from "../totp";
 import {
   crearTokenSuperAdmin,
@@ -377,6 +377,9 @@ superadminRouter.get(
       usoSupabase,
       usoResend,
       usoAnthropic,
+      usoVercel,
+      usoRender,
+      usoCloudflare,
     ] = await Promise.all([
       supabase
         .from("errores_backend")
@@ -404,6 +407,9 @@ superadminRouter.get(
       obtenerEstadoSupabase().catch((e) => ({ disponible: false as const, motivo: e instanceof Error ? e.message : String(e) })),
       obtenerEstadoResend().catch((e) => ({ disponible: false as const, motivo: e instanceof Error ? e.message : String(e) })),
       obtenerEstadoAnthropic().catch((e) => ({ disponible: false as const, motivo: e instanceof Error ? e.message : String(e) })),
+      obtenerEstadoVercel().catch((e) => ({ disponible: false as const, motivo: e instanceof Error ? e.message : String(e) })),
+      obtenerEstadoRender().catch((e) => ({ disponible: false as const, motivo: e instanceof Error ? e.message : String(e) })),
+      obtenerEstadoCloudflare().catch((e) => ({ disponible: false as const, motivo: e instanceof Error ? e.message : String(e) })),
     ]);
 
     res.json({
@@ -416,7 +422,7 @@ superadminRouter.get(
       proveedores_sin_monitoreo: PROVEEDORES_SIN_MONITOREO_AUTOMATICO,
       tendencia_mensual: tendenciaMensual ?? [],
       storage_historico: storageHistorico ?? [],
-      uso_recursos: { supabase: usoSupabase, resend: usoResend, anthropic: usoAnthropic },
+      uso_recursos: { supabase: usoSupabase, resend: usoResend, anthropic: usoAnthropic, vercel: usoVercel, render: usoRender, cloudflare: usoCloudflare },
       generado_en: new Date().toISOString(),
     });
   })
