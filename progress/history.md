@@ -159,3 +159,33 @@ Formato:
   y prod (verificado 23-sep). Pendientes que no son código: unidad "1"
   de Hidroservi (la corrige un admin de esa empresa); build EAS cuando
   se pida. Siguiente tarea de código: paridad de Agenda web/mobile.
+
+## 2026-09-23 — Sesión: estilos, Agenda, OS/PDF, ventas, flota, panel Salud (tareas 97–111)
+- **Agente:** Claude (directo; subagentes Explore solo para el análisis de las 6 mejoras)
+- **Plan:** pendientes de la usuaria + 6 mejoras (OS, PDF, ventas, flota) con
+  análisis previo confirmado, y seguimiento de PRs hasta prod.
+- **Cambios (PR #1 a #4, todos mergeados a main):**
+  - 97/98: Super-Admin elige el tema por empresa y su propio estilo (migración 127).
+  - 99: Agenda con paridad web/mobile (web muestra Levantamientos, mobile OS).
+  - 100–102: fotos de OS agrupadas por categoría con descripción editable;
+    comentarios del técnico bajo las fotos; informe IA bajo las fotos en el PDF.
+  - 103: permisos de escritura en /api/equipos (antes sin ningún chequeo).
+  - 104: Nueva OS sin "Tipo de OS" ni mapa; Rutas sin "Tipo de tarea".
+  - 105/107: acción `registrar_venta` (Admin + Supervisor, migración 129).
+  - 106: eventos semanales de flota (migración 128, índice validado con EXPLAIN ANALYZE).
+  - 108: panel Salud con Vercel/Render/Cloudflare (faltan los tokens en Render).
+  - 109: detalles menores (ítems reales en Mantención, Documentos con roles dinámicos).
+  - 110: el estilo del Super-Admin no guardaba → era una extensión del navegador
+    que reescribía el preflight CORS (sin PATCH); PR #3 dejó el error visible.
+  - Infra: variables Preview en Vercel (los previews de PR ya construyen);
+    migraciones 126–129 anotadas y aplicadas en dev y prod.
+  - Decisiones: builds mobile solo locales (usuario `cquiroz`), documentado.
+- **Verificación:** `./verificar.sh` en verde en cada commit; CI verde en cada PR;
+  deploys de Render (live) y Vercel (READY) verificados tras cada merge.
+- **Cierre / próximos pasos:**
+  - Usuaria: build mobile 1.10.16 en `cquiroz` (llave de release nueva →
+    reinstalar una vez en cada teléfono); tokens del panel Salud; pruebas en prod;
+    quitar la extensión CORS del navegador.
+  - Decisiones abiertas: Google Play prueba interna (US$25); categorías de
+    empresa con productos + venta desde cita (maqueta enviada, no aplicada).
+  - Deuda técnica: tarea 111 (proteger main en GitHub, evaluar repo privado).

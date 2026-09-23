@@ -1620,6 +1620,27 @@
       "title": "Detalles menores: '35 ítems' fijo en Mantención y permisos fijos en Documentos",
       "status": "done",
       "resolution": "MantencionVehiculoScreen cuenta los ítems reales de la plantilla del checklist diario (obtenerPlantillaMantencion, con caché/fallback). documentos.ts usa rolPuedeVerModulo (roles dinámicos) en vez de puedeVerModulo (matriz semilla). verificar.sh en verde."
+    },
+    {
+      "id": 110,
+      "name": "superadmin_tema_failed_to_fetch",
+      "title": "Super-Admin: el cambio de estilo no guardaba en prod",
+      "status": "done",
+      "resolution": "Causa: una extensión del navegador de la usuaria reescribía la respuesta CORS del preflight (Access-Control-Allow-Methods sin PATCH) → 'Failed to fetch'. El backend responde bien (verificado en local: GET,HEAD,PUT,PATCH,POST,DELETE). En incógnito funciona. PR #3 dejó el cambio de tema con try/catch, error visible y auditoría cambiar_mi_tema. Sin cambios de código adicionales."
+    },
+    {
+      "id": 111,
+      "name": "deuda_proteger_main_github",
+      "title": "Deuda técnica: proteger la rama main en GitHub (y evaluar repo privado)",
+      "status": "pending",
+      "description": "GitHub avisa 'Your main branch isn't protected'. main es lo que se despliega a prod (Vercel + Render). Anotado como deuda técnica a pedido de la usuaria (23-sep-2026), para hacerlo más adelante.",
+      "acceptance": [
+        "Ruleset sobre main: Restrict deletions + Block force pushes",
+        "Require status checks: solo 'verificar' (NO 'check-migraciones': solo corre si cambian migraciones y dejaría PRs trabados)",
+        "Require pull request: solo si se agrega a la usuaria en Bypass list (las sesiones locales pushean directo a main) y con 0 approvals requeridos",
+        "Evaluar pasar el repo a privado (hoy es Public; sin secretos en el repo, la anon key de Supabase es pública por diseño)",
+        "Verificar en el siguiente PR que 'verificar' sea requerido"
+      ]
     }
   ]
 }
