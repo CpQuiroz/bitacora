@@ -1342,6 +1342,22 @@
       ],
       "status": "done",
       "resolution": "Reutilizado el eje ya existente en trabajos.ts (req.rol===\"colaborador\" -> filtrar por responsable_id) para no inventar un criterio nuevo. Verificado con datos reales de dev: Pedro Chofer QA (rol colaborador) ve 1/3 clientes de su empresa tras el fix. Asistente: doble capa -- requiereRol(\"admin\") en el backend es la proteccion real e incondicional (funciona aunque algun rol viejo tuviera \"asistente\" ya en su lista base, de antes de este fix); MODULOS_DELEGABLES_POR_EMPRESA + el chequeo de rol en las 5 pantallas de UI (1 web + 4 mobile) son la capa de UX para no ofrecer un boton que igual daria 403. tsc + verificar.sh en verde. Sin migraciones en esta fase."
+    },
+    {
+      "id": 87,
+      "name": "fase3_backend_pdf_foto_descripcion_ejecutor_sesion",
+      "title": "FASE 3 (parte 1/2 - backend+PDF): fotos con descripcion en OS, sacar firma del colaborador, cliente no disponible",
+      "description": "3.1 fotos con descripcion (backend+PDF). 3.2 backend/PDF: bloqueEjecutor por sesion en vez de firma dibujada del tecnico (retrocompatible con OS viejas que ya tienen firma_tecnico_url), RUT del cliente tomado de su ficha en vez de pedirlo al firmar, endpoint cliente-no-disponible (motivo+foto) como alternativa a la firma para poder finalizar.",
+      "acceptance": [
+        "Migracion 125: analisis_fotos.descripcion; ordenes_servicio.cliente_no_disponible(+motivo+foto), check_in_sin_ubicacion, check_out_sin_ubicacion; tabla nueva os_pdf_versiones (para 3.3)",
+        "Backend trabajos.ts: POST/PATCH /:id/fotos aceptan descripcion; nuevo POST /:id/cliente-no-disponible; /:id/finalizar acepta cliente_no_disponible como alternativa a firma_url; check_in_sin_ubicacion/check_out_sin_ubicacion se infieren de lat==null (sin flag nuevo que el cliente tenga que mandar); cliente_info select suma rut",
+        "armarDatosPdf: suma checkIn/checkOutLat/Lng/SinUbicacion, clienteNoDisponible*, descripcion por foto",
+        "generarPdfOS.ts: bloqueEjecutor (nombre+llegada+salida+GPS-o-sin-ubicacion, sin imagen) reemplaza a bloqueFirma del tecnico SOLO cuando no hay firma_tecnico_url guardada (backward-compat automatico por presencia de dato, no por flag de version); bloqueClienteNoDisponible (motivo+foto) reemplaza a bloqueFirma del cliente cuando cliente_no_disponible; firma de cliente normal ahora usa clienteRut en vez de firmanteDocumento tipeado; fotos de la galeria muestran su descripcion debajo",
+        "Verificado visualmente generando un PDF de prueba real (script directo a generarPdfOS): descripcion de foto, bloque Ejecutado por con GPS y sin-ubicacion, RUT real del cliente en la firma -- todo correcto",
+        "tsc (6 workspaces) + verificar.sh (incluye audit:tenant) en verde"
+      ],
+      "status": "done",
+      "resolution": "Verificado con un PDF real generado de punta a punta (no solo lectura de codigo): foto con descripcion debajo, bloque Ejecutado por mostrando GPS del check-in y sin ubicacion en el check-out, RUT real del cliente en la firma de conformidad. audit:tenant encontro 1 hallazgo real (el nuevo endpoint cliente-no-disponible sin empresa_id explicito en el update) y se corrigio antes de cerrar. Pendiente para la parte 2/2 de esta fase: el rediseno de la pantalla mobile a 3 pasos (3.4) que consume estos campos nuevos, y el versionado de PDF con IA (3.3)."
     }
   ]
 }

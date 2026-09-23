@@ -63,17 +63,28 @@ export type DatosOSPdf = {
   seccionesVisibles: Record<SeccionPdfOS, boolean>;
   checklist: { item: string; hecho: boolean; hora: string | null }[];
   checkInAt: string | null;
+  checkInLat: number | null;
+  checkInLng: number | null;
+  checkInSinUbicacion: boolean;
   checkOutAt: string | null;
+  checkOutLat: number | null;
+  checkOutLng: number | null;
+  checkOutSinUbicacion: boolean;
   observacionesCierre: string | null;
   informeIA: string | null;
   items: ItemOSPdf[];
-  fotos: { url: string; categoria: CategoriaFotoOS | null }[];
+  fotos: { url: string; categoria: CategoriaFotoOS | null; descripcion: string | null }[];
   firmaUrl: string | null;
   firmanteNombre: string | null;
   firmanteDocumento: string | null;
   firmaTecnicoUrl: string | null;
   tecnicoFirmanteNombre: string | null;
   tecnicoFirmanteDocumento: string | null;
+  // Fase 3.4b (23-sep-2026) — reemplaza el bloque de firma del cliente
+  // cuando no había nadie que firmara.
+  clienteNoDisponible: boolean;
+  clienteNoDisponibleMotivo: string | null;
+  clienteNoDisponibleFotoUrl: string | null;
 };
 
 const monto = (n: number) => `$${Math.round(n).toLocaleString("es-CL")}`;
@@ -115,10 +126,11 @@ export async function generarPdfOS(datos: DatosOSPdf): Promise<Buffer> {
   // campo (mismo índice, preservando el orden de datos.camposCombinados).
   const camposFotoUrls = datos.camposCombinados.filter((c) => c.tipo === "foto").flatMap((c) => c.fotos);
 
-  const [logoBuffer, firmaBuffer, firmaTecnicoBuffer, ...resto] = await Promise.all([
+  const [logoBuffer, firmaBuffer, firmaTecnicoBuffer, clienteNoDisponibleFotoBuffer, ...resto] = await Promise.all([
     datos.empresaLogoUrl ? descargar(datos.empresaLogoUrl) : Promise.resolve(null),
     datos.firmaUrl ? descargar(datos.firmaUrl) : Promise.resolve(null),
     datos.firmaTecnicoUrl ? descargar(datos.firmaTecnicoUrl) : Promise.resolve(null),
+    datos.clienteNoDisponibleFotoUrl ? descargar(datos.clienteNoDisponibleFotoUrl) : Promise.resolve(null),
     ...datos.fotos.map((f) => descargar(f.url)),
     ...camposFotoUrls.map((url) => descargar(url)),
   ]);
@@ -130,8 +142,8 @@ export async function generarPdfOS(datos: DatosOSPdf): Promise<Buffer> {
   // → después → generales.
   const ORDEN_CAT: (CategoriaFotoOS | null)[] = ["equipo", "antes", "durante", "despues", null];
   const fotosPorCategoria = fotoBuffers
-    .map((buf, i) => ({ buf, categoria: datos.fotos[i]?.categoria ?? null }))
-    .filter((f): f is { buf: Buffer; categoria: CategoriaFotoOS | null } => f.buf !== null);
+    .map((buf, i) => ({ buf, categoria: datos.fotos[i]?.categoria ?? null, descripcion: datos.fotos[i]?.descripcion ?? null }))
+    .filter((f): f is { buf: Buffer; categoria: CategoriaFotoOS | null; descripcion: string | null } => f.buf !== null);
 
   // Reagrupa camposFotoBuffers (plano) de vuelta dentro de
   // datos.camposCombinados, preservando el orden original texto+foto.
@@ -347,10 +359,15 @@ export async function generarPdfOS(datos: DatosOSPdf): Promise<Buffer> {
       let x = 50;
       let filaY = doc.y;
       const anchoFoto = 155;
-      for (const { buf } of delGrupo) {
+      // 110 la foto + 24 para hasta 2 líneas de descripción (Fase 3.1,
+      // 23-sep-2026, pedido explícito) — antes 120 (solo 10px de aire,
+      // sin descripción). Sin descripción esas 24px quedan en blanco,
+      // no se recorta el layout de las OS de antes de esta fase.
+      const altoFila = 138;
+      for (const { buf, descripcion } of delGrupo) {
         if (x + anchoFoto > 545) {
           x = 50;
-          filaY += 120;
+          filaY += altoFila;
         }
         if (filaY > 640) {
           doc.addPage();
@@ -362,30 +379,56 @@ export async function generarPdfOS(datos: DatosOSPdf): Promise<Buffer> {
         } catch {
           // foto corrupta o formato no soportado — se omite
         }
+        if (descripcion) {
+          doc
+            .font("Helvetica")
+            .fontSize(7)
+            .fillColor(PDF.muted)
+            .text(descripcion, x, filaY + 113, { width: anchoFoto, height: 22, ellipsis: true });
+          doc.fillColor(PDF.tinta);
+        }
         x += anchoFoto + 15;
       }
-      doc.y = filaY + 120;
+      doc.y = filaY + altoFila;
       doc.moveDown(0.4);
     }
     doc.moveDown(0.5);
   }
 
-  // --- Firmas: técnico (si hay) y cliente ---
-  if (datos.seccionesVisibles.firma_tecnico && (datos.firmaTecnicoUrl || datos.tecnicoFirmanteNombre)) {
-    bloqueFirma(doc, colorMarca, {
-      titulo: "Firma del técnico responsable",
-      imagen: firmaTecnicoBuffer,
-      nombre: datos.tecnicoFirmanteNombre ?? datos.colaboradorNombre,
-      documento: datos.tecnicoFirmanteDocumento,
-    });
+  // --- Ejecutor: firma dibujada (OS de antes de la Fase 3.2, back-
+  // compat) o acreditación por sesión (OS nuevas — ya no se pide
+  // firma al colaborador, queda acreditado por su cuenta + check-in/
+  // check-out con hora y GPS si hubo). Cuál de las dos se imprime
+  // depende solo de si HAY una firma_tecnico_url guardada — nunca un
+  // flag de versión aparte, así una OS vieja sigue viéndose igual.
+  if (datos.seccionesVisibles.firma_tecnico) {
+    if (datos.firmaTecnicoUrl || datos.tecnicoFirmanteNombre) {
+      bloqueFirma(doc, colorMarca, {
+        titulo: "Firma del técnico responsable",
+        imagen: firmaTecnicoBuffer,
+        nombre: datos.tecnicoFirmanteNombre ?? datos.colaboradorNombre,
+        documento: datos.tecnicoFirmanteDocumento,
+      });
+    } else {
+      bloqueEjecutor(doc, colorMarca, datos);
+    }
   }
+  // --- Cliente: "no disponible" (nadie firmó, motivo + evidencia) o
+  // firma de conformidad normal. El RUT ya no se pide al firmar (Fase
+  // 3.2) — sale de la ficha del cliente asociado a la OS
+  // (datos.clienteRut), con el dato tipeado viejo como respaldo si el
+  // cliente no tiene RUT cargado.
   if (datos.seccionesVisibles.firma_cliente) {
-    bloqueFirma(doc, colorMarca, {
-      titulo: "Firma de conformidad del cliente",
-      imagen: firmaBuffer,
-      nombre: datos.firmanteNombre,
-      documento: datos.firmanteDocumento,
-    });
+    if (datos.clienteNoDisponible) {
+      bloqueClienteNoDisponible(doc, colorMarca, datos, clienteNoDisponibleFotoBuffer);
+    } else {
+      bloqueFirma(doc, colorMarca, {
+        titulo: "Firma de conformidad del cliente",
+        imagen: firmaBuffer,
+        nombre: datos.firmanteNombre,
+        documento: datos.clienteRut ?? datos.firmanteDocumento,
+      });
+    }
   }
 
   if (datos.textoPie) {
@@ -425,5 +468,57 @@ function bloqueFirma(
   doc.font("Helvetica").fontSize(8.5).fillColor(PDF.tinta);
   doc.text(`Nombre: ${f.nombre || "—"}`, caja.x, y0 + 72, { width: caja.ancho });
   doc.text(`RUT / Documento: ${f.documento || "—"}`, caja.x, y0 + 83, { width: caja.ancho });
+  cerrarCaja(doc, caja.yFin);
+}
+
+// "Hora · lat, lng" o "Hora · sin ubicación" (GPS denegado/sin señal,
+// Fase 3.4b) o solo "Hora" si ni siquiera eso quedó registrado (OS de
+// antes del check-in geolocalizado, migración 64).
+function textoUbicacion(at: string | null, lat: number | null, lng: number | null, sinUbicacion: boolean): string {
+  const hora = fechaHora(at) ?? "—";
+  if (lat != null && lng != null) return `${hora} · ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+  if (sinUbicacion) return `${hora} · sin ubicación`;
+  return hora;
+}
+
+// Reemplaza a bloqueFirma para el técnico en OS nuevas (Fase 3.2,
+// 23-sep-2026) — ya no se pide firma dibujada: el ejecutor queda
+// acreditado por su propia sesión + los horarios/GPS de check-in y
+// check-out, que de todas formas ya se registraban.
+function bloqueEjecutor(doc: PDFKit.PDFDocument, colorMarca: string, datos: DatosOSPdf): void {
+  const ALTO_CONTENIDO = 60;
+  const caja = abrirCaja(doc, "Ejecutado por", colorMarca, ALTO_CONTENIDO);
+  const y0 = doc.y;
+  doc.font("Helvetica").fontSize(8.5).fillColor(PDF.tinta);
+  doc.text(`Nombre: ${datos.colaboradorNombre || "—"}`, caja.x, y0, { width: caja.ancho });
+  doc.text(`Llegada: ${textoUbicacion(datos.checkInAt, datos.checkInLat, datos.checkInLng, datos.checkInSinUbicacion)}`, caja.x, y0 + 15, {
+    width: caja.ancho,
+  });
+  doc.text(`Salida: ${textoUbicacion(datos.checkOutAt, datos.checkOutLat, datos.checkOutLng, datos.checkOutSinUbicacion)}`, caja.x, y0 + 30, {
+    width: caja.ancho,
+  });
+  doc.font("Helvetica").fontSize(7).fillColor(PDF.faint);
+  doc.text("Acreditado por su cuenta en el sistema — sin firma dibujada.", caja.x, y0 + 46, { width: caja.ancho });
+  doc.fillColor(PDF.tinta);
+  cerrarCaja(doc, caja.yFin);
+}
+
+// Reemplaza a bloqueFirma para el cliente cuando no había nadie que
+// firmara (Fase 3.4b) — motivo + foto de evidencia, en vez de firma.
+function bloqueClienteNoDisponible(doc: PDFKit.PDFDocument, colorMarca: string, datos: DatosOSPdf, foto: Buffer | null): void {
+  const ALTO_CONTENIDO = 76;
+  const caja = abrirCaja(doc, "Cliente no disponible", colorMarca, ALTO_CONTENIDO);
+  const y0 = doc.y;
+  const anchoTexto = foto ? caja.ancho - 112 : caja.ancho;
+  const xTexto = foto ? caja.x + 112 : caja.x;
+  if (foto) {
+    try {
+      doc.image(foto, caja.x, y0, { width: 100, height: 76, fit: [100, 76] });
+    } catch {
+      /* foto corrupta — se omite */
+    }
+  }
+  doc.font("Helvetica").fontSize(8.5).fillColor(PDF.tinta);
+  doc.text(`Motivo: ${datos.clienteNoDisponibleMotivo || "—"}`, xTexto, y0, { width: anchoTexto });
   cerrarCaja(doc, caja.yFin);
 }

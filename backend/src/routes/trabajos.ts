@@ -129,7 +129,7 @@ trabajosRouter.get(
   ah<RequestConEmpresa>(async (req, res) => {
     let query = supabase
       .from("trabajos")
-      .select("*, tipo:tipos_os_trabajo(*), cliente_info:clientes(id, nombre, telefono, direccion, lat, lng)")
+      .select("*, tipo:tipos_os_trabajo(*), cliente_info:clientes(id, nombre, telefono, direccion, lat, lng, rut)")
       .eq("empresa_id", req.empresaId!);
     // No revela que el trabajo existe si no es del colaborador — 404, no 403.
     if (req.rol === "colaborador") query = query.eq("responsable_id", req.userId!);
@@ -758,16 +758,23 @@ trabajosRouter.post(
     }
     // Copia geolocalizada consultable (migración 64) — además del item
     // en el jsonb `checklist`.
+    // "Sin ubicación" (Fase 3.4b, 23-sep-2026) — se infiere directo de
+    // que no haya coordenadas: no hace falta un flag aparte que el
+    // cliente tenga que mandar bien, la ausencia de lat/lng YA es la
+    // señal real de "se continuó sin GPS" (permiso denegado o sin
+    // señal), justo el caso que el flujo nuevo permite seguir igual.
     if (item === "Check-in") {
       cambios.check_in_at = ahora;
       cambios.check_in_lat = latNum;
       cambios.check_in_lng = lngNum;
       cambios.check_in_precision = precNum;
+      cambios.check_in_sin_ubicacion = latNum === null;
     } else {
       cambios.check_out_at = ahora;
       cambios.check_out_lat = latNum;
       cambios.check_out_lng = lngNum;
       cambios.check_out_precision = precNum;
+      cambios.check_out_sin_ubicacion = latNum === null;
     }
 
     // tenant-ok: trabajoExiste() más arriba ya validó empresa_id; orden
@@ -1093,6 +1100,11 @@ trabajosRouter.post(
     const campoClave =
       typeof req.body?.campo_clave === "string" && /^[a-z0-9_]+$/.test(req.body.campo_clave) ? req.body.campo_clave : null;
 
+    // Descripción opcional (Fase 3.1, 23-sep-2026, pedido explícito) —
+    // mismo criterio que levantamiento_fotos (migración 124): viaja
+    // como campo de texto del mismo multipart, no un archivo.
+    const descripcion = typeof req.body?.descripcion === "string" ? req.body.descripcion.trim() || null : null;
+
     // Con la IA apagada la foto queda "listo" al toque, sin resumen.
     const estadoInicial = env.ANALISIS_FOTOS_IA_ACTIVO ? "procesando" : "listo";
 
@@ -1105,6 +1117,7 @@ trabajosRouter.post(
         foto_url: key,
         categoria,
         campo_clave: campoClave,
+        descripcion,
         subida_por: req.userId!,
         estado: estadoInicial,
       })
@@ -1185,6 +1198,50 @@ trabajosRouter.get(
       (fotos ?? []).map(async (f) => ({ ...f, url: await urlFirmada(f.foto_url, 15) }))
     );
     res.json(conUrl);
+  })
+);
+
+// Edita solo la descripción de una foto ya subida (Fase 3.1,
+// 23-sep-2026) — mismo criterio de bloqueo que borrar: no una vez
+// firmada la OS.
+trabajosRouter.patch(
+  "/:id/fotos/:fotoId",
+  ah<RequestConEmpresa>(async (req, res) => {
+    if (!(await trabajoExiste(req.empresaId!, req.params.id))) {
+      res.status(404).json({ error: "Trabajo no encontrado" });
+      return;
+    }
+    if (await trabajoBloqueado(req.empresaId!, req.params.id)) {
+      res.status(403).json({ error: "La orden de servicio ya fue firmada, las fotos originales no se pueden modificar" });
+      return;
+    }
+    const orden = await ordenDeTrabajo(req.empresaId!, req.params.id);
+    if (!orden) {
+      res.status(404).json({ error: "Foto no encontrada" });
+      return;
+    }
+    const { descripcion } = req.body ?? {};
+    if (typeof descripcion !== "string") {
+      res.status(400).json({ error: "Falta descripcion" });
+      return;
+    }
+    const { data, error } = await supabase
+      .from("analisis_fotos")
+      .update({ descripcion: descripcion.trim() || null })
+      .eq("empresa_id", req.empresaId!)
+      .eq("orden_servicio_id", orden.id)
+      .eq("id", req.params.fotoId)
+      .select("id, descripcion")
+      .maybeSingle();
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    if (!data) {
+      res.status(404).json({ error: "Foto no encontrada" });
+      return;
+    }
+    res.json(data);
   })
 );
 
@@ -1312,8 +1369,61 @@ trabajosRouter.post(
   })
 );
 
-// Cierra la OS: exige firma ya guardada y check-out ya marcado.
-// A partir de acá el trabajo queda de solo lectura (trabajoBloqueado).
+// "Cliente no disponible" al cerrar la OS (Fase 3.4b, 23-sep-2026,
+// pedido explícito) — reemplaza a /:id/firma cuando no hay nadie que
+// firme: motivo obligatorio + foto de evidencia. Mismo criterio que
+// /:id/firma (guarda el dato, no cierra la OS todavía — eso sigue
+// siendo /:id/finalizar, que ahora acepta este caso como alternativa
+// a la firma).
+trabajosRouter.post(
+  "/:id/cliente-no-disponible",
+  upload.single("foto"),
+  ah<RequestConEmpresa>(async (req, res) => {
+    const { motivo } = req.body ?? {};
+    if (typeof motivo !== "string" || !motivo.trim()) {
+      res.status(400).json({ error: "Falta el motivo" });
+      return;
+    }
+    if (!req.file) {
+      res.status(400).json({ error: "Falta la foto de evidencia" });
+      return;
+    }
+    if (!(await trabajoExiste(req.empresaId!, req.params.id))) {
+      res.status(404).json({ error: "Trabajo no encontrado" });
+      return;
+    }
+    if (await trabajoBloqueado(req.empresaId!, req.params.id)) {
+      res.status(409).json({ error: "La orden de servicio ya fue finalizada y no se puede editar" });
+      return;
+    }
+    const orden = await obtenerOCrearOrden(req.empresaId!, req.params.id);
+    const key = await subirFoto(req.empresaId!, req.params.id, req.file.buffer, req.file.mimetype);
+    // tenant-ok: orden sale de obtenerOCrearOrden(req.empresaId!, ...) —
+    // el .eq("empresa_id", ...) de abajo es explícito igual, no solo
+    // por ese origen ya validado (mismo criterio que POST /:id/fotos).
+    const { data, error } = await supabase
+      .from("ordenes_servicio")
+      .update({
+        cliente_no_disponible: true,
+        cliente_no_disponible_motivo: motivo.trim(),
+        cliente_no_disponible_foto: key,
+      })
+      .eq("empresa_id", req.empresaId!)
+      .eq("id", orden.id)
+      .select()
+      .single();
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    res.json({ ...data, cliente_no_disponible_foto_url: await urlFirmada(key, 15) });
+  })
+);
+
+// Cierra la OS: exige firma ya guardada (o "cliente no disponible" con
+// su motivo+foto, ver /:id/cliente-no-disponible arriba) y check-out
+// ya marcado. A partir de acá el trabajo queda de solo lectura
+// (trabajoBloqueado).
 trabajosRouter.post(
   "/:id/finalizar",
   ah<RequestConEmpresa>(async (req, res) => {
@@ -1328,8 +1438,8 @@ trabajosRouter.post(
       res.status(409).json({ error: "La orden de servicio ya estaba finalizada" });
       return;
     }
-    if (!orden.firma_url) {
-      res.status(400).json({ error: "Falta la firma antes de finalizar la OS" });
+    if (!orden.firma_url && !orden.cliente_no_disponible) {
+      res.status(400).json({ error: "Falta la firma (o marcar 'cliente no disponible') antes de finalizar la OS" });
       return;
     }
     const checkOutHecho = (orden.checklist as ItemChecklist[]).find(
@@ -1506,7 +1616,7 @@ export async function armarDatosPdf(empresaId: string, trabajoId: string) {
 
   const { data: fotos } = await supabase
     .from("analisis_fotos")
-    .select("foto_url, categoria, campo_clave")
+    .select("foto_url, categoria, campo_clave, descripcion")
     .eq("orden_servicio_id", orden.id)
     .order("creado_en", { ascending: true });
 
@@ -1523,8 +1633,12 @@ export async function armarDatosPdf(empresaId: string, trabajoId: string) {
     fotosGaleria.map(async (f) => ({
       url: await urlFirmada(f.foto_url, 15),
       categoria: (f.categoria as CategoriaFotoOS | null) ?? null,
+      // Fase 3.1 (23-sep-2026) — descripción escrita al subirla, se
+      // imprime bajo la foto en el PDF.
+      descripcion: f.descripcion ?? null,
     }))
   );
+  const clienteNoDisponibleFotoUrl = orden.cliente_no_disponible_foto ? await urlFirmada(orden.cliente_no_disponible_foto, 15) : null;
   const firmaUrl = orden.firma_url ? await urlFirmada(orden.firma_url, 15) : null;
   const firmaTecnicoUrl = orden.firma_tecnico_url ? await urlFirmada(orden.firma_tecnico_url, 15) : null;
 
@@ -1593,12 +1707,23 @@ export async function armarDatosPdf(empresaId: string, trabajoId: string) {
     camposCombinados,
     checklist,
     checkInAt: orden.check_in_at ?? null,
+    checkInLat: orden.check_in_lat ?? null,
+    checkInLng: orden.check_in_lng ?? null,
+    checkInSinUbicacion: Boolean(orden.check_in_sin_ubicacion),
     checkOutAt: orden.check_out_at ?? null,
+    checkOutLat: orden.check_out_lat ?? null,
+    checkOutLng: orden.check_out_lng ?? null,
+    checkOutSinUbicacion: Boolean(orden.check_out_sin_ubicacion),
     observacionesCierre: orden.observaciones_cierre,
     informeIA: orden.informe_ia,
     firmaTecnicoUrl,
     tecnicoFirmanteNombre: orden.tecnico_firmante_nombre ?? null,
     tecnicoFirmanteDocumento: orden.tecnico_firmante_documento ?? null,
+    // Fase 3.4b (23-sep-2026) — no siempre hay alguien que firme; queda
+    // esta marca visible en el PDF y para Admin en vez de la firma.
+    clienteNoDisponible: Boolean(orden.cliente_no_disponible),
+    clienteNoDisponibleMotivo: orden.cliente_no_disponible_motivo ?? null,
+    clienteNoDisponibleFotoUrl,
     items: (items ?? []).map((it) => ({
       descripcion: it.descripcion,
       cantidad: it.cantidad,

@@ -969,6 +969,32 @@ export type OrdenServicio = {
   // número.
   orden_compra_cliente: string | null;
   creado_en: string;
+  // Fase 3 (23-sep-2026, pedido explícito):
+  // "Cliente no disponible" al cerrar — no siempre hay alguien que
+  // firme; motivo + foto de evidencia (key de storage, no URL pública),
+  // la OS queda cerrada igual con esa marca visible en el PDF/Admin.
+  cliente_no_disponible: boolean;
+  cliente_no_disponible_motivo: string | null;
+  cliente_no_disponible_foto: string | null;
+  // El flujo nuevo permite continuar el check-in/check-out sin GPS
+  // (permiso denegado o sin señal) — estas 2 banderas distinguen esa
+  // decisión consciente de un simple check_in_lat/lng null "de antes".
+  check_in_sin_ubicacion: boolean;
+  check_out_sin_ubicacion: boolean;
+};
+
+// Fase 3.3 — versiones del PDF con Informe IA. v1 = pdf_url de
+// OrdenServicio (la original, firmada, inmutable) — esta tabla arranca
+// en v2 (ver migración 125).
+export type OsPdfVersion = {
+  id: string;
+  empresa_id: string;
+  orden_servicio_id: string;
+  version: number;
+  pdf_url: string;
+  informe_ia: string;
+  creado_por: string | null;
+  creado_en: string;
 };
 
 export type OsItem = {
@@ -1856,6 +1882,10 @@ export type AnalisisFoto = {
   subida_por: string | null;
   estado: EstadoAnalisisFoto;
   resumen: string | null;
+  // Descripción escrita por quien subió la foto (migración 125,
+  // 23-sep-2026, pedido explícito) — distinta de `resumen` (generado
+  // por IA): esto es lo que la persona en terreno quiso anotar.
+  descripcion: string | null;
   alerta: boolean;
   detalle_alerta: string | null;
   creado_en: string;

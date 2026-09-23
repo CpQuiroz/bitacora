@@ -6170,9 +6170,55 @@ levantamiento u OS asignado — en Clientes (web o mobile) solo aparecen
 los suyos; el botón/chat del Asistente no aparece en ninguna pantalla
 y `GET /api/asistente` devuelve 403 si se llama directo.
 
-Tarea 86 cerrada. Sigo con Fase 3 (bug OS: fotos con descripción,
-firmas, versiones de PDF con IA, flujo de 3 pasos) — la más grande de
-las 7.
+Tarea 86 cerrada.
+
+### Fase 3, parte 1/2 (backend + PDF) — tarea 87
+
+Antes de tocar código, mapeé el flujo ACTUAL completo leyendo
+`TrabajoDetalleScreen.tsx`/`CierreFirma.tsx`/`trabajos.ts`/
+`generarPdfOS.ts`: check-in (GPS opcional) → checklist+fotos+materiales
+todo en una sola pantalla scrolleable, editable en cualquier momento →
+check-out (GPS opcional) → firma técnico (opcional, ya con nombre
+autocompletado de la sesión, dibuja igual) + firma cliente (nombre +
+"cargo o RUT" tipeado + dibuja) → `/finalizar` (exige firma_url +
+check-out, pasa a "firmada", dispara cobro/PDF/descuento de stock).
+
+Migración 125: `analisis_fotos.descripcion`; `ordenes_servicio`:
+`cliente_no_disponible`(+motivo+foto), `check_in_sin_ubicacion`,
+`check_out_sin_ubicacion`; tabla nueva `os_pdf_versiones` (para 3.3).
+
+- **3.1 fotos con descripción**: `POST`/`PATCH /:id/fotos` aceptan
+  `descripcion`; `armarDatosPdf`/`generarPdfOS.ts` la imprimen debajo
+  de cada foto en el PDF.
+- **3.2 backend/PDF**: `bloqueEjecutor` (nombre + llegada + salida +
+  GPS o "sin ubicación", **sin imagen de firma**) reemplaza a
+  `bloqueFirma` del técnico **solo cuando no hay `firma_tecnico_url`
+  guardada** — retrocompatible automático por presencia de dato, sin
+  ningún flag de versión: una OS vieja con firma dibujada de antes de
+  esta fase sigue mostrando exactamente lo mismo que mostraba.
+  `check_in_sin_ubicacion`/`check_out_sin_ubicacion` se infieren solos
+  de `lat == null` (no hay que mandar un flag nuevo aparte). RUT del
+  cliente: la firma de conformidad ahora imprime `clienteRut` (de la
+  ficha del cliente asociado a la OS) en vez de lo tipeado a mano.
+  Nuevo `POST /:id/cliente-no-disponible` (motivo + foto de
+  evidencia) como alternativa a la firma para poder cerrar una OS sin
+  que haya nadie que firme — `bloqueClienteNoDisponible` en el PDF.
+- **Verificado con un PDF real** (script directo a `generarPdfOS`,
+  sin pasar por la DB): foto con descripción debajo, "Ejecutado por"
+  con GPS en la llegada y "sin ubicación" en la salida, RUT real del
+  cliente en la firma — todo correcto.
+- `audit:tenant` encontró 1 hallazgo real (mi endpoint nuevo sin
+  `empresa_id` explícito en el `update`) — corregido antes de cerrar.
+- `tsc` (6 workspaces) + `verificar.sh` completo en verde.
+
+**Archivos**: migración 125,
+`packages/shared/src/types.ts`, `backend/src/routes/trabajos.ts`,
+`backend/src/generarPdfOS.ts`, `mobile/src/services/trabajos.ts`
+(tipo `ClienteContacto` + `rut`).
+
+Sigo con la parte 2/2: el rediseño de la pantalla mobile a 3 pasos
+(3.4, la reescritura grande) y el versionado de PDF con Informe IA
+(3.3).
 
 ## 23-sep-2026 — tarea 81: bajar el botón flotante del Asistente
 

@@ -5,7 +5,7 @@ import { encolar } from "./sync/queue";
 import { guardarCache, leerCache } from "./sync/cache";
 import type { Ubicacion } from "../lib/geo";
 
-export type ClienteContacto = Pick<Cliente, "id" | "nombre" | "telefono" | "direccion" | "lat" | "lng">;
+export type ClienteContacto = Pick<Cliente, "id" | "nombre" | "telefono" | "direccion" | "lat" | "lng" | "rut">;
 export type TrabajoConTipo = Trabajo & { tipo: TipoOsTrabajo | null; cliente_info: ClienteContacto | null };
 export type FotoConUrl = AnalisisFoto & { url: string };
 export type OrdenConFirma = OrdenServicio & {
