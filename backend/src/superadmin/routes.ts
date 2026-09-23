@@ -161,6 +161,7 @@ superadminRouter.patch(
       res.status(500).json({ error: error.message });
       return;
     }
+    await registrarAuditoria(req.superAdminId!, "cambiar_mi_tema", { ip: req.ip ?? null, detalle: tema });
     res.json({ tema });
   })
 );
