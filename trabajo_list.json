@@ -1406,6 +1406,20 @@
       ],
       "status": "done",
       "resolution": "Reutilizado el mismo patron de \"colaborador ve lo suyo\" ya usado en clientes.ts (Fase 2.1): backend audita (agregado_por + agregado_por_admin, creado_en ya existia) y aplica el permiso -- 403 a no-Admin, 409 si esta cerrado. El full-replace del tecnico en /:id/completar se escopeo con .eq(\"agregado_por_admin\", false) tanto en el DELETE como en lo que inserta, para que un re-guardado del tecnico nunca borre lo que agrego el Admin. Web reutiliza CatalogoSelectorModal (mismo componente que Cotizaciones/OS) tomando solo catalogo_item_id+cantidad de cada item elegido, ignorando los campos de precio que no aplican acá. Mobile: ademas del badge, las filas de Admin quedan de solo lectura para el tecnico y se filtran del payload de guardar (cinturon y tirantes -- el backend ya las protege, pero evita reenviarlas de una). tsc (6 workspaces) + verificar.sh en verde."
+    },
+    {
+      "id": 91,
+      "name": "fase5_1_gastos_solo_propios_colaborador",
+      "title": "FASE 5.1: colaborador solo ve sus propios gastos (Gastos y Rendición)",
+      "description": "El modulo de Rendiciones (rendiciones.ts, ya existia completo: crear/listar/detalle/PDF/aprobar/rechazar/liquidar saldo, con ownership por colaborador_id en todos los endpoints) ya cumplia casi toda la Fase 5.1. El hueco real: /api/gastos (lista plana, sin pasar por una rendicion) no filtraba por colaborador en absoluto -- cualquier rol con el modulo financiero delegado (incluido colaborador) veia TODOS los gastos de la empresa via GET /api/gastos, sin scoping.",
+      "acceptance": [
+        "gastos.ts: GET / y GET /:id y GET /:id/comprobante y PATCH /:id ahora escopean por colaborador cuando req.rol === \"colaborador\" -- solo ven/editan gastos que cuelgan de una rendicion propia (rendicion_id -> rendiciones.colaborador_id); un gasto \"suelto\" (rendicion_id null, alta rapida desde el celular, sin owner en la tabla) queda fuera para colaborador -- no tiene como saber que es \"suyo\"",
+        "No se tocó el flujo existente de \"Nuevo gasto\" suelto en mobile (MasScreen) -- sigue disponible para cualquier rol con financiero delegado, a propósito, según el comentario ya existente en ese archivo",
+        "Resto de Fase 5.1 (estados Borrador/Enviada/Aprobada/Rechazada+motivo, saldo_liquidado como \"Reembolsada\", Admin aprueba/rechaza desde rendiciones/[id]/page.tsx, colaborador registra su propia rendición con boleta/monto/fecha/categoría/OS opcional) ya existía completo de una tarea previa a esta sesión -- verificado leyendo el código, no reconstruido",
+        "tsc (6 workspaces) + verificar.sh en verde"
+      ],
+      "status": "done",
+      "resolution": "Antes de tocar nada se leyó rendiciones.ts completo (654 líneas) y se confirmó que ya implementaba todo lo pedido en 5.1 con ownership correcto en cada endpoint (esGestion pattern). El único hueco real estaba en gastos.ts (lista plana, pre-existente, sin ningún filtro de rol) -- se agregó esGestion local + idsRendicionesPropias() y se aplicó en GET /, GET /:id, GET /:id/comprobante y PATCH /:id. tsc + verificar.sh en verde."
     }
   ]
 }

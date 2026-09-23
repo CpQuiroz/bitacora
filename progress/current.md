@@ -6323,12 +6323,41 @@ y distinguir visualmente los materiales agregados por Admin."
   una).
 - `tsc` (6 workspaces) + `verificar.sh` en verde. Tarea 90 cerrada.
 
-**Pendiente de la usuaria**: correr la migración 126 en dev y prod
-(comandos abajo).
-**Pendiente de mí**: seguir con la Fase 5 (Vista del Colaborador:
-gastos/rendición, equipos/vehículos, "Mis trabajos") a continuación,
-sin esperar más pedidos — así lo pidió la usuaria ("sigue con la fase
-4 y 5").
+**Confirmado**: migración 126 corrida y verificada en dev y prod
+(columnas presentes en ambas).
+
+## 23-sep-2026 — tarea 91: FASE 5.1 (Gastos y rendición del colaborador)
+
+Antes de construir algo, leí `rendiciones.ts` completo (654 líneas) —
+resultó que YA implementaba casi toda la 5.1 (de una tarea previa a
+esta sesión, 21/22-sep): rendición Borrador→Enviada→Aprobada/
+Rechazada(motivo), `saldo_liquidado` como "Reembolsada", ownership
+por `colaborador_id` en cada endpoint (crear/listar/detalle/PDF),
+Admin aprueba/rechaza/liquida desde `rendiciones/[id]/page.tsx`,
+mobile ya tiene `RendicionFormScreen`/`RendicionesListScreen`/
+`RendicionDetalleScreen` + `NuevoGastoScreen` (boleta, monto, fecha,
+categoría, OS opcional).
+
+El hueco real: `/api/gastos` (lista plana, sin pasar por una
+rendición) no filtraba por colaborador — cualquier rol con
+`financiero` delegado veía TODOS los gastos de la empresa. Corregido:
+
+- `gastos.ts`: `GET /`, `GET /:id`, `GET /:id/comprobante`,
+  `PATCH /:id` ahora escopean por `colaborador` cuando
+  `req.rol === "colaborador"` — solo ven/editan gastos que cuelgan de
+  una rendición propia (`rendicion_id` → `rendiciones.colaborador_id`).
+  Un gasto "suelto" (`rendicion_id` null, alta rápida desde el
+  celular, sin owner en la tabla) queda fuera para colaborador — no
+  hay cómo saber que es "suyo".
+- No se tocó "Nuevo gasto" suelto en mobile (sigue disponible para
+  cualquier rol con financiero delegado, a propósito, según el
+  comentario ya existente en `MasScreen.tsx`).
+- `tsc` (6 workspaces) + `verificar.sh` en verde. Tarea 91 cerrada.
+
+**Pendiente de mí**: seguir con 5.2 (Equipos/vehículos con alertas de
+vencimiento) y 5.3 ("Mis trabajos" + Agenda gris + Admin ve historial
+de cualquier colaborador) — interrumpido por un pedido de build de
+mobile, vuelvo después.
 
 ## 23-sep-2026 — tarea 81: bajar el botón flotante del Asistente
 

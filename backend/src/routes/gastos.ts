@@ -11,6 +11,23 @@ export const gastosRouter = Router();
 
 const ESTADOS: EstadoGasto[] = ["pagado", "pendiente"];
 
+// Fase 5.1 (23-sep-2026, pedido explícito): "el colaborador solo ve sus
+// propios gastos". Un gasto queda "del colaborador" cuando cuelga de una
+// rendición suya (rendicion_id -> rendiciones.colaborador_id) — el gasto
+// "suelto" (rendicion_id null, alta rápida desde el celular, sin owner
+// en la tabla) es un registro de empresa sin dueño individual, no algo
+// personal para filtrar; ver mobile/src/features/mas/MasScreen.tsx
+// ("Nuevo gasto" queda disponible para cualquier rol con financiero
+// delegado, a propósito — no se toca acá). Mismo criterio que ya usa
+// rendiciones.ts (esGestion), duplicado localmente para no crear un
+// import circular (rendiciones.ts ya importa de este archivo).
+const esGestion = (req: RequestConEmpresa) => req.rol !== "colaborador";
+
+async function idsRendicionesPropias(empresaId: string, userId: string): Promise<string[]> {
+  const { data } = await supabase.from("rendiciones").select("id").eq("empresa_id", empresaId).eq("colaborador_id", userId);
+  return (data ?? []).map((r) => r.id);
+}
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 },
@@ -52,6 +69,15 @@ gastosRouter.get(
       .eq("empresa_id", req.empresaId!)
       .order("fecha", { ascending: false });
 
+    if (!esGestion(req)) {
+      const idsPropias = await idsRendicionesPropias(req.empresaId!, req.userId!);
+      if (idsPropias.length === 0) {
+        res.json([]);
+        return;
+      }
+      query = query.in("rendicion_id", idsPropias);
+    }
+
     const { desde, hasta, estado } = req.query;
     if (typeof desde === "string" && desde) query = query.gte("fecha", desde);
     if (typeof hasta === "string" && hasta) query = query.lte("fecha", hasta);
@@ -73,7 +99,7 @@ gastosRouter.get(
   ah<RequestConEmpresa>(async (req, res) => {
     const { data, error } = await supabase
       .from("gastos")
-      .select("*, categoria_info:categorias_gasto(id, nombre, color), centro_costo_info:centros_costo(id, nombre), proveedor_info:proveedores(id, nombre, telefono, correo), trabajo_info:trabajos(id, cliente, fecha)")
+      .select("*, categoria_info:categorias_gasto(id, nombre, color), centro_costo_info:centros_costo(id, nombre), proveedor_info:proveedores(id, nombre, telefono, correo), trabajo_info:trabajos(id, cliente, fecha), rendicion:rendiciones(colaborador_id)")
       .eq("empresa_id", req.empresaId!)
       .eq("id", req.params.id)
       .maybeSingle();
@@ -83,6 +109,11 @@ gastosRouter.get(
     }
     if (!data) {
       res.status(404).json({ error: "Gasto no encontrado" });
+      return;
+    }
+    const rendicionDelGasto = (data as unknown as { rendicion: { colaborador_id: string } | null }).rendicion;
+    if (!esGestion(req) && rendicionDelGasto?.colaborador_id !== req.userId) {
+      res.status(403).json({ error: "No tienes acceso a este gasto" });
       return;
     }
     res.json(data);
@@ -185,7 +216,7 @@ gastosRouter.patch(
 
     const { data: gastoActual } = await supabase
       .from("gastos")
-      .select("estado, rendicion:rendiciones(estado)")
+      .select("estado, rendicion:rendiciones(estado, colaborador_id)")
       .eq("empresa_id", req.empresaId!)
       .eq("id", req.params.id)
       .maybeSingle();
@@ -193,11 +224,17 @@ gastosRouter.patch(
       res.status(404).json({ error: "Gasto no encontrado" });
       return;
     }
+    const rendicionDeGasto = (gastoActual as unknown as { rendicion: { estado: string; colaborador_id: string } | null }).rendicion;
+    // Fase 5.1: si el gasto es de una rendición, solo su dueño (o
+    // gestión) la toca — un colaborador no edita el gasto de otro.
+    if (rendicionDeGasto && !esGestion(req) && rendicionDeGasto.colaborador_id !== req.userId) {
+      res.status(403).json({ error: "No tienes acceso a este gasto" });
+      return;
+    }
     // Rendiciones (migración 120): una vez que la rendición dejó
     // 'borrador' (enviada/aprobada), sus gastos quedan congelados — ni
     // el colaborador ni nadie los edita desde acá. Se libera si se
     // rechaza (vuelve a 'borrador').
-    const rendicionDeGasto = (gastoActual as unknown as { rendicion: { estado: string } | null }).rendicion;
     if (rendicionDeGasto && rendicionDeGasto.estado !== "borrador") {
       res.status(409).json({ error: "Este gasto pertenece a una rendición ya enviada — no se puede editar" });
       return;
@@ -302,12 +339,21 @@ gastosRouter.get(
   ah<RequestConEmpresa>(async (req, res) => {
     const { data } = await supabase
       .from("gastos")
-      .select("comprobante_url")
+      .select("comprobante_url, rendicion:rendiciones(colaborador_id)")
       .eq("empresa_id", req.empresaId!)
       .eq("id", req.params.id)
       .maybeSingle();
 
-    if (!data?.comprobante_url) {
+    if (!data) {
+      res.status(404).json({ error: "Este gasto no tiene comprobante adjunto" });
+      return;
+    }
+    const rendicionDelGasto = (data as unknown as { rendicion: { colaborador_id: string } | null }).rendicion;
+    if (!esGestion(req) && rendicionDelGasto?.colaborador_id !== req.userId) {
+      res.status(403).json({ error: "No tienes acceso a este gasto" });
+      return;
+    }
+    if (!data.comprobante_url) {
       res.status(404).json({ error: "Este gasto no tiene comprobante adjunto" });
       return;
     }
