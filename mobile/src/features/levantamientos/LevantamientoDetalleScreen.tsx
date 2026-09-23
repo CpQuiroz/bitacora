@@ -48,7 +48,7 @@ const TONO_ESTADO: Record<EstadoLevantamiento, TonoEstado> = {
   rechazado: "cancelado",
 };
 
-type MaterialLocal = { catalogo_item_id: string; cantidad: number; nombre: string; unidad: string };
+type MaterialLocal = { catalogo_item_id: string; cantidad: number; nombre: string; unidad: string; agregado_por_admin: boolean };
 
 // Sistema visual móvil v2 (14-sep-2026) — migración del sistema viejo
 // (useTema/Ionicons/components-ui) al nuevo: ScreenHeader propio con
@@ -100,6 +100,7 @@ export function LevantamientoDetalleScreen({ route, navigation }: NativeStackScr
         cantidad: m.cantidad,
         nombre: m.catalogo_item?.nombre ?? "Ítem eliminado",
         unidad: m.catalogo_item?.unidad ?? "",
+        agregado_por_admin: m.agregado_por_admin,
       }))
     );
   }, [id]);
@@ -133,7 +134,7 @@ export function LevantamientoDetalleScreen({ route, navigation }: NativeStackScr
     setMateriales((prev) => {
       const ya = prev.find((m) => m.catalogo_item_id === item.id);
       if (ya) return prev.map((m) => (m.catalogo_item_id === item.id ? { ...m, cantidad: m.cantidad + 1 } : m));
-      return [...prev, { catalogo_item_id: item.id, cantidad: 1, nombre: item.nombre, unidad: item.unidad }];
+      return [...prev, { catalogo_item_id: item.id, cantidad: 1, nombre: item.nombre, unidad: item.unidad, agregado_por_admin: false }];
     });
     setPickerAbierto(false);
   }
@@ -152,7 +153,10 @@ export function LevantamientoDetalleScreen({ route, navigation }: NativeStackScr
     setGuardando(true);
     const datos = {
       descripcion_tecnico: descripcion,
-      materiales: materiales.map((m) => ({ catalogo_item_id: m.catalogo_item_id, cantidad: m.cantidad })),
+      // Los agregados por Admin (Fase 4) no son del técnico para
+      // reenviar — el backend ya los protege del full-replace, pero no
+      // hace falta ni mandarlos de vuelta acá.
+      materiales: materiales.filter((m) => !m.agregado_por_admin).map((m) => ({ catalogo_item_id: m.catalogo_item_id, cantidad: m.cantidad })),
     };
 
     if (enLinea) {
@@ -319,46 +323,57 @@ export function LevantamientoDetalleScreen({ route, navigation }: NativeStackScr
               Sin materiales indicados todavía.
             </Texto>
           ) : (
-            materiales.map((m) => (
-              <View
-                key={m.catalogo_item_id}
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: tokens.space["2"],
-                  borderWidth: 1,
-                  borderColor: tokens.color.divider,
-                  borderRadius: tokens.radius.md,
-                  padding: tokens.space["3"],
-                }}
-              >
-                <Texto tamano={tokens.size.body} color={tokens.color.text} style={{ flex: 1 }} numberOfLines={1}>
-                  {m.nombre}
-                </Texto>
-                {editable ? (
-                  <View style={{ flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: tokens.color.divider, borderRadius: tokens.radius.sm }}>
-                    <Pressable onPress={() => cambiarCantidad(m.catalogo_item_id, -1)} style={{ width: 32, height: 32, alignItems: "center", justifyContent: "center" }}>
-                      <Minus size={15} strokeWidth={2.5} color={tokens.color.text} />
-                    </Pressable>
-                    <Texto tamano={tokens.size.small} color={tokens.color.text} peso="semibold" style={{ width: 32, textAlign: "center", fontVariant: ["tabular-nums"] }}>
-                      {m.cantidad}
+            materiales.map((m) => {
+              // Fase 4: lo que agregó el Admin (desde la web, sobre un
+              // levantamiento que el técnico ya completó) se muestra
+              // siempre de solo lectura acá, con la marca visual — el
+              // técnico no lo edita ni lo reenvía, aunque el resto de la
+              // lista siga editable.
+              const soloLecturaFila = !editable || m.agregado_por_admin;
+              return (
+                <View
+                  key={m.catalogo_item_id}
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: tokens.space["2"],
+                    borderWidth: 1,
+                    borderColor: tokens.color.divider,
+                    borderRadius: tokens.radius.md,
+                    padding: tokens.space["3"],
+                  }}
+                >
+                  <View style={{ flex: 1, gap: 3 }}>
+                    <Texto tamano={tokens.size.body} color={tokens.color.text} numberOfLines={1}>
+                      {m.nombre}
                     </Texto>
-                    <Pressable onPress={() => cambiarCantidad(m.catalogo_item_id, 1)} style={{ width: 32, height: 32, alignItems: "center", justifyContent: "center" }}>
-                      <Plus size={15} strokeWidth={2.5} color={tokens.color.text} />
-                    </Pressable>
+                    {m.agregado_por_admin ? <StatusBadge estado="agregado_admin" etiqueta="Agregado por Admin" tonoForzado="en_progreso" /> : null}
                   </View>
-                ) : (
-                  <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} style={{ fontVariant: ["tabular-nums"] }}>
-                    {m.cantidad} {m.unidad}
-                  </Texto>
-                )}
-                {editable ? (
-                  <Pressable onPress={() => quitarMaterial(m.catalogo_item_id)} hitSlop={8}>
-                    <X size={18} strokeWidth={2.5} color={`${tokens.color.text}66`} />
-                  </Pressable>
-                ) : null}
-              </View>
-            ))
+                  {soloLecturaFila ? (
+                    <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} style={{ fontVariant: ["tabular-nums"] }}>
+                      {m.cantidad} {m.unidad}
+                    </Texto>
+                  ) : (
+                    <View style={{ flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: tokens.color.divider, borderRadius: tokens.radius.sm }}>
+                      <Pressable onPress={() => cambiarCantidad(m.catalogo_item_id, -1)} style={{ width: 32, height: 32, alignItems: "center", justifyContent: "center" }}>
+                        <Minus size={15} strokeWidth={2.5} color={tokens.color.text} />
+                      </Pressable>
+                      <Texto tamano={tokens.size.small} color={tokens.color.text} peso="semibold" style={{ width: 32, textAlign: "center", fontVariant: ["tabular-nums"] }}>
+                        {m.cantidad}
+                      </Texto>
+                      <Pressable onPress={() => cambiarCantidad(m.catalogo_item_id, 1)} style={{ width: 32, height: 32, alignItems: "center", justifyContent: "center" }}>
+                        <Plus size={15} strokeWidth={2.5} color={tokens.color.text} />
+                      </Pressable>
+                    </View>
+                  )}
+                  {!soloLecturaFila ? (
+                    <Pressable onPress={() => quitarMaterial(m.catalogo_item_id)} hitSlop={8}>
+                      <X size={18} strokeWidth={2.5} color={`${tokens.color.text}66`} />
+                    </Pressable>
+                  ) : null}
+                </View>
+              );
+            })
           )}
         </View>
 

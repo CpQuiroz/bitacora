@@ -1289,6 +1289,12 @@ export type LevantamientoMaterial = {
   catalogo_item_id: string;
   cantidad: number;
   creado_en: string;
+  // Fase 4 (23-sep-2026, pedido explícito) — auditoría de quién lo
+  // agregó (el "cuándo" ya lo da creado_en) + distinción visual de
+  // materiales que sumó el Admin después de que el técnico completó,
+  // en vez de los que indicó el técnico en terreno.
+  agregado_por: string | null;
+  agregado_por_admin: boolean;
 };
 
 // Molde: RegistroMantencionFoto. Varias fotos por levantamiento, misma
@@ -1320,6 +1326,8 @@ export type LevantamientoMaterialConItem = {
   catalogo_item_id: string;
   cantidad: number;
   catalogo_item: { id: string; nombre: string; precio_base: number; unidad: string } | null;
+  // Fase 4 — true si lo agregó el Admin (no el técnico en terreno).
+  agregado_por_admin: boolean;
 };
 
 export type LevantamientoFotoUrl = { id: string; url: string; descripcion: string | null; creado_en: string };

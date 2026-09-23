@@ -6290,8 +6290,45 @@ Intenté probar el insert real contra dev — confirmó que la migración
   llegada/salida visible en el detalle web.
 
 **Pendiente de la usuaria**: correr la migración 125 en dev y prod.
-**Pendiente de mí**: seguir con la Fase 4 (Levantamiento: Admin agrega
-materiales) cuando se pida.
+
+## 23-sep-2026 — tarea 90: FASE 4 (Levantamiento: Admin agrega materiales)
+
+Pedido: "4.1 Admin puede agregar más materiales a un levantamiento ya
+realizado por el técnico. Registrar auditoría (quién agregó, cuándo)
+y distinguir visualmente los materiales agregados por Admin."
+
+- Migración 126: `levantamiento_materiales.agregado_por` (uuid, FK
+  `usuarios`) + `agregado_por_admin` (boolean default false).
+  `creado_en` ya existía — cubre el "cuándo" sin columna nueva.
+- Backend (`levantamientos.ts`): nuevo `POST /:id/materiales`
+  (Admin-only, 403 a cualquier otro; 409 si `aprobado`/`rechazado`,
+  mismo criterio que `puedeEditar`). El full-replace del técnico en
+  `/:id/completar` ahora escopea su `DELETE` a
+  `agregado_por_admin=false` (antes borraba todo) e inserta sus
+  propias filas con `agregado_por_admin: false` — así un re-guardado
+  del técnico nunca pisa lo que agregó el Admin.
+- `packages/shared/types.ts`: `LevantamientoMaterial` y
+  `LevantamientoMaterialConItem` con los 2 campos nuevos.
+- Web (`dashboard/levantamientos/page.tsx`): botón "Agregar" visible
+  solo si `usuario.rol === "admin"` y el levantamiento sigue editable
+  — reusa `CatalogoSelectorModal` (mismo componente que
+  Cotizaciones/OS), tomando solo `catalogo_item_id`+`cantidad` de cada
+  ítem elegido (ignora los campos de precio, que no aplican acá).
+  `StatusBadge` "Agregado por Admin" en cada fila que corresponda.
+- Mobile (`LevantamientoDetalleScreen.tsx`): mismo badge; las filas
+  agregadas por Admin quedan de solo lectura para el técnico (sin
+  +/− ni "quitar") aunque el resto de la lista siga editable, y se
+  excluyen del payload que el técnico reenvía al guardar (cinturón y
+  tirantes — el backend ya las protege, pero evita reenviarlas de
+  una).
+- `tsc` (6 workspaces) + `verificar.sh` en verde. Tarea 90 cerrada.
+
+**Pendiente de la usuaria**: correr la migración 126 en dev y prod
+(comandos abajo).
+**Pendiente de mí**: seguir con la Fase 5 (Vista del Colaborador:
+gastos/rendición, equipos/vehículos, "Mis trabajos") a continuación,
+sin esperar más pedidos — así lo pidió la usuaria ("sigue con la fase
+4 y 5").
 
 ## 23-sep-2026 — tarea 81: bajar el botón flotante del Asistente
 

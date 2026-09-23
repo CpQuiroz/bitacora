@@ -1389,6 +1389,23 @@
       ],
       "status": "done",
       "resolution": "Se confirmo leyendo obtenerPdfOS (trabajos.ts) que v1 YA era inmutable por diseno (cachea pdf_url la primera vez tras la firma, nunca regenera) -- no hizo falta proteger nada ahi, solo agregar el camino NUEVO y separado para v2+. Intento de prueba en vivo del insert a os_pdf_versiones confirmo que la migracion 125 todavia no esta corrida en dev (error \"table not found in schema cache\", esperado -- la corre la usuaria). Encontrado de paso un patron real de este repo: hay un Database type compartido (packages/shared/types.ts) que mapea cada tabla a su tipo TS -- una tabla nueva sin esa entrada rompe tsc con errores confusos (\"never\") en cualquier query, no solo un tsc mal configurado. tsc + verificar.sh en verde. Fase 3 completa (3.1, 3.2, 3.3, 3.4 todas cerradas)."
+    },
+    {
+      "id": 90,
+      "name": "fase4_levantamiento_admin_agrega_materiales",
+      "title": "FASE 4: Admin agrega materiales a un levantamiento ya completado por el técnico",
+      "description": "4.1: el Admin puede sumar mas materiales a un levantamiento que el tecnico ya completo. Auditoria (quien, cuando) y distincion visual de lo agregado por Admin, en web y mobile.",
+      "acceptance": [
+        "Migracion 126: levantamiento_materiales.agregado_por (uuid, FK usuarios) + agregado_por_admin (boolean default false)",
+        "Backend: nuevo POST /:id/materiales (solo Admin, 403 a cualquier otro; 409 si el levantamiento ya esta aprobado/rechazado) que inserta una fila con agregado_por_admin=true",
+        "/:id/completar (el full-replace del tecnico) ahora escopea su DELETE a agregado_por_admin=false e inserta sus propias filas con agregado_por_admin=false -- protege lo que agrego el Admin de un re-guardado del tecnico",
+        "packages/shared/types.ts: LevantamientoMaterial y LevantamientoMaterialConItem con agregado_por/agregado_por_admin",
+        "Web (dashboard/levantamientos): boton \"Agregar\" (solo Admin, reusa CatalogoSelectorModal como en Cotizaciones/OS) + badge \"Agregado por Admin\" (StatusBadge) en cada fila que corresponda",
+        "Mobile (LevantamientoDetalleScreen): mismo badge; las filas agregadas por Admin quedan de solo lectura para el tecnico (no +/- ni quitar) aunque el resto de la lista siga editable, y se excluyen del payload que el tecnico reenvia al guardar",
+        "tsc (6 workspaces) + verificar.sh en verde"
+      ],
+      "status": "done",
+      "resolution": "Reutilizado el mismo patron de \"colaborador ve lo suyo\" ya usado en clientes.ts (Fase 2.1): backend audita (agregado_por + agregado_por_admin, creado_en ya existia) y aplica el permiso -- 403 a no-Admin, 409 si esta cerrado. El full-replace del tecnico en /:id/completar se escopeo con .eq(\"agregado_por_admin\", false) tanto en el DELETE como en lo que inserta, para que un re-guardado del tecnico nunca borre lo que agrego el Admin. Web reutiliza CatalogoSelectorModal (mismo componente que Cotizaciones/OS) tomando solo catalogo_item_id+cantidad de cada item elegido, ignorando los campos de precio que no aplican acá. Mobile: ademas del badge, las filas de Admin quedan de solo lectura para el tecnico y se filtran del payload de guardar (cinturon y tirantes -- el backend ya las protege, pero evita reenviarlas de una). tsc (6 workspaces) + verificar.sh en verde."
     }
   ]
 }

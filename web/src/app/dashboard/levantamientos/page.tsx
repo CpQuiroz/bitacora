@@ -13,6 +13,7 @@ import { Button, DatePicker, ErrorState, Input, LoadingState, StatusBadge, Table
 import { Modal } from "@/components/Modal";
 import { ComboboxCliente } from "@/components/ComboboxCliente";
 import { ComboboxResponsable } from "@/components/ComboboxResponsable";
+import { CatalogoSelectorModal, type ItemSeleccionadoCatalogo } from "@/components/CatalogoSelectorModal";
 
 // LevantamientoResumen/DetalleLevantamiento vivían acá, redeclarados a
 // mano (mismo shape que mobile y que el backend volvían a escribir cada
@@ -107,6 +108,14 @@ function LevantamientosContenido() {
   // escribiendo (se resincroniza cada vez que se recarga el detalle).
   const [descripcionesFotos, setDescripcionesFotos] = useState<Record<string, string>>({});
   const [guardandoDescripcionFotoId, setGuardandoDescripcionFotoId] = useState<string | null>(null);
+
+  // Fase 4 (23-sep-2026, pedido explícito): el Admin puede agregar más
+  // materiales a un levantamiento que el técnico ya completó. Reusa
+  // CatalogoSelectorModal (mismo componente que Cotizaciones/OS) pero
+  // solo toma catalogo_item_id + cantidad de cada ítem elegido — este
+  // material es una lista de qué se necesita, no lleva precio propio.
+  const [catalogoAbierto, setCatalogoAbierto] = useState(false);
+  const [agregandoMaterial, setAgregandoMaterial] = useState(false);
 
   async function cargarLevantamientos() {
     const res = await apiFetch("/api/levantamientos");
@@ -370,6 +379,30 @@ function LevantamientosContenido() {
 
   const puedeEditar = detalle != null && detalle.estado !== "aprobado" && detalle.estado !== "rechazado";
   const puedeEliminar = detalle != null && detalle.estado !== "aprobado";
+  // Mismo estado que puedeEditar (backend rechaza con 409 en aprobado/
+  // rechazado) + rol admin (backend rechaza con 403 a cualquier otro).
+  const puedeAgregarMaterial = puedeEditar && usuario?.rol === "admin";
+
+  async function onAgregarMateriales(items: ItemSeleccionadoCatalogo[]) {
+    if (!detalle) return;
+    setAgregandoMaterial(true);
+    setDetalleError(null);
+    for (const it of items) {
+      if (!it.catalogo_item_id) continue; // el ítem "manual" del selector no aplica acá
+      const res = await apiFetch(`/api/levantamientos/${detalle.id}/materiales`, {
+        method: "POST",
+        body: JSON.stringify({ catalogo_item_id: it.catalogo_item_id, cantidad: it.cantidad }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setDetalleError(body.error ?? "No se pudo agregar el material");
+        break;
+      }
+    }
+    setAgregandoMaterial(false);
+    setCatalogoAbierto(false);
+    await abrirDetalle(detalle.id);
+  }
 
   if (!usuario) return null;
 
@@ -568,14 +601,24 @@ function LevantamientosContenido() {
             ) : null}
 
             <div>
-              <span className="text-ds-small font-medium text-ds-text/80">Materiales indicados</span>
+              <div className="flex items-center justify-between">
+                <span className="text-ds-small font-medium text-ds-text/80">Materiales indicados</span>
+                {puedeAgregarMaterial ? (
+                  <Button variante="ghost" tamano="sm" iconoIzq={<Plus size={14} strokeWidth={2.75} />} onPress={() => setCatalogoAbierto(true)} deshabilitado={agregandoMaterial}>
+                    Agregar
+                  </Button>
+                ) : null}
+              </div>
               {detalle.materiales.length === 0 ? (
                 <p className="text-ds-small text-ds-text/60">Todavía no hay materiales cargados.</p>
               ) : (
                 <ul className="mt-1 flex flex-col gap-1">
                   {detalle.materiales.map((m) => (
-                    <li key={m.id} className="flex justify-between text-ds-small text-ds-text">
-                      <span>{m.catalogo_item?.nombre ?? "Ítem eliminado"}</span>
+                    <li key={m.id} className="flex items-center justify-between gap-2 text-ds-small text-ds-text">
+                      <span className="flex items-center gap-2">
+                        {m.catalogo_item?.nombre ?? "Ítem eliminado"}
+                        {m.agregado_por_admin ? <StatusBadge estado="agregado_admin" etiqueta="Agregado por Admin" tonoForzado="en_progreso" /> : null}
+                      </span>
                       <span className="tabular-nums">
                         {m.cantidad} {m.catalogo_item?.unidad ?? ""}
                       </span>
@@ -680,6 +723,14 @@ function LevantamientosContenido() {
           </div>
         )}
       </Modal>
+
+      <CatalogoSelectorModal
+        open={catalogoAbierto}
+        onClose={() => setCatalogoAbierto(false)}
+        onAgregar={onAgregarMateriales}
+        moneda={usuario.moneda ?? "CLP"}
+        avisaDescuentoStock={false}
+      />
     </DashboardShell>
   );
 }

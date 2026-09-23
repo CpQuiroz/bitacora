@@ -147,7 +147,7 @@ levantamientosRouter.get(
     const [{ data: materiales }, { data: fotosRaw }, { data: cliente }, { data: tecnico }, { data: orden }] = await Promise.all([
       supabase
         .from("levantamiento_materiales")
-        .select("id, catalogo_item_id, cantidad, catalogo_item:catalogo_items(id, nombre, precio_base, unidad)")
+        .select("id, catalogo_item_id, cantidad, agregado_por_admin, catalogo_item:catalogo_items(id, nombre, precio_base, unidad)")
         .eq("levantamiento_id", lev.id),
       supabase.from("levantamiento_fotos").select("id, foto_url, descripcion, creado_en").eq("levantamiento_id", lev.id).order("creado_en"),
       // tenant-ok: cliente_id sale de `lev`, ya cargado con
@@ -430,7 +430,13 @@ levantamientosRouter.patch(
     }
 
     if (materiales !== undefined) {
-      await supabase.from("levantamiento_materiales").delete().eq("levantamiento_id", lev.id);
+      // Fase 4 (23-sep-2026, pedido explícito): este reemplazo es del
+      // TÉCNICO — solo borra SUS propios materiales (agregado_por_admin
+      // = false). Los que el Admin haya sumado después (ver POST
+      // /:id/materiales, más abajo) sobreviven aunque el técnico vuelva
+      // a guardar — antes de esta fase esto era un delete total, que
+      // hubiera borrado también lo que agregara el Admin.
+      await supabase.from("levantamiento_materiales").delete().eq("levantamiento_id", lev.id).eq("agregado_por_admin", false);
       if (materialesParseados.length > 0) {
         await supabase.from("levantamiento_materiales").insert(
           materialesParseados.map((m) => ({
@@ -438,12 +444,66 @@ levantamientosRouter.patch(
             levantamiento_id: lev.id,
             catalogo_item_id: m.catalogo_item_id,
             cantidad: m.cantidad,
+            agregado_por: req.userId ?? null,
+            agregado_por_admin: false,
           }))
         );
       }
     }
 
     res.json({ ok: true });
+  })
+);
+
+// ------------------------------------------------------------
+// POST /:id/materiales — Fase 4 (23-sep-2026, pedido explícito): el
+// Admin puede sumar más materiales a un levantamiento YA completado
+// por el técnico (o en cualquier estado, salvo cerrado). Distinto del
+// reemplazo de arriba (que es del técnico, sus propios materiales) —
+// esto siempre AGREGA una fila nueva, nunca borra ni reemplaza las
+// del técnico. agregado_por_admin=true queda para distinguirla en la
+// UI (web y mobile).
+// ------------------------------------------------------------
+levantamientosRouter.post(
+  "/:id/materiales",
+  ah<RequestConEmpresa>(async (req, res) => {
+    if (!(await moduloActivo(req, res))) return;
+    if (!esAdmin(req)) {
+      res.status(403).json({ error: "Solo un Admin puede agregar materiales acá" });
+      return;
+    }
+    const lev = await buscarLevantamiento(req.empresaId!, req.params.id);
+    if (!lev) {
+      res.status(404).json({ error: "Levantamiento no encontrado" });
+      return;
+    }
+    if (["aprobado", "rechazado"].includes(lev.estado)) {
+      res.status(409).json({ error: "Este levantamiento ya fue cerrado" });
+      return;
+    }
+    const { catalogo_item_id, cantidad } = req.body ?? {};
+    const cantidadNum = Number(cantidad);
+    if (typeof catalogo_item_id !== "string" || !catalogo_item_id || !(cantidadNum > 0)) {
+      res.status(400).json({ error: "Falta catalogo_item_id y una cantidad mayor a 0" });
+      return;
+    }
+    const { data, error } = await supabase
+      .from("levantamiento_materiales")
+      .insert({
+        empresa_id: req.empresaId!,
+        levantamiento_id: lev.id,
+        catalogo_item_id,
+        cantidad: cantidadNum,
+        agregado_por: req.userId ?? null,
+        agregado_por_admin: true,
+      })
+      .select("id, catalogo_item_id, cantidad, agregado_por_admin, catalogo_item:catalogo_items(id, nombre, precio_base, unidad)")
+      .single();
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    res.status(201).json(data);
   })
 );
 
