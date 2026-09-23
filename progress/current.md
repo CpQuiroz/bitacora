@@ -56,3 +56,7 @@ Vercel (READY) verificados. Hidroservi: cerrado, se deja como está.
   documentado en convenciones.md, CLAUDE.md y AGENTS.md.
 - Maqueta (no aplicada) de "Registrar venta" desde una cita, con productos
   filtrados por categoría de empresa — enviada como imagen.
+- Tarea 110 (CERRADA): el estilo del Super-Admin no guardaba en prod.
+  Causa: extensión del navegador que reescribía el preflight CORS sin
+  PATCH ("Method PATCH is not allowed" + errores de content.js). En
+  incógnito funciona. PR #3 (error visible + auditoría) mergeado.
