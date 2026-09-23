@@ -203,7 +203,9 @@ export function TrabajosScreen({ navigation }: NativeStackScreenProps<TrabajosSt
       <OfflineBanner guardadoEn={guardadoEn} />
       {esGestion ? (
         <View style={{ paddingHorizontal: tokens.space["4"], paddingBottom: tokens.space["2"], gap: tokens.space["2"] }}>
-          <Button bloque onPress={() => navigation.navigate("TrabajoForm")}>
+          {/* Neutro (secundario), no el tinte de marca — pedido 23-sep-2026:
+              "ese color verde no me gusta". */}
+          <Button variante="secundario" bloque onPress={() => navigation.navigate("TrabajoForm")}>
             Nueva orden de servicio
           </Button>
           <View style={{ flexDirection: "row", gap: tokens.space["2"] }}>

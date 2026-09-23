@@ -369,34 +369,39 @@ export function AgendaScreen({ navigation }: NativeStackScreenProps<AgendaStackP
 
       {/* Fase 6.2/6.4 — chips de tipo (Cita/OS/Levantamiento, combinable
           con Mes/Sem/Día del ScreenHeader) + botón de leyenda. */}
-      <View style={{ flexDirection: "row", alignItems: "center", gap: tokens.space["2"], paddingHorizontal: tokens.space["4"], paddingBottom: tokens.space["2"] }}>
-        {tiposVisibles.map((t) => {
-          const Icono = ICONO_TIPO[t];
-          const activo = tipoFiltro.has(t);
-          return (
-            <Pressable
-              key={t}
-              onPress={() => alternarTipoFiltro(t)}
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 4,
-                borderRadius: tokens.radius.pill,
-                borderWidth: 1,
-                borderColor: activo ? marca.base : tokens.color.divider,
-                backgroundColor: activo ? `${marca.base}1a` : "transparent",
-                paddingHorizontal: tokens.space["3"],
-                paddingVertical: 4,
-              }}
-            >
-              <Icono size={12} strokeWidth={2.5} color={activo ? marca.base : `${tokens.color.text}99`} />
-              <Texto tamano={tokens.size.caption} peso="semibold" color={activo ? marca.base : `${tokens.color.text}99`}>
-                {ETIQUETA_TIPO_AGENDA[t]}
-              </Texto>
-            </Pressable>
-          );
-        })}
-        <Pressable onPress={() => setLeyendaAbierta(true)} hitSlop={8} style={{ marginLeft: "auto" }}>
+      {/* Chips en scroll horizontal (23-sep-2026): en pantallas angostas
+          "OS"/"Levantamiento" quedaban cortados. El ⓘ queda fijo a la
+          derecha, fuera del scroll. */}
+      <View style={{ flexDirection: "row", alignItems: "center", gap: tokens.space["2"], paddingLeft: tokens.space["4"], paddingRight: tokens.space["4"], paddingBottom: tokens.space["2"] }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={{ gap: tokens.space["2"] }}>
+          {tiposVisibles.map((t) => {
+            const Icono = ICONO_TIPO[t];
+            const activo = tipoFiltro.has(t);
+            return (
+              <Pressable
+                key={t}
+                onPress={() => alternarTipoFiltro(t)}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 4,
+                  borderRadius: tokens.radius.pill,
+                  borderWidth: 1,
+                  borderColor: activo ? marca.base : tokens.color.divider,
+                  backgroundColor: activo ? `${marca.base}1a` : "transparent",
+                  paddingHorizontal: tokens.space["3"],
+                  paddingVertical: 4,
+                }}
+              >
+                <Icono size={12} strokeWidth={2.5} color={activo ? marca.base : `${tokens.color.text}99`} />
+                <Texto tamano={tokens.size.caption} peso="semibold" color={activo ? marca.base : `${tokens.color.text}99`}>
+                  {ETIQUETA_TIPO_AGENDA[t]}
+                </Texto>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+        <Pressable onPress={() => setLeyendaAbierta(true)} hitSlop={8}>
           <Info size={18} strokeWidth={2.25} color={`${tokens.color.text}80`} />
         </Pressable>
       </View>

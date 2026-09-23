@@ -1641,6 +1641,13 @@
         "Evaluar pasar el repo a privado (hoy es Public; sin secretos en el repo, la anon key de Supabase es pública por diseño)",
         "Verificar en el siguiente PR que 'verificar' sea requerido"
       ]
+    },
+    {
+      "id": 112,
+      "name": "mobile_ajustes_ui_asistente_agenda_boton",
+      "title": "Mobile: Asistente más abajo, chips de Agenda en scroll, botón 'Nueva OS' neutro",
+      "status": "done",
+      "resolution": "Feedback de la usuaria al probar 1.10.16. OFFSET_ASISTENTE_FLOTANTE 96→72 (baja también el FAB '+' de Agenda). Chips Cita/OS/Levantamiento en ScrollView horizontal con el ⓘ fijo a la derecha. 'Nueva orden de servicio' con variante secundario (neutro, opción b). Agenda mobile estaba congelada: tocada por pedido explícito. verificar.sh en verde; requiere build mobile."
     }
   ]
 }

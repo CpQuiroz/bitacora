@@ -29,9 +29,12 @@ const FOREGROUND = resolverMarca(TERRACOTA).foreground;
 // ESPACIO_ASISTENTE_FLOTANTE) para que el FAB de Agenda, que se
 // alinea a propósito con este botón, lo use en vez de repetir el
 // número a mano.
-export const OFFSET_ASISTENTE_FLOTANTE = 96;
+// 96 → 72 (23-sep-2026, pedido: "el asistente sigue muy arriba") —
+// queda justo sobre la barra de pestañas; el FAB "+" de Agenda usa el
+// mismo valor, así que baja junto con él.
+export const OFFSET_ASISTENTE_FLOTANTE = 72;
 const ALTO_ASISTENTE_FLOTANTE = 48;
-export const ESPACIO_ASISTENTE_FLOTANTE = OFFSET_ASISTENTE_FLOTANTE + ALTO_ASISTENTE_FLOTANTE + tokens.space["4"]; // 110 + 48 + ~18 de aire
+export const ESPACIO_ASISTENTE_FLOTANTE = OFFSET_ASISTENTE_FLOTANTE + ALTO_ASISTENTE_FLOTANTE + tokens.space["4"]; // 72 + 48 + ~18 de aire
 
 export type PropsAsistenteButton = {
   /** El gating por rol lo resuelve quien consume el componente — este solo pinta o no pinta nada. */
