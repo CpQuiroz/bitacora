@@ -3,7 +3,7 @@
     "name": "Bitácora",
     "slug": "bitacora",
     "scheme": "bitacora",
-    "version": "1.10.14",
+    "version": "1.10.15",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -23,7 +23,7 @@
     },
     "android": {
       "package": "cl.transportesitineris.bitacora",
-      "versionCode": 55,
+      "versionCode": 56,
       "adaptiveIcon": {
         "backgroundColor": "#2563a6",
         "foregroundImage": "./assets/android-icon-foreground.png",
