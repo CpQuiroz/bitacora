@@ -181,10 +181,19 @@ export type MostrarToast = (mensaje: string) => void;
 export type PropsCifra = { children: ReactNode };
 
 // ── StatusBadge (semántico, un estado de dominio → un tono fijo) ──
-// Solo 4 tonos, tal como los define el prompt. Para roles, prioridad o
-// canal (que no son "estados" en el sentido de ciclo de vida) usá <Tag>
-// con el tono que corresponda — no fuerces esos casos en este mapa.
-export type TonoEstado = "en_progreso" | "completado" | "cerrado" | "cancelado";
+// 4 tonos originales (tal como los define el prompt original) + 2
+// semánticos agregados el 23-sep-2026 (pedido explícito: "arregla lo
+// del tono" — antes "vencido" caía en el gris de "cancelado" por ser
+// lo más parecido disponible, sin un rojo de alerta real; documentado
+// como gap conocido en docs/design-system.md §"Homologar todo" y
+// §Informes). `peligro`/`advertencia` usan `--color-ds-danger`/
+// `--color-ds-warning` (packages/design-tokens — semantic/semanticDark),
+// INDEPENDIENTES de la marca por tenant, a diferencia de accent/
+// accent2: una alerta tiene que leerse igual sin importar el tema de
+// la empresa. Para roles, prioridad o canal (que no son "estados" en
+// el sentido de ciclo de vida) usá <Tag> con el tono que corresponda —
+// no fuerces esos casos en este mapa.
+export type TonoEstado = "en_progreso" | "completado" | "cerrado" | "cancelado" | "peligro" | "advertencia";
 
 export type PropsStatusBadge = {
   /** Valor crudo del dominio (ej. "en_curso", "firmada", "cancelada"). */
@@ -241,12 +250,18 @@ export const MAPA_ESTADO_TONO: Record<string, TonoEstado> = {
   cancelado: "cancelado",
   cancelada: "cancelado",
   rechazado: "cancelado",
-  vencida: "cancelado",
-  vencido: "cancelado",
   no_asistio: "cancelado",
   cancelada_anticipada: "cancelado",
   sin_stock: "cancelado",
   fallido: "cancelado",
   agotado: "cancelado",
   salida: "cancelado",
+  // peligro — semantic.danger (23-sep-2026, antes caían en "cancelado")
+  vencida: "peligro",
+  vencido: "peligro",
+  // advertencia — semantic.warning. Antes NO estaba en este mapa a
+  // propósito ("por_vencer no está en MAPA_ESTADO_TONO — ambiguo",
+  // comentario que quedó en varios call-sites que forzaban tono
+  // "en_progreso" con tonoForzado) — ya no hace falta forzarlo.
+  por_vencer: "advertencia",
 };

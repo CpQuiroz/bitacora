@@ -176,6 +176,18 @@ export const tokens = {
       "900": "#382610"
     }
   },
+  "semantic": {
+    "danger": "#a02020",
+    "dangerSoft": "#fbeaea",
+    "warning": "#8a5a00",
+    "warningSoft": "#fdf1e6"
+  },
+  "semanticDark": {
+    "danger": "#e5706e",
+    "dangerSoft": "#2a1212",
+    "warning": "#d99b2b",
+    "warningSoft": "#2a2007"
+  },
   "size": {
     "h1": 42,
     "h2": 32,

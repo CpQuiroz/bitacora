@@ -609,11 +609,23 @@ cambios.
   `pago_pendiente`/`suspendida_por_pago`/`cancelada`) y de cobro
   (`exitoso`/`fallido`/`pendiente`) no están en `MAPA_ESTADO_TONO` —
   se agregó un `TONO_SUSCRIPCION` local, mismo patrón que
-  `TONO_FORZADO` en Dinero/Recursos. Gap real documentado:
-  `StatusBadge` solo expone 4 tonos (`en_progreso`/`completado`/
-  `cerrado`/`cancelado`) — no hay un tono "peligro" propio, así que
-  "suspendida"/"fallido" caen en el gris de "cancelado" (lo más
-  parecido disponible, no un rojo de alerta).
+  `TONO_FORZADO` en Dinero/Recursos. Gap real documentado (en esta
+  fecha): `StatusBadge` solo exponía 4 tonos (`en_progreso`/
+  `completado`/`cerrado`/`cancelado`) — no había un tono "peligro"
+  propio, así que "suspendida"/"fallido" caían en el gris de
+  "cancelado" (lo más parecido disponible, no un rojo de alerta).
+  **Actualización (23-sep-2026, pedido explícito):** se agregaron 2
+  tonos semánticos reales, `peligro`/`advertencia`
+  (`packages/design-tokens` → `semantic`/`semanticDark`, INDEPENDIENTES
+  de la marca por tenant — a diferencia de accent/accent2, que sí
+  varían por empresa). `MAPA_ESTADO_TONO` ya mapea `vencido`/`vencida`
+  → `peligro` y `por_vencer` → `advertencia` (antes forzado a mano con
+  `tonoForzado` en varios call-sites — `DocumentoForm.tsx`, `flota/
+  documentos-por-vencer`, `MantencionVehiculoScreen` mobile — ya
+  limpiados). **`TONO_SUSCRIPCION` de este archivo NO se migró** —
+  sigue con su propio mapeo local a los 4 tonos originales; sería un
+  buen candidato para usar `peligro` en `suspendida_por_pago`/
+  `fallido` si se retoma este archivo.
 - Banners de estado (trial/activa/suspendida en `plan`, "Tu período
   de prueba terminó", zona de peligro en `seguridad`) no podían usar
   `<Card className=...>` (el primitivo no acepta `className`) — se

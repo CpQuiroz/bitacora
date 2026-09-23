@@ -42,6 +42,16 @@ export type Tokens = {
   // alternativa "segura" para clientes nuevos, sin tocar la voz
   // tipográfica de la marca.
   colorConfianza: Paleta;
+  // Semántico (23-sep-2026) — peligro/advertencia, INDEPENDIENTE de la
+  // marca por tenant (a diferencia de accent/accent2, no se pisa en
+  // colorTaller/colorConfianza): una alerta real ("vencido") tiene que
+  // leerse igual sin importar qué tema eligió la empresa. Sí cambia
+  // entre claro/oscuro (semanticDark), mismo criterio que color/
+  // colorDark. Antes no existía — StatusBadge solo tenía 4 tonos
+  // ligados a marca, así que "vencido" cae en gris ("cancelado", el
+  // más parecido) en vez de rojo. Ver docs/design-system.md.
+  semantic: { danger: string; dangerSoft: string; warning: string; warningSoft: string };
+  semanticDark: { danger: string; dangerSoft: string; warning: string; warningSoft: string };
   font: { heading: string; body: string; headingWeight: number };
   fontTaller: { heading: string; body: string; headingWeight: number };
   size: Record<"h1" | "h2" | "h3" | "h4" | "h5" | "body" | "small" | "caption" | "micro", number>;
@@ -83,6 +93,15 @@ ${rampCss("neutral", tokens.color.neutral)}
 ${rampCss("accent", tokens.color.accentRamp)}
 
 ${rampCss("accent2", tokens.color.accent2Ramp)}
+
+  /* Semántico (23-sep-2026) — peligro/advertencia, fijo sin importar
+     la marca por tenant. Re-declarado abajo para Modo Nocturno; NO se
+     toca en [data-tema="taller"/"confianza"] (esos solo pisan lo
+     ligado a marca). */
+  --color-ds-danger: ${tokens.semantic.danger};
+  --color-ds-danger-soft: ${tokens.semantic.dangerSoft};
+  --color-ds-warning: ${tokens.semantic.warning};
+  --color-ds-warning-soft: ${tokens.semantic.warningSoft};
 
   /* Marca del tenant. --ds-brand se define abajo en :root (fallback) y lo
      pisan los shells por empresa. hover/pressed se derivan solos en OKLCH
@@ -177,6 +196,11 @@ ${rampCss("neutral", tokens.colorDark.neutral)}
 ${rampCss("accent", tokens.colorDark.accentRamp)}
 
 ${rampCss("accent2", tokens.colorDark.accent2Ramp)}
+
+    --color-ds-danger: ${tokens.semanticDark.danger};
+    --color-ds-danger-soft: ${tokens.semanticDark.dangerSoft};
+    --color-ds-warning: ${tokens.semanticDark.warning};
+    --color-ds-warning-soft: ${tokens.semanticDark.warningSoft};
   }
 }
 
@@ -193,6 +217,11 @@ ${rampCss("neutral", tokens.colorDark.neutral)}
 ${rampCss("accent", tokens.colorDark.accentRamp)}
 
 ${rampCss("accent2", tokens.colorDark.accent2Ramp)}
+
+  --color-ds-danger: ${tokens.semanticDark.danger};
+  --color-ds-danger-soft: ${tokens.semanticDark.dangerSoft};
+  --color-ds-warning: ${tokens.semanticDark.warning};
+  --color-ds-warning-soft: ${tokens.semanticDark.warningSoft};
 }
 
 /* Tema "Taller" (19-sep-2026) — override opcional por empresa

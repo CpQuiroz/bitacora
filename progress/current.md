@@ -6526,3 +6526,46 @@ moverlo afecta todas las pantallas a la vez.
   casualidad.
 - `tsc` (6 workspaces, incluye `ui`) + `verificar.sh` en verde. Tarea
   81 cerrada.
+
+## 23-sep-2026 — tarea 96: sistema de diseño — tonos "peligro"/"advertencia"
+
+Pedido: "Arregla ... lo de sin tono" — deuda técnica reportada al
+cerrar las Fases 1-7 ("vencido" se ve gris en casi toda la app,
+`StatusBadge` solo tenía 4 tonos ligados a la marca de cada empresa).
+
+- `packages/design-tokens/tokens.json`: nuevo bloque `semantic`/
+  `semanticDark` (danger/dangerSoft/warning/warningSoft) —
+  INDEPENDIENTE de `accent`/`accent2` (no varía por tenant, a
+  diferencia de esos). Mismos valores hex que ya tenía el sistema de
+  tokens VIEJO (`globals.css` `--danger`/`--warning`) — para que
+  ambos sistemas muestren el mismo rojo/amarillo.
+- `build.ts`: `--color-ds-danger(-soft)`/`--color-ds-warning(-soft)`
+  en el `@theme` + reescritos en modo oscuro (`@media
+  prefers-color-scheme` + `[data-theme="dark"]`). NO en
+  `[data-tema="taller"/"confianza"]` — esos solo pisan lo ligado a
+  marca.
+- `packages/ui/tipos.ts`: `TonoEstado` += `peligro`/`advertencia`;
+  `MAPA_ESTADO_TONO` remapea `vencido`/`vencida` → `peligro` (antes
+  `cancelado`) y agrega `por_vencer` → `advertencia` (antes no estaba
+  en el mapa, forzado a mano en cada call-site).
+- `StatusBadge` web y native: nuevas entradas en `CLASE`/`COLORES`.
+- Limpiados los `tonoForzado="en_progreso"` para `por_vencer` que ya
+  no hacían falta: `DocumentoForm.tsx`, `flota/documentos-por-vencer`
+  (también su `COLOR_ESTADO` de texto, antes `accent-700` para ambos
+  vencido/por_vencer, ahora danger/warning distintos),
+  `MantencionVehiculoScreen` (mobile).
+- `perfil/page.tsx`: reemplazado el workaround
+  `CLASE_ESTADO_DOCUMENTO`/`text-danger`/`text-warning` (agregado en
+  la Fase 5.2 de esta misma sesión) por `StatusBadge` directo, ya que
+  ahora resuelve bien solo.
+- `docs/design-system.md` actualizado donde se documentaba el gap
+  (`plan/page.tsx` `TONO_SUSCRIPCION`) — el gap del NÚCLEO está
+  cerrado, pero `TONO_SUSCRIPCION` mismo no se migró (queda como
+  oportunidad futura, no tocado — fuera de alcance de este pedido).
+- `tsc` (6 workspaces) + `verificar.sh` en verde (incluye
+  check-colores: 0 literales nuevos, todo entra por `tokens.json`).
+  Tarea 96 cerrada.
+
+**Pendiente de mí**: Agenda sin paridad entre plataformas (web no
+muestra Levantamiento, mobile no muestra OS) — pedido explícito de
+arreglar, siguiente.

@@ -5,12 +5,9 @@ import Link from "next/link";
 import { Paperclip, Plus } from "lucide-react";
 import type { Documento, EntidadDocumento, EstadoDocumento, TipoDocumento } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
-import { Button, Card, Input, Select, StatusBadge, type TonoEstado } from "@bitacora/ui/web";
+import { Button, Card, Input, Select, StatusBadge } from "@bitacora/ui/web";
 
 type DocumentoConTipo = Documento & { tipo: { nombre: string } | null; estado: EstadoDocumento | null };
-
-// "por_vencer" no está en MAPA_ESTADO_TONO (ambiguo a propósito).
-const TONO_FORZADO: Partial<Record<EstadoDocumento, TonoEstado>> = { por_vencer: "en_progreso" };
 
 // Campo con label asociado (htmlFor/id) — mismo estilo que <label> del
 // design system, pero enlazado al control para accesibilidad.
@@ -259,7 +256,7 @@ export function DocumentoForm({ entidadTipo, entidadId }: { entidadTipo: Entidad
                 <td className="py-2.5 font-medium text-ds-text">{d.tipo?.nombre ?? "—"}</td>
                 <td className="py-2.5 text-ds-text/70">{d.numero ?? "—"}</td>
                 <td className="py-2.5 text-ds-text/70">{d.fecha_vencimiento ?? "—"}</td>
-                <td className="py-2.5">{d.estado ? <StatusBadge estado={d.estado} tonoForzado={TONO_FORZADO[d.estado]} /> : "—"}</td>
+                <td className="py-2.5">{d.estado ? <StatusBadge estado={d.estado} /> : "—"}</td>
                 <td className="py-2.5">
                   <div className="flex justify-end gap-1 font-ds-body text-ds-caption font-medium">
                     {d.archivo_key && (

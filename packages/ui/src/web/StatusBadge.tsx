@@ -8,6 +8,10 @@ const CLASE: Record<TonoEstado, string> = {
   completado: "bg-ds-accent2-200 text-ds-accent2-800",
   cerrado: "bg-ds-neutral-300 text-ds-neutral-900",
   cancelado: "bg-ds-neutral-200 text-ds-neutral-700",
+  // Semánticos (23-sep-2026) — --color-ds-danger/warning, fijos sin
+  // importar la marca del tenant (ver packages/design-tokens).
+  peligro: "bg-ds-danger-soft text-ds-danger",
+  advertencia: "bg-ds-warning-soft text-ds-warning",
 };
 
 export function StatusBadge({ estado, etiqueta, tonoForzado }: PropsStatusBadge) {

@@ -5,7 +5,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { DocumentoVehiculoAsignado, Equipo } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
-import { Card, EmptyState, ErrorState, LoadingState, ScreenHeader, StatusBadge, Texto, type TonoEstado, useMarca } from "@bitacora/ui/native";
+import { Card, EmptyState, ErrorState, LoadingState, ScreenHeader, StatusBadge, Texto, useMarca } from "@bitacora/ui/native";
 import { PickerBuscable } from "../../components/ui";
 import { useAuth } from "../auth/AuthContext";
 import type { MasStackParamList } from "../../shell/navigation/types";
@@ -252,15 +252,6 @@ function FilaRegistro({ r }: { r: MantencionResumen }) {
   );
 }
 
-// "por_vencer" no está en MAPA_ESTADO_TONO (ambiguo a propósito, ver
-// tipos.ts) — mismo forzado que ya usa la web (Flota → Documentos por
-// vencer) para el mismo dato, así queda consistente entre plataformas.
-// El sistema de diseño no tiene un tono "rojo" propio (marca por
-// empresa, sin literal fuera de packages/design-tokens) — "vencido" ya
-// cae en MAPA_ESTADO_TONO como "cancelado", el tono más urgente que
-// hay disponible.
-const TONO_FORZADO_DOCUMENTO: Partial<Record<string, TonoEstado>> = { por_vencer: "en_progreso" };
-
 function FilaDocumento({ d }: { d: DocumentoVehiculoAsignado }) {
   return (
     <View
@@ -277,11 +268,7 @@ function FilaDocumento({ d }: { d: DocumentoVehiculoAsignado }) {
         ) : null}
       </View>
       {d.estado ? (
-        <StatusBadge
-          estado={d.estado}
-          etiqueta={d.estado === "vencido" ? "Vencido" : d.estado === "por_vencer" ? "Por vencer" : "Vigente"}
-          tonoForzado={TONO_FORZADO_DOCUMENTO[d.estado]}
-        />
+        <StatusBadge estado={d.estado} etiqueta={d.estado === "vencido" ? "Vencido" : d.estado === "por_vencer" ? "Por vencer" : "Vigente"} />
       ) : null}
     </View>
   );

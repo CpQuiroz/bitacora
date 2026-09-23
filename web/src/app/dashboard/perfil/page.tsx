@@ -9,17 +9,17 @@ import { DashboardShell } from "@/components/DashboardShell";
 import { Card, PageHeader } from "@/components/ui";
 import { DocumentoForm } from "@/components/DocumentoForm";
 import { IconTruck } from "@/components/icons";
+import { StatusBadge } from "@bitacora/ui/web";
 
 type UsuarioConEmpresa = Usuario & { empresa: Empresa };
 
 // Esta página sigue con el sistema de tokens viejo (Card/PageHeader de
-// @/components/ui, no @bitacora/ui/web) — a diferencia de StatusBadge
-// (que no tiene un tono "rojo" propio, solo tonos por marca), este
-// sistema SÍ trae danger/warning semánticos (globals.css) — se usan
-// tal cual, mismo patrón que ya usa trabajos/[id]/page.tsx para sus
-// alertas.
-const CLASE_ESTADO_DOCUMENTO: Record<string, string> = { vencido: "text-danger", por_vencer: "text-warning", vigente: "text-muted" };
-const ETIQUETA_ESTADO_DOCUMENTO: Record<string, string> = { vencido: "Vencido", por_vencer: "Por vencer", vigente: "Vigente" };
+// @/components/ui) — StatusBadge (@bitacora/ui/web) igual se puede
+// usar acá: sus clases ds- conviven con las del sistema viejo en el
+// mismo Tailwind. Antes tenía su propio texto text-danger/text-warning
+// a mano porque StatusBadge no distinguía vencido/por_vencer del resto
+// (gap cerrado el 23-sep-2026 — MAPA_ESTADO_TONO ya los mapea a
+// peligro/advertencia), así que ya no hace falta duplicarlo acá.
 
 export default function PerfilPage() {
   const router = useRouter();
@@ -82,7 +82,7 @@ export default function PerfilPage() {
                       {d.tipo?.nombre ?? "Documento"}
                       {d.fecha_vencimiento ? <span className="text-muted"> — vence {d.fecha_vencimiento}</span> : null}
                     </span>
-                    {d.estado ? <span className={`text-xs font-medium ${CLASE_ESTADO_DOCUMENTO[d.estado]}`}>{ETIQUETA_ESTADO_DOCUMENTO[d.estado]}</span> : null}
+                    {d.estado ? <StatusBadge estado={d.estado} /> : null}
                   </li>
                 ))}
               </ul>

@@ -7,7 +7,7 @@ import type { Documento, EntidadDocumento, EstadoDocumento } from "@bitacora/sha
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { StatusBadge, type TonoEstado } from "@bitacora/ui/web";
+import { StatusBadge } from "@bitacora/ui/web";
 import { DataTable } from "@/components/DataTable";
 
 type DocumentoPorVencer = Documento & { tipo: { nombre: string } | null; estado: EstadoDocumento | null; entidad_nombre: string };
@@ -27,14 +27,12 @@ const RUTA_POR_ENTIDAD: Record<EntidadDocumento, (id: string) => string> = {
   vehiculo: () => `/dashboard/registros/equipos`,
 };
 
-// "por_vencer" no está en MAPA_ESTADO_TONO (ambiguo a propósito) — mismo
-// criterio que DocumentoForm.tsx.
-const TONO_FORZADO: Partial<Record<EstadoDocumento, TonoEstado>> = { por_vencer: "en_progreso" };
-
-// Color de urgencia sobre la fecha — mismo criterio que el badge de estado.
+// Color de urgencia sobre la fecha — mismo criterio que el badge de
+// estado (MAPA_ESTADO_TONO ya distingue vencido=peligro/por_vencer=
+// advertencia desde el 23-sep-2026, ya no hace falta tonoForzado acá).
 const COLOR_ESTADO: Record<EstadoDocumento, string> = {
-  vencido: "text-ds-accent-700 font-medium",
-  por_vencer: "text-ds-accent-700 font-medium",
+  vencido: "text-ds-danger font-medium",
+  por_vencer: "text-ds-warning font-medium",
   vigente: "text-ds-text/60",
 };
 
@@ -124,7 +122,7 @@ export default function DocumentosPorVencerPage() {
             header: "Vence",
             cell: (d) => <span className={d.estado ? COLOR_ESTADO[d.estado] : "text-ds-text/60"}>{d.fecha_vencimiento ?? "Sin vencimiento"}</span>,
           },
-          { header: "Estado", cell: (d) => (d.estado ? <StatusBadge estado={d.estado} tonoForzado={TONO_FORZADO[d.estado]} /> : "—") },
+          { header: "Estado", cell: (d) => (d.estado ? <StatusBadge estado={d.estado} /> : "—") },
         ]}
         actions={[
           {

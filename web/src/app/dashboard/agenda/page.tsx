@@ -61,11 +61,16 @@ const ESTADOS_AGENDA: { valor: EstadoAgenda; etiqueta: string; tono: TonoEstado 
 // porque las celdas del mes/semana necesitan el ícono adentro del chip
 // (StatusBadge no tiene ese slot), así que no se puede reusar el
 // componente tal cual en esos 2 lugares.
+// peligro/advertencia no los usa la Agenda (sus 4 estados de siempre
+// no caen ahí) — se listan solo para satisfacer el Record exhaustivo
+// desde que TonoEstado los tiene (23-sep-2026).
 const CLASE_CHIP: Record<TonoEstado, string> = {
   en_progreso: "bg-ds-accent-200 text-ds-accent-800",
   completado: "bg-ds-accent2-200 text-ds-accent2-800",
   cerrado: "bg-ds-neutral-300 text-ds-neutral-900",
   cancelado: "bg-ds-neutral-200 text-ds-neutral-700",
+  peligro: "bg-ds-danger-soft text-ds-danger",
+  advertencia: "bg-ds-warning-soft text-ds-warning",
 };
 
 function estadoInfo(estado: EstadoAgenda) {

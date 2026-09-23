@@ -38,6 +38,15 @@
   --color-ds-accent2-800: #3d472b;
   --color-ds-accent2-900: #272e1b;
 
+  /* Semántico (23-sep-2026) — peligro/advertencia, fijo sin importar
+     la marca por tenant. Re-declarado abajo para Modo Nocturno; NO se
+     toca en [data-tema="taller"/"confianza"] (esos solo pisan lo
+     ligado a marca). */
+  --color-ds-danger: #a02020;
+  --color-ds-danger-soft: #fbeaea;
+  --color-ds-warning: #8a5a00;
+  --color-ds-warning-soft: #fdf1e6;
+
   /* Marca del tenant. --ds-brand se define abajo en :root (fallback) y lo
      pisan los shells por empresa. hover/pressed se derivan solos en OKLCH
      porque referencian var(--ds-brand) en el punto de uso. */
@@ -155,6 +164,11 @@
   --color-ds-accent2-700: #c7d6a8;
   --color-ds-accent2-800: #e1eecc;
   --color-ds-accent2-900: #f0fae1;
+
+    --color-ds-danger: #e5706e;
+    --color-ds-danger-soft: #2a1212;
+    --color-ds-warning: #d99b2b;
+    --color-ds-warning-soft: #2a2007;
   }
 }
 
@@ -195,6 +209,11 @@
   --color-ds-accent2-700: #c7d6a8;
   --color-ds-accent2-800: #e1eecc;
   --color-ds-accent2-900: #f0fae1;
+
+  --color-ds-danger: #e5706e;
+  --color-ds-danger-soft: #2a1212;
+  --color-ds-warning: #d99b2b;
+  --color-ds-warning-soft: #2a2007;
 }
 
 /* Tema "Taller" (19-sep-2026) — override opcional por empresa
