@@ -91,7 +91,9 @@ async function puedeVer(req: RequestConEmpresa, lev: Levantamiento): Promise<boo
 
 // ------------------------------------------------------------
 // GET / — listar. Admin: todos (filtro opcional ?estado=). Técnico:
-// solo los suyos asignados.
+// solo los suyos asignados. ?desde=&hasta= (YYYY-MM-DD) acota por
+// fecha_visita — lo usa la Agenda web para traer solo el rango visible
+// (sin esos params, mismo comportamiento de siempre).
 // ------------------------------------------------------------
 levantamientosRouter.get(
   "/",
@@ -107,6 +109,10 @@ levantamientosRouter.get(
       .select("*, cliente:clientes(id, nombre, direccion), tecnico:usuarios!tecnico_id(id, nombre)")
       .eq("empresa_id", req.empresaId!)
       .order("creado_en", { ascending: false });
+
+    const { desde, hasta } = req.query;
+    if (typeof desde === "string" && /^\d{4}-\d{2}-\d{2}$/.test(desde)) query = query.gte("fecha_visita", desde);
+    if (typeof hasta === "string" && /^\d{4}-\d{2}-\d{2}$/.test(hasta)) query = query.lte("fecha_visita", hasta);
 
     if (esAdmin(req)) {
       const estado = typeof req.query.estado === "string" && ESTADOS_LEVANTAMIENTO.includes(req.query.estado as EstadoLevantamiento) ? (req.query.estado as EstadoLevantamiento) : undefined;

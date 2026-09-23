@@ -38,6 +38,9 @@ export type AgendaStackParamList = {
   // 20-sep-2026) — mismo criterio que HoyStackParamList/MasStackParamList:
   // no es un sub-stack propio, es solo el detalle, plano.
   LevantamientoDetalle: { id: string };
+  // OS en el calendario (23-sep-2026): detalle vía el stack de Trabajos
+  // anidado — mismo patrón que HoyStackParamList.
+  Trabajos: NavigatorScreenParams<TrabajosStackParamList> | undefined;
 };
 
 export type ClientesStackParamList = {

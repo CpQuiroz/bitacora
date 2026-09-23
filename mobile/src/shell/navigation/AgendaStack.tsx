@@ -7,6 +7,7 @@ import { TareaDetalleScreen } from "../../features/agenda/TareaDetalleScreen";
 import { NuevaCitaScreen } from "../../features/agenda/NuevaCitaScreen";
 import { AsistenteScreen } from "../../features/asistente/AsistenteScreen";
 import { LevantamientoDetalleScreen } from "../../features/levantamientos/LevantamientoDetalleScreen";
+import { TrabajosStack } from "./TrabajosStack";
 
 const Stack = createNativeStackNavigator<AgendaStackParamList>();
 
@@ -36,6 +37,9 @@ export function AgendaStack() {
           HoyStack/MasStack: plano, no un sub-stack propio, dibuja su
           propio ScreenHeader. */}
       <Stack.Screen name="LevantamientoDetalle" component={LevantamientoDetalleScreen} options={{ headerShown: false }} />
+      {/* OS en el calendario (23-sep-2026): se abren en el stack de
+          Trabajos anidado, igual que desde Hoy (HoyStack). */}
+      <Stack.Screen name="Trabajos" component={TrabajosStack} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 }

@@ -1529,6 +1529,20 @@
       ],
       "status": "done",
       "resolution": "Implementado y verificar.sh en verde. Pendiente de la usuaria: correr la migración 127 en dev y prod antes de mergear a main (el CI check-migraciones-prod lo exige). Mobile requiere build EAS nuevo para verse."
+    },
+    {
+      "id": 99,
+      "name": "agenda_paridad_web_mobile",
+      "title": "Agenda: paridad web/mobile (web muestra Levantamientos, mobile muestra OS)",
+      "description": "Gap detectado en el diagnóstico 6.1 (tarea 94) y pedido explícito de arreglar: web Agenda mostraba Cita+OS, mobile Cita+Levantamiento. Ahora ambas muestran los 3 tipos.",
+      "acceptance": [
+        "Backend: GET /api/levantamientos acepta ?desde&hasta sobre fecha_visita (sin params, igual que antes)",
+        "Web Agenda: levantamientos con fecha_visita como eventos (color=estado vía estadoAgendaDeLevantamiento), chip de tipo gated por módulo 'levantamientos', leyenda con los 3 tipos; click abre /dashboard/levantamientos?id=... (nuevo deep-link al detalle)",
+        "Mobile Agenda: OS vía GET /api/ordenes-servicio?desde&hasta (cache offline), gated por módulo 'ordenes_servicio'; FilaOS + barritas + chip + leyenda; abre TrabajoDetalle vía TrabajosStack anidado en AgendaStack",
+        "verificar.sh en verde"
+      ],
+      "status": "done",
+      "resolution": "Implementado, verificar.sh en verde (tsc 6 workspaces, tests, eslint). No probado contra la app real en esta sesión (sin backend/credenciales locales). Mobile requiere build EAS. Mobile Agenda estaba 'congelada' en CLAUDE.md, se tocó por pedido explícito de la usuaria ('Ejecuta tu lado ambas tareas')."
     }
   ]
 }

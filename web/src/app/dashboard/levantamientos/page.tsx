@@ -161,6 +161,16 @@ function LevantamientosContenido() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Venimos de un levantamiento en el calendario de Agenda (?id=...):
+  // abre su detalle y limpia el query param (mismo criterio que ?crear=1).
+  useEffect(() => {
+    const id = searchParams.get("id");
+    if (!id) return;
+    void abrirDetalle(id);
+    router.replace("/dashboard/levantamientos");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
   // Venimos del menú "+ Nuevo" de Agenda (?crear=1): abre el form directo
   // y limpia el query param para que un refresh no lo reabra.
   useEffect(() => {
