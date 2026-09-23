@@ -1233,6 +1233,20 @@
       ],
       "status": "done",
       "resolution": "Implementado en mobile, sin cambios de backend (PATCH /api/gastos/:id y GET /:id/comprobante ya existian y ya bloqueaban edicion fuera de borrador, migracion 120). services/gastos.ts: obtenerGasto/obtenerComprobanteUrl/actualizarGasto (foto nueva se encola con encolarComprobante existente, nunca multipart inline). RendicionDetalleScreen: filas de gasto navegan a GastoForm con gastoId+soloLectura (reusa puedeEditar existente). NuevoGastoScreen: precarga datos+foto (URL firmada) con gastoId, vista de solo lectura separada (VisorFotoGrande, mismo patron que FotosSection.tsx) cuando soloLectura. MasScreen: Nuevo gasto + Rendiciones unidos en una tarjeta Gastos con Alert.alert de 2 acciones (confirmado: en web Rendiciones SI es subseccion de Gastos via GastosSubnav; en mobile habia quedado suelta por no existir pantalla de lista de Gastos para anidarla, no por diseno deliberado). tsc (6 workspaces) + verificar.sh en verde. Pendiente: build mobile v1.10.14 para verlo en el celular."
+    },
+    {
+      "id": 80,
+      "name": "agenda_mobile_doble_tap_y_administracion_iconos",
+      "title": "Mobile: doble tap en Agenda (Mes) para nueva cita + grupo Administración de Más con iconos grandes",
+      "description": "Pedido de la usuaria (tras aclarar con 2 preguntas): 1) en la Agenda mobile, 1 toque en un dia del calendario ya mostraba sus citas (vista Mes) pero no habia forma de crear una cita nueva para ese dia especifico salvo el FAB generico; se agrega doble tap = Nueva cita ese dia, mismo patron 1 clic/2 clics que ya tiene la Agenda web (vista Mes, 7-sep). 2) el grupo Administracion del menu Mas (Servicios y packs, Informes) pasa de lista de texto a tarjetas grandes con icono, igual que Accesos rapidos.",
+      "acceptance": [
+        "AgendaScreen.tsx: hook useManejadorTapDia (doble tap por comparacion de timestamp, sin delay en el tap simple) aplicado a VistaMes; primer tap dispara onDia de inmediato, segundo tap en el mismo dia dentro de 300ms abre NuevaCita con esa fecha",
+        "VistaSemana sin cambios (mismo alcance que la web, que tampoco lo tiene en Semana/Dia) — el tap ahi ya cambia de vista a Dia, agregar el gesto ahi requeriria retrasar el tap simple existente",
+        "MasScreen.tsx: nuevo componente GrillaAccesos compartido por Accesos rapidos y Administracion (antes duplicado); Administracion pasa de Item[] (ListRow) a AccesoItem[] (QuickAccessCard), sigue en su propia grilla con rotulo propio, no se mezcla con Accesos rapidos",
+        "tsc (6 workspaces) + verificar.sh en verde"
+      ],
+      "status": "done",
+      "resolution": "Investigacion primero: la Agenda web (vista Mes) YA tenia el patron 1 clic/doble clic completo desde el 7-sep (cc4dcaa8) - se confirmo con la usuaria via AskUserQuestion que el pedido real era el calendario MOBILE (Mas -> Agenda), no el web. Implementado: useManejadorTapDia (helper de doble-tap manual, RN no trae onDoubleTap nativo) aplicado solo a VistaMes (VistaSemana cambia de vista en el primer tap, agregar el gesto ahi degradaria el tap simple con un delay - mismo alcance que la web, que tampoco lo tiene en Semana). GrillaAccesos extrae la grilla de QuickAccessCard (antes solo en Accesos rapidos) para reusarla en Administracion sin duplicar el JSX. tsc + verificar.sh en verde."
     }
   ]
 }

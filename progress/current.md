@@ -5868,3 +5868,34 @@ modificarlo y ver la foto que subí"):
 **Pendiente**: nuevo build mobile (v1.10.14) para ver esto en el
 celular; Anthropic Admin Key + tokens Vercel/Render/Cloudflare
 (sin cambios desde la entrada anterior).
+
+## 23-sep-2026 — tarea 80: doble tap Agenda mobile + Administración con íconos
+
+Pedido: "el calendario al dale doble clic se abra para crear una nueva
+cita. Y 1 clic me muestre los eventos de ese día. Además administración
+hazlo iconos igual." Antes de tocar código, investigué y encontré que
+la Agenda **web** (vista Mes) ya tiene exactamente ese patrón desde el
+7-sep (`cc4dcaa8`) — usé `AskUserQuestion` para no reconstruir algo que
+ya existe. Confirmado: el pedido era sobre la Agenda del **mobile**, y
+"Administración" es el grupo de `MasScreen.tsx` (Más → Servicios y
+packs / Informes).
+
+- `AgendaScreen.tsx`: `useManejadorTapDia` — helper de doble-tap manual
+  (RN no trae `onDoubleTap`), compara contra el último toque (mismo
+  día + <300ms); el primer toque SIEMPRE dispara de inmediato (sin
+  delay al caso normal de "ver el día"). Aplicado solo a `VistaMes`
+  (donde 1 toque ya mostraba las citas abajo sin cambiar de vista) —
+  `VistaSemana` queda sin el gesto: ahí el tap YA cambia a vista Día de
+  inmediato, agregarlo ahí exigiría retrasar el tap simple existente
+  (mismo alcance que la web, que tampoco lo tiene en Semana/Día).
+- `MasScreen.tsx`: nuevo componente `GrillaAccesos` (antes el JSX de
+  la grilla vivía solo en "Accesos rápidos", duplicado si se quería
+  reusar) — "Administración" pasa de `ListRow` (lista de texto) a
+  `QuickAccessCard` (tarjeta grande con ícono), en su propia grilla
+  con rótulo propio (sigue siendo "uso ocasional", no se mezcla con
+  Accesos rápidos).
+- Sin cambios de backend. `tsc` (6 workspaces) + `verificar.sh` en
+  verde. Tarea 80 cerrada.
+
+**Pendiente**: build mobile v1.10.14 (acumula: huella+crear empresa,
+tarea 79, tarea 80) — no armado todavía, esperando pedido explícito.

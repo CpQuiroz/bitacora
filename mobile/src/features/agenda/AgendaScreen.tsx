@@ -58,6 +58,29 @@ function colorEstado(estado: EstadoTarea, marca: Marca): string {
 type Modo = "mes" | "semana" | "dia";
 let ultimoModo: Modo = "mes";
 
+// Doble tap en una celda de día (Mes/Semana) abre "Nueva cita" ese día
+// — mismo patrón que ya tiene la Agenda web (vista Mes, 7-sep-2026):
+// 1 toque = ver las citas del día, 2 toques = agendar una nueva.
+// React Native no trae onDoubleTap: se arma a mano comparando contra
+// el último toque (mismo día + <300ms). El primer toque SIEMPRE
+// dispara onDia de inmediato — no se le mete latencia al caso normal
+// de "ver el día" esperando a ver si viene un segundo toque.
+const VENTANA_DOBLE_TAP_MS = 300;
+
+function useManejadorTapDia(onDia: (k: string) => void, onDobleTap: (k: string) => void) {
+  const ultimo = useRef<{ k: string; en: number } | null>(null);
+  return useCallback(
+    (k: string) => {
+      const ahora = Date.now();
+      const esDobleTap = ultimo.current?.k === k && ahora - ultimo.current.en < VENTANA_DOBLE_TAP_MS;
+      ultimo.current = esDobleTap ? null : { k, en: ahora };
+      if (esDobleTap) onDobleTap(k);
+      else onDia(k);
+    },
+    [onDia, onDobleTap]
+  );
+}
+
 const HORA_ALTO = 54;
 const HORA_INI = 7;
 const HORA_FIN = 21;
@@ -262,6 +285,7 @@ export function AgendaScreen({ navigation }: NativeStackScreenProps<AgendaStackP
           porDia={porDia}
           porDiaLevantamientos={porDiaLevantamientos}
           onDia={(k) => setAncla(k)}
+          onNuevaCita={nuevaCita}
           onCita={abrirCita}
           onLevantamiento={abrirLevantamiento}
           esGestion={esGestion}
@@ -381,6 +405,7 @@ function VistaMes({
   porDia,
   porDiaLevantamientos,
   onDia,
+  onNuevaCita,
   onCita,
   onLevantamiento,
   esGestion,
@@ -394,6 +419,7 @@ function VistaMes({
   porDia: Map<string, TareaConDatos[]>;
   porDiaLevantamientos: Map<string, LevantamientoResumen[]>;
   onDia: (k: string) => void;
+  onNuevaCita: (k: string) => void;
   onCita: (c: TareaConDatos) => void;
   onLevantamiento: (l: LevantamientoResumen) => void;
   esGestion: boolean;
@@ -401,6 +427,7 @@ function VistaMes({
   onRefresh: () => void;
   marca: Marca;
 }) {
+  const manejarTap = useManejadorTapDia(onDia, onNuevaCita);
   const mesNum = anclaDate.getMonth();
   const inicioGrilla = useMemo(() => lunesDe(new Date(anclaDate.getFullYear(), anclaDate.getMonth(), 1)), [anclaDate]);
   const semanas = useMemo(() => {
@@ -439,7 +466,7 @@ function VistaMes({
             return (
               <Pressable
                 key={k}
-                onPress={() => onDia(k)}
+                onPress={() => manejarTap(k)}
                 style={{
                   width: `${100 / 7}%`,
                   height: 52,
@@ -481,6 +508,9 @@ function VistaMes({
       <View style={{ padding: tokens.space["4"], gap: tokens.space["2"] }}>
         <Texto tamano={tokens.size.h5} peso="semibold" color={tokens.color.text} style={{ textTransform: "capitalize" }}>
           {anclaKey === hoyKey ? "Hoy" : `${DIAS_LARGO[d.getDay()]} ${d.getDate()} de ${MESES[d.getMonth()]}`}
+        </Texto>
+        <Texto tamano={tokens.size.caption} color={tokens.color.text + "66"}>
+          Doble toque en un día del calendario para agendar una cita nueva.
         </Texto>
         {delDia.length === 0 && levDelDia.length === 0 ? (
           <Texto tamano={tokens.size.small} color={tokens.color.text + "99"}>

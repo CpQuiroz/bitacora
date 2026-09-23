@@ -147,13 +147,17 @@ export function MasScreen({ navigation }: NativeStackScreenProps<MasStackParamLi
     accesos.push({ titulo: "Levantamientos", Icono: Search, ir: () => navigation.navigate("Levantamientos") });
   }
 
-  // --- Administración (uso ocasional — se queda como lista) ---
-  const administracion: Item[] = [];
+  // --- Administración (uso ocasional) — misma tarjeta grande con
+  // ícono que "Accesos rápidos" (pedido explícito 23-sep-2026: "hazlo
+  // iconos igual"), en su propia grilla con rótulo propio — sigue
+  // siendo uso ocasional, no se mezcla con la grilla de tareas
+  // diarias de arriba.
+  const administracion: AccesoItem[] = [];
   if (visibles.includes("agenda_pro")) {
-    administracion.push({ titulo: "Servicios y packs", contexto: "Precios, duraciones y packs de sesiones", icono: <Tags size={22} strokeWidth={2.25} {...iconoTint} />, ir: () => navigation.navigate("Catalogo") });
+    administracion.push({ titulo: "Servicios y packs", Icono: Tags, ir: () => navigation.navigate("Catalogo") });
   }
   if (acciones.includes("ver_dashboard") && visibles.includes("informes")) {
-    administracion.push({ titulo: "Informes", contexto: "Visión general, financiero, ventas, operaciones", icono: <FileChartColumn size={22} strokeWidth={2.25} {...iconoTint} />, ir: () => navigation.navigate("Informes") });
+    administracion.push({ titulo: "Informes", Icono: FileChartColumn, ir: () => navigation.navigate("Informes") });
   }
 
   // --- Cuenta ---
@@ -168,36 +172,15 @@ export function MasScreen({ navigation }: NativeStackScreenProps<MasStackParamLi
     { titulo: "Perfil y sesión", contexto: "Tus datos, el bloqueo con huella y la versión", icono: <CircleUser size={22} strokeWidth={2.25} {...iconoTint} />, ir: () => navigation.navigate("Perfil") },
   ];
 
-  const grupos: { titulo: string; items: Item[] }[] = [
-    { titulo: "Administración", items: administracion },
-    { titulo: "Cuenta", items: cuenta },
-  ].filter((g) => g.items.length > 0);
+  const grupos: { titulo: string; items: Item[] }[] = [{ titulo: "Cuenta", items: cuenta }].filter((g) => g.items.length > 0);
 
   return (
     <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
       <ScrollView contentContainerStyle={{ gap: tokens.space["6"], paddingTop: tokens.space["3"], paddingBottom: ESPACIO_ASISTENTE_FLOTANTE }}>
         <ScreenHeader titulo="Más" />
 
-        {accesos.length > 0 ? (
-          <View style={{ paddingHorizontal: tokens.space["4"], gap: tokens.space["2"] }}>
-            <Texto tamano={tokens.size.micro} color={tokens.color.accent2Ramp["800"]} peso="semibold" style={{ textTransform: "uppercase", letterSpacing: 1.3 }}>
-              Accesos rápidos
-            </Texto>
-            <View style={{ gap: tokens.space["2"] }}>
-              {filasDeTres(accesos).map((fila, i) => (
-                <View key={i} style={{ flexDirection: "row", gap: tokens.space["2"] }}>
-                  {fila.map((item, j) =>
-                    item ? (
-                      <QuickAccessCard key={item.titulo} titulo={item.titulo} Icono={item.Icono} badge={item.badge} tinte={((i * 3 + j) % 2) as 0 | 1} onPress={item.ir} />
-                    ) : (
-                      <View key={j} style={{ flex: 1 }} />
-                    )
-                  )}
-                </View>
-              ))}
-            </View>
-          </View>
-        ) : null}
+        <GrillaAccesos titulo="Accesos rápidos" items={accesos} />
+        <GrillaAccesos titulo="Administración" items={administracion} />
 
         {grupos.map((g) => (
           <View key={g.titulo} style={{ paddingHorizontal: tokens.space["4"], gap: tokens.space["2"] }}>
@@ -226,6 +209,34 @@ export function MasScreen({ navigation }: NativeStackScreenProps<MasStackParamLi
         ))}
       </ScrollView>
       <AsistenteButton visible={veAsistente} onPress={() => navigation.navigate("Asistente")} />
+    </View>
+  );
+}
+
+// Grilla de tarjetas con ícono grande (misma que "Accesos rápidos",
+// 18-sep-2026) — reusada también para "Administración" (23-sep-2026,
+// "hazlo iconos igual": antes era una lista de texto, ahora mismo
+// tratamiento visual, en su propia grilla con rótulo propio).
+function GrillaAccesos({ titulo, items }: { titulo: string; items: AccesoItem[] }) {
+  if (items.length === 0) return null;
+  return (
+    <View style={{ paddingHorizontal: tokens.space["4"], gap: tokens.space["2"] }}>
+      <Texto tamano={tokens.size.micro} color={tokens.color.accent2Ramp["800"]} peso="semibold" style={{ textTransform: "uppercase", letterSpacing: 1.3 }}>
+        {titulo}
+      </Texto>
+      <View style={{ gap: tokens.space["2"] }}>
+        {filasDeTres(items).map((fila, i) => (
+          <View key={i} style={{ flexDirection: "row", gap: tokens.space["2"] }}>
+            {fila.map((item, j) =>
+              item ? (
+                <QuickAccessCard key={item.titulo} titulo={item.titulo} Icono={item.Icono} badge={item.badge} tinte={((i * 3 + j) % 2) as 0 | 1} onPress={item.ir} />
+              ) : (
+                <View key={j} style={{ flex: 1 }} />
+              )
+            )}
+          </View>
+        ))}
+      </View>
     </View>
   );
 }
