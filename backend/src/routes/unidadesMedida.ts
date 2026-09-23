@@ -7,6 +7,17 @@ import { requiereModulo } from "../permisos";
 
 export const unidadesMedidaRouter = Router();
 
+// Bug real (23-sep-2026, descubierto por reporte de la usuaria: "no sé
+// por qué sale un 1 demás" en los materiales de un Levantamiento) —
+// varias unidades de la empresa en prod terminaron con nombre "1", "10"
+// o "15" (alguien las tipeó en el combobox "crear al vuelo" pensando
+// en otra cosa) y `{cantidad} {unidad}` renderizaba "1 1". No hay forma
+// de que "1" sea una unidad de medida real — se rechaza acá, en el
+// único lugar donde se puede crear/editar una.
+function esNombreUnidadValido(nombre: string): boolean {
+  return !/^\d+$/.test(nombre.trim());
+}
+
 unidadesMedidaRouter.get(
   "/",
   ah<RequestConEmpresa>(async (req, res) => {
@@ -31,6 +42,10 @@ unidadesMedidaRouter.post(
     const { nombre, abreviatura } = req.body ?? {};
     if (typeof nombre !== "string" || !nombre.trim()) {
       res.status(400).json({ error: "Falta nombre" });
+      return;
+    }
+    if (!esNombreUnidadValido(nombre)) {
+      res.status(400).json({ error: "El nombre de la unidad no puede ser solo un número (ej. \"1\") — usa algo como \"unidad\", \"litro\" o \"metro\"" });
       return;
     }
 
@@ -59,6 +74,10 @@ unidadesMedidaRouter.patch(
     if (nombre !== undefined) {
       if (typeof nombre !== "string" || !nombre.trim()) {
         res.status(400).json({ error: "Falta nombre" });
+        return;
+      }
+      if (!esNombreUnidadValido(nombre)) {
+        res.status(400).json({ error: "El nombre de la unidad no puede ser solo un número (ej. \"1\") — usa algo como \"unidad\", \"litro\" o \"metro\"" });
         return;
       }
       cambios.nombre = nombre.trim();

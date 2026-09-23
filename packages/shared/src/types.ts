@@ -1272,6 +1272,9 @@ export type LevantamientoFoto = {
   empresa_id: string;
   levantamiento_id: string;
   foto_url: string;
+  // Descripción opcional de la foto (migración 124, 23-sep-2026) —
+  // "qué se ve acá" (ej. "cableado dañado bajo el tablero").
+  descripcion: string | null;
   subida_por: string | null;
   creado_en: string;
 };
@@ -1293,12 +1296,15 @@ export type LevantamientoMaterialConItem = {
   catalogo_item: { id: string; nombre: string; precio_base: number; unidad: string } | null;
 };
 
-export type LevantamientoFotoUrl = { id: string; url: string; creado_en: string };
+export type LevantamientoFotoUrl = { id: string; url: string; descripcion: string | null; creado_en: string };
 
 // GET /api/levantamientos — la fila cruda + los 2 joins que arma el
-// backend (cliente:clientes(id,nombre), tecnico:usuarios(id,nombre)).
+// backend (cliente:clientes(id,nombre,direccion), tecnico:usuarios(id,nombre)).
+// direccion (23-sep-2026, pedido explícito): para que el técnico sepa
+// adónde ir sin salir del levantamiento — null si el cliente todavía no
+// la tiene cargada en su ficha.
 export type LevantamientoResumen = Levantamiento & {
-  cliente: { id: string; nombre: string } | null;
+  cliente: { id: string; nombre: string; direccion: string | null } | null;
   tecnico: { id: string; nombre: string } | null;
 };
 

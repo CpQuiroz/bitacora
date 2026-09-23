@@ -104,7 +104,7 @@ levantamientosRouter.get(
       // PostgREST necesita el hint de columna (!tecnico_id) para saber
       // cuál de las dos usar; sin esto tira "more than one relationship
       // was found" (hallazgo real, probado en vivo contra dev).
-      .select("*, cliente:clientes(id, nombre), tecnico:usuarios!tecnico_id(id, nombre)")
+      .select("*, cliente:clientes(id, nombre, direccion), tecnico:usuarios!tecnico_id(id, nombre)")
       .eq("empresa_id", req.empresaId!)
       .order("creado_en", { ascending: false });
 
@@ -149,11 +149,11 @@ levantamientosRouter.get(
         .from("levantamiento_materiales")
         .select("id, catalogo_item_id, cantidad, catalogo_item:catalogo_items(id, nombre, precio_base, unidad)")
         .eq("levantamiento_id", lev.id),
-      supabase.from("levantamiento_fotos").select("id, foto_url, creado_en").eq("levantamiento_id", lev.id).order("creado_en"),
+      supabase.from("levantamiento_fotos").select("id, foto_url, descripcion, creado_en").eq("levantamiento_id", lev.id).order("creado_en"),
       // tenant-ok: cliente_id sale de `lev`, ya cargado con
       // .eq("empresa_id", req.empresaId!) en buscarLevantamiento() —
       // no puede apuntar a un cliente de otra empresa.
-      supabase.from("clientes").select("id, nombre").eq("id", lev.cliente_id).maybeSingle(),
+      supabase.from("clientes").select("id, nombre, direccion").eq("id", lev.cliente_id).maybeSingle(),
       // tenant-ok: tecnico_id sale de `lev`, y solo se pudo haber
       // guardado ahí tras pasar esTecnicoAsignable(empresaId, ...) en
       // POST / — ya acotado a la empresa.
@@ -166,7 +166,9 @@ levantamientosRouter.get(
       lev.orden_servicio_id ? supabase.from("ordenes_servicio").select("trabajo_id, folio").eq("id", lev.orden_servicio_id).maybeSingle() : Promise.resolve({ data: null }),
     ]);
 
-    const fotos = await Promise.all((fotosRaw ?? []).map(async (f) => ({ id: f.id, creado_en: f.creado_en, url: await urlFirmada(f.foto_url, 15) })));
+    const fotos = await Promise.all(
+      (fotosRaw ?? []).map(async (f) => ({ id: f.id, creado_en: f.creado_en, descripcion: f.descripcion ?? null, url: await urlFirmada(f.foto_url, 15) }))
+    );
 
     res.json({ ...lev, cliente, tecnico, materiales: materiales ?? [], fotos, trabajo_id: orden?.trabajo_id ?? null, folio_os: orden?.folio ?? null });
   })
@@ -472,17 +474,73 @@ levantamientosRouter.post(
       return;
     }
 
+    // descripcion viaje como campo de texto del mismo multipart (no es
+    // un archivo) — multer la deja en req.body igual que cualquier
+    // form-data sin archivo. Opcional: mobile la manda al elegir la
+    // foto (ver encolarFotoLevantamiento), web la deja vacía al subir y
+    // la agrega después con el PATCH de más abajo.
+    const descripcion = typeof req.body?.descripcion === "string" ? req.body.descripcion.trim() || null : null;
+
     const key = await subirFotoLevantamiento(req.empresaId!, lev.id, req.file.buffer, req.file.mimetype);
     const { data, error } = await supabase
       .from("levantamiento_fotos")
-      .insert({ empresa_id: req.empresaId!, levantamiento_id: lev.id, foto_url: key, subida_por: req.userId ?? null })
-      .select("id, creado_en")
+      .insert({ empresa_id: req.empresaId!, levantamiento_id: lev.id, foto_url: key, descripcion, subida_por: req.userId ?? null })
+      .select("id, descripcion, creado_en")
       .single();
     if (error) {
       res.status(500).json({ error: error.message });
       return;
     }
-    res.status(201).json({ id: data.id, creado_en: data.creado_en, url: await urlFirmada(key, 15) });
+    res.status(201).json({ id: data.id, creado_en: data.creado_en, descripcion: data.descripcion, url: await urlFirmada(key, 15) });
+  })
+);
+
+// ------------------------------------------------------------
+// PATCH /:id/fotos/:fotoId — editar la descripción de una foto ya
+// subida (23-sep-2026, pedido explícito). Mismo criterio de permiso
+// que subir/borrar: Admin o el técnico asignado, y solo mientras el
+// levantamiento no esté cerrado.
+// ------------------------------------------------------------
+levantamientosRouter.patch(
+  "/:id/fotos/:fotoId",
+  ah<RequestConEmpresa>(async (req, res) => {
+    if (!(await moduloActivo(req, res))) return;
+    const lev = await buscarLevantamiento(req.empresaId!, req.params.id);
+    if (!lev) {
+      res.status(404).json({ error: "Levantamiento no encontrado" });
+      return;
+    }
+    const esElTecnico = lev.tecnico_id === req.userId && (await esTecnicoAsignable(req.empresaId!, req.userId!));
+    if (!esAdmin(req) && !esElTecnico) {
+      res.status(403).json({ error: "No puedes editar fotos de este levantamiento" });
+      return;
+    }
+    if (["aprobado", "rechazado"].includes(lev.estado)) {
+      res.status(409).json({ error: "Este levantamiento ya fue cerrado" });
+      return;
+    }
+    const { descripcion } = req.body ?? {};
+    if (typeof descripcion !== "string") {
+      res.status(400).json({ error: "Falta descripcion" });
+      return;
+    }
+    const { data, error } = await supabase
+      .from("levantamiento_fotos")
+      .update({ descripcion: descripcion.trim() || null })
+      .eq("empresa_id", req.empresaId!)
+      .eq("levantamiento_id", lev.id)
+      .eq("id", req.params.fotoId)
+      .select("id, descripcion")
+      .maybeSingle();
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    if (!data) {
+      res.status(404).json({ error: "Foto no encontrada" });
+      return;
+    }
+    res.json(data);
   })
 );
 

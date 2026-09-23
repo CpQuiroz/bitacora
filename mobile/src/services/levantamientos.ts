@@ -79,12 +79,18 @@ export function encolarCompletarLevantamiento(id: string, datos: DatosCompletar)
 // dejar dos subidas viajando a la vez sin que ninguna terminara nunca.)
 // "Foto de levantamiento" — sumada a ES_SUBIDA_DE_FOTO en queue.ts para
 // que se procese al final del lote (nunca bloquea check-in/firma/etc).
-export function encolarFotoLevantamiento(id: string, foto: { uri: string; name?: string; type?: string }): Promise<void> {
+// descripcion (23-sep-2026, pedido explícito) — texto opcional que el
+// técnico agrega al elegir la foto (ver LevantamientoDetalleScreen).
+// La cola ya manda `body` como campos de texto adicionales del MISMO
+// multipart cuando hay un archivo (ver sync/queue.ts) — no hace falta
+// ningún cambio ahí, solo pasarlo acá.
+export function encolarFotoLevantamiento(id: string, foto: { uri: string; name?: string; type?: string }, descripcion?: string): Promise<void> {
   return encolar({
     etiqueta: "Foto de levantamiento",
     recurso: `levantamiento:${id}`,
     path: `/api/levantamientos/${id}/fotos`,
     method: "POST",
+    body: descripcion?.trim() ? { descripcion: descripcion.trim() } : {},
     archivo: { uri: foto.uri, name: foto.name ?? "foto.jpg", type: foto.type ?? "image/jpeg", campo: "foto" },
   });
 }

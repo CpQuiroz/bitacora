@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
-import { Alert, FlatList, Image, Pressable, ScrollView, View } from "react-native";
+import { Alert, FlatList, Image, Linking, Platform, Pressable, ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { AlertCircle, ArrowLeft, Camera, Minus, Plus, RefreshCw, X } from "lucide-react-native";
+import { AlertCircle, ArrowLeft, Camera, MapPin, Minus, Plus, RefreshCw, X } from "lucide-react-native";
 import type { CatalogoItem, EstadoLevantamiento } from "@bitacora/shared";
 import { formatearFolio } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
-import { Button, Dialog, ErrorState, LoadingState, ScreenHeader, StatusBadge, Textarea, Texto, useMarca, type TonoEstado } from "@bitacora/ui/native";
+import { Button, Dialog, ErrorState, Input, LoadingState, ScreenHeader, StatusBadge, Textarea, Texto, useMarca, type TonoEstado } from "@bitacora/ui/native";
 import { elegirFotos } from "../../lib/imagen";
 import { useAuth } from "../auth/AuthContext";
 import { useRed } from "../../services/sync/NetworkProvider";
+import { actualizarDireccionCliente } from "../../services/clientes";
 import {
   completarLevantamiento,
   encolarCompletarLevantamiento,
@@ -71,6 +72,18 @@ export function LevantamientoDetalleScreen({ route, navigation }: NativeStackScr
   const [guardando, setGuardando] = useState(false);
   const [pickerAbierto, setPickerAbierto] = useState(false);
   const [catalogo, setCatalogo] = useState<CatalogoItem[] | null>(null);
+
+  // Dirección del cliente (23-sep-2026, pedido explícito) — se muestra
+  // la que ya tiene en su ficha; si no tiene, se ofrece agregarla acá
+  // mismo (PATCH directo al cliente, no es un campo propio del
+  // levantamiento — ver actualizarDireccionCliente).
+  const [direccionNueva, setDireccionNueva] = useState("");
+  const [guardandoDireccion, setGuardandoDireccion] = useState(false);
+
+  // Descripción de la foto (mismo pedido) — se pide en un diálogo justo
+  // después de elegirla, antes de encolar la subida.
+  const [fotoElegida, setFotoElegida] = useState<{ uri: string; name?: string; type?: string } | null>(null);
+  const [descripcionFoto, setDescripcionFoto] = useState("");
 
   const cargar = useCallback(async () => {
     setError(null);
@@ -171,10 +184,40 @@ export function LevantamientoDetalleScreen({ route, navigation }: NativeStackScr
   // encolábamos como respaldo quedaban dos subidas de la MISMA foto
   // viajando a la vez. El placeholder en `fotosEnCola` ya da feedback
   // inmediato — no hace falta el intento inline para que se sienta rápido.
+  // Elegir la foto y encolarla son 2 pasos separados (23-sep-2026): en
+  // el medio se pide una descripción opcional (Dialog más abajo) antes
+  // de mandarla a la cola.
   async function agregarFoto() {
     const [elegida] = await elegirFotos();
     if (!elegida) return;
-    await encolarFotoLevantamiento(id, elegida);
+    setDescripcionFoto("");
+    setFotoElegida(elegida);
+  }
+
+  async function confirmarFoto() {
+    if (!fotoElegida) return;
+    await encolarFotoLevantamiento(id, fotoElegida, descripcionFoto);
+    setFotoElegida(null);
+    setDescripcionFoto("");
+  }
+
+  function abrirMapa(direccion: string) {
+    const destino = encodeURIComponent(direccion);
+    const url = Platform.select({
+      ios: `http://maps.apple.com/?daddr=${destino}`,
+      default: `https://www.google.com/maps/dir/?api=1&destination=${destino}`,
+    });
+    Linking.openURL(url!);
+  }
+
+  async function guardarDireccion() {
+    if (!detalle?.cliente || !direccionNueva.trim()) return;
+    setGuardandoDireccion(true);
+    const r = await actualizarDireccionCliente(detalle.cliente.id, direccionNueva);
+    setGuardandoDireccion(false);
+    if (!r.ok) return Alert.alert("No se pudo guardar", r.error);
+    setDireccionNueva("");
+    await cargar();
   }
 
   const volver = { icono: <ArrowLeft size={20} strokeWidth={2.5} color={tokens.color.text} />, onPress: () => navigation.goBack(), etiquetaAccesible: "Volver" };
@@ -210,6 +253,33 @@ export function LevantamientoDetalleScreen({ route, navigation }: NativeStackScr
         <StatusBadge estado={detalle.estado} etiqueta={ETIQUETA_ESTADO[detalle.estado]} tonoForzado={TONO_ESTADO[detalle.estado]} />
       </View>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: tokens.space["4"], gap: tokens.space["4"], paddingBottom: tokens.space["8"] * 2 }}>
+        <View style={{ gap: 6 }}>
+          <Texto tamano={tokens.size.micro} color={tokens.color.accent2Ramp["800"]} peso="semibold" style={{ textTransform: "uppercase", letterSpacing: 1.3 }}>
+            Dirección
+          </Texto>
+          {detalle.cliente?.direccion ? (
+            <Pressable onPress={() => abrirMapa(detalle.cliente!.direccion!)} style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <MapPin size={16} strokeWidth={2.5} color={marca.base} />
+              <Texto tamano={tokens.size.body} color={marca.base} style={{ textDecorationLine: "underline", flex: 1 }}>
+                {detalle.cliente.direccion}
+              </Texto>
+            </Pressable>
+          ) : editable ? (
+            <View style={{ flexDirection: "row", gap: tokens.space["2"] }}>
+              <View style={{ flex: 1 }}>
+                <Input placeholder="Agregar dirección…" valor={direccionNueva} onCambio={setDireccionNueva} />
+              </View>
+              <Button variante="secundario" onPress={guardarDireccion} cargando={guardandoDireccion} deshabilitado={!direccionNueva.trim()}>
+                Guardar
+              </Button>
+            </View>
+          ) : (
+            <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
+              El cliente no tiene dirección cargada.
+            </Texto>
+          )}
+        </View>
+
         {detalle.descripcion_requerimiento ? (
           <View style={{ gap: 4 }}>
             <Texto tamano={tokens.size.micro} color={tokens.color.accent2Ramp["800"]} peso="semibold" style={{ textTransform: "uppercase", letterSpacing: 1.3 }}>
@@ -316,7 +386,14 @@ export function LevantamientoDetalleScreen({ route, navigation }: NativeStackScr
           ) : (
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: tokens.space["2"] }}>
               {detalle.fotos.map((f) => (
-                <Image key={f.id} source={{ uri: f.url }} style={{ width: 88, height: 88, borderRadius: tokens.radius.md, backgroundColor: tokens.color.neutral["200"] }} />
+                <View key={f.id} style={{ width: 88, gap: 3 }}>
+                  <Image source={{ uri: f.url }} style={{ width: 88, height: 88, borderRadius: tokens.radius.md, backgroundColor: tokens.color.neutral["200"] }} />
+                  {f.descripcion ? (
+                    <Texto tamano={tokens.size.micro} color={`${tokens.color.text}99`} numberOfLines={2}>
+                      {f.descripcion}
+                    </Texto>
+                  ) : null}
+                </View>
               ))}
               {fotosEnCola.map((a) => (
                 <View
@@ -354,6 +431,23 @@ export function LevantamientoDetalleScreen({ route, navigation }: NativeStackScr
           </View>
         ) : null}
       </ScrollView>
+
+      <Dialog abierto={fotoElegida != null} onCerrar={() => setFotoElegida(null)} titulo="Descripción de la foto">
+        {fotoElegida ? (
+          <View style={{ gap: tokens.space["3"] }}>
+            <Image source={{ uri: fotoElegida.uri }} style={{ width: "100%", height: 180, borderRadius: tokens.radius.md, backgroundColor: tokens.color.neutral["200"] }} resizeMode="cover" />
+            <Textarea
+              placeholder="Opcional — ej.: cableado dañado bajo el tablero"
+              valor={descripcionFoto}
+              onCambio={setDescripcionFoto}
+              filas={3}
+            />
+            <Button tamano="lg" bloque onPress={confirmarFoto}>
+              Agregar foto
+            </Button>
+          </View>
+        ) : null}
+      </Dialog>
 
       <Dialog abierto={pickerAbierto} onCerrar={() => setPickerAbierto(false)} titulo="Elegir del catálogo">
         {catalogo === null ? (

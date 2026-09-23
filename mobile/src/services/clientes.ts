@@ -75,6 +75,17 @@ export async function crearCliente(b: BorradorCliente): Promise<Resultado> {
   return res.ok ? { ok: true, cliente: res.data } : { ok: false, error: res.error };
 }
 
+// Actualiza SOLO la dirección — a propósito no reusa editarCliente
+// (23-sep-2026): esa manda el BorradorCliente completo, y acá (ej.
+// desde un Levantamiento) solo se tiene id/nombre/dirección del
+// cliente cargados — mandar el resto vacío borraría rut/teléfono/
+// correo/etc. que ya tenía. El backend (PATCH /api/clientes/:id) ya
+// actualiza solo los campos presentes en el body.
+export async function actualizarDireccionCliente(id: string, direccion: string): Promise<Resultado> {
+  const res = await apiJson<Cliente>(`/api/clientes/${id}`, { method: "PATCH", body: JSON.stringify({ direccion: direccion.trim() }) });
+  return res.ok ? { ok: true, cliente: res.data } : { ok: false, error: res.error };
+}
+
 export async function editarCliente(id: string, b: BorradorCliente & { activo?: boolean }): Promise<Resultado> {
   const res = await apiJson<Cliente>(`/api/clientes/${id}`, {
     method: "PATCH",

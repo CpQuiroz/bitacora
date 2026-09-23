@@ -1293,6 +1293,21 @@
       ],
       "status": "done",
       "resolution": "Diagnostico confirmado leyendo globals.css (--brand: #14314f) vs packages/design-tokens/tokens.css (--ds-brand: #c67139) y DashboardShell.tsx (pisa --ds-brand con el color_primario del tenant, NUNCA --brand) -- el logo quedaba fijo en azul marino en TODA la app (incluido el propio sidebar del dashboard), sin que nadie lo notara por ser un detalle chico. Se corrigio Logo.tsx (fix de 1 archivo, mejora todas las pantallas a la vez) y se reescribio page.tsx completo. Verificado en vivo con Chrome (localhost:3000) comparando landing vs login lado a lado -- ya comparten fondo/logo/tipografia/botones. Fuera de alcance a proposito (se menciona pero no se toca): el resto del Portal del Cliente y el Panel de Super-Admin todavia usan el otro sistema legado (web/src/components/ui.tsx, ~20 archivos) -- es un gap mas grande, no lo que se pidio esta vez. tsc + eslint + check-colores + verificar.sh en verde."
+    },
+    {
+      "id": 84,
+      "name": "levantamientos_direccion_materiales_1_1_y_descripcion_foto",
+      "title": "Levantamientos: direccion del cliente + investigar bug 1 1 en materiales + descripcion por foto",
+      "description": "Pedido: (1) el levantamiento necesita la direccion del cliente, agregarla del cliente si ya la tiene o dar opcion de agregarla; (2) los Item de Materiales muestran 1 1, no se sabe por que; (3) las fotos que se suben deberian tener una cajita para descripcion.",
+      "acceptance": [
+        "Direccion: GET /api/levantamientos (lista y detalle) suma direccion al join de cliente; LevantamientoResumen.cliente (shared) suma direccion; web muestra la direccion como link a Maps o un input+Guardar inline si falta (PATCH /api/clientes/:id, solo el campo direccion, sin pisar el resto); mobile igual, ademas con abrirMapa (mismo patron que TrabajoDetalleScreen)",
+        "Bug 1 1: investigado con datos reales de prod (script de solo lectura via service role, sin usar la CLI de supabase) -- CONFIRMADO que es un problema de datos, no de codigo: 9 de 10 catalogo_items en prod tienen unidad=\"1\" (una fila real en unidades_medida llamada literalmente \"1\", mas \"10\" y \"15\" tambien numericas) -- {cantidad} {unidad} ya renderizaba bien, el dato era el bug. Se agrega validacion en backend/src/routes/unidadesMedida.ts (POST y PATCH) rechazando un nombre de unidad puramente numerico, para que no vuelva a pasar. La correccion de las unidades ya existentes en prod queda para la usuaria (instrucciones dadas en el chat, no se escribio en la base directamente)",
+        "Descripcion por foto: migracion 124 (levantamiento_fotos.descripcion), shared types actualizados, POST /:id/fotos acepta descripcion opcional (multipart), nuevo PATCH /:id/fotos/:fotoId para editarla despues; web con input editable bajo cada miniatura (PATCH on blur); mobile pide la descripcion en un Dialog justo despues de elegir la foto, antes de encolarla (encolarFotoLevantamiento ahora acepta descripcion, viaja en el mismo multipart de la cola)",
+        "Verificado en vivo contra dev con Chrome: la direccion de un cliente real ya se ve como link a Maps en el detalle web",
+        "tsc (6 workspaces) + verificar.sh en verde"
+      ],
+      "status": "done",
+      "resolution": "Los 3 pedidos implementados. El hallazgo mas importante fue el del bug 1 1: se comprobo con un script de solo lectura (service role, NO CLI de supabase) contra prod que 9 de los 10 items del catalogo tienen unidad=\"1\" -- una unidad de medida real mal nombrada, probablemente creada por error via el combobox \"crear al vuelo\". El codigo de render ({cantidad} {unidad}) siempre estuvo bien. Se agrego una validacion que rechaza nombres de unidad puramente numericos para que no se pueda volver a crear una unidad asi -- la correccion de los datos ya existentes en prod (renombrar esa unidad, o reasignar cada item a la unidad correcta) se le explico a la usuaria en el chat, no se escribio directamente en la base de prod. Direccion y descripcion de foto implementadas en shared/backend/web/mobile con migracion 124. Verificado en vivo con Chrome contra dev (direccion real de un cliente ya aparece como link a Maps). tsc + verificar.sh en verde."
     }
   ]
 }

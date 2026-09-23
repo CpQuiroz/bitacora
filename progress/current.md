@@ -6007,6 +6007,51 @@ usan el otro sistema legado (`web/src/components/ui.tsx`) — es un gap
 más grande que el pedido de esta vez, queda anotado para si se pide
 después. Tarea 83 cerrada.
 
+## 23-sep-2026 — tarea 84: Levantamientos — dirección, bug "1 1", foto con descripción
+
+Pedido: (1) dirección del cliente en el levantamiento; (2) un bug
+donde los materiales muestran "1 1"; (3) cajita de descripción por
+foto subida.
+
+- **Dirección**: `GET /api/levantamientos` (lista y detalle) suma
+  `direccion` al join de cliente; tipo compartido actualizado. Web
+  muestra la dirección como link a Google Maps, o un input+"Guardar"
+  inline si el cliente no la tiene (PATCH acotado a `direccion`
+  únicamente — no pisa el resto de la ficha). Mobile igual, con
+  `abrirMapa()` (mismo patrón que `TrabajoDetalleScreen`). Verificado
+  en vivo con Chrome contra dev: la dirección real de "Comercial Andes
+  SpA" ya aparece como link.
+- **Bug "1 1" — investigado antes de tocar código**: un script de
+  solo lectura (service role directo, **sin usar la CLI de
+  supabase**) contra prod confirmó que **9 de los 10 ítems del
+  catálogo tienen `unidad = "1"`** — una fila real y mal nombrada en
+  `unidades_medida` (más "10" y "15", también numéricas). El código de
+  render (`{cantidad} {unidad}`) siempre estuvo bien — era un dato mal
+  cargado, probablemente tipeado por error en el combobox "crear al
+  vuelo" de unidad. Se agregó validación en
+  `backend/src/routes/unidadesMedida.ts` (POST y PATCH) que rechaza un
+  nombre de unidad puramente numérico, para que no se pueda repetir.
+  **La corrección de las 3 unidades ya existentes en prod (renombrar
+  "1"/"10"/"15" a algo real) se le explicó a la usuaria en el chat —
+  no se escribió directamente en la base de prod**, queda pendiente de
+  que ella lo haga desde Configuración > Catálogo.
+- **Descripción por foto**: migración 124
+  (`levantamiento_fotos.descripcion`), tipos compartidos actualizados,
+  `POST /:id/fotos` acepta `descripcion` opcional (mismo multipart),
+  nuevo `PATCH /:id/fotos/:fotoId` para editarla después. Web: input
+  editable bajo cada miniatura, PATCH al perder el foco. Mobile: pide
+  la descripción en un `Dialog` justo después de elegir la foto, antes
+  de encolarla (`encolarFotoLevantamiento` ahora la manda en el mismo
+  multipart de la cola offline, sin tocar `sync/queue.ts` — ya
+  soportaba campos de texto junto a un archivo).
+- `tsc` (6 workspaces) + `verificar.sh` en verde. Tarea 84 cerrada.
+
+**Pendiente de la usuaria**: renombrar en Catálogo las unidades "1",
+"10" y "15" a algo real (ej. "unidad", "litro", lo que corresponda a
+cada ítem) — la validación nueva ya impide que se repita, pero no
+tocó los datos existentes en prod. Correr la migración 124 en dev y
+prod.
+
 ## 23-sep-2026 — tarea 81: bajar el botón flotante del Asistente
 
 Pedido: "El asistente puede colocarlo un poco mas abajo o arriba, ahi

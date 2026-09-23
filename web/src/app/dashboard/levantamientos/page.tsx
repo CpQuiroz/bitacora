@@ -94,6 +94,20 @@ function LevantamientosContenido() {
   const [eliminandoFotoId, setEliminandoFotoId] = useState<string | null>(null);
   const [eliminando, setEliminando] = useState(false);
 
+  // Dirección del cliente (23-sep-2026, pedido explícito) — se muestra
+  // la que ya tiene en su ficha; si no tiene, se ofrece agregarla acá
+  // mismo (PATCH directo a /api/clientes, no es un campo propio del
+  // levantamiento).
+  const [direccionNueva, setDireccionNueva] = useState("");
+  const [guardandoDireccion, setGuardandoDireccion] = useState(false);
+
+  // Descripción por foto (mismo pedido) — texto libre editable debajo
+  // de cada miniatura, PATCH al perder el foco. Estado local aparte de
+  // `detalle.fotos` para no perder lo tipeado mientras el usuario sigue
+  // escribiendo (se resincroniza cada vez que se recarga el detalle).
+  const [descripcionesFotos, setDescripcionesFotos] = useState<Record<string, string>>({});
+  const [guardandoDescripcionFotoId, setGuardandoDescripcionFotoId] = useState<string | null>(null);
+
   async function cargarLevantamientos() {
     const res = await apiFetch("/api/levantamientos");
     if (!res.ok) {
@@ -200,6 +214,8 @@ function LevantamientosContenido() {
     const d: Detalle = await res.json();
     setDetalle(d);
     setReferenciaExterna(d.referencia_externa ?? "");
+    setDireccionNueva("");
+    setDescripcionesFotos(Object.fromEntries(d.fotos.map((f) => [f.id, f.descripcion ?? ""])));
     setEditando(false);
   }
 
@@ -249,6 +265,32 @@ function LevantamientosContenido() {
       return;
     }
     await abrirDetalle(detalle.id);
+  }
+
+  async function guardarDireccion() {
+    if (!detalle?.cliente || !direccionNueva.trim()) return;
+    setGuardandoDireccion(true);
+    const res = await apiFetch(`/api/clientes/${detalle.cliente.id}`, { method: "PATCH", body: JSON.stringify({ direccion: direccionNueva.trim() }) });
+    setGuardandoDireccion(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setDetalleError(body.error ?? "No se pudo guardar la dirección");
+      return;
+    }
+    await abrirDetalle(detalle.id);
+  }
+
+  async function guardarDescripcionFoto(fotoId: string, descripcionAnterior: string | null) {
+    if (!detalle) return;
+    const nueva = descripcionesFotos[fotoId] ?? "";
+    if (nueva === (descripcionAnterior ?? "")) return; // sin cambios — no pegarle a la API al tocar y salir sin escribir nada
+    setGuardandoDescripcionFotoId(fotoId);
+    const res = await apiFetch(`/api/levantamientos/${detalle.id}/fotos/${fotoId}`, { method: "PATCH", body: JSON.stringify({ descripcion: nueva }) });
+    setGuardandoDescripcionFotoId(null);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setDetalleError(body.error ?? "No se pudo guardar la descripción");
+    }
   }
 
   async function eliminarFoto(fotoId: string) {
@@ -461,7 +503,7 @@ function LevantamientosContenido() {
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-3 gap-ds-3 text-ds-small">
+                <div className="grid grid-cols-2 gap-ds-3 text-ds-small sm:grid-cols-4">
                   <div>
                     <span className="text-ds-text/60">Cliente</span>
                     <p className="text-ds-text">{detalle.cliente?.nombre ?? "—"}</p>
@@ -477,6 +519,35 @@ function LevantamientosContenido() {
                         ? fechaDesdeString(detalle.fecha_visita).toLocaleDateString("es-CL") + (detalle.hora_visita ? ` · ${detalle.hora_visita}` : "")
                         : "Sin fecha"}
                     </p>
+                  </div>
+                  <div>
+                    <span className="text-ds-text/60">Dirección</span>
+                    {detalle.cliente?.direccion ? (
+                      <p className="text-ds-text">
+                        <a
+                          href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(detalle.cliente.direccion)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="underline hover:text-ds-brand"
+                        >
+                          {detalle.cliente.direccion}
+                        </a>
+                      </p>
+                    ) : puedeEditar ? (
+                      <div className="mt-1 flex items-center gap-1">
+                        <input
+                          value={direccionNueva}
+                          onChange={(e) => setDireccionNueva(e.target.value)}
+                          placeholder="Agregar dirección…"
+                          className="h-8 min-w-0 flex-1 rounded-ds-sm border border-ds-divider bg-ds-surface px-ds-2 text-ds-small text-ds-text outline-none focus-visible:ring-2 focus-visible:ring-ds-accent"
+                        />
+                        <Button variante="secundario" tamano="sm" cargando={guardandoDireccion} deshabilitado={!direccionNueva.trim()} onPress={guardarDireccion}>
+                          Guardar
+                        </Button>
+                      </div>
+                    ) : (
+                      <p className="text-ds-text/60">Sin dirección</p>
+                    )}
                   </div>
                 </div>
 
@@ -541,20 +612,34 @@ function LevantamientosContenido() {
               ) : (
                 <div className="mt-1 flex flex-wrap gap-ds-2">
                   {detalle.fotos.map((f) => (
-                    <div key={f.id} className="group relative">
-                      <a href={f.url} target="_blank" rel="noopener noreferrer">
-                        {/* URL firmada (vence) — sin optimizer, con lazy-load igual. */}
-                        <Image src={f.url} alt="" width={96} height={96} unoptimized className="h-24 w-24 rounded-ds-md border border-ds-divider object-cover" />
-                      </a>
+                    <div key={f.id} className="flex w-24 flex-col gap-1">
+                      <div className="group relative">
+                        <a href={f.url} target="_blank" rel="noopener noreferrer">
+                          {/* URL firmada (vence) — sin optimizer, con lazy-load igual. */}
+                          <Image src={f.url} alt="" width={96} height={96} unoptimized className="h-24 w-24 rounded-ds-md border border-ds-divider object-cover" />
+                        </a>
+                        {puedeEditar ? (
+                          <button
+                            type="button"
+                            onClick={() => eliminarFoto(f.id)}
+                            disabled={eliminandoFotoId === f.id}
+                            className="absolute right-1 top-1 rounded-ds-pill bg-ds-accent-700 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100 disabled:opacity-50"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        ) : null}
+                      </div>
                       {puedeEditar ? (
-                        <button
-                          type="button"
-                          onClick={() => eliminarFoto(f.id)}
-                          disabled={eliminandoFotoId === f.id}
-                          className="absolute right-1 top-1 rounded-ds-pill bg-ds-accent-700 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100 disabled:opacity-50"
-                        >
-                          <Trash2 size={13} />
-                        </button>
+                        <input
+                          value={descripcionesFotos[f.id] ?? ""}
+                          onChange={(e) => setDescripcionesFotos((prev) => ({ ...prev, [f.id]: e.target.value }))}
+                          onBlur={() => guardarDescripcionFoto(f.id, f.descripcion)}
+                          disabled={guardandoDescripcionFotoId === f.id}
+                          placeholder="Descripción…"
+                          className="h-7 w-full rounded-ds-sm border border-ds-divider bg-ds-surface px-1 text-[11px] text-ds-text outline-none focus-visible:ring-2 focus-visible:ring-ds-accent"
+                        />
+                      ) : f.descripcion ? (
+                        <p className="text-[11px] leading-tight text-ds-text/70">{f.descripcion}</p>
                       ) : null}
                     </div>
                   ))}
