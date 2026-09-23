@@ -31,4 +31,5 @@ export const ETIQUETA_ACCION: Record<string, string> = {
   gestionar_plan: "Gestionar el plan y la suscripción de la empresa",
   config_agenda_pro: "Configurar Agenda Pro (servicios, horarios, paquetes)",
   ver_dashboard: "Ver el Dashboard con KPIs y finanzas de la empresa",
+  registrar_venta: "Registrar ventas a clientes (app móvil)",
 };

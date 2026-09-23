@@ -10,7 +10,6 @@ import type {
   Prioridad,
   RutaPlanificada,
   TipoCheckin,
-  TipoOsTrabajo,
   Trabajo,
   Usuario,
 } from "@bitacora/shared";
@@ -20,7 +19,6 @@ import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Button, Card, Input, Select, StatusBadge, Tag, Textarea } from "@bitacora/ui/web";
 import { ComboboxCliente } from "@/components/ComboboxCliente";
 import { ComboboxResponsable } from "@/components/ComboboxResponsable";
-import { SelectCrear } from "@/components/SelectCrear";
 import dynamic from "next/dynamic";
 import type { Parada } from "@/components/MapaRutas";
 // Leaflet ~148 KB — carga aparte (AUDITORIA_PERFORMANCE_COSTOS.md #7).
@@ -60,7 +58,6 @@ export default function NuevaRutaPage() {
   const [usuario, setUsuario] = useState<UsuarioShell | null>(null);
   const [equipo, setEquipo] = useState<Usuario[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
-  const [tiposTrabajo, setTiposTrabajo] = useState<TipoOsTrabajo[]>([]);
   const [trabajosSinRuta, setTrabajosSinRuta] = useState<Trabajo[]>([]);
   const [vehiculos, setVehiculos] = useState<VehiculoConAsignacion[]>([]);
 
@@ -83,8 +80,6 @@ export default function NuevaRutaPage() {
   // --- form: nueva tarea ---
   const [mostrarFormTarea, setMostrarFormTarea] = useState(false);
   const [clienteId, setClienteId] = useState("");
-  const [tipoTrabajoId, setTipoTrabajoId] = useState("");
-  const [datosDinamicos, setDatosDinamicos] = useState<Record<string, string>>({});
   const [etiquetas, setEtiquetas] = useState("");
   const [duracionMin, setDuracionMin] = useState("30");
   const [tipoCheckin, setTipoCheckin] = useState<TipoCheckin>("manual");
@@ -109,11 +104,10 @@ export default function NuevaRutaPage() {
         router.replace("/login");
         return;
       }
-      const [resMe, resEquipo, resClientes, resTipos, resVehiculos] = await Promise.all([
+      const [resMe, resEquipo, resClientes, resVehiculos] = await Promise.all([
         apiFetch("/api/me"),
         apiFetch("/api/usuarios"),
         apiFetch("/api/clientes"),
-        apiFetch("/api/tipos-os-trabajo"),
         apiFetch("/api/equipos"),
       ]);
       if (resMe.ok) {
@@ -128,7 +122,6 @@ export default function NuevaRutaPage() {
         if (lista.length > 0) setResponsableId(lista[0].id);
       }
       if (resClientes.ok) setClientes(await resClientes.json());
-      if (resTipos.ok) setTiposTrabajo(await resTipos.json());
       if (resVehiculos.ok) {
         const todosEquipos: VehiculoConAsignacion[] = await resVehiculos.json();
         setVehiculos(todosEquipos.filter((e) => e.categoria === "Vehículo"));
@@ -195,12 +188,8 @@ export default function NuevaRutaPage() {
     cargarTrabajosSinRuta();
   }
 
-  const tipoTrabajoSeleccionado = tiposTrabajo.find((t) => t.id === tipoTrabajoId);
-
   function limpiarFormTarea() {
     setClienteId("");
-    setTipoTrabajoId("");
-    setDatosDinamicos({});
     setEtiquetas("");
     setDuracionMin("30");
     setTipoCheckin("manual");
@@ -233,7 +222,6 @@ export default function NuevaRutaPage() {
     setGuardandoTarea(true);
     const formData = new FormData();
     formData.append("cliente_id", clienteId);
-    if (tipoTrabajoId) formData.append("tipo_id", tipoTrabajoId);
     formData.append("etiquetas", etiquetas);
     formData.append("duracion_estimada_min", duracionMin);
     formData.append("tipo_checkin", tipoCheckin);
@@ -241,9 +229,6 @@ export default function NuevaRutaPage() {
     formData.append("descripcion", descripcion);
     if (encuestaEmail.trim()) formData.append("encuesta_email", encuestaEmail.trim());
     if (codigo.trim()) formData.append("codigo", codigo.trim());
-    if (tipoTrabajoSeleccionado && Object.keys(datosDinamicos).length > 0) {
-      formData.append("datos", JSON.stringify(datosDinamicos));
-    }
     anexos.forEach((archivo) => formData.append("anexos", archivo));
 
     const res = await apiFetch(`/api/rutas-planificadas/${ruta.id}/tareas`, {
@@ -473,20 +458,6 @@ export default function NuevaRutaPage() {
                       />
                     </div>
 
-                    <div className="flex flex-col gap-ds-1">
-                      <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Tipo de tarea</label>
-                      <SelectCrear<TipoOsTrabajo>
-                        value={tipoTrabajoId}
-                        onChange={(id) => { setTipoTrabajoId(id); setDatosDinamicos({}); }}
-                        opciones={tiposTrabajo}
-                        endpoint="/api/tipos-os-trabajo"
-                        placeholder="Sin tipo específico"
-                        etiquetaCrear="+ Crear tipo de OS/Trabajo"
-                        onCreado={(nuevo) => setTiposTrabajo((prev) => [...prev, nuevo])}
-                        gestionHref="/dashboard/configuracion/tipos-os-trabajo"
-                        gestionLabel="Configurar tipos de OS/Trabajo →"
-                      />
-                    </div>
                     <Input
                       etiqueta="Duración estimada (min)"
                       iconoIzq={<Clock size={14} strokeWidth={2.75} />}
@@ -517,32 +488,6 @@ export default function NuevaRutaPage() {
                     />
                     <Input etiqueta="Código externo (opcional)" valor={codigo} onCambio={setCodigo} />
 
-                    {tipoTrabajoSeleccionado && tipoTrabajoSeleccionado.campos.length > 0 && (
-                      <div className="grid gap-ds-3 rounded-ds-md bg-ds-text/[0.04] p-ds-3 sm:col-span-2 sm:grid-cols-2">
-                        {tipoTrabajoSeleccionado.campos.map((campo) =>
-                          // Input (ds-) no tiene tipo "fecha" (solo lo usan estos campos
-                          // dinámicos del Tipo de OS/Trabajo) — reusa el input date nativo de
-                          // más abajo en vez de inventarle una variante puntual al
-                          // primitivo compartido.
-                          campo.tipo === "fecha" ? (
-                            <DatePickerCampo
-                              key={campo.clave}
-                              etiqueta={campo.etiqueta}
-                              valor={datosDinamicos[campo.clave] ?? ""}
-                              onCambio={(v) => setDatosDinamicos((prev) => ({ ...prev, [campo.clave]: v }))}
-                            />
-                          ) : (
-                            <Input
-                              key={campo.clave}
-                              etiqueta={campo.etiqueta}
-                              tipo={campo.tipo === "numero" ? "numero" : "texto"}
-                              valor={datosDinamicos[campo.clave] ?? ""}
-                              onCambio={(v) => setDatosDinamicos((prev) => ({ ...prev, [campo.clave]: v }))}
-                            />
-                          )
-                        )}
-                      </div>
-                    )}
 
                     <div className="sm:col-span-2">
                       {/* Textarea (ds-) no tiene `requerido` (Input sí) — la validación

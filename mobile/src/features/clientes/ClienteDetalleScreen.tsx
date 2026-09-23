@@ -120,6 +120,9 @@ export function ClienteDetalleScreen({ route, navigation }: NativeStackScreenPro
   if (!cliente) return null;
 
   const ultimoTrabajo = cliente.trabajos[0];
+  // Registrar venta: solo con la acción "registrar_venta" (hoy solo
+  // Admin) — el backend es la protección real.
+  const puedeVender = auth.fase === "listo" && auth.acciones.includes("registrar_venta");
 
   function registrarVenta() {
     if (!ultimoTrabajo) return Alert.alert("Sin OS", "Una venta nace de una cita o de una OS. Este cliente todavía no tiene ninguna.");
@@ -312,11 +315,13 @@ export function ClienteDetalleScreen({ route, navigation }: NativeStackScreenPro
       </ScrollView>
 
       {/* Pie */}
-      <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, backgroundColor: tokens.color.surface, borderTopWidth: 1, borderTopColor: tokens.color.divider, padding: tokens.space["4"] }}>
-        <Button bloque onPress={registrarVenta}>
-          Registrar venta
-        </Button>
-      </View>
+      {puedeVender ? (
+        <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, backgroundColor: tokens.color.surface, borderTopWidth: 1, borderTopColor: tokens.color.divider, padding: tokens.space["4"] }}>
+          <Button bloque onPress={registrarVenta}>
+            Registrar venta
+          </Button>
+        </View>
+      ) : null}
 
       <AsignarPackModal
         visible={asignando}

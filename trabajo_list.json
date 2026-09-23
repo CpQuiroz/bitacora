@@ -1571,6 +1571,20 @@
       "title": "Seguridad: permisos de escritura en /api/equipos",
       "status": "done",
       "resolution": "Antes ningún handler chequeaba permisos (cualquier colaborador podía crear/editar equipos y asignar vehículos). Ahora: vehículos → módulo flota; otros equipos → registros o flota; asignar/desasignar → flota. Lecturas sin cambios (las usa mobile). verificar.sh en verde; no probado contra la app real en esta sesión."
+    },
+    {
+      "id": 104,
+      "name": "os_quitar_tipo_y_mapa_creacion",
+      "title": "Nueva OS: quitar 'Tipo de OS/Trabajo' y el mapa; Rutas: quitar 'Tipo de tarea'",
+      "status": "done",
+      "resolution": "Decisión de la usuaria tras explicarle para qué sirve (en prod ningún tipo tiene campos ni checklist; 2 de 7 OS con tipo). web ordenes/nueva: sin selector de tipo, sin 'Datos medidos', sin preview de MapaRutas. web rutas/nueva: sin 'Tipo de tarea' ni sus campos. Backend sin cambios (tipo_id ya era opcional). Configuración > Tipos de OS/Trabajo y el PATCH tipo_id siguen existiendo. verificar.sh en verde."
+    },
+    {
+      "id": 105,
+      "name": "ventas_solo_admin",
+      "title": "Ventas: solo Admin puede registrar ventas (acción registrar_venta)",
+      "status": "done",
+      "resolution": "Pedido: 'de momento solo el Admin puede registrar venta, más adelante activamos otros roles; el chofer/colaborador no debiera poder'. Nueva acción 'registrar_venta' en ACCIONES (admin la tiene siempre; ningún otro rol por defecto; delegable desde Super-Admin > Roles sin tocar código ni migración). POST /api/ventas con requiereAccion('registrar_venta') — antes no chequeaba nada. Mobile: botón 'Registrar venta' oculto sin la acción (ClienteDetalle, TrabajoDetalle). verificar.sh en verde."
     }
   ]
 }

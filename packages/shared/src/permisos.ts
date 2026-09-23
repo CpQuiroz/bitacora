@@ -80,7 +80,10 @@ export const MODULOS_DELEGABLES_POR_EMPRESA: Modulo[] = MODULOS.filter(
 
 // Capacidades sensibles delegables a un rol (además de sus módulos). El
 // rol `admin` las tiene todas siempre, no hace falta listarlas.
-export const ACCIONES = ["facturar", "gestionar_plan", "config_agenda_pro", "ver_dashboard"] as const;
+// registrar_venta (23-sep-2026): por ahora solo el Admin puede registrar
+// ventas a clientes — se delega a otros roles desde el Panel de
+// Super-Admin > Roles cuando se decida (sin tocar código).
+export const ACCIONES = ["facturar", "gestionar_plan", "config_agenda_pro", "ver_dashboard", "registrar_venta"] as const;
 export type Accion = (typeof ACCIONES)[number];
 
 export const ACCIONES_POR_ROL: Record<Rol, Accion[]> = {

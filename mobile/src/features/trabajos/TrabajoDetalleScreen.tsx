@@ -524,7 +524,7 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
         {/* Registrar venta — independiente de en qué paso esté el
             cierre, se puede hacer en cualquier momento antes de
             finalizar (igual que en el flujo anterior). */}
-        {!finalizada && trabajo.cliente_id ? (
+        {!finalizada && trabajo.cliente_id && auth.fase === "listo" && auth.acciones.includes("registrar_venta") ? (
           <Button
             variante="secundario"
             bloque

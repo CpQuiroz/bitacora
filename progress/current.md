@@ -35,3 +35,7 @@ usuaria antes de tocar código. Decisiones de la usuaria:
 - T4 (PDF): aplicado (tarea 102).
 - T5 (ventas) y T6 (flota): no los marcó en el alcance — pendiente
   confirmar. Sí marcó cerrar permisos de Equipos (tarea 103).
+- Segunda ronda de decisiones: T1 quitar tipo + mapa (tarea 104); T2
+  nombres actuales; T5 al revés de lo pedido originalmente: solo Admin
+  vende (tarea 105, acción `registrar_venta`); T6 construir con tipos
+  fijos (en curso).

@@ -17,6 +17,7 @@ import { supabase } from "../supabase";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
 import { rolTieneAccion } from "../roles";
+import { requiereAccion } from "../permisos";
 
 export const ventasRouter = Router();
 
@@ -78,8 +79,12 @@ ventasRouter.get(
   })
 );
 
+// Solo quien tenga la acción "registrar_venta" (hoy: solo Admin, pedido
+// 23-sep-2026 — "el chofer/colaborador no debiera poder registrarle
+// venta a los clientes"). Antes el POST no chequeaba rol ni acción.
 ventasRouter.post(
   "/",
+  requiereAccion("registrar_venta"),
   ah<RequestConEmpresa>(async (req, res) => {
     const empresaId = req.empresaId!;
     const body = req.body ?? {};
