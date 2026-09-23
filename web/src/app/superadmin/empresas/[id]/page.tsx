@@ -597,17 +597,23 @@ export default function SuperAdminSaludEmpresaPage() {
     if (!salud || nuevo === salud.empresa.tema) return;
     setErrorTema(null);
     setGuardandoTema(true);
-    const res = await superadminFetch(`/api/superadmin/empresas/${params.id}/tema`, {
-      method: "PATCH",
-      body: JSON.stringify({ tema: nuevo }),
-    });
-    setGuardandoTema(false);
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      setErrorTema(body.error ?? "No se pudo cambiar el tema");
-      return;
+    // try/catch: un fetch que lanza (red/CORS) antes se perdía en
+    // silencio y el selector quedaba bloqueado en el valor viejo.
+    try {
+      const res = await superadminFetch(`/api/superadmin/empresas/${params.id}/tema`, {
+        method: "PATCH",
+        body: JSON.stringify({ tema: nuevo }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? `Error ${res.status}`);
+      }
+      setSalud((s) => (s ? { ...s, empresa: { ...s.empresa, tema: nuevo } } : s));
+    } catch (e) {
+      setErrorTema(`No se pudo cambiar el tema: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setGuardandoTema(false);
     }
-    cargar();
   }
 
   async function onCambiarEstado(nuevo: EstadoEmpresa) {

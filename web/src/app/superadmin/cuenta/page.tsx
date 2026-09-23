@@ -62,19 +62,30 @@ export default function SuperAdminCuentaPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Optimista: el selector y el panel cambian al instante; si el guardado
+  // falla se vuelve al anterior y se muestra el error REAL (antes, si el
+  // fetch lanzaba — red/CORS —, la excepción se perdía: el selector
+  // quedaba deshabilitado en el valor viejo sin ningún mensaje).
   async function onCambiarTema(nuevo: TemaSuperAdmin) {
     if (!cuenta || nuevo === cuenta.tema) return;
+    const anterior = cuenta.tema;
     setErrorTema(null);
-    setGuardandoTema(true);
-    const res = await superadminFetch("/api/superadmin/me/tema", { method: "PATCH", body: JSON.stringify({ tema: nuevo }) });
-    setGuardandoTema(false);
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      setErrorTema(body.error ?? "No se pudo cambiar el estilo");
-      return;
-    }
     setCuenta({ ...cuenta, tema: nuevo });
     guardarTemaSuperAdmin(nuevo);
+    setGuardandoTema(true);
+    try {
+      const res = await superadminFetch("/api/superadmin/me/tema", { method: "PATCH", body: JSON.stringify({ tema: nuevo }) });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? `Error ${res.status}`);
+      }
+    } catch (e) {
+      setCuenta((c) => (c ? { ...c, tema: anterior } : c));
+      guardarTemaSuperAdmin(anterior);
+      setErrorTema(`No se pudo guardar el estilo: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setGuardandoTema(false);
+    }
   }
 
   async function onCambiarPassword(e: FormEvent) {
