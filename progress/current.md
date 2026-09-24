@@ -37,3 +37,6 @@ en mobile, (3) paginación, (4) IA en fotos por plan [decisión pendiente],
 - (1) Tarea 116 (done): límites de OS/usuarios en todas las rutas +
   contador de storage que descuenta y se recalibra al llegar al tope.
 - (2) Tarea 117 (done): 403 con code LIMITE_PLAN; la cola offline mobile muestra el mensaje real. Requiere build.
+- (5) Tarea 118 (in_progress): migración 130 cierra el acceso directo PostgREST a todas las tablas. Falta que la usuaria la aplique en dev y prod.
+- (3) Paginación: relevamiento hecho (listas sin tope + agregaciones del dashboard en JS). Pendiente definir alcance con la usuaria.
+- (4) IA en fotos por plan: decisión pendiente de la usuaria.

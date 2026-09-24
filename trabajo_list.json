@@ -1690,6 +1690,18 @@
       "title": "Mobile: la cola offline muestra el motivo real de un 403 (tope del plan) en vez de 'Tu rol no tiene permiso'",
       "status": "done",
       "resolution": "LimiteAlcanzadoError lleva code 'LIMITE_PLAN' y el handler global lo incluye en el JSON de error (solo en errores esperados). La cola de sync (mobile/src/services/sync/queue.ts) lee el body de un 403 y muestra su `error` (ej. 'Llegaste al límite de órdenes de servicio de este mes…'); el texto de rol queda como fallback. Las pantallas online ya mostraban body.error vía apiJson. Requiere build mobile."
+    },
+    {
+      "id": 118,
+      "name": "cerrar_acceso_directo_postgrest",
+      "title": "Seguridad: cerrar el acceso directo vía PostgREST a todas las tablas (migración 130)",
+      "status": "in_progress",
+      "description": "Verificado en prod (24-sep-2026): authenticated/anon tenían INSERT/UPDATE/DELETE sobre todas las tablas de public y 68 políticas 'for all using (empresa_id = empresa_actual())'. Cualquier usuario con sesión (colaborador incluido) podía escribir su suscripción/cobros/historial de plan, editar una OS firmada o leer liquidaciones vía PostgREST con la anon key + su JWT. Web y mobile no usan tablas directo (solo Auth), el backend usa service role. Migración 130: revoke all de tablas y secuencias, revoke execute de funciones (menos empresa_actual) y default privileges cerrados para lo nuevo. RLS y políticas se mantienen.",
+      "acceptance": [
+        "Usuaria aplica 130 en dev y prueba web + mobile (login, OS, clientes, plan)",
+        "Usuaria aplica 130 en prod + migration repair",
+        "Verificación: has_table_privilege('authenticated', ...) = false en suscripciones/trabajos/liquidaciones"
+      ]
     }
   ]
 }
