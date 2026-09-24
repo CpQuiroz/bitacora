@@ -108,7 +108,7 @@ export default function RutasPage() {
           <RouteIcon size={24} strokeWidth={2.75} className="text-ds-brand" />
           Rutas
         </p>
-        <Link href="/dashboard/rutas/nueva">
+        <Link href="/dashboard/viajes/rutas/nueva">
           <Button>Nueva ruta</Button>
         </Link>
       </div>
@@ -123,7 +123,7 @@ export default function RutasPage() {
               {
                 encabezado: "Ruta",
                 celda: (r) => (
-                  <Link href={`/dashboard/rutas/${r.id}`} className="font-medium text-ds-brand hover:underline">
+                  <Link href={`/dashboard/viajes/rutas/${r.id}`} className="font-medium text-ds-brand hover:underline">
                     {r.nombre || equipo.find((u) => u.id === r.responsable_id)?.nombre || "Ruta"}
                   </Link>
                 ),

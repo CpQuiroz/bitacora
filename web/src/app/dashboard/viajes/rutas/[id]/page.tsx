@@ -80,7 +80,7 @@ export default function VerRutaPage() {
 
   return (
     <DashboardShell usuario={usuario}>
-      <Link href="/dashboard/rutas" className="mb-ds-4 inline-flex items-center gap-ds-1 font-ds-body text-ds-small font-medium text-ds-brand hover:underline">
+      <Link href="/dashboard/viajes/rutas" className="mb-ds-4 inline-flex items-center gap-ds-1 font-ds-body text-ds-small font-medium text-ds-brand hover:underline">
         <ChevronLeft size={16} strokeWidth={2.75} />
         Rutas
       </Link>

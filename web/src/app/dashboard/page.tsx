@@ -75,7 +75,7 @@ const PERIODOS = [
 const ACCESOS: { href: string; label: string; icon: typeof Briefcase; modulo: Modulo }[] = [
   { href: "/dashboard/ordenes", label: "Órdenes de servicio", icon: ClipboardCheck, modulo: "ordenes_servicio" },
   { href: "/dashboard/registros/clientes", label: "Clientes", icon: MapPin, modulo: "registros" },
-  { href: "/dashboard/rutas", label: "Rutas", icon: Route, modulo: "rutas" },
+  { href: "/dashboard/viajes/rutas", label: "Rutas", icon: Route, modulo: "rutas" },
   { href: "/dashboard/financiero/cobros", label: "Cobros", icon: Receipt, modulo: "cobros" },
   { href: "/dashboard/financiero/cotizaciones", label: "Cotizaciones", icon: Tag, modulo: "cotizaciones" },
   { href: "/dashboard/gastos", label: "Gastos", icon: Wallet, modulo: "financiero" },

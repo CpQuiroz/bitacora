@@ -409,7 +409,7 @@ export default function PersonaFichaPage() {
             ) : rutas.length === 0 ? (
               <p className="font-ds-body text-ds-small text-ds-text/70">
                 Sin rutas planificadas asignadas — se configuran en{" "}
-                <Link href="/dashboard/rutas" className="font-medium text-ds-brand hover:underline">
+                <Link href="/dashboard/viajes/rutas" className="font-medium text-ds-brand hover:underline">
                   Rutas
                 </Link>
                 .

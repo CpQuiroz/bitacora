@@ -169,3 +169,7 @@ PUBLICADO 24-sep-2026 ~07:07: main 1c304bc (fast-forward, 23 commits). Render in
 Vercel READY; /health 200; /api/modulos 401 sin sesión (backend nuevo). El aviso ERR_ERL_PERMISSIVE_TRUST_PROXY
 aparecía en la instancia anterior de prod → confirmado que el arreglo de trust proxy era necesario.
 Tarea 124 → done. Pendiente de la usuaria: planes en Flow + FLOW_PLAN_ID_* en Render; build mobile (126).
+- Decisiones de la usuaria (24-sep): editar monto = Admin y Supervisor (no el chofer) con historial; hora
+  opcional en el viaje; al borrar un cobro, sus viajes vuelven a quedar disponibles. Nuevo pedido: viáticos
+  (local / interregional) por viaje que se registran como gasto "Viáticos" — propuesta pendiente de OK.
+- 130 HECHA (Rutas dentro de Viajes + redirect + migración 134 ruta_viajes). 131 en curso.

@@ -9,7 +9,7 @@ import { IconBell } from "./icons";
 const RUTA_POR_ENTIDAD: Record<string, (id: string) => string> = {
   trabajo: (id) => `/dashboard/trabajos/${id}`,
   factura: () => `/dashboard/financiero/cobros`,
-  ruta: () => `/dashboard/rutas`,
+  ruta: () => `/dashboard/viajes/rutas`,
   usuario: () => `/dashboard/personas`,
   cotizacion: (id) => `/dashboard/financiero/cotizaciones/${id}`,
   tarea: () => `/dashboard/agenda`,

@@ -30,7 +30,6 @@ import {
   Menu,
   Paperclip,
   Receipt,
-  Route,
   Search,
   Settings,
   Sparkles,
@@ -42,7 +41,8 @@ import {
   Wrench,
 } from "lucide-react";
 
-type NavLeaf = { href: string; label: string };
+// `modulo` en un subitem: se oculta si ese módulo no está visible.
+type NavLeaf = { href: string; label: string; modulo?: Modulo };
 type NavItem =
   | { href: string; label: string; icon: typeof Home; modulo: Modulo | null; modulos?: Modulo[]; children?: undefined }
   | { label: string; icon: typeof Home; children: NavLeaf[]; modulo: Modulo | null; modulos?: Modulo[]; href?: undefined };
@@ -75,8 +75,18 @@ const NAV_GROUPS: NavGroup[] = [
       // viven dentro de la página.
       { href: "/dashboard/ordenes", label: "Órdenes de servicio", icon: ClipboardCheck, modulo: "ordenes_servicio" },
       // Módulos apagables, cada uno con su propio gate.
-      { href: "/dashboard/rutas", label: "Rutas", icon: Route, modulo: "rutas" },
-      { href: "/dashboard/viajes", label: "Viajes", icon: Truck, modulo: "viajes" },
+      // Rutas es una subsección de Viajes (tarea 130, 24-sep-2026); cada
+      // subitem conserva su módulo. /dashboard/rutas redirige (next.config).
+      {
+        label: "Viajes",
+        icon: Truck,
+        modulo: null,
+        modulos: ["viajes", "rutas"],
+        children: [
+          { href: "/dashboard/viajes", label: "Viajes", modulo: "viajes" },
+          { href: "/dashboard/viajes/rutas", label: "Rutas", modulo: "rutas" },
+        ],
+      },
       // Historial de lo propio (Fase 5.3, 23-sep-2026) — self-service,
       // sin módulo (mismo criterio que /api/mis-trabajos): no depende
       // de si la empresa activó Levantamientos/OS como módulos
@@ -376,9 +386,11 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
   // muestra un encabezado de sección flotando sin nada debajo.
   const gruposVisibles = NAV_GROUPS.map((g) => ({
     ...g,
-    items: g.items.filter((item) =>
-      item.modulos ? item.modulos.some(moduloVisible) : item.modulo === null || moduloVisible(item.modulo)
-    ),
+    items: g.items
+      .filter((item) => (item.modulos ? item.modulos.some(moduloVisible) : item.modulo === null || moduloVisible(item.modulo)))
+      // Subitems con su propio módulo: se ocultan los que no se ven.
+      .map((item) => (item.children ? { ...item, children: item.children.filter((c) => !c.modulo || moduloVisible(c.modulo)) } : item))
+      .filter((item) => !item.children || item.children.length > 0),
   })).filter((g) => g.items.length > 0);
 
   function esActivoLeaf(href: string): boolean {
@@ -452,7 +464,12 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
                 {abierto && (
                   <div className="ml-4 mt-0.5 flex flex-col gap-0.5 border-l border-ds-divider pl-3">
                     {item.children.map((c) => {
-                      const activoHijo = pathname.startsWith(c.href);
+                      // El subitem más específico que calza: /dashboard/viajes/rutas
+                      // no debe marcar también "Viajes" (/dashboard/viajes).
+                      const masEspecifico = item.children
+                        .filter((h) => pathname.startsWith(h.href))
+                        .sort((a, b) => b.href.length - a.href.length)[0];
+                      const activoHijo = masEspecifico?.href === c.href;
                       return (
                         <Link
                           key={c.href}
