@@ -16,6 +16,7 @@
 // ============================================================
 import { supabase } from "./supabase";
 import { empresaPuedeUsarRol } from "./roles";
+import { LimiteAlcanzadoError, verificarLimiteUsuarios } from "./limites";
 
 export function normalizarCorreo(email: string): string {
   return email.trim().toLowerCase();
@@ -110,6 +111,18 @@ export async function aprovisionarUsuario(params: {
   rol: string;
   nombre: string;
 }) {
+  // Un acceso autorizado por correo/dominio es un usuario más: respeta el
+  // tope del plan igual que una invitación. Si no hay cupo, no se crea la
+  // fila y /api/me responde "denegado" (el admin ve el tope al invitar).
+  try {
+    await verificarLimiteUsuarios(params.empresaId);
+  } catch (e) {
+    if (e instanceof LimiteAlcanzadoError) {
+      console.warn(`Acceso autorizado sin cupo de usuarios (empresa ${params.empresaId})`);
+      return null;
+    }
+    throw e;
+  }
   const { data, error } = await supabase
     .from("usuarios")
     .insert({

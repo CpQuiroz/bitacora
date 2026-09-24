@@ -1676,6 +1676,13 @@
         "URLs de confirmación/retorno en Flow (y webhook de WhatsApp) actualizadas",
         "Servicio de Ohio borrado solo cuando no reciba tráfico"
       ]
+    },
+    {
+      "id": 116,
+      "name": "limites_plan_sin_huecos",
+      "title": "Límites del plan: cerrar las rutas que los saltaban + contador de storage que baja",
+      "status": "done",
+      "resolution": "verificarLimiteOS ahora también en convertir cotización→OS (cotizaciones.ts) y en crear tarea de ruta planificada (rutasPlanificadas.ts). verificarLimiteUsuarios también al reactivar un usuario (PATCH usuarios) y al aprovisionar un acceso autorizado por correo/dominio (sin cupo → no crea la fila, /api/me responde denegado). Storage: borrarFoto mide el objeto (HeadObject) y descuenta del contador; al llegar al tope, verificarLimiteStorage recalibra el contador contra el uso real del bucket (medirUsoStorage, solo si el listado fue completo) antes de bloquear. Super-Admin puede seguir reactivando por encima del tope (override deliberado)."
     }
   ]
 }

@@ -27,3 +27,12 @@
   org en plan FREE (sin backups, 1 GB storage), Vercel en cuenta personal
   (probable Hobby = sin uso comercial).
 - Nuevo `docs/DEUDA_TECNICA.md`: listado de deuda técnica (111 y 115) con pasos.
+
+## 24-sep-2026 — mejoras post-auditoría, 1 a 1
+
+Orden pedido por la usuaria: (1) huecos en límites, (2) mensaje de límite
+en mobile, (3) paginación, (4) IA en fotos por plan [decisión pendiente],
+(5) RLS de suscripciones, (6) tests, (7) tareas programadas.
+
+- (1) Tarea 116 (done): límites de OS/usuarios en todas las rutas +
+  contador de storage que descuenta y se recalibra al llegar al tope.

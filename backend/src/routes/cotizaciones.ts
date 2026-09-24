@@ -10,6 +10,7 @@ import { subirPdfCotizacion, descargarPdfCotizacion, urlFirmadaPdfCotizacion } f
 import { notificarCliente } from "../notificarCliente";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
+import { verificarLimiteOS } from "../limites";
 
 export const cotizacionesRouter = Router();
 
@@ -442,6 +443,10 @@ cotizacionesRouter.post(
       res.status(400).json({ error: "Esta cotización ya fue convertida en una OS" });
       return;
     }
+
+    // Convertir crea una OS nueva: cuenta para el tope mensual del plan,
+    // igual que POST /api/trabajos.
+    await verificarLimiteOS(req.empresaId!);
 
     const clienteNombre = (cotizacion as { cliente_info?: { nombre?: string } }).cliente_info?.nombre ?? "Cliente";
 

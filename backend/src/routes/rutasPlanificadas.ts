@@ -10,6 +10,7 @@ import { crearOrdenServicio } from "../ordenes";
 import { equipoAsignadoAColaborador } from "./equipos";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
+import { verificarLimiteOS } from "../limites";
 
 export const rutasPlanificadasRouter = Router();
 
@@ -286,6 +287,9 @@ rutasPlanificadasRouter.post(
         return;
       }
     }
+
+    // Antes de subir anexos: una tarea de ruta es una OS más del mes.
+    await verificarLimiteOS(req.empresaId!);
 
     const archivos = (req.files as Express.Multer.File[] | undefined) ?? [];
     const anexos: Anexo[] = [];

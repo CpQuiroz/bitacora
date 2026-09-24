@@ -1338,7 +1338,7 @@ trabajosRouter.delete(
       .eq("id", orden.id);
     // El objeto de storage se borra al final: si falla, la fila ya no
     // está y el archivo huérfano no molesta (lo barre el conteo de uso).
-    await borrarFoto(foto.foto_url).catch((e) => console.error("borrarFoto:", e));
+    await borrarFoto(req.empresaId!, foto.foto_url).catch((e) => console.error("borrarFoto:", e));
 
     res.status(204).end();
   })

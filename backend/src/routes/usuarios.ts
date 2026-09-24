@@ -209,6 +209,8 @@ usuariosRouter.patch(
     if (activo !== undefined) {
       const activoBool = Boolean(activo);
       if (activoBool !== actual.activo) {
+        // Reactivar suma un usuario activo: mismo tope que invitar.
+        if (activoBool) await verificarLimiteUsuarios(req.empresaId!);
         cambios.activo = activoBool;
         cambiosAuditoria.push({ campo: "activo", anterior: String(actual.activo), nuevo: String(activoBool) });
       }

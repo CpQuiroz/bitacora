@@ -14,11 +14,12 @@ import {
   PutObjectCommand,
   GetObjectCommand,
   DeleteObjectCommand,
+  HeadObjectCommand,
   ListObjectsV2Command,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { env } from "./env";
-import { verificarLimiteStorage, incrementarStorageUsado } from "./limites";
+import { verificarLimiteStorage as verificarLimiteContador, incrementarStorageUsado, descontarStorageUsado } from "./limites";
 
 const client = new S3Client({
   endpoint: env.STORAGE_ENDPOINT,
@@ -41,6 +42,16 @@ const client = new S3Client({
 });
 
 const BUCKET = env.STORAGE_BUCKET;
+
+// Todas las subidas pasan por acá: verifica el tope del plan y, si el
+// contador aproximado dice que se pasó, recalibra contra el uso real del
+// bucket antes de bloquear (ver verificarLimiteStorage en limites.ts).
+function verificarLimiteStorage(empresaId: string, bytesNuevos: number): Promise<void> {
+  return verificarLimiteContador(empresaId, bytesNuevos, async () => {
+    const medicion = await medirUsoStorage(empresaId);
+    return medicion.completo ? medicion.bytesTotal : null;
+  });
+}
 
 // ------------------------------------------------------------
 // Sube una foto de un trabajo
@@ -361,8 +372,11 @@ export async function descargarFoto(key: string): Promise<Buffer> {
 
 // Borra el objeto de una foto de trabajo del bucket. Solo se llama
 // mientras la OS NO está firmada (DELETE /api/trabajos/:id/fotos/:fotoId).
-export async function borrarFoto(key: string): Promise<void> {
+// Descuenta el tamaño real del objeto del contador de uso de la empresa.
+export async function borrarFoto(empresaId: string, key: string): Promise<void> {
+  const cabecera = await client.send(new HeadObjectCommand({ Bucket: BUCKET, Key: key })).catch(() => null);
   await client.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: key }));
+  descontarStorageUsado(empresaId, cabecera?.ContentLength ?? 0);
 }
 
 // ------------------------------------------------------------
@@ -470,7 +484,7 @@ export async function subirFotoGuiaConNombre(
 // un total exacto.
 const MAX_PAGINAS_LISTADO = 20;
 
-async function sumarTamanioBucket(bucket: string, empresaId: string): Promise<number> {
+async function sumarTamanioBucket(bucket: string, empresaId: string): Promise<{ bytes: number; completo: boolean }> {
   let total = 0;
   let continuationToken: string | undefined;
   for (let pagina = 0; pagina < MAX_PAGINAS_LISTADO; pagina++) {
@@ -482,15 +496,26 @@ async function sumarTamanioBucket(bucket: string, empresaId: string): Promise<nu
       })
     );
     for (const objeto of resultado.Contents ?? []) total += objeto.Size ?? 0;
-    if (!resultado.IsTruncated || !resultado.NextContinuationToken) break;
+    if (!resultado.IsTruncated || !resultado.NextContinuationToken) return { bytes: total, completo: true };
     continuationToken = resultado.NextContinuationToken;
   }
-  return total;
+  // Se cortó por MAX_PAGINAS_LISTADO: el total es un piso, no el real.
+  return { bytes: total, completo: false };
 }
 
-export async function medirUsoStorage(empresaId: string): Promise<{ bytesTotal: number; incluyeAvatares: false }> {
+// `completo` es false si algún bucket falló o se cortó el listado — en ese
+// caso bytesTotal es solo un piso (no sirve para recalibrar el contador).
+export async function medirUsoStorage(
+  empresaId: string
+): Promise<{ bytesTotal: number; completo: boolean; incluyeAvatares: false }> {
   const tamanos = await Promise.all(
-    [BUCKET, BUCKET_LOGOS, BUCKET_ANEXOS].map((bucket) => sumarTamanioBucket(bucket, empresaId).catch(() => 0))
+    [BUCKET, BUCKET_LOGOS, BUCKET_ANEXOS].map((bucket) =>
+      sumarTamanioBucket(bucket, empresaId).catch(() => ({ bytes: 0, completo: false }))
+    )
   );
-  return { bytesTotal: tamanos.reduce((a, b) => a + b, 0), incluyeAvatares: false };
+  return {
+    bytesTotal: tamanos.reduce((a, t) => a + t.bytes, 0),
+    completo: tamanos.every((t) => t.completo),
+    incluyeAvatares: false,
+  };
 }

@@ -53,15 +53,30 @@ export async function verificarLimiteOS(empresaId: string): Promise<void> {
   }
 }
 
-export async function verificarLimiteStorage(empresaId: string, bytesNuevos: number): Promise<void> {
+// `medirReal` (opcional) mide el uso REAL del bucket. El contador de
+// empresas.storage_bytes_usado es aproximado (se suma sin esperar, no
+// cuenta firmas/logos/PDFs y solo baja al borrar fotos de OS), así que
+// antes de bloquear una subida se recalibra contra el bucket: si el uso
+// real deja espacio, se corrige el contador y la subida pasa. Solo se
+// mide al llegar al tope — el camino normal sigue siendo una lectura.
+export async function verificarLimiteStorage(
+  empresaId: string,
+  bytesNuevos: number,
+  medirReal?: () => Promise<number | null>
+): Promise<void> {
   const plan = await obtenerPlan(empresaId);
   const limiteBytes = LIMITES_POR_PLAN[plan].storageGB * 1024 ** 3;
   const { data } = await supabase.from("empresas").select("storage_bytes_usado").eq("id", empresaId).maybeSingle();
-  if ((data?.storage_bytes_usado ?? 0) + bytesNuevos > limiteBytes) {
-    throw new LimiteAlcanzadoError(
-      `Llegaste al límite de almacenamiento de tu plan (${LIMITES_POR_PLAN[plan].storageGB} GB) — pasa a un plan superior o libera espacio.`
-    );
+  if ((data?.storage_bytes_usado ?? 0) + bytesNuevos <= limiteBytes) return;
+
+  const real = medirReal ? await medirReal().catch(() => null) : null;
+  if (real != null) {
+    await supabase.from("empresas").update({ storage_bytes_usado: real }).eq("id", empresaId);
+    if (real + bytesNuevos <= limiteBytes) return;
   }
+  throw new LimiteAlcanzadoError(
+    `Llegaste al límite de almacenamiento de tu plan (${LIMITES_POR_PLAN[plan].storageGB} GB) — pasa a un plan superior o libera espacio.`
+  );
 }
 
 // No se espera esta escritura — es solo un contador aproximado (ver
@@ -69,6 +84,16 @@ export async function verificarLimiteStorage(empresaId: string, bytesNuevos: num
 export function incrementarStorageUsado(empresaId: string, bytes: number): void {
   void supabase.rpc("incrementar_storage_usado", { p_empresa_id: empresaId, p_bytes: bytes }).then(({ error }) => {
     if (error) console.error("Error incrementando storage_bytes_usado:", error);
+  });
+}
+
+// Contraparte de incrementarStorageUsado al borrar un objeto. Misma RPC
+// con bytes negativos; si el contador quedara por debajo de lo real, la
+// recalibración de verificarLimiteStorage lo corrige al llegar al tope.
+export function descontarStorageUsado(empresaId: string, bytes: number): void {
+  if (bytes <= 0) return;
+  void supabase.rpc("incrementar_storage_usado", { p_empresa_id: empresaId, p_bytes: -bytes }).then(({ error }) => {
+    if (error) console.error("Error descontando storage_bytes_usado:", error);
   });
 }
 
