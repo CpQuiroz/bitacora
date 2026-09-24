@@ -91,8 +91,15 @@ export const app = express();
 // cualquier ruta. Ver checklist de seguridad pre-lanzamiento.
 app.use(helmet());
 // Para que req.ip sea la IP real del cliente (historial de accesos en
-// Seguridad) cuando el backend corre detrás de un proxy/load balancer.
-app.set("trust proxy", true);
+// Seguridad, límites de intentos de login) detrás del proxy de Render.
+// Se confía en EXACTAMENTE 1 salto (el de Render), no en `true`: con
+// `true` cualquiera podía mandar su propio X-Forwarded-For y aparecer
+// con otra IP en cada intento, saltándose el límite de intentos de login
+// (aviso ERR_ERL_PERMISSIVE_TRUST_PROXY de express-rate-limit).
+// ⚠️ Si algún día se pone otro proxy delante (ej. Cloudflare con la nube
+// naranja en un dominio propio, tarea 115), hay que subirlo a 2 — si no,
+// todos los usuarios quedan con la IP de ese proxy y comparten el límite.
+app.set("trust proxy", 1);
 // Sin ALLOWED_ORIGINS configurada (dev local), solo se permite el dev
 // server de Next.js — nunca "*". En producción, ALLOWED_ORIGINS debe
 // listar los dominios reales separados por coma.

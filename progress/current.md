@@ -131,3 +131,14 @@ Review etapa 3 (progress/review_planes_etapa3.md): APROBADO. Corregidas las 2 re
 - R1: el límite de /solicitar y /cotizar-empresa cuenta por empresa (no por IP falsificable). Probado: 4ª → 429 con IP distinta.
 - R2 (preexistente): empresa.ts compara rutas por segmento (esRuta); la prueba vencida ya no deja usar
   /api/plantillas ni /api/planes-mantencion. Probado en DEV: plantillas 403, plan 200, módulos 200.
+
+trust proxy (pedido de la usuaria: analizar impacto y aplicar si no hay riesgo) — HECHO 24-sep:
+- Render pone 1 proxy delante (docs y otros proyectos) → `app.set("trust proxy", 1)`. Con `true` se podía
+  falsear X-Forwarded-For y saltarse el límite de intentos de login.
+- Impacto revisado: req.ip se usa en rate limits (login, invitaciones, encuesta, portal), historial de accesos,
+  consentimientos y auditoría del Super-Admin — todos siguen recibiendo la IP real del cliente.
+- Riesgo futuro anotado en DEUDA_TECNICA (tarea 115): si el backend pasa por Cloudflare con proxy (nube
+  naranja), subir a 2.
+- Probado en local simulando Render: 11 intentos con IP falsa distinta y la misma IP real → el 11º da 429;
+  otra IP real no se bloquea. Sin aviso ERR_ERL_PERMISSIVE_TRUST_PROXY.
+- Datos de prueba QA borrados de DEV (5 usuarios, 3 OS, empresa QA, super-admin QA): comprobado en 0.

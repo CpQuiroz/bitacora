@@ -33,6 +33,10 @@ en Flow.
    `/health`, mismas variables de entorno.
 2. Dominio propio en el servicio nuevo (ej. `api.transportesitineris.cl`)
    + CNAME en Cloudflare. Así la URL no vuelve a depender de Render.
+   ⚠️ El CNAME en **modo DNS only (nube gris)**. Si se deja "Proxied" (nube
+   naranja), Cloudflare suma un segundo proxy: hay que cambiar
+   `app.set("trust proxy", 1)` a `2` en `backend/src/server.ts`, o todos los
+   usuarios compartirían el límite de intentos de login.
 3. Vercel: `NEXT_PUBLIC_API_URL` (Production y Preview) al dominio propio
    y redeploy.
 4. Flow (y Meta/WhatsApp si aplica): URLs de confirmación/retorno.
