@@ -311,9 +311,17 @@ export async function procesar(): Promise<void> {
           reintentoIntento = 0; // algo salió: el backoff vuelve a empezar corto
           await persistir();
         } else if (res.status === 401 || res.status === 403) {
-          // Sesión vencida o sin permiso — reintentar no lo va a arreglar.
+          // Sesión vencida, sin permiso o tope del plan — reintentar solo
+          // no lo va a arreglar. Un 403 trae el motivo real del backend
+          // (ej. code "LIMITE_PLAN": "Llegaste al límite de órdenes…"):
+          // se muestra ese texto; queda fallida y se puede reintentar
+          // desde Perfil cuando se libere cupo o se suba de plan.
+          const body = res.status === 403 ? await res.json().catch(() => ({})) : {};
           a.fallida = true;
-          a.ultimoError = res.status === 401 ? "Tu sesión venció — sal y vuelve a entrar" : "Tu rol no tiene permiso para esto";
+          a.ultimoError =
+            res.status === 401
+              ? "Tu sesión venció — sal y vuelve a entrar"
+              : (body as { error?: string }).error ?? "Tu rol no tiene permiso para esto";
           await persistir();
           continue;
         } else {

@@ -458,7 +458,8 @@ app.use((err: unknown, req: express.Request, res: express.Response, _next: expre
     })();
   }
 
-  res.status(status).json({ error: mensaje });
+  const posibleCode = err instanceof Error ? (err as unknown as { code?: unknown }).code : undefined;
+  res.status(status).json(esperado && typeof posibleCode === "string" ? { error: mensaje, code: posibleCode } : { error: mensaje });
 });
 
 // Red de seguridad a nivel proceso (AUDITORIA_RESILIENCIA.md R5). Casi

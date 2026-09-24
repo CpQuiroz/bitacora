@@ -11,6 +11,9 @@ import { supabase } from "./supabase";
 
 export class LimiteAlcanzadoError extends Error {
   status = 403;
+  // Viaja en el JSON de error (handler global de server.ts) para que los
+  // clientes distingan "tope del plan" de "sin permiso" (ambos son 403).
+  code = "LIMITE_PLAN";
   constructor(mensaje: string) {
     super(mensaje);
     this.name = "LimiteAlcanzadoError";

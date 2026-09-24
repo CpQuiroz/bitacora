@@ -36,3 +36,4 @@ en mobile, (3) paginación, (4) IA en fotos por plan [decisión pendiente],
 
 - (1) Tarea 116 (done): límites de OS/usuarios en todas las rutas +
   contador de storage que descuenta y se recalibra al llegar al tope.
+- (2) Tarea 117 (done): 403 con code LIMITE_PLAN; la cola offline mobile muestra el mensaje real. Requiere build.
