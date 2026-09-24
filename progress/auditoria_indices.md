@@ -73,3 +73,10 @@ Otro índice ya cubre las mismas columnas y se usa en su lugar. Borrarlos ahorra
 2. **Validación:** `EXPLAIN ANALYZE` en DEV de cada consulta de A1–A7, con `enable_seqscan = off`, para confirmar que Postgres usa el índice nuevo. Es la regla del proyecto para índices nuevos.
 3. **C1 y C2 como tareas aparte**, con sus pruebas.
 4. **Prod:** la migración la corre la usuaria, como siempre.
+
+## 7. Resultado en DEV (24-sep-2026)
+- Migración 139 aplicada: 26 índices creados y los 5 redundantes borrados.
+- `EXPLAIN` con `enable_seqscan = off` y UUID constantes:
+  - A1–A5 y A7 usan su índice nuevo, con `empresa_id` (y usuario, tipo o fecha) dentro de la condición del índice.
+  - A6 eligió el índice existente `trabajos_responsable_id_idx`, porque DEV casi no tiene datos y estima 1 fila. Hay que revisarlo cuando haya volumen real; el índice nuevo además entrega el orden por fecha.
+- La primera validación usaba `gen_random_uuid()`. Es una función volátil, así que Postgres no la puede usar como condición de índice; se corrigió con valores fijos.

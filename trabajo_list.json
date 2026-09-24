@@ -1861,9 +1861,9 @@
       "id": 139,
       "name": "auditoria_indices",
       "title": "Índices: consultas calientes, FKs sin índice y redundantes (auditoría 24-sep)",
-      "status": "in_progress",
+      "status": "blocked",
       "description": "Auditoría en progress/auditoria_indices.md, aprobada por la usuaria. Migración 139: 7 índices para rutas calientes (A1-A7), 19 FKs sin índice, borrar 5 redundantes. Validar con EXPLAIN ANALYZE en DEV.",
-      "resolution": ""
+      "resolution": "Migración 139_indices_auditoria.sql: 7 índices de rutas calientes (A1-A7), 19 FKs, borra 5 redundantes. DEV: aplicada; 26 índices creados, 0 redundantes restantes; EXPLAIN (enable_seqscan=off, UUID constantes) → A1-A5 y A7 usan el índice nuevo con empresa_id en la condición; A6 eligió trabajos_responsable_id_idx por estimar 1 fila (DEV casi vacío), revisar con volumen real. BLOQUEADA hasta que la usuaria corra la 139 en prod."
     },
     {
       "id": 140,

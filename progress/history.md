@@ -255,3 +255,10 @@ Formato:
 - **Cambios:** la usuaria corrió en prod las migraciones 134-138 (verificadas por SELECT; 0 usuarios contador). main 1c304bc → 8b95e9c (fast-forward, 13 commits).
 - **Verificación:** verificar.sh verde; Render deploy dep-daqpegbl550s73cqock0 live (sin errores en logs, conecta a yjbskbskyadxjooxngjv); Vercel dpl_8vDCHpkgtpLK68yQ73mm85KjJcjV READY; /health 200 y rutas nuevas responden 401 sin sesión.
 - **Cierre:** tareas 130-134, 137, 138 done. Pendiente: build mobile (a pedido), auditoría de índices (espera OK), tarifas por tramo/km + cotización de viaje, limpiar usuarios QA de DEV, planes en Flow + FLOW_PLAN_ID_* en Render, deuda 127/128/136.
+
+## 2026-09-24 — Auditoría de índices (tarea 139)
+- **Agente:** Claude Opus 5.5 + 2 agentes Explore (inventario de índices y de consultas)
+- **Plan:** cruzar consultas del backend con índices, advertencias de Supabase y estadísticas reales de prod.
+- **Cambios:** progress/auditoria_indices.md; migración 139 (7 índices calientes, 19 FKs, 5 redundantes borrados).
+- **Verificación:** DEV aplicada; EXPLAIN valida A1-A5 y A7 (A6 a revisar con volumen).
+- **Cierre:** 139 blocked hasta prod. C1 (cumpleaños) y C2 (WhatsApp) anotadas como 140/141, pendientes de OK.
