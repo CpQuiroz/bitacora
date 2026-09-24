@@ -86,3 +86,18 @@ export function filtrarModulosVisibles(modulos: readonly Modulo[], rol: string, 
     return true;
   });
 }
+
+// Módulos agrupados como aparecen en el menú (tarea 124, etapa 2). Lo
+// usan el Super-Admin y la pantalla de Módulos de la empresa para
+// mostrar los interruptores en el mismo orden que el menú. `cuenta`
+// indica si el grupo suma para el tope del plan.
+export const GRUPOS_MODULOS: readonly { titulo: string; modulos: readonly Modulo[]; cuenta: boolean }[] = [
+  { titulo: "Operación", modulos: ["agenda", "agenda_pro", "levantamientos", "ordenes_servicio", "rutas", "viajes"], cuenta: true },
+  { titulo: "Clientes", modulos: ["registros"], cuenta: true },
+  { titulo: "Dinero", modulos: ["cotizaciones", "cobros", "financiero", "remuneraciones"], cuenta: true },
+  { titulo: "Recursos", modulos: ["equipos", "inventario", "catalogo", "proveedores"], cuenta: true },
+  { titulo: "Equipo", modulos: ["flota"], cuenta: true },
+  { titulo: "Informes", modulos: ["informes"], cuenta: true },
+  { titulo: "Inteligencia artificial (solo Admin, no cuenta para el tope)", modulos: ["informe_ia", "asistente"], cuenta: false },
+  { titulo: "Base (no cuenta para el tope)", modulos: ["configuracion", "gestion_control"], cuenta: false },
+];

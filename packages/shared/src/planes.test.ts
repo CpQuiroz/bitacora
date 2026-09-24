@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { MODULOS } from "./permisos";
-import { DIAS_PRUEBA, MODULOS_CONTABLES, PLANES_CONTRATABLES, cuentaParaTope, esPlanPago, filtrarModulosVisibles, modulosContablesActivos, modulosSobrantesParaPlan } from "./planes";
+import { DIAS_PRUEBA, GRUPOS_MODULOS, MODULOS_CONTABLES, PLANES_CONTRATABLES, cuentaParaTope, esPlanPago, filtrarModulosVisibles, modulosContablesActivos, modulosSobrantesParaPlan } from "./planes";
 
 test("las 17 secciones del menú cuentan para el tope", () => {
   assert.equal(MODULOS_CONTABLES.length, 17);
@@ -71,4 +71,11 @@ test("visibles: en Esencial y Operación el admin ve el Informe con IA pero no e
   for (const plan of ["basico", "operacion"] as const) {
     assert.deepEqual(filtrarModulosVisibles(["informe_ia", "asistente", "registros"], "admin", plan), ["informe_ia", "registros"]);
   }
+});
+
+test("grupos del menú: cada módulo aparece una sola vez y `cuenta` coincide con el tope", () => {
+  const todos = GRUPOS_MODULOS.flatMap((g) => g.modulos);
+  assert.equal(new Set(todos).size, todos.length);
+  assert.deepEqual([...todos].sort(), [...MODULOS].sort());
+  for (const g of GRUPOS_MODULOS) for (const m of g.modulos) assert.equal(cuentaParaTope(m), g.cuenta, m);
 });

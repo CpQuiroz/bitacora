@@ -85,3 +85,10 @@ Pasos de la usuaria para la 132 (cuando se apruebe la etapa): correrla en prod A
   del cliente o encargado" + "Tú no firmas: quedas registrado por tu cuenta" (mobile, requiere build 1.10.18),
   PDF y web con el mismo texto; sección del PDF "Técnico que ejecutó". "Ejecutado por" se mantiene.
 - Tarea 124 vuelve a in_progress (etapa 1 lista, esperando decisiones de la usuaria para la etapa 2).
+
+Etapa 2 (aprobada 24-sep, HECHA): Super-Admin > Empresa > "Módulos" agrupado como el menú (GRUPOS_MODULOS en
+shared, con test), contador "X de Y módulos" según el plan, módulos que cuentan quedan deshabilitados al
+llegar al tope, IA y Base marcados como "no cuenta", Asistente marcado si el plan no lo incluye. Sin cambio
+de API (mobile 1.10.17 sigue usando la misma respuesta). verificar.sh verde.
+Pendiente: pruebas E2E contra DEV — web/.env.local creado (URL + anon DEV); backend/.env creado con
+placeholders que completa la usuaria (secretos DEV).

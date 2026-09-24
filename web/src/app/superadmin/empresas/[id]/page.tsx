@@ -4,7 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import type { Empresa, EstadoEmpresa, Plan, Rubro, Suscripcion, SuscripcionCobro } from "@bitacora/shared";
-import { ETIQUETA_PLAN, LIMITES_POR_PLAN } from "@bitacora/shared";
+import { ETIQUETA_PLAN, GRUPOS_MODULOS, LIMITES_POR_PLAN, cuentaParaTope, planPermiteIACompleta, type Modulo } from "@bitacora/shared";
 import { SuperAdminShell } from "@/components/SuperAdminShell";
 import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText, Textarea } from "@/components/ui";
 import { IconChevronDown, IconChevronLeft, IconShield } from "@/components/icons";
@@ -1027,36 +1027,85 @@ export default function SuperAdminSaludEmpresaPage() {
           </Card>
 
           <Card className="mt-4">
-            <CabeceraColapsable titulo="Módulos contratados" abierto={modulosAbierto} onToggle={() => setModulosAbierto((v) => !v)} />
-            {modulosAbierto && (
-              <>
-            <p className="mb-3 mt-2 text-sm text-muted">
-              Desactivar un módulo lo oculta del menú y bloquea sus rutas para todos los usuarios de esta empresa, sin importar su rol.
-            </p>
-            {!modulos ? (
-              <p className="text-sm text-muted">Cargando…</p>
-            ) : (
-              <div className="grid gap-2 sm:grid-cols-2">
-                {modulos.map((m) => (
-                  <label key={m.modulo} className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={m.activado}
-                      disabled={guardandoModulo === m.modulo}
-                      onChange={(e) => onTogglearModulo(m.modulo, e.target.checked)}
-                    />
-                    <span className="text-foreground">{ETIQUETA_MODULO[m.modulo] ?? m.modulo}</span>
-                  </label>
-                ))}
-              </div>
-            )}
-            {errorModulos && (
-              <div className="mt-3">
-                <ErrorText>{errorModulos}</ErrorText>
-              </div>
-            )}
-              </>
-            )}
+            {/* Tarea 124, etapa 2: el plan fija cuántos módulos puede tener
+                activos la empresa; acá se eligen cuáles. Mismo orden que el
+                menú (GRUPOS_MODULOS). El backend valida el tope igual
+                (403 LIMITE_PLAN); esto solo evita ofrecer lo que no cabe. */}
+            {(() => {
+              const tope = LIMITES_POR_PLAN[salud.empresa.plan]?.modulosMax ?? null;
+              const activos = (modulos ?? []).filter((m) => m.activado && cuentaParaTope(m.modulo as Modulo)).length;
+              const lleno = tope != null && activos >= tope;
+              const estado = new Map((modulos ?? []).map((m) => [m.modulo, m.activado]));
+              return (
+                <>
+                  <CabeceraColapsable
+                    titulo="Módulos"
+                    abierto={modulosAbierto}
+                    onToggle={() => setModulosAbierto((v) => !v)}
+                    extra={
+                      modulos ? (
+                        <span className={`text-xs tabular-nums ${lleno ? "font-semibold text-foreground" : "text-muted"}`}>
+                          {tope != null ? `${activos} de ${tope} módulos` : `${activos} módulos · sin tope`}
+                        </span>
+                      ) : null
+                    }
+                  />
+                  {modulosAbierto && (
+                    <>
+                      <p className="mb-3 mt-2 text-sm text-muted">
+                        Desactivar un módulo lo oculta del menú y bloquea sus rutas para todos los usuarios de esta empresa, sin importar su
+                        rol. El plan {ETIQUETA_PLAN[salud.empresa.plan]}{" "}
+                        {tope != null ? `permite hasta ${tope} módulos activos.` : "no tiene tope de módulos."}
+                      </p>
+                      {lleno ? (
+                        <p className="mb-3 text-sm text-foreground">
+                          Llegó al tope: para activar otro, apaga uno o cambia el plan a uno superior.
+                        </p>
+                      ) : null}
+                      {!modulos ? (
+                        <p className="text-sm text-muted">Cargando…</p>
+                      ) : (
+                        <div className="flex flex-col gap-4">
+                          {GRUPOS_MODULOS.map((g) => (
+                            <div key={g.titulo}>
+                              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">{g.titulo}</p>
+                              <div className="grid gap-2 sm:grid-cols-2">
+                                {g.modulos.map((modulo) => {
+                                  const activado = estado.get(modulo) ?? false;
+                                  const bloqueadoPorTope = !activado && g.cuenta && lleno;
+                                  const sinIAEnPlan = modulo === "asistente" && !planPermiteIACompleta(salud.empresa.plan);
+                                  return (
+                                    <label
+                                      key={modulo}
+                                      className={`flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm ${bloqueadoPorTope ? "opacity-60" : ""}`}
+                                      title={bloqueadoPorTope ? "La empresa llegó al tope de módulos de su plan" : undefined}
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={activado}
+                                        disabled={guardandoModulo === modulo || bloqueadoPorTope}
+                                        onChange={(e) => onTogglearModulo(modulo, e.target.checked)}
+                                      />
+                                      <span className="text-foreground">{ETIQUETA_MODULO[modulo] ?? modulo}</span>
+                                      {sinIAEnPlan ? <span className="text-xs text-muted">(no incluido en este plan)</span> : null}
+                                    </label>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {errorModulos && (
+                        <div className="mt-3">
+                          <ErrorText>{errorModulos}</ErrorText>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </>
+              );
+            })()}
           </Card>
 
           <Card className="mt-4">
