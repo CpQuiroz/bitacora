@@ -1845,9 +1845,9 @@
       "id": 137,
       "name": "viaticos_viaje",
       "title": "Viajes: viático local/interregional por viaje, registrado como gasto 'Viáticos' del chofer, con resumen semanal/mensual y marcar pagado",
-      "status": "in_progress",
+      "status": "blocked",
       "description": "Aprobado por la usuaria 24-sep-2026. Viático siempre del chofer asignado; local = origen y destino en la Región Metropolitana; queda como gasto (pendiente hasta que se le paga al chofer). Montos por defecto por empresa. Solo Admin/Supervisor lo definen. No aparece en el cobro ni en su PDF.",
-      "resolution": ""
+      "resolution": "Viático local/interregional por viaje (solo Admin/Supervisor, exige chofer; sugerencia RM en shared/regionMetropolitana.ts) → gasto 'Viáticos' (gastos.es_viatico, índice único por viaje) que sigue al viaje; Configuración › Viajes (montos por defecto, Admin); Gastos › Viáticos (resumen semana/mes por chofer + Marcar pagado en lotes, fecha de pago en hora de Chile). Pagado = congelado (no cambia viático/chofer ni se borra el viaje; carrera con el pago revierte el viaje). Borrar viaje borra su viático pendiente sin huérfanos; crear viaje sin poder registrar el gasto deshace el viaje. Mobile: solo lectura (sin build). No toca cobro/PDF. Migración 137 aplicada en DEV; EXPLAIN ANALYZE validado (Index Scan idx_gastos_viatico_empresa_fecha). verificar.sh verde; E2E DEV 26/26 + regresión 49/49; revisor (progress/review_viaticos_137.md): B1/B2 resueltos, M1 y m1-m8,m10,m11 corregidos; m9 a confirmar con la usuaria. BLOQUEADA para publicar hasta que la usuaria corra la migración 137 en prod (junto con 134-136)."
     }
   ]
 }

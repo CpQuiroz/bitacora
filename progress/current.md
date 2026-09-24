@@ -200,3 +200,13 @@ tests; viajes POST/PATCH/DELETE + GET/PATCH /config; misViajes DELETE/PATCH; gas
 /viaticos/pagar, guard de edición), web (CampoViatico en viajes, Configuración › Viajes, Gastos › Viáticos),
 mobile (viático solo lectura). verificar.sh verde. Pendiente: migración en DEV → E2E scratchpad/qa/prueba-137.ts
 (23 casos) + regresión 131-134 + EXPLAIN ANALYZE + revisor.
+- 137: migración aplicada en DEV por la usuaria. E2E 137 23/23; regresión 131-134 + review 49/49.
+  EXPLAIN ANALYZE (DEV): con 3 filas usa Seq Scan (2,7 ms); con enable_seqscan=off usa
+  Index Scan idx_gastos_viatico_empresa_fecha (empresa_id + rango de fecha), 1,6 ms → índice validado.
+  Revisor en curso → progress/review_viaticos_137.md.
+- 137 CERRADA en la rama (blocked hasta migraciones 134-137 en prod). Revisor RECHAZADO → corregido: M1 (borrar viaje
+  primero borra el gasto pendiente y revierte si falla), m2 (pago en carrera revierte el viaje, 409), m3 (si no se
+  registra el gasto se deshace el viaje), m4 (23505 aplica el último monto), m5, m6 (fecha Chile), m7 (paginado +
+  lotes), m8 (log), m10 (E2E reasignar/concurrencia), m11 (rótulo semana). m1: requiereRol("admin") justificado.
+  m9 (contador ve/paga viáticos; viáticos dependen del módulo financiero) → preguntar a la usuaria.
+  E2E 26/26, regresión 49/49, verificar.sh verde.

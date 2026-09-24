@@ -34,10 +34,13 @@ function finDelPeriodo(periodo: string, agrupar: AgruparViaticos): string {
   const d = aFecha(periodo)!;
   return aTexto(new Date(d.getFullYear(), d.getMonth() + 1, 0));
 }
-function etiquetaPeriodo(periodo: string, agrupar: AgruparViaticos): string {
-  const [y, m, d] = periodo.split("-");
+// La primera semana puede empezar antes del filtro "desde" (ej. lunes
+// 31-08 con desde 01-09): se rotula desde el primer día que sí suma.
+function etiquetaPeriodo(periodo: string, agrupar: AgruparViaticos, desde: string): string {
+  const [y, m] = periodo.split("-");
   if (agrupar === "mes") return `${MESES[Number(m) - 1]} ${y}`;
-  return `Semana del ${d}-${m}-${y}`;
+  const inicio = periodo < desde ? desde : periodo;
+  return `Semana del ${inicio.split("-").reverse().join("-")}`;
 }
 
 export default function ViaticosPage() {
@@ -49,6 +52,7 @@ export default function ViaticosPage() {
   const [filas, setFilas] = useState<FilaResumenViaticos[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
+  const [errorPago, setErrorPago] = useState<string | null>(null);
   const [pagando, setPagando] = useState<string | null>(null);
 
   async function cargarResumen() {
@@ -108,12 +112,14 @@ export default function ViaticosPage() {
     const h = fin < hasta ? fin : hasta;
     if (!window.confirm(`¿Marcar como pagados ${formatMoneda(f.pendiente, usuario?.moneda)} de viáticos a ${f.chofer}?`)) return;
     setAviso(null);
+    setErrorPago(null);
     setPagando(`${f.periodo}|${f.chofer_id}`);
     const res = await apiFetch("/api/gastos/viaticos/pagar", { method: "POST", body: JSON.stringify({ chofer_id: f.chofer_id, desde: d, hasta: h }) });
     setPagando(null);
     const body = await res.json().catch(() => ({}));
     if (!res.ok) {
-      setError(body.error ?? "No se pudo marcar como pagado");
+      setErrorPago(body.error ?? "No se pudo marcar como pagado");
+      cargarResumen();
       return;
     }
     setAviso(`Listo: ${body.pagados} viático(s) de ${f.chofer} marcados como pagados (${formatMoneda(body.total, usuario?.moneda)}).`);
@@ -164,6 +170,7 @@ export default function ViaticosPage() {
       </Card>
 
       {aviso ? <p className="mt-ds-4 font-ds-body text-ds-small text-ds-text/70">{aviso}</p> : null}
+      {errorPago ? <p className="mt-ds-4 font-ds-body text-ds-small text-ds-accent-700">{errorPago}</p> : null}
 
       <div className="mt-ds-6">
         {error ? (
@@ -176,7 +183,7 @@ export default function ViaticosPage() {
             claveFila={(f) => `${f.periodo}|${f.chofer_id ?? ""}`}
             vacio={{ titulo: "Sin viáticos en este período", mensaje: "Se registran al asignar un viático a un viaje (Viajes › Editar)." }}
             columnas={[
-              { encabezado: "Período", celda: (f) => etiquetaPeriodo(f.periodo, agrupar) },
+              { encabezado: "Período", celda: (f) => etiquetaPeriodo(f.periodo, agrupar, desde) },
               { encabezado: "Chofer", celda: (f) => f.chofer },
               { encabezado: "Viajes", clase: "text-right", celda: (f) => f.cantidad },
               { encabezado: "Total", clase: "text-right", celda: (f) => formatMoneda(f.total, usuario.moneda) },

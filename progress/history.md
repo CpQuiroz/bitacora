@@ -235,3 +235,10 @@ Formato:
 - **Cambios:** backend (viajes, misViajes, cobros, clientes, auditoriaEmpresa, generarPdfCobro, viajesMontos/Asignacion/Cobros), shared, web (viajes, agenda, cobros, clientes, menú), mobile (sin build), migraciones 134-136.
 - **Verificación:** verificar.sh verde; tests unitarios nuevos; E2E DEV 45/45 + 4/4 de la revisión.
 - **Cierre:** tareas 130-134 blocked hasta migraciones 134-136 en prod; deuda en tarea 136. Siguiente: viáticos (137).
+
+## 2026-09-24 — Viáticos por viaje (tarea 137)
+- **Agente:** Claude Opus 5.5 (implementación directa + subagente revisor)
+- **Plan:** viático local/interregional por viaje como gasto "Viáticos" del chofer, con resumen semanal/mensual y marcar pagado.
+- **Cambios:** migración 137; shared (tipos, regionMetropolitana); backend (viajesViaticos.ts, viajes, misViajes, gastos); web (CampoViatico, Configuración › Viajes, Gastos › Viáticos); mobile (solo lectura, sin build).
+- **Verificación:** verificar.sh verde; E2E DEV 26/26 + regresión 49/49; EXPLAIN ANALYZE con Index Scan; revisión con correcciones aplicadas.
+- **Cierre:** blocked hasta migraciones 134-137 en prod. Siguiente: tarifas por tramo/km en Viajes y Cotización de viaje; auditoría de índices propuesta a la usuaria.

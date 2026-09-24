@@ -12,12 +12,11 @@ import { cobroDeViaje } from "../viajesCobros";
 import { avisarViajeAsignado, validarChofer } from "../viajesAsignacion";
 import { siguienteFolioCobro, siguienteFolioViaje } from "../folios";
 import {
-  borrarGastoViaticoPendiente,
+  borrarViajeConViatico,
   errorViaticoPagado,
   gastoViaticoDe,
   leerViatico,
   mismoViatico,
-  revisarViaticoAntesDeBorrar,
   sincronizarGastoViatico,
   viaticoDeViaje,
 } from "../viajesViaticos";
@@ -57,6 +56,10 @@ viajesRouter.get(
   })
 );
 
+// requiereRol y no requiereAccion: no hay una acción delegable para la
+// configuración de Viajes (ACCIONES en packages/shared/src/permisos.ts),
+// y los montos por defecto son configuración de la empresa, del Admin —
+// mismo criterio que eliminar clientes (tarea 131).
 viajesRouter.patch(
   "/config",
   requiereRol("admin"),
@@ -415,8 +418,11 @@ viajesRouter.post(
     }
     if (viatico) {
       const sync = await sincronizarGastoViatico(req.empresaId!, data, viatico);
-      if ("error" in sync) {
-        res.status(500).json({ error: `El viaje se guardó, pero no se pudo registrar el viático: ${sync.error}. Edita el viaje para reintentarlo.` });
+      if (!("ok" in sync)) {
+        // Sin el gasto no queda el viaje: si no, volver a guardar lo
+        // duplicaría. Se deshace y se informa como error normal.
+        await supabase.from("viajes").delete().eq("empresa_id", req.empresaId!).eq("id", data.id);
+        res.status(500).json({ error: `No se pudo registrar el viático, así que el viaje no se guardó. Intenta de nuevo.` });
         return;
       }
     }
@@ -589,7 +595,19 @@ viajesRouter.patch(
     // El gasto del viático sigue al viaje (monto, fecha, guía y chofer).
     if (viaticoFinal || viaticoAnterior) {
       const sync = await sincronizarGastoViatico(req.empresaId!, data, viaticoFinal);
-      if ("error" in sync) {
+      if ("pagado" in sync) {
+        // Se pagó mientras se guardaba: el viaje vuelve al viático y chofer
+        // del gasto pagado, que manda.
+        if (cambiaViatico || choferFinal !== existente.chofer_id) {
+          await supabase
+            .from("viajes")
+            .update({ viatico_tipo: existente.viatico_tipo, viatico_monto: existente.viatico_monto, chofer_id: existente.chofer_id })
+            .eq("empresa_id", req.empresaId!)
+            .eq("id", existente.id);
+          res.status(409).json({ error: errorViaticoPagado(sync.pagado) });
+          return;
+        }
+      } else if ("error" in sync) {
         res.status(500).json({ error: `El viaje se guardó, pero no se pudo actualizar el viático: ${sync.error}. Vuelve a guardarlo.` });
         return;
       }
@@ -647,17 +665,12 @@ viajesRouter.delete(
       res.status(409).json({ error: "Este viaje ya fue facturado y no se puede eliminar" });
       return;
     }
-    const viatico = await revisarViaticoAntesDeBorrar(req.empresaId!, req.params.id);
-    if ("error" in viatico) {
-      res.status(409).json({ error: viatico.error });
+    // Tarea 137: borra también su viático pendiente (sin dejar gastos sueltos).
+    const borrado = await borrarViajeConViatico(req.empresaId!, req.params.id);
+    if ("error" in borrado) {
+      res.status(borrado.status).json({ error: borrado.error });
       return;
     }
-    const { error } = await supabase.from("viajes").delete().eq("empresa_id", req.empresaId!).eq("id", req.params.id);
-    if (error) {
-      res.status(500).json({ error: error.message });
-      return;
-    }
-    await borrarGastoViaticoPendiente(req.empresaId!, viatico.gastoPendienteId);
     res.status(204).end();
   })
 );

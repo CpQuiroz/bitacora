@@ -6,7 +6,7 @@ import { subirFotoGuiaConNombre, urlFirmadaFotoGuia } from "../storage";
 import { ROLES_EDITAN_MONTO_VIAJE, calcularMontos, nuevosMontosViaje } from "../viajesMontos";
 import { registrarAuditoriaEmpresa } from "../auditoriaEmpresa";
 import { cobroDeViaje } from "../viajesCobros";
-import { borrarGastoViaticoPendiente, revisarViaticoAntesDeBorrar, sincronizarGastoViatico, viaticoDeViaje } from "../viajesViaticos";
+import { borrarViajeConViatico, sincronizarGastoViatico, viaticoDeViaje } from "../viajesViaticos";
 import { siguienteFolioViaje } from "../folios";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
@@ -452,7 +452,12 @@ misViajesRouter.patch(
       });
     }
     // Viático (tarea 137): acá no se cambia, pero su gasto sigue la guía.
-    if (data.viatico_tipo) await sincronizarGastoViatico(req.empresaId!, data, viaticoDeViaje(data));
+    // Si falla, el viaje ya quedó guardado: se registra y se reintenta en
+    // el próximo guardado (el gasto solo queda con la guía anterior).
+    if (data.viatico_tipo) {
+      const sync = await sincronizarGastoViatico(req.empresaId!, data, viaticoDeViaje(data));
+      if ("error" in sync) console.error(`[viaticos] no se pudo actualizar el gasto del viaje ${data.id}: ${sync.error}`);
+    }
     res.json(data);
   })
 );
@@ -480,17 +485,12 @@ misViajesRouter.delete(
       res.status(409).json({ error: "Este viaje ya fue facturado y no se puede eliminar" });
       return;
     }
-    const viatico = await revisarViaticoAntesDeBorrar(req.empresaId!, req.params.id);
-    if ("error" in viatico) {
-      res.status(409).json({ error: viatico.error });
+    // Tarea 137: borra también su viático pendiente (sin dejar gastos sueltos).
+    const borrado = await borrarViajeConViatico(req.empresaId!, req.params.id);
+    if ("error" in borrado) {
+      res.status(borrado.status).json({ error: borrado.error });
       return;
     }
-    const { error } = await supabase.from("viajes").delete().eq("empresa_id", req.empresaId!).eq("id", req.params.id);
-    if (error) {
-      res.status(500).json({ error: error.message });
-      return;
-    }
-    await borrarGastoViaticoPendiente(req.empresaId!, viatico.gastoPendienteId);
     res.status(204).end();
   })
 );

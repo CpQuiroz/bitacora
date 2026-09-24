@@ -111,19 +111,35 @@ function rangoValido(desde: unknown, hasta: unknown): { desde: string; hasta: st
 
 type FilaGastoViatico = { id: string; monto: number; estado: EstadoGasto; fecha: string; viaje: { chofer_id: string | null; chofer: { nombre: string } | null } | null };
 
+// Lee por páginas: PostgREST devuelve a lo más 1000 filas por consulta y
+// un rango de 400 días con muchos choferes puede pasarse de eso.
+const PAGINA = 1000;
+const MAX_FILAS = 20_000;
+
 async function gastosViaticos(empresaId: string, desde: string, hasta: string, choferId?: string) {
-  let q = supabase
-    .from("gastos")
-    .select("id, monto, estado, fecha, viaje:viajes!inner(chofer_id, chofer:usuarios(nombre))")
-    .eq("empresa_id", empresaId)
-    .eq("es_viatico", true)
-    .gte("fecha", desde)
-    .lte("fecha", hasta)
-    .limit(5000);
-  if (choferId) q = q.eq("viaje.chofer_id", choferId);
-  const { data, error } = await q;
-  return { data: (data ?? []) as unknown as FilaGastoViatico[], error };
+  const filas: FilaGastoViatico[] = [];
+  for (let offset = 0; offset < MAX_FILAS; offset += PAGINA) {
+    let q = supabase
+      .from("gastos")
+      .select("id, monto, estado, fecha, viaje:viajes!inner(chofer_id, chofer:usuarios(nombre))")
+      .eq("empresa_id", empresaId)
+      .eq("es_viatico", true)
+      .gte("fecha", desde)
+      .lte("fecha", hasta)
+      .order("fecha")
+      .order("id")
+      .range(offset, offset + PAGINA - 1);
+    if (choferId) q = q.eq("viaje.chofer_id", choferId);
+    const { data, error } = await q;
+    if (error) return { data: filas, error, truncado: false };
+    filas.push(...((data ?? []) as unknown as FilaGastoViatico[]));
+    if ((data ?? []).length < PAGINA) return { data: filas, error: null, truncado: false };
+  }
+  return { data: filas, error: null, truncado: true };
 }
+
+// Fecha de hoy en Chile (no UTC: después de las ~21 h UTC ya es "mañana").
+const hoyChile = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Santiago" }).format(new Date());
 
 gastosRouter.get(
   "/viaticos",
@@ -139,9 +155,13 @@ gastosRouter.get(
     }
     const agrupar: AgruparViaticos = req.query.agrupar === "mes" ? "mes" : "semana";
     const choferId = typeof req.query.chofer_id === "string" && req.query.chofer_id ? req.query.chofer_id : undefined;
-    const { data, error } = await gastosViaticos(req.empresaId!, rango.desde, rango.hasta, choferId);
+    const { data, error, truncado } = await gastosViaticos(req.empresaId!, rango.desde, rango.hasta, choferId);
     if (error) {
       res.status(500).json({ error: error.message });
+      return;
+    }
+    if (truncado) {
+      res.status(400).json({ error: "Demasiados viáticos en ese rango: acorta las fechas" });
       return;
     }
     const filas: GastoViaticoConChofer[] = data.map((g) => ({
@@ -175,29 +195,37 @@ gastosRouter.post(
       res.status(400).json({ error: rango.error });
       return;
     }
-    const { data, error } = await gastosViaticos(req.empresaId!, rango.desde, rango.hasta, chofer_id);
+    const { data, error, truncado } = await gastosViaticos(req.empresaId!, rango.desde, rango.hasta, chofer_id);
     if (error) {
       res.status(500).json({ error: error.message });
       return;
     }
+    if (truncado) {
+      res.status(400).json({ error: "Demasiados viáticos en ese rango: acorta las fechas" });
+      return;
+    }
     const ids = data.filter((g) => g.estado === "pendiente").map((g) => g.id);
-    if (ids.length === 0) {
-      res.json({ pagados: 0, total: 0 });
-      return;
+    const fechaPago = typeof fecha_pago === "string" && FECHA.test(fecha_pago) ? fecha_pago : hoyChile();
+    let pagados = 0;
+    let total = 0;
+    // En lotes: una lista de miles de ids no cabe en la URL de PostgREST.
+    for (let i = 0; i < ids.length; i += 200) {
+      const { data: lote, error: errorPago } = await supabase
+        .from("gastos")
+        .update({ estado: "pagado", fecha_pago: fechaPago })
+        .eq("empresa_id", req.empresaId!)
+        .eq("es_viatico", true)
+        .eq("estado", "pendiente")
+        .in("id", ids.slice(i, i + 200))
+        .select("monto");
+      if (errorPago) {
+        res.status(500).json({ error: `Se marcaron ${pagados} viático(s) antes del error: ${errorPago.message}`, pagados, total });
+        return;
+      }
+      pagados += lote?.length ?? 0;
+      total += (lote ?? []).reduce((t, g) => t + Number(g.monto), 0);
     }
-    const { data: pagados, error: errorPago } = await supabase
-      .from("gastos")
-      .update({ estado: "pagado", fecha_pago: typeof fecha_pago === "string" && FECHA.test(fecha_pago) ? fecha_pago : new Date().toISOString().slice(0, 10) })
-      .eq("empresa_id", req.empresaId!)
-      .eq("es_viatico", true)
-      .eq("estado", "pendiente")
-      .in("id", ids)
-      .select("monto");
-    if (errorPago) {
-      res.status(500).json({ error: errorPago.message });
-      return;
-    }
-    res.json({ pagados: pagados?.length ?? 0, total: (pagados ?? []).reduce((t, g) => t + Number(g.monto), 0) });
+    res.json({ pagados, total });
   })
 );
 

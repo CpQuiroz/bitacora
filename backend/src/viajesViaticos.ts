@@ -93,33 +93,43 @@ function nombreChofer(chofer: unknown): string | null {
 }
 
 // Deja el gasto de viático del viaje igual al viático indicado: lo crea,
-// lo actualiza o (si viatico es null) lo borra. No toca un gasto pagado:
-// las rutas lo bloquean antes con errorViaticoPagado.
-export async function sincronizarGastoViatico(
-  empresaId: string,
-  viaje: ViajeParaViatico,
-  viatico: Viatico
-): Promise<{ error: string } | { ok: true }> {
+// lo actualiza o (si viatico es null) lo borra. Nunca toca un gasto
+// pagado: las rutas lo bloquean antes con errorViaticoPagado, y si se
+// pagó justo entre ese chequeo y este paso (carrera con "Marcar pagado")
+// devuelve { pagado } para que la ruta deshaga el cambio del viaje.
+export type ResultadoSync = { ok: true } | { error: string } | { pagado: GastoViatico };
+
+export async function sincronizarGastoViatico(empresaId: string, viaje: ViajeParaViatico, viatico: Viatico): Promise<ResultadoSync> {
   const existente = await gastoViaticoDe(empresaId, viaje.id);
-  if (existente?.estado === "pagado") return { ok: true };
+  if (existente?.estado === "pagado") return { pagado: existente };
 
   if (!viatico) {
     if (!existente) return { ok: true };
-    const { error } = await supabase.from("gastos").delete().eq("empresa_id", empresaId).eq("id", existente.id).eq("estado", "pendiente");
-    return error ? { error: error.message } : { ok: true };
+    const { data, error } = await supabase
+      .from("gastos")
+      .delete()
+      .eq("empresa_id", empresaId)
+      .eq("id", existente.id)
+      .eq("estado", "pendiente")
+      .select("id");
+    if (error) return { error: error.message };
+    return data?.length ? { ok: true } : { pagado: { ...existente, estado: "pagado" } };
   }
 
   const chofer = nombreChofer(viaje.chofer);
   const descripcion = `Viático ${viatico.tipo} · Guía ${viaje.numero_guia}${chofer ? ` · ${chofer}` : ""}`;
-  if (existente) {
-    const { error } = await supabase
+  const actualizar = async (gasto: GastoViatico): Promise<ResultadoSync> => {
+    const { data, error } = await supabase
       .from("gastos")
       .update({ monto: viatico.monto, fecha: viaje.fecha, descripcion })
       .eq("empresa_id", empresaId)
-      .eq("id", existente.id)
-      .eq("estado", "pendiente");
-    return error ? { error: error.message } : { ok: true };
-  }
+      .eq("id", gasto.id)
+      .eq("estado", "pendiente")
+      .select("id");
+    if (error) return { error: error.message };
+    return data?.length ? { ok: true } : { pagado: { ...gasto, estado: "pagado" } };
+  };
+  if (existente) return actualizar(existente);
 
   const categoria = await categoriaViaticos(empresaId);
   if (!categoria) return { error: "No se pudo crear la categoría Viáticos" };
@@ -136,25 +146,51 @@ export async function sincronizarGastoViatico(
     es_viatico: true,
     folio,
   });
-  // 23505: otro guardado simultáneo ya creó el gasto de este viaje.
-  if (error && error.code !== "23505") return { error: error.message };
-  return { ok: true };
+  if (!error) return { ok: true };
+  if (error.code !== "23505") return { error: error.message };
+  // 23505: otro guardado simultáneo ya creó el gasto de este viaje — se
+  // le aplica este viático (gana el último guardado, igual que el viaje).
+  const otro = await gastoViaticoDe(empresaId, viaje.id);
+  if (!otro) return { error: "No se pudo registrar el viático" };
+  return otro.estado === "pagado" ? { pagado: otro } : actualizar(otro);
 }
 
-// Antes de borrar un viaje: si su viático ya se pagó, no se borra.
-// Devuelve el gasto pendiente para borrarlo después del viaje.
-export async function revisarViaticoAntesDeBorrar(
+// Borra un viaje junto con su viático pendiente, sin dejar gastos
+// sueltos: primero el gasto (solo si sigue pendiente), después el viaje;
+// si el viaje no se pudo borrar, el gasto se vuelve a crear. Un viático
+// ya pagado impide borrar el viaje (409).
+export async function borrarViajeConViatico(
   empresaId: string,
   viajeId: string
-): Promise<{ error: string } | { gastoPendienteId: string | null }> {
+): Promise<{ ok: true } | { status: 409 | 500; error: string }> {
   const gasto = await gastoViaticoDe(empresaId, viajeId);
-  if (gasto?.estado === "pagado") return { error: `${errorViaticoPagado(gasto).split(".")[0]}: no se puede eliminar el viaje.` };
-  return { gastoPendienteId: gasto?.id ?? null };
-}
-
-export async function borrarGastoViaticoPendiente(empresaId: string, gastoId: string | null) {
-  if (!gastoId) return;
-  await supabase.from("gastos").delete().eq("empresa_id", empresaId).eq("id", gastoId).eq("estado", "pendiente");
+  const bloqueo = (g: GastoViatico) => ({ status: 409 as const, error: `${errorViaticoPagado(g).split(".")[0]}: no se puede eliminar el viaje.` });
+  if (gasto?.estado === "pagado") return bloqueo(gasto);
+  if (gasto) {
+    const { data, error } = await supabase
+      .from("gastos")
+      .delete()
+      .eq("empresa_id", empresaId)
+      .eq("id", gasto.id)
+      .eq("estado", "pendiente")
+      .select("id");
+    if (error) return { status: 500, error: error.message };
+    if (!data?.length) return bloqueo({ ...gasto, estado: "pagado" });
+  }
+  const { error } = await supabase.from("viajes").delete().eq("empresa_id", empresaId).eq("id", viajeId);
+  if (error) {
+    if (gasto) {
+      const { data: viaje } = await supabase
+        .from("viajes")
+        .select("id, fecha, numero_guia, viatico_tipo, viatico_monto, chofer:usuarios(nombre)")
+        .eq("empresa_id", empresaId)
+        .eq("id", viajeId)
+        .maybeSingle();
+      if (viaje) await sincronizarGastoViatico(empresaId, viaje, viaticoDeViaje(viaje));
+    }
+    return { status: 500, error: error.message };
+  }
+  return { ok: true };
 }
 
 // ---------- Resumen por chofer y período (Gastos › Viáticos) ----------
