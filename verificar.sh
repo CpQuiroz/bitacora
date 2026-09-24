@@ -131,6 +131,14 @@ else
   fi
 fi
 
+if npx eslint --no-config-lookup -c scripts/eslint-hooks.config.mjs --no-inline-config "mobile/src/**/*.{ts,tsx}" "packages/ui/src/**/*.{ts,tsx}" >/tmp/verif-hooks.log 2>&1; then
+  ok "reglas de hooks OK (mobile + packages/ui)"
+else
+  cat /tmp/verif-hooks.log
+  fail "hooks de React llamados condicionalmente (mobile/packages/ui) — ver arriba"
+  EXIT_CODE=1
+fi
+
 echo ""
 echo "── 7. Aislamiento multi-tenant (audit:tenant) ─────────"
 npm run audit:tenant -w backend --silent >/tmp/harness_tenant.log 2>&1

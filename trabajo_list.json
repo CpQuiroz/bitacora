@@ -1702,6 +1702,34 @@
         "Usuaria aplica 130 en prod + migration repair",
         "Verificación: has_table_privilege('authenticated', ...) = false en suscripciones/trabajos/liquidaciones"
       ]
+    },
+    {
+      "id": 119,
+      "name": "fix_crash_abrir_os_mobile",
+      "title": "Mobile: la app se cerraba al abrir una OS (hooks después de un return anticipado)",
+      "status": "done",
+      "resolution": "Reportado por la usuaria en 1.10.16: al tocar una OS creada la app se cierra. Causa: en TrabajoDetalleScreen dos useEffect (autoguardado de comentarios, 23-sep, y del formulario) estaban declarados después de `if (!detalle) return …`; el primer render (cargando) tenía menos hooks que el siguiente y React tira 'Rendered more hooks…', que en release cierra la app. Fix: los efectos van arriba de los returns y leen funciones/paso por ref. Mismo patrón (latente) en NuevaCitaScreen: se separó en envoltorio + NuevaCitaGenerica. Nuevo paso en verificar.sh: react-hooks/rules-of-hooks sobre mobile + packages/ui (scripts/eslint-hooks.config.mjs); confirmado que detecta el bug original. Sale en el build 1.10.17."
+    },
+    {
+      "id": 120,
+      "name": "paginacion_etapa_a_traer_todo",
+      "title": "Paginación etapa A: traer en tandas de 1000 las listas y agregaciones que hoy se cortan en silencio",
+      "status": "pending",
+      "description": "Aprobado por la usuaria (24-sep-2026, 1 día). PostgREST corta en 1000 filas sin avisar. Helper común en el backend que pagina con .range() hasta completar, aplicado a ~25 agregaciones de agregacionesDashboard.ts/informes y a las listas sin tope (trabajos, clientes, cobros, cotizaciones, gastos, ventas, documentos por vencer, viajes/resumen, categoriasGasto, equipos, rendiciones). Sin cambios de UI."
+    },
+    {
+      "id": 121,
+      "name": "deuda_paginacion_real_ui",
+      "title": "Deuda técnica: paginación real (Cargar más + búsqueda en servidor) para OS, clientes, cobros, cotizaciones y gastos",
+      "status": "pending",
+      "description": "Anotado como deuda técnica a pedido de la usuaria (24-sep-2026). Etapa B: la web busca/filtra/cuenta sobre el array completo (clientes, cotizaciones, gastos, cobros), así que paginar exige mover búsqueda y conteos al servidor. Necesario cuando un cliente pase de algunos miles de registros."
+    },
+    {
+      "id": 122,
+      "name": "ia_fotos_solo_pro_admin",
+      "title": "IA en fotos: solo Pro/Empresa y solo a pedido del Admin; evaluar modelo más barato",
+      "status": "pending",
+      "description": "Decisión de la usuaria (24-sep-2026): el análisis de fotos con IA deja de ser automático. Solo en planes Pro y Empresa, y solo cuando el Admin lo pide sobre una foto/OS; el resto de las fotos solo se suben y quedan guardadas. Evaluar un modelo más barato para el análisis de fotos."
     }
   ]
 }

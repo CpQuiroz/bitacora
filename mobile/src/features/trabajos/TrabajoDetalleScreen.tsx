@@ -173,6 +173,27 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
     return () => clearInterval(id);
   }, [hayFotoProcesando, cargar]);
 
+  // Autoguardados (comentarios del técnico y formulario del paso 2).
+  // Tienen que declararse ANTES de los returns anticipados de abajo:
+  // un hook después de `if (!detalle) return …` hace que el primer
+  // render (cargando) tenga menos hooks que el siguiente y React tumba
+  // la app en release ("Rendered more hooks…", crash al abrir una OS en
+  // 1.10.16). Las funciones y el paso se leen por ref porque se definen
+  // más abajo, ya con `detalle` resuelto.
+  const guardarObservacionesRef = useRef<() => Promise<void>>(async () => {});
+  const guardarDatosRef = useRef<() => Promise<void>>(async () => {});
+  const pasoRef = useRef<1 | 2 | 3>(1);
+  useEffect(() => {
+    if (!observacionesTocadas.current) return;
+    const t = setTimeout(() => void guardarObservacionesRef.current(), 1500);
+    return () => clearTimeout(t);
+  }, [observaciones]);
+  useEffect(() => {
+    if (!formTocado.current || pasoRef.current !== 2) return;
+    const t = setTimeout(() => void guardarDatosRef.current(), 1500);
+    return () => clearTimeout(t);
+  }, [datosForm]);
+
   const volver = { icono: <ArrowLeft size={20} strokeWidth={2.5} color={tokens.color.text} />, onPress: () => navigation.goBack(), etiquetaAccesible: "Volver" };
 
   if (!detalle && !error) {
@@ -218,6 +239,7 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
   // ver el comentario largo arriba del componente.
   const pasoBase: 1 | 2 | 3 = !checkInAt ? 1 : checkOut?.hecho ? 3 : 2;
   const paso: 1 | 2 | 3 = pasoOverride ?? pasoBase;
+  pasoRef.current = paso;
 
   function abrirMapa() {
     const destino = coords ? `${coords.lat},${coords.lng}` : encodeURIComponent(direccion ?? "");
@@ -258,13 +280,9 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
     observacionesTocadas.current = false;
   }
 
-  // Autoguardado de los comentarios, mismo debounce que el formulario.
-  useEffect(() => {
-    if (!observacionesTocadas.current) return;
-    const t = setTimeout(() => void guardarObservaciones(), 1500);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [observaciones]);
+  // Autoguardado de los comentarios: el efecto (debounce 1,5 s) vive
+  // arriba de los returns anticipados; acá solo se le pasa la función.
+  guardarObservacionesRef.current = guardarObservaciones;
 
   async function guardarDatos() {
     setGuardandoDatos(true);
@@ -273,15 +291,10 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
   }
 
   // Autoguardado (Fase 3.4b, "autoguardado continuo") — debounced,
-  // solo si el usuario tocó algo. La cola offline (encolarDatos) ya
-  // garantiza que quede guardado localmente y se sincronice solo al
-  // recuperar señal — no hace falta nada nuevo para eso acá.
-  useEffect(() => {
-    if (!formTocado.current || paso !== 2) return;
-    const t = setTimeout(() => void guardarDatos(), 1500);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [datosForm]);
+  // solo si el usuario tocó algo (efecto arriba de los returns
+  // anticipados). La cola offline (encolarDatos) ya garantiza que quede
+  // guardado localmente y se sincronice solo al recuperar señal.
+  guardarDatosRef.current = guardarDatos;
 
   async function confirmarCierre(payload: ConfirmarCierrePayload) {
     setConfirmando(true);

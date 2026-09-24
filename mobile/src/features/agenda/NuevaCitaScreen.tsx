@@ -26,7 +26,20 @@ const PRIORIDADES: { valor: Prioridad; label: string }[] = [
   { valor: "alta", label: "Alta" },
 ];
 
-export function NuevaCitaScreen({ navigation, route }: NativeStackScreenProps<AgendaStackParamList, "NuevaCita">) {
+// Tema por rubro: cosmetología tiene su propia pantalla de creación
+// ("Nueva reserva") — solo para crear, editar sigue con el genérico. La
+// elección vive en este envoltorio y no dentro de NuevaCitaGenerica:
+// un return anticipado antes de sus hooks rompe las reglas de React.
+export function NuevaCitaScreen(props: NativeStackScreenProps<AgendaStackParamList, "NuevaCita">) {
+  const auth = useAuth();
+  const editandoId = props.route.params?.tareaId ?? null;
+  if (!editandoId && auth.fase === "listo" && auth.usuario.empresa.rubro === "cosmetologia") {
+    return <NuevaReservaCosmetologia navigation={props.navigation} route={props.route} />;
+  }
+  return <NuevaCitaGenerica {...props} />;
+}
+
+function NuevaCitaGenerica({ navigation, route }: NativeStackScreenProps<AgendaStackParamList, "NuevaCita">) {
   const marca = useMarca();
   // Pantalla modal (presentation: "modal" en AgendaStack.tsx) — no vive
   // dentro del pager de AppTabs.tsx, así que no hereda el fix de
@@ -46,13 +59,6 @@ export function NuevaCitaScreen({ navigation, route }: NativeStackScreenProps<Ag
   // (Configuración > Empresa > Agenda). Al editar se respeta la
   // duración que la cita ya tenía (obtenerTarea la carga tal cual).
   const duracionDefault = auth.fase === "listo" ? auth.usuario.empresa.duracion_cita_default_min ?? 60 : 60;
-
-  // Tema por rubro: cosmetología tiene su propia pantalla de creación
-  // ("Nueva reserva") — solo para crear, editar sigue con el genérico
-  // de acá abajo. El resto de los rubros no la ve nunca.
-  if (!editandoId && auth.fase === "listo" && auth.usuario.empresa.rubro === "cosmetologia") {
-    return <NuevaReservaCosmetologia navigation={navigation} route={route} />;
-  }
 
   const [clientes, setClientes] = useState<Cliente[] | null>(null);
   const [equipo, setEquipo] = useState<Usuario[]>([]);

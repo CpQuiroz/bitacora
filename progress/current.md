@@ -40,3 +40,6 @@ en mobile, (3) paginación, (4) IA en fotos por plan [decisión pendiente],
 - (5) Tarea 118 (in_progress): migración 130 cierra el acceso directo PostgREST a todas las tablas. Falta que la usuaria la aplique en dev y prod.
 - (3) Paginación: relevamiento hecho (listas sin tope + agregaciones del dashboard en JS). Pendiente definir alcance con la usuaria.
 - (4) IA en fotos por plan: decisión pendiente de la usuaria.
+- Tarea 119 (done): crash al abrir una OS en mobile 1.10.16 (hooks después de return anticipado). Fix + regla rules-of-hooks en verificar.sh. Sale en 1.10.17.
+- Decisiones de la usuaria (24-sep): paginación etapa A = tarea 120 (pendiente); etapa B = deuda técnica 121; IA en fotos solo Pro/Empresa y a pedido del Admin + evaluar modelo barato = tarea 122.
+- Migración 130: la usuaria la corrió desde una copia vieja (builds/1.10.16) sin el archivo, y contra prod en vez de dev. Se le explicó cómo hacerlo.
