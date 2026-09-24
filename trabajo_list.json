@@ -1853,9 +1853,9 @@
       "id": 138,
       "name": "fusionar_contador_en_supervisor",
       "title": "Roles: Contador se fusiona en Supervisor (un solo rol con ambos perfiles; 2FA opcional)",
-      "status": "in_progress",
+      "status": "blocked",
       "description": "Decisión de la usuaria 24-sep-2026: 'dejar solo uno y que ese uno contenga al otro' → queda Supervisor; 2FA opcional. Migración 138 (unión de módulos/acciones, usuarios y accesos autorizados contador→supervisor, borra el rol).",
-      "resolution": ""
+      "resolution": "Queda solo Supervisor (unión de módulos y acciones de ambos; 2FA opcional). Migración 138_fusionar_contador_en_supervisor.sql (transacción: rol, usuarios y accesos autorizados contador→supervisor, borra el rol; overrides del contador por cascade). Rol sin 'contador' en shared/backend/web/mobile; /api/usuarios/me/mfa devuelve 'exigido' y la web lo usa. Docs actualizados. Prod: 0 usuarios contador (consulta de la usuaria). DEV: migración aplicada; E2E 138 9/9; regresión 131-134, 137 y review verdes (132-6 ajustado: el rol sin permiso de monto es el colaborador). BLOQUEADA para publicar hasta migraciones 134-138 en prod."
     }
   ]
 }

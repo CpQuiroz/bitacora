@@ -242,3 +242,10 @@ Formato:
 - **Cambios:** migración 137; shared (tipos, regionMetropolitana); backend (viajesViaticos.ts, viajes, misViajes, gastos); web (CampoViatico, Configuración › Viajes, Gastos › Viáticos); mobile (solo lectura, sin build).
 - **Verificación:** verificar.sh verde; E2E DEV 26/26 + regresión 49/49; EXPLAIN ANALYZE con Index Scan; revisión con correcciones aplicadas.
 - **Cierre:** blocked hasta migraciones 134-137 en prod. Siguiente: tarifas por tramo/km en Viajes y Cotización de viaje; auditoría de índices propuesta a la usuaria.
+
+## 2026-09-24 — Contador fusionado en Supervisor (tarea 138)
+- **Agente:** Claude Opus 5.5
+- **Plan:** dejar un solo rol (Supervisor) que contenga al Contador; 2FA opcional (decisión de la usuaria).
+- **Cambios:** migración 138; Rol sin "contador" en shared/backend/web/mobile; /me/mfa con `exigido`; CLAUDE.md y arquitectura.md.
+- **Verificación:** verificar.sh verde; E2E DEV 138 9/9 + regresión 131-134/137/review verde.
+- **Cierre:** blocked hasta migraciones 134-138 en prod. Pendiente de OK: auditoría de índices; siguiente del plan: Tarifas por tramo/km.

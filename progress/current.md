@@ -217,3 +217,6 @@ de módulos/acciones, 2FA opcional. Migración 138_fusionar_contador_en_supervis
 autorizados contador→supervisor, borra el rol; overrides del contador caen por cascade). Rol sin "contador" en
 shared/backend/web/mobile; la web lee `exigido` de /api/usuarios/me/mfa en vez de hardcodear admin/supervisor.
 verificar.sh verde. Pendiente: la usuaria corre la 138 en DEV → E2E prueba-138.ts (9 casos) + regresión.
+- 138 CERRADA en la rama (blocked hasta migraciones 134-138 en prod). DEV: migración aplicada (3 roles, supervisor
+  2FA opcional). E2E 138 9/9; 137 26/26; 131 11/11; 132 9/9 (132-6 ajustado a colaborador); 133 12/12; 134 13/13;
+  review 4/4. Prod: 0 usuarios contador.
