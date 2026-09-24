@@ -114,8 +114,8 @@ app.use(
 // tener el body) y antes de las rutas.
 app.use(medirLatencia);
 
-// Liveness: el proceso Node responde. Lo usa keep-warm.yml (solo
-// necesita despertar a Render) y cualquier check "¿está vivo?".
+// Liveness: el proceso Node responde. Lo usa el health check de Render
+// (healthCheckPath) y cualquier check "¿está vivo?".
 app.get("/health", (_req, res) => {
   res.json({ ok: true });
 });

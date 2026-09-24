@@ -1655,6 +1655,27 @@
       "title": "Mobile: pantalla 'Mi plan' (solo lectura, solo Admin)",
       "status": "done",
       "resolution": "Decisión de la usuaria pensando en Google Play: mobile solo MUESTRA plan/estado de pago/próximo cobro/últimos cobros; contratar, cambiar de plan y pagar siguen en la web (Play Billing / anti-steering). Más → Administración → 'Mi plan', visible solo con la acción gestionar_plan. Backend: GET /api/plan devuelve además pruebaTerminaEn. Mobile 1.10.17 (vc 58). verificar.sh en verde."
+    },
+    {
+      "id": 114,
+      "name": "quitar_keep_warm",
+      "title": "Quitar el workflow keep-warm (Render ya está en plan pago)",
+      "status": "done",
+      "resolution": "Render corre en Starter pago (0.5 CPU / 512 MB, verificado vía API el 24-sep-2026): no se duerme, así que el cron de GitHub Actions a /health cada 10 min ya no sirve. Se borró .github/workflows/keep-warm.yml y se actualizaron los comentarios que lo citaban. Los reintentos de apiFetch (web) y apiJson (mobile) se mantienen: siguen cubriendo reinicios por deploy y cortes de red."
+    },
+    {
+      "id": 115,
+      "name": "render_mover_a_oregon",
+      "title": "Mover el backend de Render de Ohio a Oregón (misma región que Supabase prod us-west-2)",
+      "status": "pending",
+      "description": "Render no permite cambiar la región de un servicio existente: hay que crear uno nuevo en Oregón. La URL bitacora-cgt7.onrender.com está grabada en las apps móviles ya instaladas (eas.json / .env del build local), en NEXT_PUBLIC_API_URL de Vercel y en los paneles de Flow (y WhatsApp si aplica). Plan: dominio propio api.<dominio> en el servicio nuevo, apuntar web + nuevo build mobile a ese dominio, mantener Ohio vivo hasta que todos los teléfonos actualicen y recién ahí borrarlo.",
+      "acceptance": [
+        "Servicio nuevo en Oregón con las mismas env vars y health check /health",
+        "Dominio propio (ej. api.transportesitineris.cl) apuntando al servicio nuevo",
+        "NEXT_PUBLIC_API_URL (Production + Preview) y la URL del build mobile apuntando al dominio propio",
+        "URLs de confirmación/retorno en Flow (y webhook de WhatsApp) actualizadas",
+        "Servicio de Ohio borrado solo cuando no reciba tráfico"
+      ]
     }
   ]
 }

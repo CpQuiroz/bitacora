@@ -3,9 +3,9 @@ import { obtenerImpersonacion } from "./impersonacion";
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
-// El backend vive en Render (plan gratis): si estuvo inactivo ~15 min se
-// duerme y la primera petición tarda 30-60s en despertarlo, o falla en
-// seco mientras arranca. apiFetch reintenta ante error de red / timeout
+// El backend vive en Render (Starter pago desde sep-2026: ya no se duerme
+// por inactividad, pero sí se reinicia en cada deploy y puede fallar en
+// seco unos segundos mientras arranca). apiFetch reintenta ante error de red / timeout
 // / 5xx antes de rendirse (AUDITORIA_RESILIENCIA.md R1). En un fallo
 // total devuelve una Response sintética 503 con un mensaje claro — así
 // los callers (que hacen `if (!res.ok)`) no necesitan try/catch.

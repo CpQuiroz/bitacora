@@ -15,3 +15,14 @@
   (pago/cambio de plan en la web por reglas de Google Play). Mobile 1.10.17.
 - Precios: la usuaria todavía está definiendo montos; se le propuso
   planes por tramo + implementación + adaptaciones aparte + IA con límite.
+
+## 24-sep-2026 — infraestructura
+
+- Tarea 114 (done): se borró `keep-warm.yml`. Render está en Starter pago
+  (verificado vía API), ya no se duerme.
+- Tarea 115 (pending): mover Render de Ohio a Oregón. No es un cambio de
+  región en el panel: servicio nuevo + dominio propio + URLs de web/mobile/
+  Flow. Pasos entregados a la usuaria; lo ejecuta ella en los paneles.
+- Hallazgos de la revisión de infra (para la Fase 0 de precios): Supabase
+  org en plan FREE (sin backups, 1 GB storage), Vercel en cuenta personal
+  (probable Hobby = sin uso comercial).
