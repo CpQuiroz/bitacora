@@ -6,7 +6,7 @@ import { supabase } from "./supabase";
 // se acotan por otra columna, no por empresa_id.
 export const TABLAS_POR_EMPRESA = [
   "accesos_usuario", "agenda_pro_config", "agenda_pro_horarios", "analisis_fotos",
-  "asistente_mensajes", "auditoria_usuarios",
+  "asistente_mensajes", "auditoria_empresa", "auditoria_usuarios",
   "catalogo_items", "catalogo_item_tipos_equipo", "catalogo_kit_items", "categorias_gasto", "centros_costo",
   "checklist_templates", "clientes", "consentimientos", "documentos", "empresa_modulos", "empresa_rol_modulos", "equipos", "facturas",
   "gastos", "gastos_fijos", "informes_generados", "informes_personalizados",
@@ -15,7 +15,7 @@ export const TABLAS_POR_EMPRESA = [
   "ordenes_servicio", "os_items", "paquetes_sesiones", "planes_mantencion", "plantillas_documento", "portal_accesos",
   "portal_codigos", "presupuesto_items", "presupuestos", "proveedores",
   "registros_mantencion_equipo", "registro_mantencion_fotos",
-  "rutas_planificadas", "suscripciones", "suscripcion_cobros", "tareas", "tipos_documento", "tipos_os_trabajo",
+  "ruta_viajes", "rutas_planificadas", "suscripciones", "suscripcion_cobros", "tareas", "tipos_documento", "tipos_os_trabajo",
   "trabajos", "unidades_medida", "usuarios", "vehiculo_asignaciones",
   "viajes",
 ] as const;

@@ -799,10 +799,22 @@ export default function ViajesPage() {
                               </div>
                               <div className="w-36">
                                 <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Monto del viaje</label>
-                                <InputMonto value={editSubtotal} onChange={setEditSubtotal} moneda={usuario.moneda} />
+                                {/* Solo Admin y Supervisor cambian el monto (tarea 132; el backend lo exige). */}
+                                <InputMonto
+                                  value={editSubtotal}
+                                  onChange={setEditSubtotal}
+                                  moneda={usuario.moneda}
+                                  disabled={!["admin", "supervisor"].includes(usuario.rol)}
+                                />
                               </div>
                               <label className="flex items-center gap-ds-2 pb-2.5 font-ds-body text-ds-small text-ds-text">
-                                <input type="checkbox" checked={editAplicaIva} onChange={(e) => setEditAplicaIva(e.target.checked)} className="accent-[var(--ds-brand)]" />
+                                <input
+                                  type="checkbox"
+                                  checked={editAplicaIva}
+                                  onChange={(e) => setEditAplicaIva(e.target.checked)}
+                                  disabled={!["admin", "supervisor"].includes(usuario.rol)}
+                                  className="accent-[var(--ds-brand)]"
+                                />
                                 Aplicar IVA
                               </label>
                             </div>

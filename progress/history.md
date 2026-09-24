@@ -228,3 +228,10 @@ Formato:
   - No existe plan "Empresa" en el código — cuando se cree, sumarlo a `PLANES_CON_ANALISIS_FOTOS_IA`.
   - Si Render prod tiene `ANALISIS_FOTOS_IA_ACTIVO` seteada, ya no se usa: se puede borrar.
   - Probar en prod con una empresa Pro tras el deploy (calidad de Haiku en fotos reales).
+
+## 2026-09-24 — Mejoras Viajes Parte A (tareas 130-134) + revisión
+- **Agente:** Claude Opus 5.5 (implementación directa + subagente revisor)
+- **Plan:** Rutas dentro de Viajes, eliminar clientes, editar monto con historial, asignar chofer con hora/aviso/agenda, cobro multi-viaje con PDF.
+- **Cambios:** backend (viajes, misViajes, cobros, clientes, auditoriaEmpresa, generarPdfCobro, viajesMontos/Asignacion/Cobros), shared, web (viajes, agenda, cobros, clientes, menú), mobile (sin build), migraciones 134-136.
+- **Verificación:** verificar.sh verde; tests unitarios nuevos; E2E DEV 45/45 + 4/4 de la revisión.
+- **Cierre:** tareas 130-134 blocked hasta migraciones 134-136 en prod; deuda en tarea 136. Siguiente: viáticos (137).

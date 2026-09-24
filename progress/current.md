@@ -178,3 +178,16 @@ Tarea 124 → done. Pendiente de la usuaria: planes en Flow + FLOW_PLAN_ID_* en 
 - 133 HECHA (asignar chofer + hora + aviso + agenda/pizarra; validación de chofer de otra empresa). Migración 136. E2E DEV 12/12. 134 en curso.
 - 134 HECHA (cobro multi-viaje con detalle, folio, sin duplicados, PDF con período; borrar libera viajes). E2E DEV 13/13. 135 (propuesta Parte B) en curso.
 - 135: propuesta en docs/PROPUESTA_PRECIOS_VIAJES.md (viáticos + tramos/km). Esperando aprobación. Revisor de la Parte A en curso → progress/review_viajes_parteA.md.
+- Revisión Parte A (progress/review_viajes_parteA.md, RECHAZADO) corregida: B1 tenant lists, B2 tests unitarios
+  (viajesMontos.test.ts, agendaColores.test.ts), B3 tareas 130-134 → blocked hasta migraciones 134-136 en prod,
+  B4 citas/consentimientos como historial, M1 borrar cobro libera viajes, M2 solo viajes confirmados, M3 límite
+  con rango, M4-M6 web, M8 columnas explícitas. verificar.sh verde; E2E 131-134 45/45 + casos review 4/4.
+  Deuda: tarea 136 (facturar como RPC; ruta_viajes misma empresa).
+- Usuaria 24-sep: viático siempre del chofer asignado, como gasto "Viáticos" (para saber cuánto pagarle por
+  semana/mes); local = dentro de la RM. Aprueba tramos/km. Tarifas en Viajes › Tarifas; "Cotización de viaje"
+  como apartado de Cotizaciones con "Convertir en viaje". Orden: viáticos → tarifas → cotización de viaje.
+
+### Checklist de publicación — Parte A (NO ejecutado)
+1. La usuaria corre en prod las migraciones 134, 135, 136 (db query -f + migration repair).
+2. Verificar por SELECT que existen ruta_viajes, auditoria_empresa y viajes.hora.
+3. OK de la usuaria → merge a main (fast-forward) → Render + Vercel; smoke /health y /api/viajes.

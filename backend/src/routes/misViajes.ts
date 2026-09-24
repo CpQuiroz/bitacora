@@ -43,7 +43,9 @@ misViajesRouter.get(
       .eq("empresa_id", req.empresaId!)
       .order("fecha", { ascending: false })
       .order("creado_en", { ascending: false })
-      .limit(100);
+      // Con rango de fechas (Agenda) se permiten más filas: la vista mes
+      // del equipo puede pasar de 100 viajes (review parte A, M3).
+      .limit(req.query.desde || req.query.hasta ? 1000 : 100);
 
     if (!verEquipo) query = query.eq("chofer_id", req.userId!);
     // Rango de fechas opcional (Agenda web/mobile, tarea 133). Sin rango

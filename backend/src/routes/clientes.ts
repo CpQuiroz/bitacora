@@ -406,6 +406,10 @@ const HISTORIAL_CLIENTE = [
   { tabla: "ventas", etiqueta: "ventas" },
   { tabla: "paquetes_sesiones", etiqueta: "paquetes de sesiones" },
   { tabla: "equipos", etiqueta: "equipos" },
+  // Citas de agenda y consentimientos firmados (Ley 21.719): la base los
+  // dejaría huérfanos (SET NULL) — también son historial (review parte A).
+  { tabla: "tareas", etiqueta: "citas de agenda" },
+  { tabla: "consentimientos", etiqueta: "consentimientos firmados" },
 ] as const;
 
 type UsoCliente = { etiqueta: string; cantidad: number }[];

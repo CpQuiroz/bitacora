@@ -6,10 +6,10 @@ import { subirFotoGuiaConNombre, urlFirmadaFotoGuia } from "../storage";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
 import { requiereAccion } from "../permisos";
-import { ROLES_EDITAN_MONTO_VIAJE, calcularMontos, nuevosMontosViaje } from "../viajesMontos";
+import { ROLES_EDITAN_MONTO_VIAJE, calcularMontos, normalizarHora, nuevosMontosViaje } from "../viajesMontos";
 import { registrarAuditoriaEmpresa } from "../auditoriaEmpresa";
 import { cobroDeViaje } from "../viajesCobros";
-import { avisarViajeAsignado, normalizarHora, validarChofer } from "../viajesAsignacion";
+import { avisarViajeAsignado, validarChofer } from "../viajesAsignacion";
 import { siguienteFolioCobro, siguienteFolioViaje } from "../folios";
 
 export const viajesRouter = Router();
@@ -554,6 +554,12 @@ viajesRouter.post(
       res.status(409).json({ error: "Alguno de los viajes ya fue facturado" });
       return;
     }
+    // Solo viajes confirmados (un borrador todavía no lo aprueba la
+    // oficina) — la web ya lo exigía; ahora también el backend.
+    if (viajes.some((v) => v.estado !== "confirmado")) {
+      res.status(400).json({ error: "Solo se pueden cobrar viajes confirmados" });
+      return;
+    }
     const clienteIds = new Set(viajes.map((v) => v.cliente_id));
     if (clienteIds.size !== 1 || !viajes[0]!.cliente_id) {
       res.status(400).json({ error: "Todos los viajes deben ser del mismo cliente" });
@@ -600,7 +606,7 @@ viajesRouter.post(
       .update({ estado: "facturado", factura_id: factura!.id })
       .eq("empresa_id", req.empresaId!)
       .in("id", viaje_ids)
-      .neq("estado", "facturado")
+      .eq("estado", "confirmado")
       .is("factura_id", null)
       .select("id");
     if (errorActualizar || (marcados?.length ?? 0) !== viaje_ids.length) {

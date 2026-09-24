@@ -19,7 +19,7 @@ import { join } from "path";
 // empresa_id — no aplica este chequeo.
 const TABLAS_POR_EMPRESA = [
   "accesos_usuario", "agenda_pro_config", "agenda_pro_horarios", "analisis_fotos",
-  "asistente_mensajes", "auditoria_usuarios",
+  "asistente_mensajes", "auditoria_empresa", "auditoria_usuarios",
   "catalogo_items", "catalogo_kit_items", "categorias_gasto", "centros_costo",
   "checklist_templates", "clientes", "documentos", "empresa_modulos", "equipos", "facturas",
   "gastos", "gastos_fijos", "informes_generados", "informes_personalizados",
@@ -27,7 +27,7 @@ const TABLAS_POR_EMPRESA = [
   "notificaciones", "notificaciones_cliente_log", "notificaciones_config",
   "ordenes_servicio", "os_items", "paquetes_sesiones", "plantillas_documento", "portal_accesos",
   "portal_codigos", "presupuesto_items", "presupuestos", "proveedores",
-  "rutas_planificadas", "suscripciones", "suscripcion_cobros", "tareas", "tipos_documento", "tipos_os", "tipos_trabajo",
+  "ruta_viajes", "rutas_planificadas", "suscripciones", "suscripcion_cobros", "tareas", "tipos_documento", "tipos_os", "tipos_trabajo",
   "trabajos", "unidades_medida", "usuarios", "vehiculo_asignaciones", "vehiculos",
   "viajes",
 ];

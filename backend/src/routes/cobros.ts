@@ -131,7 +131,7 @@ cobrosRouter.get(
   ah<RequestConEmpresa>(async (req, res) => {
     const { data: cobro } = await supabase
       .from("facturas")
-      .select("*, cliente_info:clientes(nombre, rut, direccion)")
+      .select("id, folio, cliente, monto, fecha_emision, fecha_vencimiento, viaje_ids, cliente_info:clientes(nombre, rut, direccion)")
       .eq("empresa_id", req.empresaId!)
       .eq("id", req.params.id)
       .maybeSingle();
@@ -417,25 +417,29 @@ cobrosRouter.delete(
       res.status(403).json({ error: "Este cobro ya fue pagado y no se puede eliminar" });
       return;
     }
-    const { error } = await supabase.from("facturas").delete().eq("empresa_id", req.empresaId!).eq("id", req.params.id);
-    if (error) {
-      res.status(500).json({ error: error.message });
+    // Los viajes del cobro vuelven a quedar disponibles para cobrar
+    // (tarea 134; antes quedaban "facturado" sin cobro). Se liberan ANTES
+    // de borrar: si esto falla, el cobro no se borra y nada queda a medias.
+    // Un viaje facturado siempre estuvo "confirmado" antes (facturar solo
+    // acepta confirmados), así que ese es su estado previo.
+    const { error: errorViajes } = await supabase
+      .from("viajes")
+      .update({ estado: "confirmado", factura_id: null })
+      .eq("empresa_id", req.empresaId!)
+      .eq("factura_id", factura.id);
+    if (errorViajes) {
+      res.status(500).json({ error: `No se pudieron liberar los viajes del cobro: ${errorViajes.message}` });
       return;
     }
-    // Los viajes del cobro borrado vuelven a quedar disponibles para
-    // cobrar (tarea 134). Antes quedaban en "facturado" sin cobro y no
-    // se podían volver a seleccionar. factura_id ya quedó en null por el
-    // ON DELETE SET NULL; acá se corrige el estado.
-    const viajeIds = ((factura as { viaje_ids?: string[] | null }).viaje_ids ?? []).filter(Boolean);
-    if (viajeIds.length > 0) {
-      const { error: errorViajes } = await supabase
-        .from("viajes")
-        .update({ estado: "confirmado", factura_id: null })
-        .eq("empresa_id", req.empresaId!)
-        .in("id", viajeIds)
-        .eq("estado", "facturado")
-        .is("factura_id", null);
-      if (errorViajes) console.error("No se pudieron liberar los viajes del cobro borrado:", errorViajes.message);
+    const { error } = await supabase.from("facturas").delete().eq("empresa_id", req.empresaId!).eq("id", req.params.id);
+    if (error) {
+      // Se vuelven a asociar los viajes que se habían liberado.
+      const viajeIds = ((factura as { viaje_ids?: string[] | null }).viaje_ids ?? []).filter(Boolean);
+      if (viajeIds.length) {
+        await supabase.from("viajes").update({ estado: "facturado", factura_id: factura.id }).eq("empresa_id", req.empresaId!).in("id", viajeIds).is("factura_id", null);
+      }
+      res.status(500).json({ error: error.message });
+      return;
     }
     res.status(204).end();
   })

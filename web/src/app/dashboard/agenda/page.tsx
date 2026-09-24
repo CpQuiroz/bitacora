@@ -1134,7 +1134,7 @@ function AgendaContenido() {
               Levantamiento necesita "levantamientos"; Cita no tiene gate propio, si se llegó a esta página el
               módulo Agenda ya está activo). */}
           <div className="mb-ds-4 flex flex-wrap items-center gap-ds-2 border-t border-ds-divider pt-ds-3">
-            {(["cita", "os", "levantamiento", "viaje"] as TipoEventoAgenda[])
+            {(["cita", "os", "levantamiento", "viaje"] as TipoEventoAgenda[]).filter((t) => t !== "viaje" || !modulosDeshabilitados.includes("viajes"))
               .filter((t) => (t !== "os" || puedeCrearOS) && (t !== "levantamiento" || puedeCrearLevantamiento))
               .map((t) => {
                 const Icono = ICONO_TIPO[t];
@@ -1188,7 +1188,7 @@ function AgendaContenido() {
               </div>
               <div className="h-4 w-px bg-ds-divider" />
               <div className="flex flex-wrap items-center gap-ds-3">
-                {(["cita", "os", "levantamiento", "viaje"] as TipoEventoAgenda[]).map((t) => {
+                {(["cita", "os", "levantamiento", "viaje"] as TipoEventoAgenda[]).filter((t) => t !== "viaje" || !modulosDeshabilitados.includes("viajes")).map((t) => {
                   const Icono = ICONO_TIPO[t];
                   return (
                     <span key={t} className="flex items-center gap-1 font-ds-body text-ds-micro text-ds-text/70">

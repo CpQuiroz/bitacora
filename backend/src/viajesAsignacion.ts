@@ -61,10 +61,3 @@ export async function avisarViajeAsignado(empresaId: string, choferId: string, v
     console.error("avisarViajeAsignado (correo):", err);
   }
 }
-
-// "HH:MM" o "HH:MM:SS" → "HH:MM:SS"; vacío → null; otro → error.
-export function normalizarHora(hora: unknown): { hora: string | null } | { error: string } {
-  if (hora === undefined || hora === null || hora === "") return { hora: null };
-  if (typeof hora !== "string" || !/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/.test(hora)) return { error: "Hora inválida (usa HH:MM)" };
-  return { hora: hora.length === 5 ? `${hora}:00` : hora };
-}
