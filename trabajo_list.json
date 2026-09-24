@@ -1775,6 +1775,14 @@
       "title": "Deuda técnica: borrar la columna empresas.pack_rubro (sin uso desde el rediseño de la tarea 124)",
       "status": "pending",
       "description": "La migración 131 la creó para los packs de rubro, que se reemplazaron por el tope de módulos. Borrarla con una migración cuando la 132 esté estable en prod."
+    },
+    {
+      "id": 129,
+      "name": "os_firma_cliente_etiquetas",
+      "title": "OS: dejar claro que firma el cliente o encargado (no el técnico)",
+      "status": "done",
+      "description": "Pedido de la usuaria 24-sep-2026: al cerrar la OS la etiqueta \"Nombre del encargado\" parecía la firma del técnico. Título \"Firma de conformidad del cliente o encargado\" en app, PDF y web; el técnico no firma (queda \"Ejecutado por\" en el PDF). La app necesita build (solo a pedido).",
+      "resolution": "Título \"Firma de conformidad del cliente o encargado\" + aclaración \"Tú no firmas: quedas registrado por tu cuenta\" en el cierre de la OS (mobile, sale en el próximo build), PDF y web; sección de ajustes del PDF \"Técnico que ejecutó\". Bloque \"Ejecutado por\" se mantiene (pedido de la usuaria). OS ya firmadas no cambian. verificar.sh verde."
     }
   ]
 }

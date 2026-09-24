@@ -1734,8 +1734,11 @@ export const ETIQUETA_SECCION_PDF_OS: Record<SeccionPdfOS, string> = {
   observaciones: "Comentarios del técnico",
   informe_ia: "Informe técnico (IA)",
   items: "Ítems y materiales",
-  firma_tecnico: "Firma del técnico",
-  firma_cliente: "Firma del cliente",
+  // Desde la Fase 3.2 el técnico no firma: la sección muestra quién
+  // ejecutó la OS (nombre y horarios). Las claves no cambian (se guardan
+  // en la configuración de cada empresa).
+  firma_tecnico: "Técnico que ejecutó",
+  firma_cliente: "Firma del cliente o encargado",
 };
 
 export type PlantillaDocumento = {

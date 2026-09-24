@@ -839,13 +839,13 @@ export default function DetalleOrdenServicioPage() {
 
           <div className="my-ds-6">
             <Card>
-              <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Firma de conformidad</p>
+              <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Firma de conformidad del cliente o encargado</p>
               {detalle.orden?.firma_url_firmada ? (
                 <div className="flex flex-col gap-ds-3 sm:flex-row sm:items-center sm:gap-ds-6">
                   {/* URL firmada (vence) — sin optimizer, con lazy-load igual. */}
                   <Image
                     src={detalle.orden.firma_url_firmada}
-                    alt="Firma"
+                    alt="Firma del cliente o encargado"
                     width={192}
                     height={96}
                     unoptimized

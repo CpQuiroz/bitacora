@@ -79,3 +79,9 @@ Etapa 1 — review (progress/review_planes_etapa1.md) RECHAZADO → correcciones
 Pasos de la usuaria para la 132 (cuando se apruebe la etapa): correrla en prod ANTES del merge a main:
   npx supabase db query --linked --project-ref yjbskbskyadxjooxngjv -f supabase/migrations/132_secciones_con_interruptor.sql
   npx supabase migration repair --status applied --linked 132
+
+## Tarea 129 — OS: firma del cliente o encargado (HECHA, 24-sep)
+- La usuaria confundió "Nombre del encargado" con la firma del técnico. Ahora: título "Firma de conformidad
+  del cliente o encargado" + "Tú no firmas: quedas registrado por tu cuenta" (mobile, requiere build 1.10.18),
+  PDF y web con el mismo texto; sección del PDF "Técnico que ejecutó". "Ejecutado por" se mantiene.
+- Tarea 124 vuelve a in_progress (etapa 1 lista, esperando decisiones de la usuaria para la etapa 2).

@@ -223,7 +223,7 @@ export function encolarFirmaTecnico(
 // viejo lo sigue mandando.
 export function encolarFirma(trabajoId: string, payload: { firma_base64: string; firmante_nombre: string }) {
   return encolar({
-    etiqueta: "Firma del cliente",
+    etiqueta: "Firma del cliente o encargado",
     recurso: `trabajo:${trabajoId}`,
     path: `/api/trabajos/${trabajoId}/firma`,
     method: "POST",

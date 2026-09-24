@@ -68,9 +68,9 @@ export function CierreFirma({
       await onConfirmar({ tipo: "no_disponible", motivo: motivo.trim(), foto: fotoEvidencia });
       return;
     }
-    if (!nombre.trim()) return Alert.alert("Falta un dato", "Escribe el nombre del encargado.");
+    if (!nombre.trim()) return Alert.alert("Falta un dato", "Escribe el nombre del cliente o encargado que firma.");
     const base64 = await lienzo.current?.capturar();
-    if (!base64) return Alert.alert("Falta la firma", "Pide al encargado que firme en el recuadro.");
+    if (!base64) return Alert.alert("Falta la firma", "Pide al cliente o encargado que firme en el recuadro.");
     await onConfirmar({ tipo: "firma", firma_base64: base64, firmante_nombre: nombre.trim() });
   }
 
@@ -153,8 +153,18 @@ export function CierreFirma({
           </Button>
         </View>
       ) : (
+        // Quien firma es el CLIENTE (o su encargado), no el técnico — el
+        // técnico queda acreditado por su cuenta ("Ejecutado por" en el
+        // PDF). Pedido 24-sep-2026: "Nombre del encargado" se leía como
+        // la firma del técnico.
         <View style={{ gap: tokens.space["2"] }}>
-          <Input etiqueta="Nombre del encargado" valor={nombre} onCambio={setNombre} />
+          <Texto tamano={tokens.size.body} color={tokens.color.text} peso="semibold">
+            Firma de conformidad del cliente o encargado
+          </Texto>
+          <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
+            Pásale el teléfono al cliente para que firme. Tú no firmas: quedas registrado por tu cuenta.
+          </Texto>
+          <Input etiqueta="Nombre del cliente o encargado" valor={nombre} onCambio={setNombre} />
           <LienzoFirma ref={lienzo} />
         </View>
       )}

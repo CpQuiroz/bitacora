@@ -431,7 +431,7 @@ export async function generarPdfOS(datos: DatosOSPdf): Promise<Buffer> {
       bloqueClienteNoDisponible(doc, colorMarca, datos, clienteNoDisponibleFotoBuffer);
     } else {
       bloqueFirma(doc, colorMarca, {
-        titulo: "Firma de conformidad del cliente",
+        titulo: "Firma de conformidad del cliente o encargado",
         imagen: firmaBuffer,
         nombre: datos.firmanteNombre,
         documento: datos.clienteRut ?? datos.firmanteDocumento,

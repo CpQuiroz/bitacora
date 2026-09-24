@@ -169,12 +169,12 @@ export default function TrabajoDetallePage() {
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted">Firma del cliente</p>
+                    <p className="text-xs text-muted">Firma del cliente o encargado</p>
                     {orden?.firma_url_firmada ? (
                       // URL firmada (vence) — sin optimizer, con lazy-load igual.
                       <Image
                         src={orden.firma_url_firmada}
-                        alt="Firma del cliente"
+                        alt="Firma del cliente o encargado"
                         width={160}
                         height={40}
                         unoptimized
