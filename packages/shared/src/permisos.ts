@@ -65,10 +65,37 @@ export type Modulo = (typeof MODULOS)[number];
 // para sembrar los 4 roles de sistema la primera vez (backend/src/roles.ts).
 // El backend resuelve permisos contra la tabla; el frontend contra
 // `modulos_visibles` / `acciones` que devuelve /api/me.
+const PERFIL_SUPERVISION: Modulo[] = [
+  "agenda",
+  "ordenes_servicio",
+  "viajes",
+  "registros",
+  "equipos",
+  "inventario",
+  "catalogo",
+  "proveedores",
+  "rutas",
+  "flota",
+  "agenda_pro",
+  "financiero",
+  "cotizaciones",
+  "cobros",
+  "informes",
+  "remuneraciones",
+];
+
+// Roles de gestión con el mismo alcance operativo (tarea 138): los que
+// asignan y cambian montos, reciben avisos de gestión, etc. Las reglas
+// de 2FA NO usan esto (el Contador tiene 2FA opcional: ROL_EXIGE_2FA).
+export const ROLES_SUPERVISION: readonly string[] = ["admin", "supervisor", "contador"];
+
 export const PERMISOS_POR_ROL: Record<Rol, Modulo[]> = {
   admin: [...MODULOS],
-  supervisor: ["agenda", "ordenes_servicio", "viajes", "registros", "equipos", "inventario", "catalogo", "proveedores", "rutas", "flota", "agenda_pro"],
-  contador: ["financiero", "cotizaciones", "cobros", "informes", "remuneraciones"],
+  // Supervisor y Contador: mismo perfil desde el 24-sep-2026 (tarea 138,
+  // pedido de la usuaria). Si algún día se separan, se editan acá y en
+  // la tabla roles (migración nueva), no en cada pantalla.
+  supervisor: PERFIL_SUPERVISION,
+  contador: PERFIL_SUPERVISION,
   // El colaborador ve su Agenda (calendario + tareas asignadas). El
   // resto de su trabajo en terreno vive en la app móvil.
   colaborador: ["agenda"],
@@ -108,7 +135,7 @@ export type Accion = (typeof ACCIONES)[number];
 export const ACCIONES_POR_ROL: Record<Rol, Accion[]> = {
   admin: [...ACCIONES],
   supervisor: ["config_agenda_pro", "ver_dashboard", "registrar_venta"],
-  contador: ["ver_dashboard"],
+  contador: ["config_agenda_pro", "ver_dashboard", "registrar_venta"],
   colaborador: [],
 };
 

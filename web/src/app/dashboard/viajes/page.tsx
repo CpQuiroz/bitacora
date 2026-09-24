@@ -4,7 +4,7 @@ import { Fragment, useEffect, useMemo, useState, type FormEvent } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Plus, Truck } from "lucide-react";
-import { CIUDADES_CHILE, formatearFolio, type Cliente, type ConfigViaticos, type EstadoViaje, type TipoViatico, type Usuario, type Viaje } from "@bitacora/shared";
+import { CIUDADES_CHILE, ROLES_SUPERVISION, formatearFolio, type Cliente, type ConfigViaticos, type EstadoViaje, type TipoViatico, type Usuario, type Viaje } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
@@ -126,7 +126,7 @@ export default function ViajesPage() {
   const [editComentarios, setEditComentarios] = useState("");
   const [editViaticoTipo, setEditViaticoTipo] = useState<TipoViatico | "">("");
   const [editViaticoMonto, setEditViaticoMonto] = useState("");
-  const puedeViatico = ["admin", "supervisor"].includes(usuario?.rol ?? "");
+  const puedeViatico = ROLES_SUPERVISION.includes(usuario?.rol ?? "");
 
   async function cargarViajes() {
     const res = await apiFetch(`/api/viajes${filtroEstado !== "todos" ? `?estado=${filtroEstado}` : ""}`);
@@ -852,7 +852,7 @@ export default function ViajesPage() {
                                   value={editSubtotal}
                                   onChange={setEditSubtotal}
                                   moneda={usuario.moneda}
-                                  disabled={!["admin", "supervisor"].includes(usuario.rol)}
+                                  disabled={!ROLES_SUPERVISION.includes(usuario.rol)}
                                 />
                               </div>
                               <label className="flex items-center gap-ds-2 pb-2.5 font-ds-body text-ds-small text-ds-text">
@@ -860,7 +860,7 @@ export default function ViajesPage() {
                                   type="checkbox"
                                   checked={editAplicaIva}
                                   onChange={(e) => setEditAplicaIva(e.target.checked)}
-                                  disabled={!["admin", "supervisor"].includes(usuario.rol)}
+                                  disabled={!ROLES_SUPERVISION.includes(usuario.rol)}
                                   className="accent-[var(--ds-brand)]"
                                 />
                                 Aplicar IVA

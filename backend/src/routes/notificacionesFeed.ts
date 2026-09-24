@@ -5,7 +5,7 @@
 // ============================================================
 import { Router } from "express";
 import type { TipoNotificacion } from "@bitacora/shared";
-import { estadoDocumento } from "@bitacora/shared";
+import { ROLES_SUPERVISION, estadoDocumento } from "@bitacora/shared";
 import { supabase } from "../supabase";
 import { notificar, notificarGerencia } from "../notificar";
 import { asignacionVigentePorEquipo } from "./equipos";
@@ -122,7 +122,7 @@ notificacionesFeedRouter.get(
     // Solo admin/supervisor disparan la revisión de vencimientos (evita
     // que se dispare N veces si varios colaboradores abren el panel a
     // la vez, y son igual los únicos destinatarios de esas alertas).
-    if (req.rol === "admin" || req.rol === "supervisor") {
+    if (ROLES_SUPERVISION.includes(req.rol ?? "")) {
       await generarVencimientosPerezosos(req.empresaId!);
     }
 

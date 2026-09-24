@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Alert, Image, Pressable, ScrollView, View } from "react-native";
 import { ArrowLeft, Check, Square } from "lucide-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { CIUDADES_CHILE, type Cliente, type Equipo, type Usuario } from "@bitacora/shared";
+import { CIUDADES_CHILE, ROLES_SUPERVISION, type Cliente, type Equipo, type Usuario } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
 import { Button, Card, DatePicker, Input, LoadingState, ScreenHeader, Skeleton, Texto, useMarca } from "@bitacora/ui/native";
 import { PickerBuscable } from "../../components/ui";
@@ -45,10 +45,10 @@ export function ViajeFormScreen({ navigation, route }: NativeStackScreenProps<Vi
   // Tarea 132: al EDITAR, el monto solo lo cambian Admin y Supervisor (el
   // backend lo exige igual). Al crear, el chofer sigue ingresándolo.
   const auth = useAuth();
-  const puedeEditarMonto = !editandoId || (auth.fase === "listo" && ["admin", "supervisor"].includes(auth.usuario.rol));
+  const puedeEditarMonto = !editandoId || (auth.fase === "listo" && ROLES_SUPERVISION.includes(auth.usuario.rol));
   // Tarea 133: al CREAR, Admin/Supervisor pueden asignarlo a un chofer,
   // con fecha y hora; sin chofer se registra como propio (como siempre).
-  const puedeAsignar = !editandoId && auth.fase === "listo" && ["admin", "supervisor"].includes(auth.usuario.rol);
+  const puedeAsignar = !editandoId && auth.fase === "listo" && ROLES_SUPERVISION.includes(auth.usuario.rol);
   const [choferes, setChoferes] = useState<Usuario[]>([]);
   const [fechaViaje, setFechaViaje] = useState<Date>(() => new Date());
   const [clientes, setClientes] = useState<Cliente[] | null>(null);

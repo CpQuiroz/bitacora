@@ -9,7 +9,7 @@ import { siguienteFolioCobro } from "../folios";
 import { detalleViajesDeCobro } from "../viajesCobros";
 import { generarPdfEnWorker } from "../pdfWorkerPool";
 import type { DatosCobroPdf } from "../generarPdfCobro";
-import { sustituirVariables, sustituirVariablesEnBloques } from "@bitacora/shared";
+import { ROLES_SUPERVISION, sustituirVariables, sustituirVariablesEnBloques } from "@bitacora/shared";
 
 export const cobrosRouter = Router();
 
@@ -79,7 +79,7 @@ async function revisarCobrosCliente(empresaId: string) {
 cobrosRouter.get(
   "/",
   ah<RequestConEmpresa>(async (req, res) => {
-    if (req.rol === "admin" || req.rol === "supervisor") {
+    if (ROLES_SUPERVISION.includes(req.rol ?? "")) {
       revisarCobrosCliente(req.empresaId!).catch((err) => console.error("Error revisando cobros para notificar al cliente:", err));
     }
 

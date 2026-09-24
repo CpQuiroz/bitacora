@@ -1,6 +1,6 @@
 import { Router } from "express";
 import type { EstadoPresupuesto, Presupuesto } from "@bitacora/shared";
-import { sustituirVariables, sustituirVariablesEnBloques } from "@bitacora/shared";
+import { ROLES_SUPERVISION, sustituirVariables, sustituirVariablesEnBloques } from "@bitacora/shared";
 import { supabase } from "../supabase";
 import { crearOrdenServicio } from "../ordenes";
 import type { DatosCotizacionPdf } from "../generarPdfCotizacion";
@@ -166,7 +166,7 @@ cotizacionesRouter.get(
   "/",
   ah<RequestConEmpresa>(async (req, res) => {
     await marcarCotizacionesExpiradas(req.empresaId!);
-    if (req.rol === "admin" || req.rol === "supervisor") {
+    if (ROLES_SUPERVISION.includes(req.rol ?? "")) {
       revisarCotizacionesPorVencer(req.empresaId!).catch((err) => console.error("Error revisando cotizaciones por vencer:", err));
     }
 

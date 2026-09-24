@@ -1,3 +1,4 @@
+import { ROLES_SUPERVISION } from "@bitacora/shared";
 // IVA por viaje — una sola definición, compartida entre la ruta REST
 // (routes/viajes.ts, formulario web) y el bot de WhatsApp
 // (whatsappFlujoViaje.ts). Redondeo a peso entero, igual que el resto
@@ -14,7 +15,8 @@ export function calcularMontos(subtotalNum: number, aplicaIva: boolean) {
 // Supervisor, nunca sobre un viaje ya cobrado, y cada cambio queda en
 // auditoria_empresa. Lo usan /api/viajes (web) y /api/mis-viajes (app).
 // ============================================================
-export const ROLES_EDITAN_MONTO_VIAJE: readonly string[] = ["admin", "supervisor"];
+// Tarea 138: Supervisor y Contador son el mismo perfil.
+export const ROLES_EDITAN_MONTO_VIAJE: readonly string[] = ROLES_SUPERVISION;
 
 export type MontosViaje = { subtotal: number; aplica_iva: boolean; iva: number; total: number };
 

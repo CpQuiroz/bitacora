@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { ChevronLeft, ClipboardCheck, Plus, Wrench } from "lucide-react";
 import type { Equipo, OrdenServicio, PlanMantencion, Trabajo } from "@bitacora/shared";
-import { estadoOsDeTrabajo } from "@bitacora/shared";
+import { ROLES_SUPERVISION, estadoOsDeTrabajo } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
@@ -84,7 +84,7 @@ export default function EquipoDetallePage() {
   }, [cargar]);
 
   const esVehiculo = equipo?.categoria === "Vehículo";
-  const puedeGestionar = rol === "admin" || rol === "supervisor";
+  const puedeGestionar = ROLES_SUPERVISION.includes(rol ?? "");
 
   const tabs = useMemo<{ id: Tab; label: string }[]>(
     () => [

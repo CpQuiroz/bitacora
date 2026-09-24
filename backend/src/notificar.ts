@@ -4,7 +4,8 @@
 // ocurre cada evento (no hay un job/cron aparte) — agregar un tipo de
 // evento nuevo es una llamada más a notificar(), no un sistema nuevo.
 // ============================================================
-import type { EntidadNotificacion, TipoNotificacion } from "@bitacora/shared";
+import type { EntidadNotificacion, Rol, TipoNotificacion } from "@bitacora/shared";
+import { ROLES_SUPERVISION } from "@bitacora/shared";
 import { supabase } from "./supabase";
 
 const TITULOS: Record<TipoNotificacion, string> = {
@@ -72,7 +73,7 @@ export async function notificarGerencia(
     .from("usuarios")
     .select("id")
     .eq("empresa_id", empresaId)
-    .in("rol", ["admin", "supervisor"])
+    .in("rol", ROLES_SUPERVISION as Rol[])
     .eq("activo", true);
   await Promise.all((destinatarios ?? []).map((u) => notificar(empresaId, u.id, tipo, opciones)));
 }
