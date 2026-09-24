@@ -11,7 +11,7 @@ import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { AsignarPackForm } from "@/components/AsignarPackForm";
-import { Button, Card, Input, StatusBadge } from "@bitacora/ui/web";
+import { Button, Card, Dialog, Input, StatusBadge } from "@bitacora/ui/web";
 import { linkWhatsapp } from "@/lib/whatsapp";
 
 type TrabajoConOrden = Trabajo & { orden: Pick<OrdenServicio, "folio" | "estado_os"> | null };
@@ -63,6 +63,12 @@ export default function ClienteDetallePage() {
   const [guardando, setGuardando] = useState(false);
   const [errorForm, setErrorForm] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
+  // Eliminar cliente (tarea 131): solo Admin. Antes de ofrecer el borrado
+  // se pregunta cuántos registros tiene; con historial se ofrece desactivar.
+  const [eliminarAbierto, setEliminarAbierto] = useState(false);
+  const [usoCliente, setUsoCliente] = useState<{ eliminable: boolean; uso: { etiqueta: string; cantidad: number }[] } | null>(null);
+  const [eliminando, setEliminando] = useState(false);
+  const [errorEliminar, setErrorEliminar] = useState<string | null>(null);
 
   // Agenda Pro — packs del cliente. `null` = todavía no cargó o la
   // empresa no tiene Agenda Pro (en cuyo caso la card no se muestra).
@@ -164,6 +170,40 @@ export default function ClienteDetallePage() {
     if (res.ok) cargar();
   }
 
+  async function abrirEliminar() {
+    setErrorEliminar(null);
+    setUsoCliente(null);
+    setEliminarAbierto(true);
+    const res = await apiFetch(`/api/clientes/${params.id}/uso`);
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setErrorEliminar(body.error ?? "No se pudo revisar el historial del cliente");
+      return;
+    }
+    setUsoCliente(body);
+  }
+
+  async function onEliminar() {
+    setEliminando(true);
+    setErrorEliminar(null);
+    const res = await apiFetch(`/api/clientes/${params.id}`, { method: "DELETE" });
+    setEliminando(false);
+    if (res.status === 204) {
+      router.replace("/dashboard/registros/clientes");
+      return;
+    }
+    const body = await res.json().catch(() => ({}));
+    // Le asociaron un registro mientras el diálogo estaba abierto.
+    if (res.status === 409 && Array.isArray(body.uso)) setUsoCliente({ eliminable: false, uso: body.uso });
+    setErrorEliminar(body.error ?? "No se pudo eliminar el cliente");
+  }
+
+  async function onDesactivarDesdeEliminar() {
+    await onAlternarActivo();
+    setEliminarAbierto(false);
+    setAviso("Cliente desactivado");
+  }
+
   const eventosHistorial: EventoHistorial[] = useMemo(() => {
     if (!cliente) return [];
     const eventos: EventoHistorial[] = [
@@ -239,11 +279,59 @@ export default function ClienteDetallePage() {
               <Button variante="secundario" onPress={onAlternarActivo}>
                 {cliente.activo ? "Desactivar" : "Activar"}
               </Button>
+              {usuario?.rol === "admin" ? (
+                <Button variante="peligro" onPress={() => void abrirEliminar()}>
+                  Eliminar
+                </Button>
+              ) : null}
               <Button variante="secundario" onPress={() => setEditando((v) => !v)}>
                 {editando ? "Cerrar" : "Editar"}
               </Button>
             </div>
           </div>
+
+          <Dialog abierto={eliminarAbierto} onCerrar={() => setEliminarAbierto(false)} titulo={`Eliminar ${cliente.nombre}`}>
+            <div className="flex flex-col gap-ds-3 font-ds-body text-ds-small text-ds-text">
+              {!usoCliente && !errorEliminar ? <p className="text-ds-text/70">Revisando el historial del cliente…</p> : null}
+              {usoCliente?.eliminable ? (
+                <>
+                  <p>Este cliente no tiene viajes, órdenes de servicio, cotizaciones ni cobros. Se eliminará para siempre y no se puede deshacer.</p>
+                  <div className="flex flex-wrap gap-ds-2">
+                    <Button variante="peligro" onPress={() => void onEliminar()} cargando={eliminando}>
+                      Sí, eliminar
+                    </Button>
+                    <Button variante="ghost" onPress={() => setEliminarAbierto(false)}>
+                      Cancelar
+                    </Button>
+                  </div>
+                </>
+              ) : null}
+              {usoCliente && !usoCliente.eliminable ? (
+                <>
+                  <p>No se puede eliminar porque tiene historial:</p>
+                  <ul className="flex flex-col gap-1">
+                    {usoCliente.uso.map((u) => (
+                      <li key={u.etiqueta} className="tabular-nums">
+                        • {u.cantidad} {u.etiqueta}
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="text-ds-text/70">
+                    Para que no aparezca en las listas, desactívalo. Su historial se conserva.
+                  </p>
+                  <div className="flex flex-wrap gap-ds-2">
+                    {cliente.activo ? (
+                      <Button onPress={() => void onDesactivarDesdeEliminar()}>Desactivar cliente</Button>
+                    ) : null}
+                    <Button variante="ghost" onPress={() => setEliminarAbierto(false)}>
+                      Cerrar
+                    </Button>
+                  </div>
+                </>
+              ) : null}
+              {errorEliminar ? <p className="text-ds-accent-700">{errorEliminar}</p> : null}
+            </div>
+          </Dialog>
 
           {/* Bloque A — accesos directos: cada uno abre el formulario
               correspondiente con este cliente ya preseleccionado. */}

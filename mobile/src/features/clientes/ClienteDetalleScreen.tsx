@@ -9,7 +9,7 @@ import { tokens } from "@bitacora/design-tokens";
 import { Button, Card, ErrorState, ListRow, ListRowGrupo, LoadingState, ScreenHeader, Skeleton, StatusBadge, Texto, useMarca } from "@bitacora/ui/native";
 import { useRed } from "../../services/sync/NetworkProvider";
 import { useAuth } from "../auth/AuthContext";
-import { editarCliente, obtenerClienteDetalle, saldoDeFacturas, type ClienteDetalle } from "../../services/clientes";
+import { editarCliente, eliminarCliente, obtenerClienteDetalle, saldoDeFacturas, usoDelCliente, type ClienteDetalle } from "../../services/clientes";
 import { listarPaquetesCliente } from "../../services/paquetes";
 import { ventasDeCliente } from "../../services/ventas";
 import { pesos } from "../../lib/plata";
@@ -72,6 +72,46 @@ export function ClienteDetalleScreen({ route, navigation }: NativeStackScreenPro
   useFocusEffect(useCallback(() => void cargar(), [cargar]));
 
   const saldo = useMemo(() => saldoDeFacturas(cliente?.facturas ?? []), [cliente]);
+
+  const esAdmin = auth.fase === "listo" && auth.usuario.rol === "admin";
+
+  // Eliminar (tarea 131): solo Admin y solo sin historial; si tiene
+  // registros se explica cuántos y se ofrece desactivar.
+  async function eliminar() {
+    if (!cliente) return;
+    if (!enLinea) return Alert.alert("Sin conexión", "Necesitas conexión para esto.");
+    setOcupado(true);
+    const uso = await usoDelCliente(clienteId);
+    setOcupado(false);
+    if (!uso.ok) return Alert.alert("No se pudo revisar", uso.error);
+    if (!uso.data.eliminable) {
+      const detalle = uso.data.uso.map((u) => `• ${u.cantidad} ${u.etiqueta}`).join("\n");
+      return Alert.alert(
+        "No se puede eliminar",
+        `${cliente.nombre} tiene historial:\n${detalle}\n\nPuedes desactivarlo; su historial se conserva.`,
+        cliente.activo
+          ? [
+              { text: "Cerrar", style: "cancel" },
+              { text: "Desactivar", onPress: () => void alternarActivo() },
+            ]
+          : [{ text: "Cerrar", style: "cancel" }]
+      );
+    }
+    Alert.alert("Eliminar cliente", `Se eliminará ${cliente.nombre} para siempre. No se puede deshacer.`, [
+      { text: "Cancelar", style: "cancel" },
+      {
+        text: "Eliminar",
+        style: "destructive",
+        onPress: async () => {
+          setOcupado(true);
+          const r = await eliminarCliente(clienteId);
+          setOcupado(false);
+          if (!r.ok) return Alert.alert("No se pudo eliminar", r.error);
+          navigation.goBack();
+        },
+      },
+    ]);
+  }
 
   async function alternarActivo() {
     if (!cliente) return;
@@ -310,6 +350,11 @@ export function ClienteDetalleScreen({ route, navigation }: NativeStackScreenPro
             <Button variante={cliente.activo ? "peligro" : "primario"} bloque onPress={alternarActivo} cargando={ocupado}>
               {cliente.activo ? "Marcar como inactivo" : "Reactivar cliente"}
             </Button>
+            {esAdmin ? (
+              <Button variante="ghost" bloque onPress={() => void eliminar()} deshabilitado={ocupado}>
+                Eliminar cliente
+              </Button>
+            ) : null}
           </View>
         ) : null}
       </ScrollView>

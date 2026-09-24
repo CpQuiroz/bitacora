@@ -106,3 +106,18 @@ function cuerpo(b: BorradorCliente) {
     contacto_nombre: b.contacto_nombre.trim() || null,
   };
 }
+
+// Eliminar cliente (tarea 131) — solo Admin. Primero se consulta el
+// historial: con registros asociados el backend no deja borrar (409) y
+// la pantalla ofrece desactivar.
+export type UsoCliente = { eliminable: boolean; uso: { etiqueta: string; cantidad: number }[] };
+
+export async function usoDelCliente(id: string): Promise<{ ok: true; data: UsoCliente } | { ok: false; error: string }> {
+  const res = await apiJson<UsoCliente>(`/api/clientes/${id}/uso`);
+  return res.ok ? { ok: true, data: res.data } : { ok: false, error: res.error };
+}
+
+export async function eliminarCliente(id: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  const res = await apiJson<unknown>(`/api/clientes/${id}`, { method: "DELETE" });
+  return res.ok ? { ok: true } : { ok: false, error: res.error };
+}

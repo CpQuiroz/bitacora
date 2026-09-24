@@ -1797,14 +1797,15 @@
       "id": 131,
       "name": "clientes_eliminar_admin",
       "title": "Clientes: eliminar (solo Admin) si no tiene historial; si tiene, bloquear, mostrar cuántos registros y ofrecer desactivar; auditoría",
-      "status": "in_progress",
-      "description": "Pedido de la usuaria 24-sep-2026 (Mejoras módulo Viajes, Parte A). Reutilizar lo existente; multi-tenant; permisos por rol/módulo; estilo actual. Commit por punto."
+      "status": "done",
+      "description": "Pedido de la usuaria 24-sep-2026 (Mejoras módulo Viajes, Parte A). Reutilizar lo existente; multi-tenant; permisos por rol/módulo; estilo actual. Commit por punto.",
+      "resolution": "GET /api/clientes/:id/uso y DELETE /api/clientes/:id, solo rol admin (requiereRol). Historial que bloquea: viajes, OS, cotizaciones, cobros, levantamientos, ventas, paquetes de sesiones y equipos (incluye las tablas que la base borraría en cascada o dejaría huérfanas). Con historial → 409 CLIENTE_CON_HISTORIAL con el detalle; web y mobile ofrecen Desactivar. Auditoría en tabla nueva auditoria_empresa (migración 135, RLS, sin grants anon/authenticated): usuario, fecha, nombre y RUT del cliente. Botón Eliminar solo para Admin en web (diálogo) y mobile (se ve en el próximo build). E2E DEV 11/11 (supervisor 403, contador 403, con viaje 409, auditoría ok). verificar.sh verde."
     },
     {
       "id": 132,
       "name": "viajes_editar_precio",
       "title": "Viajes: el Admin edita el monto de un viaje no cobrado, con historial del cambio",
-      "status": "pending",
+      "status": "in_progress",
       "description": "Pedido de la usuaria 24-sep-2026 (Mejoras módulo Viajes, Parte A). Reutilizar lo existente; multi-tenant; permisos por rol/módulo; estilo actual. Commit por punto."
     },
     {

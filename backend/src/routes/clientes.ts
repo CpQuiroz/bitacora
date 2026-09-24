@@ -6,6 +6,8 @@ import { geocodificarDireccion } from "../geocodificar";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
 import { siguienteFolioCliente } from "../folios";
+import { requiereRol } from "../permisos";
+import { registrarAuditoriaEmpresa } from "../auditoriaEmpresa";
 
 export const clientesRouter = Router();
 
@@ -384,5 +386,104 @@ clientesRouter.patch(
       return;
     }
     res.json(data);
+  })
+);
+
+// ============================================================
+// Eliminar un cliente (tarea 131, 24-sep-2026) — solo el rol admin.
+// Solo se borra si el cliente NO tiene historial. Se cuentan también las
+// tablas que la base borraría en cascada (equipos, paquetes de sesiones)
+// o dejaría huérfanas (viajes, cobros → SET NULL): el borrado nunca se
+// lleva historial por delante. Con historial → 409 con el detalle, y la
+// pantalla ofrece "Desactivar" en su lugar.
+// ============================================================
+const HISTORIAL_CLIENTE = [
+  { tabla: "viajes", etiqueta: "viajes" },
+  { tabla: "trabajos", etiqueta: "órdenes de servicio" },
+  { tabla: "presupuestos", etiqueta: "cotizaciones" },
+  { tabla: "facturas", etiqueta: "cobros" },
+  { tabla: "levantamientos", etiqueta: "levantamientos" },
+  { tabla: "ventas", etiqueta: "ventas" },
+  { tabla: "paquetes_sesiones", etiqueta: "paquetes de sesiones" },
+  { tabla: "equipos", etiqueta: "equipos" },
+] as const;
+
+type UsoCliente = { etiqueta: string; cantidad: number }[];
+
+async function usoDelCliente(empresaId: string, clienteId: string): Promise<UsoCliente> {
+  const conteos = await Promise.all(
+    HISTORIAL_CLIENTE.map(async ({ tabla, etiqueta }) => {
+      const { count, error } = await supabase
+        .from(tabla)
+        .select("id", { count: "exact", head: true })
+        .eq("empresa_id", empresaId)
+        .eq("cliente_id", clienteId);
+      if (error) throw new Error(`No se pudo revisar ${etiqueta} del cliente: ${error.message}`);
+      return { etiqueta, cantidad: count ?? 0 };
+    })
+  );
+  return conteos.filter((c) => c.cantidad > 0);
+}
+
+async function clienteDeEmpresa(empresaId: string, clienteId: string) {
+  const { data } = await supabase.from("clientes").select("id, nombre, rut, activo").eq("empresa_id", empresaId).eq("id", clienteId).maybeSingle();
+  return data;
+}
+
+// Cuántos registros tiene el cliente — la pantalla lo pide antes de
+// ofrecer "Eliminar" (si hay historial, ofrece "Desactivar").
+clientesRouter.get(
+  "/:id/uso",
+  requiereRol("admin"),
+  ah<RequestConEmpresa>(async (req, res) => {
+    const cliente = await clienteDeEmpresa(req.empresaId!, req.params.id);
+    if (!cliente) {
+      res.status(404).json({ error: "Cliente no encontrado" });
+      return;
+    }
+    const uso = await usoDelCliente(req.empresaId!, cliente.id);
+    res.json({ eliminable: uso.length === 0, uso });
+  })
+);
+
+clientesRouter.delete(
+  "/:id",
+  requiereRol("admin"),
+  ah<RequestConEmpresa>(async (req, res) => {
+    const cliente = await clienteDeEmpresa(req.empresaId!, req.params.id);
+    if (!cliente) {
+      res.status(404).json({ error: "Cliente no encontrado" });
+      return;
+    }
+    const uso = await usoDelCliente(req.empresaId!, cliente.id);
+    if (uso.length > 0) {
+      res.status(409).json({
+        error: `${cliente.nombre} tiene historial (${uso.map((u) => `${u.cantidad} ${u.etiqueta}`).join(", ")}) y no se puede eliminar. Puedes desactivarlo.`,
+        code: "CLIENTE_CON_HISTORIAL",
+        uso,
+      });
+      return;
+    }
+
+    const { error } = await supabase.from("clientes").delete().eq("empresa_id", req.empresaId!).eq("id", cliente.id);
+    if (error) {
+      // Carrera: alguien le asoció un registro entre el conteo y el borrado.
+      if (error.code === "23503") {
+        res.status(409).json({ error: `${cliente.nombre} tiene registros asociados y no se puede eliminar. Puedes desactivarlo.`, code: "CLIENTE_CON_HISTORIAL", uso: [] });
+        return;
+      }
+      res.status(500).json({ error: error.message });
+      return;
+    }
+
+    await registrarAuditoriaEmpresa({
+      empresaId: req.empresaId!,
+      usuarioId: req.userId ?? null,
+      accion: "eliminar",
+      entidad: "cliente",
+      entidadId: cliente.id,
+      detalle: { nombre: cliente.nombre, rut: cliente.rut },
+    });
+    res.status(204).end();
   })
 );

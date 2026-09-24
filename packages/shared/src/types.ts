@@ -461,6 +461,19 @@ export type AuditoriaUsuario = {
   creado_en: string;
 };
 
+// Auditoría genérica de acciones de usuarios de una empresa (migración
+// 135): eliminar cliente, cambio de monto de un viaje, etc.
+export type AuditoriaEmpresa = {
+  id: string;
+  empresa_id: string;
+  usuario_id: string | null;
+  accion: string;
+  entidad: string;
+  entidad_id: string | null;
+  detalle: Record<string, unknown>;
+  creado_en: string;
+};
+
 export type TipoNotificacion =
   | "os_asignada"
   | "os_completada"
@@ -2022,6 +2035,7 @@ export type Database = {
       whatsapp_mensajes_procesados: Tabla<MensajeWhatsappProcesado>;
       whatsapp_conversaciones: Tabla<ConversacionWhatsapp>;
       auditoria_usuarios: Tabla<AuditoriaUsuario>;
+      auditoria_empresa: Tabla<AuditoriaEmpresa>;
       accesos_usuario: Tabla<AccesoUsuario>;
       unidades_medida: Tabla<UnidadMedida>;
       notificaciones_cliente_log: Tabla<NotificacionClienteLog>;
