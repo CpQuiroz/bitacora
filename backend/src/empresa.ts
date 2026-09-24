@@ -16,18 +16,25 @@ export interface RequestConEmpresa extends RequestConUsuario {
 // datos de la empresa (incluye la autobaja), gestionar el equipo/roles,
 // ni las credenciales de integraciones. Regla conservadora a propósito
 // (Ley 21.719) — ajustable si estorba demasiado al debugging real.
+// ¿La URL es `base` o algo debajo de `base/`? Compara por segmento: un
+// startsWith("/api/plan") a secas también calzaba con /api/plantillas y
+// /api/planes-mantencion (review etapa 3, tarea 124).
+function esRuta(url: string, base: string): boolean {
+  return url === base || url.startsWith(`${base}/`) || url.startsWith(`${base}?`);
+}
+
 function mutacionBloqueadaEnImpersonacion(req: RequestConUsuario): boolean {
   if (!req.impersonacion) return false;
   if (req.method === "GET" || req.method === "HEAD") return false;
   if (req.method === "DELETE") return true;
   const url = req.originalUrl;
   return (
-    url.startsWith("/api/suscripcion") ||
-    url.startsWith("/api/plan") ||
-    url.startsWith("/api/modulos") ||
-    url.startsWith("/api/empresa") ||
-    url.startsWith("/api/usuarios") ||
-    url.startsWith("/api/integraciones")
+    esRuta(url, "/api/suscripcion") ||
+    esRuta(url, "/api/plan") ||
+    esRuta(url, "/api/modulos") ||
+    esRuta(url, "/api/empresa") ||
+    esRuta(url, "/api/usuarios") ||
+    esRuta(url, "/api/integraciones")
   );
 }
 
@@ -73,7 +80,7 @@ export const requiereEmpresa = ah<RequestConEmpresa>(async (req, res, next) => {
   const HOY = new Date().toISOString().slice(0, 10);
   const trialVencido = empresa?.plan === "trial" && empresa.prueba_termina_en != null && empresa.prueba_termina_en < HOY;
   const rutaDePlan =
-    req.originalUrl.startsWith("/api/plan") || req.originalUrl.startsWith("/api/suscripcion") || req.originalUrl.startsWith("/api/modulos");
+    esRuta(req.originalUrl, "/api/plan") || esRuta(req.originalUrl, "/api/suscripcion") || esRuta(req.originalUrl, "/api/modulos");
   if (trialVencido && !rutaDePlan) {
     res.status(403).json({
       error: "Tu período de prueba terminó — elige un plan para seguir usando Bitácora.",

@@ -126,3 +126,8 @@ Etapa 3 (aprobada 24-sep, HECHA): Configuración › Módulos para el Admin (acc
 - Pasos de la usuaria para prod (antes del merge a main): migraciones 132 y 133 con
   `npx supabase db query --linked --project-ref yjbskbskyadxjooxngjv -f supabase/migrations/NNN_*.sql`
   + `npx supabase migration repair --status applied --linked NNN`.
+
+Review etapa 3 (progress/review_planes_etapa3.md): APROBADO. Corregidas las 2 recomendadas:
+- R1: el límite de /solicitar y /cotizar-empresa cuenta por empresa (no por IP falsificable). Probado: 4ª → 429 con IP distinta.
+- R2 (preexistente): empresa.ts compara rutas por segmento (esRuta); la prueba vencida ya no deja usar
+  /api/plantillas ni /api/planes-mantencion. Probado en DEV: plantillas 403, plan 200, módulos 200.

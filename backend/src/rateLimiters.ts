@@ -55,8 +55,12 @@ export const limitarPortalAcceso = rateLimit({
 
 // Pedidos que mandan un correo a los Super-Admin (cotizar el plan
 // Empresa, solicitar más módulos — tarea 124): con esto no se pueden
-// usar para spamearlos.
+// usar para spamearlos. Cuenta por EMPRESA, no por IP: la IP se puede
+// falsear con X-Forwarded-For (trust proxy) y varias empresas detrás de
+// un mismo NAT no deberían compartir cupo. Estas rutas van siempre
+// detrás de requiereEmpresa, así que empresaId está.
 export const limitarSolicitudesSuperAdmin = rateLimit({
+  keyGenerator: (req) => `empresa:${(req as { empresaId?: string }).empresaId ?? "desconocida"}`,
   windowMs: 60 * 60 * 1000,
   limit: 3,
   standardHeaders: true,
