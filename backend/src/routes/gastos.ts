@@ -7,6 +7,7 @@ import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
 import { siguienteFolioGasto } from "../folios";
 import { resumirViaticos, type GastoViaticoConChofer } from "../viajesViaticos";
+import { hoyChile } from "../fechaChile";
 
 export const gastosRouter = Router();
 
@@ -138,8 +139,6 @@ async function gastosViaticos(empresaId: string, desde: string, hasta: string, c
   return { data: filas, error: null, truncado: true };
 }
 
-// Fecha de hoy en Chile (no UTC: después de las ~21 h UTC ya es "mañana").
-const hoyChile = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Santiago" }).format(new Date());
 
 gastosRouter.get(
   "/viaticos",

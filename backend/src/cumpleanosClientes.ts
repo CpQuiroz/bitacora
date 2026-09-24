@@ -10,15 +10,42 @@
 // Dedupe: no manda dos veces en el mismo año a un mismo cliente —
 // revisa notificaciones_cliente_log de los últimos 350 días (margen
 // de sobra sin tener que hacer aritmética exacta de año calendario).
+//
+// Tarea 140 (auditoría de índices, C1): antes corría en CADA GET /api/me
+// y leía todos los clientes activos de la empresa en cada navegación.
+// Ahora corre a lo más una vez por empresa y por día de Chile, por
+// proceso (Render tiene una instancia; si fueran varias, el dedupe de
+// notificaciones_cliente_log igual evita saludos repetidos).
 // ============================================================
 import { supabase } from "./supabase";
 import { notificarCliente } from "./notificarCliente";
+import { hoyChile } from "./fechaChile";
 
-export async function revisarCumpleanosClientes(empresaId: string): Promise<void> {
-  const hoy = new Date();
-  const mesHoy = hoy.getMonth() + 1;
-  const diaHoy = hoy.getDate();
+const revisadoEl = new Map<string, string>(); // empresaId → YYYY-MM-DD (Chile)
 
+export function revisarCumpleanosSiCorresponde(empresaId: string): void {
+  const hoy = hoyChile();
+  if (revisadoEl.get(empresaId) === hoy) return;
+  revisadoEl.set(empresaId, hoy);
+  revisarCumpleanosClientes(empresaId, hoy).catch((err) => {
+    // Falló: se deja reintentar en la próxima navegación.
+    revisadoEl.delete(empresaId);
+    console.error("Error revisando cumpleaños de clientes:", err);
+  });
+}
+
+// ¿Cumple años hoy? Compara mes y día como texto (sin zona horaria). Quien
+// nació un 29 de febrero se saluda el 28 en los años no bisiestos.
+export function esCumpleanos(fechaNacimiento: string, hoy: string): boolean {
+  const mmdd = fechaNacimiento.slice(5, 10);
+  const hoyMmdd = hoy.slice(5, 10);
+  if (mmdd === hoyMmdd) return true;
+  const anio = Number(hoy.slice(0, 4));
+  const bisiesto = (anio % 4 === 0 && anio % 100 !== 0) || anio % 400 === 0;
+  return mmdd === "02-29" && hoyMmdd === "02-28" && !bisiesto;
+}
+
+export async function revisarCumpleanosClientes(empresaId: string, hoy: string = hoyChile()): Promise<void> {
   const { data: clientes } = await supabase
     .from("clientes")
     .select("id, nombre, correo, fecha_nacimiento")
@@ -27,10 +54,7 @@ export async function revisarCumpleanosClientes(empresaId: string): Promise<void
     .not("fecha_nacimiento", "is", null)
     .not("correo", "is", null);
 
-  const cumpleanerosHoy = (clientes ?? []).filter((c) => {
-    const fecha = new Date(`${c.fecha_nacimiento}T00:00:00`);
-    return fecha.getMonth() + 1 === mesHoy && fecha.getDate() === diaHoy;
-  });
+  const cumpleanerosHoy = (clientes ?? []).filter((c) => !!c.fecha_nacimiento && esCumpleanos(c.fecha_nacimiento, hoy));
   if (cumpleanerosHoy.length === 0) return;
 
   const { data: empresa } = await supabase.from("empresas").select("nombre").eq("id", empresaId).single();

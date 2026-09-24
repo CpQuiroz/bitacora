@@ -346,6 +346,9 @@ export type Usuario = {
   // castea a string donde necesita aceptar slugs custom.
   rol: Rol;
   telefono: string | null;
+  // Últimos 8 dígitos del teléfono (migración 140, columna GENERADA por
+  // Postgres: no se escribe nunca). Para ubicar al chofer por WhatsApp.
+  telefono_sufijo?: string | null;
   idioma: string;
   pais: string;
   huso_horario: string;

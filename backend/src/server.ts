@@ -73,7 +73,7 @@ import { modulosDeshabilitadosDeEmpresa, featureFlagsDeEmpresa, modulosVisiblesD
 import { accionesDeRol, rolExigeMfa } from "./roles";
 import { resolverAccesoParaLogin, aprovisionarUsuario } from "./accesosAutorizados";
 import { activarModulosDePrueba } from "./planes";
-import { revisarCumpleanosClientes } from "./cumpleanosClientes";
+import { revisarCumpleanosSiCorresponde } from "./cumpleanosClientes";
 import { sembrarSugerenciasRubro } from "./seedRubro";
 import { registrarConsentimiento, tieneConsentimientoVigente } from "./consentimiento";
 import { limpiarDatosVencidosSiCorresponde } from "./retencion";
@@ -201,7 +201,7 @@ app.get("/api/me", requiereAuth, ah<RequestConUsuario>(async (req, res) => {
   // (cualquier navegación del dashboard lo llama), así que es donde
   // más chances hay de que el chequeo corra el día justo. No bloquea
   // la respuesta.
-  if (usuario) revisarCumpleanosClientes(usuario.empresa_id).catch((err) => console.error("Error revisando cumpleaños de clientes:", err));
+  if (usuario) revisarCumpleanosSiCorresponde(usuario.empresa_id);
   // Ley 21.719 — limpieza perezosa de logs/tokens vencidos (ver retencion.ts).
   if (usuario) limpiarDatosVencidosSiCorresponde();
   res.json({

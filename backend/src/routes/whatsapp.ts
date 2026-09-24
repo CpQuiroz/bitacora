@@ -9,6 +9,7 @@ import {
   descargarMediaWhatsapp,
   enviarMensajeWhatsapp,
   extraerMensajes,
+  elegirChofer,
   normalizarTelefono,
   verificarFirmaWebhook,
   type MensajeEntranteWhatsapp,
@@ -38,27 +39,18 @@ async function yaProcesado(mensajeId: string): Promise<boolean> {
   return Boolean(error);
 }
 
+// Tarea 141: la base filtra por los últimos 8 dígitos (columna generada
+// usuarios.telefono_sufijo, con índice) en vez de traer a todos los
+// colaboradores de todas las empresas; la elección final es la misma de
+// siempre (elegirChofer, whatsapp.ts).
 async function buscarChofer(telefonoNormalizado: string) {
+  if (telefonoNormalizado.length < 8) return null;
   const { data } = await supabase
     .from("usuarios")
     .select("id, empresa_id, telefono")
     .eq("rol", "colaborador")
-    .not("telefono", "is", null);
-  const candidatos = (data ?? []).map((u) => ({ ...u, norm: normalizarTelefono(u.telefono) })).filter((u) => u.norm.length >= 8);
-
-  // Coincidencia exacta primero.
-  const exacto = candidatos.find((u) => u.norm === telefonoNormalizado);
-  if (exacto) return exacto;
-
-  // Tolerante: WhatsApp a veces entrega el wa_id sin el "9" móvil de
-  // Chile, o con distinto prefijo de país. El número de abonado son los
-  // últimos 8 dígitos — si esos coinciden y es único, es la persona.
-  if (telefonoNormalizado.length >= 8) {
-    const sufijo = telefonoNormalizado.slice(-8);
-    const porSufijo = candidatos.filter((u) => u.norm.slice(-8) === sufijo);
-    if (porSufijo.length === 1) return porSufijo[0];
-  }
-  return null;
+    .eq("telefono_sufijo", telefonoNormalizado.slice(-8));
+  return elegirChofer(data ?? [], telefonoNormalizado);
 }
 
 // Deja rastro en errores_backend de un mensaje de un número que no

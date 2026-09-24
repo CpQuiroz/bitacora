@@ -1869,7 +1869,7 @@
       "id": 140,
       "name": "cumpleanos_throttle",
       "title": "Cumpleaños de clientes: revisar una vez por día y empresa, no en cada GET /api/me (auditoría C1)",
-      "status": "pending",
+      "status": "in_progress",
       "description": "progress/auditoria_indices.md §5 C1. Pendiente de OK de la usuaria.",
       "resolution": ""
     },
@@ -1877,7 +1877,7 @@
       "id": 141,
       "name": "whatsapp_telefono_norm",
       "title": "WhatsApp: buscar al chofer por teléfono normalizado indexado en vez de leer todos los usuarios (auditoría C2)",
-      "status": "pending",
+      "status": "in_progress",
       "description": "progress/auditoria_indices.md §5 C2. Pendiente de OK de la usuaria.",
       "resolution": ""
     }

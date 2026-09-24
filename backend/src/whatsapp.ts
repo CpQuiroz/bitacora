@@ -16,6 +16,21 @@ export function normalizarTelefono(tel: string | null | undefined): string {
   return (tel ?? "").replace(/\D/g, "");
 }
 
+// Elige al chofer que escribió entre los candidatos (usuarios colaborador
+// con teléfono). Coincidencia exacta primero. Si no, tolerante: WhatsApp a
+// veces entrega el wa_id sin el "9" móvil de Chile o con otro prefijo de
+// país; el número de abonado son los últimos 8 dígitos — si coinciden y el
+// candidato es único, es la persona. Con dos o más, no se adivina.
+export function elegirChofer<T extends { telefono: string | null }>(candidatos: T[], telefonoNormalizado: string): T | null {
+  const conNorm = candidatos.map((u) => ({ u, norm: normalizarTelefono(u.telefono) })).filter((c) => c.norm.length >= 8);
+  const exacto = conNorm.find((c) => c.norm === telefonoNormalizado);
+  if (exacto) return exacto.u;
+  if (telefonoNormalizado.length < 8) return null;
+  const sufijo = telefonoNormalizado.slice(-8);
+  const porSufijo = conNorm.filter((c) => c.norm.slice(-8) === sufijo);
+  return porSufijo.length === 1 ? porSufijo[0]!.u : null;
+}
+
 // Meta firma el body crudo del webhook con HMAC-SHA256 usando el App
 // Secret — hay que verificarlo con el body EXACTO que llegó (bytes),
 // nunca con el JSON re-serializado (ver server.ts, verify callback de
