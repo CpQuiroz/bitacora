@@ -1856,6 +1856,30 @@
       "status": "done",
       "description": "Decisión de la usuaria 24-sep-2026: 'dejar solo uno y que ese uno contenga al otro' → queda Supervisor; 2FA opcional. Migración 138 (unión de módulos/acciones, usuarios y accesos autorizados contador→supervisor, borra el rol).",
       "resolution": "Queda solo Supervisor (unión de módulos y acciones de ambos; 2FA opcional). Migración 138_fusionar_contador_en_supervisor.sql (transacción: rol, usuarios y accesos autorizados contador→supervisor, borra el rol; overrides del contador por cascade). Rol sin 'contador' en shared/backend/web/mobile; /api/usuarios/me/mfa devuelve 'exigido' y la web lo usa. Docs actualizados. Prod: 0 usuarios contador (consulta de la usuaria). DEV: migración aplicada; E2E 138 9/9; regresión 131-134, 137 y review verdes (132-6 ajustado: el rol sin permiso de monto es el colaborador). BLOQUEADA para publicar hasta migraciones 134-138 en prod. | PUBLICADO 24-sep-2026: migraciones 134-138 corridas en prod por la usuaria (verificadas por SELECT) y main 8b95e9c (Render live, Vercel READY)."
+    },
+    {
+      "id": 139,
+      "name": "auditoria_indices",
+      "title": "Índices: consultas calientes, FKs sin índice y redundantes (auditoría 24-sep)",
+      "status": "in_progress",
+      "description": "Auditoría en progress/auditoria_indices.md, aprobada por la usuaria. Migración 139: 7 índices para rutas calientes (A1-A7), 19 FKs sin índice, borrar 5 redundantes. Validar con EXPLAIN ANALYZE en DEV.",
+      "resolution": ""
+    },
+    {
+      "id": 140,
+      "name": "cumpleanos_throttle",
+      "title": "Cumpleaños de clientes: revisar una vez por día y empresa, no en cada GET /api/me (auditoría C1)",
+      "status": "pending",
+      "description": "progress/auditoria_indices.md §5 C1. Pendiente de OK de la usuaria.",
+      "resolution": ""
+    },
+    {
+      "id": 141,
+      "name": "whatsapp_telefono_norm",
+      "title": "WhatsApp: buscar al chofer por teléfono normalizado indexado en vez de leer todos los usuarios (auditoría C2)",
+      "status": "pending",
+      "description": "progress/auditoria_indices.md §5 C2. Pendiente de OK de la usuaria.",
+      "resolution": ""
     }
   ]
 }
