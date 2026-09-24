@@ -406,7 +406,7 @@ app.use("/api/mis-viajes", requiereAuth, requiereEmpresa, misViajesRouter);
 // requiereModulo, self-service. Ver routes/misTrabajos.ts.
 app.use("/api/mis-trabajos", requiereAuth, requiereEmpresa, misTrabajosRouter);
 // Remuneraciones (liquidaciones de sueldo) — módulo opt-in, apagado por
-// defecto, lo enciende el Super-Admin. Roles admin/contador.
+// defecto, lo enciende el Super-Admin. Roles admin/supervisor.
 app.use("/api/remuneraciones", requiereAuth, requiereEmpresa, requiereModulo("remuneraciones"), remuneracionesRouter);
 app.use("/api/tipos-documento", requiereAuth, requiereEmpresa, tiposDocumentoRouter);
 app.use("/api/documentos", requiereAuth, requiereEmpresa, documentosRouter);

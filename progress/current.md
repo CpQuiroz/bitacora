@@ -210,3 +210,10 @@ mobile (viático solo lectura). verificar.sh verde. Pendiente: migración en DEV
   lotes), m8 (log), m10 (E2E reasignar/concurrencia), m11 (rótulo semana). m1: requiereRol("admin") justificado.
   m9 (contador ve/paga viáticos; viáticos dependen del módulo financiero) → preguntar a la usuaria.
   E2E 26/26, regresión 49/49, verificar.sh verde.
+
+### Tarea 138 — Contador fusionado en Supervisor (en curso, 24-sep)
+Primera versión (igualar ambos roles, b27b788) descartada: la usuaria quería UN rol. Queda Supervisor con la unión
+de módulos/acciones, 2FA opcional. Migración 138_fusionar_contador_en_supervisor.sql (usuarios y accesos
+autorizados contador→supervisor, borra el rol; overrides del contador caen por cascade). Rol sin "contador" en
+shared/backend/web/mobile; la web lee `exigido` de /api/usuarios/me/mfa en vez de hardcodear admin/supervisor.
+verificar.sh verde. Pendiente: la usuaria corre la 138 en DEV → E2E prueba-138.ts (9 casos) + regresión.

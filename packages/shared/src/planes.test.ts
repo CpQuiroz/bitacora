@@ -62,7 +62,7 @@ test("visibles: el admin conserva Informe con IA y Asistente en planes con IA co
 });
 
 test("visibles: supervisor y colaborador nunca ven Informe con IA ni Asistente", () => {
-  for (const rol of ["supervisor", "colaborador", "contador"]) {
+  for (const rol of ["supervisor", "colaborador"]) {
     assert.deepEqual(filtrarModulosVisibles(["agenda", "informe_ia", "asistente"], rol, "pro"), ["agenda"]);
   }
 });

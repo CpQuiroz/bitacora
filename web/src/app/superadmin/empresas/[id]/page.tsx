@@ -451,7 +451,9 @@ export default function SuperAdminSaludEmpresaPage() {
 
   async function onDesactivarMfa(usuarioId: string, nombre: string, rol: string) {
     const avisoRol =
-      rol === "admin" || rol === "supervisor"
+      // Supervisor dejó de exigir 2FA (tarea 138); un rol custom puede
+      // exigirlo desde Roles, pero acá solo se avisa el caso seguro.
+      rol === "admin"
         ? " Su rol EXIGE 2FA activo — hasta que lo vuelva a activar (o cambie de rol), va a quedar bloqueado del resto de la app."
         : "";
     if (!confirm(`¿Desactivar el 2FA de ${nombre}?${avisoRol}`)) return;

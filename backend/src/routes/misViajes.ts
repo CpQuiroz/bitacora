@@ -410,7 +410,7 @@ misViajesRouter.patch(
     }
     if (montos.cambio) {
       if (!ROLES_EDITAN_MONTO_VIAJE.includes(req.rol ?? "")) {
-        res.status(403).json({ error: "El monto del viaje lo cambia la oficina (administrador, supervisor o contador)" });
+        res.status(403).json({ error: "El monto del viaje lo cambia la oficina (administrador o supervisor)" });
         return;
       }
       Object.assign(cambios, montos.cambio.nuevo);

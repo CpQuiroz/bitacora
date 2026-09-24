@@ -85,7 +85,7 @@ export default function PersonasPage() {
       const resAccesos = await apiFetch("/api/accesos");
       if (resAccesos.ok) setAccesos((await resAccesos.json()).accesos ?? []);
     } else {
-      // Sin gestion_control (supervisor/contador): la lista base igual se
+      // Sin gestion_control (supervisor): la lista base igual se
       // puede ver, solo sin la columna de correo ni las acciones de admin.
       const resPlano = await apiFetch("/api/usuarios");
       if (!resPlano.ok) {

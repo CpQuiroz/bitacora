@@ -1,7 +1,7 @@
 // ============================================================
 // BITÁCORA — Historial de notificaciones al cliente (Configuración >
 // Notificaciones) + reenvío manual de las que fallaron. Gateado por
-// "financiero" (admin + contador): la mayoría de los 6 eventos son de
+// "financiero" (admin + supervisor): la mayoría de los 6 eventos son de
 // cotizaciones/cobros, y esos módulos ya son financiero-only — más
 // simple un solo gate que partir el historial por tipo de evento.
 // ============================================================

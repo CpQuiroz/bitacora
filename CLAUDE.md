@@ -69,7 +69,8 @@ hacer. Lo que más se repite:
 
 - **RLS + filtrado por `empresa_id` son complementarios, no alternativos**
   — no reabras esa discusión sin que se pida.
-- **Roles**: 4 de sistema (`admin/supervisor/contador/colaborador`), 3
+- **Roles**: 3 de sistema (`admin/supervisor/colaborador`; Contador se
+  fusionó en Supervisor, tarea 138), 3
   capas (plantilla global → override por empresa → gating por plan).
   Mobile usa `usuarios.funcion` aparte de los roles web.
 - **Reutilizá**: `subirAnexo`, `requiereModulo`/`requiereAccion`,

@@ -10,6 +10,7 @@ import { supabase } from "../supabase";
 import { env } from "../env";
 import { ah } from "../asyncHandler";
 import type { RequestConEmpresa } from "../empresa";
+import { rolExigeMfa } from "../roles";
 import { generarSecretoTotp, otpauthUri, verificarCodigoTotp } from "../totp";
 import { cifrarJson, descifrarJson } from "../crypto";
 import { enviarCodigoVerificacion } from "../email";
@@ -35,7 +36,10 @@ mfaRouter.get(
   "/",
   ah<RequestConEmpresa>(async (req, res) => {
     const { data } = await supabase.from("usuarios").select("mfa_activado, mfa_metodo").eq("id", req.userId!).maybeSingle();
-    res.json({ activado: data?.mfa_activado ?? false, metodo: data?.mfa_metodo ?? null });
+    // exigido: lo define roles.requiere_2fa (el mismo dato que usa el gate
+    // de requiereEmpresa), así la web no repite la regla por rol.
+    const exigido = await rolExigeMfa(req.rol ?? "colaborador");
+    res.json({ activado: data?.mfa_activado ?? false, metodo: data?.mfa_metodo ?? null, exigido });
   })
 );
 

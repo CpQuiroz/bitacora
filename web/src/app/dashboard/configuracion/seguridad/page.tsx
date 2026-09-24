@@ -26,15 +26,16 @@ function detectarSO(userAgent: string): string {
   return "SO desconocido";
 }
 
-type EstadoMfa = { activado: boolean; metodo: "totp" | "email" | null };
+type EstadoMfa = { activado: boolean; metodo: "totp" | "email" | null; exigido?: boolean };
 
 // PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export default function SeguridadPage() {
   const { usuario } = useConfiguracion();
   const router = useRouter();
 
-  const mfaObligatoria = usuario.rol === "admin" || usuario.rol === "supervisor";
   const [mfa, setMfa] = useState<EstadoMfa | null>(null);
+  // Lo define roles.requiere_2fa (backend), no una lista de roles acá.
+  const mfaObligatoria = mfa?.exigido ?? usuario.rol === "admin";
   const [modoActivacion, setModoActivacion] = useState<"totp" | "email" | null>(null);
   const [secretoTotp, setSecretoTotp] = useState<{ secreto: string; otpauthUri: string } | null>(null);
   const [copiadoSecreto, setCopiadoSecreto] = useState(false);
@@ -95,7 +96,7 @@ export default function SeguridadPage() {
       setErrorMfa(body.error ?? "Código incorrecto");
       return;
     }
-    setMfa({ activado: true, metodo: "totp" });
+    setMfa((prev) => ({ ...prev, activado: true, metodo: "totp" }));
     cerrarActivacion();
   }
 
@@ -127,7 +128,7 @@ export default function SeguridadPage() {
       setErrorMfa(body.error ?? "Código incorrecto");
       return;
     }
-    setMfa({ activado: true, metodo: "email" });
+    setMfa((prev) => ({ ...prev, activado: true, metodo: "email" }));
     cerrarActivacion();
   }
 
@@ -136,7 +137,7 @@ export default function SeguridadPage() {
     setDesactivando(true);
     const res = await apiFetch("/api/usuarios/me/mfa/desactivar", { method: "POST" });
     setDesactivando(false);
-    if (res.ok) setMfa({ activado: false, metodo: null });
+    if (res.ok) setMfa((prev) => ({ ...prev, activado: false, metodo: null }));
   }
 
   const [sesion, setSesion] = useState<{ navegador: string; so: string; actualizado: string | null } | null>(null);

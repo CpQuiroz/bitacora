@@ -84,18 +84,17 @@ const PERFIL_SUPERVISION: Modulo[] = [
   "remuneraciones",
 ];
 
-// Roles de gestión con el mismo alcance operativo (tarea 138): los que
-// asignan y cambian montos, reciben avisos de gestión, etc. Las reglas
-// de 2FA NO usan esto (el Contador tiene 2FA opcional: ROL_EXIGE_2FA).
-export const ROLES_SUPERVISION: readonly string[] = ["admin", "supervisor", "contador"];
+// Roles de gestión (tarea 138): los que asignan y cambian montos,
+// reciben avisos de gestión, etc. Desde el 24-sep-2026 el Contador se
+// fusionó en el Supervisor (pedido de la usuaria: un solo perfil).
+export const ROLES_SUPERVISION: readonly string[] = ["admin", "supervisor"];
 
 export const PERMISOS_POR_ROL: Record<Rol, Modulo[]> = {
   admin: [...MODULOS],
-  // Supervisor y Contador: mismo perfil desde el 24-sep-2026 (tarea 138,
-  // pedido de la usuaria). Si algún día se separan, se editan acá y en
-  // la tabla roles (migración nueva), no en cada pantalla.
+  // Supervisor incluye lo que era el Contador (fusionados el 24-sep-2026,
+  // tarea 138, migración 138). Si algún día se vuelve a separar, se crea
+  // el rol acá y en la tabla roles (migración nueva).
   supervisor: PERFIL_SUPERVISION,
-  contador: PERFIL_SUPERVISION,
   // El colaborador ve su Agenda (calendario + tareas asignadas). El
   // resto de su trabajo en terreno vive en la app móvil.
   colaborador: ["agenda"],
@@ -135,21 +134,20 @@ export type Accion = (typeof ACCIONES)[number];
 export const ACCIONES_POR_ROL: Record<Rol, Accion[]> = {
   admin: [...ACCIONES],
   supervisor: ["config_agenda_pro", "ver_dashboard", "registrar_venta"],
-  contador: ["config_agenda_pro", "ver_dashboard", "registrar_venta"],
   colaborador: [],
 };
 
+// Supervisor: 2FA opcional desde la fusión con Contador (tarea 138,
+// decisión de la usuaria). El gate real lee roles.requiere_2fa.
 export const ROL_EXIGE_2FA: Record<Rol, boolean> = {
   admin: true,
-  supervisor: true,
-  contador: false,
+  supervisor: false,
   colaborador: false,
 };
 
 export const ETIQUETA_ROL_SISTEMA: Record<Rol, string> = {
   admin: "Admin",
   supervisor: "Supervisor",
-  contador: "Contador",
   colaborador: "Colaborador / técnico / chofer",
 };
 

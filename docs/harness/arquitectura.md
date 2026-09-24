@@ -55,7 +55,9 @@ supabase) sin una razón documentada en `trabajo_list.json`.
 
 ## Roles y permisos
 
-- 4 roles de sistema: `admin | supervisor | contador | colaborador`
+- 3 roles de sistema: `admin | supervisor | colaborador` (el Contador se
+  fusionó en Supervisor el 24-sep-2026, tarea 138 / migración 138; 2FA
+  obligatorio solo para admin — `roles.requiere_2fa`)
   (`packages/shared/src/types.ts` → `Rol`). Editables desde el Panel de
   Super-Admin (tabla `roles`, migración 71) — no son un enum cerrado en
   el código, se resuelven en `backend/src/roles.ts`.

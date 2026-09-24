@@ -19,7 +19,6 @@ const WEB_URL = "https://app.transportesitineris.cl";
 const ETIQUETA_ROL: Record<string, string> = {
   admin: "Administrador",
   supervisor: "Supervisor",
-  contador: "Contador",
   colaborador: "Colaborador",
 };
 const ETIQUETA_FUNCION: Record<string, string> = {

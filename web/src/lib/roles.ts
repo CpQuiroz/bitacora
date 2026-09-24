@@ -9,7 +9,6 @@ export type RolDisponible = { value: string; label: string };
 export const ROLES_FALLBACK: RolDisponible[] = [
   { value: "colaborador", label: "Colaborador / técnico / chofer" },
   { value: "supervisor", label: "Supervisor" },
-  { value: "contador", label: "Contador" },
   { value: "admin", label: "Admin" },
 ];
 

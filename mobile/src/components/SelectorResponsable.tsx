@@ -12,7 +12,6 @@ import { invitarUsuario, listarRoles, type RolDisponible } from "../services/usu
 const ROLES_FALLBACK: RolDisponible[] = [
   { slug: "colaborador", nombre: "Colaborador / técnico" },
   { slug: "supervisor", nombre: "Supervisor" },
-  { slug: "contador", nombre: "Contador" },
   { slug: "admin", nombre: "Admin" },
 ];
 

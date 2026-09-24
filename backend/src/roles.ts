@@ -33,7 +33,7 @@ export type RolConfig = {
   orden: number;
 };
 
-const ROLES_SISTEMA = ["admin", "supervisor", "contador", "colaborador"] as const;
+const ROLES_SISTEMA = ["admin", "supervisor", "colaborador"] as const;
 const TTL_MS = 60_000;
 
 // overrides: clave `${empresaId}:${slug}` → (módulo → activado). Ajustes

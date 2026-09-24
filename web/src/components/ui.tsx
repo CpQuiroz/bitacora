@@ -229,7 +229,7 @@ const TONO_DE_ESTADO: Record<string, Tono> = {
   // facturas
   pagada: "exito", pendiente: "alerta", vencida: "riesgo",
   // usuarios
-  admin: "brand", supervisor: "neutro", contador: "alerta", colaborador: "exito",
+  admin: "brand", supervisor: "neutro", colaborador: "exito",
   // prioridad de tareas
   alta: "riesgo", media: "alerta", baja: "exito",
   // estado de la orden de servicio

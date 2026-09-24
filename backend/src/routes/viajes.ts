@@ -366,7 +366,7 @@ viajesRouter.post(
     const viatico = "viatico" in pedidoViatico ? pedidoViatico.viatico : null;
     if (viatico) {
       if (!ROLES_EDITAN_MONTO_VIAJE.includes(req.rol ?? "")) {
-        res.status(403).json({ error: "Solo el administrador, un supervisor o un contador pueden asignar viático" });
+        res.status(403).json({ error: "Solo el administrador o un supervisor pueden asignar viático" });
         return;
       }
       if (!chofer) {
@@ -528,7 +528,7 @@ viajesRouter.patch(
     }
     if (montos.cambio) {
       if (!ROLES_EDITAN_MONTO_VIAJE.includes(req.rol ?? "")) {
-        res.status(403).json({ error: "Solo el administrador, un supervisor o un contador pueden cambiar el monto del viaje" });
+        res.status(403).json({ error: "Solo el administrador o un supervisor pueden cambiar el monto del viaje" });
         return;
       }
       Object.assign(cambios, montos.cambio.nuevo);
@@ -552,7 +552,7 @@ viajesRouter.patch(
     const viaticoFinal = "viatico" in pedidoViatico ? pedidoViatico.viatico : viaticoAnterior;
     const cambiaViatico = !mismoViatico(viaticoAnterior, viaticoFinal);
     if (cambiaViatico && !ROLES_EDITAN_MONTO_VIAJE.includes(req.rol ?? "")) {
-      res.status(403).json({ error: "Solo el administrador, un supervisor o un contador pueden cambiar el viático" });
+      res.status(403).json({ error: "Solo el administrador o un supervisor pueden cambiar el viático" });
       return;
     }
     const choferFinal = cambios.chofer_id !== undefined ? cambios.chofer_id : existente.chofer_id;

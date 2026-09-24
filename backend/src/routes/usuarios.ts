@@ -80,7 +80,7 @@ usuariosRouter.get(
   })
 );
 
-// Invita a un nuevo miembro del equipo (chofer, técnico, contador...)
+// Invita a un nuevo miembro del equipo (chofer, técnico, supervisor...)
 // por correo. Solo el admin de la empresa puede invitar — el correo
 // con el link para definir la contraseña se manda vía Resend (ver
 // enviarInvitacion en email.ts).

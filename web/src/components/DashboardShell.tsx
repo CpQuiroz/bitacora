@@ -272,19 +272,19 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
     asegurarFuenteCargada(usuario.fuente);
   }, [usuario.fuente]);
 
-  // admin/supervisor están obligados a tener 2FA activo (backend lo
-  // exige en requiereEmpresa) — mismo criterio que modulosDeshabilitados
+  // Los roles con roles.requiere_2fa (siempre admin) están obligados a
+  // tener 2FA activo (backend lo exige en requiereEmpresa) — mismo criterio que modulosDeshabilitados
   // arriba: fetch propio acá, para no propagar el dato por props a las
   // ~30 páginas que construyen UsuarioShell. Si todavía no lo activó,
   // lo manda directo a Configuración > Seguridad a configurarlo.
   useEffect(() => {
-    if (usuario.rol !== "admin" && usuario.rol !== "supervisor") return;
+    if (usuario.rol === "colaborador") return;
     if (pathname === "/dashboard/configuracion/seguridad") return;
     (async () => {
       const res = await apiFetch("/api/usuarios/me/mfa");
       if (!res.ok) return;
-      const { activado } = await res.json();
-      if (!activado) router.replace("/dashboard/configuracion/seguridad");
+      const { activado, exigido } = await res.json();
+      if (exigido && !activado) router.replace("/dashboard/configuracion/seguridad");
     })();
   }, [usuario.rol, pathname, router]);
 
@@ -382,7 +382,7 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
       : puedeVerModulo(usuario.rol, m) && !modulosDeshabilitados.includes(m);
 
   // Un grupo entero se oculta si, tras filtrar por módulo, no le queda
-  // ningún ítem visible (ej. "Datos" para un rol contador) — nunca se
+  // ningún ítem visible (ej. "Datos" para un rol acotado) — nunca se
   // muestra un encabezado de sección flotando sin nada debajo.
   const gruposVisibles = NAV_GROUPS.map((g) => ({
     ...g,
@@ -414,7 +414,7 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
               {renderItems(grupo.items, compacto)}
             </div>
           ) : grupo.items.length === 1 ? (
-            // Grupo con un solo ítem visible (roles acotados, ej. contador/
+            // Grupo con un solo ítem visible (roles acotados, ej. supervisor/
             // colaborador) — se muestra como link suelto, sin encabezado de
             // sección, para no dejar un título flotando sobre una sola línea.
             <div key={grupo.titulo} className={i > 0 ? "pt-4" : "pt-1"}>

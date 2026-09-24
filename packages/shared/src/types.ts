@@ -12,7 +12,8 @@
 // (mismo patrón que usa `supabase gen types typescript`).
 // ============================================================
 
-export type Rol = "admin" | "supervisor" | "contador" | "colaborador";
+// "contador" se fusionó en "supervisor" (tarea 138, 24-sep-2026).
+export type Rol = "admin" | "supervisor" | "colaborador";
 
 // Función / especialidad de un colaborador en terreno — más fina que el
 // rol (ver migración 65). La usa la app móvil para mostrar solo las
@@ -339,7 +340,7 @@ export type Usuario = {
   nombre: string;
   // Desde la migración 71 el rol es el `slug` de una fila de `roles`
   // (editable desde el Panel de Super-Admin). Los 4 de sistema —
-  // admin/supervisor/contador/colaborador — mantienen su semántica.
+  // admin/supervisor/colaborador — mantienen su semántica.
   // El tipo se mantiene como `Rol` para no romper el frontend, que
   // resuelve los permisos vía `/api/me` (`modulos_visibles`). El backend
   // castea a string donde necesita aceptar slugs custom.

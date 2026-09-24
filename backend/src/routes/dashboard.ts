@@ -63,7 +63,7 @@ export function resolverPeriodo(periodo: string | undefined, desdeQuery: unknown
 }
 
 // KPIs financieros + operativos agregados de toda la empresa — no es
-// para un colaborador (rol sin módulos). admin/supervisor/contador sí.
+// para un colaborador (rol sin módulos). admin/supervisor sí.
 dashboardRouter.get(
   "/",
   requiereAccion("ver_dashboard"),

@@ -1851,10 +1851,10 @@
     },
     {
       "id": 138,
-      "name": "supervisor_igual_contador",
-      "title": "Roles: Supervisor y Contador con el mismo perfil (módulos y acciones); 2FA obligatorio solo Supervisor",
+      "name": "fusionar_contador_en_supervisor",
+      "title": "Roles: Contador se fusiona en Supervisor (un solo rol con ambos perfiles; 2FA opcional)",
       "status": "in_progress",
-      "description": "Decisión de la usuaria 24-sep-2026: 'supervisor y contador para mí sería el mismo perfil; si algún día alguien lo pide distinto lo programamos'. Iguales en toda la app (unión de módulos y acciones); el Contador mantiene 2FA opcional. Respeta overrides por empresa (empresa_rol_modulos) y el gating por plan.",
+      "description": "Decisión de la usuaria 24-sep-2026: 'dejar solo uno y que ese uno contenga al otro' → queda Supervisor; 2FA opcional. Migración 138 (unión de módulos/acciones, usuarios y accesos autorizados contador→supervisor, borra el rol).",
       "resolution": ""
     }
   ]

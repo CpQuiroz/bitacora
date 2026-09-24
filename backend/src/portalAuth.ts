@@ -1,7 +1,7 @@
 // ============================================================
 // BITÁCORA — Sesión del Portal de Cliente. Identidad completamente
 // aparte de Supabase Auth (nunca un rol de la matriz admin/supervisor/
-// contador/colaborador) — token propio, formato JWT mínimo
+// colaborador) — token propio, formato JWT mínimo
 // (header.payload.firma, HMAC-SHA256), sin dependencia nueva: mismo
 // criterio que la firma del webhook de WhatsApp (whatsapp.ts), que ya
 // usa crypto nativo de Node en vez de una librería.

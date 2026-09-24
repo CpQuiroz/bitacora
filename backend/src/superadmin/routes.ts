@@ -1821,10 +1821,11 @@ superadminRouter.patch(
 // ── Roles editables (tabla `roles`, migración 71) ────────────────────
 // El Super-Admin edita qué módulos y qué acciones sensibles tiene cada
 // rol, crea roles nuevos, y puede restringir un rol a empresas puntuales
-// (rol_empresas). Los 4 roles de sistema no se borran ni se renombra su
+// (rol_empresas). Los 3 roles de sistema (Contador se fusionó en
+// Supervisor, tarea 138) no se borran ni se renombra su
 // slug; `admin` además no se edita (acceso total siempre).
 const SLUG_ROL_REGEX = /^[a-z][a-z0-9_]{1,30}$/;
-const ROLES_SISTEMA_SLUGS = ["admin", "supervisor", "contador", "colaborador"];
+const ROLES_SISTEMA_SLUGS = ["admin", "supervisor", "colaborador"];
 
 function sanearListaModulos(valor: unknown): Modulo[] | null {
   if (!Array.isArray(valor)) return null;
