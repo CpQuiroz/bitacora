@@ -1869,17 +1869,17 @@
       "id": 140,
       "name": "cumpleanos_throttle",
       "title": "Cumpleaños de clientes: revisar una vez por día y empresa, no en cada GET /api/me (auditoría C1)",
-      "status": "in_progress",
+      "status": "done",
       "description": "progress/auditoria_indices.md §5 C1. Pendiente de OK de la usuaria.",
-      "resolution": ""
+      "resolution": "revisarCumpleanosSiCorresponde: una vez por empresa y día de Chile (reintenta si falla). Fecha en hora de Chile (fechaChile.ts) y 29-feb → 28 en años no bisiestos. Tests 3/3; regresión E2E verde. Sin migración: se publica con el próximo deploy."
     },
     {
       "id": 141,
       "name": "whatsapp_telefono_norm",
       "title": "WhatsApp: buscar al chofer por teléfono normalizado indexado en vez de leer todos los usuarios (auditoría C2)",
-      "status": "in_progress",
+      "status": "blocked",
       "description": "progress/auditoria_indices.md §5 C2. Pendiente de OK de la usuaria.",
-      "resolution": ""
+      "resolution": "Migración 140: usuarios.telefono_sufijo (columna generada, últimos 8 dígitos) + índice parcial. Webhook filtra por sufijo y elige con elegirChofer (misma regla). Tests 4/4; DEV: migración aplicada, E2E 141 5/5, regresión 84/84. BLOQUEADA: correr la 140 en prod ANTES de publicar este código (si no, el webhook no encuentra al chofer)."
     }
   ]
 }

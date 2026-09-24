@@ -262,3 +262,9 @@ Formato:
 - **Cambios:** progress/auditoria_indices.md; migración 139 (7 índices calientes, 19 FKs, 5 redundantes borrados).
 - **Verificación:** DEV aplicada; EXPLAIN valida A1-A5 y A7 (A6 a revisar con volumen).
 - **Cierre:** 139 blocked hasta prod. C1 (cumpleaños) y C2 (WhatsApp) anotadas como 140/141, pendientes de OK.
+
+## 2026-09-24 — Auditoría C1 y C2 (tareas 140 y 141)
+- **Agente:** Claude Opus 5.5
+- **Cambios:** cumpleaños una vez por día y empresa (hora Chile, 29-feb); migración 140 + búsqueda del chofer de WhatsApp por sufijo indexado.
+- **Verificación:** verificar.sh verde (backend 25 tests); DEV: E2E 141 5/5 y regresión 84/84.
+- **Cierre:** 140 done; 141 blocked hasta migración 140 en prod (antes del deploy). Pendiente en prod: migraciones 139 y 140, luego publicar.
