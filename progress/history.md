@@ -249,3 +249,9 @@ Formato:
 - **Cambios:** migración 138; Rol sin "contador" en shared/backend/web/mobile; /me/mfa con `exigido`; CLAUDE.md y arquitectura.md.
 - **Verificación:** verificar.sh verde; E2E DEV 138 9/9 + regresión 131-134/137/review verde.
 - **Cierre:** blocked hasta migraciones 134-138 en prod. Pendiente de OK: auditoría de índices; siguiente del plan: Tarifas por tramo/km.
+
+## 2026-09-24 — Publicación Viajes A + viáticos + fusión de roles
+- **Agente:** Claude Opus 5.5
+- **Cambios:** la usuaria corrió en prod las migraciones 134-138 (verificadas por SELECT; 0 usuarios contador). main 1c304bc → 8b95e9c (fast-forward, 13 commits).
+- **Verificación:** verificar.sh verde; Render deploy dep-daqpegbl550s73cqock0 live (sin errores en logs, conecta a yjbskbskyadxjooxngjv); Vercel dpl_8vDCHpkgtpLK68yQ73mm85KjJcjV READY; /health 200 y rutas nuevas responden 401 sin sesión.
+- **Cierre:** tareas 130-134, 137, 138 done. Pendiente: build mobile (a pedido), auditoría de índices (espera OK), tarifas por tramo/km + cotización de viaje, limpiar usuarios QA de DEV, planes en Flow + FLOW_PLAN_ID_* en Render, deuda 127/128/136.
