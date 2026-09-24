@@ -92,3 +92,23 @@ llegar al tope, IA y Base marcados como "no cuenta", Asistente marcado si el pla
 de API (mobile 1.10.17 sigue usando la misma respuesta). verificar.sh verde.
 Pendiente: pruebas E2E contra DEV — web/.env.local creado (URL + anon DEV); backend/.env creado con
 placeholders que completa la usuaria (secretos DEV).
+
+Evidencia E2E contra DEV (24-sep, backend local + Supabase DEV pruwvpnlvrvgtmpetlsr, migraciones 131+132
+aplicadas en DEV): 43/43 OK. Usuarios QA por rol en "Transportes Gotra" (Pro) + empresa "QA Plan Esencial".
+- A (/api/me): admin Pro ve informe_ia; supervisor ve equipos/inventario/catalogo/proveedores y NO
+  informe_ia/asistente; colaborador tampoco; contador sigue con financiero/cobros/cotizaciones; admin
+  Esencial ve informe_ia y NO asistente.
+- B (OS): admin y supervisor crean OS (201); colaborador 403; los 3 roles listan (200); admin y supervisor
+  abren el detalle (200).
+- C (informe IA solo admin): supervisor 403 en /api/informe/historial, generar, editar y versión PDF;
+  admin 200 en historial y edición.
+- D: supervisor GET clientes/equipos/inventario/catalogo/proveedores 200; contador GET
+  gastos/rendiciones/cobros/cotizaciones 200.
+- E (planes): /api/plan 17 de 6; Asistente en Esencial 403 LIMITE_PLAN; mismo plan 409; Empresa oculto 400;
+  cotizar 404; Super-Admin GET módulos sigue siendo lista; activar sobre el tope 403; pasar a Operación con
+  16 activos 409 y con 10 activos 200; el cambio de plan no tocó módulos.
+- F: con 20 informes en el mes (Operación), el 21 → 403 LIMITE_PLAN sin llamar a Claude.
+Datos QA (usuarios, empresa QA, super-admin QA, OS de prueba) quedan en DEV hasta que la usuaria termine
+de probar; después se borran.
+Hallazgo aparte (pre-existente, sin aplicar): backend/src/server.ts `app.set("trust proxy", true)` permite
+saltarse el rate limit del login falseando X-Forwarded-For (aviso ERR_ERL_PERMISSIVE_TRUST_PROXY).
