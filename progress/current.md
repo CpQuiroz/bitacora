@@ -164,3 +164,8 @@ Tareas 130-134 (Parte A, implementar) y 135 (Parte B, solo propuesta). 124 queda
 usuaria corra las migraciones 132/133 en prod para publicar. Regla del pedido: analizar lo existente antes de
 codificar, commit antes de empezar y uno por punto. En curso: análisis (agente Explore) de Viajes, Rutas,
 pizarra, Agenda, Clientes, Cobros, PDF, auditoría y notificaciones.
+
+PUBLICADO 24-sep-2026 ~07:07: main 1c304bc (fast-forward, 23 commits). Render instancia nueva sin errores;
+Vercel READY; /health 200; /api/modulos 401 sin sesión (backend nuevo). El aviso ERR_ERL_PERMISSIVE_TRUST_PROXY
+aparecía en la instancia anterior de prod → confirmado que el arreglo de trust proxy era necesario.
+Tarea 124 → done. Pendiente de la usuaria: planes en Flow + FLOW_PLAN_ID_* en Render; build mobile (126).
