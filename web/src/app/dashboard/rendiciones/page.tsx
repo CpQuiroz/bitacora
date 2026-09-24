@@ -159,7 +159,7 @@ export default function RendicionesPage() {
 
   return (
     <DashboardShell usuario={usuario}>
-      <GastosSubnav activo="rendiciones" />
+      <GastosSubnav activo="rendiciones" rol={usuario.rol} />
       <div className="mb-ds-6 flex flex-wrap items-center justify-between gap-ds-3">
         <div>
           <p className="ds-heading text-ds-h2 text-ds-text">Rendiciones</p>

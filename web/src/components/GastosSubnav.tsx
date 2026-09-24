@@ -3,18 +3,20 @@
 import Link from "next/link";
 
 const TABS = [
-  { href: "/dashboard/gastos", label: "Gastos" },
-  { href: "/dashboard/rendiciones", label: "Rendiciones" },
+  { href: "/dashboard/gastos", label: "Gastos", clave: "gastos" },
+  { href: "/dashboard/rendiciones", label: "Rendiciones", clave: "rendiciones" },
+  // Tarea 137: viáticos de los choferes (solo gestión; el backend lo exige).
+  { href: "/dashboard/viaticos", label: "Viáticos", clave: "viaticos" },
 ] as const;
 
 // Rendiciones (fondo por rendir / caja chica) es una subsección de
 // Gastos, no un módulo aparte — este switcher minimalista reemplaza el
 // ítem de nav propio que tenía antes (ver DashboardShell).
-export function GastosSubnav({ activo }: { activo: "gastos" | "rendiciones" }) {
+export function GastosSubnav({ activo, rol }: { activo: (typeof TABS)[number]["clave"]; rol?: string }) {
   return (
     <div className="mb-ds-6 flex flex-wrap gap-ds-2">
-      {TABS.map((tab) => {
-        const seleccionado = (tab.label === "Gastos" ? "gastos" : "rendiciones") === activo;
+      {TABS.filter((tab) => tab.clave !== "viaticos" || rol !== "colaborador").map((tab) => {
+        const seleccionado = tab.clave === activo;
         return (
           <Link
             key={tab.href}

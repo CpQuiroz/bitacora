@@ -4,7 +4,7 @@ import { Fragment, useEffect, useMemo, useState, type FormEvent } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Plus, Truck } from "lucide-react";
-import { CIUDADES_CHILE, formatearFolio, type Cliente, type EstadoViaje, type Usuario, type Viaje } from "@bitacora/shared";
+import { CIUDADES_CHILE, formatearFolio, type Cliente, type ConfigViaticos, type EstadoViaje, type TipoViatico, type Usuario, type Viaje } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
@@ -15,6 +15,7 @@ import { Modal } from "@/components/Modal";
 import { ComboboxCliente } from "@/components/ComboboxCliente";
 import { ComboboxResponsable } from "@/components/ComboboxResponsable";
 import { Combobox } from "@/components/Combobox";
+import { CampoViatico } from "@/components/CampoViatico";
 
 type ViajeConDatos = Viaje & {
   cliente_info: Pick<Cliente, "id" | "nombre"> | null;
@@ -89,6 +90,10 @@ export default function ViajesPage() {
   const [subtotal, setSubtotal] = useState("");
   const [aplicaIva, setAplicaIva] = useState(true);
   const [comentarios, setComentarios] = useState("");
+  // Viático del chofer (tarea 137): solo Admin/Supervisor.
+  const [configViaticos, setConfigViaticos] = useState<ConfigViaticos | null>(null);
+  const [viaticoTipo, setViaticoTipo] = useState<TipoViatico | "">("");
+  const [viaticoMonto, setViaticoMonto] = useState("");
 
   const [fotosViaje, setFotosViaje] = useState<{
     id: string;
@@ -119,6 +124,9 @@ export default function ViajesPage() {
   const [editSubtotal, setEditSubtotal] = useState("");
   const [editAplicaIva, setEditAplicaIva] = useState(true);
   const [editComentarios, setEditComentarios] = useState("");
+  const [editViaticoTipo, setEditViaticoTipo] = useState<TipoViatico | "">("");
+  const [editViaticoMonto, setEditViaticoMonto] = useState("");
+  const puedeViatico = ["admin", "supervisor"].includes(usuario?.rol ?? "");
 
   async function cargarViajes() {
     const res = await apiFetch(`/api/viajes${filtroEstado !== "todos" ? `?estado=${filtroEstado}` : ""}`);
@@ -140,11 +148,13 @@ export default function ViajesPage() {
       router.replace("/login");
       return;
     }
-    const [resMe, resClientes, resUsuarios] = await Promise.all([
+    const [resMe, resClientes, resUsuarios, resConfig] = await Promise.all([
       apiFetch("/api/me"),
       apiFetch("/api/clientes"),
       apiFetch("/api/usuarios"),
+      apiFetch("/api/viajes/config"),
     ]);
+    if (resConfig.ok) setConfigViaticos(await resConfig.json());
     if (resMe.ok) {
       const { usuario: u } = await resMe.json();
       if (u) {
@@ -222,6 +232,8 @@ export default function ViajesPage() {
     setSubtotal("");
     setAplicaIva(true);
     setComentarios("");
+    setViaticoTipo("");
+    setViaticoMonto("");
     setFormError(null);
     setFormAbierto(true);
   }
@@ -232,6 +244,10 @@ export default function ViajesPage() {
     setAviso(null);
     if (!clienteId) {
       setFormError("Selecciona un cliente");
+      return;
+    }
+    if (viaticoTipo && !choferId) {
+      setFormError("Asigna un chofer: el viático es del chofer del viaje");
       return;
     }
     setGuardando(true);
@@ -250,6 +266,7 @@ export default function ViajesPage() {
         subtotal,
         aplica_iva: aplicaIva,
         comentarios,
+        ...(viaticoTipo ? { viatico_tipo: viaticoTipo, viatico_monto: viaticoMonto } : {}),
       }),
     });
     setGuardando(false);
@@ -282,6 +299,8 @@ export default function ViajesPage() {
     setEditSubtotal(v.subtotal ? String(v.subtotal) : "");
     setEditAplicaIva(v.aplica_iva);
     setEditComentarios(v.comentarios ?? "");
+    setEditViaticoTipo(v.viatico_tipo ?? "");
+    setEditViaticoMonto(v.viatico_monto != null ? String(Math.round(Number(v.viatico_monto))) : "");
   }
 
   async function verHistorialMonto(v: ViajeConDatos) {
@@ -350,6 +369,10 @@ export default function ViajesPage() {
       setEditError("Ingresa un monto válido");
       return;
     }
+    if (editViaticoTipo && !editChoferId) {
+      setEditError("Asigna un chofer: el viático es del chofer del viaje");
+      return;
+    }
     setConfirmando(true);
     const res = await apiFetch(`/api/viajes/${id}`, {
       method: "PATCH",
@@ -365,6 +388,7 @@ export default function ViajesPage() {
         subtotal: subtotalNum,
         aplica_iva: editAplicaIva,
         comentarios: editComentarios,
+        ...(puedeViatico ? { viatico_tipo: editViaticoTipo || null, viatico_monto: editViaticoTipo ? editViaticoMonto : null } : {}),
         ...(confirmar !== undefined ? { estado: confirmar ? "confirmado" : "borrador" } : {}),
       }),
     });
@@ -391,7 +415,12 @@ export default function ViajesPage() {
   async function eliminar(id: string) {
     if (!window.confirm("¿Eliminar este viaje?")) return;
     const res = await apiFetch(`/api/viajes/${id}`, { method: "DELETE" });
-    if (res.ok) cargar();
+    if (res.ok) {
+      cargar();
+      return;
+    }
+    const body = await res.json().catch(() => ({}));
+    setError(body.error ?? "No se pudo eliminar el viaje");
   }
 
   const viajesSeleccionados = useMemo(
@@ -572,6 +601,20 @@ export default function ViajesPage() {
                     Aplicar IVA (19%)
                   </label>
                 </div>
+                {puedeViatico ? (
+                  <CampoViatico
+                    tipo={viaticoTipo}
+                    monto={viaticoMonto}
+                    onCambio={(t, m) => {
+                      setViaticoTipo(t);
+                      setViaticoMonto(m);
+                    }}
+                    origen={origen}
+                    destino={destino}
+                    config={configViaticos}
+                    moneda={usuario.moneda}
+                  />
+                ) : null}
                 <div className="sm:col-span-2 lg:col-span-3">
                   <Input etiqueta="Comentarios (opcional)" valor={comentarios} onCambio={setComentarios} />
                 </div>
@@ -701,6 +744,11 @@ export default function ViajesPage() {
                         <td className="px-ds-4 py-ds-3 text-ds-text">
                           {formatMoneda(v.total, usuario.moneda)}
                           {v.aplica_iva && <span className="ml-ds-1 font-ds-body text-ds-caption text-ds-text/60">+IVA</span>}
+                          {puedeViatico && v.viatico_tipo ? (
+                            <p className="font-ds-body text-ds-caption text-ds-text/60">
+                              Viático {v.viatico_tipo}: {formatMoneda(Number(v.viatico_monto ?? 0), usuario.moneda)}
+                            </p>
+                          ) : null}
                         </td>
                         <td className="px-ds-4 py-ds-3">
                           <StatusBadge estado={v.estado} tonoForzado={v.estado === "confirmado" || v.estado === "facturado" ? "completado" : "en_progreso"} />
@@ -817,6 +865,22 @@ export default function ViajesPage() {
                                 />
                                 Aplicar IVA
                               </label>
+                              {puedeViatico ? (
+                                <div className="flex min-w-[220px] flex-wrap items-end gap-ds-3">
+                                  <CampoViatico
+                                    tipo={editViaticoTipo}
+                                    monto={editViaticoMonto}
+                                    onCambio={(t, m) => {
+                                      setEditViaticoTipo(t);
+                                      setEditViaticoMonto(m);
+                                    }}
+                                    origen={editOrigen}
+                                    destino={editDestino}
+                                    config={configViaticos}
+                                    moneda={usuario.moneda}
+                                  />
+                                </div>
+                              ) : null}
                             </div>
                             <div className="mt-ds-3">
                               <Input etiqueta="Comentarios / incidentes (opcional)" valor={editComentarios} onCambio={setEditComentarios} />

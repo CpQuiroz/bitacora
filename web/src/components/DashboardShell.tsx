@@ -400,7 +400,8 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
     if (href === "/dashboard/configuracion/cuenta") return pathname.startsWith("/dashboard/configuracion");
     // Rendiciones es subsección de Gastos (ver GastosSubnav) — sin ítem
     // propio en el nav, así que el de Gastos queda activo ahí también.
-    if (href === "/dashboard/gastos") return pathname.startsWith("/dashboard/gastos") || pathname.startsWith("/dashboard/rendiciones");
+    if (href === "/dashboard/gastos")
+      return pathname.startsWith("/dashboard/gastos") || pathname.startsWith("/dashboard/rendiciones") || pathname.startsWith("/dashboard/viaticos");
     return pathname.startsWith(href);
   }
 

@@ -69,10 +69,14 @@ export function ViajeFormScreen({ navigation, route }: NativeStackScreenProps<Vi
     if (puedeAsignar) void listarChoferes().then(setChoferes);
   }, [puedeAsignar]);
 
+  // Viático del chofer (tarea 137): se ve acá, lo asigna la oficina en la web.
+  const [viatico, setViatico] = useState<{ tipo: string; monto: number } | null>(null);
+
   useEffect(() => {
     if (!editandoId) return;
     obtenerViaje(editandoId)
       .then(({ viaje }) => {
+        setViatico(viaje.viatico_tipo ? { tipo: viaje.viatico_tipo, monto: Number(viaje.viatico_monto ?? 0) } : null);
         setB({
           cliente_id: viaje.cliente_id ?? "",
           numero_guia: viaje.numero_guia,
@@ -343,6 +347,20 @@ export function ViajeFormScreen({ navigation, route }: NativeStackScreenProps<Vi
             </Texto>
           </View>
         )}
+
+        {viatico ? (
+          <View style={{ gap: tokens.space["1"] }}>
+            <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
+              Viático {viatico.tipo === "local" ? "local" : "interregional"}
+            </Texto>
+            <Texto tamano={tokens.size.body} color={tokens.color.text} peso="semibold" style={{ fontVariant: ["tabular-nums"] }}>
+              ${Math.round(viatico.monto).toLocaleString("es-CL")}
+            </Texto>
+            <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`}>
+              Lo asigna la oficina y se paga al chofer del viaje.
+            </Texto>
+          </View>
+        ) : null}
       </ScrollView>
 
       <View

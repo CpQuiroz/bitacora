@@ -13,3 +13,4 @@ export * from "./legales";
 export * from "./estadosCita";
 export * from "./agendaColores";
 export * from "./ciudadesChile";
+export * from "./regionMetropolitana";

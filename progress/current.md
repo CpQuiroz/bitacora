@@ -191,3 +191,12 @@ Tarea 124 → done. Pendiente de la usuaria: planes en Flow + FLOW_PLAN_ID_* en 
 1. La usuaria corre en prod las migraciones 134, 135, 136 (db query -f + migration repair).
 2. Verificar por SELECT que existen ruta_viajes, auditoria_empresa y viajes.hora.
 3. OK de la usuaria → merge a main (fast-forward) → Render + Vercel; smoke /health y /api/viajes.
+
+### Tarea 137 — Viáticos por viaje (en curso, 24-sep)
+Plan aprobado: /Users/cquiroz/.claude/plans/dazzling-singing-firefly.md. Migración 137 escrita; NO aplicada en DEV
+(el clasificador de permisos bloqueó `supabase db query --project-ref <dev>` porque el proyecto enlazado es prod;
+la usuaria la corre con `!`). Hecho: shared (tipos, regionMetropolitana + tests), backend (viajesViaticos.ts +
+tests; viajes POST/PATCH/DELETE + GET/PATCH /config; misViajes DELETE/PATCH; gastos GET /viaticos, POST
+/viaticos/pagar, guard de edición), web (CampoViatico en viajes, Configuración › Viajes, Gastos › Viáticos),
+mobile (viático solo lectura). verificar.sh verde. Pendiente: migración en DEV → E2E scratchpad/qa/prueba-137.ts
+(23 casos) + regresión 131-134 + EXPLAIN ANALYZE + revisor.

@@ -6,6 +6,7 @@ import { subirFotoGuiaConNombre, urlFirmadaFotoGuia } from "../storage";
 import { ROLES_EDITAN_MONTO_VIAJE, calcularMontos, nuevosMontosViaje } from "../viajesMontos";
 import { registrarAuditoriaEmpresa } from "../auditoriaEmpresa";
 import { cobroDeViaje } from "../viajesCobros";
+import { borrarGastoViaticoPendiente, revisarViaticoAntesDeBorrar, sincronizarGastoViatico, viaticoDeViaje } from "../viajesViaticos";
 import { siguienteFolioViaje } from "../folios";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
@@ -450,6 +451,8 @@ misViajesRouter.patch(
         detalle: { anterior: montos.cambio.anterior, nuevo: montos.cambio.nuevo, numero_guia: existente.numero_guia },
       });
     }
+    // Viático (tarea 137): acá no se cambia, pero su gasto sigue la guía.
+    if (data.viatico_tipo) await sincronizarGastoViatico(req.empresaId!, data, viaticoDeViaje(data));
     res.json(data);
   })
 );
@@ -477,11 +480,17 @@ misViajesRouter.delete(
       res.status(409).json({ error: "Este viaje ya fue facturado y no se puede eliminar" });
       return;
     }
+    const viatico = await revisarViaticoAntesDeBorrar(req.empresaId!, req.params.id);
+    if ("error" in viatico) {
+      res.status(409).json({ error: viatico.error });
+      return;
+    }
     const { error } = await supabase.from("viajes").delete().eq("empresa_id", req.empresaId!).eq("id", req.params.id);
     if (error) {
       res.status(500).json({ error: error.message });
       return;
     }
+    await borrarGastoViaticoPendiente(req.empresaId!, viatico.gastoPendienteId);
     res.status(204).end();
   })
 );

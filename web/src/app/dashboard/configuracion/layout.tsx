@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Bell, Box, Briefcase, Calendar, ClipboardCheck, CreditCard, Flag, Layers, Paperclip, Plug, Share2, Shield, Tag, User, Users, Wallet, LayoutGrid } from "lucide-react";
+import { Bell, Box, Briefcase, Calendar, ClipboardCheck, CreditCard, Flag, Layers, Paperclip, Plug, Share2, Shield, Tag, Truck, User, Users, Wallet, LayoutGrid } from "lucide-react";
 import type { Modulo } from "@bitacora/shared";
 import { puedeVerModulo } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
@@ -31,6 +31,8 @@ const SECCIONES: { valor: string; label: string; icon: typeof User; modulo: Modu
   { valor: "categorias-gastos", label: "Categorías de Gastos", icon: Wallet, modulo: "configuracion" },
   { valor: "centros-costo", label: "Centros de Costo", icon: Layers, modulo: "configuracion" },
   { valor: "cotizacion-etapas", label: "Etapas de Cotización", icon: Flag, modulo: "configuracion" },
+  // Tarea 137: montos por defecto del viático del chofer.
+  { valor: "viajes", label: "Viajes", icon: Truck, modulo: "viajes" },
   // Remuneraciones dejó de ser grupo del sidebar: sus parámetros (tope
   // imponible, UF, tasas AFP…) se tocan un par de veces al año.
   { valor: "parametros-remuneracion", label: "Parámetros de remuneración", icon: CreditCard, modulo: "remuneraciones", href: "/dashboard/remuneraciones/parametros" },

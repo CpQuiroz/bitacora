@@ -1,11 +1,12 @@
 import { Router } from "express";
 import multer from "multer";
-import type { EstadoGasto, Gasto } from "@bitacora/shared";
+import type { AgruparViaticos, EstadoGasto, Gasto } from "@bitacora/shared";
 import { supabase } from "../supabase";
 import { subirComprobante, urlFirmadaComprobante } from "../storage";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
 import { siguienteFolioGasto } from "../folios";
+import { resumirViaticos, type GastoViaticoConChofer } from "../viajesViaticos";
 
 export const gastosRouter = Router();
 
@@ -91,6 +92,112 @@ gastosRouter.get(
       return;
     }
     res.json(data);
+  })
+);
+
+// ---------- Viáticos (tarea 137) ----------
+// Cuánto hay que pagarle a cada chofer por semana o por mes. El chofer
+// del viático es el del viaje (gastos.viaje_id → viajes.chofer_id).
+const FECHA = /^\d{4}-\d{2}-\d{2}$/;
+
+function rangoValido(desde: unknown, hasta: unknown): { desde: string; hasta: string } | { error: string } {
+  if (typeof desde !== "string" || typeof hasta !== "string" || !FECHA.test(desde) || !FECHA.test(hasta) || desde > hasta) {
+    return { error: "Indica un rango de fechas válido (desde y hasta, YYYY-MM-DD)" };
+  }
+  const dias = (Date.parse(hasta) - Date.parse(desde)) / 86_400_000;
+  if (!(dias <= 400)) return { error: "El rango no puede superar 400 días" };
+  return { desde, hasta };
+}
+
+type FilaGastoViatico = { id: string; monto: number; estado: EstadoGasto; fecha: string; viaje: { chofer_id: string | null; chofer: { nombre: string } | null } | null };
+
+async function gastosViaticos(empresaId: string, desde: string, hasta: string, choferId?: string) {
+  let q = supabase
+    .from("gastos")
+    .select("id, monto, estado, fecha, viaje:viajes!inner(chofer_id, chofer:usuarios(nombre))")
+    .eq("empresa_id", empresaId)
+    .eq("es_viatico", true)
+    .gte("fecha", desde)
+    .lte("fecha", hasta)
+    .limit(5000);
+  if (choferId) q = q.eq("viaje.chofer_id", choferId);
+  const { data, error } = await q;
+  return { data: (data ?? []) as unknown as FilaGastoViatico[], error };
+}
+
+gastosRouter.get(
+  "/viaticos",
+  ah<RequestConEmpresa>(async (req, res) => {
+    if (!esGestion(req)) {
+      res.status(403).json({ error: "No tienes permiso para ver los viáticos" });
+      return;
+    }
+    const rango = rangoValido(req.query.desde, req.query.hasta);
+    if ("error" in rango) {
+      res.status(400).json({ error: rango.error });
+      return;
+    }
+    const agrupar: AgruparViaticos = req.query.agrupar === "mes" ? "mes" : "semana";
+    const choferId = typeof req.query.chofer_id === "string" && req.query.chofer_id ? req.query.chofer_id : undefined;
+    const { data, error } = await gastosViaticos(req.empresaId!, rango.desde, rango.hasta, choferId);
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    const filas: GastoViaticoConChofer[] = data.map((g) => ({
+      monto: g.monto,
+      estado: g.estado,
+      fecha: g.fecha,
+      chofer_id: g.viaje?.chofer_id ?? null,
+      chofer: g.viaje?.chofer?.nombre ?? null,
+    }));
+    res.json(resumirViaticos(filas, agrupar));
+  })
+);
+
+// Marca como pagados los viáticos pendientes de un chofer en un período
+// (cuando se le transfiere). Deshacer: el gasto se vuelve a pendiente en
+// Gastos, uno por uno.
+gastosRouter.post(
+  "/viaticos/pagar",
+  ah<RequestConEmpresa>(async (req, res) => {
+    if (!esGestion(req)) {
+      res.status(403).json({ error: "No tienes permiso para pagar viáticos" });
+      return;
+    }
+    const { chofer_id, desde, hasta, fecha_pago } = req.body ?? {};
+    if (typeof chofer_id !== "string" || !chofer_id) {
+      res.status(400).json({ error: "Falta el chofer" });
+      return;
+    }
+    const rango = rangoValido(desde, hasta);
+    if ("error" in rango) {
+      res.status(400).json({ error: rango.error });
+      return;
+    }
+    const { data, error } = await gastosViaticos(req.empresaId!, rango.desde, rango.hasta, chofer_id);
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    const ids = data.filter((g) => g.estado === "pendiente").map((g) => g.id);
+    if (ids.length === 0) {
+      res.json({ pagados: 0, total: 0 });
+      return;
+    }
+    const { data: pagados, error: errorPago } = await supabase
+      .from("gastos")
+      .update({ estado: "pagado", fecha_pago: typeof fecha_pago === "string" && FECHA.test(fecha_pago) ? fecha_pago : new Date().toISOString().slice(0, 10) })
+      .eq("empresa_id", req.empresaId!)
+      .eq("es_viatico", true)
+      .eq("estado", "pendiente")
+      .in("id", ids)
+      .select("monto");
+    if (errorPago) {
+      res.status(500).json({ error: errorPago.message });
+      return;
+    }
+    res.json({ pagados: pagados?.length ?? 0, total: (pagados ?? []).reduce((t, g) => t + Number(g.monto), 0) });
   })
 );
 
@@ -216,7 +323,7 @@ gastosRouter.patch(
 
     const { data: gastoActual } = await supabase
       .from("gastos")
-      .select("estado, rendicion:rendiciones(estado, colaborador_id)")
+      .select("estado, es_viatico, monto, fecha, categoria_gasto_id, rendicion:rendiciones(estado, colaborador_id)")
       .eq("empresa_id", req.empresaId!)
       .eq("id", req.params.id)
       .maybeSingle();
@@ -237,6 +344,19 @@ gastosRouter.patch(
     // rechaza (vuelve a 'borrador').
     if (rendicionDeGasto && rendicionDeGasto.estado !== "borrador") {
       res.status(409).json({ error: "Este gasto pertenece a una rendición ya enviada — no se puede editar" });
+      return;
+    }
+
+    // Viático de un viaje (tarea 137): monto, fecha y categoría se cambian
+    // desde el viaje; acá solo el estado (pagado/pendiente), el
+    // comprobante y la descripción.
+    if (
+      gastoActual.es_viatico &&
+      ((monto !== undefined && Number(monto) !== Number(gastoActual.monto)) ||
+        (fecha !== undefined && fecha !== gastoActual.fecha) ||
+        (categoria_gasto_id !== undefined && (categoria_gasto_id || null) !== gastoActual.categoria_gasto_id))
+    ) {
+      res.status(409).json({ error: "Este gasto es el viático de un viaje: cambia su monto o fecha desde el viaje" });
       return;
     }
 

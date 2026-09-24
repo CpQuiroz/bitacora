@@ -1,16 +1,26 @@
 import { Router } from "express";
 import multer from "multer";
-import type { EstadoViaje, Factura, Viaje } from "@bitacora/shared";
+import type { ConfigViaticos, EstadoViaje, Factura, Viaje } from "@bitacora/shared";
 import { supabase } from "../supabase";
 import { subirFotoGuiaConNombre, urlFirmadaFotoGuia } from "../storage";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
-import { requiereAccion } from "../permisos";
+import { requiereAccion, requiereRol } from "../permisos";
 import { ROLES_EDITAN_MONTO_VIAJE, calcularMontos, normalizarHora, nuevosMontosViaje } from "../viajesMontos";
 import { registrarAuditoriaEmpresa } from "../auditoriaEmpresa";
 import { cobroDeViaje } from "../viajesCobros";
 import { avisarViajeAsignado, validarChofer } from "../viajesAsignacion";
 import { siguienteFolioCobro, siguienteFolioViaje } from "../folios";
+import {
+  borrarGastoViaticoPendiente,
+  errorViaticoPagado,
+  gastoViaticoDe,
+  leerViatico,
+  mismoViatico,
+  revisarViaticoAntesDeBorrar,
+  sincronizarGastoViatico,
+  viaticoDeViaje,
+} from "../viajesViaticos";
 
 export const viajesRouter = Router();
 
@@ -28,6 +38,61 @@ const upload = multer({
     cb(null, ["image/jpeg", "image/png", "image/webp"].includes(file.mimetype));
   },
 });
+
+// Montos por defecto de viático (tarea 137): se precargan al elegir el
+// tipo en un viaje. Leerlos: cualquiera con el módulo; cambiarlos: Admin.
+viajesRouter.get(
+  "/config",
+  ah<RequestConEmpresa>(async (req, res) => {
+    const { data, error } = await supabase
+      .from("empresas")
+      .select("viatico_local_monto, viatico_interregional_monto")
+      .eq("id", req.empresaId!)
+      .single();
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    res.json(data);
+  })
+);
+
+viajesRouter.patch(
+  "/config",
+  requiereRol("admin"),
+  ah<RequestConEmpresa>(async (req, res) => {
+    const cambios: Partial<ConfigViaticos> = {};
+    for (const campo of ["viatico_local_monto", "viatico_interregional_monto"] as const) {
+      const v = req.body?.[campo];
+      if (v === undefined) continue;
+      if (v === null || v === "") {
+        cambios[campo] = null;
+        continue;
+      }
+      const n = Number(v);
+      if (!Number.isFinite(n) || n < 0) {
+        res.status(400).json({ error: "Monto de viático inválido" });
+        return;
+      }
+      cambios[campo] = Math.round(n);
+    }
+    if (Object.keys(cambios).length === 0) {
+      res.status(400).json({ error: "Nada que actualizar" });
+      return;
+    }
+    const { data, error } = await supabase
+      .from("empresas")
+      .update(cambios)
+      .eq("id", req.empresaId!)
+      .select("viatico_local_monto, viatico_interregional_monto")
+      .single();
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    res.json(data);
+  })
+);
 
 viajesRouter.get(
   "/",
@@ -253,6 +318,8 @@ viajesRouter.post(
       aplica_iva,
       comentarios,
       hora,
+      viatico_tipo,
+      viatico_monto,
     } = req.body ?? {};
 
     if (typeof fecha !== "string" || !fecha) {
@@ -287,6 +354,23 @@ viajesRouter.post(
       res.status(400).json({ error: horaNorm.error });
       return;
     }
+    // Viático (tarea 137): solo Admin/Supervisor y siempre con chofer.
+    const pedidoViatico = leerViatico(viatico_tipo, viatico_monto);
+    if ("error" in pedidoViatico) {
+      res.status(400).json({ error: pedidoViatico.error });
+      return;
+    }
+    const viatico = "viatico" in pedidoViatico ? pedidoViatico.viatico : null;
+    if (viatico) {
+      if (!ROLES_EDITAN_MONTO_VIAJE.includes(req.rol ?? "")) {
+        res.status(403).json({ error: "Solo el administrador o un supervisor pueden asignar viático" });
+        return;
+      }
+      if (!chofer) {
+        res.status(400).json({ error: "Asigna un chofer: el viático es del chofer del viaje" });
+        return;
+      }
+    }
     const subtotalNum = Number(subtotal);
     if (!Number.isFinite(subtotalNum) || subtotalNum < 0) {
       res.status(400).json({ error: "monto inválido" });
@@ -319,6 +403,8 @@ viajesRouter.post(
         estado: "confirmado",
         origen_captura: "manual",
         comentarios: typeof comentarios === "string" && comentarios.trim() ? comentarios.trim() : null,
+        viatico_tipo: viatico?.tipo ?? null,
+        viatico_monto: viatico?.monto ?? null,
       })
       .select("*, cliente_info:clientes(id, nombre), chofer:usuarios(id, nombre), equipo:equipos(id, patente, marca, modelo)")
       .single();
@@ -326,6 +412,13 @@ viajesRouter.post(
     if (error) {
       res.status(500).json({ error: error.message });
       return;
+    }
+    if (viatico) {
+      const sync = await sincronizarGastoViatico(req.empresaId!, data, viatico);
+      if ("error" in sync) {
+        res.status(500).json({ error: `El viaje se guardó, pero no se pudo registrar el viático: ${sync.error}. Edita el viaje para reintentarlo.` });
+        return;
+      }
     }
     // Aviso al chofer (no a quien se asigna a sí mismo).
     if (chofer && chofer.id !== req.userId) await avisarViajeAsignado(req.empresaId!, chofer.id, data);
@@ -374,6 +467,8 @@ viajesRouter.patch(
       comentarios,
       estado,
       hora,
+      viatico_tipo,
+      viatico_monto,
     } = req.body ?? {};
 
     const cambios: Partial<Viaje> = {};
@@ -441,6 +536,34 @@ viajesRouter.patch(
       cambios.estado = estado;
     }
 
+    // Viático (tarea 137).
+    const pedidoViatico = leerViatico(viatico_tipo, viatico_monto);
+    if ("error" in pedidoViatico) {
+      res.status(400).json({ error: pedidoViatico.error });
+      return;
+    }
+    const viaticoAnterior = viaticoDeViaje(existente);
+    const viaticoFinal = "viatico" in pedidoViatico ? pedidoViatico.viatico : viaticoAnterior;
+    const cambiaViatico = !mismoViatico(viaticoAnterior, viaticoFinal);
+    if (cambiaViatico && !ROLES_EDITAN_MONTO_VIAJE.includes(req.rol ?? "")) {
+      res.status(403).json({ error: "Solo el administrador o un supervisor pueden cambiar el viático" });
+      return;
+    }
+    const choferFinal = cambios.chofer_id !== undefined ? cambios.chofer_id : existente.chofer_id;
+    if (viaticoFinal && !choferFinal) {
+      res.status(400).json({ error: "Asigna un chofer: el viático es del chofer del viaje" });
+      return;
+    }
+    const gastoViatico = viaticoAnterior ? await gastoViaticoDe(req.empresaId!, existente.id) : null;
+    if (gastoViatico?.estado === "pagado" && (cambiaViatico || choferFinal !== existente.chofer_id)) {
+      res.status(409).json({ error: errorViaticoPagado(gastoViatico) });
+      return;
+    }
+    if (cambiaViatico) {
+      cambios.viatico_tipo = viaticoFinal?.tipo ?? null;
+      cambios.viatico_monto = viaticoFinal?.monto ?? null;
+    }
+
     const { data, error } = await supabase
       .from("viajes")
       .update(cambios)
@@ -462,6 +585,14 @@ viajesRouter.patch(
         entidadId: existente.id,
         detalle: { anterior: montos.cambio.anterior, nuevo: montos.cambio.nuevo, numero_guia: existente.numero_guia },
       });
+    }
+    // El gasto del viático sigue al viaje (monto, fecha, guía y chofer).
+    if (viaticoFinal || viaticoAnterior) {
+      const sync = await sincronizarGastoViatico(req.empresaId!, data, viaticoFinal);
+      if ("error" in sync) {
+        res.status(500).json({ error: `El viaje se guardó, pero no se pudo actualizar el viático: ${sync.error}. Vuelve a guardarlo.` });
+        return;
+      }
     }
     // Reasignación (tarea 133): el viaje sale de la pizarra/agenda del
     // chofer anterior solo (se lista por chofer_id) y se avisa al nuevo.
@@ -516,11 +647,17 @@ viajesRouter.delete(
       res.status(409).json({ error: "Este viaje ya fue facturado y no se puede eliminar" });
       return;
     }
+    const viatico = await revisarViaticoAntesDeBorrar(req.empresaId!, req.params.id);
+    if ("error" in viatico) {
+      res.status(409).json({ error: viatico.error });
+      return;
+    }
     const { error } = await supabase.from("viajes").delete().eq("empresa_id", req.empresaId!).eq("id", req.params.id);
     if (error) {
       res.status(500).json({ error: error.message });
       return;
     }
+    await borrarGastoViaticoPendiente(req.empresaId!, viatico.gastoPendienteId);
     res.status(204).end();
   })
 );

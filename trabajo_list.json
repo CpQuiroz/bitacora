@@ -1840,6 +1840,14 @@
       "status": "pending",
       "description": "Del revisor de la Parte A (M2 y M7). facturar hoy crea el cobro y marca los viajes en dos pasos (con marcado atómico y rollback manual); pasarlo a una RPC en una transacción. ruta_viajes: validar en BD (trigger) que la ruta y el viaje sean de la misma empresa.",
       "resolution": ""
+    },
+    {
+      "id": 137,
+      "name": "viaticos_viaje",
+      "title": "Viajes: viático local/interregional por viaje, registrado como gasto 'Viáticos' del chofer, con resumen semanal/mensual y marcar pagado",
+      "status": "in_progress",
+      "description": "Aprobado por la usuaria 24-sep-2026. Viático siempre del chofer asignado; local = origen y destino en la Región Metropolitana; queda como gasto (pendiente hasta que se le paga al chofer). Montos por defecto por empresa. Solo Admin/Supervisor lo definen. No aparece en el cobro ni en su PDF.",
+      "resolution": ""
     }
   ]
 }

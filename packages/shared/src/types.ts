@@ -166,6 +166,9 @@ export type Empresa = {
   // Ley 21.719 — cuándo se dio de baja (para el ejercicio de retención).
   dada_de_baja_en: string | null;
   creado_en: string;
+  // Montos por defecto del viático de un viaje (tarea 137, migración 137).
+  viatico_local_monto: number | null;
+  viatico_interregional_monto: number | null;
 };
 
 // Identidad de plataforma — completamente separada de Usuario/Rol. Fila
@@ -1082,6 +1085,9 @@ export type Gasto = {
   // viaje, sin restricción entre ambos.
   rendicion_id: string | null;
   viaje_id: string | null;
+  // Gasto generado por el viático de un viaje (tarea 137). Su monto,
+  // fecha y categoría se editan desde el viaje, no desde Gastos.
+  es_viatico: boolean;
 };
 
 export type PeriodoRendicion = "diario" | "semanal";
@@ -1564,6 +1570,33 @@ export type Viaje = {
   // ordenes_servicio.folio. Null en viajes creados antes de esta
   // migración, no se backfillea histórico.
   folio: number | null;
+  // Viático del chofer asignado (tarea 137, migración 137): tipo y monto
+  // van juntos. Se registra como gasto "Viáticos" (gastos.es_viatico);
+  // no sale en el cobro.
+  viatico_tipo: TipoViatico | null;
+  viatico_monto: number | null;
+};
+
+export type TipoViatico = "local" | "interregional";
+
+// Montos por defecto de la empresa (Configuración › Viajes).
+export type ConfigViaticos = {
+  viatico_local_monto: number | null;
+  viatico_interregional_monto: number | null;
+};
+
+// Resumen de viáticos por chofer y período (Gastos › Viáticos): cuánto
+// hay que pagarle a cada chofer por semana o por mes.
+export type AgruparViaticos = "semana" | "mes";
+export type FilaResumenViaticos = {
+  // Lunes de la semana o primer día del mes (YYYY-MM-DD).
+  periodo: string;
+  chofer_id: string | null;
+  chofer: string;
+  cantidad: number;
+  total: number;
+  pendiente: number;
+  pagado: number;
 };
 
 // Ledger de idempotencia del webhook de WhatsApp — nunca se expone

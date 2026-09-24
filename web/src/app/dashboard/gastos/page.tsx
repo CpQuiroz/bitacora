@@ -219,7 +219,7 @@ export default function GastosPage() {
 
   return (
     <DashboardShell usuario={usuario}>
-      <GastosSubnav activo="gastos" />
+      <GastosSubnav activo="gastos" rol={usuario.rol} />
       <div className="mb-ds-6 flex flex-wrap items-center justify-between gap-ds-3">
         <div>
           <p className="ds-heading text-ds-h2 text-ds-text">Gastos</p>
