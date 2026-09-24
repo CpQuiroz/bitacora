@@ -1861,9 +1861,9 @@
       "id": 139,
       "name": "auditoria_indices",
       "title": "Índices: consultas calientes, FKs sin índice y redundantes (auditoría 24-sep)",
-      "status": "blocked",
+      "status": "done",
       "description": "Auditoría en progress/auditoria_indices.md, aprobada por la usuaria. Migración 139: 7 índices para rutas calientes (A1-A7), 19 FKs sin índice, borrar 5 redundantes. Validar con EXPLAIN ANALYZE en DEV.",
-      "resolution": "Migración 139_indices_auditoria.sql: 7 índices de rutas calientes (A1-A7), 19 FKs, borra 5 redundantes. DEV: aplicada; 26 índices creados, 0 redundantes restantes; EXPLAIN (enable_seqscan=off, UUID constantes) → A1-A5 y A7 usan el índice nuevo con empresa_id en la condición; A6 eligió trabajos_responsable_id_idx por estimar 1 fila (DEV casi vacío), revisar con volumen real. BLOQUEADA hasta que la usuaria corra la 139 en prod."
+      "resolution": "Migración 139_indices_auditoria.sql: 7 índices de rutas calientes (A1-A7), 19 FKs, borra 5 redundantes. DEV: aplicada; 26 índices creados, 0 redundantes restantes; EXPLAIN (enable_seqscan=off, UUID constantes) → A1-A5 y A7 usan el índice nuevo con empresa_id en la condición; A6 eligió trabajos_responsable_id_idx por estimar 1 fila (DEV casi vacío), revisar con volumen real. BLOQUEADA hasta que la usuaria corra la 139 en prod. | PUBLICADO 24-sep-2026: migraciones 139 y 140 en prod (verificadas), main e48af51 (Render live, Vercel READY)."
     },
     {
       "id": 140,
@@ -1877,9 +1877,9 @@
       "id": 141,
       "name": "whatsapp_telefono_norm",
       "title": "WhatsApp: buscar al chofer por teléfono normalizado indexado en vez de leer todos los usuarios (auditoría C2)",
-      "status": "blocked",
+      "status": "done",
       "description": "progress/auditoria_indices.md §5 C2. Pendiente de OK de la usuaria.",
-      "resolution": "Migración 140: usuarios.telefono_sufijo (columna generada, últimos 8 dígitos) + índice parcial. Webhook filtra por sufijo y elige con elegirChofer (misma regla). Tests 4/4; DEV: migración aplicada, E2E 141 5/5, regresión 84/84. BLOQUEADA: correr la 140 en prod ANTES de publicar este código (si no, el webhook no encuentra al chofer)."
+      "resolution": "Migración 140: usuarios.telefono_sufijo (columna generada, últimos 8 dígitos) + índice parcial. Webhook filtra por sufijo y elige con elegirChofer (misma regla). Tests 4/4; DEV: migración aplicada, E2E 141 5/5, regresión 84/84. BLOQUEADA: correr la 140 en prod ANTES de publicar este código (si no, el webhook no encuentra al chofer). | PUBLICADO 24-sep-2026: migraciones 139 y 140 en prod (verificadas), main e48af51 (Render live, Vercel READY)."
     }
   ]
 }

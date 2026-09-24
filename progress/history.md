@@ -268,3 +268,4 @@ Formato:
 - **Cambios:** cumpleaños una vez por día y empresa (hora Chile, 29-feb); migración 140 + búsqueda del chofer de WhatsApp por sufijo indexado.
 - **Verificación:** verificar.sh verde (backend 25 tests); DEV: E2E 141 5/5 y regresión 84/84.
 - **Cierre:** 140 done; 141 blocked hasta migración 140 en prod (antes del deploy). Pendiente en prod: migraciones 139 y 140, luego publicar.
+- **Publicación (24-sep, noche):** migraciones 139 y 140 en prod (EXPLAIN en prod: A1-A7 usan su índice nuevo, incluido A6); main 8b95e9c → e48af51; Render dep-daqqj07f3r2c73amhus0 live, Vercel dpl_7Hxvao5zUxHbLHjo2kBuWmkC8WC5 READY, /health 200. Tareas 139 y 141 done.
