@@ -120,8 +120,10 @@ export async function analizarFoto(
   base64: string,
   mediaType: "image/jpeg" | "image/png" | "image/webp"
 ): Promise<AnalisisFotoIA> {
+  // Haiku 4.5 (tarea 122): describir una foto y marcar un daño visible
+  // no necesita Sonnet — cuesta la mitad ($1/$5 vs $2/$10 por MTok).
   const response = await crearMensajeIA(empresaId, "analisis_foto", {
-    model: "claude-sonnet-5",
+    model: "claude-haiku-4-5",
     max_tokens: 512,
     messages: [
       {

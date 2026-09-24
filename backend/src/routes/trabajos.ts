@@ -8,7 +8,6 @@ import { analizarFoto, generarInformeOS, type ImagenInforme } from "../claude";
 import { rolPuedeVerModulo } from "../roles";
 import { crearOrdenServicio, obtenerOCrearOrden, checklistDeTipoOs } from "../ordenes";
 import { enviarEncuestaSatisfaccion, enviarPdfOS } from "../email";
-import { env } from "../env";
 import { generarPdfEnWorker } from "../pdfWorkerPool";
 import type { CampoCombinadoOSPdf, DatosOSPdf } from "../generarPdfOS";
 import { notificar, notificarGerencia } from "../notificar";
@@ -16,7 +15,7 @@ import { notificarCliente } from "../notificarCliente";
 import { aplicarDescuentoInventarioSiCorresponde, revertirStockPorOS } from "../inventario";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
-import { verificarLimiteOS } from "../limites";
+import { LimiteAlcanzadoError, verificarLimiteOS, verificarPlanAnalisisFotosIA } from "../limites";
 
 export const trabajosRouter = Router();
 
@@ -1043,54 +1042,10 @@ trabajosRouter.post(
   })
 );
 
-// El análisis con IA corre DESPUÉS de responder al cliente: subir una
-// foto no puede quedar "pegado" esperando a Claude (Render free + cola
-// de IA pueden tardar >30s y el celular corta la conexión). La fila se
-// crea en estado "procesando" y esta función la completa en segundo
-// plano; la app refresca y muestra el resumen cuando está listo.
-async function analizarFotoEnSegundoPlano(
-  empresaId: string,
-  fotoId: string,
-  base64: string,
-  mediaType: "image/jpeg" | "image/png" | "image/webp"
-): Promise<void> {
-  try {
-    const analisis = await analizarFoto(empresaId, base64, mediaType);
-    const { error } = await supabase
-      .from("analisis_fotos")
-      .update({
-        estado: "listo",
-        resumen: analisis.resumen,
-        alerta: analisis.alerta,
-        detalle_alerta: analisis.detalle_alerta,
-      })
-      .eq("id", fotoId);
-    if (error) console.error("analizarFotoEnSegundoPlano (guardar):", error.message);
-  } catch (err) {
-    console.error("analizarFotoEnSegundoPlano:", err);
-    await supabase
-      .from("analisis_fotos")
-      .update({ estado: "error", resumen: "No se pudo analizar la foto automáticamente." })
-      .eq("id", fotoId)
-      .then(({ error }) => {
-        if (error) console.error("analizarFotoEnSegundoPlano (marcar error):", error.message);
-      });
-    try {
-      await supabase.from("errores_backend").insert({
-        empresa_id: empresaId,
-        ruta: "trabajos:analizarFotoEnSegundoPlano",
-        metodo: "POST",
-        mensaje: err instanceof Error ? err.message : String(err),
-      });
-    } catch {
-      /* best-effort */
-    }
-  }
-}
-
-// Sube una foto del trabajo. Responde apenas la imagen está guardada;
-// el análisis con IA (detecta daños/riesgos visibles) corre en segundo
-// plano. La orden de servicio se crea si hace falta.
+// Sube una foto del trabajo. Solo la guarda como evidencia: el análisis
+// con IA ya no es automático (tarea 122) — lo pide el Admin por foto en
+// POST /:id/fotos/:fotoId/analizar. La orden de servicio se crea si hace
+// falta.
 trabajosRouter.post(
   "/:id/fotos",
   upload.single("foto"),
@@ -1134,7 +1089,6 @@ trabajosRouter.post(
     const orden = await obtenerOCrearOrden(req.empresaId!, req.params.id);
 
     const key = await subirFoto(req.empresaId!, req.params.id, req.file.buffer, req.file.mimetype);
-    const mediaType = req.file.mimetype as "image/jpeg" | "image/png" | "image/webp";
 
     // Categoría de la foto (migración 98) — para agrupar la galería del
     // PDF. Solo valores del set conocido; cualquier otra cosa → general.
@@ -1155,9 +1109,6 @@ trabajosRouter.post(
     // como campo de texto del mismo multipart, no un archivo.
     const descripcion = typeof req.body?.descripcion === "string" ? req.body.descripcion.trim() || null : null;
 
-    // Con la IA apagada la foto queda "listo" al toque, sin resumen.
-    const estadoInicial = env.ANALISIS_FOTOS_IA_ACTIVO ? "procesando" : "listo";
-
     const { data: fotoGuardada, error: errorInsert } = await supabase
       .from("analisis_fotos")
       .insert({
@@ -1169,7 +1120,7 @@ trabajosRouter.post(
         campo_clave: campoClave,
         descripcion,
         subida_por: req.userId!,
-        estado: estadoInicial,
+        estado: "listo",
       })
       .select()
       .single();
@@ -1200,15 +1151,6 @@ trabajosRouter.post(
       .eq("id", orden.id);
 
     res.status(201).json(fotoGuardada);
-
-    if (env.ANALISIS_FOTOS_IA_ACTIVO) {
-      void analizarFotoEnSegundoPlano(
-        req.empresaId!,
-        fotoGuardada.id,
-        req.file.buffer.toString("base64"),
-        mediaType
-      );
-    }
   })
 );
 
@@ -1248,6 +1190,86 @@ trabajosRouter.get(
       (fotos ?? []).map(async (f) => ({ ...f, url: await urlFirmada(f.foto_url, 15) }))
     );
     res.json(conUrl);
+  })
+);
+
+// Analiza UNA foto con IA, a pedido (tarea 122, 24-sep-2026). Reemplaza
+// al análisis automático al subir, que se eliminó por costo:
+//  - Solo el rol `admin` (no delegable a supervisor).
+//  - Solo planes con PLANES_CON_ANALISIS_FOTOS_IA → si no, 403 LIMITE_PLAN.
+//  - No sobre una OS finalizada (misma regla que editar/borrar fotos).
+// Síncrona: la pide un Admin desde la web y espera el resultado; una
+// foto tarda pocos segundos con Haiku. Si Claude falla, la foto queda
+// en estado "error" y se responde 502 — la foto en sí nunca se toca.
+trabajosRouter.post(
+  "/:id/fotos/:fotoId/analizar",
+  ah<RequestConEmpresa>(async (req, res) => {
+    if (req.rol !== "admin") {
+      res.status(403).json({ error: "Solo el administrador puede pedir el análisis de una foto con IA." });
+      return;
+    }
+    await verificarPlanAnalisisFotosIA(req.empresaId!);
+
+    if (!(await trabajoExiste(req.empresaId!, req.params.id))) {
+      res.status(404).json({ error: "Trabajo no encontrado" });
+      return;
+    }
+    if (await trabajoBloqueado(req.empresaId!, req.params.id)) {
+      res.status(403).json({ error: "La orden de servicio ya fue firmada, las fotos originales no se pueden modificar" });
+      return;
+    }
+    const orden = await ordenDeTrabajo(req.empresaId!, req.params.id);
+    if (!orden) {
+      res.status(404).json({ error: "Foto no encontrada" });
+      return;
+    }
+    const { data: foto } = await supabase
+      .from("analisis_fotos")
+      .select("id, foto_url")
+      .eq("empresa_id", req.empresaId!)
+      .eq("orden_servicio_id", orden.id)
+      .eq("id", req.params.fotoId)
+      .maybeSingle();
+    if (!foto) {
+      res.status(404).json({ error: "Foto no encontrada" });
+      return;
+    }
+
+    const buf = await descargarFoto(foto.foto_url);
+    const mediaType = tipoImagen(buf);
+    if (!mediaType) {
+      res.status(415).json({ error: "El formato de esta foto no se puede analizar (solo JPG, PNG o WebP)." });
+      return;
+    }
+
+    let cambios: { estado: "listo" | "error"; resumen: string; alerta?: boolean; detalle_alerta?: string | null };
+    try {
+      const analisis = await analizarFoto(req.empresaId!, buf.toString("base64"), mediaType);
+      cambios = { estado: "listo", ...analisis };
+    } catch (err) {
+      // El tope mensual de IA (LimiteAlcanzadoError) sigue su camino
+      // normal al handler global → 403 LIMITE_PLAN.
+      if (err instanceof LimiteAlcanzadoError) throw err;
+      console.error("analizar foto:", err);
+      cambios = { estado: "error", resumen: "No se pudo analizar la foto con IA." };
+    }
+
+    const { data, error } = await supabase
+      .from("analisis_fotos")
+      .update(cambios)
+      .eq("empresa_id", req.empresaId!)
+      .eq("id", foto.id)
+      .select("*")
+      .single();
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    if (cambios.estado === "error") {
+      res.status(502).json({ error: cambios.resumen, foto: data });
+      return;
+    }
+    res.json(data);
   })
 );
 
@@ -1884,11 +1906,10 @@ function tipoImagen(buf: Buffer): ImagenInforme["media_type"] | null {
 //    `informe_ia` en esa empresa. Contador/colaborador nunca, aunque
 //    tengan el módulo delegado para otros usos (ej. informe libre).
 //
-// El análisis de las fotos ocurre ACÁ, on-demand — es un camino
-// independiente a propósito del análisis masivo automático al subir
-// (analisis_fotos + `ANALISIS_FOTOS_IA_ACTIVO`, hoy apagado por costo).
-// NO reencadenar esta ruta a ese flag: subir la foto siempre la guarda
-// como evidencia; analizarla es solo cuando el Admin pide el informe.
+// Las fotos se analizan ACÁ, on-demand, como parte del informe — es
+// independiente del análisis por foto (POST /:id/fotos/:fotoId/analizar,
+// solo Admin + Pro). Subir la foto siempre la guarda como evidencia sin
+// llamar a la IA.
 trabajosRouter.post(
   "/:id/informe-ia",
   ah<RequestConEmpresa>(async (req, res) => {
@@ -1939,9 +1960,8 @@ trabajosRouter.post(
       .map((i) => `- [${i.hecho ? "x" : " "}] ${i.item}`)
       .join("\n");
 
-    // Si algún día el análisis masivo está encendido, aprovechamos el
-    // resumen ya generado; con el flag apagado esto queda vacío y la
-    // fuente son las imágenes adjuntas más abajo.
+    // Si el Admin ya analizó alguna foto, aprovechamos ese resumen; si
+    // no, esto queda vacío y la fuente son las imágenes adjuntas más abajo.
     const fotosTexto = (fotos ?? [])
       .filter((f) => f.resumen)
       .map((f, i) => `Foto ${i + 1}: ${f.resumen}${f.alerta ? ` — ALERTA: ${f.detalle_alerta}` : ""}`)

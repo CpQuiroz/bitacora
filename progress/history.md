@@ -212,3 +212,19 @@ Formato:
   - Sugerido: actualizar Node global a 22 en la Mac (`brew install node@22`).
   - Hallazgos de infra para precios: Supabase org en FREE (sin backups), Vercel
     en cuenta personal (probable Hobby = sin uso comercial). Ver `docs/DEUDA_TECNICA.md`.
+
+## 2026-09-24 — Tarea 122: IA en fotos solo Pro, a pedido del Admin, con Haiku
+- **Agente:** Claude (directo, sin subagentes)
+- **Cambios:**
+  - Se eliminó el análisis automático al subir foto (y la env `ANALISIS_FOTOS_IA_ACTIVO`).
+  - Nueva ruta `POST /api/trabajos/:id/fotos/:fotoId/analizar`: solo Admin, solo planes de
+    `PLANES_CON_ANALISIS_FOTOS_IA` (packages/shared/src/limites.ts, hoy `["pro"]`), 403
+    `LIMITE_PLAN` si no; no sobre OS finalizada; cuenta contra el tope mensual de IA.
+  - `analizarFoto` pasa de Sonnet 5 a Haiku 4.5 (`claude-haiku-4-5`): $1/$5 vs $2/$10 por MTok.
+  - Web (detalle OS): botón "Analizar con IA" por foto (Admin + Pro) y aviso de alerta.
+  - Mobile sin cambios: ya muestra resumen/alerta cuando existen.
+- **Verificación:** `./verificar.sh` en verde (Node 22 de la caché de npx; la Mac sigue en 20.8).
+- **Pendiente / a confirmar:**
+  - No existe plan "Empresa" en el código — cuando se cree, sumarlo a `PLANES_CON_ANALISIS_FOTOS_IA`.
+  - Si Render prod tiene `ANALISIS_FOTOS_IA_ACTIVO` seteada, ya no se usa: se puede borrar.
+  - Probar en prod con una empresa Pro tras el deploy (calidad de Haiku en fotos reales).

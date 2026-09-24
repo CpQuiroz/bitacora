@@ -1729,8 +1729,9 @@
       "id": 122,
       "name": "ia_fotos_solo_pro_admin",
       "title": "IA en fotos: solo Pro/Empresa y solo a pedido del Admin; evaluar modelo más barato",
-      "status": "pending",
-      "description": "Decisión de la usuaria (24-sep-2026): el análisis de fotos con IA deja de ser automático. Solo en planes Pro y Empresa, y solo cuando el Admin lo pide sobre una foto/OS; el resto de las fotos solo se suben y quedan guardadas. Evaluar un modelo más barato para el análisis de fotos."
+      "status": "done",
+      "description": "Decisión de la usuaria (24-sep-2026): el análisis de fotos con IA deja de ser automático. Solo en planes Pro y Empresa, y solo cuando el Admin lo pide sobre una foto/OS; el resto de las fotos solo se suben y quedan guardadas. Evaluar un modelo más barato para el análisis de fotos.",
+      "resolution": "Análisis automático al subir eliminado (código + env ANALISIS_FOTOS_IA_ACTIVO). Nueva ruta POST /api/trabajos/:id/fotos/:fotoId/analizar: solo rol admin, solo planes PLANES_CON_ANALISIS_FOTOS_IA (hoy [\"pro\"]; no existe plan Empresa en código — sumarlo ahí), 403 LIMITE_PLAN si no; bloqueada con OS finalizada; cuenta contra el tope mensual de IA. Modelo de analizarFoto: claude-sonnet-5 -> claude-haiku-4-5 (mitad de costo). Web: botón Analizar con IA por foto en detalle OS (Admin + Pro) y muestra la alerta. Mobile sin cambios (ya pinta resumen/alerta). verificar.sh verde (Node 22)."
     },
     {
       "id": 123,

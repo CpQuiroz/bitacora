@@ -293,6 +293,12 @@ plan Básico.
 instrumentar el costo real por empresa (ver §8), (b) revisar los topes de `limites.ts`,
 (c) decidir si la IA de fotos es un add-on / solo Pro.
 
+**Resuelto (tarea 122, 24-sep-2026):** el análisis de fotos dejó de ser automático
+(se eliminó `ANALISIS_FOTOS_IA_ACTIVO`). Ahora es por foto, a pedido del Admin, solo en
+los planes de `PLANES_CON_ANALISIS_FOTOS_IA` (hoy Pro), y cuenta contra el tope mensual
+de IA como cualquier otra llamada. El modelo pasó de Sonnet 5 a Haiku 4.5, a la mitad
+de costo por token ($1/$5 vs $2/$10 por MTok).
+
 ---
 
 ## 8. Recomendación de instrumentación (para que la próxima auditoría sea con datos reales)

@@ -5,11 +5,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { Camera, ChevronLeft, ClipboardCheck, Mail, Plus } from "lucide-react";
-import type { AnalisisFoto, CatalogoItem, Cliente, OrdenServicio, OsItem, Trabajo, TipoOsTrabajo, Usuario } from "@bitacora/shared";
+import type { AnalisisFoto, CatalogoItem, Plan, Cliente, OrdenServicio, OsItem, Trabajo, TipoOsTrabajo, Usuario } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { abrirPdfOS } from "@/lib/descargarPdf";
-import { CATEGORIAS_FOTO_OS, ETIQUETA_CATEGORIA_FOTO_OS, formatearCLP, formatearFolio } from "@bitacora/shared";
+import { CATEGORIAS_FOTO_OS, ETIQUETA_CATEGORIA_FOTO_OS, formatearCLP, formatearFolio, planPermiteAnalisisFotosIA } from "@bitacora/shared";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Button, Card, Cifra, DatePicker, Input, Select, StatusBadge, Table, Textarea } from "@bitacora/ui/web";
 import { InputMonto } from "@/components/InputMonto";
@@ -87,6 +87,7 @@ export default function DetalleOrdenServicioPage() {
   const [modulosVisibles, setModulosVisibles] = useState<string[]>([]);
   // Migración 116 — ver nota en ordenes/nueva/page.tsx.
   const [preciosAvanzados, setPreciosAvanzados] = useState(false);
+  const [planEmpresa, setPlanEmpresa] = useState<Plan | null>(null);
   const [patrones, setPatrones] = useState("");
 
   const [eliminando, setEliminando] = useState(false);
@@ -127,6 +128,7 @@ export default function DetalleOrdenServicioPage() {
       if (u) {
         setUsuario({ nombre: u.nombre, rol: u.rol, empresaNombre: u.empresa?.nombre ?? "", empresaLogoUrl: u.empresa?.logo_url ?? null, colorPrimario: u.empresa?.color_primario ?? null, tema: u.empresa?.tema ?? "faena", colorPrimarioForeground: u.empresa?.color_primario_foreground ?? null, colorSecundario: u.empresa?.color_secundario ?? null, fuente: u.empresa?.fuente ?? null, moneda: u.empresa?.moneda ?? "CLP" });
         setPreciosAvanzados(Boolean(u.empresa?.precios_avanzados_activado));
+        setPlanEmpresa((u.empresa?.plan as Plan | undefined) ?? null);
       }
       if (Array.isArray(cuerpoMe.modulos_visibles)) setModulosVisibles(cuerpoMe.modulos_visibles);
     }
@@ -726,7 +728,13 @@ export default function DetalleOrdenServicioPage() {
                         </p>
                         <div className="grid gap-ds-4 sm:grid-cols-2 lg:grid-cols-3">
                           {delGrupo.map((f) => (
-                            <FotoOS key={f.id} foto={f} trabajoId={detalle.id} editable={detalle.orden?.estado_os !== "firmada"} />
+                            <FotoOS
+                              key={f.id}
+                              foto={f}
+                              trabajoId={detalle.id}
+                              editable={detalle.orden?.estado_os !== "firmada"}
+                              puedeAnalizar={usuario?.rol === "admin" && planPermiteAnalisisFotosIA(planEmpresa)}
+                            />
                           ))}
                         </div>
                       </section>
@@ -926,10 +934,38 @@ const GRUPOS_FOTO: { valor: string | null; texto: string }[] = [
 // Foto de la OS con descripción editable (analisis_fotos.descripcion,
 // migración 125 — sale debajo de la foto en el PDF). Se guarda al salir
 // del campo; el backend la bloquea si la OS ya está firmada.
-function FotoOS({ foto, trabajoId, editable }: { foto: AnalisisFotoConUrl; trabajoId: string; editable: boolean }) {
+// Análisis con IA (tarea 122): ya no es automático — solo el Admin en
+// plan Pro lo pide por foto (el backend valida rol y plan de verdad).
+function FotoOS({
+  foto,
+  trabajoId,
+  editable,
+  puedeAnalizar,
+}: {
+  foto: AnalisisFotoConUrl;
+  trabajoId: string;
+  editable: boolean;
+  puedeAnalizar: boolean;
+}) {
   const [descripcion, setDescripcion] = useState(foto.descripcion ?? "");
   const [guardada, setGuardada] = useState(foto.descripcion ?? "");
   const [estado, setEstado] = useState<"idle" | "guardando" | "ok" | "error">("idle");
+  const [analisis, setAnalisis] = useState({ resumen: foto.resumen, alerta: foto.alerta, detalleAlerta: foto.detalle_alerta });
+  const [analizando, setAnalizando] = useState(false);
+  const [errorAnalisis, setErrorAnalisis] = useState<string | null>(null);
+
+  async function analizar() {
+    setAnalizando(true);
+    setErrorAnalisis(null);
+    const res = await apiFetch(`/api/trabajos/${trabajoId}/fotos/${foto.id}/analizar`, { method: "POST" });
+    const cuerpo = await res.json().catch(() => null);
+    setAnalizando(false);
+    if (!res.ok) {
+      setErrorAnalisis(cuerpo?.error ?? "No se pudo analizar la foto");
+      return;
+    }
+    setAnalisis({ resumen: cuerpo.resumen, alerta: cuerpo.alerta, detalleAlerta: cuerpo.detalle_alerta });
+  }
 
   async function guardar() {
     if (descripcion.trim() === guardada) return;
@@ -967,7 +1003,16 @@ function FotoOS({ foto, trabajoId, editable }: { foto: AnalisisFotoConUrl; traba
         {estado === "guardando" ? <p className="font-ds-body text-ds-caption text-ds-text/50">Guardando…</p> : null}
         {estado === "ok" ? <p className="font-ds-body text-ds-caption text-ds-text/50">Guardado</p> : null}
         {estado === "error" ? <p className="font-ds-body text-ds-caption text-ds-danger">No se pudo guardar</p> : null}
-        {foto.resumen ? <p className="font-ds-body text-ds-caption text-ds-text/60">{foto.resumen}</p> : null}
+        {analisis.resumen ? <p className="font-ds-body text-ds-caption text-ds-text/60">{analisis.resumen}</p> : null}
+        {analisis.alerta && analisis.detalleAlerta ? (
+          <p className="font-ds-body text-ds-caption text-ds-danger">⚠ {analisis.detalleAlerta}</p>
+        ) : null}
+        {puedeAnalizar && editable ? (
+          <Button variante="ghost" tamano="sm" onPress={() => void analizar()} cargando={analizando}>
+            {analisis.resumen ? "Volver a analizar con IA" : "Analizar con IA"}
+          </Button>
+        ) : null}
+        {errorAnalisis ? <p className="font-ds-body text-ds-caption text-ds-danger">{errorAnalisis}</p> : null}
       </div>
     </div>
   );

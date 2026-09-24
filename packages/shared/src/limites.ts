@@ -20,3 +20,12 @@ export const LIMITES_POR_PLAN: Record<Plan, LimitesPlan> = {
   basico: { usuarios: 5, osPorMes: 100, storageGB: 10, iaTokensPorMes: 1_500_000 },
   pro: { usuarios: 15, osPorMes: null, storageGB: 50, iaTokensPorMes: 5_000_000 },
 };
+
+// Análisis con IA de fotos de OS (tarea 122, 24-sep-2026): deja de ser
+// automático al subir — solo a pedido del Admin y solo en estos planes.
+// Cuando exista el plan "Empresa", sumarlo acá.
+export const PLANES_CON_ANALISIS_FOTOS_IA: readonly Plan[] = ["pro"];
+
+export function planPermiteAnalisisFotosIA(plan: Plan | null | undefined): boolean {
+  return plan != null && PLANES_CON_ANALISIS_FOTOS_IA.includes(plan);
+}

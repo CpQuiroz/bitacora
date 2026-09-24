@@ -6,7 +6,7 @@
 // errores_backend (no es un bug, es un freno esperado del negocio).
 // ============================================================
 import type { Plan } from "@bitacora/shared";
-import { LIMITES_POR_PLAN } from "@bitacora/shared";
+import { LIMITES_POR_PLAN, planPermiteAnalisisFotosIA } from "@bitacora/shared";
 import { supabase } from "./supabase";
 
 export class LimiteAlcanzadoError extends Error {
@@ -114,5 +114,14 @@ export async function verificarLimiteIA(empresaId: string): Promise<void> {
     throw new LimiteAlcanzadoError(
       `Llegaste al límite de uso de IA de este mes en tu plan (${limite.toLocaleString("es-CL")} tokens) — pasa a un plan superior para seguir.`
     );
+  }
+}
+
+// Análisis de fotos con IA a pedido (tarea 122) — solo en los planes de
+// PLANES_CON_ANALISIS_FOTOS_IA. Mismo 403 LIMITE_PLAN que el resto de los
+// topes: los clientes lo muestran como "pasa a un plan superior".
+export async function verificarPlanAnalisisFotosIA(empresaId: string): Promise<void> {
+  if (!planPermiteAnalisisFotosIA(await obtenerPlan(empresaId))) {
+    throw new LimiteAlcanzadoError("El análisis de fotos con IA está disponible solo en el plan Pro.");
   }
 }
