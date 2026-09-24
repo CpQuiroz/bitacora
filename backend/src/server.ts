@@ -51,6 +51,7 @@ import { catalogoRouter } from "./routes/catalogo";
 import { inventarioRouter } from "./routes/inventario";
 import { proveedoresRouter } from "./routes/proveedores";
 import { asistenteRouter } from "./routes/asistente";
+import { modulosRouter } from "./routes/modulos";
 import { viajesRouter } from "./routes/viajes";
 import { misViajesRouter } from "./routes/misViajes";
 import { misTrabajosRouter } from "./routes/misTrabajos";
@@ -343,6 +344,9 @@ app.use("/api/servicios", requiereAuth, requiereEmpresa, serviciosRouter);
 app.use("/api/ventas", requiereAuth, requiereEmpresa, ventasRouter);
 app.use("/api/suscripcion", requiereAuth, requiereEmpresa, suscripcionRouter);
 app.use("/api/plan", requiereAuth, requiereEmpresa, planRouter);
+// Configuración › Módulos de la empresa (tarea 124, etapa 3). La acción
+// gestionar_plan se exige adentro del router.
+app.use("/api/modulos", requiereAuth, requiereEmpresa, modulosRouter);
 app.use("/api/agenda-pro/config", requiereAuth, requiereEmpresa, agendaProConfigRouter);
 app.use("/api/dashboard", requiereAuth, requiereEmpresa, dashboardRouter);
 app.use("/api/informes", requiereAuth, requiereEmpresa, requiereModulo("informes"), informesRouter);

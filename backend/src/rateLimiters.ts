@@ -53,9 +53,10 @@ export const limitarPortalAcceso = rateLimit({
   message: { error: "Demasiados intentos — espera unos minutos y vuelve a intentar." },
 });
 
-// Pedir cotización del plan Empresa (tarea 124) — cada pedido manda un
-// correo a los Super-Admin; con esto no se puede usar para spamearlos.
-export const limitarCotizacionPlan = rateLimit({
+// Pedidos que mandan un correo a los Super-Admin (cotizar el plan
+// Empresa, solicitar más módulos — tarea 124): con esto no se pueden
+// usar para spamearlos.
+export const limitarSolicitudesSuperAdmin = rateLimit({
   windowMs: 60 * 60 * 1000,
   limit: 3,
   standardHeaders: true,

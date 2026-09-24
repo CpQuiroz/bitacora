@@ -2085,6 +2085,19 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      // Migración 133 (tarea 124): prende/apaga un módulo respetando el
+      // tope del plan, con la empresa bloqueada (sin carreras).
+      cambiar_modulo_empresa: {
+        Args: {
+          p_empresa_id: string;
+          p_modulo: string;
+          p_activado: boolean;
+          p_contables: string[];
+          p_default_activos: string[];
+          p_tope: number | null;
+        };
+        Returns: number; // módulos contables activos después del cambio
+      };
       generar_factura: {
         Args: {
           p_empresa_id: string;

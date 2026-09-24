@@ -11,6 +11,7 @@ import { Logo } from "./Logo";
 import { NotificacionesBell } from "./NotificacionesBell";
 import { supabase } from "@/lib/supabase";
 import { apiFetch, API_URL } from "@/lib/api";
+import { EVENTO_MODULOS_CAMBIADOS } from "@/lib/eventosModulos";
 import { limpiarImpersonacion, obtenerImpersonacion } from "@/lib/impersonacion";
 import { asegurarFuenteCargada, fuenteDe } from "@/lib/fuentes";
 import {
@@ -201,8 +202,10 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
   // del rol) — fetch propio, independiente del que ya hizo la página
   // que renderiza este shell, para no tener que propagar el dato por
   // props a las ~30 páginas que construyen UsuarioShell.
+  // También se vuelve a pedir cuando Configuración › Módulos avisa que
+  // cambiaron (tarea 124), para que el menú refleje el cambio al tiro.
   useEffect(() => {
-    (async () => {
+    async function cargarMe() {
       const res = await apiFetch("/api/me");
       if (res.ok) {
         const body = await res.json();
@@ -214,7 +217,11 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
         else if (obtenerImpersonacion()) limpiarImpersonacion();
         setConsentimientoPendiente(Boolean(body.consentimiento_pendiente));
       }
-    })();
+    }
+    void cargarMe();
+    const alCambiar = () => void cargarMe();
+    window.addEventListener(EVENTO_MODULOS_CAMBIADOS, alCambiar);
+    return () => window.removeEventListener(EVENTO_MODULOS_CAMBIADOS, alCambiar);
   }, []);
 
   async function aceptarConsentimiento() {
@@ -276,7 +283,9 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
   // fetch propio acá contra una ruta exceptuada del gate (/api/plan), en
   // vez de propagar el dato por props. Lo manda a Configuración > Plan.
   useEffect(() => {
-    if (pathname === "/dashboard/configuracion/plan") return;
+    // Módulos también queda abierta: para caber en el tope de un plan
+    // puede tener que apagar secciones antes de elegirlo (tarea 124).
+    if (pathname === "/dashboard/configuracion/plan" || pathname === "/dashboard/configuracion/modulos") return;
     (async () => {
       const res = await apiFetch("/api/plan");
       if (!res.ok) return;

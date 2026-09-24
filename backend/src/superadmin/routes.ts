@@ -19,7 +19,7 @@ import { cifrarJson, descifrarJson } from "../crypto";
 import { medirUsoStorage } from "../storage";
 import { TABLAS_POR_EMPRESA } from "../tenant";
 import { activarModulosDePrueba, cambiarPlanEmpresa } from "../planes";
-import { verificarModulosCabenEnPlan, verificarPuedeActivarModulo } from "../limites";
+import { cambiarModuloEmpresa, verificarModulosCabenEnPlan } from "../limites";
 import { enviarInvitacion } from "../email";
 import { sembrarSugerenciasRubro } from "../seedRubro";
 import { hashPassword, verificarPassword } from "./passwords";
@@ -1483,19 +1483,9 @@ superadminRouter.patch(
       res.status(404).json({ error: "Empresa no encontrada" });
       return;
     }
-    // Tope de módulos activos del plan (tarea 124): 403 LIMITE_PLAN.
-    if (activado) await verificarPuedeActivarModulo(req.params.id, modulo as Modulo);
-
-    const { error } = await supabase
-      .from("empresa_modulos")
-      .upsert(
-        { empresa_id: req.params.id, modulo, activado, actualizado_en: new Date().toISOString() },
-        { onConflict: "empresa_id,modulo" }
-      );
-    if (error) {
-      res.status(500).json({ error: error.message });
-      return;
-    }
+    // Tope de módulos activos del plan (tarea 124): chequeo y guardado
+    // juntos en la base; sobre el tope → 403 LIMITE_PLAN.
+    await cambiarModuloEmpresa(req.params.id, modulo as Modulo, activado);
 
     await registrarAuditoria(req.superAdminId!, "cambiar_modulo_empresa", {
       empresaId: req.params.id,

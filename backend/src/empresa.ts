@@ -24,6 +24,7 @@ function mutacionBloqueadaEnImpersonacion(req: RequestConUsuario): boolean {
   return (
     url.startsWith("/api/suscripcion") ||
     url.startsWith("/api/plan") ||
+    url.startsWith("/api/modulos") ||
     url.startsWith("/api/empresa") ||
     url.startsWith("/api/usuarios") ||
     url.startsWith("/api/integraciones")
@@ -66,11 +67,13 @@ export const requiereEmpresa = ah<RequestConEmpresa>(async (req, res, next) => {
   // Trial vencido sin haber elegido un plan pago: empresas.plan solo
   // sale de "trial" al confirmarse una tarjeta (ver cambiarPlanEmpresa
   // en planes.ts) — así que si sigue en "trial" pasada la fecha, es
-  // que nunca eligió plan. Se deja pasar /api/plan* y /api/suscripcion*
-  // para que pueda elegir uno y salir del bloqueo.
+  // que nunca eligió plan. Se deja pasar /api/plan*, /api/suscripcion* y
+  // /api/modulos* (tarea 124: para caber en el tope de Esencial u
+  // Operación puede tener que apagar módulos) para que salga del bloqueo.
   const HOY = new Date().toISOString().slice(0, 10);
   const trialVencido = empresa?.plan === "trial" && empresa.prueba_termina_en != null && empresa.prueba_termina_en < HOY;
-  const rutaDePlan = req.originalUrl.startsWith("/api/plan") || req.originalUrl.startsWith("/api/suscripcion");
+  const rutaDePlan =
+    req.originalUrl.startsWith("/api/plan") || req.originalUrl.startsWith("/api/suscripcion") || req.originalUrl.startsWith("/api/modulos");
   if (trialVencido && !rutaDePlan) {
     res.status(403).json({
       error: "Tu período de prueba terminó — elige un plan para seguir usando Bitácora.",

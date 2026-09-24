@@ -12,9 +12,8 @@ import { ah } from "../asyncHandler";
 import { requiereAccion } from "../permisos";
 import { cambiarPlanEmpresa } from "../planes";
 import { suscribirAPlan, cancelarSuscripcionFlow, flowPlanIdDe } from "../flow";
-import { enviarConReintento } from "../email";
-import { env } from "../env";
-import { limitarCotizacionPlan } from "../rateLimiters";
+import { avisarSuperAdmins, escaparHtml } from "../avisosSuperAdmin";
+import { limitarSolicitudesSuperAdmin } from "../rateLimiters";
 import { modulosActivosContables, verificarModulosCabenEnPlan } from "../limites";
 
 export const planRouter = Router();
@@ -115,15 +114,11 @@ planRouter.post(
   })
 );
 
-function escaparHtml(texto: string): string {
-  return texto.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
-}
-
 // Plan Empresa a cotizar: avisa por correo a los Super-Admin activos.
 // Programado pero apagado mientras PLAN_EMPRESA_DISPONIBLE sea false.
 planRouter.post(
   "/cotizar-empresa",
-  limitarCotizacionPlan,
+  limitarSolicitudesSuperAdmin,
   requiereAccion("gestionar_plan"),
   ah<RequestConEmpresa>(async (req, res) => {
     if (!PLAN_EMPRESA_DISPONIBLE) {
@@ -133,35 +128,24 @@ planRouter.post(
     const mensaje = typeof req.body?.mensaje === "string" ? req.body.mensaje.trim().slice(0, 2000) : "";
     const usuariosEstimados = Number.isInteger(req.body?.usuarios) ? Math.max(0, Math.min(10_000, req.body.usuarios as number)) : null;
 
-    const [{ data: empresa }, { count: usuariosActivos }, { data: admins }, { data: authUser }] = await Promise.all([
+    const [{ data: empresa }, { count: usuariosActivos }, { data: authUser }] = await Promise.all([
       supabase.from("empresas").select("nombre, rut, plan").eq("id", req.empresaId!).maybeSingle(),
       supabase.from("usuarios").select("id", { count: "exact", head: true }).eq("empresa_id", req.empresaId!).eq("activo", true),
-      supabase.from("super_admins").select("correo").eq("activo", true),
       supabase.auth.admin.getUserById(req.userId!),
     ]);
-    const destinatarios = (admins ?? []).map((a) => a.correo).filter(Boolean);
-    if (destinatarios.length === 0) {
-      res.status(503).json({ error: "No pudimos enviar tu solicitud en este momento. Intenta de nuevo más tarde." });
-      return;
-    }
-    const correoSolicitante = authUser?.user?.email ?? "(sin correo)";
+    const correoSolicitante = authUser?.user?.email ?? null;
     const nombreEmpresa = empresa?.nombre ?? "Empresa";
-
     const html = `
       <div style="font-family:sans-serif;max-width:560px;">
         <h2>Solicitud de cotización del plan Empresa</h2>
         <p><b>Empresa:</b> ${escaparHtml(nombreEmpresa)}${empresa?.rut ? ` (${escaparHtml(empresa.rut)})` : ""}</p>
         <p><b>Plan actual:</b> ${escaparHtml(ETIQUETA_PLAN[(empresa?.plan ?? "trial") as keyof typeof ETIQUETA_PLAN] ?? String(empresa?.plan))}</p>
         <p><b>Usuarios activos hoy:</b> ${usuariosActivos ?? 0}${usuariosEstimados != null ? ` · <b>usuarios que necesita:</b> ${usuariosEstimados}` : ""}</p>
-        <p><b>Contacto:</b> ${escaparHtml(correoSolicitante)}</p>
+        <p><b>Contacto:</b> ${escaparHtml(correoSolicitante ?? "(sin correo)")}</p>
         ${mensaje ? `<p><b>Mensaje:</b><br>${escaparHtml(mensaje).replace(/\n/g, "<br>")}</p>` : ""}
       </div>`;
-
     try {
-      await enviarConReintento(
-        { from: env.RESEND_FROM_EMAIL, to: destinatarios, reply_to: authUser?.user?.email ?? undefined, subject: `Cotización plan Empresa — ${nombreEmpresa}`, html },
-        "la solicitud de cotización"
-      );
+      await avisarSuperAdmins(`Cotización plan Empresa — ${nombreEmpresa}`, html, correoSolicitante, "la solicitud de cotización");
     } catch (err) {
       console.error("cotizar-empresa:", err);
       res.status(502).json({ error: "No pudimos enviar tu solicitud. Intenta de nuevo en unos minutos." });

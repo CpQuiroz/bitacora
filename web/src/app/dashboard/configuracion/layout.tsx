@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Bell, Box, Briefcase, Calendar, ClipboardCheck, CreditCard, Flag, Layers, Paperclip, Plug, Share2, Shield, Tag, User, Users, Wallet } from "lucide-react";
+import { Bell, Box, Briefcase, Calendar, ClipboardCheck, CreditCard, Flag, Layers, Paperclip, Plug, Share2, Shield, Tag, User, Users, Wallet, LayoutGrid } from "lucide-react";
 import type { Modulo } from "@bitacora/shared";
 import { puedeVerModulo } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
@@ -21,6 +21,8 @@ const SECCIONES: { valor: string; label: string; icon: typeof User; modulo: Modu
   { valor: "equipo", label: "Personas", icon: Users, modulo: "gestion_control", href: "/dashboard/personas" },
   { valor: "perfiles", label: "Perfiles y permisos", icon: Shield, modulo: "gestion_control" },
   { valor: "plan", label: "Plan", icon: CreditCard, modulo: "configuracion" },
+  // Tarea 124, etapa 3: elegir secciones dentro del tope del plan.
+  { valor: "modulos", label: "Módulos", icon: LayoutGrid, modulo: "configuracion" },
   { valor: "plantillas", label: "Plantillas", icon: Paperclip, modulo: "configuracion" },
   { valor: "checklists", label: "Checklists", icon: ClipboardCheck, modulo: "configuracion" },
   { valor: "tipos-os-trabajo", label: "Tipos de OS/Trabajo", icon: Tag, modulo: "configuracion" },

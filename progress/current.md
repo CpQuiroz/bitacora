@@ -112,3 +112,17 @@ Datos QA (usuarios, empresa QA, super-admin QA, OS de prueba) quedan en DEV hast
 de probar; después se borran.
 Hallazgo aparte (pre-existente, sin aplicar): backend/src/server.ts `app.set("trust proxy", true)` permite
 saltarse el rate limit del login falseando X-Forwarded-For (aviso ERR_ERL_PERMISSIVE_TRUST_PROXY).
+
+Etapa 3 (aprobada 24-sep, HECHA): Configuración › Módulos para el Admin (acción gestionar_plan).
+- Backend: /api/modulos (GET estado, PATCH solo secciones contables, POST /solicitar → correo a Super-Admins
+  con límite de envíos). Tope con chequeo+guardado atómico en la base: RPC cambiar_modulo_empresa
+  (migración 133, bloquea la fila de la empresa; solo service_role puede ejecutarla). El Super-Admin usa la
+  misma RPC. Prueba vencida deja pasar /api/modulos (para apagar lo que sobra y elegir plan).
+  avisosSuperAdmin.ts reutilizado por cotizar-empresa y solicitar.
+- Web: página Configuración › Módulos (contador, bloqueo al tope, "Subir de plan", "Solicitar más módulos");
+  el menú se refresca sin recargar (evento bitacora:modulos-cambiados); la tarjeta de Plan manda a Módulos.
+- Evidencia DEV (migración 133 aplicada en DEV): 11/11 etapa 3 (incluye 3 clics simultáneos con 1 cupo →
+  entra 1) + regresión 43/43 de etapas 1-2. verificar.sh verde.
+- Pasos de la usuaria para prod (antes del merge a main): migraciones 132 y 133 con
+  `npx supabase db query --linked --project-ref yjbskbskyadxjooxngjv -f supabase/migrations/NNN_*.sql`
+  + `npx supabase migration repair --status applied --linked NNN`.

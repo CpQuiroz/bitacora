@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Check, CreditCard } from "lucide-react";
 import type { EmpresaPlanHistorial, Plan, PlanPago, Suscripcion, SuscripcionCobro } from "@bitacora/shared";
@@ -304,9 +305,8 @@ function PlanContenido() {
             const destacado = plan === "operacion";
             const limites = LIMITES_POR_PLAN[plan];
             const contratable = info?.contratables[plan] ?? false;
-            // Más módulos activos que el tope de este plan: mientras la
-            // empresa no pueda elegir sus módulos (etapa 3 de la tarea 124)
-            // no se ofrece el cambio — se le pide escribir.
+            // Más módulos activos que el tope de este plan: no se ofrece el
+            // cambio hasta apagar los que sobran en Configuración › Módulos.
             const sobran = info ? modulosSobrantesParaPlan(plan, info.modulosActivos) : 0;
             return (
               <div
@@ -334,8 +334,11 @@ function PlanContenido() {
                     <p className="font-ds-body text-ds-caption font-medium text-ds-text/60">Tu plan actual</p>
                   ) : sobran > 0 ? (
                     <p className="font-ds-body text-ds-caption text-ds-text/70">
-                      Tienes {info?.modulosActivos} módulos activos y este plan permite {limites.modulosMax}. Escríbenos para elegir juntos
-                      cuáles mantener.
+                      Tienes {info?.modulosActivos} módulos activos y este plan permite {limites.modulosMax}.{" "}
+                      <Link href="/dashboard/configuracion/modulos" className="font-medium text-ds-brand underline">
+                        Apaga {sobran} en Módulos
+                      </Link>{" "}
+                      para poder cambiar.
                     </p>
                   ) : contratable ? (
                     <Button

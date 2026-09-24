@@ -6,7 +6,7 @@
 // errores_backend (no es un bug, es un freno esperado del negocio).
 // ============================================================
 import type { Modulo, Plan } from "@bitacora/shared";
-import { ETIQUETA_PLAN, LIMITES_POR_PLAN, cuentaParaTope, modulosContablesActivos, modulosSobrantesParaPlan, planPermiteIACompleta } from "@bitacora/shared";
+import { ETIQUETA_PLAN, LIMITES_POR_PLAN, MODULOS_CONTABLES, cuentaParaTope, moduloActivadoPorDefecto, modulosContablesActivos, modulosSobrantesParaPlan, planPermiteIACompleta } from "@bitacora/shared";
 import { supabase } from "./supabase";
 
 export class LimiteAlcanzadoError extends Error {
@@ -182,9 +182,8 @@ export async function modulosActivosContables(empresaId: string): Promise<Modulo
 // no se puede aplicar. 409 (conflicto con el estado actual de la
 // empresa), a diferencia del 403 LIMITE_PLAN de activar un módulo de
 // más: acá no se choca con el plan vigente sino con el que se elige.
-// El mensaje depende de quién cambia: el Super-Admin puede apagar
-// módulos; la empresa todavía no tiene esa pantalla (etapa 3), así que
-// se le pide que escriba.
+// El mensaje le dice a cada uno dónde apagar módulos: el Super-Admin en
+// el panel, la empresa en Configuración › Módulos (etapa 3).
 export async function verificarModulosCabenEnPlan(empresaId: string, plan: Plan, quien: "empresa" | "super_admin"): Promise<void> {
   const tope = LIMITES_POR_PLAN[plan].modulosMax;
   if (tope == null) return;
@@ -194,25 +193,35 @@ export async function verificarModulosCabenEnPlan(empresaId: string, plan: Plan,
     throw new ModulosExcedenPlanError(
       quien === "super_admin"
         ? `El plan ${ETIQUETA_PLAN[plan]} permite hasta ${tope} módulos y la empresa tiene ${activos} activos. Apaga ${sobran} en Módulos antes de cambiar el plan.`
-        : `Tienes ${activos} módulos activos y el plan ${ETIQUETA_PLAN[plan]} permite ${tope}. Escríbenos para elegir juntos cuáles mantener y dejamos listo el cambio.`
+        : `Tienes ${activos} módulos activos y el plan ${ETIQUETA_PLAN[plan]} permite ${tope}. Apaga ${sobran} en Configuración › Módulos y vuelve a intentarlo.`
     );
   }
 }
 
-// Antes de activar `modulo`: si cuenta para el tope y ya se llegó al
-// tope del plan actual, se bloquea (403 LIMITE_PLAN). El chequeo y el
-// guardado no son atómicos: hoy solo lo usa el Super-Admin; cuando lo
-// use el Admin de la empresa (etapa 3) hay que cerrarlo en la base.
-export async function verificarPuedeActivarModulo(empresaId: string, modulo: Modulo): Promise<void> {
-  if (!cuentaParaTope(modulo)) return;
+// Prende/apaga un módulo de la empresa respetando el tope de su plan
+// (tarea 124, etapa 3). El chequeo y el guardado ocurren juntos en la
+// base (RPC cambiar_modulo_empresa, migración 133, con la empresa
+// bloqueada), así dos pedidos simultáneos no pueden pasar el tope.
+// Tope alcanzado → 403 LIMITE_PLAN. Devuelve los activos que cuentan.
+export async function cambiarModuloEmpresa(empresaId: string, modulo: Modulo, activado: boolean): Promise<number> {
   const plan = await obtenerPlan(empresaId);
   const tope = LIMITES_POR_PLAN[plan].modulosMax;
-  if (tope == null) return;
-  const activos = await modulosActivosContables(empresaId);
-  if (activos.includes(modulo)) return;
-  if (activos.length >= tope) {
-    throw new LimiteAlcanzadoError(
-      `El plan ${ETIQUETA_PLAN[plan]} permite hasta ${tope} módulos activos y ya están los ${tope}. Apaga uno o pasa a un plan superior.`
-    );
+  const { data, error } = await supabase.rpc("cambiar_modulo_empresa", {
+    p_empresa_id: empresaId,
+    p_modulo: modulo,
+    p_activado: activado,
+    p_contables: [...MODULOS_CONTABLES],
+    p_default_activos: MODULOS_CONTABLES.filter((m) => moduloActivadoPorDefecto(m)),
+    p_tope: tope,
+  });
+  if (error) {
+    if (error.message.includes("TOPE_MODULOS")) {
+      throw new LimiteAlcanzadoError(
+        `El plan ${ETIQUETA_PLAN[plan]} permite hasta ${tope} módulos activos y ya están los ${tope}. Apaga uno o pasa a un plan superior.`
+      );
+    }
+    throw new Error(`No se pudo cambiar el módulo: ${error.message}`);
   }
+  return data as number;
 }
+
