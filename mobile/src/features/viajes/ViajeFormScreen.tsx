@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { Alert, Image, Pressable, ScrollView, View } from "react-native";
 import { ArrowLeft, Check, Square } from "lucide-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { CIUDADES_CHILE, type Cliente, type Equipo } from "@bitacora/shared";
+import { CIUDADES_CHILE, type Cliente, type Equipo, type Usuario } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
-import { Button, Card, Input, LoadingState, ScreenHeader, Skeleton, Texto, useMarca } from "@bitacora/ui/native";
+import { Button, Card, DatePicker, Input, LoadingState, ScreenHeader, Skeleton, Texto, useMarca } from "@bitacora/ui/native";
 import { PickerBuscable } from "../../components/ui";
 import { SelectorCliente } from "../../components/SelectorCliente";
 import { InputMonto } from "../../components/InputMonto";
@@ -14,6 +14,7 @@ import { elegirFotos } from "../../lib/imagen";
 import {
   catalogoParaViaje,
   crearViaje,
+  listarChoferes,
   editarViaje,
   encolarViaje,
   obtenerViaje,
@@ -45,6 +46,11 @@ export function ViajeFormScreen({ navigation, route }: NativeStackScreenProps<Vi
   // backend lo exige igual). Al crear, el chofer sigue ingresándolo.
   const auth = useAuth();
   const puedeEditarMonto = !editandoId || (auth.fase === "listo" && ["admin", "supervisor"].includes(auth.usuario.rol));
+  // Tarea 133: al CREAR, Admin/Supervisor pueden asignarlo a un chofer,
+  // con fecha y hora; sin chofer se registra como propio (como siempre).
+  const puedeAsignar = !editandoId && auth.fase === "listo" && ["admin", "supervisor"].includes(auth.usuario.rol);
+  const [choferes, setChoferes] = useState<Usuario[]>([]);
+  const [fechaViaje, setFechaViaje] = useState<Date>(() => new Date());
   const [clientes, setClientes] = useState<Cliente[] | null>(null);
   const [equipos, setEquipos] = useState<Equipo[]>([]);
   const [b, setB] = useState<BorradorViaje>(VACIO);
@@ -58,6 +64,10 @@ export function ViajeFormScreen({ navigation, route }: NativeStackScreenProps<Vi
       setEquipos(equipos.filter((e) => e.activo));
     });
   }, []);
+
+  useEffect(() => {
+    if (puedeAsignar) void listarChoferes().then(setChoferes);
+  }, [puedeAsignar]);
 
   useEffect(() => {
     if (!editandoId) return;
@@ -97,7 +107,12 @@ export function ViajeFormScreen({ navigation, route }: NativeStackScreenProps<Vi
       return Alert.alert("Revisa los kilómetros", "El km final no puede ser menor que el inicial.");
     }
 
-    const borrador = { ...b, subtotal: b.subtotal.replace(/\D/g, "") };
+    const f = fechaViaje;
+    const fechaTexto = `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, "0")}-${String(f.getDate()).padStart(2, "0")}`;
+    const borrador = { ...b, subtotal: b.subtotal.replace(/\D/g, ""), ...(b.chofer_id ? { fecha: fechaTexto } : {}) };
+    if (borrador.hora && !/^([01]\d|2[0-3]):[0-5]\d$/.test(borrador.hora)) {
+      return Alert.alert("Revisa la hora", "Usa el formato HH:MM, por ejemplo 08:30.");
+    }
     const volverForm = () => navigation.goBack();
     setGuardando(true);
 
@@ -120,6 +135,13 @@ export function ViajeFormScreen({ navigation, route }: NativeStackScreenProps<Vi
       if (!r.ok) return Alert.alert("No se pudo guardar", r.error);
       Alert.alert("Viaje actualizado", "Listo.", [{ text: "Listo", onPress: volverForm }]);
       return;
+    }
+
+    // Asignar a un chofer necesita conexión: la oficina valida al chofer
+    // y le avisa en el momento (no pasa por la cola offline).
+    if (borrador.chofer_id && !enLinea) {
+      setGuardando(false);
+      return Alert.alert("Sin conexión", "Necesitas conexión para asignar un viaje a un chofer.");
     }
 
     if (enLinea) {
@@ -191,6 +213,29 @@ export function ViajeFormScreen({ navigation, route }: NativeStackScreenProps<Vi
         />
 
         <Input etiqueta="Número de guía" valor={b.numero_guia} onCambio={(v) => set("numero_guia", v)} />
+
+        {puedeAsignar ? (
+          <Card>
+            <View style={{ gap: tokens.space["2"] }}>
+              <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} style={{ letterSpacing: 1 }}>
+                ASIGNAR A UN CHOFER (OPCIONAL)
+              </Texto>
+              <PickerBuscable
+                etiqueta="Chofer"
+                valor={b.chofer_id ?? ""}
+                opcionVacia="Yo mismo"
+                opciones={choferes.map((c) => ({ id: c.id, label: c.nombre }))}
+                onElegir={(v) => set("chofer_id", v)}
+              />
+              {b.chofer_id ? (
+                <>
+                  <DatePicker etiqueta="Fecha del viaje" valor={fechaViaje} onCambio={(d) => d && setFechaViaje(d)} />
+                  <Input etiqueta="Hora de salida (opcional)" tipo="hora" valor={b.hora ?? ""} onCambio={(v) => set("hora", v)} placeholder="08:30" />
+                </>
+              ) : null}
+            </View>
+          </Card>
+        ) : null}
 
         {!editandoId ? (
           <Card>

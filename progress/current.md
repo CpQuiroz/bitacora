@@ -175,3 +175,4 @@ Tarea 124 → done. Pendiente de la usuaria: planes en Flow + FLOW_PLAN_ID_* en 
 - 130 HECHA (Rutas dentro de Viajes + redirect + migración 134 ruta_viajes). 131 en curso.
 - 131 HECHA (eliminar clientes solo Admin + auditoria_empresa, migración 135). E2E DEV 11/11. 132 en curso.
 - 132 HECHA (monto solo Admin/Supervisor, historial, 409 si está cobrado). E2E DEV 9/9. 133 en curso.
+- 133 HECHA (asignar chofer + hora + aviso + agenda/pizarra; validación de chofer de otra empresa). Migración 136. E2E DEV 12/12. 134 en curso.

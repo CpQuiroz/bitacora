@@ -138,7 +138,8 @@ export async function cargarHoy(
       items.push({
         tipo: "viaje",
         id: v.id,
-        hora: null,
+        // Hora de salida si el Admin la programó (tarea 133).
+        hora: v.hora ? hhmm(v.hora) : null,
         fecha: v.fecha,
         titulo: v.cliente_info?.nombre ?? v.cliente ?? "Viaje",
         subtitulo: v.origen && v.destino ? `${v.origen} → ${v.destino}` : v.numero_guia ? `Guía ${v.numero_guia}` : null,

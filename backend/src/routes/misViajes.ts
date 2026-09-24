@@ -46,6 +46,12 @@ misViajesRouter.get(
       .limit(100);
 
     if (!verEquipo) query = query.eq("chofer_id", req.userId!);
+    // Rango de fechas opcional (Agenda web/mobile, tarea 133). Sin rango
+    // se mantiene el comportamiento de siempre (los últimos 100).
+    const desde = typeof req.query.desde === "string" && /^\d{4}-\d{2}-\d{2}$/.test(req.query.desde) ? req.query.desde : null;
+    const hasta = typeof req.query.hasta === "string" && /^\d{4}-\d{2}-\d{2}$/.test(req.query.hasta) ? req.query.hasta : null;
+    if (desde) query = query.gte("fecha", desde);
+    if (hasta) query = query.lte("fecha", hasta);
 
     const { data, error } = await query;
     if (error) {

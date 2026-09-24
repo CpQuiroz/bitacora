@@ -41,6 +41,8 @@ export type AgendaStackParamList = {
   // OS en el calendario (23-sep-2026): detalle vía el stack de Trabajos
   // anidado — mismo patrón que HoyStackParamList.
   Trabajos: NavigatorScreenParams<TrabajosStackParamList> | undefined;
+  // Viajes asignados en el calendario (tarea 133), mismo patrón.
+  Viajes: NavigatorScreenParams<ViajesStackParamList> | undefined;
 };
 
 export type ClientesStackParamList = {

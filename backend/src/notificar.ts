@@ -23,6 +23,7 @@ const TITULOS: Record<TipoNotificacion, string> = {
   cita_cancelada: "Cliente canceló una cita",
   solicitud_correccion_datos: "Un cliente pidió corregir sus datos",
   levantamiento_asignado: "Nuevo levantamiento asignado",
+  viaje_asignado: "Nuevo viaje asignado",
 };
 
 export async function notificar(

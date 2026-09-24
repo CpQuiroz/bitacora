@@ -65,6 +65,7 @@ export default function ViajesPage() {
   const [numeroGuia, setNumeroGuia] = useState("");
   const [clienteId, setClienteId] = useState("");
   const [choferId, setChoferId] = useState("");
+  const [hora, setHora] = useState("");
   const [origen, setOrigen] = useState("");
   const [destino, setDestino] = useState("");
   // Ciudades escritas a mano (no están en CIUDADES_CHILE) — se agregan
@@ -112,6 +113,7 @@ export default function ViajesPage() {
   const [editDestino, setEditDestino] = useState("");
   const [editClienteId, setEditClienteId] = useState("");
   const [editChoferId, setEditChoferId] = useState("");
+  const [editHora, setEditHora] = useState("");
   const [editKmInicial, setEditKmInicial] = useState("");
   const [editKmFinal, setEditKmFinal] = useState("");
   const [editSubtotal, setEditSubtotal] = useState("");
@@ -164,7 +166,9 @@ export default function ViajesPage() {
     if (resClientes.ok) setClientes(await resClientes.json());
     if (resUsuarios.ok) {
       const todos: Usuario[] = await resUsuarios.json();
-      setChoferes(todos.filter((u) => u.rol === "colaborador"));
+      // Tarea 133: solo usuarios activos con la función Chofer (el backend
+      // valida lo mismo). Incluye a un admin que además maneja.
+      setChoferes(todos.filter((u) => u.funcion === "chofer" && u.activo));
     }
     await Promise.all([cargarViajes(), cargarResumen(agrupacion)]);
   }
@@ -210,6 +214,7 @@ export default function ViajesPage() {
     setNumeroGuia("");
     setClienteId("");
     setChoferId("");
+    setHora("");
     setOrigen("");
     setDestino("");
     setKmInicial("");
@@ -237,6 +242,7 @@ export default function ViajesPage() {
         numero_guia: numeroGuia,
         cliente_id: clienteId,
         chofer_id: choferId || undefined,
+        hora: hora || undefined,
         origen,
         destino,
         km_inicial: kmInicial || undefined,
@@ -270,6 +276,7 @@ export default function ViajesPage() {
     agregarCiudadLibre(v.destino);
     setEditClienteId(v.cliente_id ?? "");
     setEditChoferId(v.chofer_id ?? "");
+    setEditHora(v.hora ? v.hora.slice(0, 5) : "");
     setEditKmInicial(v.km_inicial != null ? String(v.km_inicial) : "");
     setEditKmFinal(v.km_final != null ? String(v.km_final) : "");
     setEditSubtotal(v.subtotal ? String(v.subtotal) : "");
@@ -352,6 +359,7 @@ export default function ViajesPage() {
         destino: editDestino.trim(),
         cliente_id: editClienteId,
         chofer_id: editChoferId || null,
+        hora: editHora || null,
         km_inicial: editKmInicial || undefined,
         km_final: editKmFinal || undefined,
         subtotal: subtotalNum,
@@ -512,7 +520,11 @@ export default function ViajesPage() {
                 <div className="flex flex-col gap-ds-1">
                   <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Chofer (opcional)</label>
                   <ComboboxResponsable value={choferId} onChange={setChoferId} equipo={choferes} opcionVacia="Sin asignar" placeholder="Sin asignar" />
+                  {choferes.length === 0 ? (
+                    <p className="font-ds-body text-ds-caption text-ds-text/60">Para asignar, marca a la persona con la función Chofer en Personas.</p>
+                  ) : null}
                 </div>
+                <Input etiqueta="Hora de salida (opcional)" tipo="hora" valor={hora} onCambio={setHora} />
                 <div className="flex flex-col gap-ds-1">
                   <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Origen</label>
                   <Combobox
@@ -761,7 +773,16 @@ export default function ViajesPage() {
                               </div>
                               <div className="min-w-[180px]">
                                 <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Chofer</label>
-                                <ComboboxResponsable value={editChoferId} onChange={setEditChoferId} equipo={choferes} opcionVacia="Sin asignar" placeholder="Sin asignar" />
+                                <ComboboxResponsable
+                                  value={editChoferId}
+                                  onChange={setEditChoferId}
+                                  equipo={v.chofer && !choferes.some((c) => c.id === v.chofer?.id) ? [...choferes, v.chofer as Usuario] : choferes}
+                                  opcionVacia="Sin asignar"
+                                  placeholder="Sin asignar"
+                                />
+                              </div>
+                              <div className="w-32">
+                                <Input etiqueta="Hora" tipo="hora" valor={editHora} onCambio={setEditHora} />
                               </div>
                               <div className="w-32">
                                 <Input etiqueta="Km inicial" tipo="numero" valor={editKmInicial} onCambio={setEditKmInicial} />

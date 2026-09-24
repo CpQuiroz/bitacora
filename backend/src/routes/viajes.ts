@@ -9,6 +9,7 @@ import { requiereAccion } from "../permisos";
 import { ROLES_EDITAN_MONTO_VIAJE, calcularMontos, nuevosMontosViaje } from "../viajesMontos";
 import { registrarAuditoriaEmpresa } from "../auditoriaEmpresa";
 import { cobroDeViaje } from "../viajesCobros";
+import { avisarViajeAsignado, normalizarHora, validarChofer } from "../viajesAsignacion";
 import { siguienteFolioViaje } from "../folios";
 
 export const viajesRouter = Router();
@@ -251,6 +252,7 @@ viajesRouter.post(
       subtotal,
       aplica_iva,
       comentarios,
+      hora,
     } = req.body ?? {};
 
     if (typeof fecha !== "string" || !fecha) {
@@ -268,6 +270,21 @@ viajesRouter.post(
     const resultado = await resolverCliente(req.empresaId!, cliente_id);
     if ("error" in resultado) {
       res.status(400).json({ error: resultado.error });
+      return;
+    }
+    // Tarea 133: chofer de la misma empresa, activo, función chofer.
+    let chofer: { id: string; nombre: string } | null = null;
+    if (typeof chofer_id === "string" && chofer_id) {
+      const c = await validarChofer(req.empresaId!, chofer_id);
+      if ("error" in c) {
+        res.status(400).json({ error: c.error });
+        return;
+      }
+      chofer = c;
+    }
+    const horaNorm = normalizarHora(hora);
+    if ("error" in horaNorm) {
+      res.status(400).json({ error: horaNorm.error });
       return;
     }
     const subtotalNum = Number(subtotal);
@@ -288,7 +305,8 @@ viajesRouter.post(
         folio,
         cliente: resultado.cliente.nombre,
         cliente_id: resultado.cliente.id,
-        chofer_id: typeof chofer_id === "string" && chofer_id ? chofer_id : null,
+        hora: horaNorm.hora,
+        chofer_id: chofer?.id ?? null,
         equipo_id: typeof equipo_id === "string" && equipo_id ? equipo_id : null,
         origen: origen.trim(),
         destino: destino.trim(),
@@ -309,6 +327,8 @@ viajesRouter.post(
       res.status(500).json({ error: error.message });
       return;
     }
+    // Aviso al chofer (no a quien se asigna a sí mismo).
+    if (chofer && chofer.id !== req.userId) await avisarViajeAsignado(req.empresaId!, chofer.id, data);
     res.status(201).json(data);
   })
 );
@@ -353,6 +373,7 @@ viajesRouter.patch(
       aplica_iva,
       comentarios,
       estado,
+      hora,
     } = req.body ?? {};
 
     const cambios: Partial<Viaje> = {};
@@ -362,7 +383,28 @@ viajesRouter.patch(
     if (origen !== undefined) cambios.origen = String(origen).trim();
     if (destino !== undefined) cambios.destino = String(destino).trim();
     if (comentarios !== undefined) cambios.comentarios = comentarios?.trim() || null;
-    if (chofer_id !== undefined) cambios.chofer_id = chofer_id || null;
+    // Solo se valida si el chofer CAMBIA: un viaje antiguo asignado a
+    // alguien sin la función Chofer se puede seguir editando igual.
+    if (chofer_id !== undefined && (chofer_id || null) !== existente.chofer_id) {
+      if (chofer_id) {
+        const c = await validarChofer(req.empresaId!, chofer_id);
+        if ("error" in c) {
+          res.status(400).json({ error: c.error });
+          return;
+        }
+        cambios.chofer_id = c.id;
+      } else {
+        cambios.chofer_id = null;
+      }
+    }
+    if (hora !== undefined) {
+      const h = normalizarHora(hora);
+      if ("error" in h) {
+        res.status(400).json({ error: h.error });
+        return;
+      }
+      cambios.hora = h.hora;
+    }
     if (equipo_id !== undefined) cambios.equipo_id = equipo_id || null;
     if (km_inicial !== undefined) cambios.km_inicial = km_inicial === "" || km_inicial == null ? null : Number(km_inicial);
     if (km_final !== undefined) cambios.km_final = km_final === "" || km_final == null ? null : Number(km_final);
@@ -420,6 +462,11 @@ viajesRouter.patch(
         entidadId: existente.id,
         detalle: { anterior: montos.cambio.anterior, nuevo: montos.cambio.nuevo, numero_guia: existente.numero_guia },
       });
+    }
+    // Reasignación (tarea 133): el viaje sale de la pizarra/agenda del
+    // chofer anterior solo (se lista por chofer_id) y se avisa al nuevo.
+    if (cambios.chofer_id && cambios.chofer_id !== existente.chofer_id && cambios.chofer_id !== req.userId) {
+      await avisarViajeAsignado(req.empresaId!, cambios.chofer_id, data);
     }
     res.json(data);
   })

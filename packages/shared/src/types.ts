@@ -489,9 +489,11 @@ export type TipoNotificacion =
   | "cita_confirmada"
   | "cita_cancelada"
   | "solicitud_correccion_datos"
-  | "levantamiento_asignado";
+  | "levantamiento_asignado"
+  // Tarea 133: el Admin le asigna un viaje a un chofer.
+  | "viaje_asignado";
 
-export type EntidadNotificacion = "trabajo" | "factura" | "ruta" | "usuario" | "cotizacion" | "tarea" | "documento" | "levantamiento";
+export type EntidadNotificacion = "trabajo" | "factura" | "ruta" | "usuario" | "cotizacion" | "tarea" | "documento" | "levantamiento" | "viaje";
 
 export type Notificacion = {
   id: string;
@@ -1513,6 +1515,9 @@ export type Viaje = {
   id: string;
   empresa_id: string;
   fecha: string;
+  // Hora de salida programada, opcional (tarea 133, migración 136) —
+  // "HH:MM:SS"; null = todo el día.
+  hora: string | null;
   numero_guia: string;
   cliente: string;
   cliente_id: string | null;

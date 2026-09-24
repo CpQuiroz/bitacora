@@ -1813,14 +1813,15 @@
       "id": 133,
       "name": "viajes_admin_asigna_chofer",
       "title": "Viajes: el Admin crea el viaje y asigna chofer; aparece en pizarra y agenda del chofer; aviso por notificaciones existentes",
-      "status": "in_progress",
-      "description": "Pedido de la usuaria 24-sep-2026 (Mejoras módulo Viajes, Parte A). Reutilizar lo existente; multi-tenant; permisos por rol/módulo; estilo actual. Commit por punto."
+      "status": "done",
+      "description": "Pedido de la usuaria 24-sep-2026 (Mejoras módulo Viajes, Parte A). Reutilizar lo existente; multi-tenant; permisos por rol/módulo; estilo actual. Commit por punto.",
+      "resolution": "Admin/Supervisor crean viaje con chofer (web y mobile) y hora opcional (migración 136 viajes.hora). Chofer validado: misma empresa, activo, función Chofer (antes no se validaba: se aceptaba un usuario de otra empresa); solo se valida si cambia. Aviso con notificar() (campana, tipo viaje_asignado) + correo si Resend está activo y el chofer no lo apagó; WhatsApp no (requiere plantilla aprobada por Meta). El chofer lo ve en Pizarra (con hora) y Agenda web/mobile (tipo de evento viaje, /api/mis-viajes con desde/hasta). Reasignación: sale del anterior y avisa al nuevo. Mobile: Agenda con viajes, formulario con Asignar a chofer + fecha + hora (próximo build). E2E DEV 12/12. verificar.sh verde."
     },
     {
       "id": 134,
       "name": "cobro_multi_viaje_pdf",
       "title": "Cobros: cobro desde varios viajes con detalle por viaje (neto/IVA/total), mismo cliente, sin repetir viajes, y PDF con período",
-      "status": "pending",
+      "status": "in_progress",
       "description": "Pedido de la usuaria 24-sep-2026 (Mejoras módulo Viajes, Parte A). Reutilizar lo existente; multi-tenant; permisos por rol/módulo; estilo actual. Commit por punto."
     },
     {

@@ -26,6 +26,7 @@ const TIPO_LABEL: Record<TipoNotificacion, string> = {
   cita_cancelada: "Cliente canceló una cita",
   solicitud_correccion_datos: "Un cliente pidió corregir sus datos",
   levantamiento_asignado: "Nuevo levantamiento asignado a mí",
+  viaje_asignado: "Nuevo viaje asignado a mí",
 };
 
 const IDIOMAS = [

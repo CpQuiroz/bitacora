@@ -1,4 +1,4 @@
-import type { Cliente, Equipo, Viaje } from "@bitacora/shared";
+import type { Cliente, Equipo, Usuario, Viaje } from "@bitacora/shared";
 import { apiFetch, apiJson } from "./api";
 import { encolar } from "./sync/queue";
 import { guardarCache, leerCache } from "./sync/cache";
@@ -49,6 +49,14 @@ export async function listarViajesEquipo(): Promise<{ viajes: ViajeConDatos[]; d
   throw new Error(res.error);
 }
 
+/** Viajes de un rango de fechas para la Agenda (tarea 133): el chofer
+ *  recibe los suyos; la gestión, los del equipo (lo decide el backend). */
+export async function listarViajesRango(desde: string, hasta: string): Promise<ViajeConDatos[]> {
+  const res = await apiJson<ViajeConDatos[]>(`/api/mis-viajes?equipo=true&desde=${desde}&hasta=${hasta}`);
+  if (!res.ok) throw new Error(res.error);
+  return res.data;
+}
+
 /** Aprueba un viaje en borrador (gestión). */
 export async function aprobarViaje(id: string): Promise<{ ok: boolean; error?: string }> {
   const res = await apiJson<Viaje>(`/api/mis-viajes/${id}`, { method: "PATCH", body: JSON.stringify({ estado: "confirmado" }) });
@@ -76,6 +84,13 @@ export async function editarViaje(id: string, c: EdicionViaje): Promise<{ ok: tr
 }
 
 /** Clientes + equipos de la empresa, para los selectores del formulario. */
+/** Choferes asignables (tarea 133): usuarios activos con función Chofer. */
+export async function listarChoferes(): Promise<Usuario[]> {
+  const res = await apiJson<Usuario[]>("/api/usuarios");
+  if (!res.ok) return [];
+  return res.data.filter((u) => u.funcion === "chofer" && u.activo);
+}
+
 export async function catalogoParaViaje(): Promise<{ clientes: Cliente[]; equipos: Equipo[] }> {
   const [c, e] = await Promise.all([apiJson<Cliente[]>("/api/clientes"), apiJson<Equipo[]>("/api/equipos")]);
   if (c.ok) await guardarCache("viajes:clientes", c.data);
@@ -86,6 +101,11 @@ export async function catalogoParaViaje(): Promise<{ clientes: Cliente[]; equipo
 }
 
 export type BorradorViaje = {
+  // Solo Admin/Supervisor (tarea 133): con chofer_id el viaje se crea por
+  // el endpoint de gestión (/api/viajes), que valida al chofer y le avisa.
+  chofer_id?: string | null;
+  fecha?: string;
+  hora?: string;
   cliente_id: string;
   numero_guia: string;
   origen: string;
@@ -152,9 +172,14 @@ export type ResultadoCrearViaje =
  * la pantalla manda TODO (viaje + foto) a la cola como respaldo.
  */
 export async function crearViaje(b: BorradorViaje, foto?: Foto): Promise<ResultadoCrearViaje> {
-  const res = await apiJson<ViajeConDatos>("/api/mis-viajes", {
+  const asignado = Boolean(b.chofer_id);
+  const res = await apiJson<ViajeConDatos>(asignado ? "/api/viajes" : "/api/mis-viajes", {
     method: "POST",
-    body: JSON.stringify(cuerpoViaje(b)),
+    body: JSON.stringify(
+      asignado
+        ? { ...cuerpoViaje(b), chofer_id: b.chofer_id, fecha: b.fecha ?? new Date().toISOString().slice(0, 10), hora: b.hora || undefined }
+        : cuerpoViaje(b)
+    ),
   });
 
   if (!res.ok) {

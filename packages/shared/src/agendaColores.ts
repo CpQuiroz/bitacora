@@ -26,11 +26,13 @@
 // depende de packages/shared, no al revés; duplicar el literal acá es
 // más simple que invertir esa dependencia.
 // ============================================================
-import type { EstadoLevantamiento, EstadoOS, EstadoTarea, EstadoTrabajo } from "./types";
+import type { EstadoLevantamiento, EstadoOS, EstadoTarea, EstadoTrabajo, EstadoViaje } from "./types";
 
 export type TonoAgenda = "en_progreso" | "completado" | "cerrado" | "cancelado";
 export type EstadoAgendaUnificado = "agendado" | "en_progreso" | "completado" | "cancelado";
-export type TipoEventoAgenda = "cita" | "os" | "levantamiento";
+// "viaje" desde la tarea 133 (24-sep-2026): el viaje asignado a un chofer
+// aparece en su Agenda (web y mobile).
+export type TipoEventoAgenda = "cita" | "os" | "levantamiento" | "viaje";
 
 export const TONO_ESTADO_AGENDA: Record<EstadoAgendaUnificado, TonoAgenda> = {
   agendado: "cerrado",
@@ -50,6 +52,7 @@ export const ETIQUETA_TIPO_AGENDA: Record<TipoEventoAgenda, string> = {
   cita: "Cita",
   os: "OS",
   levantamiento: "Levantamiento",
+  viaje: "Viaje",
 };
 
 // Nombre de ícono lucide (idéntico en lucide-react y lucide-react-native)
@@ -59,6 +62,7 @@ export const ICONO_TIPO_AGENDA: Record<TipoEventoAgenda, string> = {
   cita: "Calendar",
   os: "ClipboardCheck",
   levantamiento: "Search",
+  viaje: "Truck",
 };
 
 // --- Derivación por tipo (mismo criterio que ya usaba cada plataforma,
@@ -87,4 +91,10 @@ export function estadoAgendaDeLevantamiento(estado: EstadoLevantamiento): Estado
   if (estado === "en_terreno") return "en_progreso";
   if (estado === "creado" || estado === "asignado") return "agendado";
   return "completado"; // completado_tecnico, cotizado_externo, aprobado
+}
+
+// Un viaje no registra cuándo se ejecuta: queda "agendado" hasta que se
+// cobra (facturado → completado). Tarea 133.
+export function estadoAgendaDeViaje(estado: EstadoViaje): EstadoAgendaUnificado {
+  return estado === "facturado" ? "completado" : "agendado";
 }

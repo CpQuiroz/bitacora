@@ -13,9 +13,10 @@ import type {
   Tarea,
   Trabajo,
   Usuario,
+  Viaje,
 } from "@bitacora/shared";
-import { puedeVerModulo, formatearFolio, estadoAgendaDeLevantamiento, estadoAgendaDeOS, estadoAgendaDeTarea, ETIQUETA_ESTADO_AGENDA, ETIQUETA_TIPO_AGENDA, TONO_ESTADO_AGENDA, type EstadoAgendaUnificado, type TipoEventoAgenda } from "@bitacora/shared";
-import { Calendar, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, ClipboardCheck, Info, Plus, Search, Wrench } from "lucide-react";
+import { puedeVerModulo, formatearFolio, estadoAgendaDeLevantamiento, estadoAgendaDeOS, estadoAgendaDeTarea, estadoAgendaDeViaje, ETIQUETA_ESTADO_AGENDA, ETIQUETA_TIPO_AGENDA, TONO_ESTADO_AGENDA, type EstadoAgendaUnificado, type TipoEventoAgenda } from "@bitacora/shared";
+import { Calendar, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, ClipboardCheck, Info, Plus, Search, Truck, Wrench } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
@@ -37,6 +38,9 @@ type TareaListado = Tarea & {
 };
 
 // GET /api/levantamientos (con ?desde&hasta sobre fecha_visita).
+// Viaje asignado (tarea 133) — viene de /api/mis-viajes.
+type ViajeListado = Viaje & { cliente_info: { id: string; nombre: string } | null; chofer: { id: string; nombre: string } | null };
+
 type LevantamientoListado = Levantamiento & {
   cliente: { id: string; nombre: string } | null;
   tecnico: { id: string; nombre: string } | null;
@@ -57,7 +61,7 @@ type EventoAgenda = {
   estadoAgenda: EstadoAgenda;
   titulo: string;
   subtitulo: string;
-  origen: OrdenListado | TareaListado | LevantamientoListado;
+  origen: OrdenListado | TareaListado | LevantamientoListado | ViajeListado;
 };
 
 const ESTADOS_AGENDA: { valor: EstadoAgenda; etiqueta: string; tono: TonoEstado }[] = (
@@ -88,7 +92,24 @@ const PRIORIDADES: Prioridad[] = ["alta", "media", "baja"];
 
 // Ícono por tipo (6.3: color=estado, ícono+etiqueta=tipo). Levantamiento
 // entra en la Agenda web desde el 23-sep-2026 (paridad con mobile).
-const ICONO_TIPO: Record<TipoEventoAgenda, typeof Calendar> = { cita: Calendar, os: ClipboardCheck, levantamiento: Search };
+const ICONO_TIPO: Record<TipoEventoAgenda, typeof Calendar> = { cita: Calendar, os: ClipboardCheck, levantamiento: Search, viaje: Truck };
+
+// Viaje asignado a un chofer (tarea 133): a su hora si la tiene, si no
+// como todo el día.
+function eventoDeViaje(v: ViajeListado): EventoAgenda {
+  const folio = formatearFolio("VIA", v.folio);
+  const detalle = [v.cliente_info?.nombre ?? v.cliente, v.chofer?.nombre ?? "Sin chofer"].join(" · ");
+  return {
+    id: v.id,
+    tipo: "viaje",
+    fecha: v.fecha,
+    hora: v.hora ? v.hora.slice(0, 5) : null,
+    estadoAgenda: estadoAgendaDeViaje(v.estado),
+    titulo: `${v.origen} → ${v.destino}`,
+    subtitulo: folio ? `${folio} · ${detalle}` : detalle,
+    origen: v,
+  };
+}
 
 function eventoDeOrden(o: OrdenListado): EventoAgenda {
   return {
@@ -177,6 +198,7 @@ function AgendaContenido() {
   const [ordenes, setOrdenes] = useState<OrdenListado[] | null>(null);
   const [tareas, setTareas] = useState<TareaListado[] | null>(null);
   const [levantamientos, setLevantamientos] = useState<LevantamientoListado[]>([]);
+  const [viajesAgenda, setViajesAgenda] = useState<ViajeListado[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [filtros, setFiltros] = useState<Set<EstadoAgenda>>(new Set());
   // Fase 6.2 — filtro por tipo, combinable con el de estado (AND).
@@ -249,12 +271,15 @@ function AgendaContenido() {
       hasta = fechaActual;
     }
     const params = new URLSearchParams({ desde: fmtLocal(desde), hasta: fmtLocal(hasta) });
-    const [resOrdenes, resTareas, resLevantamientos] = await Promise.all([
+    const [resOrdenes, resTareas, resLevantamientos, resViajes] = await Promise.all([
       apiFetch(`/api/ordenes-servicio?${params.toString()}`),
       apiFetch(`/api/tareas?${params.toString()}`),
       // Tolerante a error a propósito: sin el módulo (403) o sin permiso
       // de ver levantamientos, la agenda de citas/OS sigue igual.
       apiFetch(`/api/levantamientos?${params.toString()}`).catch(() => null),
+      // Viajes (tarea 133): el chofer ve los suyos; la gestión, los del
+      // equipo (el backend decide con equipo=true según el rol).
+      apiFetch(`/api/mis-viajes?equipo=true&${params.toString()}`).catch(() => null),
     ]);
     if (!resOrdenes.ok) {
       setError("No se pudieron cargar las órdenes de servicio");
@@ -268,6 +293,7 @@ function AgendaContenido() {
     } else {
       setLevantamientos([]);
     }
+    setViajesAgenda(resViajes?.ok ? await resViajes.json() : []);
   }, [fechaActual, vista]);
 
   useEffect(() => {
@@ -364,8 +390,14 @@ function AgendaContenido() {
   }, []);
 
   const eventos = useMemo(() => {
-    return [...(ordenes ?? []).map(eventoDeOrden), ...(tareas ?? []).map(eventoDeTarea), ...levantamientos.map(eventoDeLevantamiento)];
-  }, [ordenes, tareas, levantamientos]);
+    return [
+      ...(ordenes ?? []).map(eventoDeOrden),
+      ...(tareas ?? []).map(eventoDeTarea),
+      ...levantamientos.map(eventoDeLevantamiento),
+      // El módulo Viajes apagado para la empresa → sin viajes en la agenda.
+      ...(modulosDeshabilitados.includes("viajes") ? [] : viajesAgenda.map(eventoDeViaje)),
+    ];
+  }, [ordenes, tareas, levantamientos, viajesAgenda, modulosDeshabilitados]);
 
   const eventosFiltrados = useMemo(() => {
     return eventos.filter((e) => (filtros.size === 0 || filtros.has(e.estadoAgenda)) && (tipoFiltros.size === 0 || tipoFiltros.has(e.tipo)));
@@ -645,6 +677,9 @@ function AgendaContenido() {
       router.push(`/dashboard/ordenes/${e.id}`);
     } else if (e.tipo === "levantamiento") {
       router.push(`/dashboard/levantamientos?id=${e.id}`);
+    } else if (e.tipo === "viaje") {
+      // La página de Viajes es de gestión; el chofer ve el detalle en la app.
+      if (usuario?.rol !== "colaborador") router.push("/dashboard/viajes");
     } else {
       abrirEdicionTarea(e.origen as TareaListado);
     }
@@ -1099,7 +1134,7 @@ function AgendaContenido() {
               Levantamiento necesita "levantamientos"; Cita no tiene gate propio, si se llegó a esta página el
               módulo Agenda ya está activo). */}
           <div className="mb-ds-4 flex flex-wrap items-center gap-ds-2 border-t border-ds-divider pt-ds-3">
-            {(["cita", "os", "levantamiento"] as TipoEventoAgenda[])
+            {(["cita", "os", "levantamiento", "viaje"] as TipoEventoAgenda[])
               .filter((t) => (t !== "os" || puedeCrearOS) && (t !== "levantamiento" || puedeCrearLevantamiento))
               .map((t) => {
                 const Icono = ICONO_TIPO[t];
@@ -1153,7 +1188,7 @@ function AgendaContenido() {
               </div>
               <div className="h-4 w-px bg-ds-divider" />
               <div className="flex flex-wrap items-center gap-ds-3">
-                {(["cita", "os", "levantamiento"] as TipoEventoAgenda[]).map((t) => {
+                {(["cita", "os", "levantamiento", "viaje"] as TipoEventoAgenda[]).map((t) => {
                   const Icono = ICONO_TIPO[t];
                   return (
                     <span key={t} className="flex items-center gap-1 font-ds-body text-ds-micro text-ds-text/70">
