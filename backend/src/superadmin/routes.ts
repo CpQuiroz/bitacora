@@ -1,7 +1,7 @@
 import { Router } from "express";
 import crypto from "node:crypto";
 import type { Accion, Empresa, EstadoEmpresa, Modulo, Plan, Rol, Rubro } from "@bitacora/shared";
-import { ACCIONES, MODULOS, MODULOS_DELEGABLES_POR_EMPRESA, esPackRubro, moduloActivadoPorDefecto, formatearRut, validarRut } from "@bitacora/shared";
+import { ACCIONES, DIAS_PRUEBA, MODULOS, MODULOS_DELEGABLES_POR_EMPRESA, moduloActivadoPorDefecto, formatearRut, validarRut } from "@bitacora/shared";
 import {
   invalidarCacheRoles,
   empresaPuedeUsarRol,
@@ -18,7 +18,8 @@ import { ah } from "../asyncHandler";
 import { cifrarJson, descifrarJson } from "../crypto";
 import { medirUsoStorage } from "../storage";
 import { TABLAS_POR_EMPRESA } from "../tenant";
-import { aplicarModulosDelPlan, cambiarPlanEmpresa } from "../planes";
+import { activarModulosDePrueba, cambiarPlanEmpresa } from "../planes";
+import { verificarModulosCabenEnPlan, verificarPuedeActivarModulo } from "../limites";
 import { enviarInvitacion } from "../email";
 import { sembrarSugerenciasRubro } from "../seedRubro";
 import { hashPassword, verificarPassword } from "./passwords";
@@ -495,7 +496,7 @@ superadminRouter.post(
     }
 
     const pruebaTerminaEn = new Date();
-    pruebaTerminaEn.setDate(pruebaTerminaEn.getDate() + 21);
+    pruebaTerminaEn.setDate(pruebaTerminaEn.getDate() + DIAS_PRUEBA);
 
     const { data: empresa, error: errorEmpresa } = await supabase
       .from("empresas")
@@ -514,9 +515,9 @@ superadminRouter.post(
       res.status(500).json({ error: errorEmpresa.message });
       return;
     }
-    // La prueba trae todo, como Pro (tarea 124). Si falla, la empresa
+    // La prueba trae todo activo (tarea 124). Si falla, la empresa
     // arranca con los módulos por defecto; no se bloquea el alta.
-    await aplicarModulosDelPlan(empresa.id, "trial", null).catch((err) => console.error("Módulos de la prueba:", err));
+    await activarModulosDePrueba(empresa.id).catch((err) => console.error("Módulos de la prueba:", err));
 
     // generateLink crea el usuario y devuelve el link sin intentar mandar
     // nada — el envío va por nuestro Resend (enviarInvitacion), no por el
@@ -1194,7 +1195,7 @@ superadminRouter.get(
   requiereSuperAdmin,
   ah<RequestConSuperAdmin>(async (req, res) => {
     const empresaId = req.params.id;
-    const { data: empresa } = await supabase.from("empresas").select("id, nombre, estado, plan, pack_rubro, rut, rubro, tema, dada_de_baja_en").eq("id", empresaId).maybeSingle();
+    const { data: empresa } = await supabase.from("empresas").select("id, nombre, estado, plan, rut, rubro, tema, dada_de_baja_en").eq("id", empresaId).maybeSingle();
     if (!empresa) {
       res.status(404).json({ error: "Empresa no encontrada" });
       return;
@@ -1347,13 +1348,9 @@ superadminRouter.patch(
   "/empresas/:id/plan",
   requiereSuperAdmin,
   ah<RequestConSuperAdmin>(async (req, res) => {
-    const { plan, pack } = req.body ?? {};
+    const { plan } = req.body ?? {};
     if (typeof plan !== "string" || !PLANES.includes(plan as Plan)) {
       res.status(400).json({ error: `plan debe ser uno de: ${PLANES.join(", ")}` });
-      return;
-    }
-    if (pack !== undefined && pack !== null && !esPackRubro(pack)) {
-      res.status(400).json({ error: "pack debe ser 'transporte', 'mantencion' o 'agenda'" });
       return;
     }
 
@@ -1363,23 +1360,17 @@ superadminRouter.patch(
       return;
     }
 
-    // Misma función que usa la autogestión de la empresa (Configuración >
-    // Plan) — sincroniza empresa_modulos y queda en empresa_plan_historial,
-    // para que ningún camino pueda desincronizarse del otro.
-    // Operación sin pack explícito conserva el que tenga la empresa
-    // (o Transporte si nunca eligió uno — ver modulosDelPlan).
-    await cambiarPlanEmpresa(
-      req.params.id,
-      plan as Plan,
-      { tipo: "super_admin", superAdminId: req.superAdminId! },
-      true,
-      plan === "operacion" && esPackRubro(pack) ? pack : undefined
-    );
+    // El plan no toca módulos (tarea 124): los activos tienen que caber
+    // en el tope del plan nuevo — si no, 409 y el Super-Admin apaga
+    // módulos primero. Misma función que la autogestión de la empresa,
+    // queda en empresa_plan_historial.
+    await verificarModulosCabenEnPlan(req.params.id, plan as Plan);
+    await cambiarPlanEmpresa(req.params.id, plan as Plan, { tipo: "super_admin", superAdminId: req.superAdminId! });
 
     await registrarAuditoria(req.superAdminId!, "cambiar_plan_empresa", {
       empresaId: req.params.id,
       ip: req.ip ?? null,
-      detalle: `${actual.nombre}: ${actual.plan} → ${plan}${plan === "operacion" && esPackRubro(pack) ? ` (pack ${pack})` : ""}`,
+      detalle: `${actual.nombre}: ${actual.plan} → ${plan}`,
     });
 
     res.json({ id: req.params.id, plan });
@@ -1492,6 +1483,8 @@ superadminRouter.patch(
       res.status(404).json({ error: "Empresa no encontrada" });
       return;
     }
+    // Tope de módulos activos del plan (tarea 124): 403 LIMITE_PLAN.
+    if (activado) await verificarPuedeActivarModulo(req.params.id, modulo as Modulo);
 
     const { error } = await supabase
       .from("empresa_modulos")

@@ -1744,16 +1744,16 @@
     {
       "id": 124,
       "name": "planes_4_categorias",
-      "title": "Planes nuevos: Esencial, Operación (con pack de rubro), Pro y Empresa",
+      "title": "Planes con tope de módulos (Esencial 6 / Operación 10 / Pro todos), secciones con interruptor propio",
       "status": "in_progress",
-      "description": "Decisión 24-sep-2026: 4 categorías en UF + IVA (Esencial 1,5 · Operación 3,5 · Pro 6 · Empresa desde 12, contratable con tarjeta o a cotizar). Prueba = todo como Pro con 3 usuarios. Packs de Operación: Transporte (viajes, registros, rutas, flota), Mantención (levantamientos), Servicios con agenda (agenda_pro). Operación trae Informe IA con tope de 20/mes. Etapa 1: tipos, límites, módulos por plan, migración, Flow, web Configuración > Plan y Super-Admin."
+      "description": "Rediseño aprobado 24-sep-2026 (reemplaza los packs de rubro). Ver progress/current.md. Etapa 1: shared, migración 132, backend y lo mínimo de web. Etapas 2 (Super-Admin con contador), 3 (Configuración > Módulos de la empresa + solicitar más) y 4 (mobile, ver 126) con OK previo de la usuaria."
     },
     {
       "id": 125,
       "name": "planes_adicionales",
       "title": "Adicionales del plan: usuario extra, remuneraciones por trabajador, pack IA, segundo pack, pago anual",
       "status": "pending",
-      "description": "Etapa 2 de la tarea 124. Precios: usuario extra 0,2 UF; remuneraciones 0,06 UF por trabajador (mín 1 UF); segundo pack de rubro 1 UF; pack IA para Operación 1,5 UF; anual = 10 meses."
+      "description": "Etapa 2 de la tarea 124. Precios: usuario extra 0,2 UF; remuneraciones 0,06 UF por trabajador (mín 1 UF); segundo pack de rubro 1 UF; pack IA para Operación 1,5 UF; anual = 10 meses. Revisar vigencia tras el rediseño de la tarea 124 (tope de módulos)."
     },
     {
       "id": 126,
@@ -1761,6 +1761,13 @@
       "title": "Mobile: Mi plan con las 4 categorías y lo incluido en el plan",
       "status": "pending",
       "description": "Etapa 3 de la tarea 124. Requiere build mobile (bump de versión). Ver maqueta https://claude.ai/artifact/6Ce1AFvXG7jkGdcEKXDPhH."
+    },
+    {
+      "id": 127,
+      "name": "deuda_tests_regresion",
+      "title": "Deuda técnica: pruebas de regresión de flujos críticos (abrir OS, crear OS, planes) para que un error no llegue a producción",
+      "status": "pending",
+      "description": "Pedido de la usuaria 24-sep-2026 tras el cierre de la app al abrir una OS (tarea 119, hooks tras return anticipado). Evaluar pruebas de pantallas/flujos críticos en web y mobile (render de OS, alta de OS, cambio de plan) y correrlas en verificar.sh/CI."
     }
   ]
 }

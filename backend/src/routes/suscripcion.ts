@@ -5,7 +5,7 @@
 // ============================================================
 import { Router } from "express";
 import type { Suscripcion } from "@bitacora/shared";
-import { esPackRubro, esPlanPago } from "@bitacora/shared";
+import { PLANES_CONTRATABLES, esPlanPago } from "@bitacora/shared";
 import { supabase } from "../supabase";
 import { env } from "../env";
 import type { RequestConEmpresa } from "../empresa";
@@ -13,6 +13,7 @@ import { ah } from "../asyncHandler";
 import { requiereAccion } from "../permisos";
 import { crearClienteFlow, linkRegistroTarjeta, consultarRegistroTarjeta, consultarCliente, suscribirAPlan, cancelarSuscripcionFlow, flowPlanIdDe } from "../flow";
 import { cambiarPlanEmpresa } from "../planes";
+import { verificarModulosCabenEnPlan } from "../limites";
 
 export const suscripcionRouter = Router();
 
@@ -93,16 +94,15 @@ suscripcionRouter.post(
   "/tarjeta",
   requiereAccion("gestionar_plan"),
   ah<RequestConEmpresa>(async (req, res) => {
-    const { plan, pack } = req.body ?? {};
-    const planPendiente = esPlanPago(plan) ? plan : null;
+    const { plan } = req.body ?? {};
+    const planPendiente = esPlanPago(plan) && PLANES_CONTRATABLES.includes(plan) ? plan : null;
     if (plan !== undefined && !planPendiente) {
-      res.status(400).json({ error: "plan debe ser 'basico', 'operacion', 'pro' o 'empresa'" });
+      res.status(400).json({ error: `plan debe ser uno de: ${PLANES_CONTRATABLES.join(", ")}` });
       return;
     }
-    if (planPendiente === "operacion" && !esPackRubro(pack)) {
-      res.status(400).json({ error: "Elige el pack de rubro del plan Operación" });
-      return;
-    }
+    // Antes de mandar a pagar: los módulos activos tienen que caber en el
+    // plan elegido (409 con el detalle si no).
+    if (planPendiente) await verificarModulosCabenEnPlan(req.empresaId!, planPendiente);
     if (planPendiente && !flowPlanIdDe(planPendiente)) {
       res.status(400).json({ error: `El plan "${planPendiente}" todavía no está disponible para contratar` });
       return;
@@ -111,11 +111,6 @@ suscripcionRouter.post(
     const suscripcion = await obtenerOCrearSuscripcion(req.empresaId!);
     const { data: empresa } = await supabase.from("empresas").select("nombre").eq("id", req.empresaId!).single();
     await supabase.from("suscripciones").update({ plan_pendiente: planPendiente }).eq("empresa_id", req.empresaId!);
-    // El pack se guarda ya: solo pesa cuando la empresa queda en
-    // Operación, y así cambiarPlanEmpresa lo toma al confirmarse la tarjeta.
-    if (planPendiente === "operacion") {
-      await supabase.from("empresas").update({ pack_rubro: pack }).eq("id", req.empresaId!);
-    }
 
     let customerId = suscripcion.flow_customer_id as string | null;
     try {

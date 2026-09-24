@@ -5,7 +5,11 @@ export const ETIQUETA_MODULO: Record<string, string> = {
   agenda: "Agenda",
   ordenes_servicio: "Órdenes de servicio",
   viajes: "Viajes",
-  registros: "Registros",
+  registros: "Clientes",
+  equipos: "Equipos",
+  inventario: "Inventario",
+  catalogo: "Catálogo",
+  proveedores: "Proveedores",
   rutas: "Rutas",
   // Dinero, separado en 3 desde el 23-sep-2026 (antes un solo
   // "financiero" bundleaba las 3 cosas) — ver packages/shared/src/permisos.ts.

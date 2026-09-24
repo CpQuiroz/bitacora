@@ -3,6 +3,7 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import type { Rubro } from "@bitacora/shared";
+import { DIAS_PRUEBA } from "@bitacora/shared";
 import { env } from "./env";
 import { supabase } from "./supabase";
 import { requiereAuth, type RequestConUsuario } from "./auth";
@@ -67,10 +68,10 @@ import { documentosRouter } from "./routes/documentos";
 import { mfaRouter } from "./routes/mfa";
 import { authLoginRouter } from "./routes/authLogin";
 import { limitarLogin, limitarEncuestaPublica } from "./rateLimiters";
-import { modulosDeshabilitadosDeEmpresa, featureFlagsDeEmpresa, modulosVisiblesDeUsuario, requiereModulo, requiereRol } from "./permisos";
+import { modulosDeshabilitadosDeEmpresa, featureFlagsDeEmpresa, modulosVisiblesDeUsuario, requiereModulo, requierePlanIACompleta, requiereRol } from "./permisos";
 import { accionesDeRol, rolExigeMfa } from "./roles";
 import { resolverAccesoParaLogin, aprovisionarUsuario } from "./accesosAutorizados";
-import { aplicarModulosDelPlan } from "./planes";
+import { activarModulosDePrueba } from "./planes";
 import { revisarCumpleanosClientes } from "./cumpleanosClientes";
 import { sembrarSugerenciasRubro } from "./seedRubro";
 import { registrarConsentimiento, tieneConsentimientoVigente } from "./consentimiento";
@@ -258,7 +259,7 @@ app.post("/api/registro-empresa", requiereAuth, ah<RequestConUsuario>(async (req
   }
 
   const pruebaTerminaEn = new Date();
-  pruebaTerminaEn.setDate(pruebaTerminaEn.getDate() + 21);
+  pruebaTerminaEn.setDate(pruebaTerminaEn.getDate() + DIAS_PRUEBA);
 
   const { data: empresa, error: errorEmpresa } = await supabase
     .from("empresas")
@@ -291,9 +292,9 @@ app.post("/api/registro-empresa", requiereAuth, ah<RequestConUsuario>(async (req
     return;
   }
 
-  // La prueba trae todo, como Pro (tarea 124). Si falla, la empresa
+  // La prueba trae todo activo (tarea 124). Si falla, la empresa
   // arranca con los módulos por defecto; no se bloquea el alta.
-  await aplicarModulosDelPlan(empresa.id, "trial", null).catch((err) => console.error("Módulos de la prueba:", err));
+  await activarModulosDePrueba(empresa.id).catch((err) => console.error("Módulos de la prueba:", err));
 
   // Ley 21.719 — deja constancia de la aceptación (tabla consentimientos).
   await registrarConsentimiento(
@@ -321,7 +322,9 @@ app.post("/api/consentimiento", requiereAuth, ah<RequestConUsuario>(async (req, 
 
 app.use("/api/trabajos", requiereAuth, requiereEmpresa, trabajosRouter);
 app.use("/api/cobros", requiereAuth, requiereEmpresa, requiereModulo("cobros"), cobrosRouter);
-app.use("/api/informe", requiereAuth, requiereEmpresa, requiereModulo("informe_ia"), informeRouter);
+// Informe con IA: todos los planes, solo el rol admin (tarea 124,
+// 24-sep-2026); el tope de informes por plan lo aplica crearMensajeIA.
+app.use("/api/informe", requiereAuth, requiereEmpresa, requiereRol("admin"), requiereModulo("informe_ia"), informeRouter);
 app.use("/api/tipos-os-trabajo", requiereAuth, requiereEmpresa, tiposOsTrabajoRouter);
 app.use("/api/usuarios", requiereAuth, requiereEmpresa, usuariosRouter);
 app.use("/api/accesos", requiereAuth, requiereEmpresa, requiereModulo("gestion_control"), accesosRouter);
@@ -378,7 +381,9 @@ app.use("/api/proveedores", requiereAuth, requiereEmpresa, proveedoresRouter);
 // esquivar delegando el módulo "asistente" a otro rol desde
 // Configuración > Perfiles o el Panel de Super-Admin — ver también
 // permisos.ts (MODULOS_DELEGABLES_POR_EMPRESA ya no lo incluye).
-app.use("/api/asistente", requiereAuth, requiereEmpresa, requiereRol("admin"), requiereModulo("asistente"), asistenteRouter);
+// Además del rol y el módulo, el Asistente es de los planes con IA
+// completa (prueba, Pro, Empresa) — 403 LIMITE_PLAN en los demás.
+app.use("/api/asistente", requiereAuth, requiereEmpresa, requiereRol("admin"), requiereModulo("asistente"), requierePlanIACompleta, asistenteRouter);
 app.use("/api/notificaciones-feed", requiereAuth, requiereEmpresa, notificacionesFeedRouter);
 app.use("/api/notificaciones-cliente", requiereAuth, requiereEmpresa, notificacionesClienteRouter);
 app.use("/api/viajes", requiereAuth, requiereEmpresa, requiereModulo("viajes"), viajesRouter);

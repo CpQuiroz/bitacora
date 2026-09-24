@@ -13,26 +13,30 @@ export type LimitesPlan = {
   osPorMes: number | null;
   storageGB: number;
   iaTokensPorMes: number;
-  // Informes con IA (informe de OS, informe libre y variantes) por mes.
+  // Módulos activos a la vez (ver MODULOS_CONTABLES en planes.ts).
+  // null = todos.
+  modulosMax: number | null;
+  // Informes con IA (solo Admin). Por mes, o en toda la prueba gratis.
   // null = sin tope propio (solo cuenta iaTokensPorMes).
-  informesIAPorMes: number | null;
+  informesIA: { tope: number; periodo: "mes" | "prueba" } | null;
 };
 
-// Tarea 124 (24-sep-2026): 4 planes pagos + prueba. La prueba trae todo
-// como Pro, pero con 3 usuarios.
+// Tarea 124 (rediseño 24-sep-2026). Ver packages/shared/src/planes.ts.
 export const LIMITES_POR_PLAN: Record<Plan, LimitesPlan> = {
-  trial: { usuarios: 3, osPorMes: 30, storageGB: 2, iaTokensPorMes: 500_000, informesIAPorMes: null },
-  basico: { usuarios: 5, osPorMes: 100, storageGB: 10, iaTokensPorMes: 500_000, informesIAPorMes: null },
-  operacion: { usuarios: 15, osPorMes: null, storageGB: 25, iaTokensPorMes: 1_500_000, informesIAPorMes: 20 },
-  pro: { usuarios: 30, osPorMes: null, storageGB: 50, iaTokensPorMes: 5_000_000, informesIAPorMes: null },
-  empresa: { usuarios: 100, osPorMes: null, storageGB: 200, iaTokensPorMes: 15_000_000, informesIAPorMes: null },
+  trial: { usuarios: 3, osPorMes: 30, storageGB: 2, iaTokensPorMes: 500_000, modulosMax: null, informesIA: { tope: 10, periodo: "prueba" } },
+  basico: { usuarios: 5, osPorMes: 100, storageGB: 10, iaTokensPorMes: 500_000, modulosMax: 6, informesIA: { tope: 5, periodo: "mes" } },
+  operacion: { usuarios: 15, osPorMes: null, storageGB: 25, iaTokensPorMes: 1_500_000, modulosMax: 10, informesIA: { tope: 20, periodo: "mes" } },
+  pro: { usuarios: 30, osPorMes: null, storageGB: 50, iaTokensPorMes: 5_000_000, modulosMax: null, informesIA: null },
+  empresa: { usuarios: 100, osPorMes: null, storageGB: 200, iaTokensPorMes: 15_000_000, modulosMax: null, informesIA: null },
 };
 
-// Análisis con IA de fotos de OS (tarea 122, 24-sep-2026): deja de ser
-// automático al subir — solo a pedido del Admin y solo en estos planes
-// (la prueba incluida: trae todo como Pro).
-export const PLANES_CON_ANALISIS_FOTOS_IA: readonly Plan[] = ["trial", "pro", "empresa"];
+// IA completa (Asistente y análisis de fotos): prueba, Pro y Empresa.
+// El informe con IA es de todos los planes (solo Admin, con tope).
+export const PLANES_CON_IA_COMPLETA: readonly Plan[] = ["trial", "pro", "empresa"];
 
-export function planPermiteAnalisisFotosIA(plan: Plan | null | undefined): boolean {
-  return plan != null && PLANES_CON_ANALISIS_FOTOS_IA.includes(plan);
+export function planPermiteIACompleta(plan: Plan | null | undefined): boolean {
+  return plan != null && PLANES_CON_IA_COMPLETA.includes(plan);
 }
+
+// Nombre histórico (tarea 122), lo usa la web para el botón de fotos.
+export const planPermiteAnalisisFotosIA = planPermiteIACompleta;

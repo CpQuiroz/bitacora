@@ -65,8 +65,8 @@ export async function equipoAsignadoAColaborador(empresaId: string, colaboradorI
 // asignar/desasignar vehículos. Las lecturas siguen abiertas a propósito
 // (mobile las usa en Viajes y Mantención para elegir equipo/vehículo).
 //   · Vehículo (categoría "Vehículo" o con patente) → módulo "flota".
-//   · Cualquier otro equipo → "registros" (donde vive Equipos en el menú
-//     web) o "flota".
+//   · Cualquier otro equipo → "equipos" (su propia sección desde la
+//     tarea 124; antes "registros") o "flota".
 function esVehiculo(e: { categoria?: unknown; patente?: unknown } | null | undefined): boolean {
   if (!e) return false;
   return e.categoria === "Vehículo" || (typeof e.patente === "string" && e.patente.trim() !== "");
@@ -75,7 +75,7 @@ function esVehiculo(e: { categoria?: unknown; patente?: unknown } | null | undef
 async function puedeEscribirEquipo(req: RequestConEmpresa, vehiculo: boolean): Promise<boolean> {
   const rol = req.rol ?? "colaborador";
   if (await rolPuedeVerModulo(rol, "flota", req.empresaId)) return true;
-  return !vehiculo && (await rolPuedeVerModulo(rol, "registros", req.empresaId));
+  return !vehiculo && (await rolPuedeVerModulo(rol, "equipos", req.empresaId));
 }
 
 const SIN_PERMISO_EQUIPOS = "No tienes permiso para modificar equipos";

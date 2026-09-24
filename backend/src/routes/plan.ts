@@ -1,12 +1,11 @@
 // ============================================================
-// Autogestión de plan desde Configuración > Plan (tarea 124): Esencial
-// (`basico`), Operación (con pack de rubro), Pro y Empresa. Qué trae
-// cada uno vive en packages/shared/src/planes.ts; el cambio real de
-// módulos lo hace cambiarPlanEmpresa (planes.ts).
+// Autogestión de plan desde Configuración > Plan (tarea 124). El plan
+// fija topes (usuarios, módulos activos, informes con IA); los módulos
+// no cambian al cambiar de plan. Ver packages/shared/src/planes.ts.
 // ============================================================
 import { Router } from "express";
 import type { PlanPago } from "@bitacora/shared";
-import { ETIQUETA_PLAN, PLANES_PAGO, esPackRubro, esPlanPago, packSugeridoDeRubro } from "@bitacora/shared";
+import { ETIQUETA_PLAN, LIMITES_POR_PLAN, PLANES_CONTRATABLES, PLAN_EMPRESA_DISPONIBLE, esPlanPago } from "@bitacora/shared";
 import { supabase } from "../supabase";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
@@ -16,17 +15,18 @@ import { suscribirAPlan, cancelarSuscripcionFlow, flowPlanIdDe } from "../flow";
 import { enviarConReintento } from "../email";
 import { env } from "../env";
 import { limitarCotizacionPlan } from "../rateLimiters";
+import { modulosActivosContables, verificarModulosCabenEnPlan } from "../limites";
 
 export const planRouter = Router();
 
 planRouter.get(
   "/",
   ah<RequestConEmpresa>(async (req, res) => {
-    const { data: empresa } = await supabase
-      .from("empresas")
-      .select("plan, pack_rubro, rubro, prueba_termina_en")
-      .eq("id", req.empresaId!)
-      .maybeSingle();
+    const { data: empresa, error } = await supabase.from("empresas").select("plan, prueba_termina_en").eq("id", req.empresaId!).maybeSingle();
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
     const { data: historial } = await supabase
       .from("empresa_plan_historial")
       .select("*")
@@ -35,21 +35,22 @@ planRouter.get(
       .limit(20);
 
     const HOY = new Date().toISOString().slice(0, 10);
-    const trialVencido =
-      empresa?.plan === "trial" && empresa.prueba_termina_en != null && empresa.prueba_termina_en < HOY;
+    const planActual = empresa?.plan ?? "trial";
+    const trialVencido = planActual === "trial" && empresa?.prueba_termina_en != null && empresa.prueba_termina_en < HOY;
 
-    // Planes que se pueden contratar con tarjeta hoy (tienen Plan de Flow).
-    const contratables = Object.fromEntries(PLANES_PAGO.map((p) => [p, Boolean(flowPlanIdDe(p))])) as Record<PlanPago, boolean>;
+    // Planes que la empresa puede contratar hoy con tarjeta (tienen Plan
+    // de Flow). El plan Empresa no aparece mientras esté apagado.
+    const contratables = Object.fromEntries(PLANES_CONTRATABLES.map((p) => [p, Boolean(flowPlanIdDe(p))])) as Partial<Record<PlanPago, boolean>>;
 
     res.json({
-      planActual: empresa?.plan ?? "trial",
-      packRubro: empresa?.pack_rubro ?? null,
-      packSugerido: packSugeridoDeRubro(empresa?.rubro),
+      planActual,
       // Fecha de término del trial — la pantalla "Mi plan" de mobile
       // (23-sep-2026) muestra los días que quedan.
       pruebaTerminaEn: empresa?.prueba_termina_en ?? null,
       trialVencido,
       contratables,
+      modulosActivos: (await modulosActivosContables(req.empresaId!)).length,
+      modulosMax: LIMITES_POR_PLAN[planActual].modulosMax,
       historial: historial ?? [],
     });
   })
@@ -59,28 +60,15 @@ planRouter.post(
   "/cambiar",
   requiereAccion("gestionar_plan"),
   ah<RequestConEmpresa>(async (req, res) => {
-    const { plan, pack } = req.body ?? {};
-    if (!esPlanPago(plan)) {
-      res.status(400).json({ error: "plan debe ser 'basico', 'operacion', 'pro' o 'empresa'" });
+    const { plan } = req.body ?? {};
+    if (!esPlanPago(plan) || !PLANES_CONTRATABLES.includes(plan)) {
+      res.status(400).json({ error: `plan debe ser uno de: ${PLANES_CONTRATABLES.join(", ")}` });
       return;
     }
-    if (plan === "operacion" && !esPackRubro(pack)) {
-      res.status(400).json({ error: "Elige el pack de rubro del plan Operación" });
-      return;
-    }
-    const packElegido = plan === "operacion" ? pack : undefined;
 
     const { data: empresa } = await supabase.from("empresas").select("plan").eq("id", req.empresaId!).maybeSingle();
-
-    // Mismo plan Operación con otro pack: no hay nada que cambiar en Flow
-    // (mismo Plan, mismo precio) — solo los módulos.
     if (empresa?.plan === plan) {
-      if (plan !== "operacion") {
-        res.status(409).json({ error: "Ya estás en ese plan" });
-        return;
-      }
-      const resultado = await cambiarPlanEmpresa(req.empresaId!, plan, { tipo: "empresa", usuarioId: req.userId! }, true, packElegido);
-      res.json({ requiereTarjeta: false, ...resultado });
+      res.status(409).json({ error: "Ya estás en ese plan" });
       return;
     }
 
@@ -90,11 +78,15 @@ planRouter.post(
       return;
     }
 
+    // Antes de tocar Flow: los módulos activos tienen que caber en el
+    // plan nuevo (409 con el detalle si no).
+    await verificarModulosCabenEnPlan(req.empresaId!, plan);
+
     const { data: suscripcion } = await supabase.from("suscripciones").select("*").eq("empresa_id", req.empresaId!).maybeSingle();
 
     // Sin tarjeta todavía: el frontend debe pasar por el flujo de registro
-    // de tarjeta (POST /api/suscripcion/tarjeta con { plan, pack }) — el
-    // resto lo resuelve el lazy-check de suscripcion.ts al confirmarse.
+    // de tarjeta (POST /api/suscripcion/tarjeta con { plan }) — el resto
+    // lo resuelve el lazy-check de suscripcion.ts al confirmarse.
     if (!suscripcion?.tarjeta_ultimos4 || !suscripcion.flow_customer_id) {
       res.json({ requiereTarjeta: true });
       return;
@@ -118,7 +110,7 @@ planRouter.post(
       return;
     }
 
-    const resultado = await cambiarPlanEmpresa(req.empresaId!, plan, { tipo: "empresa", usuarioId: req.userId! }, true, packElegido);
+    const resultado = await cambiarPlanEmpresa(req.empresaId!, plan, { tipo: "empresa", usuarioId: req.userId! });
     res.json({ requiereTarjeta: false, ...resultado });
   })
 );
@@ -127,14 +119,17 @@ function escaparHtml(texto: string): string {
   return texto.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 }
 
-// Plan Empresa a cotizar (tarea 124): avisa por correo a los
-// Super-Admin activos. Ellos responden y, si se acuerda, activan el
-// plan desde el panel (se cobra por transferencia contra factura).
+// Plan Empresa a cotizar: avisa por correo a los Super-Admin activos.
+// Programado pero apagado mientras PLAN_EMPRESA_DISPONIBLE sea false.
 planRouter.post(
   "/cotizar-empresa",
   limitarCotizacionPlan,
   requiereAccion("gestionar_plan"),
   ah<RequestConEmpresa>(async (req, res) => {
+    if (!PLAN_EMPRESA_DISPONIBLE) {
+      res.status(404).json({ error: "El plan Empresa no está disponible por ahora." });
+      return;
+    }
     const mensaje = typeof req.body?.mensaje === "string" ? req.body.mensaje.trim().slice(0, 2000) : "";
     const usuariosEstimados = Number.isInteger(req.body?.usuarios) ? Math.max(0, Math.min(10_000, req.body.usuarios as number)) : null;
 

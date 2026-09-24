@@ -25,3 +25,40 @@ Diseño:
   empresas en prueba. Las empresas Básico/Pro existentes no cambian de módulos (fundadores).
 - Flow: FLOW_PLAN_ID_OPERACION y FLOW_PLAN_ID_EMPRESA nuevas (la usuaria crea los planes en el panel de Flow).
 - Clientes actuales: mantienen su suscripción de Flow (precio viejo) porque el plan de Flow no cambia.
+
+Avance (24-sep):
+- Hecho y en commit b77203a (verificar.sh verde): shared, migración 131, backend, web Plan + Super-Admin,
+  etiquetas mobile (sin build).
+- En revisión: subagente revisor → progress/review_planes.md.
+
+Pasos que tiene que hacer la usuaria (no los puede hacer Claude):
+1. Correr la migración 131 en prod + `supabase migration repair --status applied 131 --linked`.
+2. Crear en el panel de Flow los planes: Esencial 1,5 UF, Operación 3,5 UF, Pro 6 UF, Empresa 12 UF
+   (revisar si Flow permite plan en UF; si no, en CLP al valor de la UF y actualizarlos cuando suba).
+3. En Render: FLOW_PLAN_ID_BASICO (nuevo plan Esencial), FLOW_PLAN_ID_OPERACION, FLOW_PLAN_ID_PRO (nuevo plan Pro),
+   FLOW_PLAN_ID_EMPRESA. Las suscripciones actuales siguen con su plan de Flow viejo (precio fundador).
+
+## Tarea 124 — REDISEÑO aprobado por la usuaria (24-sep, tarde). Etapa 1 en curso
+
+Reemplaza a los packs de rubro. El plan fija topes; los módulos los elige el Super-Admin
+(y, en la etapa 3, también el Admin de la empresa dentro del tope).
+- Prueba: 7 días (antes 21, solo empresas nuevas), 3 usuarios, todo activo, 10 informes IA en toda la prueba.
+- Esencial 1,5 UF: 5 usuarios, hasta 6 módulos, 5 informes IA/mes.
+- Operación 3,5 UF: 15 usuarios, hasta 10 módulos, 20 informes IA/mes.
+- Pro 6 UF: 30 usuarios, todos los módulos, IA completa (informe sin tope, asistente, fotos).
+- Empresa desde 12 UF: programado pero apagado (no visible ni contratable por la empresa; el Super-Admin sí puede asignarlo).
+- Informe con IA: todos los planes, SOLO rol admin. Asistente y fotos IA: prueba/Pro/Empresa.
+- Cambiar de plan NO toca módulos; si los módulos activos superan el tope del plan nuevo → 409 hasta ajustar.
+- Un interruptor por ítem del menú; las pestañas internas van con su sección (usuaria, 24-sep: Rendiciones
+  dentro de Gastos = 1 módulo; Mantención dentro de Flota = 1). Se mantiene la clave vieja con significado
+  acotado (precedente migración 123): `registros` = Clientes (+ nuevas `equipos`, `inventario`, `catalogo`,
+  `proveedores`). Mobile 1.10.17 no usa `registros`, así que sigue funcionando.
+- Módulos que cuentan para el tope: las 17 secciones del menú. No cuentan: configuracion, gestion_control, informe_ia, asistente.
+
+Etapa 1 (aprobada): shared + migración 132 + backend (+ lo mínimo de web para que nada quede roto:
+menú con las claves nuevas, página de Plan sin packs y con Empresa oculto, botones de informe IA solo Admin).
+Etapas siguientes, cada una con OK previo: 2 Super-Admin con contador · 3 Configuración > Módulos de la
+empresa + "Solicitar más módulos" · 4 mobile (build).
+
+Orden de despliegue: correr la migración 132 en prod ANTES de mergear a main (el backend nuevo exige
+las secciones nuevas en los roles; la migración con el backend viejo es inocua).

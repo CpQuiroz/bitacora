@@ -5,7 +5,7 @@ import { CATEGORIAS_FOTO_OS, SECCIONES_PDF_OS, mapearCamposPersonalizados, susti
 import { supabase } from "../supabase";
 import { subirFirma, subirFoto, urlFirmada, subirPdfOS, descargarPdfOS, descargarFoto, borrarFoto, subirAnexo, urlFirmadaAnexo } from "../storage";
 import { analizarFoto, generarInformeOS, type ImagenInforme } from "../claude";
-import { rolPuedeVerModulo } from "../roles";
+import { empresaTieneModulo } from "../permisos";
 import { crearOrdenServicio, obtenerOCrearOrden, checklistDeTipoOs } from "../ordenes";
 import { enviarEncuestaSatisfaccion, enviarPdfOS } from "../email";
 import { generarPdfEnWorker } from "../pdfWorkerPool";
@@ -101,6 +101,14 @@ async function ordenDeTrabajo(empresaId: string, trabajoId: string) {
 // "Finalizar OS" del celular es la única forma de deshacerlo (no hay
 // forma de deshacerlo: es intencional, es la garantía de que el PDF
 // ya entregado no cambia por debajo).
+// Informe con IA de la OS (tarea 124, 24-sep-2026): todos los planes,
+// SOLO el rol admin (antes también un supervisor con el módulo
+// delegado), y con el módulo informe_ia activo en la empresa. El tope
+// de informes por plan lo aplica crearMensajeIA (claude.ts).
+async function puedeUsarInformeIA(rol: string, empresaId: string): Promise<boolean> {
+  return rol === "admin" && (await empresaTieneModulo(empresaId, "informe_ia"));
+}
+
 async function trabajoBloqueado(empresaId: string, trabajoId: string) {
   const orden = await ordenDeTrabajo(empresaId, trabajoId);
   return Boolean(orden?.finalizada_en);
@@ -1915,12 +1923,8 @@ trabajosRouter.post(
   ah<RequestConEmpresa>(async (req, res) => {
     // Guard de rol — antes de tocar ningún dato.
     const rol = req.rol ?? "colaborador";
-    const puedeGenerar =
-      (rol === "admin" || rol === "supervisor") && (await rolPuedeVerModulo(rol, "informe_ia", req.empresaId!));
-    if (!puedeGenerar) {
-      res.status(403).json({
-        error: "Solo el administrador — o un supervisor con el módulo de Informes IA habilitado — puede generar este informe.",
-      });
+    if (!(await puedeUsarInformeIA(rol, req.empresaId!))) {
+      res.status(403).json({ error: "Solo el administrador puede generar el informe con IA." });
       return;
     }
 
@@ -2032,9 +2036,8 @@ trabajosRouter.patch(
   "/:id/informe-ia",
   ah<RequestConEmpresa>(async (req, res) => {
     const rol = req.rol ?? "colaborador";
-    const puedeEditar = (rol === "admin" || rol === "supervisor") && (await rolPuedeVerModulo(rol, "informe_ia", req.empresaId!));
-    if (!puedeEditar) {
-      res.status(403).json({ error: "Solo el administrador — o un supervisor con el módulo de Informes IA habilitado — puede editar este informe." });
+    if (!(await puedeUsarInformeIA(rol, req.empresaId!))) {
+      res.status(403).json({ error: "Solo el administrador puede editar el informe con IA." });
       return;
     }
     const { informe_ia } = req.body ?? {};
@@ -2110,9 +2113,8 @@ trabajosRouter.post(
   "/:id/pdf-versiones",
   ah<RequestConEmpresa>(async (req, res) => {
     const rol = req.rol ?? "colaborador";
-    const puede = (rol === "admin" || rol === "supervisor") && (await rolPuedeVerModulo(rol, "informe_ia", req.empresaId!));
-    if (!puede) {
-      res.status(403).json({ error: "Solo el administrador — o un supervisor con el módulo de Informes IA habilitado — puede generar una versión nueva del PDF." });
+    if (!(await puedeUsarInformeIA(rol, req.empresaId!))) {
+      res.status(403).json({ error: "Solo el administrador puede generar una versión nueva del PDF con el informe." });
       return;
     }
     const orden = await ordenDeTrabajo(req.empresaId!, req.params.id);

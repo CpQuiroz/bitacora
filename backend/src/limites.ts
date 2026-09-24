@@ -5,8 +5,8 @@
 // global de errores (server.ts) la traduce a 403 sin loguearla en
 // errores_backend (no es un bug, es un freno esperado del negocio).
 // ============================================================
-import type { Plan } from "@bitacora/shared";
-import { LIMITES_POR_PLAN, planPermiteAnalisisFotosIA } from "@bitacora/shared";
+import type { Modulo, Plan } from "@bitacora/shared";
+import { ETIQUETA_PLAN, LIMITES_POR_PLAN, cuentaParaTope, modulosContablesActivos, planPermiteIACompleta } from "@bitacora/shared";
 import { supabase } from "./supabase";
 
 export class LimiteAlcanzadoError extends Error {
@@ -20,7 +20,18 @@ export class LimiteAlcanzadoError extends Error {
   }
 }
 
-async function obtenerPlan(empresaId: string): Promise<Plan> {
+// Un cambio de plan que dejaría más módulos activos que el tope del plan
+// nuevo (tarea 124): 409, hay que apagar módulos antes de cambiar.
+export class ModulosExcedenPlanError extends Error {
+  status = 409;
+  code = "MODULOS_EXCEDEN_PLAN";
+  constructor(mensaje: string) {
+    super(mensaje);
+    this.name = "ModulosExcedenPlanError";
+  }
+}
+
+export async function obtenerPlan(empresaId: string): Promise<Plan> {
   const { data } = await supabase.from("empresas").select("plan").eq("id", empresaId).maybeSingle();
   return (data?.plan as Plan | undefined) ?? "trial";
 }
@@ -117,34 +128,81 @@ export async function verificarLimiteIA(empresaId: string): Promise<void> {
   }
 }
 
-// Análisis de fotos con IA a pedido (tarea 122) — solo en los planes de
-// PLANES_CON_ANALISIS_FOTOS_IA. Mismo 403 LIMITE_PLAN que el resto de los
-// topes: los clientes lo muestran como "pasa a un plan superior".
-export async function verificarPlanAnalisisFotosIA(empresaId: string): Promise<void> {
-  if (!planPermiteAnalisisFotosIA(await obtenerPlan(empresaId))) {
-    throw new LimiteAlcanzadoError("El análisis de fotos con IA está disponible solo en el plan Pro.");
+// Asistente y análisis de fotos con IA: solo planes con IA completa
+// (prueba, Pro, Empresa). Mismo 403 LIMITE_PLAN que el resto de los topes.
+export async function verificarPlanIACompleta(empresaId: string): Promise<void> {
+  if (!planPermiteIACompleta(await obtenerPlan(empresaId))) {
+    throw new LimiteAlcanzadoError("Esta función de IA está disponible en el plan Pro.");
   }
 }
 
-// Tope de informes con IA por mes (hoy solo Operación: 20, tarea 124).
-// Cuenta las llamadas registradas en ia_uso de las features de informe.
+// Nombre histórico (tarea 122), lo usa la ruta de análisis de fotos.
+export const verificarPlanAnalisisFotosIA = verificarPlanIACompleta;
+
+// Tope de informes con IA (tarea 124): por mes, o en toda la prueba
+// gratis. Cuenta las llamadas registradas en ia_uso de las features de
+// informe (ia_uso solo guarda llamadas exitosas).
 export const FEATURES_INFORME_IA = ["informe_os", "informe_libre", "informe_estructurado", "informe_personalizado"] as const;
 
 export async function verificarLimiteInformesIA(empresaId: string): Promise<void> {
   const plan = await obtenerPlan(empresaId);
-  const tope = LIMITES_POR_PLAN[plan].informesIAPorMes;
+  const tope = LIMITES_POR_PLAN[plan].informesIA;
   if (tope == null) return;
-  const inicioMes = new Date();
-  inicioMes.setDate(1);
-  const { count } = await supabase
+  let query = supabase
     .from("ia_uso")
     .select("id", { count: "exact", head: true })
     .eq("empresa_id", empresaId)
-    .in("feature", [...FEATURES_INFORME_IA])
-    .gte("creado_en", inicioMes.toISOString().slice(0, 10));
-  if ((count ?? 0) >= tope) {
+    .in("feature", [...FEATURES_INFORME_IA]);
+  if (tope.periodo === "mes") {
+    const inicioMes = new Date();
+    inicioMes.setDate(1);
+    query = query.gte("creado_en", inicioMes.toISOString().slice(0, 10));
+  }
+  const { count, error } = await query;
+  if (error) throw new Error(`No se pudo revisar el tope de informes con IA: ${error.message}`);
+  if ((count ?? 0) >= tope.tope) {
     throw new LimiteAlcanzadoError(
-      `Llegaste a los ${tope} informes con IA de este mes en tu plan — pasa a Pro para generar sin tope.`
+      tope.periodo === "prueba"
+        ? `Usaste los ${tope.tope} informes con IA de la prueba gratis — elige un plan para seguir generándolos.`
+        : `Llegaste a los ${tope.tope} informes con IA de este mes en el plan ${ETIQUETA_PLAN[plan]} — pasa a un plan superior para generar más.`
+    );
+  }
+}
+
+// Módulos activos que cuentan para el tope del plan. Sin fila en
+// empresa_modulos rige el default del código (igual que permisos.ts).
+export async function modulosActivosContables(empresaId: string): Promise<Modulo[]> {
+  const { data, error } = await supabase.from("empresa_modulos").select("modulo, activado").eq("empresa_id", empresaId);
+  if (error) throw new Error(`No se pudieron leer los módulos de la empresa: ${error.message}`);
+  return modulosContablesActivos(data ?? []);
+}
+
+// Antes de cambiar a `plan`: los módulos activos tienen que caber en su
+// tope. Se llama ANTES de tocar Flow, para no cobrar un plan que después
+// no se puede aplicar.
+export async function verificarModulosCabenEnPlan(empresaId: string, plan: Plan): Promise<void> {
+  const tope = LIMITES_POR_PLAN[plan].modulosMax;
+  if (tope == null) return;
+  const activos = (await modulosActivosContables(empresaId)).length;
+  if (activos > tope) {
+    throw new ModulosExcedenPlanError(
+      `El plan ${ETIQUETA_PLAN[plan]} permite hasta ${tope} módulos y hoy tienes ${activos} activos. Apaga ${activos - tope} para poder cambiar.`
+    );
+  }
+}
+
+// Antes de activar `modulo`: si cuenta para el tope y ya se llegó al
+// tope del plan actual, se bloquea.
+export async function verificarPuedeActivarModulo(empresaId: string, modulo: Modulo): Promise<void> {
+  if (!cuentaParaTope(modulo)) return;
+  const plan = await obtenerPlan(empresaId);
+  const tope = LIMITES_POR_PLAN[plan].modulosMax;
+  if (tope == null) return;
+  const activos = await modulosActivosContables(empresaId);
+  if (activos.includes(modulo)) return;
+  if (activos.length >= tope) {
+    throw new LimiteAlcanzadoError(
+      `El plan ${ETIQUETA_PLAN[plan]} permite hasta ${tope} módulos activos y ya están los ${tope}. Apaga uno o pasa a un plan superior.`
     );
   }
 }

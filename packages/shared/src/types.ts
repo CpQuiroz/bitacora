@@ -23,8 +23,6 @@ export type Rubro = "transporte" | "servicio_tecnico" | "cosmetologia" | "otro";
 // "Esencial" — se mantuvo para no migrar datos. Detalle en planes.ts.
 export type Plan = "trial" | "basico" | "operacion" | "pro" | "empresa";
 export type PlanPago = Exclude<Plan, "trial">;
-// Pack de rubro que elige una empresa en plan Operación.
-export type PackRubro = "transporte" | "mantencion" | "agenda";
 export type EstadoEmpresa = "activa" | "suspendida" | "dada_de_baja";
 // @internal — columna `trabajos.estado`. NO usar para pintar UI ni sumar
 // informes: eso va SIEMPRE contra `ordenes_servicio.estado_os` (PASO 1
@@ -89,7 +87,6 @@ export type Empresa = {
   nombre: string;
   rubro: Rubro;
   plan: Plan;
-  pack_rubro: PackRubro | null;
   logo_url: string | null;
   siguiente_folio_os: number;
   siguiente_numero_cotizacion: number;

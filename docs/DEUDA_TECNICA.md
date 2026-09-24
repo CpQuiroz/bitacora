@@ -8,6 +8,7 @@ tarea `done` y sacarlo de esta lista.
 |---|---|---|---|
 | 111 | Proteger la rama `main` en GitHub (y evaluar repo privado) | `main` es lo que se despliega a prod (Vercel + Render). Hoy se puede borrar o hacer force-push sin freno. | Antes de sumar colaboradores o clientes pagados. |
 | 121 | Paginación real ("Cargar más" + búsqueda en el servidor) en OS, clientes, cobros, cotizaciones y gastos | Hoy la web busca y filtra sobre la lista completa; con miles de registros se vuelve lenta. La etapa A (tarea 120) ya evita que se corten datos. | Cuando un cliente pase de algunos miles de registros en una lista. |
+| 127 | Pruebas de regresión de flujos críticos (abrir y crear OS, cambio de plan) en web y mobile | En sept-2026 un error de hooks cerró la app al abrir una OS (tarea 119) y llegó a los teléfonos: hoy `verificar.sh` revisa tipos, lint y tests de lógica, pero no renderiza pantallas ni recorre flujos. | Antes del próximo build mobile grande o del onboarding de clientes pagados. |
 | 115 | Mover el backend de Render de Ohio a Oregón | Supabase prod está en Oregón (us-west-2): cada consulta hoy cruza EE.UU. (~50–70 ms extra). | Junto con el próximo build mobile, para no hacer un build solo por esto. |
 
 ## 111 — Proteger `main`

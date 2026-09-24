@@ -745,10 +745,10 @@ export default function DetalleOrdenServicioPage() {
             </div>
           ) : null}
 
-          {/* Solo Admin, o Supervisor con el módulo informe_ia habilitado
+          {/* Solo Admin con el módulo informe_ia activo (tarea 124)
               (el chequeo real es el backend — esto evita mostrar una
               acción que devolvería 403). */}
-          {detalle.orden && (usuario?.rol === "admin" || (usuario?.rol === "supervisor" && modulosVisibles.includes("informe_ia"))) ? (
+          {detalle.orden && usuario?.rol === "admin" && modulosVisibles.includes("informe_ia") ? (
             <div className="my-ds-6">
               <Card>
                 <div className="mb-ds-4 flex flex-wrap items-center justify-between gap-ds-2">

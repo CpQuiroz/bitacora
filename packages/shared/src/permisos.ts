@@ -11,7 +11,19 @@ export const MODULOS = [
   "agenda",
   "ordenes_servicio",
   "viajes",
+  // Recursos — hasta el 24-sep-2026 "registros" bundleaba Clientes,
+  // Equipos, Inventario, Catálogo y Proveedores (tarea 124, pedido
+  // explícito: un interruptor por cada ítem del menú; las pestañas
+  // internas, como Rendiciones dentro de Gastos o Mantención dentro de
+  // Flota, van con su sección). Mismo criterio que "financiero" más
+  // abajo: la clave NO se renombra y pasa a significar solo Clientes;
+  // las otras 4 nacen nuevas (migración 132 copia el estado de
+  // "registros" a las nuevas, en empresas y en roles).
   "registros",
+  "equipos",
+  "inventario",
+  "catalogo",
+  "proveedores",
   "rutas",
   // Dinero — hasta el 23-sep-2026 un solo módulo "financiero" bundleaba
   // Cotizaciones + Cobros + Gastos/Rendiciones, todo o nada. Pedido
@@ -55,7 +67,7 @@ export type Modulo = (typeof MODULOS)[number];
 // `modulos_visibles` / `acciones` que devuelve /api/me.
 export const PERMISOS_POR_ROL: Record<Rol, Modulo[]> = {
   admin: [...MODULOS],
-  supervisor: ["agenda", "ordenes_servicio", "viajes", "registros", "rutas", "flota", "agenda_pro"],
+  supervisor: ["agenda", "ordenes_servicio", "viajes", "registros", "equipos", "inventario", "catalogo", "proveedores", "rutas", "flota", "agenda_pro"],
   contador: ["financiero", "cotizaciones", "cobros", "informes", "remuneraciones"],
   // El colaborador ve su Agenda (calendario + tareas asignadas). El
   // resto de su trabajo en terreno vive en la app móvil.
@@ -74,9 +86,16 @@ export const PERMISOS_POR_ROL: Record<Rol, Modulo[]> = {
 // requiereRol("admin") que ya lo protege en el backend (server.ts) del
 // lado de la EMPRESA, no del lado del Super-Admin (que sigue viendo
 // todos los módulos igual, admin siempre pasa cualquier chequeo de rol).
+// `informe_ia` se excluye desde el 24-sep-2026 (tarea 124): el informe
+// con IA pasa a ser solo del Admin, en todos los planes.
 export const MODULOS_DELEGABLES_POR_EMPRESA: Modulo[] = MODULOS.filter(
-  (m) => m !== "configuracion" && m !== "gestion_control" && m !== "asistente"
+  (m) => m !== "configuracion" && m !== "gestion_control" && m !== "asistente" && m !== "informe_ia"
 );
+
+// Módulos que son SOLO del rol admin, aunque un rol los tenga en su
+// lista (snapshot en la tabla roles). modulosVisiblesDeUsuario los
+// filtra para el resto y el backend exige rol admin en sus rutas.
+export const MODULOS_SOLO_ADMIN: readonly Modulo[] = ["informe_ia", "asistente"];
 
 // Capacidades sensibles delegables a un rol (además de sus módulos). El
 // rol `admin` las tiene todas siempre, no hace falta listarlas.

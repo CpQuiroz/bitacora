@@ -110,10 +110,12 @@ const NAV_GROUPS: NavGroup[] = [
   {
     titulo: "Recursos",
     items: [
-      { href: "/dashboard/registros/equipos", label: "Equipos", icon: Wrench, modulo: "registros" },
-      { href: "/dashboard/registros/inventario", label: "Inventario", icon: Layers, modulo: "registros" },
-      { href: "/dashboard/registros/catalogo", label: "Catálogo", icon: Tag, modulo: "registros" },
-      { href: "/dashboard/registros/proveedores", label: "Proveedores", icon: Briefcase, modulo: "registros" },
+      // Cada sección con su interruptor (tarea 124); antes las 4 colgaban
+      // de "registros", que ahora es solo Clientes.
+      { href: "/dashboard/registros/equipos", label: "Equipos", icon: Wrench, modulo: "equipos" },
+      { href: "/dashboard/registros/inventario", label: "Inventario", icon: Layers, modulo: "inventario" },
+      { href: "/dashboard/registros/catalogo", label: "Catálogo", icon: Tag, modulo: "catalogo" },
+      { href: "/dashboard/registros/proveedores", label: "Proveedores", icon: Briefcase, modulo: "proveedores" },
     ],
   },
   {

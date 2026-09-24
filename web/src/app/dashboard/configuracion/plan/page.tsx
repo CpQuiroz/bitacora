@@ -3,32 +3,34 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Check, CreditCard } from "lucide-react";
-import type { EmpresaPlanHistorial, Modulo, PackRubro, Plan, PlanPago, Suscripcion, SuscripcionCobro } from "@bitacora/shared";
-import { ETIQUETA_PACK, ETIQUETA_PLAN, LIMITES_POR_PLAN, PACKS, PACKS_RUBRO, PLANES_PAGO, PRECIO_PLAN_UF, modulosDelPlan } from "@bitacora/shared";
+import type { EmpresaPlanHistorial, Plan, PlanPago, Suscripcion, SuscripcionCobro } from "@bitacora/shared";
+import { ETIQUETA_PLAN, LIMITES_POR_PLAN, PLANES_CONTRATABLES, PRECIO_PLAN_UF } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
-import { Button, Card, Input, StatusBadge, Table, Textarea, type TonoEstado } from "@bitacora/ui/web";
-import { ETIQUETA_MODULO } from "@/lib/etiquetasModulo";
+import { Button, Card, StatusBadge, Table, type TonoEstado } from "@bitacora/ui/web";
 import { useConfiguracion } from "../ConfiguracionContext";
 
-// Lo que traen todos los planes (tarea 124). Los topes de usuarios y
-// OS van en cada tarjeta — antes esta lista decía "OS ilimitadas" aunque
-// el plan de entrada tiene tope.
+// Lo que traen todos los planes (tarea 124, rediseño 24-sep-2026). Los
+// topes de usuarios, módulos e informes con IA van en cada tarjeta.
 const INCLUIDO_EN_TODOS = [
-  "Clientes y cotizaciones ilimitados",
-  "App móvil para técnicos, también sin señal",
-  "Órdenes de servicio con firma y PDF",
-  "Fotos de la OS guardadas como evidencia",
+  "Eliges qué módulos usar, dentro del tope de tu plan",
+  "App móvil para tu equipo, también sin señal",
+  "Informe con IA para el Admin",
   "Exportación a PDF",
   "Soporte por correo",
 ];
 
-// Qué muestra cada tarjeta, en palabras del cliente (los módulos reales
-// los define modulosDelPlan en packages/shared/src/planes.ts).
+function informesIA(plan: PlanPago): string {
+  const tope = LIMITES_POR_PLAN[plan].informesIA;
+  return tope ? `Informe con IA para el Admin (${tope.tope} al mes)` : "Informe con IA para el Admin, sin tope";
+}
+
+// Qué muestra cada tarjeta, en palabras del cliente. Los topes reales
+// viven en LIMITES_POR_PLAN (packages/shared/src/limites.ts).
 const DESTACADOS: Record<PlanPago, string[]> = {
-  basico: ["Agenda", "Órdenes de servicio", "Cotizaciones y cobros", "Gastos y rendiciones", "Informes"],
-  operacion: ["Todo lo de Esencial", "Un pack de rubro a elección", `Informe con IA (${LIMITES_POR_PLAN.operacion.informesIAPorMes} al mes)`],
-  pro: ["Todo lo de Operación", "Los 3 packs de rubro", "Informe con IA sin tope", "Asistente", "Análisis de fotos con IA"],
-  empresa: ["Todo lo de Pro", "Implementación y capacitación", "Soporte prioritario", "Precio a convenir según tamaño"],
+  basico: [`Hasta ${LIMITES_POR_PLAN.basico.modulosMax} módulos a elección`, informesIA("basico")],
+  operacion: [`Hasta ${LIMITES_POR_PLAN.operacion.modulosMax} módulos a elección`, informesIA("operacion")],
+  pro: ["Todos los módulos", informesIA("pro"), "Asistente con IA", "Análisis de fotos con IA"],
+  empresa: ["Todo lo de Pro", "Implementación y capacitación", "Soporte prioritario"],
 };
 
 const uf = (n: number) => `${n.toLocaleString("es-CL")} UF`;
@@ -66,10 +68,10 @@ function diasRestantes(fechaTermino: string | null): number | null {
 
 type InfoPlan = {
   planActual: Plan;
-  packRubro: PackRubro | null;
-  packSugerido: PackRubro;
   trialVencido: boolean;
-  contratables: Record<PlanPago, boolean>;
+  contratables: Partial<Record<PlanPago, boolean>>;
+  modulosActivos: number;
+  modulosMax: number | null;
   historial: EmpresaPlanHistorial[];
 };
 
@@ -90,16 +92,7 @@ function PlanContenido() {
   const [confirmandoCancelar, setConfirmandoCancelar] = useState(false);
   const [cancelando, setCancelando] = useState(false);
   const [cambiandoPlan, setCambiandoPlan] = useState<PlanPago | null>(null);
-  // Plan al que se quiere bajar, esperando confirmación (pierde módulos).
-  const [confirmandoBajarA, setConfirmandoBajarA] = useState<PlanPago | null>(null);
   const [errorPlan, setErrorPlan] = useState<string | null>(null);
-  const [pack, setPack] = useState<PackRubro>("transporte");
-  const [cotizacionAbierta, setCotizacionAbierta] = useState(false);
-  const [usuariosCotizacion, setUsuariosCotizacion] = useState("");
-  const [mensajeCotizacion, setMensajeCotizacion] = useState("");
-  const [enviandoCotizacion, setEnviandoCotizacion] = useState(false);
-  const [errorCotizacion, setErrorCotizacion] = useState<string | null>(null);
-  const [cotizacionEnviada, setCotizacionEnviada] = useState(false);
 
   const cargar = useCallback(async () => {
     setError(null);
@@ -115,11 +108,7 @@ function PlanContenido() {
 
   const cargarPlan = useCallback(async () => {
     const res = await apiFetch("/api/plan");
-    if (res.ok) {
-      const body: InfoPlan = await res.json();
-      setInfo(body);
-      setPack(body.packRubro ?? (body.planActual === "operacion" ? "transporte" : body.packSugerido));
-    }
+    if (res.ok) setInfo(await res.json());
   }, []);
 
   useEffect(() => {
@@ -162,21 +151,13 @@ function PlanContenido() {
     window.location.href = body.url;
   }
 
-  // Módulos que se pierden al pasar del plan actual a `plan`.
-  function modulosQueSePierden(plan: PlanPago): Modulo[] {
-    if (!info) return [];
-    const nuevos = new Set(modulosDelPlan(plan, pack));
-    return modulosDelPlan(info.planActual, info.packRubro).filter((m) => !nuevos.has(m));
-  }
-
+  // Cambiar de plan no toca los módulos (tarea 124). Si los activos no
+  // caben en el tope del plan nuevo, el backend responde 409 con el
+  // detalle y se muestra tal cual.
   async function onCambiarPlan(plan: PlanPago) {
-    if (modulosQueSePierden(plan).length > 0 && confirmandoBajarA !== plan) {
-      setConfirmandoBajarA(plan);
-      return;
-    }
     setErrorPlan(null);
     setCambiandoPlan(plan);
-    const cuerpo = JSON.stringify({ plan, ...(plan === "operacion" ? { pack } : {}) });
+    const cuerpo = JSON.stringify({ plan });
     const res = await apiFetch("/api/plan/cambiar", { method: "POST", body: cuerpo });
     if (!res.ok) {
       setCambiandoPlan(null);
@@ -198,31 +179,9 @@ function PlanContenido() {
       return;
     }
     setCambiandoPlan(null);
-    setConfirmandoBajarA(null);
-    setAviso(
-      plan === "operacion" && info?.planActual === "operacion"
-        ? `Tu pack quedó en ${ETIQUETA_PACK[pack]}.`
-        : `Tu plan quedó en ${ETIQUETA_PLAN[plan]}.`
-    );
+    setAviso(`Tu plan quedó en ${ETIQUETA_PLAN[plan]}.`);
     cargar();
     cargarPlan();
-  }
-
-  async function onPedirCotizacion() {
-    setErrorCotizacion(null);
-    setEnviandoCotizacion(true);
-    const usuarios = Number.parseInt(usuariosCotizacion, 10);
-    const res = await apiFetch("/api/plan/cotizar-empresa", {
-      method: "POST",
-      body: JSON.stringify({ mensaje: mensajeCotizacion, ...(Number.isFinite(usuarios) ? { usuarios } : {}) }),
-    });
-    setEnviandoCotizacion(false);
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      setErrorCotizacion(body.error ?? "No pudimos enviar tu solicitud");
-      return;
-    }
-    setCotizacionEnviada(true);
   }
 
   async function onCancelar() {
@@ -326,19 +285,21 @@ function PlanContenido() {
         <div className="mb-ds-4">
           <p className="font-ds-body text-ds-small font-semibold text-ds-text">Tu plan</p>
           <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">
-            Plan actual:{" "}
-            <span className="font-medium text-ds-text">
-              {info ? ETIQUETA_PLAN[info.planActual] : "—"}
-              {info?.planActual === "operacion" && info.packRubro ? ` · pack ${ETIQUETA_PACK[info.packRubro]}` : ""}
-            </span>
+            Plan actual: <span className="font-medium text-ds-text">{info ? ETIQUETA_PLAN[info.planActual] : "—"}</span>
+            {info ? (
+              <span className="tabular-nums">
+                {" "}
+                · {info.modulosActivos} {info.modulosMax != null ? `de ${info.modulosMax} ` : ""}módulos activos
+              </span>
+            ) : null}
           </p>
           <p className="mt-ds-1 font-ds-body text-ds-caption text-ds-text/60">Precios mensuales en UF, más IVA. Se cobran en pesos al valor de la UF del día.</p>
         </div>
 
         {errorPlan ? <p className="mb-ds-4 font-ds-body text-ds-small text-ds-accent-700">{errorPlan}</p> : null}
 
-        <div className="grid gap-ds-4 sm:grid-cols-2 xl:grid-cols-4">
-          {PLANES_PAGO.map((plan) => {
+        <div className="grid gap-ds-4 sm:grid-cols-2 lg:grid-cols-3">
+          {PLANES_CONTRATABLES.map((plan) => {
             const esActual = info?.planActual === plan;
             const destacado = plan === "operacion";
             const limites = LIMITES_POR_PLAN[plan];
@@ -350,7 +311,6 @@ function PlanContenido() {
               >
                 <p className={`font-ds-body text-ds-small font-semibold ${destacado ? "text-ds-brand" : "text-ds-text"}`}>{ETIQUETA_PLAN[plan]}</p>
                 <p className="text-2xl font-bold tabular-nums text-ds-text">
-                  {plan === "empresa" ? <span className="font-ds-body text-ds-small font-normal text-ds-text/70">desde </span> : null}
                   {uf(PRECIO_PLAN_UF[plan])}
                   <span className="font-ds-body text-ds-small font-normal text-ds-text/70"> + IVA / mes</span>
                 </p>
@@ -365,36 +325,9 @@ function PlanContenido() {
                     </li>
                   ))}
                 </ul>
-
-                {plan === "operacion" ? (
-                  <fieldset className="flex flex-col gap-ds-2">
-                    <legend className="mb-ds-1 font-ds-body text-ds-caption font-semibold text-ds-text">Pack de rubro</legend>
-                    {PACKS.map((p) => (
-                      <label key={p} className="flex cursor-pointer items-start gap-2 font-ds-body text-ds-caption text-ds-text">
-                        <input
-                          type="radio"
-                          name="pack-rubro"
-                          value={p}
-                          checked={pack === p}
-                          onChange={() => setPack(p)}
-                          className="mt-0.5 accent-ds-brand"
-                        />
-                        <span>
-                          <span className="font-semibold">{ETIQUETA_PACK[p]}</span>
-                          <span className="block text-ds-text/60">{PACKS_RUBRO[p].map((m) => ETIQUETA_MODULO[m] ?? m).join(", ")}</span>
-                        </span>
-                      </label>
-                    ))}
-                  </fieldset>
-                ) : null}
-
                 <div className="mt-auto flex flex-col gap-ds-2 pt-ds-2">
-                  {esActual && !(plan === "operacion" && (info?.packRubro ?? "transporte") !== pack) ? (
+                  {esActual ? (
                     <p className="font-ds-body text-ds-caption font-medium text-ds-text/60">Tu plan actual</p>
-                  ) : esActual ? (
-                    <Button bloque variante="secundario" deshabilitado={cambiandoPlan !== null} cargando={cambiandoPlan === plan} onPress={() => onCambiarPlan(plan)}>
-                      Cambiar a pack {ETIQUETA_PACK[pack]}
-                    </Button>
                   ) : contratable ? (
                     <Button
                       bloque
@@ -403,85 +336,16 @@ function PlanContenido() {
                       cargando={cambiandoPlan === plan}
                       onPress={() => onCambiarPlan(plan)}
                     >
-                      {plan === "empresa" ? "Contratar con tarjeta" : `Cambiar a ${ETIQUETA_PLAN[plan]}`}
+                      Cambiar a {ETIQUETA_PLAN[plan]}
                     </Button>
-                  ) : plan !== "empresa" ? (
+                  ) : (
                     <p className="font-ds-body text-ds-caption text-ds-text/60">Disponible pronto — escríbenos si te interesa.</p>
-                  ) : null}
-                  {plan === "empresa" && !esActual ? (
-                    <Button bloque variante="ghost" onPress={() => setCotizacionAbierta((v) => !v)}>
-                      Pedir cotización
-                    </Button>
-                  ) : null}
+                  )}
                 </div>
               </div>
             );
           })}
         </div>
-
-        {confirmandoBajarA && (
-          <div className="mt-ds-4 rounded-ds-lg border border-ds-accent-700 bg-ds-accent-100 p-ds-4">
-            <p className="font-ds-body text-ds-small font-semibold text-ds-accent-700">
-              Al pasar a {ETIQUETA_PLAN[confirmandoBajarA]}
-              {confirmandoBajarA === "operacion" ? ` (pack ${ETIQUETA_PACK[pack]})` : ""} vas a perder acceso a:
-            </p>
-            <ul className="mt-ds-2 flex flex-col gap-1 font-ds-body text-ds-small text-ds-text">
-              {modulosQueSePierden(confirmandoBajarA).map((m) => (
-                <li key={m}>• {ETIQUETA_MODULO[m] ?? m}</li>
-              ))}
-            </ul>
-            <p className="mt-ds-2 font-ds-body text-ds-caption text-ds-text/70">Tus datos no se borran: vuelven a verse si cambias de nuevo de plan.</p>
-            <div className="mt-ds-3 flex flex-wrap gap-ds-2">
-              <Button
-                variante="peligro"
-                deshabilitado={cambiandoPlan !== null}
-                cargando={cambiandoPlan === confirmandoBajarA}
-                onPress={() => onCambiarPlan(confirmandoBajarA)}
-              >
-                Sí, cambiar a {ETIQUETA_PLAN[confirmandoBajarA]}
-              </Button>
-              <Button variante="ghost" onPress={() => setConfirmandoBajarA(null)}>
-                Volver
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {cotizacionAbierta && (
-          <div className="mt-ds-4 flex flex-col gap-ds-3 rounded-ds-lg border border-ds-divider p-ds-4">
-            <p className="font-ds-body text-ds-small font-semibold text-ds-text">Cotizar el plan Empresa</p>
-            {cotizacionEnviada ? (
-              <p className="font-ds-body text-ds-small font-medium text-ds-accent2-800">
-                Recibimos tu solicitud. Te escribimos al correo de tu cuenta para acordar el plan.
-              </p>
-            ) : (
-              <>
-                <p className="font-ds-body text-ds-caption text-ds-text/70">
-                  Para más de {LIMITES_POR_PLAN.pro.usuarios} usuarios, varias sucursales o si prefieres pagar por transferencia contra factura.
-                </p>
-                <Input
-                  etiqueta="¿Cuántos usuarios necesitas?"
-                  valor={usuariosCotizacion}
-                  onCambio={(v) => setUsuariosCotizacion(v.replace(/[^0-9]/g, ""))}
-                  placeholder="Ej.: 45"
-                />
-                <Textarea
-                  etiqueta="Cuéntanos de tu operación (opcional)"
-                  filas={3}
-                  valor={mensajeCotizacion}
-                  onCambio={setMensajeCotizacion}
-                  placeholder="Ej.: 3 sucursales, 12 camiones y 30 técnicos en terreno."
-                />
-                {errorCotizacion ? <p className="font-ds-body text-ds-small text-ds-accent-700">{errorCotizacion}</p> : null}
-                <div>
-                  <Button onPress={onPedirCotizacion} cargando={enviandoCotizacion}>
-                    Enviar solicitud
-                  </Button>
-                </div>
-              </>
-            )}
-          </div>
-        )}
       </Card>
 
       <Card>

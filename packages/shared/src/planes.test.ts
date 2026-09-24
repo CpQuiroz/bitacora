@@ -1,39 +1,50 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { MODULOS_ESENCIAL, MODULOS_GESTIONADOS_POR_PLAN, modulosDelPlan, packSugeridoDeRubro } from "./planes";
+import { MODULOS } from "./permisos";
+import { DIAS_PRUEBA, MODULOS_CONTABLES, PLANES_CONTRATABLES, cuentaParaTope, esPlanPago, modulosContablesActivos } from "./planes";
 
-test("Esencial: solo el núcleo, sin packs ni IA", () => {
-  const m = modulosDelPlan("basico", "transporte");
-  assert.deepEqual(m, [...MODULOS_ESENCIAL]);
-  assert.ok(!m.includes("flota"));
-  assert.ok(!m.includes("informe_ia"));
-});
-
-test("Operación: núcleo + el pack elegido + Informe con IA, sin Asistente", () => {
-  const m = modulosDelPlan("operacion", "mantencion");
-  assert.ok(m.includes("levantamientos"));
-  assert.ok(m.includes("informe_ia"));
-  assert.ok(!m.includes("flota"));
-  assert.ok(!m.includes("asistente"));
-});
-
-test("Operación sin pack cae en Transporte", () => {
-  assert.ok(modulosDelPlan("operacion", null).includes("viajes"));
-});
-
-test("Pro, Empresa y la prueba traen todo lo gestionado por plan", () => {
-  for (const plan of ["pro", "empresa", "trial"] as const) {
-    assert.deepEqual(modulosDelPlan(plan, null), [...MODULOS_GESTIONADOS_POR_PLAN]);
+test("las 17 secciones del menú cuentan para el tope", () => {
+  assert.equal(MODULOS_CONTABLES.length, 17);
+  for (const m of ["registros", "equipos", "inventario", "catalogo", "proveedores", "financiero", "flota"] as const) {
+    assert.ok(cuentaParaTope(m), m);
   }
 });
 
-test("remuneraciones nunca depende del plan", () => {
-  assert.ok(!MODULOS_GESTIONADOS_POR_PLAN.includes("remuneraciones"));
+test("base e IA no cuentan para el tope", () => {
+  for (const m of ["configuracion", "gestion_control", "informe_ia", "asistente"] as const) assert.equal(cuentaParaTope(m), false, m);
+  assert.equal(MODULOS_CONTABLES.length + 4, MODULOS.length);
 });
 
-test("pack sugerido según rubro", () => {
-  assert.equal(packSugeridoDeRubro("servicio_tecnico"), "mantencion");
-  assert.equal(packSugeridoDeRubro("cosmetologia"), "agenda");
-  assert.equal(packSugeridoDeRubro("transporte"), "transporte");
-  assert.equal(packSugeridoDeRubro("otro"), "transporte");
+test("el plan Empresa está programado pero no se ofrece", () => {
+  assert.deepEqual([...PLANES_CONTRATABLES], ["basico", "operacion", "pro"]);
+  assert.ok(esPlanPago("empresa"));
+});
+
+test("la prueba dura 7 días", () => {
+  assert.equal(DIAS_PRUEBA, 7);
+});
+
+test("módulos activos: sin filas rige el default (los opcionales parten apagados)", () => {
+  const activos = modulosContablesActivos([]);
+  assert.ok(activos.includes("registros"));
+  assert.ok(activos.includes("equipos"));
+  assert.ok(!activos.includes("levantamientos"));
+  assert.ok(!activos.includes("agenda_pro"));
+  assert.ok(!activos.includes("remuneraciones"));
+});
+
+test("módulos activos: una fila explícita manda sobre el default", () => {
+  const activos = modulosContablesActivos([
+    { modulo: "registros", activado: false },
+    { modulo: "levantamientos", activado: true },
+    { modulo: "informe_ia", activado: true },
+  ]);
+  assert.ok(!activos.includes("registros"));
+  assert.ok(activos.includes("levantamientos"));
+  assert.ok(!activos.includes("informe_ia" as never), "la IA no cuenta para el tope");
+});
+
+test("módulos activos: una empresa con todo activo cuenta las 17 secciones", () => {
+  const filas = MODULOS.map((modulo) => ({ modulo, activado: true }));
+  assert.equal(modulosContablesActivos(filas).length, 17);
 });

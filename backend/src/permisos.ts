@@ -14,11 +14,12 @@
 //   compatibilidad puntual.
 // ============================================================
 import type { Accion, Modulo, Rol } from "@bitacora/shared";
-import { MODULOS, moduloActivadoPorDefecto } from "@bitacora/shared";
+import { MODULOS, MODULOS_SOLO_ADMIN, moduloActivadoPorDefecto } from "@bitacora/shared";
 import { supabase } from "./supabase";
 import type { RequestConEmpresa } from "./empresa";
 import { ah } from "./asyncHandler";
 import { modulosDeRol, rolPuedeVerModulo, rolTieneAccion } from "./roles";
+import { verificarPlanIACompleta } from "./limites";
 
 export async function empresaTieneModulo(empresaId: string, modulo: Modulo): Promise<boolean> {
   const { data } = await supabase
@@ -42,10 +43,13 @@ export async function modulosDeshabilitadosDeEmpresa(empresaId: string): Promise
 // Módulos que este usuario realmente ve: los de su rol ∩ los contratados
 // (y activos) por su empresa. Lo consume /api/me → el frontend filtra la
 // navegación con esto y ya no depende de la matriz hardcodeada.
+// Informe con IA y Asistente son solo del rol admin (tarea 124), aunque
+// un rol los tenga en su lista guardada: acá se filtran para el resto,
+// así la web/mobile no ofrecen una acción que el backend rechaza.
 export async function modulosVisiblesDeUsuario(rol: string, empresaId: string): Promise<Modulo[]> {
   const delRol = new Set(await modulosDeRol(rol, empresaId));
   const deshabilitados = new Set(await modulosDeshabilitadosDeEmpresa(empresaId));
-  return MODULOS.filter((m) => delRol.has(m) && !deshabilitados.has(m));
+  return MODULOS.filter((m) => delRol.has(m) && !deshabilitados.has(m) && (rol === "admin" || !MODULOS_SOLO_ADMIN.includes(m)));
 }
 
 export async function featureFlagsDeEmpresa(empresaId: string): Promise<string[]> {
@@ -70,6 +74,13 @@ export function requiereModulo(modulo: Modulo) {
     next();
   });
 }
+
+// Funciones de IA completa (Asistente): solo en los planes que la
+// incluyen. LimiteAlcanzadoError → handler global → 403 LIMITE_PLAN.
+export const requierePlanIACompleta = ah<RequestConEmpresa>(async (req, _res, next) => {
+  await verificarPlanIACompleta(req.empresaId!);
+  next();
+});
 
 export function requiereAccion(accion: Accion) {
   return ah<RequestConEmpresa>(async (req, res, next) => {
