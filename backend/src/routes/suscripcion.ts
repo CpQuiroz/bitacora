@@ -102,7 +102,7 @@ suscripcionRouter.post(
     }
     // Antes de mandar a pagar: los módulos activos tienen que caber en el
     // plan elegido (409 con el detalle si no).
-    if (planPendiente) await verificarModulosCabenEnPlan(req.empresaId!, planPendiente);
+    if (planPendiente) await verificarModulosCabenEnPlan(req.empresaId!, planPendiente, "empresa");
     if (planPendiente && !flowPlanIdDe(planPendiente)) {
       res.status(400).json({ error: `El plan "${planPendiente}" todavía no está disponible para contratar` });
       return;

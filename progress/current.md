@@ -4,7 +4,7 @@
 > `progress/history.md` y vaciar este archivo. Historial anterior al
 > 23-sep-2026: `progress/archivo/current_2026-09-11_a_2026-09-23.md`.
 
-## Tarea 124 — Planes nuevos: Esencial, Operación, Pro, Empresa (etapa 1) — 24-sep-2026
+## [REEMPLAZADO por el rediseño de más abajo] Tarea 124 — primera versión con packs de rubro — 24-sep-2026
 
 Estado: in_progress. Decisiones de la usuaria (24-sep):
 - Precios UF + IVA/mes: Esencial 1,5 · Operación 3,5 · Pro 6 · Empresa desde 12.
@@ -32,7 +32,7 @@ Avance (24-sep):
 - En revisión: subagente revisor → progress/review_planes.md.
 
 Pasos que tiene que hacer la usuaria (no los puede hacer Claude):
-1. Correr la migración 131 en prod + `supabase migration repair --status applied 131 --linked`.
+1. ~~Correr la migración 131 en prod~~ — HECHO 24-sep (verificado por SELECT).
 2. Crear en el panel de Flow los planes: Esencial 1,5 UF, Operación 3,5 UF, Pro 6 UF, Empresa 12 UF
    (revisar si Flow permite plan en UF; si no, en CLP al valor de la UF y actualizarlos cuando suba).
 3. En Render: FLOW_PLAN_ID_BASICO (nuevo plan Esencial), FLOW_PLAN_ID_OPERACION, FLOW_PLAN_ID_PRO (nuevo plan Pro),
@@ -62,3 +62,20 @@ empresa + "Solicitar más módulos" · 4 mobile (build).
 
 Orden de despliegue: correr la migración 132 en prod ANTES de mergear a main (el backend nuevo exige
 las secciones nuevas en los roles; la migración con el backend viejo es inocua).
+
+Etapa 1 — review (progress/review_planes_etapa1.md) RECHAZADO → correcciones:
+- H1: una prueba no podía pasar sola a Esencial/Operación (17 módulos > tope y sin pantalla para apagar
+  hasta la etapa 3). Ahora el 409 de la empresa le explica y le pide escribir; el Super-Admin ve
+  "apaga N en Módulos". Procedimiento manual mientras no exista la etapa 3: el Super-Admin apaga módulos
+  desde Panel > Empresa > Módulos y después cambia el plan (o la empresa lo cambia sola).
+  Recomendación: no mergear la etapa 1 a main sin la etapa 3.
+- H2: Asistente filtrado por plan en /api/me (filtrarModulosVisibles, shared, con tests) → web y mobile
+  1.10.17 dejan de mostrarlo en Esencial/Operación.
+- H3 (E2E contra DEV): PENDIENTE — no hay backend/.env local para levantar el backend contra DEV.
+  Hecho: migración 132 probada en DEV dentro de una transacción revertida (roles OK, idempotente).
+- B1/B2/B4/B6/B7 corregidos o documentados. B3 documentado en el código. B5: se corrige en el build de la etapa 4.
+- Deuda: borrar `empresas.pack_rubro` (sin uso) → tarea 128.
+
+Pasos de la usuaria para la 132 (cuando se apruebe la etapa): correrla en prod ANTES del merge a main:
+  npx supabase db query --linked --project-ref yjbskbskyadxjooxngjv -f supabase/migrations/132_secciones_con_interruptor.sql
+  npx supabase migration repair --status applied --linked 132

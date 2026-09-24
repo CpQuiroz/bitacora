@@ -12,7 +12,8 @@
 //  - Empresa: todos. Programado pero apagado (PLAN_EMPRESA_DISPONIBLE).
 // ============================================================
 import type { Modulo } from "./permisos";
-import { MODULOS, moduloActivadoPorDefecto } from "./permisos";
+import { MODULOS, MODULOS_SOLO_ADMIN, moduloActivadoPorDefecto } from "./permisos";
+import { LIMITES_POR_PLAN, planPermiteIACompleta } from "./limites";
 import type { Plan, PlanPago } from "./types";
 
 export const PLANES_PAGO: readonly PlanPago[] = ["basico", "operacion", "pro", "empresa"];
@@ -64,4 +65,24 @@ export function esPlanPago(valor: unknown): valor is PlanPago {
 export function modulosContablesActivos(filas: readonly { modulo: string; activado: boolean }[]): Modulo[] {
   const estado = new Map(filas.map((f) => [f.modulo, f.activado]));
   return MODULOS_CONTABLES.filter((m) => (estado.has(m) ? estado.get(m)! : moduloActivadoPorDefecto(m)));
+}
+
+// Cuántos módulos sobran para caber en `plan` (0 si caben o no hay tope).
+export function modulosSobrantesParaPlan(plan: Plan, activos: number): number {
+  const tope = LIMITES_POR_PLAN[plan].modulosMax;
+  return tope == null ? 0 : Math.max(0, activos - tope);
+}
+
+// Filtro final de lo que ve un usuario (lo usa /api/me → web y mobile):
+//  - Informe con IA y Asistente son solo del rol admin, aunque un rol
+//    los tenga en su lista guardada.
+//  - El Asistente además solo en planes con IA completa: el cambio de
+//    plan no apaga módulos, así que sin esto un Esencial vería un botón
+//    que el backend rechaza.
+export function filtrarModulosVisibles(modulos: readonly Modulo[], rol: string, plan: Plan): Modulo[] {
+  return modulos.filter((m) => {
+    if (MODULOS_SOLO_ADMIN.includes(m) && rol !== "admin") return false;
+    if (m === "asistente" && !planPermiteIACompleta(plan)) return false;
+    return true;
+  });
 }

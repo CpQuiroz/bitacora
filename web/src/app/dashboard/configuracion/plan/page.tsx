@@ -4,7 +4,7 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Check, CreditCard } from "lucide-react";
 import type { EmpresaPlanHistorial, Plan, PlanPago, Suscripcion, SuscripcionCobro } from "@bitacora/shared";
-import { ETIQUETA_PLAN, LIMITES_POR_PLAN, PLANES_CONTRATABLES, PRECIO_PLAN_UF } from "@bitacora/shared";
+import { ETIQUETA_PLAN, LIMITES_POR_PLAN, PLANES_CONTRATABLES, PRECIO_PLAN_UF, modulosSobrantesParaPlan } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
 import { Button, Card, StatusBadge, Table, type TonoEstado } from "@bitacora/ui/web";
 import { useConfiguracion } from "../ConfiguracionContext";
@@ -304,6 +304,10 @@ function PlanContenido() {
             const destacado = plan === "operacion";
             const limites = LIMITES_POR_PLAN[plan];
             const contratable = info?.contratables[plan] ?? false;
+            // Más módulos activos que el tope de este plan: mientras la
+            // empresa no pueda elegir sus módulos (etapa 3 de la tarea 124)
+            // no se ofrece el cambio — se le pide escribir.
+            const sobran = info ? modulosSobrantesParaPlan(plan, info.modulosActivos) : 0;
             return (
               <div
                 key={plan}
@@ -328,6 +332,11 @@ function PlanContenido() {
                 <div className="mt-auto flex flex-col gap-ds-2 pt-ds-2">
                   {esActual ? (
                     <p className="font-ds-body text-ds-caption font-medium text-ds-text/60">Tu plan actual</p>
+                  ) : sobran > 0 ? (
+                    <p className="font-ds-body text-ds-caption text-ds-text/70">
+                      Tienes {info?.modulosActivos} módulos activos y este plan permite {limites.modulosMax}. Escríbenos para elegir juntos
+                      cuáles mantener.
+                    </p>
                   ) : contratable ? (
                     <Button
                       bloque

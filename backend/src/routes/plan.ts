@@ -80,7 +80,7 @@ planRouter.post(
 
     // Antes de tocar Flow: los módulos activos tienen que caber en el
     // plan nuevo (409 con el detalle si no).
-    await verificarModulosCabenEnPlan(req.empresaId!, plan);
+    await verificarModulosCabenEnPlan(req.empresaId!, plan, "empresa");
 
     const { data: suscripcion } = await supabase.from("suscripciones").select("*").eq("empresa_id", req.empresaId!).maybeSingle();
 

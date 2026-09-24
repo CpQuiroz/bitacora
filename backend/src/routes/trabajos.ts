@@ -15,7 +15,7 @@ import { notificarCliente } from "../notificarCliente";
 import { aplicarDescuentoInventarioSiCorresponde, revertirStockPorOS } from "../inventario";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
-import { LimiteAlcanzadoError, verificarLimiteOS, verificarPlanAnalisisFotosIA } from "../limites";
+import { LimiteAlcanzadoError, verificarLimiteOS, verificarPlanIACompleta } from "../limites";
 
 export const trabajosRouter = Router();
 
@@ -97,10 +97,6 @@ async function ordenDeTrabajo(empresaId: string, trabajoId: string) {
   return data;
 }
 
-// Una OS finalizada bloquea checklist/fotos/firma/edición — el botón
-// "Finalizar OS" del celular es la única forma de deshacerlo (no hay
-// forma de deshacerlo: es intencional, es la garantía de que el PDF
-// ya entregado no cambia por debajo).
 // Informe con IA de la OS (tarea 124, 24-sep-2026): todos los planes,
 // SOLO el rol admin (antes también un supervisor con el módulo
 // delegado), y con el módulo informe_ia activo en la empresa. El tope
@@ -109,6 +105,10 @@ async function puedeUsarInformeIA(rol: string, empresaId: string): Promise<boole
   return rol === "admin" && (await empresaTieneModulo(empresaId, "informe_ia"));
 }
 
+// Una OS finalizada bloquea checklist/fotos/firma/edición — el botón
+// "Finalizar OS" del celular es la única forma de deshacerlo (no hay
+// forma de deshacerlo: es intencional, es la garantía de que el PDF
+// ya entregado no cambia por debajo).
 async function trabajoBloqueado(empresaId: string, trabajoId: string) {
   const orden = await ordenDeTrabajo(empresaId, trabajoId);
   return Boolean(orden?.finalizada_en);
@@ -1204,7 +1204,8 @@ trabajosRouter.get(
 // Analiza UNA foto con IA, a pedido (tarea 122, 24-sep-2026). Reemplaza
 // al análisis automático al subir, que se eliminó por costo:
 //  - Solo el rol `admin` (no delegable a supervisor).
-//  - Solo planes con PLANES_CON_ANALISIS_FOTOS_IA → si no, 403 LIMITE_PLAN.
+//  - Solo planes con IA completa (PLANES_CON_IA_COMPLETA: prueba, Pro,
+//    Empresa) → si no, 403 LIMITE_PLAN.
 //  - No sobre una OS finalizada (misma regla que editar/borrar fotos).
 // Síncrona: la pide un Admin desde la web y espera el resultado; una
 // foto tarda pocos segundos con Haiku. Si Claude falla, la foto queda
@@ -1216,7 +1217,7 @@ trabajosRouter.post(
       res.status(403).json({ error: "Solo el administrador puede pedir el análisis de una foto con IA." });
       return;
     }
-    await verificarPlanAnalisisFotosIA(req.empresaId!);
+    await verificarPlanIACompleta(req.empresaId!);
 
     if (!(await trabajoExiste(req.empresaId!, req.params.id))) {
       res.status(404).json({ error: "Trabajo no encontrado" });
@@ -1909,15 +1910,15 @@ function tipoImagen(buf: Buffer): ImagenInforme["media_type"] | null {
 // trabajo (ej. pH/cloro/turbidez para mantención de agua), el
 // checklist, las observaciones del técnico y las fotos.
 //
-// Restricción de esta acción puntual (NO es solo requiereModulo):
-//  - Solo `admin`, o `supervisor` SI el Admin le delegó el módulo
-//    `informe_ia` en esa empresa. Contador/colaborador nunca, aunque
-//    tengan el módulo delegado para otros usos (ej. informe libre).
+// Restricción de esta acción puntual (NO es solo requiereModulo): solo
+// el rol `admin`, con el módulo `informe_ia` activo (puedeUsarInformeIA;
+// desde la tarea 124 ya no se delega a un supervisor). Todos los planes,
+// con el tope de informes de cada uno.
 //
 // Las fotos se analizan ACÁ, on-demand, como parte del informe — es
 // independiente del análisis por foto (POST /:id/fotos/:fotoId/analizar,
-// solo Admin + Pro). Subir la foto siempre la guarda como evidencia sin
-// llamar a la IA.
+// solo Admin en planes con IA completa). Subir la foto siempre la guarda
+// como evidencia sin llamar a la IA.
 trabajosRouter.post(
   "/:id/informe-ia",
   ah<RequestConEmpresa>(async (req, res) => {

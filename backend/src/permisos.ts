@@ -14,12 +14,12 @@
 //   compatibilidad puntual.
 // ============================================================
 import type { Accion, Modulo, Rol } from "@bitacora/shared";
-import { MODULOS, MODULOS_SOLO_ADMIN, moduloActivadoPorDefecto } from "@bitacora/shared";
+import { MODULOS, filtrarModulosVisibles, moduloActivadoPorDefecto } from "@bitacora/shared";
 import { supabase } from "./supabase";
 import type { RequestConEmpresa } from "./empresa";
 import { ah } from "./asyncHandler";
 import { modulosDeRol, rolPuedeVerModulo, rolTieneAccion } from "./roles";
-import { verificarPlanIACompleta } from "./limites";
+import { obtenerPlan, verificarPlanIACompleta } from "./limites";
 
 export async function empresaTieneModulo(empresaId: string, modulo: Modulo): Promise<boolean> {
   const { data } = await supabase
@@ -43,13 +43,23 @@ export async function modulosDeshabilitadosDeEmpresa(empresaId: string): Promise
 // Módulos que este usuario realmente ve: los de su rol ∩ los contratados
 // (y activos) por su empresa. Lo consume /api/me → el frontend filtra la
 // navegación con esto y ya no depende de la matriz hardcodeada.
-// Informe con IA y Asistente son solo del rol admin (tarea 124), aunque
-// un rol los tenga en su lista guardada: acá se filtran para el resto,
-// así la web/mobile no ofrecen una acción que el backend rechaza.
+// Además del rol y lo contratado, filtrarModulosVisibles (shared) saca
+// Informe con IA/Asistente a quien no es admin y el Asistente a los
+// planes sin IA completa (tarea 124), así la web y el mobile no ofrecen
+// una acción que el backend rechaza.
 export async function modulosVisiblesDeUsuario(rol: string, empresaId: string): Promise<Modulo[]> {
-  const delRol = new Set(await modulosDeRol(rol, empresaId));
-  const deshabilitados = new Set(await modulosDeshabilitadosDeEmpresa(empresaId));
-  return MODULOS.filter((m) => delRol.has(m) && !deshabilitados.has(m) && (rol === "admin" || !MODULOS_SOLO_ADMIN.includes(m)));
+  const [delRolLista, deshabilitadosLista, plan] = await Promise.all([
+    modulosDeRol(rol, empresaId),
+    modulosDeshabilitadosDeEmpresa(empresaId),
+    obtenerPlan(empresaId),
+  ]);
+  const delRol = new Set(delRolLista);
+  const deshabilitados = new Set(deshabilitadosLista);
+  return filtrarModulosVisibles(
+    MODULOS.filter((m) => delRol.has(m) && !deshabilitados.has(m)),
+    rol,
+    plan
+  );
 }
 
 export async function featureFlagsDeEmpresa(empresaId: string): Promise<string[]> {

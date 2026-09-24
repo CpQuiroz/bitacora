@@ -9,7 +9,7 @@ import type { AnalisisFoto, CatalogoItem, Plan, Cliente, OrdenServicio, OsItem, 
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { abrirPdfOS } from "@/lib/descargarPdf";
-import { CATEGORIAS_FOTO_OS, ETIQUETA_CATEGORIA_FOTO_OS, formatearCLP, formatearFolio, planPermiteAnalisisFotosIA } from "@bitacora/shared";
+import { CATEGORIAS_FOTO_OS, ETIQUETA_CATEGORIA_FOTO_OS, formatearCLP, formatearFolio, planPermiteIACompleta } from "@bitacora/shared";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Button, Card, Cifra, DatePicker, Input, Select, StatusBadge, Table, Textarea } from "@bitacora/ui/web";
 import { InputMonto } from "@/components/InputMonto";
@@ -733,7 +733,7 @@ export default function DetalleOrdenServicioPage() {
                               foto={f}
                               trabajoId={detalle.id}
                               editable={detalle.orden?.estado_os !== "firmada"}
-                              puedeAnalizar={usuario?.rol === "admin" && planPermiteAnalisisFotosIA(planEmpresa)}
+                              puedeAnalizar={usuario?.rol === "admin" && planPermiteIACompleta(planEmpresa)}
                             />
                           ))}
                         </div>

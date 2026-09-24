@@ -63,10 +63,18 @@ supabase) sin una razón documentada en `trabajo_list.json`.
   1. **Plantilla global del rol** — módulos/acciones por defecto.
   2. **Override por empresa** sobre esa plantilla (tabla
      `empresa_rol_modulos`, migración 75).
-  3. **Gating por plan** — módulos contratados (`empresa_modulos`,
-     `Plan`: `trial | basico | pro`).
+  3. **Módulos activos de la empresa** (`empresa_modulos`), con un
+     interruptor por ítem del menú. Los elige el Super-Admin (y, desde la
+     etapa 3 de la tarea 124, el Admin de la empresa) dentro del **tope
+     del plan**. Desde la tarea 124 (24-sep-2026) el plan (`trial |
+     basico | operacion | pro | empresa`; `basico` se muestra "Esencial")
+     NO prende ni apaga módulos: fija topes de usuarios, módulos activos
+     e informes con IA (`LIMITES_POR_PLAN`, `packages/shared/src/limites.ts`;
+     reglas en `packages/shared/src/planes.ts`). Informe con IA y Asistente
+     son solo del rol admin; el Asistente, además, solo en planes con IA
+     completa (`filtrarModulosVisibles`).
   `requiereModulo`/`requiereAccion` (`backend/src/permisos.ts`) validan
-  rol + plan juntos.
+  rol + módulo activo juntos.
 - Mobile usa un eje aparte de los roles web: `usuarios.funcion`
   (`tecnico | chofer | instalador | administrativo | otro`, migración
   65) filtra qué herramientas ve un colaborador en la app.

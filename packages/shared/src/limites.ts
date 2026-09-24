@@ -37,6 +37,3 @@ export const PLANES_CON_IA_COMPLETA: readonly Plan[] = ["trial", "pro", "empresa
 export function planPermiteIACompleta(plan: Plan | null | undefined): boolean {
   return plan != null && PLANES_CON_IA_COMPLETA.includes(plan);
 }
-
-// Nombre histórico (tarea 122), lo usa la web para el botón de fotos.
-export const planPermiteAnalisisFotosIA = planPermiteIACompleta;

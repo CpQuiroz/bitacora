@@ -1364,7 +1364,7 @@ superadminRouter.patch(
     // en el tope del plan nuevo — si no, 409 y el Super-Admin apaga
     // módulos primero. Misma función que la autogestión de la empresa,
     // queda en empresa_plan_historial.
-    await verificarModulosCabenEnPlan(req.params.id, plan as Plan);
+    await verificarModulosCabenEnPlan(req.params.id, plan as Plan, "super_admin");
     await cambiarPlanEmpresa(req.params.id, plan as Plan, { tipo: "super_admin", superAdminId: req.superAdminId! });
 
     await registrarAuditoria(req.superAdminId!, "cambiar_plan_empresa", {

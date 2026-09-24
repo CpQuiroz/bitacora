@@ -1768,6 +1768,13 @@
       "title": "Deuda técnica: pruebas de regresión de flujos críticos (abrir OS, crear OS, planes) para que un error no llegue a producción",
       "status": "pending",
       "description": "Pedido de la usuaria 24-sep-2026 tras el cierre de la app al abrir una OS (tarea 119, hooks tras return anticipado). Evaluar pruebas de pantallas/flujos críticos en web y mobile (render de OS, alta de OS, cambio de plan) y correrlas en verificar.sh/CI."
+    },
+    {
+      "id": 128,
+      "name": "drop_pack_rubro",
+      "title": "Deuda técnica: borrar la columna empresas.pack_rubro (sin uso desde el rediseño de la tarea 124)",
+      "status": "pending",
+      "description": "La migración 131 la creó para los packs de rubro, que se reemplazaron por el tope de módulos. Borrarla con una migración cuando la 132 esté estable en prod."
     }
   ]
 }

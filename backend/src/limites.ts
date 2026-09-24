@@ -6,7 +6,7 @@
 // errores_backend (no es un bug, es un freno esperado del negocio).
 // ============================================================
 import type { Modulo, Plan } from "@bitacora/shared";
-import { ETIQUETA_PLAN, LIMITES_POR_PLAN, cuentaParaTope, modulosContablesActivos, planPermiteIACompleta } from "@bitacora/shared";
+import { ETIQUETA_PLAN, LIMITES_POR_PLAN, cuentaParaTope, modulosContablesActivos, modulosSobrantesParaPlan, planPermiteIACompleta } from "@bitacora/shared";
 import { supabase } from "./supabase";
 
 export class LimiteAlcanzadoError extends Error {
@@ -136,12 +136,12 @@ export async function verificarPlanIACompleta(empresaId: string): Promise<void> 
   }
 }
 
-// Nombre histórico (tarea 122), lo usa la ruta de análisis de fotos.
-export const verificarPlanAnalisisFotosIA = verificarPlanIACompleta;
-
 // Tope de informes con IA (tarea 124): por mes, o en toda la prueba
 // gratis. Cuenta las llamadas registradas en ia_uso de las features de
-// informe (ia_uso solo guarda llamadas exitosas).
+// informe (ia_uso solo guarda llamadas exitosas). "prueba" cuenta todo
+// el historial de la empresa: si el Super-Admin devuelve a prueba una
+// empresa que ya usó IA, arranca con ese cupo gastado (caso raro, a
+// propósito: la prueba es una sola).
 export const FEATURES_INFORME_IA = ["informe_os", "informe_libre", "informe_estructurado", "informe_personalizado"] as const;
 
 export async function verificarLimiteInformesIA(empresaId: string): Promise<void> {
@@ -172,27 +172,37 @@ export async function verificarLimiteInformesIA(empresaId: string): Promise<void
 // Módulos activos que cuentan para el tope del plan. Sin fila en
 // empresa_modulos rige el default del código (igual que permisos.ts).
 export async function modulosActivosContables(empresaId: string): Promise<Modulo[]> {
-  const { data, error } = await supabase.from("empresa_modulos").select("modulo, activado").eq("empresa_id", empresaId);
+  const { data, error } = await supabase.from("empresa_modulos").select("modulo, activado").eq("empresa_id", empresaId).limit(200);
   if (error) throw new Error(`No se pudieron leer los módulos de la empresa: ${error.message}`);
   return modulosContablesActivos(data ?? []);
 }
 
 // Antes de cambiar a `plan`: los módulos activos tienen que caber en su
 // tope. Se llama ANTES de tocar Flow, para no cobrar un plan que después
-// no se puede aplicar.
-export async function verificarModulosCabenEnPlan(empresaId: string, plan: Plan): Promise<void> {
+// no se puede aplicar. 409 (conflicto con el estado actual de la
+// empresa), a diferencia del 403 LIMITE_PLAN de activar un módulo de
+// más: acá no se choca con el plan vigente sino con el que se elige.
+// El mensaje depende de quién cambia: el Super-Admin puede apagar
+// módulos; la empresa todavía no tiene esa pantalla (etapa 3), así que
+// se le pide que escriba.
+export async function verificarModulosCabenEnPlan(empresaId: string, plan: Plan, quien: "empresa" | "super_admin"): Promise<void> {
   const tope = LIMITES_POR_PLAN[plan].modulosMax;
   if (tope == null) return;
   const activos = (await modulosActivosContables(empresaId)).length;
-  if (activos > tope) {
+  const sobran = modulosSobrantesParaPlan(plan, activos);
+  if (sobran > 0) {
     throw new ModulosExcedenPlanError(
-      `El plan ${ETIQUETA_PLAN[plan]} permite hasta ${tope} módulos y hoy tienes ${activos} activos. Apaga ${activos - tope} para poder cambiar.`
+      quien === "super_admin"
+        ? `El plan ${ETIQUETA_PLAN[plan]} permite hasta ${tope} módulos y la empresa tiene ${activos} activos. Apaga ${sobran} en Módulos antes de cambiar el plan.`
+        : `Tienes ${activos} módulos activos y el plan ${ETIQUETA_PLAN[plan]} permite ${tope}. Escríbenos para elegir juntos cuáles mantener y dejamos listo el cambio.`
     );
   }
 }
 
 // Antes de activar `modulo`: si cuenta para el tope y ya se llegó al
-// tope del plan actual, se bloquea.
+// tope del plan actual, se bloquea (403 LIMITE_PLAN). El chequeo y el
+// guardado no son atómicos: hoy solo lo usa el Super-Admin; cuando lo
+// use el Admin de la empresa (etapa 3) hay que cerrarlo en la base.
 export async function verificarPuedeActivarModulo(empresaId: string, modulo: Modulo): Promise<void> {
   if (!cuentaParaTope(modulo)) return;
   const plan = await obtenerPlan(empresaId);

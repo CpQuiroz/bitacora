@@ -1,11 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { LIMITES_POR_PLAN, planPermiteAnalisisFotosIA, planPermiteIACompleta } from "./limites";
+import { LIMITES_POR_PLAN, planPermiteIACompleta } from "./limites";
 
 test("IA completa (asistente y fotos): prueba, Pro y Empresa", () => {
   for (const plan of ["trial", "pro", "empresa"] as const) assert.equal(planPermiteIACompleta(plan), true);
   for (const plan of ["basico", "operacion"] as const) assert.equal(planPermiteIACompleta(plan), false);
-  assert.equal(planPermiteAnalisisFotosIA("pro"), true);
 });
 
 test("IA completa: sin plan conocido no se permite", () => {
