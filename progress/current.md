@@ -158,3 +158,9 @@ Prod: migraciones 129-131 aplicadas; faltan 132 y 133 (verificado por SELECT).
 5. Después (usuaria): crear en Flow los planes nuevos y cargar FLOW_PLAN_ID_OPERACION / PRO (6 UF) / BASICO
    (1,5 UF) en Render. Mientras no estén, los planes se muestran como "Disponible pronto".
 Rollback: git revert del merge (las migraciones 132/133 son aditivas; con el backend viejo son inocuas).
+
+## Mejoras módulo Viajes (+ Clientes y Cobros) — pedido 24-sep-2026
+Tareas 130-134 (Parte A, implementar) y 135 (Parte B, solo propuesta). 124 queda `blocked` esperando que la
+usuaria corra las migraciones 132/133 en prod para publicar. Regla del pedido: analizar lo existente antes de
+codificar, commit antes de empezar y uno por punto. En curso: análisis (agente Explore) de Viajes, Rutas,
+pizarra, Agenda, Clientes, Cobros, PDF, auditoría y notificaciones.
