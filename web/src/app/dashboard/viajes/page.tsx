@@ -98,6 +98,13 @@ export default function ViajesPage() {
     error: string | null;
   } | null>(null);
   const [editId, setEditId] = useState<string | null>(null);
+  // Historial de cambios de monto del viaje (tarea 132).
+  const [historialMonto, setHistorialMonto] = useState<{
+    guia: string;
+    cargando: boolean;
+    error: string | null;
+    filas: { id: string; creado_en: string; usuario: { nombre: string } | null; detalle: { anterior?: { total: number }; nuevo?: { total: number } } }[];
+  } | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
   const [confirmando, setConfirmando] = useState(false);
   const [editNumeroGuia, setEditNumeroGuia] = useState("");
@@ -268,6 +275,18 @@ export default function ViajesPage() {
     setEditSubtotal(v.subtotal ? String(v.subtotal) : "");
     setEditAplicaIva(v.aplica_iva);
     setEditComentarios(v.comentarios ?? "");
+  }
+
+  async function verHistorialMonto(v: ViajeConDatos) {
+    setHistorialMonto({ guia: v.numero_guia, cargando: true, error: null, filas: [] });
+    const res = await apiFetch(`/api/viajes/${v.id}/historial-monto`);
+    const body = await res.json().catch(() => null);
+    setHistorialMonto({
+      guia: v.numero_guia,
+      cargando: false,
+      error: res.ok ? null : (body?.error ?? "No se pudo cargar el historial"),
+      filas: res.ok && Array.isArray(body) ? body : [],
+    });
   }
 
   async function verFotos(id: string) {
@@ -682,6 +701,9 @@ export default function ViajesPage() {
                             <button type="button" onClick={() => verFotos(v.id)} className="font-ds-body text-ds-caption font-medium text-ds-text/60 hover:text-ds-brand">
                               Fotos
                             </button>
+                            <button type="button" onClick={() => void verHistorialMonto(v)} className="font-ds-body text-ds-caption font-medium text-ds-text/60 hover:text-ds-brand">
+                              Historial
+                            </button>
                             {v.estado !== "facturado" && (
                               <button type="button" onClick={() => eliminar(v.id)} className="font-ds-body text-ds-caption font-medium text-ds-accent-700 hover:underline">
                                 Eliminar
@@ -793,6 +815,29 @@ export default function ViajesPage() {
           </div>
         </Card>
       )}
+
+      <Modal open={historialMonto != null} onClose={() => setHistorialMonto(null)} title={`Cambios de monto — guía ${historialMonto?.guia ?? ""}`}>
+        {historialMonto?.cargando ? (
+          <p className="font-ds-body text-ds-small text-ds-text/70">Cargando…</p>
+        ) : historialMonto?.error ? (
+          <p className="font-ds-body text-ds-small text-ds-accent-700">{historialMonto.error}</p>
+        ) : historialMonto && historialMonto.filas.length === 0 ? (
+          <p className="font-ds-body text-ds-small text-ds-text/70">El monto de este viaje no se ha modificado.</p>
+        ) : (
+          <ul className="flex flex-col gap-ds-2 font-ds-body text-ds-small text-ds-text">
+            {historialMonto?.filas.map((f) => (
+              <li key={f.id} className="flex flex-wrap justify-between gap-ds-2 border-b border-ds-divider pb-ds-2 tabular-nums">
+                <span>
+                  {formatMoneda(f.detalle.anterior?.total ?? 0, usuario?.moneda)} → <strong>{formatMoneda(f.detalle.nuevo?.total ?? 0, usuario?.moneda)}</strong>
+                </span>
+                <span className="text-ds-text/60">
+                  {f.usuario?.nombre ?? "—"} · {new Date(f.creado_en).toLocaleString("es-CL")}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Modal>
 
       <Modal open={fotosViaje != null} onClose={() => setFotosViaje(null)} title="Fotos del viaje" wide>
         {fotosViaje?.cargando ? (

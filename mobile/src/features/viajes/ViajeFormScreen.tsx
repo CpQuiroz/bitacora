@@ -9,6 +9,7 @@ import { PickerBuscable } from "../../components/ui";
 import { SelectorCliente } from "../../components/SelectorCliente";
 import { InputMonto } from "../../components/InputMonto";
 import { useRed } from "../../services/sync/NetworkProvider";
+import { useAuth } from "../auth/AuthContext";
 import { elegirFotos } from "../../lib/imagen";
 import {
   catalogoParaViaje,
@@ -40,6 +41,10 @@ export function ViajeFormScreen({ navigation, route }: NativeStackScreenProps<Vi
   const marca = useMarca();
   const { enLinea } = useRed();
   const editandoId = route.params?.viajeId ?? null;
+  // Tarea 132: al EDITAR, el monto solo lo cambian Admin y Supervisor (el
+  // backend lo exige igual). Al crear, el chofer sigue ingresándolo.
+  const auth = useAuth();
+  const puedeEditarMonto = !editandoId || (auth.fase === "listo" && ["admin", "supervisor"].includes(auth.usuario.rol));
   const [clientes, setClientes] = useState<Cliente[] | null>(null);
   const [equipos, setEquipos] = useState<Equipo[]>([]);
   const [b, setB] = useState<BorradorViaje>(VACIO);
@@ -252,30 +257,47 @@ export function ViajeFormScreen({ navigation, route }: NativeStackScreenProps<Vi
           </View>
         </View>
 
-        <InputMonto etiqueta="Monto del viaje (sin IVA)" valor={b.subtotal} onChangeText={(v) => set("subtotal", v)} />
+        {puedeEditarMonto ? (
+          <>
+            <InputMonto etiqueta="Monto del viaje (sin IVA)" valor={b.subtotal} onChangeText={(v) => set("subtotal", v)} />
 
-        <Pressable
-          onPress={() => set("aplica_iva", !b.aplica_iva)}
-          hitSlop={8}
-          style={({ pressed }) => ({
-            flexDirection: "row",
-            alignItems: "center",
-            gap: tokens.space["3"],
-            minHeight: 44,
-            opacity: pressed ? 0.7 : 1,
-          })}
-        >
-          {b.aplica_iva ? (
-            <View style={{ width: 24, height: 24, borderRadius: tokens.radius.sm, backgroundColor: marca.base, alignItems: "center", justifyContent: "center" }}>
-              <Check size={16} strokeWidth={3} color={marca.foreground} />
-            </View>
-          ) : (
-            <Square size={24} strokeWidth={2} color={`${tokens.color.text}66`} />
-          )}
-          <Texto tamano={tokens.size.body} color={tokens.color.text}>
-            Aplicar IVA (19%)
-          </Texto>
-        </Pressable>
+            <Pressable
+              onPress={() => set("aplica_iva", !b.aplica_iva)}
+              hitSlop={8}
+              style={({ pressed }) => ({
+                flexDirection: "row",
+                alignItems: "center",
+                gap: tokens.space["3"],
+                minHeight: 44,
+                opacity: pressed ? 0.7 : 1,
+              })}
+            >
+              {b.aplica_iva ? (
+                <View style={{ width: 24, height: 24, borderRadius: tokens.radius.sm, backgroundColor: marca.base, alignItems: "center", justifyContent: "center" }}>
+                  <Check size={16} strokeWidth={3} color={marca.foreground} />
+                </View>
+              ) : (
+                <Square size={24} strokeWidth={2} color={`${tokens.color.text}66`} />
+              )}
+              <Texto tamano={tokens.size.body} color={tokens.color.text}>
+                Aplicar IVA (19%)
+              </Texto>
+            </Pressable>
+          </>
+        ) : (
+          <View style={{ gap: tokens.space["1"] }}>
+            <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
+              Monto del viaje
+            </Texto>
+            <Texto tamano={tokens.size.body} color={tokens.color.text} peso="semibold" style={{ fontVariant: ["tabular-nums"] }}>
+              ${Number(b.subtotal || 0).toLocaleString("es-CL")}
+              {b.aplica_iva ? " + IVA" : " (sin IVA)"}
+            </Texto>
+            <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`}>
+              El monto lo cambia la oficina.
+            </Texto>
+          </View>
+        )}
       </ScrollView>
 
       <View

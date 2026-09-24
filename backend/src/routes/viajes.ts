@@ -6,7 +6,9 @@ import { subirFotoGuiaConNombre, urlFirmadaFotoGuia } from "../storage";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
 import { requiereAccion } from "../permisos";
-import { calcularMontos } from "../viajesMontos";
+import { ROLES_EDITAN_MONTO_VIAJE, calcularMontos, nuevosMontosViaje } from "../viajesMontos";
+import { registrarAuditoriaEmpresa } from "../auditoriaEmpresa";
+import { cobroDeViaje } from "../viajesCobros";
 import { siguienteFolioViaje } from "../folios";
 
 export const viajesRouter = Router();
@@ -329,7 +331,11 @@ viajesRouter.patch(
       return;
     }
     if (existente.estado === "facturado") {
-      res.status(409).json({ error: "Este viaje ya fue facturado y no se puede editar" });
+      const cobro = await cobroDeViaje(req.empresaId!, existente.factura_id);
+      res.status(409).json({
+        error: cobro?.folio != null ? `Este viaje ya está en el cobro N° ${cobro.folio} y no se puede editar` : "Este viaje ya fue cobrado y no se puede editar",
+        cobro,
+      });
       return;
     }
 
@@ -371,18 +377,18 @@ viajesRouter.patch(
       cambios.cliente_id = resultado.cliente.id;
     }
 
-    if (subtotal !== undefined || aplica_iva !== undefined) {
-      const subtotalNum = subtotal !== undefined ? Number(subtotal) : Number(existente.subtotal);
-      if (!Number.isFinite(subtotalNum) || subtotalNum < 0) {
-        res.status(400).json({ error: "monto inválido" });
+    // Monto (tarea 132): solo Admin y Supervisor; queda en el historial.
+    const montos = nuevosMontosViaje(existente, subtotal, aplica_iva);
+    if ("error" in montos) {
+      res.status(400).json({ error: montos.error });
+      return;
+    }
+    if (montos.cambio) {
+      if (!ROLES_EDITAN_MONTO_VIAJE.includes(req.rol ?? "")) {
+        res.status(403).json({ error: "Solo el administrador o un supervisor pueden cambiar el monto del viaje" });
         return;
       }
-      const aplicaIvaBool = aplica_iva !== undefined ? aplica_iva !== false : existente.aplica_iva;
-      const montos = calcularMontos(subtotalNum, aplicaIvaBool);
-      cambios.subtotal = montos.subtotal;
-      cambios.aplica_iva = aplicaIvaBool;
-      cambios.iva = montos.iva;
-      cambios.total = montos.total;
+      Object.assign(cambios, montos.cambio.nuevo);
     }
 
     if (estado !== undefined) {
@@ -405,7 +411,44 @@ viajesRouter.patch(
       res.status(500).json({ error: error.message });
       return;
     }
+    if (montos.cambio) {
+      await registrarAuditoriaEmpresa({
+        empresaId: req.empresaId!,
+        usuarioId: req.userId ?? null,
+        accion: "cambiar_monto",
+        entidad: "viaje",
+        entidadId: existente.id,
+        detalle: { anterior: montos.cambio.anterior, nuevo: montos.cambio.nuevo, numero_guia: existente.numero_guia },
+      });
+    }
     res.json(data);
+  })
+);
+
+// Historial de cambios de monto de un viaje (tarea 132): monto anterior,
+// monto nuevo, quién y cuándo, del más reciente al más antiguo.
+viajesRouter.get(
+  "/:id/historial-monto",
+  ah<RequestConEmpresa>(async (req, res) => {
+    const { data: viaje } = await supabase.from("viajes").select("id").eq("empresa_id", req.empresaId!).eq("id", req.params.id).maybeSingle();
+    if (!viaje) {
+      res.status(404).json({ error: "Viaje no encontrado" });
+      return;
+    }
+    const { data, error } = await supabase
+      .from("auditoria_empresa")
+      .select("id, detalle, creado_en, usuario:usuarios(id, nombre)")
+      .eq("empresa_id", req.empresaId!)
+      .eq("entidad", "viaje")
+      .eq("entidad_id", viaje.id)
+      .eq("accion", "cambiar_monto")
+      .order("creado_en", { ascending: false })
+      .limit(100);
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    res.json(data ?? []);
   })
 );
 

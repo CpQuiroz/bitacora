@@ -1805,14 +1805,15 @@
       "id": 132,
       "name": "viajes_editar_precio",
       "title": "Viajes: el Admin edita el monto de un viaje no cobrado, con historial del cambio",
-      "status": "in_progress",
-      "description": "Pedido de la usuaria 24-sep-2026 (Mejoras módulo Viajes, Parte A). Reutilizar lo existente; multi-tenant; permisos por rol/módulo; estilo actual. Commit por punto."
+      "status": "done",
+      "description": "Pedido de la usuaria 24-sep-2026 (Mejoras módulo Viajes, Parte A). Reutilizar lo existente; multi-tenant; permisos por rol/módulo; estilo actual. Commit por punto.",
+      "resolution": "Monto del viaje solo lo cambian Admin y Supervisor (decisión de la usuaria), en /api/viajes y /api/mis-viajes (regla única nuevosMontosViaje en viajesMontos.ts); el chofer puede seguir editando lo demás si manda el mismo monto. Viaje cobrado → 409 con el cobro asociado (folio/estado). Historial en auditoria_empresa (accion cambiar_monto, anterior/nuevo) + GET /api/viajes/:id/historial-monto; web: botón Historial por viaje; mobile: monto en solo lectura al editar para el chofer (próximo build). E2E DEV 9/9. verificar.sh verde."
     },
     {
       "id": 133,
       "name": "viajes_admin_asigna_chofer",
       "title": "Viajes: el Admin crea el viaje y asigna chofer; aparece en pizarra y agenda del chofer; aviso por notificaciones existentes",
-      "status": "pending",
+      "status": "in_progress",
       "description": "Pedido de la usuaria 24-sep-2026 (Mejoras módulo Viajes, Parte A). Reutilizar lo existente; multi-tenant; permisos por rol/módulo; estilo actual. Commit por punto."
     },
     {
