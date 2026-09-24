@@ -3,25 +3,35 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Check, CreditCard } from "lucide-react";
-import type { EmpresaPlanHistorial, Plan, Suscripcion, SuscripcionCobro } from "@bitacora/shared";
+import type { EmpresaPlanHistorial, Modulo, PackRubro, Plan, PlanPago, Suscripcion, SuscripcionCobro } from "@bitacora/shared";
+import { ETIQUETA_PACK, ETIQUETA_PLAN, LIMITES_POR_PLAN, PACKS, PACKS_RUBRO, PLANES_PAGO, PRECIO_PLAN_UF, modulosDelPlan } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
-import { Button, Card, StatusBadge, Table, type TonoEstado } from "@bitacora/ui/web";
+import { Button, Card, Input, StatusBadge, Table, Textarea, type TonoEstado } from "@bitacora/ui/web";
 import { ETIQUETA_MODULO } from "@/lib/etiquetasModulo";
 import { useConfiguracion } from "../ConfiguracionContext";
 
-const FEATURES = [
-  "Clientes ilimitados",
-  "Órdenes de servicio ilimitadas",
-  "Catálogo de productos/servicios",
-  "Informes avanzados",
-  "Integración WhatsApp",
-  "Cotizaciones ilimitadas",
-  "Cobros ilimitados",
-  "Gestión de gastos",
+// Lo que traen todos los planes (tarea 124). Los topes de usuarios y
+// OS van en cada tarjeta — antes esta lista decía "OS ilimitadas" aunque
+// el plan de entrada tiene tope.
+const INCLUIDO_EN_TODOS = [
+  "Clientes y cotizaciones ilimitados",
+  "App móvil para técnicos, también sin señal",
+  "Órdenes de servicio con firma y PDF",
+  "Fotos de la OS guardadas como evidencia",
   "Exportación a PDF",
-  "Soporte prioritario",
+  "Soporte por correo",
 ];
 
+// Qué muestra cada tarjeta, en palabras del cliente (los módulos reales
+// los define modulosDelPlan en packages/shared/src/planes.ts).
+const DESTACADOS: Record<PlanPago, string[]> = {
+  basico: ["Agenda", "Órdenes de servicio", "Cotizaciones y cobros", "Gastos y rendiciones", "Informes"],
+  operacion: ["Todo lo de Esencial", "Un pack de rubro a elección", `Informe con IA (${LIMITES_POR_PLAN.operacion.informesIAPorMes} al mes)`],
+  pro: ["Todo lo de Operación", "Los 3 packs de rubro", "Informe con IA sin tope", "Asistente", "Análisis de fotos con IA"],
+  empresa: ["Todo lo de Pro", "Implementación y capacitación", "Soporte prioritario", "Precio a convenir según tamaño"],
+};
+
+const uf = (n: number) => `${n.toLocaleString("es-CL")} UF`;
 const clp = (n: number) => `$${n.toLocaleString("es-CL")}`;
 
 const ETIQUETA_ESTADO: Record<string, string> = {
@@ -46,7 +56,6 @@ const TONO_SUSCRIPCION: Record<string, TonoEstado> = {
   pendiente: "en_progreso",
 };
 
-const ETIQUETA_PLAN: Record<Plan, string> = { trial: "Trial", basico: "Básico", pro: "Pro" };
 
 function diasRestantes(fechaTermino: string | null): number | null {
   if (!fechaTermino) return null;
@@ -57,10 +66,10 @@ function diasRestantes(fechaTermino: string | null): number | null {
 
 type InfoPlan = {
   planActual: Plan;
+  packRubro: PackRubro | null;
+  packSugerido: PackRubro;
   trialVencido: boolean;
-  proDisponible: boolean;
-  modulosBasico: string[];
-  modulosExtraPro: string[];
+  contratables: Record<PlanPago, boolean>;
   historial: EmpresaPlanHistorial[];
 };
 
@@ -80,9 +89,17 @@ function PlanContenido() {
   const [confirmandoRetorno, setConfirmandoRetorno] = useState(false);
   const [confirmandoCancelar, setConfirmandoCancelar] = useState(false);
   const [cancelando, setCancelando] = useState(false);
-  const [cambiandoPlan, setCambiandoPlan] = useState<Plan | null>(null);
-  const [confirmandoBajarPlan, setConfirmandoBajarPlan] = useState(false);
+  const [cambiandoPlan, setCambiandoPlan] = useState<PlanPago | null>(null);
+  // Plan al que se quiere bajar, esperando confirmación (pierde módulos).
+  const [confirmandoBajarA, setConfirmandoBajarA] = useState<PlanPago | null>(null);
   const [errorPlan, setErrorPlan] = useState<string | null>(null);
+  const [pack, setPack] = useState<PackRubro>("transporte");
+  const [cotizacionAbierta, setCotizacionAbierta] = useState(false);
+  const [usuariosCotizacion, setUsuariosCotizacion] = useState("");
+  const [mensajeCotizacion, setMensajeCotizacion] = useState("");
+  const [enviandoCotizacion, setEnviandoCotizacion] = useState(false);
+  const [errorCotizacion, setErrorCotizacion] = useState<string | null>(null);
+  const [cotizacionEnviada, setCotizacionEnviada] = useState(false);
 
   const cargar = useCallback(async () => {
     setError(null);
@@ -98,7 +115,11 @@ function PlanContenido() {
 
   const cargarPlan = useCallback(async () => {
     const res = await apiFetch("/api/plan");
-    if (res.ok) setInfo(await res.json());
+    if (res.ok) {
+      const body: InfoPlan = await res.json();
+      setInfo(body);
+      setPack(body.packRubro ?? body.packSugerido);
+    }
   }, []);
 
   useEffect(() => {
@@ -141,14 +162,22 @@ function PlanContenido() {
     window.location.href = body.url;
   }
 
-  async function onCambiarPlan(plan: Plan) {
-    if (plan === "basico" && info?.planActual === "pro" && !confirmandoBajarPlan) {
-      setConfirmandoBajarPlan(true);
+  // Módulos que se pierden al pasar del plan actual a `plan`.
+  function modulosQueSePierden(plan: PlanPago): Modulo[] {
+    if (!info) return [];
+    const nuevos = new Set(modulosDelPlan(plan, pack));
+    return modulosDelPlan(info.planActual, info.packRubro).filter((m) => !nuevos.has(m));
+  }
+
+  async function onCambiarPlan(plan: PlanPago) {
+    if (modulosQueSePierden(plan).length > 0 && confirmandoBajarA !== plan) {
+      setConfirmandoBajarA(plan);
       return;
     }
     setErrorPlan(null);
     setCambiandoPlan(plan);
-    const res = await apiFetch("/api/plan/cambiar", { method: "POST", body: JSON.stringify({ plan }) });
+    const cuerpo = JSON.stringify({ plan, ...(plan === "operacion" ? { pack } : {}) });
+    const res = await apiFetch("/api/plan/cambiar", { method: "POST", body: cuerpo });
     if (!res.ok) {
       setCambiandoPlan(null);
       const body = await res.json().catch(() => ({}));
@@ -157,7 +186,7 @@ function PlanContenido() {
     }
     const body = await res.json();
     if (body.requiereTarjeta) {
-      const resTarjeta = await apiFetch("/api/suscripcion/tarjeta", { method: "POST", body: JSON.stringify({ plan }) });
+      const resTarjeta = await apiFetch("/api/suscripcion/tarjeta", { method: "POST", body: cuerpo });
       setCambiandoPlan(null);
       if (!resTarjeta.ok) {
         const errBody = await resTarjeta.json().catch(() => ({}));
@@ -165,14 +194,35 @@ function PlanContenido() {
         return;
       }
       const { url } = await resTarjeta.json();
-      window.location.href = url;
+      window.location.assign(url);
       return;
     }
     setCambiandoPlan(null);
-    setConfirmandoBajarPlan(false);
-    setAviso(`Tu plan quedó en ${ETIQUETA_PLAN[plan]}.`);
+    setConfirmandoBajarA(null);
+    setAviso(
+      plan === "operacion" && info?.planActual === "operacion"
+        ? `Tu pack quedó en ${ETIQUETA_PACK[pack]}.`
+        : `Tu plan quedó en ${ETIQUETA_PLAN[plan]}.`
+    );
     cargar();
     cargarPlan();
+  }
+
+  async function onPedirCotizacion() {
+    setErrorCotizacion(null);
+    setEnviandoCotizacion(true);
+    const usuarios = Number.parseInt(usuariosCotizacion, 10);
+    const res = await apiFetch("/api/plan/cotizar-empresa", {
+      method: "POST",
+      body: JSON.stringify({ mensaje: mensajeCotizacion, ...(Number.isFinite(usuarios) ? { usuarios } : {}) }),
+    });
+    setEnviandoCotizacion(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setErrorCotizacion(body.error ?? "No pudimos enviar tu solicitud");
+      return;
+    }
+    setCotizacionEnviada(true);
   }
 
   async function onCancelar() {
@@ -205,7 +255,7 @@ function PlanContenido() {
           <p className="font-ds-body text-ds-small font-semibold text-ds-accent-700">Tu período de prueba terminó</p>
           <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text">
             El resto de Bitácora queda bloqueado hasta que elijas un plan — tus datos siguen intactos, solo tienes que
-            elegir Básico o Pro abajo para seguir.
+            elegir un plan abajo para seguir.
           </p>
         </div>
       )}
@@ -273,92 +323,163 @@ function PlanContenido() {
       )}
 
       <Card>
-        <div className="mb-ds-4 flex items-center justify-between">
-          <div>
-            <p className="font-ds-body text-ds-small font-semibold text-ds-text">Tu plan</p>
-            <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">
-              Plan actual: <span className="font-medium text-ds-text">{info ? ETIQUETA_PLAN[info.planActual] : "—"}</span>
-            </p>
-          </div>
+        <div className="mb-ds-4">
+          <p className="font-ds-body text-ds-small font-semibold text-ds-text">Tu plan</p>
+          <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">
+            Plan actual:{" "}
+            <span className="font-medium text-ds-text">
+              {info ? ETIQUETA_PLAN[info.planActual] : "—"}
+              {info?.planActual === "operacion" && info.packRubro ? ` · pack ${ETIQUETA_PACK[info.packRubro]}` : ""}
+            </span>
+          </p>
+          <p className="mt-ds-1 font-ds-body text-ds-caption text-ds-text/60">Precios mensuales en UF, más IVA. Se cobran en pesos al valor de la UF del día.</p>
         </div>
 
         {errorPlan ? <p className="mb-ds-4 font-ds-body text-ds-small text-ds-accent-700">{errorPlan}</p> : null}
 
-        <div className="grid gap-ds-4 sm:grid-cols-2">
-          <div className="rounded-ds-lg border border-ds-divider p-ds-4">
-            <p className="font-ds-body text-ds-small font-semibold text-ds-text">Básico</p>
-            <p className="mt-ds-2 text-2xl font-bold text-ds-text">
-              {clp(50000)} <span className="font-ds-body text-ds-small font-normal text-ds-text/70">/ mes</span>
-            </p>
-            <ul className="mt-ds-4 flex flex-col gap-ds-2 font-ds-body text-ds-small text-ds-text">
-              {(info?.modulosBasico ?? []).map((m) => (
-                <li key={m} className="flex items-start gap-2">
-                  <Check size={16} strokeWidth={2.75} className="mt-0.5 shrink-0 text-ds-accent2-800" />
-                  {ETIQUETA_MODULO[m] ?? m}
-                </li>
-              ))}
-            </ul>
-            {info?.planActual === "basico" ? (
-              <p className="mt-ds-4 font-ds-body text-ds-caption font-medium text-ds-text/60">Tu plan actual</p>
-            ) : (
-              <div className="mt-ds-4">
-                <Button
-                  variante={info?.planActual === "pro" ? "secundario" : "primario"}
-                  bloque
-                  deshabilitado={cambiandoPlan !== null}
-                  cargando={cambiandoPlan === "basico"}
-                  onPress={() => onCambiarPlan("basico")}
-                >
-                  Cambiar a Básico
-                </Button>
-              </div>
-            )}
-          </div>
+        <div className="grid gap-ds-4 sm:grid-cols-2 xl:grid-cols-4">
+          {PLANES_PAGO.map((plan) => {
+            const esActual = info?.planActual === plan;
+            const destacado = plan === "operacion";
+            const limites = LIMITES_POR_PLAN[plan];
+            const contratable = info?.contratables[plan] ?? false;
+            return (
+              <div
+                key={plan}
+                className={`flex flex-col gap-ds-3 rounded-ds-lg border p-ds-4 ${destacado ? "border-ds-brand/40 bg-ds-brand/[0.08]" : "border-ds-divider"}`}
+              >
+                <p className={`font-ds-body text-ds-small font-semibold ${destacado ? "text-ds-brand" : "text-ds-text"}`}>{ETIQUETA_PLAN[plan]}</p>
+                <p className="text-2xl font-bold tabular-nums text-ds-text">
+                  {plan === "empresa" ? <span className="font-ds-body text-ds-small font-normal text-ds-text/70">desde </span> : null}
+                  {uf(PRECIO_PLAN_UF[plan])}
+                  <span className="font-ds-body text-ds-small font-normal text-ds-text/70"> + IVA / mes</span>
+                </p>
+                <p className="font-ds-body text-ds-caption tabular-nums text-ds-text/70">
+                  Hasta {limites.usuarios} usuarios · {limites.osPorMes == null ? "OS ilimitadas" : `${limites.osPorMes} OS al mes`}
+                </p>
+                <ul className="flex flex-col gap-ds-2 font-ds-body text-ds-small text-ds-text">
+                  {DESTACADOS[plan].map((d) => (
+                    <li key={d} className="flex items-start gap-2">
+                      <Check size={16} strokeWidth={2.75} className="mt-0.5 shrink-0 text-ds-accent2-800" />
+                      {d}
+                    </li>
+                  ))}
+                </ul>
 
-          <div className="rounded-ds-lg border border-ds-brand/40 bg-ds-brand/[0.08] p-ds-4">
-            <p className="font-ds-body text-ds-small font-semibold text-ds-brand">Pro</p>
-            <p className="mt-ds-2 text-2xl font-bold text-ds-text">
-              {clp(90000)} <span className="font-ds-body text-ds-small font-normal text-ds-text/70">/ mes</span>
-            </p>
-            <p className="mt-ds-2 font-ds-body text-ds-small font-medium text-ds-text">Además de Básico:</p>
-            <ul className="mt-ds-4 flex flex-col gap-ds-2 font-ds-body text-ds-small text-ds-text">
-              {(info?.modulosExtraPro ?? []).map((m) => (
-                <li key={m} className="flex items-start gap-2">
-                  <Check size={16} strokeWidth={2.75} className="mt-0.5 shrink-0 text-ds-accent2-800" />
-                  {ETIQUETA_MODULO[m] ?? m}
-                </li>
-              ))}
-            </ul>
-            {info?.planActual === "pro" ? (
-              <p className="mt-ds-4 font-ds-body text-ds-caption font-medium text-ds-text/60">Tu plan actual</p>
-            ) : !info?.proDisponible ? (
-              <p className="mt-ds-4 font-ds-body text-ds-caption text-ds-text/60">Pro estará disponible pronto — contáctanos si te interesa.</p>
-            ) : (
-              <div className="mt-ds-4">
-                <Button bloque deshabilitado={cambiandoPlan !== null} cargando={cambiandoPlan === "pro"} onPress={() => onCambiarPlan("pro")}>
-                  Cambiar a Pro
-                </Button>
+                {plan === "operacion" ? (
+                  <fieldset className="flex flex-col gap-ds-2">
+                    <legend className="mb-ds-1 font-ds-body text-ds-caption font-semibold text-ds-text">Pack de rubro</legend>
+                    {PACKS.map((p) => (
+                      <label key={p} className="flex cursor-pointer items-start gap-2 font-ds-body text-ds-caption text-ds-text">
+                        <input
+                          type="radio"
+                          name="pack-rubro"
+                          value={p}
+                          checked={pack === p}
+                          onChange={() => setPack(p)}
+                          className="mt-0.5 accent-ds-brand"
+                        />
+                        <span>
+                          <span className="font-semibold">{ETIQUETA_PACK[p]}</span>
+                          <span className="block text-ds-text/60">{PACKS_RUBRO[p].map((m) => ETIQUETA_MODULO[m] ?? m).join(", ")}</span>
+                        </span>
+                      </label>
+                    ))}
+                  </fieldset>
+                ) : null}
+
+                <div className="mt-auto flex flex-col gap-ds-2 pt-ds-2">
+                  {esActual && !(plan === "operacion" && info?.packRubro !== pack) ? (
+                    <p className="font-ds-body text-ds-caption font-medium text-ds-text/60">Tu plan actual</p>
+                  ) : esActual ? (
+                    <Button bloque variante="secundario" deshabilitado={cambiandoPlan !== null} cargando={cambiandoPlan === plan} onPress={() => onCambiarPlan(plan)}>
+                      Cambiar a pack {ETIQUETA_PACK[pack]}
+                    </Button>
+                  ) : contratable ? (
+                    <Button
+                      bloque
+                      variante={destacado ? "primario" : "secundario"}
+                      deshabilitado={cambiandoPlan !== null}
+                      cargando={cambiandoPlan === plan}
+                      onPress={() => onCambiarPlan(plan)}
+                    >
+                      {plan === "empresa" ? "Contratar con tarjeta" : `Cambiar a ${ETIQUETA_PLAN[plan]}`}
+                    </Button>
+                  ) : plan !== "empresa" ? (
+                    <p className="font-ds-body text-ds-caption text-ds-text/60">Disponible pronto — escríbenos si te interesa.</p>
+                  ) : null}
+                  {plan === "empresa" && !esActual ? (
+                    <Button bloque variante="ghost" onPress={() => setCotizacionAbierta((v) => !v)}>
+                      Pedir cotización
+                    </Button>
+                  ) : null}
+                </div>
               </div>
-            )}
-          </div>
+            );
+          })}
         </div>
 
-        {confirmandoBajarPlan && (
+        {confirmandoBajarA && (
           <div className="mt-ds-4 rounded-ds-lg border border-ds-accent-700 bg-ds-accent-100 p-ds-4">
-            <p className="font-ds-body text-ds-small font-semibold text-ds-accent-700">Vas a perder acceso a:</p>
+            <p className="font-ds-body text-ds-small font-semibold text-ds-accent-700">
+              Al pasar a {ETIQUETA_PLAN[confirmandoBajarA]}
+              {confirmandoBajarA === "operacion" ? ` (pack ${ETIQUETA_PACK[pack]})` : ""} vas a perder acceso a:
+            </p>
             <ul className="mt-ds-2 flex flex-col gap-1 font-ds-body text-ds-small text-ds-text">
-              {(info?.modulosExtraPro ?? []).map((m) => (
+              {modulosQueSePierden(confirmandoBajarA).map((m) => (
                 <li key={m}>• {ETIQUETA_MODULO[m] ?? m}</li>
               ))}
             </ul>
-            <div className="mt-ds-3 flex gap-ds-2">
-              <Button variante="peligro" deshabilitado={cambiandoPlan !== null} cargando={cambiandoPlan === "basico"} onPress={() => onCambiarPlan("basico")}>
-                Sí, bajar a Básico
+            <p className="mt-ds-2 font-ds-body text-ds-caption text-ds-text/70">Tus datos no se borran: vuelven a verse si cambias de nuevo de plan.</p>
+            <div className="mt-ds-3 flex flex-wrap gap-ds-2">
+              <Button
+                variante="peligro"
+                deshabilitado={cambiandoPlan !== null}
+                cargando={cambiandoPlan === confirmandoBajarA}
+                onPress={() => onCambiarPlan(confirmandoBajarA)}
+              >
+                Sí, cambiar a {ETIQUETA_PLAN[confirmandoBajarA]}
               </Button>
-              <Button variante="ghost" onPress={() => setConfirmandoBajarPlan(false)}>
+              <Button variante="ghost" onPress={() => setConfirmandoBajarA(null)}>
                 Volver
               </Button>
             </div>
+          </div>
+        )}
+
+        {cotizacionAbierta && (
+          <div className="mt-ds-4 flex flex-col gap-ds-3 rounded-ds-lg border border-ds-divider p-ds-4">
+            <p className="font-ds-body text-ds-small font-semibold text-ds-text">Cotizar el plan Empresa</p>
+            {cotizacionEnviada ? (
+              <p className="font-ds-body text-ds-small font-medium text-ds-accent2-800">
+                Recibimos tu solicitud. Te escribimos al correo de tu cuenta para acordar el plan.
+              </p>
+            ) : (
+              <>
+                <p className="font-ds-body text-ds-caption text-ds-text/70">
+                  Para más de {LIMITES_POR_PLAN.pro.usuarios} usuarios, varias sucursales o si prefieres pagar por transferencia contra factura.
+                </p>
+                <Input
+                  etiqueta="¿Cuántos usuarios necesitas?"
+                  valor={usuariosCotizacion}
+                  onCambio={(v) => setUsuariosCotizacion(v.replace(/[^0-9]/g, ""))}
+                  placeholder="Ej.: 45"
+                />
+                <Textarea
+                  etiqueta="Cuéntanos de tu operación (opcional)"
+                  filas={3}
+                  valor={mensajeCotizacion}
+                  onCambio={setMensajeCotizacion}
+                  placeholder="Ej.: 3 sucursales, 12 camiones y 30 técnicos en terreno."
+                />
+                {errorCotizacion ? <p className="font-ds-body text-ds-small text-ds-accent-700">{errorCotizacion}</p> : null}
+                <div>
+                  <Button onPress={onPedirCotizacion} cargando={enviandoCotizacion}>
+                    Enviar solicitud
+                  </Button>
+                </div>
+              </>
+            )}
           </div>
         )}
       </Card>
@@ -391,9 +512,9 @@ function PlanContenido() {
       {aviso ? <p className="font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}
 
       <Card>
-        <p className="font-ds-body text-ds-small font-semibold text-ds-text">Qué incluye Bitácora</p>
+        <p className="font-ds-body text-ds-small font-semibold text-ds-text">Incluido en todos los planes</p>
         <ul className="mt-ds-5 grid gap-2.5 sm:grid-cols-2">
-          {FEATURES.map((f) => (
+          {INCLUIDO_EN_TODOS.map((f) => (
             <li key={f} className="flex items-center gap-2 font-ds-body text-ds-small text-ds-text">
               <Check size={16} strokeWidth={2.75} className="shrink-0 text-ds-accent2-800" />
               {f}

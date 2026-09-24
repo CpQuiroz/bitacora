@@ -3,7 +3,8 @@
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import type { Empresa, EstadoEmpresa, Plan, Rubro, Suscripcion, SuscripcionCobro } from "@bitacora/shared";
+import type { Empresa, EstadoEmpresa, PackRubro, Plan, Rubro, Suscripcion, SuscripcionCobro } from "@bitacora/shared";
+import { ETIQUETA_PACK, ETIQUETA_PLAN, PACKS, packSugeridoDeRubro } from "@bitacora/shared";
 import { SuperAdminShell } from "@/components/SuperAdminShell";
 import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText, Textarea } from "@/components/ui";
 import { IconChevronDown, IconChevronLeft, IconShield } from "@/components/icons";
@@ -12,7 +13,7 @@ import { guardarImpersonacion } from "@/lib/impersonacion";
 import { ETIQUETA_MODULO } from "@/lib/etiquetasModulo";
 
 const ESTADOS: EstadoEmpresa[] = ["activa", "suspendida", "dada_de_baja"];
-const PLANES: Plan[] = ["trial", "basico", "pro"];
+const PLANES: Plan[] = ["trial", "basico", "operacion", "pro", "empresa"];
 const RUBROS: { value: Rubro; label: string }[] = [
   { value: "transporte", label: "Transporte" },
   { value: "servicio_tecnico", label: "Servicio técnico / mantención" },
@@ -27,7 +28,7 @@ const TEMAS: { value: Empresa["tema"]; label: string }[] = [
 ];
 
 type Salud = {
-  empresa: { id: string; nombre: string; estado: EstadoEmpresa; plan: Plan; rut: string | null; rubro: Rubro; tema: Empresa["tema"]; dada_de_baja_en: string | null };
+  empresa: { id: string; nombre: string; estado: EstadoEmpresa; plan: Plan; pack_rubro: PackRubro | null; rut: string | null; rubro: Rubro; tema: Empresa["tema"]; dada_de_baja_en: string | null };
   ultima_actividad: string | null;
   usuarios_activos_mes: number;
   os_creadas_mes: number;
@@ -122,6 +123,7 @@ export default function SuperAdminSaludEmpresaPage() {
   const [errorTema, setErrorTema] = useState<string | null>(null);
 
   const [planSeleccionado, setPlanSeleccionado] = useState<Plan>("trial");
+  const [packSeleccionado, setPackSeleccionado] = useState<PackRubro>("transporte");
   const [guardandoEstado, setGuardandoEstado] = useState(false);
   const [errorEstado, setErrorEstado] = useState<string | null>(null);
   const [guardandoPlan, setGuardandoPlan] = useState(false);
@@ -231,6 +233,7 @@ export default function SuperAdminSaludEmpresaPage() {
     const datos: Salud = await res.json();
     setSalud(datos);
     setPlanSeleccionado(datos.empresa.plan);
+    setPackSeleccionado(datos.empresa.pack_rubro ?? packSugeridoDeRubro(datos.empresa.rubro));
     setNombreEdit(datos.empresa.nombre);
     setRutEdit(datos.empresa.rut ?? "");
     setRubroEdit(datos.empresa.rubro);
@@ -638,7 +641,7 @@ export default function SuperAdminSaludEmpresaPage() {
     setGuardandoPlan(true);
     const res = await superadminFetch(`/api/superadmin/empresas/${params.id}/plan`, {
       method: "PATCH",
-      body: JSON.stringify({ plan: planSeleccionado }),
+      body: JSON.stringify({ plan: planSeleccionado, ...(planSeleccionado === "operacion" ? { pack: packSeleccionado } : {}) }),
     });
     setGuardandoPlan(false);
     if (!res.ok) {
@@ -900,7 +903,12 @@ export default function SuperAdminSaludEmpresaPage() {
                 titulo="Plan"
                 abierto={planAbierto}
                 onToggle={() => setPlanAbierto((v) => !v)}
-                extra={<span className="text-xs text-muted">{salud.empresa.plan}</span>}
+                extra={
+                  <span className="text-xs text-muted">
+                    {ETIQUETA_PLAN[salud.empresa.plan] ?? salud.empresa.plan}
+                    {salud.empresa.plan === "operacion" && salud.empresa.pack_rubro ? ` · ${ETIQUETA_PACK[salud.empresa.pack_rubro]}` : ""}
+                  </span>
+                }
               />
               {planAbierto && (
                 <>
@@ -910,12 +918,31 @@ export default function SuperAdminSaludEmpresaPage() {
                   <Select value={planSeleccionado} onChange={(e) => setPlanSeleccionado(e.target.value as Plan)}>
                     {PLANES.map((p) => (
                       <option key={p} value={p}>
-                        {p}
+                        {ETIQUETA_PLAN[p]}
                       </option>
                     ))}
                   </Select>
                 </div>
-                <Button type="button" disabled={guardandoPlan || planSeleccionado === salud.empresa.plan} onClick={onGuardarPlan}>
+                {planSeleccionado === "operacion" ? (
+                  <div className="flex-1">
+                    <Label>Pack de rubro</Label>
+                    <Select value={packSeleccionado} onChange={(e) => setPackSeleccionado(e.target.value as PackRubro)}>
+                      {PACKS.map((p) => (
+                        <option key={p} value={p}>
+                          {ETIQUETA_PACK[p]}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                ) : null}
+                <Button
+                  type="button"
+                  disabled={
+                    guardandoPlan ||
+                    (planSeleccionado === salud.empresa.plan && (planSeleccionado !== "operacion" || packSeleccionado === salud.empresa.pack_rubro))
+                  }
+                  onClick={onGuardarPlan}
+                >
                   {guardandoPlan ? "Guardando…" : "Guardar"}
                 </Button>
               </div>
@@ -925,8 +952,9 @@ export default function SuperAdminSaludEmpresaPage() {
                 </div>
               )}
               <p className="mt-3 text-[11px] text-muted">
-                Cambiar el plan acá activa/desactiva automáticamente los módulos opt-in de Pro (mismo camino que usa la empresa
-                al autogestionarse desde Configuración &gt; Plan) y queda en el historial visible para la empresa.
+                Cambiar el plan acá activa o desactiva los módulos que trae cada plan (y el pack de rubro en Operación), por el
+                mismo camino que usa la empresa en Configuración &gt; Plan, y queda en el historial visible para la empresa.
+                Remuneraciones no cambia con el plan. Para el plan Empresa cotizado, cobra por transferencia contra factura.
               </p>
                 </>
               )}

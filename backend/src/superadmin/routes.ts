@@ -1,7 +1,7 @@
 import { Router } from "express";
 import crypto from "node:crypto";
 import type { Accion, Empresa, EstadoEmpresa, Modulo, Plan, Rol, Rubro } from "@bitacora/shared";
-import { ACCIONES, MODULOS, MODULOS_DELEGABLES_POR_EMPRESA, moduloActivadoPorDefecto, formatearRut, validarRut } from "@bitacora/shared";
+import { ACCIONES, MODULOS, MODULOS_DELEGABLES_POR_EMPRESA, esPackRubro, moduloActivadoPorDefecto, formatearRut, validarRut } from "@bitacora/shared";
 import {
   invalidarCacheRoles,
   empresaPuedeUsarRol,
@@ -18,7 +18,7 @@ import { ah } from "../asyncHandler";
 import { cifrarJson, descifrarJson } from "../crypto";
 import { medirUsoStorage } from "../storage";
 import { TABLAS_POR_EMPRESA } from "../tenant";
-import { cambiarPlanEmpresa } from "../planes";
+import { aplicarModulosDelPlan, cambiarPlanEmpresa } from "../planes";
 import { enviarInvitacion } from "../email";
 import { sembrarSugerenciasRubro } from "../seedRubro";
 import { hashPassword, verificarPassword } from "./passwords";
@@ -34,7 +34,7 @@ import {
 } from "./auth";
 
 const ESTADOS_EMPRESA: EstadoEmpresa[] = ["activa", "suspendida", "dada_de_baja"];
-const PLANES: Plan[] = ["trial", "basico", "pro"];
+const PLANES: Plan[] = ["trial", "basico", "operacion", "pro", "empresa"];
 const RUBROS: Rubro[] = ["transporte", "servicio_tecnico", "cosmetologia", "otro"];
 
 export const superadminRouter = Router();
@@ -514,6 +514,9 @@ superadminRouter.post(
       res.status(500).json({ error: errorEmpresa.message });
       return;
     }
+    // La prueba trae todo, como Pro (tarea 124). Si falla, la empresa
+    // arranca con los módulos por defecto; no se bloquea el alta.
+    await aplicarModulosDelPlan(empresa.id, "trial", null).catch((err) => console.error("Módulos de la prueba:", err));
 
     // generateLink crea el usuario y devuelve el link sin intentar mandar
     // nada — el envío va por nuestro Resend (enviarInvitacion), no por el
@@ -1191,7 +1194,7 @@ superadminRouter.get(
   requiereSuperAdmin,
   ah<RequestConSuperAdmin>(async (req, res) => {
     const empresaId = req.params.id;
-    const { data: empresa } = await supabase.from("empresas").select("id, nombre, estado, plan, rut, rubro, tema, dada_de_baja_en").eq("id", empresaId).maybeSingle();
+    const { data: empresa } = await supabase.from("empresas").select("id, nombre, estado, plan, pack_rubro, rut, rubro, tema, dada_de_baja_en").eq("id", empresaId).maybeSingle();
     if (!empresa) {
       res.status(404).json({ error: "Empresa no encontrada" });
       return;
@@ -1344,9 +1347,13 @@ superadminRouter.patch(
   "/empresas/:id/plan",
   requiereSuperAdmin,
   ah<RequestConSuperAdmin>(async (req, res) => {
-    const { plan } = req.body ?? {};
+    const { plan, pack } = req.body ?? {};
     if (typeof plan !== "string" || !PLANES.includes(plan as Plan)) {
       res.status(400).json({ error: `plan debe ser uno de: ${PLANES.join(", ")}` });
+      return;
+    }
+    if (pack !== undefined && pack !== null && !esPackRubro(pack)) {
+      res.status(400).json({ error: "pack debe ser 'transporte', 'mantencion' o 'agenda'" });
       return;
     }
 
@@ -1359,12 +1366,20 @@ superadminRouter.patch(
     // Misma función que usa la autogestión de la empresa (Configuración >
     // Plan) — sincroniza empresa_modulos y queda en empresa_plan_historial,
     // para que ningún camino pueda desincronizarse del otro.
-    await cambiarPlanEmpresa(req.params.id, plan as Plan, { tipo: "super_admin", superAdminId: req.superAdminId! });
+    // Operación sin pack explícito conserva el que tenga la empresa
+    // (o Transporte si nunca eligió uno — ver modulosDelPlan).
+    await cambiarPlanEmpresa(
+      req.params.id,
+      plan as Plan,
+      { tipo: "super_admin", superAdminId: req.superAdminId! },
+      true,
+      plan === "operacion" && esPackRubro(pack) ? pack : undefined
+    );
 
     await registrarAuditoria(req.superAdminId!, "cambiar_plan_empresa", {
       empresaId: req.params.id,
       ip: req.ip ?? null,
-      detalle: `${actual.nombre}: ${actual.plan} → ${plan}`,
+      detalle: `${actual.nombre}: ${actual.plan} → ${plan}${plan === "operacion" && esPackRubro(pack) ? ` (pack ${pack})` : ""}`,
     });
 
     res.json({ id: req.params.id, plan });

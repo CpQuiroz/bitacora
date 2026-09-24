@@ -7,6 +7,7 @@ export * from "./permisos";
 export * from "./regionesComunas";
 export * from "./plantillas";
 export * from "./limites";
+export * from "./planes";
 export * from "./liquidacionChile";
 export * from "./legales";
 export * from "./estadosCita";

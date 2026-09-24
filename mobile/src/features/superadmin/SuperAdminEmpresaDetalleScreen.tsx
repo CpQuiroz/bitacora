@@ -4,6 +4,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { ArrowLeft } from "lucide-react-native";
 import type { Empresa, EstadoEmpresa, Modulo, Plan } from "@bitacora/shared";
+import { ETIQUETA_PLAN } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
 import { LoadingState, ScreenHeader, Texto, useMarca } from "@bitacora/ui/native";
 import {
@@ -49,11 +50,12 @@ const ESTADOS: { valor: EstadoEmpresa; label: string }[] = [
   { valor: "suspendida", label: "Suspendida" },
   { valor: "dada_de_baja", label: "Dada de baja" },
 ];
-const PLANES: { valor: Plan; label: string }[] = [
-  { valor: "trial", label: "Trial" },
-  { valor: "basico", label: "Básico" },
-  { valor: "pro", label: "Pro" },
-];
+// Operación se asigna con el pack que ya tenga la empresa (o Transporte);
+// para elegir otro pack, usar el panel web.
+const PLANES: { valor: Plan; label: string }[] = (["trial", "basico", "operacion", "pro", "empresa"] as const).map((valor) => ({
+  valor,
+  label: ETIQUETA_PLAN[valor],
+}));
 // Mismas 3 opciones que Configuración > Empresa > "Tema visual" (web).
 const TEMAS: { valor: Empresa["tema"]; label: string }[] = [
   { valor: "faena", label: "Faena" },

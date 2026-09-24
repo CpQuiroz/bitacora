@@ -3,13 +3,13 @@ import { RefreshControl, ScrollView, View } from "react-native";
 import { ArrowLeft } from "lucide-react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import type { EstadoSuscripcion, Plan } from "@bitacora/shared";
+import type { EstadoSuscripcion } from "@bitacora/shared";
+import { ETIQUETA_PLAN } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
 import { Card, ErrorState, LoadingState, ScreenHeader, StatusBadge, Texto, useMarca, type TonoEstado } from "@bitacora/ui/native";
 import { obtenerMiPlan, type InfoMiPlan } from "../../services/plan";
 import type { MasStackParamList } from "../../shell/navigation/types";
 
-const ETIQUETA_PLAN: Record<Plan, string> = { trial: "Prueba gratis", basico: "Básico", pro: "Pro" };
 const ETIQUETA_ESTADO: Record<EstadoSuscripcion, string> = {
   trial: "En prueba",
   activa: "Activa",

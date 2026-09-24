@@ -125,3 +125,26 @@ export async function verificarPlanAnalisisFotosIA(empresaId: string): Promise<v
     throw new LimiteAlcanzadoError("El análisis de fotos con IA está disponible solo en el plan Pro.");
   }
 }
+
+// Tope de informes con IA por mes (hoy solo Operación: 20, tarea 124).
+// Cuenta las llamadas registradas en ia_uso de las features de informe.
+export const FEATURES_INFORME_IA = ["informe_os", "informe_libre", "informe_estructurado", "informe_personalizado"] as const;
+
+export async function verificarLimiteInformesIA(empresaId: string): Promise<void> {
+  const plan = await obtenerPlan(empresaId);
+  const tope = LIMITES_POR_PLAN[plan].informesIAPorMes;
+  if (tope == null) return;
+  const inicioMes = new Date();
+  inicioMes.setDate(1);
+  const { count } = await supabase
+    .from("ia_uso")
+    .select("id", { count: "exact", head: true })
+    .eq("empresa_id", empresaId)
+    .in("feature", [...FEATURES_INFORME_IA])
+    .gte("creado_en", inicioMes.toISOString().slice(0, 10));
+  if ((count ?? 0) >= tope) {
+    throw new LimiteAlcanzadoError(
+      `Llegaste a los ${tope} informes con IA de este mes en tu plan — pasa a Pro para generar sin tope.`
+    );
+  }
+}

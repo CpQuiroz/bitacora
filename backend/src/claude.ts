@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { env } from "./env";
 import { supabase } from "./supabase";
-import { verificarLimiteIA } from "./limites";
+import { FEATURES_INFORME_IA, LimiteAlcanzadoError, verificarLimiteIA, verificarLimiteInformesIA } from "./limites";
 import { crearLimitadorConcurrencia } from "./concurrencia";
 
 // timeout: el SDK trae 10 min por defecto — demasiado para no dejar una
@@ -67,6 +67,7 @@ export async function crearMensajeIA(
   params: Anthropic.MessageCreateParamsNonStreaming
 ): Promise<Anthropic.Message> {
   await verificarLimiteIA(empresaId);
+  if ((FEATURES_INFORME_IA as readonly string[]).includes(feature)) await verificarLimiteInformesIA(empresaId);
   const esLarga = FEATURES_LARGAS.has(feature);
   const opts = esLarga ? { timeout: TIMEOUT_LARGO_MS } : undefined;
   // Las llamadas cortas (asistente, foto) esperan lo que haga falta en
@@ -203,6 +204,9 @@ export async function generarInformeOS(
     const textBlock = response.content.find((b): b is Anthropic.TextBlock => b.type === "text");
     return textBlock?.text?.trim() || null;
   } catch (err) {
+    // Un tope del plan no es una falla: sigue al handler global (403
+    // LIMITE_PLAN) para que la pantalla muestre el motivo real.
+    if (err instanceof LimiteAlcanzadoError) throw err;
     console.error("Error generando informe de OS con IA:", err);
     return null;
   }

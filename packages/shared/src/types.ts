@@ -19,7 +19,12 @@ export type Rol = "admin" | "supervisor" | "contador" | "colaborador";
 // herramientas que ese colaborador realmente usa. null = sin definir.
 export type FuncionColaborador = "tecnico" | "chofer" | "instalador" | "administrativo" | "otro";
 export type Rubro = "transporte" | "servicio_tecnico" | "cosmetologia" | "otro";
-export type Plan = "trial" | "basico" | "pro";
+// Planes (tarea 124, 24-sep-2026). La clave `basico` se muestra como
+// "Esencial" — se mantuvo para no migrar datos. Detalle en planes.ts.
+export type Plan = "trial" | "basico" | "operacion" | "pro" | "empresa";
+export type PlanPago = Exclude<Plan, "trial">;
+// Pack de rubro que elige una empresa en plan Operación.
+export type PackRubro = "transporte" | "mantencion" | "agenda";
 export type EstadoEmpresa = "activa" | "suspendida" | "dada_de_baja";
 // @internal — columna `trabajos.estado`. NO usar para pintar UI ni sumar
 // informes: eso va SIEMPRE contra `ordenes_servicio.estado_os` (PASO 1
@@ -84,6 +89,7 @@ export type Empresa = {
   nombre: string;
   rubro: Rubro;
   plan: Plan;
+  pack_rubro: PackRubro | null;
   logo_url: string | null;
   siguiente_folio_os: number;
   siguiente_numero_cotizacion: number;
@@ -783,7 +789,7 @@ export type Suscripcion = {
   proxima_fecha_cobro: string | null;
   cancelada_en: string | null;
   trial_aviso_enviado: boolean;
-  plan_pendiente: "basico" | "pro" | null;
+  plan_pendiente: PlanPago | null;
   creado_en: string;
   actualizado_en: string;
 };

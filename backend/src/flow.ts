@@ -18,7 +18,20 @@
 // nosotros. Ver consultarEstadoPago().
 // ============================================================
 import crypto from "node:crypto";
+import type { PlanPago } from "@bitacora/shared";
 import { env } from "./env";
+
+// Plan de Flow de cada plan pago de Bitácora (ver env.ts). null = ese
+// plan todavía no se puede contratar con tarjeta.
+export function flowPlanIdDe(plan: PlanPago): string | null {
+  const ids: Record<PlanPago, string | null> = {
+    basico: env.FLOW_PLAN_ID_BASICO,
+    operacion: env.FLOW_PLAN_ID_OPERACION,
+    pro: env.FLOW_PLAN_ID_PRO,
+    empresa: env.FLOW_PLAN_ID_EMPRESA,
+  };
+  return ids[plan];
+}
 
 function requiereCredenciales(): { apiKey: string; secretKey: string } {
   if (!env.FLOW_API_KEY || !env.FLOW_SECRET_KEY) {
@@ -103,7 +116,7 @@ export async function consultarRegistroTarjeta(token: string): Promise<{ status:
 // API — confirmado contra el sandbox: plan/create, plan/get y plan/list no
 // existen (dan "No services available", el mismo error que una ruta
 // inventada). Se crea UNA VEZ desde el panel web de Flow (Planes de
-// Suscripción) y su id se guarda en FLOW_PLAN_ID_BASICO/FLOW_PLAN_ID_PRO — acá solo se referencia.
+// Suscripción) y su id se guarda en FLOW_PLAN_ID_* (ver flowPlanIdDe) — acá solo se referencia.
 export async function suscribirAPlan(customerId: string, planId: string): Promise<{ subscriptionId: string }> {
   return llamarFlow("POST", "subscription/create", { customerId, planId });
 }

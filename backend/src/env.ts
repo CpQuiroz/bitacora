@@ -80,9 +80,14 @@ export const env = {
   FLOW_API_URL: process.env.FLOW_API_URL ?? "https://sandbox.flow.cl/api",
   // El Plan mensual se crea una sola vez desde el panel web de Flow
   // (Planes de Suscripción — no existe API para esto, ver flow.ts) y su
-  // id se pega acá.
+  // id se pega acá. Uno por plan pago (tarea 124): BASICO = Esencial.
+  // Sin id, ese plan se muestra pero no se puede contratar con tarjeta.
+  // Cambiar el id de un plan no afecta a quien ya está suscrito: su
+  // suscripción de Flow sigue en el plan (y precio) con que se creó.
   FLOW_PLAN_ID_BASICO: process.env.FLOW_PLAN_ID_BASICO ?? null,
+  FLOW_PLAN_ID_OPERACION: process.env.FLOW_PLAN_ID_OPERACION ?? null,
   FLOW_PLAN_ID_PRO: process.env.FLOW_PLAN_ID_PRO ?? null,
+  FLOW_PLAN_ID_EMPRESA: process.env.FLOW_PLAN_ID_EMPRESA ?? null,
   // Panel de infraestructura del Super-Admin (22-sep-2026) — cada uno
   // opcional: sin la credencial, ese servicio se omite del panel en vez
   // de tirar error (ver superadmin/infra.ts). Nunca se exponen al

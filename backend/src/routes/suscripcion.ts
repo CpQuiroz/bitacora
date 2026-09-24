@@ -5,23 +5,21 @@
 // ============================================================
 import { Router } from "express";
 import type { Suscripcion } from "@bitacora/shared";
+import { esPackRubro, esPlanPago } from "@bitacora/shared";
 import { supabase } from "../supabase";
 import { env } from "../env";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
 import { requiereAccion } from "../permisos";
-import { crearClienteFlow, linkRegistroTarjeta, consultarRegistroTarjeta, consultarCliente, suscribirAPlan, cancelarSuscripcionFlow } from "../flow";
+import { crearClienteFlow, linkRegistroTarjeta, consultarRegistroTarjeta, consultarCliente, suscribirAPlan, cancelarSuscripcionFlow, flowPlanIdDe } from "../flow";
 import { cambiarPlanEmpresa } from "../planes";
 
 export const suscripcionRouter = Router();
 
 // El Plan de Flow (monto/ciclo/trial) se crea a mano en su panel — cada
-// tier de Bitácora (Básico/Pro) apunta a un Plan de Flow distinto porque
-// cobran montos distintos. Si un tier todavía no tiene Plan configurado
-// (ej. Pro, mientras no se defina su precio), no hay forma de cobrarlo.
-function resolverFlowPlanId(plan: "basico" | "pro"): string | null {
-  return plan === "basico" ? env.FLOW_PLAN_ID_BASICO : env.FLOW_PLAN_ID_PRO;
-}
+// plan pago de Bitácora apunta a un Plan de Flow distinto (flowPlanIdDe).
+// Si un plan todavía no tiene Plan de Flow configurado, no se puede
+// cobrar con tarjeta.
 
 async function obtenerOCrearSuscripcion(empresaId: string) {
   const { data: existente } = await supabase.from("suscripciones").select("*").eq("empresa_id", empresaId).maybeSingle();
@@ -51,7 +49,7 @@ async function revisarRegistroTarjetaPendiente(suscripcion: Suscripcion, usuario
     };
     const planPendiente = suscripcion.plan_pendiente;
     if (!suscripcion.flow_subscription_id && planPendiente) {
-      const flowPlanId = resolverFlowPlanId(planPendiente);
+      const flowPlanId = flowPlanIdDe(planPendiente);
       if (flowPlanId) {
         const suscripcionFlow = await suscribirAPlan(suscripcion.flow_customer_id, flowPlanId);
         cambios.flow_subscription_id = suscripcionFlow.subscriptionId;
@@ -95,13 +93,17 @@ suscripcionRouter.post(
   "/tarjeta",
   requiereAccion("gestionar_plan"),
   ah<RequestConEmpresa>(async (req, res) => {
-    const { plan } = req.body ?? {};
-    const planPendiente: "basico" | "pro" | null = plan === "basico" || plan === "pro" ? plan : null;
+    const { plan, pack } = req.body ?? {};
+    const planPendiente = esPlanPago(plan) ? plan : null;
     if (plan !== undefined && !planPendiente) {
-      res.status(400).json({ error: "plan debe ser 'basico' o 'pro'" });
+      res.status(400).json({ error: "plan debe ser 'basico', 'operacion', 'pro' o 'empresa'" });
       return;
     }
-    if (planPendiente && !resolverFlowPlanId(planPendiente)) {
+    if (planPendiente === "operacion" && !esPackRubro(pack)) {
+      res.status(400).json({ error: "Elige el pack de rubro del plan Operación" });
+      return;
+    }
+    if (planPendiente && !flowPlanIdDe(planPendiente)) {
       res.status(400).json({ error: `El plan "${planPendiente}" todavía no está disponible para contratar` });
       return;
     }
@@ -109,6 +111,11 @@ suscripcionRouter.post(
     const suscripcion = await obtenerOCrearSuscripcion(req.empresaId!);
     const { data: empresa } = await supabase.from("empresas").select("nombre").eq("id", req.empresaId!).single();
     await supabase.from("suscripciones").update({ plan_pendiente: planPendiente }).eq("empresa_id", req.empresaId!);
+    // El pack se guarda ya: solo pesa cuando la empresa queda en
+    // Operación, y así cambiarPlanEmpresa lo toma al confirmarse la tarjeta.
+    if (planPendiente === "operacion") {
+      await supabase.from("empresas").update({ pack_rubro: pack }).eq("id", req.empresaId!);
+    }
 
     let customerId = suscripcion.flow_customer_id as string | null;
     try {
@@ -187,7 +194,7 @@ suscripcionRouter.post(
     // Plan del tier elegido (Flow aplica el período de prueba configurado
     // en ese Plan si corresponde — no se pasa por acá).
     if (!suscripcion.flow_subscription_id) {
-      const flowPlanId = planPendiente ? resolverFlowPlanId(planPendiente) : null;
+      const flowPlanId = planPendiente ? flowPlanIdDe(planPendiente) : null;
       if (!flowPlanId) {
         res.status(500).json({ error: "No hay un plan pendiente válido para suscribir" });
         return;

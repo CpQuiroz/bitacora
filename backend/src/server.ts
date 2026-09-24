@@ -70,6 +70,7 @@ import { limitarLogin, limitarEncuestaPublica } from "./rateLimiters";
 import { modulosDeshabilitadosDeEmpresa, featureFlagsDeEmpresa, modulosVisiblesDeUsuario, requiereModulo, requiereRol } from "./permisos";
 import { accionesDeRol, rolExigeMfa } from "./roles";
 import { resolverAccesoParaLogin, aprovisionarUsuario } from "./accesosAutorizados";
+import { aplicarModulosDelPlan } from "./planes";
 import { revisarCumpleanosClientes } from "./cumpleanosClientes";
 import { sembrarSugerenciasRubro } from "./seedRubro";
 import { registrarConsentimiento, tieneConsentimientoVigente } from "./consentimiento";
@@ -289,6 +290,10 @@ app.post("/api/registro-empresa", requiereAuth, ah<RequestConUsuario>(async (req
     res.status(500).json({ error: errorUsuario.message });
     return;
   }
+
+  // La prueba trae todo, como Pro (tarea 124). Si falla, la empresa
+  // arranca con los módulos por defecto; no se bloquea el alta.
+  await aplicarModulosDelPlan(empresa.id, "trial", null).catch((err) => console.error("Módulos de la prueba:", err));
 
   // Ley 21.719 — deja constancia de la aceptación (tabla consentimientos).
   await registrarConsentimiento(

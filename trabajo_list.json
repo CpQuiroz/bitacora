@@ -1740,6 +1740,27 @@
       "status": "done",
       "description": "Build local release de mobile 1.10.17 con Mi plan (113), feedback 1.10.16 (112), mensaje LIMITE_PLAN (117) y fix del crash al abrir OS (119).",
       "resolution": "APK release local en la Mac (cquiroz): ~/builds/apk/bitacora-1.10.17-vc58.apk (versionName 1.10.17, versionCode 58). Firmado con ~/keystores/bitacora/bitacora-release.jks (SHA-1/SHA-256 verificados con apksigner contra credenciales.txt); bundle con URLs de prod (Render + Supabase prod). La Mac tiene Node 20.8 global y RN 0.86 pide >=20.19.4: se usó Node 22 de npx node@22 solo en el PATH del build. Firma inyectada por variables de entorno en android/app/build.gradle (generado, gitignoreado); .env temporal borrado. verificar.sh verde (con Node 22)."
+    },
+    {
+      "id": 124,
+      "name": "planes_4_categorias",
+      "title": "Planes nuevos: Esencial, Operación (con pack de rubro), Pro y Empresa",
+      "status": "in_progress",
+      "description": "Decisión 24-sep-2026: 4 categorías en UF + IVA (Esencial 1,5 · Operación 3,5 · Pro 6 · Empresa desde 12, contratable con tarjeta o a cotizar). Prueba = todo como Pro con 3 usuarios. Packs de Operación: Transporte (viajes, registros, rutas, flota), Mantención (levantamientos), Servicios con agenda (agenda_pro). Operación trae Informe IA con tope de 20/mes. Etapa 1: tipos, límites, módulos por plan, migración, Flow, web Configuración > Plan y Super-Admin."
+    },
+    {
+      "id": 125,
+      "name": "planes_adicionales",
+      "title": "Adicionales del plan: usuario extra, remuneraciones por trabajador, pack IA, segundo pack, pago anual",
+      "status": "pending",
+      "description": "Etapa 2 de la tarea 124. Precios: usuario extra 0,2 UF; remuneraciones 0,06 UF por trabajador (mín 1 UF); segundo pack de rubro 1 UF; pack IA para Operación 1,5 UF; anual = 10 meses."
+    },
+    {
+      "id": 126,
+      "name": "mobile_mi_plan_categorias",
+      "title": "Mobile: Mi plan con las 4 categorías y lo incluido en el plan",
+      "status": "pending",
+      "description": "Etapa 3 de la tarea 124. Requiere build mobile (bump de versión). Ver maqueta https://claude.ai/artifact/6Ce1AFvXG7jkGdcEKXDPhH."
     }
   ]
 }

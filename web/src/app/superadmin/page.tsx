@@ -4,6 +4,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Briefcase, Plus } from "lucide-react";
 import type { Rubro } from "@bitacora/shared";
+import { ETIQUETA_PLAN } from "@bitacora/shared";
 import { SuperAdminShell } from "@/components/SuperAdminShell";
 import { DataTable, type ColumnaTabla } from "@/components/DataTable";
 import { Modal } from "@/components/Modal";
@@ -112,7 +113,7 @@ export default function SuperAdminEmpresasPage() {
     { header: "Nombre", cell: (e) => <span className="font-medium text-ds-text">{e.nombre}</span> },
     { header: "Fecha de alta", cell: (e) => new Date(e.creado_en).toLocaleDateString("es-CL") },
     { header: "Estado", cell: (e) => <StatusBadge estado={e.estado} /> },
-    { header: "Plan", cell: (e) => <Tag>{e.plan}</Tag> },
+    { header: "Plan", cell: (e) => <Tag>{(ETIQUETA_PLAN as Record<string, string>)[e.plan] ?? e.plan}</Tag> },
     { header: "Usuarios", cell: (e) => e.cantidad_usuarios },
   ];
 

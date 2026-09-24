@@ -1,6 +1,6 @@
 // Nombres visibles de cada módulo — compartido entre el Panel de
 // Super-Admin (toggle de módulos por empresa) y Configuración > Plan
-// (comparativa Básico vs Pro), para no duplicar el mapeo en dos lugares.
+// (comparativa de planes), para no duplicar el mapeo en dos lugares.
 export const ETIQUETA_MODULO: Record<string, string> = {
   agenda: "Agenda",
   ordenes_servicio: "Órdenes de servicio",
