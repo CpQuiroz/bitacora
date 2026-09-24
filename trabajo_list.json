@@ -1767,8 +1767,9 @@
       "id": 127,
       "name": "deuda_tests_regresion",
       "title": "Deuda técnica: pruebas de regresión de flujos críticos (abrir OS, crear OS, planes) para que un error no llegue a producción",
-      "status": "in_progress",
-      "description": "Pedido de la usuaria 24-sep-2026 tras el cierre de la app al abrir una OS (tarea 119, hooks tras return anticipado). Evaluar pruebas de pantallas/flujos críticos en web y mobile (render de OS, alta de OS, cambio de plan) y correrlas en verificar.sh/CI."
+      "status": "done",
+      "description": "Pedido de la usuaria 24-sep-2026 tras el cierre de la app al abrir una OS (tarea 119, hooks tras return anticipado). Evaluar pruebas de pantallas/flujos críticos en web y mobile (render de OS, alta de OS, cambio de plan) y correrlas en verificar.sh/CI.",
+      "resolution": "3 capas. (1) Reglas de hooks en mobile/packages/ui: ya existía desde la tarea 119 (scripts/eslint-hooks.config.mjs en verificar.sh). (2) Pruebas de pantallas sin red: mobile Jest+jest-expo+RNTL (abrir OS en 4 estados + error, crear OS, formulario de viaje, Agenda) = 12; web Vitest+RTL (detalle OS 4 estados + error, crear OS, Plan) = 8. Comprobado: con un hook tras return fallan con 'Rendered more hooks'. Corren en verificar.sh y CI. (3) e2e/ en el repo, autosuficiente: npm run e2e crea empresa E2E + usuarios en DEV, corre 8 suites (85 checks) y la borra (verificado 0 restos); se niega a correr contra prod; tsc e2e en verificar. Docs: docs/harness/verificacion.md Niveles 0, 2b y 3."
     },
     {
       "id": 128,

@@ -5,9 +5,10 @@
 
 ## Nivel 0 — `./verificar.sh` (obligatorio siempre)
 
-Corre: tsc de los 4 paquetes + mobile, tests de `packages/shared` y
-`packages/design-tokens`, lint de web, `audit:tenant` (baseline 0) y
-chequeo de numeración de migraciones. Verde obligatorio antes de cerrar
+Corre: tsc de los 4 paquetes + mobile + `e2e/`, tests de `packages/shared`,
+`packages/design-tokens` y `backend`, **pruebas de pantallas de mobile y web**
+(tarea 127), lint de web, reglas de hooks en mobile/`packages/ui`,
+`audit:tenant` (baseline 0) y chequeo de numeración de migraciones. Verde obligatorio antes de cerrar
 cualquier tarea. Desde 2026-09-12 también corre en CI en cada push a
 `main` y cada PR (`.github/workflows/verificar.yml`, tarea #2) — no
 depende solo de que el agente lo corra a mano.
@@ -29,7 +30,27 @@ npx tsc -p mobile/tsconfig.json   --noEmit
 Lógica no trivial en `packages/shared` o `backend` trae test (`tsx --test`).
 Camino feliz con assert del resultado + al menos un camino de error.
 
+## Nivel 2b — Pruebas de pantallas (tarea 127)
+
+Renderizan pantallas críticas con la API simulada (sin red ni base) y fallan
+si la pantalla se cae — p. ej. un hook después de un `return` (el cierre de
+la app al abrir una OS, tarea 119, se reproduce y se detecta).
+- **Mobile:** `npm test -w mobile` (Jest + jest-expo + Testing Library).
+  Archivos `*.test.tsx` junto a la pantalla. En Testing Library 14 `render`
+  y `fireEvent` son asíncronos: siempre `await`.
+- **Web:** `npm test -w web` (Vitest + Testing Library). Ayudas en
+  `web/src/test/simulacros.ts` (`apiFetchSimulado`, `ME_ADMIN`).
+- Pantalla crítica nueva o cambiada → su prueba.
+
 ## Nivel 3 — E2E contra DEV
+
+**Suite en el repo (tarea 127):** `npm run e2e` (o `npm run e2e -- viaticos
+roles`). Crea una empresa "E2E …" con sus usuarios, corre las suites de
+`e2e/suites/` y la borra al terminar; se niega a correr contra prod. Necesita
+el backend local corriendo contra DEV (`E2E_API_URL`, por defecto
+`http://localhost:8080`) y la anon key (`E2E_SUPABASE_ANON_KEY` o
+`web/.env.local`). Flujo nuevo de backend → suite nueva en `e2e/suites/` y
+registrada en `e2e/run.ts`.
 
 - **Supabase:** dev ref `pruwvpnlvrvgtmpetlsr`, prod ref `yjbskbskyadxjooxngjv`.
 - **Lectura a prod (permitida):**

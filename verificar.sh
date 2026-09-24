@@ -81,6 +81,7 @@ tsc_check tokens   packages/design-tokens/tsconfig.json
 tsc_check ui       packages/ui/tsconfig.json
 tsc_check backend  backend/tsconfig.json
 tsc_check shared   packages/shared/tsconfig.json
+tsc_check e2e      e2e/tsconfig.json
 # web/tsconfig.json incluye .next/types/**/*.ts (rutas tipadas de Next
 # 16, ej. LayoutProps<"/"> en layout.tsx) — Next lo genera solo, no
 # está versionado. Cualquiera que haya corrido `next dev`/`build` una

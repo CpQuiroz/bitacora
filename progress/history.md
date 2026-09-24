@@ -269,3 +269,10 @@ Formato:
 - **Verificación:** verificar.sh verde (backend 25 tests); DEV: E2E 141 5/5 y regresión 84/84.
 - **Cierre:** 140 done; 141 blocked hasta migración 140 en prod (antes del deploy). Pendiente en prod: migraciones 139 y 140, luego publicar.
 - **Publicación (24-sep, noche):** migraciones 139 y 140 en prod (EXPLAIN en prod: A1-A7 usan su índice nuevo, incluido A6); main 8b95e9c → e48af51; Render dep-daqqj07f3r2c73amhus0 live, Vercel dpl_7Hxvao5zUxHbLHjo2kBuWmkC8WC5 READY, /health 200. Tareas 139 y 141 done.
+
+## 2026-09-24 — Pruebas de regresión (tarea 127)
+- **Agente:** Claude Opus 5.5 (+ agente de investigación de Flow para la tarea 125)
+- **Plan:** hooks lint (ya existía), pruebas de pantallas mobile/web, e2e autosuficiente en el repo.
+- **Cambios:** mobile (Jest, jest.setup.ts, 4 archivos de prueba), web (Vitest, simulacros, 3 archivos de prueba), packages/ui Input con accessibilityLabel, e2e/ (entorno, 8 suites, run.ts), verificar.sh, docs/harness/verificacion.md.
+- **Verificación:** verificar.sh verde (mobile 12, web 8); bug de hooks inyectado detectado en mobile y web; npm run e2e 85/85 y 0 restos en DEV.
+- **Cierre:** 127 done. Siguiente: punto 5 (borrar usuarios QA de DEV) y propuesta de adicionales (tarea 125) con el informe de Flow.
