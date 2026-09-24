@@ -43,3 +43,4 @@ en mobile, (3) paginación, (4) IA en fotos por plan [decisión pendiente],
 - Tarea 119 (done): crash al abrir una OS en mobile 1.10.16 (hooks después de return anticipado). Fix + regla rules-of-hooks en verificar.sh. Sale en 1.10.17.
 - Decisiones de la usuaria (24-sep): paginación etapa A = tarea 120 (pendiente); etapa B = deuda técnica 121; IA en fotos solo Pro/Empresa y a pedido del Admin + evaluar modelo barato = tarea 122.
 - Migración 130: la usuaria la corrió desde una copia vieja (builds/1.10.16) sin el archivo, y contra prod en vez de dev. Se le explicó cómo hacerlo.
+- Tarea 118 (done): migración 130 aplicada en dev y prod por la usuaria; verificado en prod.
