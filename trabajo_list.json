@@ -1731,6 +1731,14 @@
       "title": "IA en fotos: solo Pro/Empresa y solo a pedido del Admin; evaluar modelo más barato",
       "status": "pending",
       "description": "Decisión de la usuaria (24-sep-2026): el análisis de fotos con IA deja de ser automático. Solo en planes Pro y Empresa, y solo cuando el Admin lo pide sobre una foto/OS; el resto de las fotos solo se suben y quedan guardadas. Evaluar un modelo más barato para el análisis de fotos."
+    },
+    {
+      "id": 123,
+      "name": "build_mobile_1_10_17",
+      "title": "Build local APK 1.10.17 (versionCode 58)",
+      "status": "done",
+      "description": "Build local release de mobile 1.10.17 con Mi plan (113), feedback 1.10.16 (112), mensaje LIMITE_PLAN (117) y fix del crash al abrir OS (119).",
+      "resolution": "APK release local en la Mac (cquiroz): ~/builds/apk/bitacora-1.10.17-vc58.apk (versionName 1.10.17, versionCode 58). Firmado con ~/keystores/bitacora/bitacora-release.jks (SHA-1/SHA-256 verificados con apksigner contra credenciales.txt); bundle con URLs de prod (Render + Supabase prod). La Mac tiene Node 20.8 global y RN 0.86 pide >=20.19.4: se usó Node 22 de npx node@22 solo en el PATH del build. Firma inyectada por variables de entorno en android/app/build.gradle (generado, gitignoreado); .env temporal borrado. verificar.sh verde (con Node 22)."
     }
   ]
 }

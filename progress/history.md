@@ -189,3 +189,26 @@ Formato:
   - Decisiones abiertas: Google Play prueba interna (US$25); categorías de
     empresa con productos + venta desde cita (maqueta enviada, no aplicada).
   - Deuda técnica: tarea 111 (proteger main en GitHub, evaluar repo privado).
+
+## 2026-09-24 — Sesión: infra, mejoras post-auditoría y build 1.10.17 (tareas 112–123)
+- **Agente:** Claude (directo, sin subagentes)
+- **Cambios:**
+  - 112: feedback de 1.10.16 (Asistente 96→72, chips de Agenda en scroll, "Nueva OS" neutro).
+  - 113: "Mi plan" en mobile, solo lectura y solo Admin (pago en la web por Google Play).
+  - 114: se borró `keep-warm.yml` (Render en Starter pago).
+  - 116: límites de OS/usuarios en todas las rutas + contador de storage que descuenta.
+  - 117: 403 con code `LIMITE_PLAN`; la cola offline mobile muestra el mensaje real.
+  - 118: migración 130 cierra el acceso directo PostgREST; aplicada en dev y prod por la usuaria.
+  - 119: crash al abrir una OS (hooks después de return anticipado) + regla rules-of-hooks en verificar.sh.
+  - 123: build local APK 1.10.17 (versionCode 58) → `~/builds/apk/bitacora-1.10.17-vc58.apk`,
+    firmado con la llave de release (huellas verificadas), URLs de prod.
+- **Verificación:** `./verificar.sh` en verde (con Node 22; la Mac tiene Node 20.8
+  global y los tests de backend / RN 0.86 necesitan más nuevo).
+- **Cierre / próximos pasos:**
+  - Usuaria: instalar 1.10.17 encima de 1.10.16 y probar abrir una OS, Mi plan y
+    el mensaje de límite offline.
+  - Pendientes: 115 (Render → Oregón), 120 (paginación etapa A), 121 (deuda
+    paginación real), 122 (IA en fotos solo Pro/Empresa a pedido del Admin), 111.
+  - Sugerido: actualizar Node global a 22 en la Mac (`brew install node@22`).
+  - Hallazgos de infra para precios: Supabase org en FREE (sin backups), Vercel
+    en cuenta personal (probable Hobby = sin uso comercial). Ver `docs/DEUDA_TECNICA.md`.
