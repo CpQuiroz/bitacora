@@ -1767,7 +1767,7 @@
       "id": 127,
       "name": "deuda_tests_regresion",
       "title": "Deuda técnica: pruebas de regresión de flujos críticos (abrir OS, crear OS, planes) para que un error no llegue a producción",
-      "status": "pending",
+      "status": "in_progress",
       "description": "Pedido de la usuaria 24-sep-2026 tras el cierre de la app al abrir una OS (tarea 119, hooks tras return anticipado). Evaluar pruebas de pantallas/flujos críticos en web y mobile (render de OS, alta de OS, cambio de plan) y correrlas en verificar.sh/CI."
     },
     {

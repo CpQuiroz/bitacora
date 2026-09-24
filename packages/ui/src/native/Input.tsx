@@ -53,6 +53,8 @@ export function Input({
           </View>
         ) : null}
         <TextInput
+          // El lector de pantalla (y las pruebas) ubican el campo por su etiqueta.
+          accessibilityLabel={etiqueta}
           value={valor}
           onChangeText={onCambio}
           placeholder={placeholder}

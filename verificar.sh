@@ -103,7 +103,8 @@ else
   test_ws() {
     local ws="$1"
     if npm run test -w "$ws" --silent >/tmp/harness_tests_$(basename "$ws").log 2>&1; then
-      PASS="$(grep -Eo '# pass [0-9]+' /tmp/harness_tests_$(basename "$ws").log | grep -Eo '[0-9]+' | tail -1)"
+      # node:test imprime "# pass N"; Jest "Tests: N passed"; Vitest "Tests  N passed".
+      PASS="$(grep -Eo '# pass [0-9]+|Tests:? +[0-9]+ passed' /tmp/harness_tests_$(basename "$ws").log | grep -Eo '[0-9]+' | tail -1)"
       ok "$ws — ${PASS:-?} tests verdes"
     else
       fail "$ws tests — ver /tmp/harness_tests_$(basename "$ws").log"
@@ -114,7 +115,9 @@ else
   test_ws packages/shared
   test_ws packages/design-tokens
   test_ws backend
-  # A medida que web/mobile ganen suite, agregá acá sus runners.
+  # Pruebas de pantallas (tarea 127): Jest + Testing Library, sin red.
+  test_ws mobile
+  test_ws web
 fi
 
 echo ""
