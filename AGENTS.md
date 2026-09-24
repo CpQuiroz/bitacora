@@ -42,6 +42,7 @@ Monorepo (npm workspaces):
 | `web/AGENTS.md`, `mobile/AGENTS.md` | Avisos de framework (Next 16 / Expo 57) | Antes de tocar web o mobile |
 | `docs/PUESTA_EN_PRODUCCION.md` | Despliegue, migraciones a prod | Antes de deploy / migración |
 | `docs/RUNBOOK_INCIDENTES.md` | Qué hacer si algo se cae en prod | Ante un incidente |
+| `docs/DEUDA_TECNICA.md` | Deuda técnica postergada a propósito (con pasos) | Al planificar qué sigue |
 | `docs/AUDITORIA_*.md` | Auditorías (perf, resiliencia, legal Ley 21.719, remuneraciones) | Si tu tarea toca esas áreas |
 | `CONTEXTO_PROYECTO.md` | Contexto de producto/negocio (alimenta el Project de claude.ai) | Para entender el "por qué" |
 | `web/ backend/ packages/ mobile/` | Código | Para implementar |

@@ -1666,9 +1666,9 @@
     {
       "id": 115,
       "name": "render_mover_a_oregon",
-      "title": "Mover el backend de Render de Ohio a Oregón (misma región que Supabase prod us-west-2)",
+      "title": "Deuda técnica: mover el backend de Render de Ohio a Oregón (misma región que Supabase prod us-west-2)",
       "status": "pending",
-      "description": "Render no permite cambiar la región de un servicio existente: hay que crear uno nuevo en Oregón. La URL bitacora-cgt7.onrender.com está grabada en las apps móviles ya instaladas (eas.json / .env del build local), en NEXT_PUBLIC_API_URL de Vercel y en los paneles de Flow (y WhatsApp si aplica). Plan: dominio propio api.<dominio> en el servicio nuevo, apuntar web + nuevo build mobile a ese dominio, mantener Ohio vivo hasta que todos los teléfonos actualicen y recién ahí borrarlo.",
+      "description": "Anotado como deuda técnica a pedido de la usuaria (24-sep-2026), para hacerlo junto con un build mobile futuro. Render no permite cambiar la región de un servicio existente: hay que crear uno nuevo en Oregón. La URL bitacora-cgt7.onrender.com está grabada en las apps móviles ya instaladas (eas.json / .env del build local), en NEXT_PUBLIC_API_URL de Vercel y en los paneles de Flow (y WhatsApp si aplica). Plan: dominio propio api.<dominio> en el servicio nuevo, apuntar web + nuevo build mobile a ese dominio, mantener Ohio vivo hasta que todos los teléfonos actualicen y recién ahí borrarlo.",
       "acceptance": [
         "Servicio nuevo en Oregón con las mismas env vars y health check /health",
         "Dominio propio (ej. api.transportesitineris.cl) apuntando al servicio nuevo",
