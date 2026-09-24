@@ -12,8 +12,9 @@ import { generarPdfCotizacion } from "../generarPdfCotizacion";
 import { generarPdfInforme } from "../generarPdfInforme";
 import { generarPdfRegistroMantencion } from "../generarPdfRegistroMantencion";
 import { generarPdfRendicion } from "../generarPdfRendicion";
+import { generarPdfCobro } from "../generarPdfCobro";
 
-type TipoPdf = "os" | "cotizacion" | "informe" | "mantencion" | "rendicion";
+type TipoPdf = "os" | "cotizacion" | "informe" | "mantencion" | "rendicion" | "cobro";
 
 async function main() {
   const { tipo, datos } = workerData as { tipo: TipoPdf; datos: unknown };
@@ -22,6 +23,7 @@ async function main() {
   else if (tipo === "cotizacion") pdf = await generarPdfCotizacion(datos as Parameters<typeof generarPdfCotizacion>[0]);
   else if (tipo === "mantencion") pdf = await generarPdfRegistroMantencion(datos as Parameters<typeof generarPdfRegistroMantencion>[0]);
   else if (tipo === "rendicion") pdf = await generarPdfRendicion(datos as Parameters<typeof generarPdfRendicion>[0]);
+  else if (tipo === "cobro") pdf = await generarPdfCobro(datos as Parameters<typeof generarPdfCobro>[0]);
   else pdf = await generarPdfInforme(datos as Parameters<typeof generarPdfInforme>[0]);
   parentPort!.postMessage({ ok: true, pdf });
 }

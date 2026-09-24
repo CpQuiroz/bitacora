@@ -4,7 +4,8 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { ChevronLeft, Settings } from "lucide-react";
-import type { EstadoFactura, Factura, MedioPago } from "@bitacora/shared";
+import type { DetalleViajesCobro, EstadoFactura, Factura, MedioPago } from "@bitacora/shared";
+import { abrirPdfCobro } from "@/lib/descargarPdf";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
@@ -15,7 +16,7 @@ import { Modal } from "@/components/Modal";
 import { PanelAcciones } from "@/components/PanelAcciones";
 
 type ClienteInfo = { id: string; nombre: string; correo: string | null; telefono: string | null };
-type CobroDetalle = Factura & { cliente_info: ClienteInfo | null };
+type CobroDetalle = Factura & { cliente_info: ClienteInfo | null; viajes?: DetalleViajesCobro };
 
 const ESTADOS: EstadoFactura[] = ["pendiente", "pagada", "vencida"];
 const MEDIOS_ETIQUETA: Record<MedioPago, string> = {
@@ -50,6 +51,12 @@ export default function CobroDetallePage() {
   const [observacionesPago, setObservacionesPago] = useState("");
   const [guardandoPago, setGuardandoPago] = useState(false);
   const [errorPago, setErrorPago] = useState<string | null>(null);
+  // PDF del cobro desde viajes (tarea 134): período editable, por defecto
+  // el primer y el último viaje.
+  const [periodoDesde, setPeriodoDesde] = useState("");
+  const [periodoHasta, setPeriodoHasta] = useState("");
+  const [generandoPdf, setGenerandoPdf] = useState(false);
+  const [errorPdf, setErrorPdf] = useState<string | null>(null);
 
   const cargar = useCallback(async () => {
     const { data } = await supabase.auth.getSession();
@@ -78,8 +85,23 @@ export default function CobroDetallePage() {
       setError("No se pudo cargar el cobro");
       return;
     }
-    setCobro(await resCobro.json());
+    const cuerpo: CobroDetalle = await resCobro.json();
+    setCobro(cuerpo);
+    setPeriodoDesde(cuerpo.viajes?.periodo?.desde ?? "");
+    setPeriodoHasta(cuerpo.viajes?.periodo?.hasta ?? "");
   }, [params.id, router]);
+
+  async function descargarPdfCobro() {
+    setErrorPdf(null);
+    if (periodoDesde && periodoHasta && periodoDesde > periodoHasta) {
+      setErrorPdf("La fecha de inicio no puede ser posterior a la de término.");
+      return;
+    }
+    setGenerandoPdf(true);
+    const r = await abrirPdfCobro(params.id, periodoDesde || undefined, periodoHasta || undefined);
+    setGenerandoPdf(false);
+    if (!r.ok) setErrorPdf(r.error);
+  }
 
   useEffect(() => {
     cargar();
@@ -205,6 +227,85 @@ export default function CobroDetallePage() {
             </div>
           </div>
         </Card>
+
+        {/* Detalle por viaje (tarea 134): cobros generados desde viajes. */}
+        {cobro.viajes && cobro.viajes.filas.length > 0 ? (
+          <div className="lg:col-span-2">
+            <Card>
+              <div className="mb-ds-4 flex flex-wrap items-end justify-between gap-ds-3">
+                <p className="font-ds-body text-ds-small font-semibold text-ds-text">
+                  Detalle de viajes ({cobro.viajes.filas.length})
+                </p>
+                <div className="flex flex-wrap items-end gap-ds-2">
+                  <label className="flex flex-col gap-1 font-ds-body text-ds-caption text-ds-text/70">
+                    Período desde
+                    <input
+                      type="date"
+                      value={periodoDesde}
+                      onChange={(e) => setPeriodoDesde(e.target.value)}
+                      className="rounded-ds-sm border border-ds-divider bg-ds-surface px-ds-2 py-1 font-ds-body text-ds-small text-ds-text"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1 font-ds-body text-ds-caption text-ds-text/70">
+                    hasta
+                    <input
+                      type="date"
+                      value={periodoHasta}
+                      onChange={(e) => setPeriodoHasta(e.target.value)}
+                      className="rounded-ds-sm border border-ds-divider bg-ds-surface px-ds-2 py-1 font-ds-body text-ds-small text-ds-text"
+                    />
+                  </label>
+                  <Button variante="secundario" onPress={() => void descargarPdfCobro()} cargando={generandoPdf}>
+                    Descargar PDF
+                  </Button>
+                </div>
+              </div>
+              {errorPdf ? <p className="mb-ds-3 font-ds-body text-ds-small text-ds-accent-700">{errorPdf}</p> : null}
+              <div className="overflow-x-auto">
+                <table className="w-full font-ds-body text-ds-small">
+                  <thead>
+                    <tr className="border-b border-ds-divider text-left text-ds-caption uppercase tracking-wide text-ds-text/60">
+                      <th className="px-ds-2 py-ds-2">N° guía</th>
+                      <th className="px-ds-2 py-ds-2">Fecha</th>
+                      <th className="px-ds-2 py-ds-2">Chofer</th>
+                      <th className="px-ds-2 py-ds-2">Cliente</th>
+                      <th className="px-ds-2 py-ds-2">Origen</th>
+                      <th className="px-ds-2 py-ds-2">Destino</th>
+                      <th className="px-ds-2 py-ds-2 text-right">Neto</th>
+                      <th className="px-ds-2 py-ds-2 text-right">IVA</th>
+                      <th className="px-ds-2 py-ds-2 text-right">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {cobro.viajes.filas.map((f) => (
+                      <tr key={f.id} className="border-b border-ds-text/[0.06] text-ds-text last:border-0">
+                        <td className="px-ds-2 py-ds-2">{f.numero_guia}</td>
+                        <td className="px-ds-2 py-ds-2 tabular-nums text-ds-text/70">{f.fecha}</td>
+                        <td className="px-ds-2 py-ds-2">{f.chofer ?? "—"}</td>
+                        <td className="px-ds-2 py-ds-2">{f.cliente}</td>
+                        <td className="px-ds-2 py-ds-2">{f.origen}</td>
+                        <td className="px-ds-2 py-ds-2">{f.destino}</td>
+                        <td className="px-ds-2 py-ds-2 text-right tabular-nums">{formatMoneda(f.neto, usuario.moneda)}</td>
+                        <td className="px-ds-2 py-ds-2 text-right tabular-nums">{formatMoneda(f.iva, usuario.moneda)}</td>
+                        <td className="px-ds-2 py-ds-2 text-right tabular-nums">{formatMoneda(f.total, usuario.moneda)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="border-t-2 border-ds-divider font-semibold text-ds-text">
+                      <td className="px-ds-2 py-ds-2" colSpan={6}>
+                        Totales
+                      </td>
+                      <td className="px-ds-2 py-ds-2 text-right tabular-nums">{formatMoneda(cobro.viajes.totales.neto, usuario.moneda)}</td>
+                      <td className="px-ds-2 py-ds-2 text-right tabular-nums">{formatMoneda(cobro.viajes.totales.iva, usuario.moneda)}</td>
+                      <td className="px-ds-2 py-ds-2 text-right tabular-nums">{formatMoneda(cobro.viajes.totales.total, usuario.moneda)}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </Card>
+          </div>
+        ) : null}
 
         {cobro.estado === "pagada" && (cobro.valor_recibido != null || cobro.observaciones_pago) && (
           <div className="lg:col-span-2">

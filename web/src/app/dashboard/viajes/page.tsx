@@ -417,8 +417,15 @@ export default function ViajesPage() {
       setError(body.error ?? "No se pudo generar la factura");
       return;
     }
-    setAviso("Factura generada a partir de los viajes seleccionados.");
+    // Tarea 134: al generar, se abre el cobro con el detalle por viaje y
+    // el PDF.
+    const cobro = await res.json().catch(() => null);
     setSeleccionados(new Set());
+    if (cobro?.id) {
+      router.push(`/dashboard/financiero/cobros/${cobro.id}`);
+      return;
+    }
+    setAviso("Cobro generado a partir de los viajes seleccionados.");
     cargar();
   }
 

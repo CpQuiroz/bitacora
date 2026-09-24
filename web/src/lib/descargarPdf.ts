@@ -49,3 +49,20 @@ export async function abrirPdfRegistroMantencion(equipoId: string, registroId: s
   window.open(url, "_blank");
   return true;
 }
+
+// PDF de un cobro generado desde viajes (tarea 134), con el período
+// elegido (YYYY-MM-DD); sin período el backend usa el primer y último viaje.
+export async function abrirPdfCobro(cobroId: string, desde?: string, hasta?: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  const qs = new URLSearchParams();
+  if (desde) qs.set("desde", desde);
+  if (hasta) qs.set("hasta", hasta);
+  const res = await apiFetch(`/api/cobros/${cobroId}/pdf${qs.size ? `?${qs.toString()}` : ""}`);
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    return { ok: false, error: body.error ?? "No se pudo generar el PDF" };
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  window.open(url, "_blank");
+  return { ok: true };
+}

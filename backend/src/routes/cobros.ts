@@ -6,6 +6,10 @@ import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
 import { idempotente } from "../idempotencia";
 import { siguienteFolioCobro } from "../folios";
+import { detalleViajesDeCobro } from "../viajesCobros";
+import { generarPdfEnWorker } from "../pdfWorkerPool";
+import type { DatosCobroPdf } from "../generarPdfCobro";
+import { sustituirVariables, sustituirVariablesEnBloques } from "@bitacora/shared";
 
 export const cobrosRouter = Router();
 
@@ -112,7 +116,76 @@ cobrosRouter.get(
       res.status(404).json({ error: "Cobro no encontrado" });
       return;
     }
-    res.json(data);
+    // Cobro generado desde viajes (tarea 134): detalle por viaje, totales
+    // y período, para la tabla del detalle y el PDF.
+    const viajes = await detalleViajesDeCobro(req.empresaId!, (data as { viaje_ids?: string[] | null }).viaje_ids);
+    res.json({ ...data, viajes });
+  })
+);
+
+// PDF del cobro con el detalle por viaje (tarea 134). Período editable
+// por query (?desde=&hasta=, YYYY-MM-DD); por defecto, la fecha del
+// primer y del último viaje incluido.
+cobrosRouter.get(
+  "/:id/pdf",
+  ah<RequestConEmpresa>(async (req, res) => {
+    const { data: cobro } = await supabase
+      .from("facturas")
+      .select("*, cliente_info:clientes(nombre, rut, direccion)")
+      .eq("empresa_id", req.empresaId!)
+      .eq("id", req.params.id)
+      .maybeSingle();
+    if (!cobro) {
+      res.status(404).json({ error: "Cobro no encontrado" });
+      return;
+    }
+    const detalle = await detalleViajesDeCobro(req.empresaId!, (cobro as { viaje_ids?: string[] | null }).viaje_ids);
+    if (detalle.filas.length === 0) {
+      res.status(400).json({ error: "Este cobro no tiene viajes: el PDF con detalle es para cobros generados desde viajes" });
+      return;
+    }
+    const esFecha = (v: unknown): v is string => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v);
+    const desde = esFecha(req.query.desde) ? req.query.desde : detalle.periodo!.desde;
+    const hasta = esFecha(req.query.hasta) ? req.query.hasta : detalle.periodo!.hasta;
+    if (desde > hasta) {
+      res.status(400).json({ error: "La fecha de inicio del período no puede ser posterior a la de término" });
+      return;
+    }
+
+    const [{ data: empresa }, { data: plantilla }] = await Promise.all([
+      supabase.from("empresas").select("nombre, logo_url, color_primario").eq("id", req.empresaId!).single(),
+      supabase.from("plantillas_documento").select("texto_encabezado, texto_pie, color_primario").eq("empresa_id", req.empresaId!).eq("tipo", "cobranza").maybeSingle(),
+    ]);
+    const clienteInfo = (cobro as unknown as { cliente_info: { nombre: string; rut: string | null; direccion: string | null } | null }).cliente_info;
+    const clienteNombre = clienteInfo?.nombre ?? cobro.cliente;
+    const variables = {
+      cliente: clienteNombre,
+      fecha: cobro.fecha_emision,
+      monto: `$${Math.round(Number(cobro.monto)).toLocaleString("es-CL")}`,
+      empresa: empresa?.nombre ?? "",
+    };
+    const datos: DatosCobroPdf = {
+      empresaNombre: empresa?.nombre ?? "",
+      empresaLogoUrl: empresa?.logo_url ?? null,
+      colorPrimario: plantilla?.color_primario ?? empresa?.color_primario ?? null,
+      textoEncabezado: plantilla?.texto_encabezado ? sustituirVariablesEnBloques(plantilla.texto_encabezado, variables) : null,
+      textoPie: plantilla?.texto_pie ? sustituirVariables(plantilla.texto_pie, variables) : null,
+      folio: (cobro as { folio?: number | null }).folio ?? null,
+      fechaEmision: cobro.fecha_emision,
+      fechaVencimiento: cobro.fecha_vencimiento ?? null,
+      clienteNombre,
+      clienteRut: clienteInfo?.rut ?? null,
+      clienteDireccion: clienteInfo?.direccion ?? null,
+      periodoDesde: desde,
+      periodoHasta: hasta,
+      filas: detalle.filas,
+      totales: detalle.totales,
+    };
+    const pdf = await generarPdfEnWorker<DatosCobroPdf>("cobro", datos);
+    const nombre = `Cobro-${(cobro as { folio?: number | null }).folio ?? req.params.id.slice(0, 8)}.pdf`;
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename="${nombre}"`);
+    res.send(pdf);
   })
 );
 
@@ -335,7 +408,7 @@ cobrosRouter.patch(
 cobrosRouter.delete(
   "/:id",
   ah<RequestConEmpresa>(async (req, res) => {
-    const { data: factura } = await supabase.from("facturas").select("id, estado").eq("empresa_id", req.empresaId!).eq("id", req.params.id).maybeSingle();
+    const { data: factura } = await supabase.from("facturas").select("id, estado, viaje_ids").eq("empresa_id", req.empresaId!).eq("id", req.params.id).maybeSingle();
     if (!factura) {
       res.status(404).json({ error: "Cobro no encontrado" });
       return;
@@ -348,6 +421,21 @@ cobrosRouter.delete(
     if (error) {
       res.status(500).json({ error: error.message });
       return;
+    }
+    // Los viajes del cobro borrado vuelven a quedar disponibles para
+    // cobrar (tarea 134). Antes quedaban en "facturado" sin cobro y no
+    // se podían volver a seleccionar. factura_id ya quedó en null por el
+    // ON DELETE SET NULL; acá se corrige el estado.
+    const viajeIds = ((factura as { viaje_ids?: string[] | null }).viaje_ids ?? []).filter(Boolean);
+    if (viajeIds.length > 0) {
+      const { error: errorViajes } = await supabase
+        .from("viajes")
+        .update({ estado: "confirmado", factura_id: null })
+        .eq("empresa_id", req.empresaId!)
+        .in("id", viajeIds)
+        .eq("estado", "facturado")
+        .is("factura_id", null);
+      if (errorViajes) console.error("No se pudieron liberar los viajes del cobro borrado:", errorViajes.message);
     }
     res.status(204).end();
   })

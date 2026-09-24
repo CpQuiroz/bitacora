@@ -10,7 +10,7 @@ import { ROLES_EDITAN_MONTO_VIAJE, calcularMontos, nuevosMontosViaje } from "../
 import { registrarAuditoriaEmpresa } from "../auditoriaEmpresa";
 import { cobroDeViaje } from "../viajesCobros";
 import { avisarViajeAsignado, normalizarHora, validarChofer } from "../viajesAsignacion";
-import { siguienteFolioViaje } from "../folios";
+import { siguienteFolioCobro, siguienteFolioViaje } from "../folios";
 
 export const viajesRouter = Router();
 
@@ -567,6 +567,10 @@ viajesRouter.post(
         ? fecha_vencimiento
         : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
+    // Folio COB, igual que los cobros manuales y desde OS (tarea 134:
+    // antes el cobro desde viajes quedaba sin folio).
+    const folio = await siguienteFolioCobro(req.empresaId!);
+
     const { data: factura, error: errorFactura } = await supabase
       .from("facturas")
       .insert({
@@ -578,6 +582,7 @@ viajesRouter.post(
         fecha_vencimiento: vencimiento,
         estado: "pendiente",
         viaje_ids,
+        folio,
       })
       .select("*, cliente_info:clientes(id, nombre)")
       .single<Factura>();
@@ -587,13 +592,27 @@ viajesRouter.post(
       return;
     }
 
-    const { error: errorActualizar } = await supabase
+    // Marca los viajes SOLO si siguen sin cobro: si dos pedidos llegan a
+    // la vez con los mismos viajes, uno gana y el otro deshace su cobro
+    // (un viaje nunca queda en dos cobros).
+    const { data: marcados, error: errorActualizar } = await supabase
       .from("viajes")
       .update({ estado: "facturado", factura_id: factura!.id })
       .eq("empresa_id", req.empresaId!)
-      .in("id", viaje_ids);
-    if (errorActualizar) {
-      res.status(500).json({ error: errorActualizar.message });
+      .in("id", viaje_ids)
+      .neq("estado", "facturado")
+      .is("factura_id", null)
+      .select("id");
+    if (errorActualizar || (marcados?.length ?? 0) !== viaje_ids.length) {
+      if (marcados?.length) {
+        await supabase
+          .from("viajes")
+          .update({ estado: "confirmado", factura_id: null })
+          .eq("empresa_id", req.empresaId!)
+          .eq("factura_id", factura!.id);
+      }
+      await supabase.from("facturas").delete().eq("empresa_id", req.empresaId!).eq("id", factura!.id);
+      res.status(409).json({ error: errorActualizar ? errorActualizar.message : "Alguno de los viajes ya fue incluido en otro cobro. Actualiza la lista y vuelve a intentarlo." });
       return;
     }
 

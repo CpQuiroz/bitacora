@@ -23,7 +23,7 @@ const WORKER_PATH = path.join(__dirname, "workers", `pdfWorker${EXTENSION}`);
 // .js) no hace falta nada de esto.
 const EXECARGV_DEV = CORRIENDO_EN_TS ? ["--require", require.resolve("tsx/cjs")] : [];
 
-type TipoPdf = "os" | "cotizacion" | "informe" | "mantencion" | "rendicion";
+type TipoPdf = "os" | "cotizacion" | "informe" | "mantencion" | "rendicion" | "cobro";
 
 const MAX_PDF_SIMULTANEOS = Number(process.env.MAX_PDF_SIMULTANEOS ?? 3);
 const limitarPdf = crearLimitadorConcurrencia(MAX_PDF_SIMULTANEOS);

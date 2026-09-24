@@ -1821,14 +1821,15 @@
       "id": 134,
       "name": "cobro_multi_viaje_pdf",
       "title": "Cobros: cobro desde varios viajes con detalle por viaje (neto/IVA/total), mismo cliente, sin repetir viajes, y PDF con período",
-      "status": "in_progress",
-      "description": "Pedido de la usuaria 24-sep-2026 (Mejoras módulo Viajes, Parte A). Reutilizar lo existente; multi-tenant; permisos por rol/módulo; estilo actual. Commit por punto."
+      "status": "done",
+      "description": "Pedido de la usuaria 24-sep-2026 (Mejoras módulo Viajes, Parte A). Reutilizar lo existente; multi-tenant; permisos por rol/módulo; estilo actual. Commit por punto.",
+      "resolution": "Cobro desde varios viajes: GET /api/cobros/:id trae el detalle por viaje (guía, fecha, chofer, cliente, origen, destino, neto, IVA, total) + totales + período; PDF nuevo generarPdfCobro (mismo motor/estilo que cotizaciones, A4 horizontal, encabezado de empresa y plantilla cobranza, datos del cliente, período editable ?desde&hasta, tabla con salto de página, totales) vía worker tipo cobro. Facturar: mismo cliente (ya existía) + folio COB (antes sin folio) + marcado atómico (dos pedidos simultáneos → un solo cobro). Borrar un cobro libera sus viajes (antes quedaban facturados sin cobro). Web: al generar lleva al cobro; detalle con tabla, totales y Descargar PDF con período. E2E DEV 13/13 + revisión visual del PDF. verificar.sh verde."
     },
     {
       "id": 135,
       "name": "propuesta_precio_tramos_km",
       "title": "Propuesta (solo análisis, sin código): precio por tramos y por kilómetro",
-      "status": "pending",
+      "status": "in_progress",
       "description": "Parte B del pedido de la usuaria 24-sep-2026. Entregar propuesta y esperar aprobación."
     }
   ]

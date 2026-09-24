@@ -1511,6 +1511,29 @@ export type InformePersonalizado = {
 export type EstadoViaje = "borrador" | "confirmado" | "facturado";
 export type OrigenCapturaViaje = "manual" | "whatsapp" | "app";
 
+// Detalle por viaje de un cobro generado desde viajes (tarea 134):
+// tabla del detalle en la web y del PDF del cobro.
+export type ViajeDetalleCobro = {
+  id: string;
+  folio: number | null;
+  numero_guia: string;
+  fecha: string;
+  chofer: string | null;
+  cliente: string;
+  origen: string;
+  destino: string;
+  neto: number;
+  iva: number;
+  total: number;
+};
+
+export type DetalleViajesCobro = {
+  filas: ViajeDetalleCobro[];
+  totales: { neto: number; iva: number; total: number };
+  // Primer y último viaje incluido (período por defecto del PDF).
+  periodo: { desde: string; hasta: string } | null;
+};
+
 export type Viaje = {
   id: string;
   empresa_id: string;
