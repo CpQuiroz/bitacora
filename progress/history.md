@@ -276,3 +276,4 @@ Formato:
 - **Cambios:** mobile (Jest, jest.setup.ts, 4 archivos de prueba), web (Vitest, simulacros, 3 archivos de prueba), packages/ui Input con accessibilityLabel, e2e/ (entorno, 8 suites, run.ts), verificar.sh, docs/harness/verificacion.md.
 - **Verificación:** verificar.sh verde (mobile 12, web 8); bug de hooks inyectado detectado en mobile y web; npm run e2e 85/85 y 0 restos en DEV.
 - **Cierre:** 127 done. Siguiente: punto 5 (borrar usuarios QA de DEV) y propuesta de adicionales (tarea 125) con el informe de Flow.
+- **Punto 5 (24-sep noche):** borrados de DEV los 5 usuarios QA (qa.*@bitacora-qa.cl, en Transportes Gotra) y los datos de prueba que dejó la suite vieja de cobros (48 viajes, 12 cobros, 12 clientes "QA …", 37 notificaciones). Verificado 0 restos. Las pruebas nuevas (e2e/) usan su propia empresa y no dejan datos.
