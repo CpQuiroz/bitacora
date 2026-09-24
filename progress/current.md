@@ -142,3 +142,19 @@ trust proxy (pedido de la usuaria: analizar impacto y aplicar si no hay riesgo) 
 - Probado en local simulando Render: 11 intentos con IP falsa distinta y la misma IP real → el 11º da 429;
   otra IP real no se bloquea. Sin aviso ERR_ERL_PERMISSIVE_TRUST_PROXY.
 - Datos de prueba QA borrados de DEV (5 usuarios, 3 OS, empresa QA, super-admin QA): comprobado en 0.
+
+## Checklist de publicación — etapas 1 a 3 (preparado 24-sep, NO ejecutado)
+Rama claude/nice-cannon-d6mx8x: 21 commits adelante de origin/main, 0 atrás (fast-forward). Incluye también
+lo que ya estaba en la APK 1.10.17 (tareas 112-123), IA en fotos (122), firma del cliente (129) y trust proxy.
+Prod: migraciones 129-131 aplicadas; faltan 132 y 133 (verificado por SELECT).
+1. Usuaria corre en prod, EN ORDEN (antes del merge):
+   npx supabase db query --linked --project-ref yjbskbskyadxjooxngjv -f supabase/migrations/132_secciones_con_interruptor.sql
+   npx supabase migration repair --status applied --linked 132
+   npx supabase db query --linked --project-ref yjbskbskyadxjooxngjv -f supabase/migrations/133_cambiar_modulo_con_tope.sql
+   npx supabase migration repair --status applied --linked 133
+2. Claude verifica en prod (SELECT): roles con las 4 claves nuevas, RPC sin permiso para anon.
+3. Con OK de la usuaria: push de la rama y merge a main (fast-forward) → Vercel + Render se despliegan solos.
+4. Claude revisa el deploy: logs de Render sin errores, /health, login y /api/me en prod.
+5. Después (usuaria): crear en Flow los planes nuevos y cargar FLOW_PLAN_ID_OPERACION / PRO (6 UF) / BASICO
+   (1,5 UF) en Render. Mientras no estén, los planes se muestran como "Disponible pronto".
+Rollback: git revert del merge (las migraciones 132/133 son aditivas; con el backend viejo son inocuas).
