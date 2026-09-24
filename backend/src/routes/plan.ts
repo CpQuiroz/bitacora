@@ -15,6 +15,7 @@ import { cambiarPlanEmpresa } from "../planes";
 import { suscribirAPlan, cancelarSuscripcionFlow, flowPlanIdDe } from "../flow";
 import { enviarConReintento } from "../email";
 import { env } from "../env";
+import { limitarCotizacionPlan } from "../rateLimiters";
 
 export const planRouter = Router();
 
@@ -75,7 +76,7 @@ planRouter.post(
     // (mismo Plan, mismo precio) — solo los módulos.
     if (empresa?.plan === plan) {
       if (plan !== "operacion") {
-        res.status(400).json({ error: "Ya estás en ese plan" });
+        res.status(409).json({ error: "Ya estás en ese plan" });
         return;
       }
       const resultado = await cambiarPlanEmpresa(req.empresaId!, plan, { tipo: "empresa", usuarioId: req.userId! }, true, packElegido);
@@ -131,6 +132,7 @@ function escaparHtml(texto: string): string {
 // plan desde el panel (se cobra por transferencia contra factura).
 planRouter.post(
   "/cotizar-empresa",
+  limitarCotizacionPlan,
   requiereAccion("gestionar_plan"),
   ah<RequestConEmpresa>(async (req, res) => {
     const mensaje = typeof req.body?.mensaje === "string" ? req.body.mensaje.trim().slice(0, 2000) : "";

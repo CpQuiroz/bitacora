@@ -52,3 +52,13 @@ export const limitarPortalAcceso = rateLimit({
   legacyHeaders: false,
   message: { error: "Demasiados intentos — espera unos minutos y vuelve a intentar." },
 });
+
+// Pedir cotización del plan Empresa (tarea 124) — cada pedido manda un
+// correo a los Super-Admin; con esto no se puede usar para spamearlos.
+export const limitarCotizacionPlan = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 3,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Ya enviaste varias solicitudes. Te vamos a responder al correo de tu cuenta." },
+});

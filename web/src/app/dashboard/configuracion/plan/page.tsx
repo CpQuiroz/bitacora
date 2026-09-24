@@ -118,7 +118,7 @@ function PlanContenido() {
     if (res.ok) {
       const body: InfoPlan = await res.json();
       setInfo(body);
-      setPack(body.packRubro ?? body.packSugerido);
+      setPack(body.packRubro ?? (body.planActual === "operacion" ? "transporte" : body.packSugerido));
     }
   }, []);
 
@@ -389,7 +389,7 @@ function PlanContenido() {
                 ) : null}
 
                 <div className="mt-auto flex flex-col gap-ds-2 pt-ds-2">
-                  {esActual && !(plan === "operacion" && info?.packRubro !== pack) ? (
+                  {esActual && !(plan === "operacion" && (info?.packRubro ?? "transporte") !== pack) ? (
                     <p className="font-ds-body text-ds-caption font-medium text-ds-text/60">Tu plan actual</p>
                   ) : esActual ? (
                     <Button bloque variante="secundario" deshabilitado={cambiandoPlan !== null} cargando={cambiandoPlan === plan} onPress={() => onCambiarPlan(plan)}>

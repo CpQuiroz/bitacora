@@ -3,6 +3,7 @@ import multer from "multer";
 import Anthropic from "@anthropic-ai/sdk";
 import type { InformePersonalizado, SeccionInforme, TipoInforme } from "@bitacora/shared";
 import { crearMensajeIA } from "../claude";
+import { LimiteAlcanzadoError } from "../limites";
 import { supabase } from "../supabase";
 import {
   clientesPorComuna,
@@ -346,6 +347,9 @@ informeRouter.post(
       const textBlock = response.content.find((b): b is Anthropic.TextBlock => b.type === "text");
       resultado = textBlock?.text ?? null;
     } catch (err) {
+      // El tope del plan no es una falla de Claude: 403 LIMITE_PLAN al
+      // cliente, sin guardar un informe vacío en el historial.
+      if (err instanceof LimiteAlcanzadoError) throw err;
       console.error("Error generando informe estructurado con Claude:", err);
     }
 
@@ -463,6 +467,7 @@ informeRouter.post(
       const textBlock = response.content.find((b): b is Anthropic.TextBlock => b.type === "text");
       resultadoTexto = textBlock?.text ?? null;
     } catch (err) {
+      if (err instanceof LimiteAlcanzadoError) throw err;
       console.error("Error generando informe personalizado con Claude:", err);
     }
 

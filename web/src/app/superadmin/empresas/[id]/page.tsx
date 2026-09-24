@@ -952,8 +952,9 @@ export default function SuperAdminSaludEmpresaPage() {
                 </div>
               )}
               <p className="mt-3 text-[11px] text-muted">
-                Cambiar el plan acá activa o desactiva los módulos que trae cada plan (y el pack de rubro en Operación), por el
-                mismo camino que usa la empresa en Configuración &gt; Plan, y queda en el historial visible para la empresa.
+                Cambiar el plan acá prende los módulos que el plan nuevo agrega y apaga los que ya no trae (también el pack de
+                rubro en Operación), por el mismo camino que usa la empresa en Configuración &gt; Plan. Los módulos que traen ambos
+                planes quedan como estén, aunque los hayas apagado a mano. Queda en el historial visible para la empresa.
                 Remuneraciones no cambia con el plan. Para el plan Empresa cotizado, cobra por transferencia contra factura.
               </p>
                 </>
