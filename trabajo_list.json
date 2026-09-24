@@ -1829,8 +1829,9 @@
       "id": 135,
       "name": "propuesta_precio_tramos_km",
       "title": "Propuesta (solo análisis, sin código): precio por tramos y por kilómetro",
-      "status": "in_progress",
-      "description": "Parte B del pedido de la usuaria 24-sep-2026. Entregar propuesta y esperar aprobación."
+      "status": "blocked",
+      "description": "Parte B del pedido de la usuaria 24-sep-2026. Entregar propuesta y esperar aprobación.",
+      "resolution": "Propuesta entregada en docs/PROPUESTA_PRECIOS_VIAJES.md (viáticos + precio por tramos/km). Esperando aprobación de la usuaria; sin código."
     }
   ]
 }
