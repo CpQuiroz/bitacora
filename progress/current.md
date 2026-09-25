@@ -16,3 +16,8 @@ cliente + cobro/PDF con km/tramos · 4 Cotización de viaje (Cotizaciones + conv
   ORS vía /api/viajes/tarifas/distancia con caché), servidor arma tramos_detalle/precio_km; chofer no ve costos
   (mis-viajes sinCostos); forma de cobro por defecto en la ficha del cliente; cobro y PDF con "vía" y km (PDF revisado
   visualmente). E2E precioViajes 11/11; total 109/109. ORS_API_KEY aún no configurada (sin clave: 503 "ingresa a mano").
+- Etapa 4 (Cotización de viaje) HECHA: migración 142 aplicada en DEV; E2E cotizacionViaje 7/7; total 116/116.
+- Build mobile 1.10.18 (vc59) hecho: ~/builds/apk/bitacora-1.10.18-vc59.apk (firma de release verificada, URLs prod).
+  JDK: JAVA_HOME del sistema apuntaba a un JDK 11 borrado; se usó /opt/homebrew/opt/openjdk@17. Sin prebuild (el
+  android/ tiene la firma de release a mano); versionCode/versionName editados en android/app/build.gradle.
+- Pendiente: revisor de la tarea 135 → progress/review_tarifas_135.md; EXPLAIN de índices de 141/142.

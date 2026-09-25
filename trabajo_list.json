@@ -1760,8 +1760,9 @@
       "id": 126,
       "name": "mobile_mi_plan_categorias",
       "title": "Mobile: Mi plan con las 4 categorías y lo incluido en el plan",
-      "status": "pending",
-      "description": "Etapa 3 de la tarea 124. Requiere build mobile (bump de versión). Ver maqueta https://claude.ai/artifact/6Ce1AFvXG7jkGdcEKXDPhH."
+      "status": "done",
+      "description": "Etapa 3 de la tarea 124. Requiere build mobile (bump de versión). Ver maqueta https://claude.ai/artifact/6Ce1AFvXG7jkGdcEKXDPhH.",
+      "resolution": " | Build local 1.10.18 (versionCode 59) el 25-sep-2026: ~/builds/apk/bitacora-1.10.18-vc59.apk, firmado con la llave de release (SHA-256 verificado), URLs de prod. Incluye Mi plan, Viajes (chofer/viático), Clientes y pruebas de pantallas."
     },
     {
       "id": 127,
