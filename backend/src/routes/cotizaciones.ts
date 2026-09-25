@@ -1,5 +1,5 @@
 import { Router } from "express";
-import type { EstadoPresupuesto, Presupuesto } from "@bitacora/shared";
+import type { CotizacionViajeDatos, EstadoPresupuesto, Presupuesto } from "@bitacora/shared";
 import { ROLES_SUPERVISION, sustituirVariables, sustituirVariablesEnBloques } from "@bitacora/shared";
 import { supabase } from "../supabase";
 import { crearOrdenServicio } from "../ordenes";
@@ -11,6 +11,10 @@ import { notificarCliente } from "../notificarCliente";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
 import { verificarLimiteOS } from "../limites";
+import { camposPrecio, leerPedidoPrecio } from "../viajesPrecio";
+import { calcularMontos } from "../viajesMontos";
+import { modulosVisiblesDeUsuario } from "../permisos";
+import { siguienteFolioViaje } from "../folios";
 
 export const cotizacionesRouter = Router();
 
@@ -232,7 +236,7 @@ cotizacionesRouter.get(
 cotizacionesRouter.post(
   "/",
   ah<RequestConEmpresa>(async (req, res) => {
-    const { cliente_id, descripcion, fecha_vencimiento, estado, items: itemsRaw } = req.body ?? {};
+    const { cliente_id, descripcion, fecha_vencimiento, estado, items: itemsRaw, tipo, viaje } = req.body ?? {};
 
     if (typeof cliente_id !== "string" || !cliente_id.trim()) {
       res.status(400).json({ error: "Selecciona un cliente" });
@@ -249,8 +253,21 @@ cotizacionesRouter.post(
       return;
     }
 
-    const items = parsearItems(itemsRaw ?? []);
-    if (!items) {
+    // Cotización de viaje (tarea 135): el recorrido y la forma de cobro
+    // se guardan en viaje_datos y se cotiza como un ítem "Viaje …".
+    let viajeDatos: CotizacionViajeDatos | null = null;
+    let itemsEntrada: unknown = itemsRaw ?? [];
+    if (tipo === "viaje") {
+      const armado = await armarCotizacionViaje(req, cliente_id, viaje);
+      if ("error" in armado) {
+        res.status(armado.status).json({ error: armado.error });
+        return;
+      }
+      viajeDatos = armado.datos;
+      itemsEntrada = [armado.item];
+    }
+    const items = parsearItems(itemsEntrada);
+    if (!items || (tipo === "viaje" && items.length !== 1)) {
       res.status(400).json({ error: "Ítems inválidos — cada uno necesita descripción, cantidad y precio válidos" });
       return;
     }
@@ -278,6 +295,8 @@ cotizacionesRouter.post(
         fecha_vencimiento: fecha_vencimiento || null,
         estado: estadoFinal,
         numero,
+        tipo: viajeDatos ? "viaje" : "servicio",
+        viaje_datos: viajeDatos,
       })
       .select("*, cliente_info:clientes(nombre)")
       .single();
@@ -414,6 +433,88 @@ cotizacionesRouter.delete(
       return;
     }
     res.status(204).end();
+  })
+);
+
+// Cotización de viaje aprobada → viaje en borrador con el mismo precio y
+// forma de cobro (tarea 135). El Admin después le asigna chofer y guía.
+cotizacionesRouter.post(
+  "/:id/convertir-a-viaje",
+  ah<RequestConEmpresa>(async (req, res) => {
+    if (!ROLES_SUPERVISION.includes(req.rol ?? "") || !(await modulosVisiblesDeUsuario(req.rol ?? "", req.empresaId!)).includes("viajes")) {
+      res.status(403).json({ error: "Convertir en viaje requiere el módulo Viajes (administrador o supervisor)" });
+      return;
+    }
+    const { data: cot } = await supabase
+      .from("presupuestos")
+      .select("*, cliente_info:clientes(nombre)")
+      .eq("empresa_id", req.empresaId!)
+      .eq("id", req.params.id)
+      .maybeSingle();
+    if (!cot) {
+      res.status(404).json({ error: "Cotización no encontrada" });
+      return;
+    }
+    if (cot.tipo !== "viaje" || !cot.viaje_datos) {
+      res.status(400).json({ error: "Solo una cotización de viaje se convierte en viaje" });
+      return;
+    }
+    if (cot.estado !== "aprobado") {
+      res.status(400).json({ error: "Solo una cotización aprobada puede convertirse en viaje" });
+      return;
+    }
+    if (cot.viaje_id) {
+      res.status(409).json({ error: "Esta cotización ya fue convertida en un viaje", viaje_id: cot.viaje_id });
+      return;
+    }
+    const d = cot.viaje_datos as CotizacionViajeDatos;
+    const neto = Number(cot.subtotal ?? 0);
+    const { subtotal, iva, total } = calcularMontos(neto, true);
+    const folio = await siguienteFolioViaje(req.empresaId!);
+    const { data: viajeCreado, error: errorViaje } = await supabase
+      .from("viajes")
+      .insert({
+        empresa_id: req.empresaId!,
+        fecha: d.fecha ?? new Date().toISOString().slice(0, 10),
+        // La guía real se pone al despachar; mientras, la de la cotización.
+        numero_guia: `COT-${cot.numero ?? folio}`,
+        folio,
+        cliente: (cot as { cliente_info?: { nombre?: string } }).cliente_info?.nombre ?? "Cliente",
+        cliente_id: cot.cliente_id,
+        origen: d.origen,
+        destino: d.destino,
+        subtotal,
+        aplica_iva: true,
+        iva,
+        total,
+        estado: "borrador",
+        origen_captura: "manual",
+        modo_precio: d.modo_precio,
+        distancia_km: d.distancia_km,
+        precio_km: d.precio_km,
+        tramos_detalle: d.tramos_detalle,
+        comentarios: `Desde la cotización N° ${cot.numero ?? "—"}`,
+      })
+      .select("id")
+      .single();
+    if (errorViaje || !viajeCreado) {
+      res.status(500).json({ error: errorViaje?.message ?? "No se pudo crear el viaje" });
+      return;
+    }
+    // Marcado atómico: si otro pedido convirtió primero, se deshace este viaje.
+    const { data: marcada } = await supabase
+      .from("presupuestos")
+      .update({ viaje_id: viajeCreado.id })
+      .eq("empresa_id", req.empresaId!)
+      .eq("id", cot.id)
+      .is("viaje_id", null)
+      .select("id");
+    if (!marcada?.length) {
+      await supabase.from("viajes").delete().eq("empresa_id", req.empresaId!).eq("id", viajeCreado.id);
+      res.status(409).json({ error: "Esta cotización ya fue convertida en un viaje" });
+      return;
+    }
+    res.status(201).json({ viaje_id: viajeCreado.id });
   })
 );
 
@@ -660,3 +761,40 @@ cotizacionesRouter.post(
     res.json({ ok: true });
   })
 );
+
+// Valida y arma una cotización de viaje (tarea 135). Precio neto (sin IVA).
+async function armarCotizacionViaje(
+  req: RequestConEmpresa,
+  clienteId: string,
+  viaje: unknown
+): Promise<{ datos: CotizacionViajeDatos; item: Record<string, unknown> } | { error: string; status: 400 | 403 }> {
+  if (!ROLES_SUPERVISION.includes(req.rol ?? "")) return { error: "La cotización de viaje la hace el administrador o un supervisor", status: 403 };
+  const v = (viaje ?? {}) as { fecha?: unknown; origen?: unknown; destino?: unknown; paradas?: unknown; modo_precio?: unknown; distancia_km?: unknown; monto?: unknown };
+  const origen = typeof v.origen === "string" ? v.origen.trim() : "";
+  const destino = typeof v.destino === "string" ? v.destino.trim() : "";
+  if (!origen || !destino) return { error: "Indica origen y destino del viaje", status: 400 };
+  const paradas = Array.isArray(v.paradas) ? v.paradas.filter((p): p is string => typeof p === "string" && p.trim().length > 0).map((p) => p.trim()) : [];
+  const monto = Number(v.monto);
+  if (v.monto === "" || v.monto === null || v.monto === undefined || !Number.isFinite(monto) || monto < 0) return { error: "Monto del viaje inválido", status: 400 };
+  const fecha = typeof v.fecha === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v.fecha) ? v.fecha : null;
+  const pedido = leerPedidoPrecio({ modo_precio: v.modo_precio ?? "fijo", paradas: [origen, ...paradas, destino], distancia_km: v.distancia_km });
+  if ("error" in pedido) return { error: pedido.error, status: 400 };
+  if (!("pedido" in pedido)) return { error: "Forma de cobro inválida", status: 400 };
+  const precio = await camposPrecio(req.empresaId!, clienteId, pedido.pedido);
+  if ("error" in precio) return { error: precio.error, status: 400 };
+  const recorrido = [origen, ...paradas, destino].join(" → ");
+  const km = precio.distancia_km != null ? ` (${precio.distancia_km.toLocaleString("es-CL")} km)` : "";
+  return {
+    datos: {
+      fecha,
+      origen,
+      destino,
+      paradas,
+      modo_precio: precio.modo_precio,
+      distancia_km: precio.distancia_km,
+      precio_km: precio.precio_km,
+      tramos_detalle: precio.tramos_detalle,
+    },
+    item: { descripcion: `Viaje ${recorrido}${km}`, cantidad: 1, precio_unitario: Math.round(monto) },
+  };
+}

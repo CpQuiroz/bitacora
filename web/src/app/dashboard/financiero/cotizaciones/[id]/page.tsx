@@ -248,6 +248,20 @@ export default function CotizacionDetallePage() {
     router.push("/dashboard/financiero/cotizaciones");
   }
 
+  // Tarea 135: cotización de viaje aprobada → viaje en borrador.
+  async function convertirAViaje() {
+    setConvirtiendo(true);
+    setErrorConversion(null);
+    const res = await apiFetch(`/api/cotizaciones/${params.id}/convertir-a-viaje`, { method: "POST" });
+    setConvirtiendo(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setErrorConversion(body.error ?? "No se pudo convertir la cotización en viaje");
+      return;
+    }
+    cargar();
+  }
+
   async function convertirAOs() {
     setConvirtiendo(true);
     setErrorConversion(null);
@@ -455,6 +469,39 @@ export default function CotizacionDetallePage() {
             </div>
           </Card>
 
+          {cotizacion.tipo === "viaje" && cotizacion.viaje_datos ? (
+          <Card>
+            <p className="mb-ds-3 font-ds-body text-ds-small font-semibold text-ds-text">Viaje</p>
+            <p className="font-ds-body text-ds-small text-ds-text">
+              {[cotizacion.viaje_datos.origen, ...cotizacion.viaje_datos.paradas, cotizacion.viaje_datos.destino].join(" → ")}
+            </p>
+            <p className="mt-ds-1 font-ds-body text-ds-caption text-ds-text/60">
+              {cotizacion.viaje_datos.modo_precio === "tramos"
+                ? "Por tramos"
+                : cotizacion.viaje_datos.modo_precio === "km"
+                  ? `Por km · ${cotizacion.viaje_datos.distancia_km ?? 0} km`
+                  : "Monto fijo"}
+              {cotizacion.viaje_datos.fecha ? ` · ${cotizacion.viaje_datos.fecha}` : ""}
+            </p>
+            <div className="mt-ds-4">
+              {cotizacion.viaje_id ? (
+                <Link href="/dashboard/viajes" className="font-ds-body text-ds-small font-medium text-ds-brand hover:underline">
+                  Convertida en viaje (en borrador) → ver Viajes
+                </Link>
+              ) : cotizacion.estado === "aprobado" ? (
+                <>
+                  <p className="mb-ds-3 font-ds-body text-ds-small text-ds-text/70">Aprobada: conviértela en un viaje en borrador para asignarle chofer y guía.</p>
+                  <Button onPress={convertirAViaje} cargando={convirtiendo}>
+                    Convertir en viaje
+                  </Button>
+                  {errorConversion ? <p className="mt-ds-3 font-ds-body text-ds-small text-ds-accent-700">{errorConversion}</p> : null}
+                </>
+              ) : (
+                <p className="font-ds-body text-ds-small text-ds-text/70">Aprueba la cotización para poder convertirla en un viaje.</p>
+              )}
+            </div>
+          </Card>
+          ) : (
           <Card>
             <p className="mb-ds-3 font-ds-body text-ds-small font-semibold text-ds-text">Orden de Servicio</p>
             {cotizacion.trabajo_id ? (
@@ -480,6 +527,7 @@ export default function CotizacionDetallePage() {
               <p className="font-ds-body text-ds-small text-ds-text/70">Aprueba la cotización para poder convertirla en una orden de servicio.</p>
             )}
           </Card>
+          )}
         </div>
       </div>
 

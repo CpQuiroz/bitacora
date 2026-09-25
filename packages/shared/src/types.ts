@@ -1151,6 +1151,21 @@ export type Presupuesto = {
   // manejados por `estado` (arriba), sin tocar. null = sin etapa.
   etapa_id: string | null;
   creado_en: string;
+  // Cotización de viaje (tarea 135, migración 142).
+  tipo: "servicio" | "viaje";
+  viaje_datos: CotizacionViajeDatos | null;
+  viaje_id: string | null;
+};
+
+export type CotizacionViajeDatos = {
+  fecha: string | null;
+  origen: string;
+  destino: string;
+  paradas: string[];
+  modo_precio: ModoPrecioViaje;
+  distancia_km: number | null;
+  precio_km: number | null;
+  tramos_detalle: TramoPrecio[] | null;
 };
 
 export type CotizacionEtapa = {

@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, Plus } from "lucide-react";
-import type { Cliente } from "@bitacora/shared";
+import { CIUDADES_CHILE, ROLES_SUPERVISION, type Cliente, type ModoPrecioViaje } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
@@ -12,6 +12,8 @@ import { Button, Card, DatePicker, Input } from "@bitacora/ui/web";
 import { InputMonto } from "@/components/InputMonto";
 import { CatalogoSelectorModal, type ItemSeleccionadoCatalogo } from "@/components/CatalogoSelectorModal";
 import { ComboboxCliente } from "@/components/ComboboxCliente";
+import { Combobox } from "@/components/Combobox";
+import { PrecioViaje } from "@/components/PrecioViaje";
 
 type Linea = {
   catalogo_item_id: string | null;
@@ -44,6 +46,21 @@ function NuevaCotizacionContenido() {
   const [selectorAbierto, setSelectorAbierto] = useState(false);
   // Migración 116 — ver nota en ordenes/nueva/page.tsx.
   const [preciosAvanzados, setPreciosAvanzados] = useState(false);
+  // Cotización de viaje (tarea 135): solo Admin/Supervisor con el módulo Viajes.
+  const [puedeViaje, setPuedeViaje] = useState(false);
+  const [tipo, setTipo] = useState<"servicio" | "viaje">(() => (searchParams.get("tipo") === "viaje" ? "viaje" : "servicio"));
+  const [fechaViaje, setFechaViaje] = useState("");
+  const [origen, setOrigen] = useState("");
+  const [destino, setDestino] = useState("");
+  const [paradas, setParadas] = useState<string[]>([]);
+  const [modoPrecio, setModoPrecio] = useState<ModoPrecioViaje>("fijo");
+  const [distanciaKm, setDistanciaKm] = useState("");
+  const [montoViaje, setMontoViaje] = useState("");
+  const [ciudadesLibres, setCiudadesLibres] = useState<string[]>([]);
+  const opcionesCiudad = useMemo(() => [...CIUDADES_CHILE, ...ciudadesLibres].map((c) => ({ id: c, label: c })), [ciudadesLibres]);
+  function agregarCiudadLibre(texto: string) {
+    if (texto && !CIUDADES_CHILE.includes(texto)) setCiudadesLibres((prev) => (prev.includes(texto) ? prev : [...prev, texto]));
+  }
 
   useEffect(() => {
     (async () => {
@@ -54,7 +71,9 @@ function NuevaCotizacionContenido() {
       }
       const [resMe, resClientes] = await Promise.all([apiFetch("/api/me"), apiFetch("/api/clientes")]);
       if (resMe.ok) {
-        const { usuario: u } = await resMe.json();
+        const cuerpoMe = await resMe.json();
+        const u = cuerpoMe.usuario;
+        setPuedeViaje(Boolean(u) && ROLES_SUPERVISION.includes(u.rol) && Array.isArray(cuerpoMe.modulos_visibles) && cuerpoMe.modulos_visibles.includes("viajes"));
         if (u)
           setUsuario({
             nombre: u.nombre,
@@ -97,10 +116,10 @@ function NuevaCotizacionContenido() {
   }
 
   const { subtotal, iva, total } = useMemo(() => {
-    const sub = lineas.reduce((acc, l) => acc + (Number(l.cantidad) || 0) * (Number(l.precio_unitario) || 0), 0);
+    const sub = tipo === "viaje" ? Number(montoViaje) || 0 : lineas.reduce((acc, l) => acc + (Number(l.cantidad) || 0) * (Number(l.precio_unitario) || 0), 0);
     const ivaCalc = Math.round(sub * IVA_TASA);
     return { subtotal: Math.round(sub), iva: ivaCalc, total: Math.round(sub) + ivaCalc };
-  }, [lineas]);
+  }, [lineas, tipo, montoViaje]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -109,7 +128,16 @@ function NuevaCotizacionContenido() {
       setError("Selecciona un cliente");
       return;
     }
-    if (lineas.length === 0) {
+    const esViaje = tipo === "viaje";
+    if (esViaje && (!origen || !destino)) {
+      setError("Indica origen y destino del viaje");
+      return;
+    }
+    if (esViaje && !montoViaje) {
+      setError("Indica el monto del viaje (o calcúlalo)");
+      return;
+    }
+    if (!esViaje && lineas.length === 0) {
       setError("Agrega al menos un ítem");
       return;
     }
@@ -120,7 +148,13 @@ function NuevaCotizacionContenido() {
         cliente_id: clienteId,
         descripcion,
         fecha_vencimiento: fechaVencimiento || null,
-        items: lineas.map((l) => ({
+        ...(esViaje
+          ? {
+              tipo: "viaje",
+              viaje: { fecha: fechaViaje || null, origen, destino, paradas: paradas.filter((p) => p.trim()), modo_precio: modoPrecio, distancia_km: distanciaKm || null, monto: montoViaje },
+            }
+          : {}),
+        items: esViaje ? [] : lineas.map((l) => ({
           catalogo_item_id: l.catalogo_item_id,
           descripcion: l.descripcion,
           cantidad: Number(l.cantidad),
@@ -176,6 +210,65 @@ function NuevaCotizacionContenido() {
           </div>
         </Card>
 
+        {puedeViaje ? (
+          <div className="flex gap-ds-2" role="radiogroup" aria-label="Tipo de cotización">
+            {(["servicio", "viaje"] as const).map((t) => (
+              <button
+                key={t}
+                type="button"
+                role="radio"
+                aria-checked={tipo === t}
+                onClick={() => setTipo(t)}
+                className={`rounded-ds-pill border px-ds-4 py-ds-2 font-ds-body text-ds-small font-medium ${
+                  tipo === t ? "border-transparent bg-ds-brand text-ds-brand-foreground" : "border-ds-divider text-ds-text/70 hover:bg-ds-brand/[0.08]"
+                }`}
+              >
+                {t === "servicio" ? "Cotización de servicio" : "Cotización de viaje"}
+              </button>
+            ))}
+          </div>
+        ) : null}
+
+        {tipo === "viaje" ? (
+          <Card>
+            <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Viaje a cotizar</p>
+            <div className="grid gap-ds-4 sm:grid-cols-2 lg:grid-cols-3">
+              <DatePicker etiqueta="Fecha del viaje (opcional)" valor={aFecha(fechaViaje)} onCambio={(f) => setFechaViaje(aTexto(f))} />
+              <div className="flex flex-col gap-ds-1">
+                <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Origen</label>
+                <Combobox value={origen} onChange={setOrigen} opciones={opcionesCiudad} placeholder="Ciudad de origen" etiquetaCrear={(t) => `Usar "${t}"`} onCrear={(t) => { agregarCiudadLibre(t); setOrigen(t); }} />
+              </div>
+              <div className="flex flex-col gap-ds-1">
+                <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Destino</label>
+                <Combobox value={destino} onChange={setDestino} opciones={opcionesCiudad} placeholder="Ciudad de destino" etiquetaCrear={(t) => `Usar "${t}"`} onCrear={(t) => { agregarCiudadLibre(t); setDestino(t); }} />
+              </div>
+              <PrecioViaje
+                modo={modoPrecio}
+                onModo={setModoPrecio}
+                origen={origen}
+                destino={destino}
+                paradas={paradas}
+                onParadas={setParadas}
+                km={distanciaKm}
+                onKm={setDistanciaKm}
+                clienteId={clienteId}
+                onMontoPropuesto={setMontoViaje}
+                opcionesCiudad={opcionesCiudad}
+                onCiudadLibre={agregarCiudadLibre}
+                moneda={usuario.moneda}
+              />
+              <div className="flex flex-col gap-ds-1">
+                <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Monto del viaje (neto)</label>
+                <InputMonto required value={montoViaje} onChange={setMontoViaje} moneda={usuario.moneda} />
+              </div>
+            </div>
+            <div className="mt-ds-6 flex flex-col items-end gap-ds-1 border-t border-ds-divider pt-ds-4 font-ds-body text-ds-small">
+              <div className="flex w-56 justify-between"><span className="text-ds-text/60">Subtotal</span><span className="text-ds-text">{formatMoneda(subtotal, usuario.moneda)}</span></div>
+              <div className="flex w-56 justify-between"><span className="text-ds-text/60">IVA (19%)</span><span className="text-ds-text">{formatMoneda(iva, usuario.moneda)}</span></div>
+              <div className="flex w-56 justify-between text-ds-body font-semibold"><span className="text-ds-text">Total</span><span className="text-ds-text">{formatMoneda(total, usuario.moneda)}</span></div>
+            </div>
+          </Card>
+        ) : (
         <Card>
           <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Ítems</p>
 
@@ -238,6 +331,7 @@ function NuevaCotizacionContenido() {
             </div>
           </div>
         </Card>
+        )}
 
         {error ? <p className="font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
         <div className="flex gap-ds-2">
