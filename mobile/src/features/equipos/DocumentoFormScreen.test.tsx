@@ -6,6 +6,7 @@ import { DocumentoFormScreen } from "./DocumentoFormScreen";
 let mockTipos: { id: string; nombre: string; aplica_a: string; activo: boolean }[] = [];
 const mockGuardar = jest.fn(async () => ({ ok: true }));
 jest.mock("expo-document-picker", () => ({ getDocumentAsync: jest.fn() }));
+jest.mock("expo-file-system", () => ({ File: class {}, Paths: { cache: "" } }));
 jest.mock("../../lib/imagen", () => ({ elegirFotos: jest.fn(async () => []) }));
 jest.mock("../../services/equipos", () => ({
   tiposDocumentoVehiculo: jest.fn(async () => mockTipos),

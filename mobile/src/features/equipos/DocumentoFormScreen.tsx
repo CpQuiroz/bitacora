@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import * as DocumentPicker from "expo-document-picker";
+import { File, Paths } from "expo-file-system";
 import { FileText, X } from "lucide-react-native";
 import type { TipoDocumento } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
@@ -82,7 +83,15 @@ export function DocumentoFormScreen({ navigation, route }: NativeStackScreenProp
     if (r.canceled || !r.assets?.[0]) return;
     const a = r.assets[0];
     if (a.size && a.size > MAX_BYTES) return Alert.alert("Archivo muy grande", "El PDF puede pesar hasta 10 MB.");
-    setArchivo({ uri: a.uri, name: a.name || `documento-${Date.now()}.pdf`, type: "application/pdf" });
+    // El tipo del archivo sale de su extensión: si el proveedor lo entregó
+    // sin ".pdf", se copia al caché con ese nombre para que llegue como PDF.
+    let uri = a.uri;
+    if (!/\.pdf$/i.test(uri)) {
+      const destino = new File(Paths.cache, `documento-${Date.now()}.pdf`);
+      await new File(a.uri).copy(destino);
+      uri = destino.uri;
+    }
+    setArchivo({ uri, name: a.name || `documento-${Date.now()}.pdf`, type: "application/pdf" });
   }
 
   function elegirArchivo() {

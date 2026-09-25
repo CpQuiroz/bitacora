@@ -1,4 +1,5 @@
 import type { Documento, Equipo, EquipoAsignadoConDocumentos, EstadoDocumento, PlanMantencion, TipoDocumento, Usuario } from "@bitacora/shared";
+import { File } from "expo-file-system";
 import { apiFetch, apiJson, TIMEOUT_MULTIPART_MS } from "./api";
 import { guardarCache, leerCache } from "./sync/cache";
 
@@ -105,15 +106,21 @@ export async function guardarDocumento(b: BorradorDocumento): Promise<{ ok: true
   fd.append("numero", b.numero.trim());
   fd.append("fecha_emision", b.fechaEmision ?? "");
   fd.append("fecha_vencimiento", b.fechaVencimiento ?? "");
-  // RN acepta { uri, name, type } como archivo del multipart.
-  if (b.archivo) fd.append("archivo", b.archivo as unknown as Blob);
+  // El fetch de Expo exige un Blob/File real: el objeto {uri,name,type}
+  // de antes falla con "Unsupported FormDataPart implementation" (ver
+  // services/sync/queue.ts). File de expo-file-system deriva nombre y tipo
+  // del archivo (la extensión .jpg/.pdf define el MIME que valida el backend).
+  if (b.archivo) fd.append("archivo", new File(b.archivo.uri));
   try {
     const res = await apiFetch(b.id ? `/api/documentos/${b.id}` : "/api/documentos", { method: b.id ? "PATCH" : "POST", body: fd }, TIMEOUT_MULTIPART_MS);
     if (res.ok) return { ok: true };
     const body = await res.json().catch(() => ({}));
     return { ok: false, error: (body as { error?: string }).error ?? `Error ${res.status}` };
-  } catch {
-    return { ok: false, error: "No se pudo conectar. Para subir documentos necesitas conexión." };
+  } catch (e) {
+    // Solo timeout/red es "sin conexión"; cualquier otro error se muestra tal cual.
+    if (e instanceof Error && e.name === "AbortError") return { ok: false, error: "La subida tardó demasiado. Revisa tu conexión e intenta de nuevo." };
+    if (e instanceof TypeError && /network/i.test(e.message)) return { ok: false, error: "No se pudo conectar. Para subir documentos necesitas conexión." };
+    return { ok: false, error: `No se pudo subir el archivo (${e instanceof Error ? e.message : String(e)})` };
   }
 }
 
