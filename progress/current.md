@@ -37,7 +37,7 @@ m3 reactivar no acorta, m4 tope PATCH, m5 filas afectadas, m6 fecha de alta en C
 queda pendiente con TRIAL_VENCIDO y sin "Descartar" en la pila bloqueada, m9 2FA antes que prueba vencida en mobile.
 Pendiente con la usuaria: m10 (encuesta pública) e impersonación bloqueada con prueba vencida. m11: se deja select("*")
 a propósito (datos llega con la 144). Commit 427dd23. Build 1.10.19 (vc60): ~/builds/apk/bitacora-1.10.19-vc60.apk (a094534).
-E2E: suite pruebaVencida 32/34 (antes 28/30 (144-29/30 esperan migración 144); total 151/153. verificar verde. Commits 7b911a1 + este.
+Migración 144 aplicada en DEV (25-sep, por Claude vía Supabase MCP a pedido de la usuaria). E2E pruebaVencida 34/34, total 157/157. (antes 28/30 (144-29/30 esperan migración 144); total 151/153. verificar verde. Commits 7b911a1 + este.
 
 ## Tarea 135 — Precio por tramos y por km + Cotización de viaje (en curso, 24-sep noche)
 Propuesta base: docs/PROPUESTA_PRECIOS_VIAJES.md §2 (aprobada). Decisiones de la usuaria: km con mapa (origen/destino del
