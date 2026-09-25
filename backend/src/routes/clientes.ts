@@ -1,3 +1,4 @@
+import { ROLES_SUPERVISION } from "@bitacora/shared";
 import { Router } from "express";
 import type { Cliente } from "@bitacora/shared";
 import { formatearRut, validarRut } from "@bitacora/shared";
@@ -324,7 +325,7 @@ clientesRouter.post(
 clientesRouter.patch(
   "/:id",
   ah<RequestConEmpresa>(async (req, res) => {
-    const { nombre, rut, direccion, comuna, telefono, correo, notas, contacto_nombre, activo, fecha_nacimiento } = req.body ?? {};
+    const { nombre, rut, direccion, comuna, telefono, correo, notas, contacto_nombre, activo, fecha_nacimiento, modo_precio_default } = req.body ?? {};
     const cambios: Partial<Cliente> = {};
     let reGeocodificar = false;
 
@@ -357,6 +358,18 @@ clientesRouter.patch(
     if (contacto_nombre !== undefined) cambios.contacto_nombre = contacto_nombre?.trim() || null;
     if (activo !== undefined) cambios.activo = Boolean(activo);
     if (fecha_nacimiento !== undefined) cambios.fecha_nacimiento = fecha_nacimiento || null;
+    // Tarea 135: forma de cobro por defecto de sus viajes (solo gestión de precios).
+    if (modo_precio_default !== undefined) {
+      if (modo_precio_default !== null && modo_precio_default !== "" && !["fijo", "tramos", "km"].includes(modo_precio_default)) {
+        res.status(400).json({ error: "La forma de cobro debe ser fijo, tramos o km" });
+        return;
+      }
+      if (!ROLES_SUPERVISION.includes(req.rol ?? "")) {
+        res.status(403).json({ error: "La forma de cobro la define el administrador o un supervisor" });
+        return;
+      }
+      cambios.modo_precio_default = modo_precio_default || null;
+    }
 
     if (reGeocodificar) {
       const coords = await geocodificarDireccion(cambios.direccion!);

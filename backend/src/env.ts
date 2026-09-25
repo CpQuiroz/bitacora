@@ -88,6 +88,10 @@ export const env = {
   FLOW_PLAN_ID_OPERACION: process.env.FLOW_PLAN_ID_OPERACION ?? null,
   FLOW_PLAN_ID_PRO: process.env.FLOW_PLAN_ID_PRO ?? null,
   FLOW_PLAN_ID_EMPRESA: process.env.FLOW_PLAN_ID_EMPRESA ?? null,
+  // Distancia por carretera para el precio por km de los viajes (tarea 135):
+  // OpenRouteService (openrouteservice.org, clave gratuita). Opcional: sin
+  // ella, "Calcular km" avisa y los km se ingresan a mano.
+  ORS_API_KEY: process.env.ORS_API_KEY ?? null,
   // Panel de infraestructura del Super-Admin (22-sep-2026) — cada uno
   // opcional: sin la credencial, ese servicio se omite del panel en vez
   // de tirar error (ver superadmin/infra.ts). Nunca se exponen al

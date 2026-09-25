@@ -9,6 +9,7 @@ import { ROLES_SUPERVISION, calcularPorKm, calcularPorTramos, parTramo } from "@
 import { supabase } from "../supabase";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
+import { ErrorDistancia, distanciaRecorridoKm } from "../distancia";
 
 export const tarifasViajesRouter = Router();
 
@@ -244,6 +245,28 @@ tarifasViajesRouter.post(
       return;
     }
     res.status(400).json({ error: "El modo debe ser tramos o km" });
+  })
+);
+
+// Km por carretera de un recorrido (origen, paradas, destino) con el mapa.
+tarifasViajesRouter.post(
+  "/distancia",
+  ah<RequestConEmpresa>(async (req, res) => {
+    const { paradas } = req.body ?? {};
+    const lista = Array.isArray(paradas) ? paradas.filter((p): p is string => typeof p === "string" && p.trim().length > 0) : [];
+    if (lista.length < 2 || lista.length > 10) {
+      res.status(400).json({ error: "Indica origen y destino (hasta 10 puntos)" });
+      return;
+    }
+    try {
+      res.json(await distanciaRecorridoKm(lista));
+    } catch (e) {
+      if (e instanceof ErrorDistancia) {
+        res.status(e.status).json({ error: e.message });
+        return;
+      }
+      throw e;
+    }
   })
 );
 

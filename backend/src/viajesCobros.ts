@@ -21,7 +21,7 @@ export async function detalleViajesDeCobro(empresaId: string, viajeIds: string[]
   if (ids.length === 0) return { filas: [], totales: { neto: 0, iva: 0, total: 0 }, periodo: null };
   const { data, error } = await supabase
     .from("viajes")
-    .select("id, folio, numero_guia, fecha, cliente, origen, destino, subtotal, iva, total, chofer:usuarios(nombre), cliente_info:clientes(nombre)")
+    .select("id, folio, numero_guia, fecha, cliente, origen, destino, subtotal, iva, total, modo_precio, distancia_km, tramos_detalle, chofer:usuarios(nombre), cliente_info:clientes(nombre)")
     .eq("empresa_id", empresaId)
     .in("id", ids)
     .order("fecha", { ascending: true })
@@ -31,6 +31,7 @@ export async function detalleViajesDeCobro(empresaId: string, viajeIds: string[]
     const r = v as unknown as {
       id: string; folio: number | null; numero_guia: string; fecha: string; cliente: string; origen: string; destino: string;
       subtotal: number | string; iva: number | string; total: number | string;
+      modo_precio: string | null; distancia_km: number | string | null; tramos_detalle: { destino: string }[] | null;
       chofer: { nombre: string } | null; cliente_info: { nombre: string } | null;
     };
     return {
@@ -42,6 +43,8 @@ export async function detalleViajesDeCobro(empresaId: string, viajeIds: string[]
       cliente: r.cliente_info?.nombre ?? r.cliente,
       origen: r.origen,
       destino: r.destino,
+      km: r.modo_precio === "km" && r.distancia_km != null ? Number(r.distancia_km) : null,
+      via: r.modo_precio === "tramos" && r.tramos_detalle && r.tramos_detalle.length > 1 ? r.tramos_detalle.slice(0, -1).map((t) => t.destino) : [],
       neto: Number(r.subtotal),
       iva: Number(r.iva),
       total: Number(r.total),

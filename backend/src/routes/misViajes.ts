@@ -1,3 +1,4 @@
+import { ROLES_SUPERVISION } from "@bitacora/shared";
 import { Router } from "express";
 import multer from "multer";
 import type { EstadoViaje, Viaje } from "@bitacora/shared";
@@ -33,6 +34,14 @@ const upload = multer({
 
 const esGestion = (req: RequestConEmpresa) => req.rol !== "colaborador";
 
+// Tarea 135: las tarifas y el detalle del cálculo (tramos con su precio,
+// precio por km) solo los ven Admin y Supervisor — no el chofer.
+function sinCostos<T extends Record<string, unknown>>(req: RequestConEmpresa, v: T): T {
+  if (ROLES_SUPERVISION.includes(req.rol ?? "")) return v;
+  const { precio_km: _pk, tramos_detalle: _td, ...resto } = v as T & { precio_km?: unknown; tramos_detalle?: unknown };
+  return resto as T;
+}
+
 misViajesRouter.get(
   "/",
   ah<RequestConEmpresa>(async (req, res) => {
@@ -61,7 +70,7 @@ misViajesRouter.get(
       res.status(500).json({ error: error.message });
       return;
     }
-    res.json(data ?? []);
+    res.json((data ?? []).map((v) => sinCostos(req, v)));
   })
 );
 
@@ -96,7 +105,7 @@ misViajesRouter.get(
     const fotos = await Promise.all(
       (fotosRaw ?? []).map(async (f) => ({ id: f.id, creado_en: f.creado_en, url: await urlFirmadaFotoGuia(f.foto_url, 15) }))
     );
-    res.json({ ...data, foto_guia_url_firmada, fotos });
+    res.json({ ...sinCostos(req, data), foto_guia_url_firmada, fotos });
   })
 );
 
@@ -328,7 +337,7 @@ misViajesRouter.post(
       res.status(500).json({ error: error.message });
       return;
     }
-    res.json(data);
+    res.json(sinCostos(req, data));
   })
 );
 
@@ -458,7 +467,7 @@ misViajesRouter.patch(
       const sync = await sincronizarGastoViatico(req.empresaId!, data, viaticoDeViaje(data));
       if ("error" in sync) console.error(`[viaticos] no se pudo actualizar el gasto del viaje ${data.id}: ${sync.error}`);
     }
-    res.json(data);
+    res.json(sinCostos(req, data));
   })
 );
 

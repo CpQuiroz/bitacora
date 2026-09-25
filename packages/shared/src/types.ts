@@ -1534,6 +1534,10 @@ export type ViajeDetalleCobro = {
   cliente: string;
   origen: string;
   destino: string;
+  // Tarea 135: km del viaje (cobro por km) y paradas intermedias (por
+  // tramos). Sin los precios por tramo: el cliente ve el total del viaje.
+  km: number | null;
+  via: string[];
   neto: number;
   iva: number;
   total: number;

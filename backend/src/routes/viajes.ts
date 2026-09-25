@@ -9,6 +9,7 @@ import { requiereAccion, requiereRol } from "../permisos";
 import { ROLES_EDITAN_MONTO_VIAJE, calcularMontos, normalizarHora, nuevosMontosViaje } from "../viajesMontos";
 import { registrarAuditoriaEmpresa } from "../auditoriaEmpresa";
 import { cobroDeViaje } from "../viajesCobros";
+import { camposPrecio, leerPedidoPrecio, type CamposPrecio } from "../viajesPrecio";
 import { avisarViajeAsignado, validarChofer } from "../viajesAsignacion";
 import { siguienteFolioCobro, siguienteFolioViaje } from "../folios";
 import {
@@ -374,6 +375,26 @@ viajesRouter.post(
         return;
       }
     }
+    // Forma de cobro (tarea 135): fijo, por tramos o por km. Solo quienes
+    // editan el monto; el detalle lo arma el servidor con las tarifas.
+    const pedidoPrecio = leerPedidoPrecio(req.body ?? {});
+    if ("error" in pedidoPrecio) {
+      res.status(400).json({ error: pedidoPrecio.error });
+      return;
+    }
+    let precio: CamposPrecio | null = null;
+    if ("pedido" in pedidoPrecio && pedidoPrecio.pedido.modo !== "fijo") {
+      if (!ROLES_EDITAN_MONTO_VIAJE.includes(req.rol ?? "")) {
+        res.status(403).json({ error: "Solo el administrador o un supervisor pueden cobrar por tramos o por km" });
+        return;
+      }
+      const c = await camposPrecio(req.empresaId!, resultado.cliente.id, pedidoPrecio.pedido);
+      if ("error" in c) {
+        res.status(400).json({ error: c.error });
+        return;
+      }
+      precio = c;
+    }
     const subtotalNum = Number(subtotal);
     if (!Number.isFinite(subtotalNum) || subtotalNum < 0) {
       res.status(400).json({ error: "monto inválido" });
@@ -395,8 +416,9 @@ viajesRouter.post(
         hora: horaNorm.hora,
         chofer_id: chofer?.id ?? null,
         equipo_id: typeof equipo_id === "string" && equipo_id ? equipo_id : null,
-        origen: origen.trim(),
-        destino: destino.trim(),
+        origen: precio?.origen ?? origen.trim(),
+        destino: precio?.destino ?? destino.trim(),
+        ...(precio ? { modo_precio: precio.modo_precio, tramos_detalle: precio.tramos_detalle, distancia_km: precio.distancia_km, precio_km: precio.precio_km } : {}),
         km_inicial: km_inicial === "" || km_inicial == null ? null : Number(km_inicial),
         km_final: km_final === "" || km_final == null ? null : Number(km_final),
         subtotal: subtotalRedondeado,
@@ -540,6 +562,27 @@ viajesRouter.patch(
         return;
       }
       cambios.estado = estado;
+    }
+
+    // Forma de cobro (tarea 135).
+    const pedidoPrecio = leerPedidoPrecio(req.body ?? {});
+    if ("error" in pedidoPrecio) {
+      res.status(400).json({ error: pedidoPrecio.error });
+      return;
+    }
+    if ("pedido" in pedidoPrecio) {
+      const cambiaForma = pedidoPrecio.pedido.modo !== existente.modo_precio || pedidoPrecio.pedido.modo !== "fijo";
+      if (cambiaForma && !ROLES_EDITAN_MONTO_VIAJE.includes(req.rol ?? "")) {
+        res.status(403).json({ error: "Solo el administrador o un supervisor pueden cambiar la forma de cobro" });
+        return;
+      }
+      const c = await camposPrecio(req.empresaId!, cambios.cliente_id ?? existente.cliente_id, pedidoPrecio.pedido);
+      if ("error" in c) {
+        res.status(400).json({ error: c.error });
+        return;
+      }
+      const { origen: o, destino: d, ...resto } = c;
+      Object.assign(cambios, resto, o ? { origen: o } : {}, d ? { destino: d } : {});
     }
 
     // Viático (tarea 137).

@@ -11,6 +11,7 @@ import { viaticos } from "./suites/viaticos";
 import { roles } from "./suites/roles";
 import { whatsappChofer } from "./suites/whatsappChofer";
 import { tarifasViajes } from "./suites/tarifasViajes";
+import { precioViajes } from "./suites/precioViajes";
 
 const SUITES: Record<string, (ctx: Ctx) => Promise<void>> = {
   clientesEliminar,
@@ -22,6 +23,7 @@ const SUITES: Record<string, (ctx: Ctx) => Promise<void>> = {
   roles,
   whatsappChofer,
   tarifasViajes,
+  precioViajes,
 };
 
 async function main(): Promise<number> {

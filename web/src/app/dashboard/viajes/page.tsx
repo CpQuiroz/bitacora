@@ -4,7 +4,7 @@ import { Fragment, useEffect, useMemo, useState, type FormEvent } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Plus, Truck } from "lucide-react";
-import { CIUDADES_CHILE, ROLES_SUPERVISION, formatearFolio, type Cliente, type ConfigViaticos, type EstadoViaje, type TipoViatico, type Usuario, type Viaje } from "@bitacora/shared";
+import { CIUDADES_CHILE, ROLES_SUPERVISION, formatearFolio, type Cliente, type ConfigViaticos, type EstadoViaje, type ModoPrecioViaje, type TipoViatico, type Usuario, type Viaje } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
@@ -16,6 +16,7 @@ import { ComboboxCliente } from "@/components/ComboboxCliente";
 import { ComboboxResponsable } from "@/components/ComboboxResponsable";
 import { Combobox } from "@/components/Combobox";
 import { CampoViatico } from "@/components/CampoViatico";
+import { PrecioViaje } from "@/components/PrecioViaje";
 
 type ViajeConDatos = Viaje & {
   cliente_info: Pick<Cliente, "id" | "nombre"> | null;
@@ -36,6 +37,14 @@ const HOY = () => new Date().toISOString().slice(0, 10);
 function km(v: Viaje) {
   if (v.km_inicial == null || v.km_final == null) return null;
   return Math.max(0, v.km_final - v.km_inicial);
+}
+
+// Forma de cobro que se manda al guardar (tarea 135). El servidor arma el
+// detalle con las tarifas; el monto final es el del campo "Monto del viaje".
+function cuerpoPrecio(modo: ModoPrecioViaje, origen: string, paradas: string[], destino: string, km: string) {
+  if (modo === "tramos") return { modo_precio: modo, paradas: [origen, ...paradas, destino].filter((p) => p.trim()) };
+  if (modo === "km") return { modo_precio: modo, distancia_km: km };
+  return { modo_precio: "fijo" as const };
 }
 
 // PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
@@ -94,6 +103,10 @@ export default function ViajesPage() {
   const [configViaticos, setConfigViaticos] = useState<ConfigViaticos | null>(null);
   const [viaticoTipo, setViaticoTipo] = useState<TipoViatico | "">("");
   const [viaticoMonto, setViaticoMonto] = useState("");
+  // Forma de cobro (tarea 135): fijo, por tramos o por km.
+  const [modoPrecio, setModoPrecio] = useState<ModoPrecioViaje>("fijo");
+  const [paradas, setParadas] = useState<string[]>([]);
+  const [distanciaKm, setDistanciaKm] = useState("");
 
   const [fotosViaje, setFotosViaje] = useState<{
     id: string;
@@ -126,6 +139,9 @@ export default function ViajesPage() {
   const [editComentarios, setEditComentarios] = useState("");
   const [editViaticoTipo, setEditViaticoTipo] = useState<TipoViatico | "">("");
   const [editViaticoMonto, setEditViaticoMonto] = useState("");
+  const [editModoPrecio, setEditModoPrecio] = useState<ModoPrecioViaje>("fijo");
+  const [editParadas, setEditParadas] = useState<string[]>([]);
+  const [editDistanciaKm, setEditDistanciaKm] = useState("");
   const puedeViatico = ROLES_SUPERVISION.includes(usuario?.rol ?? "");
 
   async function cargarViajes() {
@@ -234,6 +250,9 @@ export default function ViajesPage() {
     setComentarios("");
     setViaticoTipo("");
     setViaticoMonto("");
+    setModoPrecio("fijo");
+    setParadas([]);
+    setDistanciaKm("");
     setFormError(null);
     setFormAbierto(true);
   }
@@ -267,6 +286,7 @@ export default function ViajesPage() {
         aplica_iva: aplicaIva,
         comentarios,
         ...(viaticoTipo ? { viatico_tipo: viaticoTipo, viatico_monto: viaticoMonto } : {}),
+        ...(puedeViatico ? cuerpoPrecio(modoPrecio, origen, paradas, destino, distanciaKm) : {}),
       }),
     });
     setGuardando(false);
@@ -299,6 +319,10 @@ export default function ViajesPage() {
     setEditSubtotal(v.subtotal ? String(v.subtotal) : "");
     setEditAplicaIva(v.aplica_iva);
     setEditComentarios(v.comentarios ?? "");
+    setEditModoPrecio(v.modo_precio ?? "fijo");
+    // Paradas intermedias = los destinos de cada tramo menos el último.
+    setEditParadas(v.tramos_detalle && v.tramos_detalle.length > 1 ? v.tramos_detalle.slice(0, -1).map((t) => t.destino) : []);
+    setEditDistanciaKm(v.distancia_km != null ? String(v.distancia_km) : "");
     setEditViaticoTipo(v.viatico_tipo ?? "");
     setEditViaticoMonto(v.viatico_monto != null ? String(Math.round(Number(v.viatico_monto))) : "");
   }
@@ -389,6 +413,7 @@ export default function ViajesPage() {
         aplica_iva: editAplicaIva,
         comentarios: editComentarios,
         ...(puedeViatico ? { viatico_tipo: editViaticoTipo || null, viatico_monto: editViaticoTipo ? editViaticoMonto : null } : {}),
+        ...(puedeViatico ? cuerpoPrecio(editModoPrecio, editOrigen, editParadas, editDestino, editDistanciaKm) : {}),
         ...(confirmar !== undefined ? { estado: confirmar ? "confirmado" : "borrador" } : {}),
       }),
     });
@@ -547,7 +572,12 @@ export default function ViajesPage() {
                   <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Cliente</label>
                   <ComboboxCliente
                     value={clienteId}
-                    onChange={setClienteId}
+                    onChange={(id) => {
+                      setClienteId(id);
+                      // Tarea 135: la forma de cobro por defecto del cliente.
+                      const c = clientes.find((x) => x.id === id);
+                      if (c?.modo_precio_default) setModoPrecio(c.modo_precio_default);
+                    }}
                     clientes={clientes}
                     onClienteCreado={(c) => setClientes((prev) => [...prev, c])}
                     placeholder="Selecciona un cliente…"
@@ -612,6 +642,23 @@ export default function ViajesPage() {
                     origen={origen}
                     destino={destino}
                     config={configViaticos}
+                    moneda={usuario.moneda}
+                  />
+                ) : null}
+                {puedeViatico ? (
+                  <PrecioViaje
+                    modo={modoPrecio}
+                    onModo={setModoPrecio}
+                    origen={origen}
+                    destino={destino}
+                    paradas={paradas}
+                    onParadas={setParadas}
+                    km={distanciaKm}
+                    onKm={setDistanciaKm}
+                    clienteId={clienteId}
+                    onMontoPropuesto={setSubtotal}
+                    opcionesCiudad={opcionesCiudad}
+                    onCiudadLibre={agregarCiudadLibre}
                     moneda={usuario.moneda}
                   />
                 ) : null}
@@ -744,6 +791,11 @@ export default function ViajesPage() {
                         <td className="px-ds-4 py-ds-3 text-ds-text">
                           {formatMoneda(v.total, usuario.moneda)}
                           {v.aplica_iva && <span className="ml-ds-1 font-ds-body text-ds-caption text-ds-text/60">+IVA</span>}
+                          {puedeViatico && v.modo_precio && v.modo_precio !== "fijo" ? (
+                            <p className="font-ds-body text-ds-caption text-ds-text/60">
+                              {v.modo_precio === "tramos" ? `Por tramos (${v.tramos_detalle?.length ?? 0})` : `Por km · ${v.distancia_km ?? 0} km`}
+                            </p>
+                          ) : null}
                           {puedeViatico && v.viatico_tipo ? (
                             <p className="font-ds-body text-ds-caption text-ds-text/60">
                               Viático {v.viatico_tipo}: {formatMoneda(Number(v.viatico_monto ?? 0), usuario.moneda)}
@@ -882,6 +934,25 @@ export default function ViajesPage() {
                                 </div>
                               ) : null}
                             </div>
+                            {puedeViatico ? (
+                              <div className="mt-ds-3">
+                                <PrecioViaje
+                                  modo={editModoPrecio}
+                                  onModo={setEditModoPrecio}
+                                  origen={editOrigen}
+                                  destino={editDestino}
+                                  paradas={editParadas}
+                                  onParadas={setEditParadas}
+                                  km={editDistanciaKm}
+                                  onKm={setEditDistanciaKm}
+                                  clienteId={editClienteId}
+                                  onMontoPropuesto={setEditSubtotal}
+                                  opcionesCiudad={opcionesCiudad}
+                                  onCiudadLibre={agregarCiudadLibre}
+                                  moneda={usuario.moneda}
+                                />
+                              </div>
+                            ) : null}
                             <div className="mt-ds-3">
                               <Input etiqueta="Comentarios / incidentes (opcional)" valor={editComentarios} onCambio={setEditComentarios} />
                             </div>

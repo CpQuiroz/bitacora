@@ -11,3 +11,8 @@ Admin/Supervisor. rutas_planificadas NO sirve de plantilla (son rutas de técnic
 (viajes.tramos_detalle) y los precios en tarifas_tramo.
 Etapas: 1 Tarifas (tablas + Viajes › Tarifas) · 2 precio en el viaje (modo fijo/tramos/km, calcular km) · 3 modo por
 cliente + cobro/PDF con km/tramos · 4 Cotización de viaje (Cotizaciones + convertir en viaje).
+- Etapa 1 (Tarifas) HECHA: migración 141 aplicada en DEV; E2E tarifasViajes 13/13.
+- Etapas 2 y 3 HECHAS: forma de cobro en el viaje (PrecioViaje en web: fijo/tramos/km, calcular precio, calcular km con
+  ORS vía /api/viajes/tarifas/distancia con caché), servidor arma tramos_detalle/precio_km; chofer no ve costos
+  (mis-viajes sinCostos); forma de cobro por defecto en la ficha del cliente; cobro y PDF con "vía" y km (PDF revisado
+  visualmente). E2E precioViajes 11/11; total 109/109. ORS_API_KEY aún no configurada (sin clave: 503 "ingresa a mano").

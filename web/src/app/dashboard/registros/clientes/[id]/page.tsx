@@ -5,13 +5,13 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { ChevronLeft, MapPin, MessageCircle, Plus, Receipt, Tag, Wrench } from "lucide-react";
 import type { Cliente, Equipo, Factura, PaqueteSesionesConSaldo, Presupuesto, TipoPack, Trabajo, OrdenServicio } from "@bitacora/shared";
-import { estadoOsDeTrabajo, formatearFolio, formatearRut, validarRut } from "@bitacora/shared";
+import { ROLES_SUPERVISION, estadoOsDeTrabajo, formatearFolio, formatearRut, validarRut } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { AsignarPackForm } from "@/components/AsignarPackForm";
-import { Button, Card, Dialog, Input, StatusBadge } from "@bitacora/ui/web";
+import { Button, Card, Dialog, Input, Select, StatusBadge } from "@bitacora/ui/web";
 import { linkWhatsapp } from "@/lib/whatsapp";
 
 type TrabajoConOrden = Trabajo & { orden: Pick<OrdenServicio, "folio" | "estado_os"> | null };
@@ -131,6 +131,13 @@ export default function ClienteDetallePage() {
     cargar();
     cargarPacks();
   }, [cargar, cargarPacks]);
+
+  // Tarea 135: forma de cobro por defecto de los viajes del cliente.
+  async function cambiarModoPrecio(v: string) {
+    if (!cliente) return;
+    const res = await apiFetch(`/api/clientes/${cliente.id}`, { method: "PATCH", body: JSON.stringify({ modo_precio_default: v || null }) });
+    if (res.ok) setCliente({ ...cliente, modo_precio_default: (v || null) as Cliente["modo_precio_default"] });
+  }
 
   async function onGuardar() {
     setErrorForm(null);
@@ -410,6 +417,22 @@ export default function ClienteDetallePage() {
                   <p className="font-ds-body text-ds-caption text-ds-text/60">Correo</p>
                   <p className="font-ds-body text-ds-small text-ds-text">{cliente.correo ?? "—"}</p>
                 </div>
+                {usuario && ROLES_SUPERVISION.includes(usuario.rol) ? (
+                  <div className="w-56">
+                    {/* Tarea 135: se preselecciona al crear un viaje de este cliente. */}
+                    <Select
+                      etiqueta="Cómo se cobran sus viajes"
+                      valor={cliente.modo_precio_default ?? ""}
+                      onCambio={(v) => void cambiarModoPrecio(v)}
+                      opciones={[
+                        { valor: "", etiqueta: "Sin preferencia" },
+                        { valor: "fijo", etiqueta: "Monto fijo" },
+                        { valor: "tramos", etiqueta: "Por tramos" },
+                        { valor: "km", etiqueta: "Por km" },
+                      ]}
+                    />
+                  </div>
+                ) : null}
                 {cliente.contacto_nombre ? (
                   <div>
                     <p className="font-ds-body text-ds-caption text-ds-text/60">Contacto</p>

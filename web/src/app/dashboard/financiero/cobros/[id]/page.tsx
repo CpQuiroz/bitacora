@@ -284,7 +284,11 @@ export default function CobroDetallePage() {
                         <td className="px-ds-2 py-ds-2">{f.chofer ?? "—"}</td>
                         <td className="px-ds-2 py-ds-2">{f.cliente}</td>
                         <td className="px-ds-2 py-ds-2">{f.origen}</td>
-                        <td className="px-ds-2 py-ds-2">{f.destino}</td>
+                        <td className="px-ds-2 py-ds-2">
+                          {f.destino}
+                          {f.via?.length ? <span className="block font-ds-body text-ds-caption text-ds-text/60">vía {f.via.join(", ")}</span> : null}
+                          {f.km != null ? <span className="block font-ds-body text-ds-caption text-ds-text/60 tabular-nums">{f.km.toLocaleString("es-CL")} km</span> : null}
+                        </td>
                         <td className="px-ds-2 py-ds-2 text-right tabular-nums">{formatMoneda(f.neto, usuario.moneda)}</td>
                         <td className="px-ds-2 py-ds-2 text-right tabular-nums">{formatMoneda(f.iva, usuario.moneda)}</td>
                         <td className="px-ds-2 py-ds-2 text-right tabular-nums">{formatMoneda(f.total, usuario.moneda)}</td>

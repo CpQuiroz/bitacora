@@ -142,7 +142,8 @@ export async function generarPdfCobro(datos: DatosCobroPdf): Promise<Buffer> {
       f.chofer ?? "—",
       f.cliente,
       f.origen,
-      f.destino,
+      // Tarea 135: paradas intermedias y km bajo el destino.
+      [f.destino, f.via.length ? `vía ${f.via.join(", ")}` : "", f.km != null ? `${f.km.toLocaleString("es-CL")} km` : ""].filter(Boolean).join("\n"),
       monto(f.neto),
       monto(f.iva),
       monto(f.total),
