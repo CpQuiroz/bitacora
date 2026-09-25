@@ -317,6 +317,14 @@ export async function procesar(): Promise<void> {
           // se muestra ese texto; queda fallida y se puede reintentar
           // desde Perfil cuando se libere cupo o se suba de plan.
           const body = res.status === 403 ? await res.json().catch(() => ({})) : {};
+          // Tarea 144: prueba vencida → queda PENDIENTE (no fallida) para que
+          // salga sola cuando la empresa pague o le extiendan la prueba; se
+          // corta la vuelta para no insistir con el resto de la cola.
+          if ((body as { code?: string }).code === "TRIAL_VENCIDO") {
+            a.ultimoError = (body as { error?: string }).error ?? "El período de prueba terminó";
+            await persistir();
+            break;
+          }
           a.fallida = true;
           a.ultimoError =
             res.status === 401

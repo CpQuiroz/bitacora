@@ -497,8 +497,8 @@ superadminRouter.post(
       rutFormateado = formatearRut(rut);
     }
 
-    const pruebaTerminaEn = new Date();
-    pruebaTerminaEn.setDate(pruebaTerminaEn.getDate() + DIAS_PRUEBA);
+    // Fecha de Chile, igual que el bloqueo (empresaOperativa.ts).
+    const pruebaTerminaEn = sumarDiasFecha(hoyChile(), DIAS_PRUEBA);
 
     const { data: empresa, error: errorEmpresa } = await supabase
       .from("empresas")
@@ -509,7 +509,7 @@ superadminRouter.post(
         giro: giro?.trim() || null,
         telefono_empresa: telefono_empresa?.trim() || null,
         direccion_calle: direccion_calle?.trim() || null,
-        prueba_termina_en: pruebaTerminaEn.toISOString().slice(0, 10),
+        prueba_termina_en: pruebaTerminaEn,
       })
       .select()
       .single();
@@ -1819,9 +1819,19 @@ async function cambiarFinPrueba(
     res.status(400).json({ error: "La nueva fecha de fin no puede quedar en el pasado" });
     return;
   }
-  const { error } = await supabase.from("empresas").update({ prueba_termina_en: nueva }).eq("id", req.params.id).eq("plan", "trial");
+  const { data: cambiada, error } = await supabase
+    .from("empresas")
+    .update({ prueba_termina_en: nueva })
+    .eq("id", req.params.id)
+    .eq("plan", "trial")
+    .select("id");
   if (error) {
     res.status(500).json({ error: error.message });
+    return;
+  }
+  // El plan pudo cambiar entre la lectura y la escritura (pago confirmado).
+  if (!cambiada?.length) {
+    res.status(409).json({ error: "La empresa ya tiene un plan pago: la prueba no aplica" });
     return;
   }
   await registrarAuditoria(req.superAdminId!, accion, {
@@ -1849,7 +1859,11 @@ superadminRouter.post(
   "/empresas/:id/prueba/reactivar",
   requiereSuperAdmin,
   ah<RequestConSuperAdmin>(async (req, res) => {
-    await cambiarFinPrueba(req, res, "reactivar_prueba_empresa", (_actual, hoy) => sumarDiasFecha(hoy, DIAS_PRUEBA));
+    // Nunca acorta una prueba vigente que termina después de hoy + DIAS_PRUEBA.
+    await cambiarFinPrueba(req, res, "reactivar_prueba_empresa", (actual, hoy) => {
+      const nueva = sumarDiasFecha(hoy, DIAS_PRUEBA);
+      return actual && actual > nueva ? actual : nueva;
+    });
   })
 );
 
@@ -1861,6 +1875,11 @@ superadminRouter.patch(
     const { prueba_termina_en } = req.body ?? {};
     if (typeof prueba_termina_en !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(prueba_termina_en) || Number.isNaN(Date.parse(prueba_termina_en))) {
       res.status(400).json({ error: "prueba_termina_en debe ser una fecha YYYY-MM-DD" });
+      return;
+    }
+    // Mismo tope que "Extender": a lo más MAX_DIAS_EXTENSION_PRUEBA desde hoy.
+    if (prueba_termina_en > sumarDiasFecha(hoyChile(), MAX_DIAS_EXTENSION_PRUEBA)) {
+      res.status(400).json({ error: `La fecha de fin no puede pasar de ${MAX_DIAS_EXTENSION_PRUEBA} días desde hoy` });
       return;
     }
     await cambiarFinPrueba(req, res, "extender_prueba_empresa", () => prueba_termina_en);

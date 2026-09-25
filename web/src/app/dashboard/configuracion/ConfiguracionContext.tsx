@@ -8,6 +8,8 @@ export type UsuarioConEmpresa = Usuario & { empresa: Empresa };
 export type ConfiguracionContextValue = {
   usuario: UsuarioConEmpresa;
   recargar: () => Promise<void>;
+  // Tarea 144: prueba vencida — ocultar acciones que el backend rechaza.
+  pruebaVencida: boolean;
 };
 
 export const ConfiguracionContext = createContext<ConfiguracionContextValue | null>(null);

@@ -29,19 +29,18 @@ export function esRuta(url: string, base: string): boolean {
 }
 
 // Lo único que sigue abierto con la prueba vencida: Plan y pago (los
-// módulos, para caber en el tope del plan que elija), Mi cuenta (perfil,
-// 2FA, accesos, sus datos, preferencias de avisos). Borrar la empresa
-// (Seguridad) NO queda abierto: con la prueba vencida no se borran datos.
-// Cerrar sesión es del cliente (Supabase Auth).
+// módulos, para caber en el tope del plan que elija) y Mi cuenta —lista
+// cerrada de subrutas de /api/usuarios/me: perfil, sus datos, accesos,
+// foto y 2FA; /me/vehiculo NO (es de la operación)—, más las preferencias
+// de avisos. Borrar la empresa (Seguridad) NO queda abierto: con la
+// prueba vencida no se borran datos. Cerrar sesión es del cliente
+// (Supabase Auth).
+const RUTAS_BASE_ABIERTAS = ["/api/plan", "/api/suscripcion", "/api/modulos", "/api/usuarios/me/mfa", "/api/notificaciones-feed/preferencias"];
+const RUTAS_EXACTAS_ABIERTAS = ["/api/usuarios/me", "/api/usuarios/me/datos", "/api/usuarios/me/accesos", "/api/usuarios/me/foto"];
+
 export function rutaPermitidaConPruebaVencida(url: string): boolean {
-  const ruta = url.split("?")[0];
-  return (
-    esRuta(ruta, "/api/plan") ||
-    esRuta(ruta, "/api/suscripcion") ||
-    esRuta(ruta, "/api/modulos") ||
-    esRuta(ruta, "/api/usuarios/me") ||
-    esRuta(ruta, "/api/notificaciones-feed/preferencias")
-  );
+  const ruta = url.split("?")[0].replace(/\/+$/, "");
+  return RUTAS_EXACTAS_ABIERTAS.includes(ruta) || RUTAS_BASE_ABIERTAS.some((base) => esRuta(ruta, base));
 }
 
 export const MENSAJE_PRUEBA_VENCIDA = "Tu período de prueba terminó — elige un plan para seguir usando Bitácora.";

@@ -35,7 +35,7 @@ export async function pruebaVencida(ctx: Ctx): Promise<void> {
   const tokenSa = crearTokenSuperAdmin(sa.id);
 
   // Cliente para el portal y chofer con teléfono para el bot.
-  const { data: cliente } = await supabase.from("clientes").insert({ empresa_id: empresaId, nombre: "E2E Portal", direccion: "Calle 1" }).select("id").single();
+  const { data: cliente } = await supabase.from("clientes").insert({ empresa_id: empresaId, nombre: "E2E Portal", direccion: "Calle 1", rut: "11.111.111-1", correo: "e2e-portal@bitacora-e2e.test" }).select("id").single();
   const { data: acceso } = await supabase
     .from("portal_accesos")
     .insert({ empresa_id: empresaId, cliente_id: cliente!.id, expira_en: new Date(Date.now() + 3600_000).toISOString() })
@@ -74,6 +74,21 @@ export async function pruebaVencida(ctx: Ctx): Promise<void> {
     const imp = await api(admin, "GET", "/api/usuarios");
     check("144-7 /api/usuarios (equipo) no es Mi cuenta → bloqueado", imp.s === 403, `${imp.s}`);
 
+    const veh = await api(await sesion("chofer"), "GET", "/api/usuarios/me/vehiculo");
+    check("144-7b el vehículo asignado (operación) queda bloqueado", veh.s === 403 && veh.j?.code === "TRIAL_VENCIDO", `${veh.s}`);
+    const codigo = await fetch(`${API}/api/portal/solicitar-codigo`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ rut: "11.111.111-1", empresa_id: empresaId }),
+    });
+    const { count: codigos } = await supabase.from("portal_codigos").select("id", { count: "exact", head: true }).eq("cliente_id", cliente!.id);
+    check("144-7c portal por RUT: respuesta genérica y no se envía código", codigo.status === 200 && codigos === 0, `${codigo.status} codigos=${codigos}`);
+    const reservar = await fetch(`${API}/api/reserva-publica/${empresaId}/reservar`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fecha: sumarDiasFecha(hoy, 1), hora: "10:00", nombre: "E2E", telefono: "+56911111111" }),
+    });
+    check("144-7d reservar en línea: 404", reservar.status === 404, `${reservar.status}`);
     const link = await fetch(`${API}/api/portal/${acceso!.id}`).then(async (r) => ({ s: r.status, j: await r.json().catch(() => null) }));
     check("144-8 portal: el link no entrega sesión", link.s === 403 && link.j?.code === "PORTAL_NO_DISPONIBLE", JSON.stringify(link));
     const tokenPortal = crearTokenPortal(cliente!.id, empresaId);
@@ -98,13 +113,16 @@ export async function pruebaVencida(ctx: Ctx): Promise<void> {
     const sa2 = await api(tokenSa, "POST", `/api/superadmin/empresas/${empresaId}/prueba/extender`, { dias: 3 });
     check("144-15 extender vigente suma a la fecha de fin", sa2.j?.prueba_termina_en === sumarDiasFecha(hoy, 8), JSON.stringify(sa2.j));
     const sa3 = await api(tokenSa, "POST", `/api/superadmin/empresas/${empresaId}/prueba/reactivar`);
-    check("144-16 reactivar deja 7 días desde hoy", sa3.s === 200 && sa3.j?.prueba_termina_en === sumarDiasFecha(hoy, 7), JSON.stringify(sa3.j));
+    check("144-16 reactivar no acorta una prueba vigente más larga", sa3.s === 200 && sa3.j?.prueba_termina_en === sumarDiasFecha(hoy, 8), JSON.stringify(sa3.j));
+    await supabase.from("empresas").update({ prueba_termina_en: "2026-01-01" }).eq("id", empresaId);
+    const sa4 = await api(tokenSa, "POST", `/api/superadmin/empresas/${empresaId}/prueba/reactivar`);
+    check("144-16b reactivar una vencida deja 7 días desde hoy", sa4.s === 200 && sa4.j?.prueba_termina_en === sumarDiasFecha(hoy, 7), JSON.stringify(sa4.j));
     const pasada = await api(tokenSa, "PATCH", `/api/superadmin/empresas/${empresaId}/prueba`, { prueba_termina_en: "2020-01-01" });
     check("144-17 fecha exacta en el pasado → 400", pasada.s === 400, `${pasada.s}`);
     const hist = await api(tokenSa, "GET", `/api/superadmin/empresas/${empresaId}/prueba/historial`);
     check(
-      "144-18 historial con quién y cuándo (3 cambios)",
-      hist.s === 200 && hist.j?.length === 3 && hist.j.every((h: { super_admin?: { nombre?: string }; creado_en?: string }) => h.super_admin?.nombre === "E2E Super-Admin" && h.creado_en),
+      "144-18 historial con quién y cuándo (4 cambios)",
+      hist.s === 200 && hist.j?.length === 4 && hist.j.every((h: { super_admin?: { nombre?: string }; creado_en?: string }) => h.super_admin?.nombre === "E2E Super-Admin" && h.creado_en),
       JSON.stringify(hist.j)
     );
     const sinSa = await api(admin, "POST", `/api/superadmin/empresas/${empresaId}/prueba/reactivar`);

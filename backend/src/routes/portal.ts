@@ -13,7 +13,7 @@ import { env } from "../env";
 import { enviarConReintento } from "../email";
 import { notificarGerencia } from "../notificar";
 import { PORTAL_NO_DISPONIBLE, crearTokenPortal, requierePortal, type RequestConPortal } from "../portalAuth";
-import { empresaOperativa } from "../empresaOperativa";
+import { empresaConPruebaVencida, empresaOperativa } from "../empresaOperativa";
 import { calcularEstadoCancelacion, obtenerOCrearAgendaProConfig } from "../agendaPro";
 import { datosPersonalesDeCliente } from "../exportarDatosPersonales";
 import { armarDatosPdf } from "./trabajos";
@@ -101,15 +101,17 @@ function hashCodigo(codigo: string): string {
 async function buscarClientesPorRut(rut: string, empresaId?: string) {
   let query = supabase
     .from("clientes")
-    .select("id, empresa_id, nombre, correo, empresa:empresas(nombre)")
+    .select("id, empresa_id, nombre, correo, empresa:empresas(nombre, estado, plan, prueba_termina_en)")
     .eq("rut", rut)
     .eq("activo", true)
     .not("correo", "is", null);
   if (empresaId) query = query.eq("empresa_id", empresaId);
   const { data } = await query;
   // Tarea 144: solo empresas operativas (sin prueba vencida, ni suspendidas).
-  const operativas = await Promise.all((data ?? []).map((c) => empresaOperativa(c.empresa_id)));
-  return (data ?? []).filter((_, i) => operativas[i]);
+  return (data ?? []).filter((c) => {
+    const e = (c as unknown as { empresa: { estado: string; plan: string; prueba_termina_en: string | null } | null }).empresa;
+    return e?.estado === "activa" && !empresaConPruebaVencida(e);
+  });
 }
 
 // ---------- Acceso ----------

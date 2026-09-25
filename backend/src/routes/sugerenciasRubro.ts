@@ -28,10 +28,13 @@ sugerenciasRubroRouter.get(
     }
     const { data, error } = await supabase
       .from("sugerencias_rubro")
+      // "*" a propósito: la columna `datos` llega con la migración 144 y
+      // pedirla por nombre rompería esto si el código sale antes.
       .select("*")
       .eq("rubro", empresa.rubro)
       .order("tipo_sugerencia")
-      .order("orden");
+      .order("orden")
+      .limit(500);
     if (error) {
       res.status(500).json({ error: error.message });
       return;

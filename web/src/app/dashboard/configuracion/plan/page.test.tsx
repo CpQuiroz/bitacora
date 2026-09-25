@@ -30,7 +30,7 @@ describe("pantalla de Plan (web)", () => {
       "/api/plan": { planActual: "operacion", trialVencido: false, contratables: { basico: true, operacion: true, pro: true }, modulosActivos: 7, modulosMax: 10, historial: [] },
     };
     render(
-      <ConfiguracionContext.Provider value={{ usuario, recargar: async () => {} }}>
+      <ConfiguracionContext.Provider value={{ usuario, recargar: async () => {}, pruebaVencida: false }}>
         <PlanPage />
       </ConfiguracionContext.Provider>
     );
@@ -41,7 +41,7 @@ describe("pantalla de Plan (web)", () => {
   test("si falla la suscripción muestra el error, no se cae", async () => {
     h.respuestas = { "/api/suscripcion": new Response("{}", { status: 500 }), "/api/plan": new Response("{}", { status: 500 }) };
     render(
-      <ConfiguracionContext.Provider value={{ usuario, recargar: async () => {} }}>
+      <ConfiguracionContext.Provider value={{ usuario, recargar: async () => {}, pruebaVencida: false }}>
         <PlanPage />
       </ConfiguracionContext.Provider>
     );

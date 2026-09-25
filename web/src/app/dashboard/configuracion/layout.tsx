@@ -129,7 +129,7 @@ export default function ConfiguracionLayout({ children }: { children: ReactNode 
           })}
         </nav>
 
-        <ConfiguracionContext.Provider value={{ usuario, recargar: cargar }}>
+        <ConfiguracionContext.Provider value={{ usuario, recargar: cargar, pruebaVencida }}>
           <div className="min-w-0">{children}</div>
         </ConfiguracionContext.Provider>
       </div>

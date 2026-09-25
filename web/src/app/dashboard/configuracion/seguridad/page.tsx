@@ -30,7 +30,7 @@ type EstadoMfa = { activado: boolean; metodo: "totp" | "email" | null; exigido?:
 
 // PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export default function SeguridadPage() {
-  const { usuario } = useConfiguracion();
+  const { usuario, pruebaVencida } = useConfiguracion();
   const router = useRouter();
 
   const [mfa, setMfa] = useState<EstadoMfa | null>(null);
@@ -363,7 +363,8 @@ export default function SeguridadPage() {
         )}
       </Card>
 
-      {usuario.rol === "admin" && (
+      {/* Tarea 144: con la prueba vencida no se borran datos (el backend lo rechaza). */}
+      {usuario.rol === "admin" && !pruebaVencida && (
         <Card>
           <div className="rounded-ds-md border border-ds-accent-700 bg-ds-accent-100 p-ds-4">
             <p className="mb-ds-2 flex items-center gap-2 font-ds-body text-ds-small font-semibold text-ds-accent-700">

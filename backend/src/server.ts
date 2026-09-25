@@ -3,7 +3,8 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import type { Rubro } from "@bitacora/shared";
-import { DIAS_PRUEBA } from "@bitacora/shared";
+import { DIAS_PRUEBA, sumarDiasFecha } from "@bitacora/shared";
+import { hoyChile } from "./fechaChile";
 import { env } from "./env";
 import { supabase } from "./supabase";
 import { requiereAuth, type RequestConUsuario } from "./auth";
@@ -274,15 +275,15 @@ app.post("/api/registro-empresa", requiereAuth, ah<RequestConUsuario>(async (req
     return;
   }
 
-  const pruebaTerminaEn = new Date();
-  pruebaTerminaEn.setDate(pruebaTerminaEn.getDate() + DIAS_PRUEBA);
+  // Fecha de Chile, igual que el bloqueo (empresaOperativa.ts).
+  const pruebaTerminaEn = sumarDiasFecha(hoyChile(), DIAS_PRUEBA);
 
   const { data: empresa, error: errorEmpresa } = await supabase
     .from("empresas")
     .insert({
       nombre: nombre_empresa.trim(),
       rubro,
-      prueba_termina_en: pruebaTerminaEn.toISOString().slice(0, 10),
+      prueba_termina_en: pruebaTerminaEn,
     })
     .select()
     .single();

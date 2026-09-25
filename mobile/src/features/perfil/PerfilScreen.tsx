@@ -207,6 +207,11 @@ export function PerfilScreen({ navigation }: NativeStackScreenProps<MasStackPara
         ) : null}
 
         {/* Cola de sincronización detallada */}
+        {pendientes.length > 0 && auth.fase === "prueba-vencida" ? (
+          <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
+            Lo que quedó sin enviar está guardado en este teléfono y se envía solo cuando tu empresa vuelva a estar activa.
+          </Texto>
+        ) : null}
         {pendientes.length > 0 && (
           <View style={{ backgroundColor: tokens.color.surface, borderRadius: tokens.radius.md, padding: tokens.space["4"], gap: tokens.space["2"] }}>
             <Texto tamano={tokens.size.caption} peso="semibold" color={`${tokens.color.text}99`} style={{ textTransform: "uppercase", letterSpacing: 1 }}>
@@ -243,17 +248,21 @@ export function PerfilScreen({ navigation }: NativeStackScreenProps<MasStackPara
                   Reintentar ahora
                 </Button>
               </View>
-              <Button
-                variante="ghost"
-                onPress={() =>
-                  Alert.alert("Descartar lo pendiente", `Se borran ${pendientes.length} acción(es). Úsalo solo si quedó algo trancado que ya no necesitas.`, [
-                    { text: "No", style: "cancel" },
-                    { text: "Sí, descartar", style: "destructive", onPress: descartarTodo },
-                  ])
-                }
-              >
-                Descartar
-              </Button>
+              {/* Tarea 144: con la prueba vencida lo pendiente se guarda y sale
+                  solo al reactivarse la empresa — no se ofrece descartarlo. */}
+              {auth.fase === "prueba-vencida" ? null : (
+                <Button
+                  variante="ghost"
+                  onPress={() =>
+                    Alert.alert("Descartar lo pendiente", `Se borran ${pendientes.length} acción(es). Úsalo solo si quedó algo trancado que ya no necesitas.`, [
+                      { text: "No", style: "cancel" },
+                      { text: "Sí, descartar", style: "destructive", onPress: descartarTodo },
+                    ])
+                  }
+                >
+                  Descartar
+                </Button>
+              )}
             </View>
           </View>
         )}
@@ -283,9 +292,11 @@ export function PerfilScreen({ navigation }: NativeStackScreenProps<MasStackPara
                   <Button variante="secundario" onPress={() => reintentar(a.id)}>
                     Reintentar
                   </Button>
-                  <Button variante="ghost" onPress={() => descartar(a.id)}>
-                    Descartar
-                  </Button>
+                  {auth.fase === "prueba-vencida" ? null : (
+                    <Button variante="ghost" onPress={() => descartar(a.id)}>
+                      Descartar
+                    </Button>
+                  )}
                 </View>
               </View>
             ))}

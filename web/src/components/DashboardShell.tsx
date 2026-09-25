@@ -318,7 +318,8 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
   // de las páginas permitidas lo manda a Plan (quien puede pagar) o a Mi
   // cuenta (el resto del equipo).
   useEffect(() => {
-    if (!pruebaVencida || RUTAS_CON_PRUEBA_VENCIDA.some((r) => pathname.startsWith(r))) return;
+    // Por segmento: ".../plan" no debe dejar pasar ".../plantillas".
+    if (!pruebaVencida || RUTAS_CON_PRUEBA_VENCIDA.some((r) => pathname === r || pathname.startsWith(`${r}/`))) return;
     router.replace(puedeGestionarPlan ? "/dashboard/configuracion/plan" : "/dashboard/configuracion/cuenta");
   }, [pruebaVencida, puedeGestionarPlan, pathname, router]);
 

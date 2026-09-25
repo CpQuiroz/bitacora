@@ -100,17 +100,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const acciones = resMe.data.acciones ?? [];
     await guardarCache(CACHE_ME, { usuario, modulos, visibles, acciones });
 
-    if (resMe.data.prueba_vencida) {
-      setEstado({ fase: "prueba-vencida", usuario });
-      return;
-    }
-
     // La exigencia de 2FA la define roles.requiere_2fa (editable desde el
     // Panel de Super-Admin) — el backend la manda en /api/me.
     const rolExigeMfa = resMe.data.rol_exige_2fa ?? false;
     const mfaActivado = resMfa.ok ? resMfa.data.activado : true; // sin señal, no bloquear
     if (rolExigeMfa && !mfaActivado) {
       setEstado({ fase: "mfa-requerido", usuario });
+      return;
+    }
+    // Después del 2FA, igual que el backend (requiereEmpresa exige 2FA también
+    // en las rutas que quedan abiertas con la prueba vencida).
+    if (resMe.data.prueba_vencida) {
+      setEstado({ fase: "prueba-vencida", usuario });
       return;
     }
     setEstado({
