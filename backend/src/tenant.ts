@@ -15,7 +15,7 @@ export const TABLAS_POR_EMPRESA = [
   "ordenes_servicio", "os_items", "paquetes_sesiones", "planes_mantencion", "plantillas_documento", "portal_accesos",
   "portal_codigos", "presupuesto_items", "presupuestos", "proveedores",
   "registros_mantencion_equipo", "registro_mantencion_fotos",
-  "ruta_viajes", "rutas_planificadas", "suscripciones", "suscripcion_cobros", "tareas", "tipos_documento", "tipos_os_trabajo",
+  "ruta_viajes", "rutas_planificadas", "suscripciones", "suscripcion_cobros", "tareas", "tarifas_km", "tarifas_tramo", "tipos_documento", "tipos_os_trabajo",
   "trabajos", "unidades_medida", "usuarios", "vehiculo_asignaciones",
   "viajes",
 ] as const;

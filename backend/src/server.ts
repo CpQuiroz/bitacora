@@ -53,6 +53,7 @@ import { proveedoresRouter } from "./routes/proveedores";
 import { asistenteRouter } from "./routes/asistente";
 import { modulosRouter } from "./routes/modulos";
 import { viajesRouter } from "./routes/viajes";
+import { tarifasViajesRouter } from "./routes/tarifasViajes";
 import { misViajesRouter } from "./routes/misViajes";
 import { misTrabajosRouter } from "./routes/misTrabajos";
 import { accesosRouter } from "./routes/accesos";
@@ -397,6 +398,8 @@ app.use("/api/proveedores", requiereAuth, requiereEmpresa, proveedoresRouter);
 app.use("/api/asistente", requiereAuth, requiereEmpresa, requiereRol("admin"), requiereModulo("asistente"), requierePlanIACompleta, asistenteRouter);
 app.use("/api/notificaciones-feed", requiereAuth, requiereEmpresa, notificacionesFeedRouter);
 app.use("/api/notificaciones-cliente", requiereAuth, requiereEmpresa, notificacionesClienteRouter);
+// Tarifas (tarea 135) antes que /api/viajes para que no las capture /:id.
+app.use("/api/viajes/tarifas", requiereAuth, requiereEmpresa, requiereModulo("viajes"), tarifasViajesRouter);
 app.use("/api/viajes", requiereAuth, requiereEmpresa, requiereModulo("viajes"), viajesRouter);
 // Viajes propios de un colaborador (app móvil / bot) — sin requiereModulo,
 // scopeado a chofer_id = usuario autenticado. Ver routes/misViajes.ts.

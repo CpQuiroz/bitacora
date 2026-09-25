@@ -85,6 +85,8 @@ const NAV_GROUPS: NavGroup[] = [
         children: [
           { href: "/dashboard/viajes", label: "Viajes", modulo: "viajes" },
           { href: "/dashboard/viajes/rutas", label: "Rutas", modulo: "rutas" },
+          // Tarea 135: precio por tramo y por km (la página exige Admin/Supervisor).
+          { href: "/dashboard/viajes/tarifas", label: "Tarifas", modulo: "viajes" },
         ],
       },
       // Historial de lo propio (Fase 5.3, 23-sep-2026) — self-service,

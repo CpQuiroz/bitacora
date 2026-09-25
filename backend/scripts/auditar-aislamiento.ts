@@ -27,7 +27,7 @@ const TABLAS_POR_EMPRESA = [
   "notificaciones", "notificaciones_cliente_log", "notificaciones_config",
   "ordenes_servicio", "os_items", "paquetes_sesiones", "plantillas_documento", "portal_accesos",
   "portal_codigos", "presupuesto_items", "presupuestos", "proveedores",
-  "ruta_viajes", "rutas_planificadas", "suscripciones", "suscripcion_cobros", "tareas", "tipos_documento", "tipos_os", "tipos_trabajo",
+  "ruta_viajes", "rutas_planificadas", "suscripciones", "suscripcion_cobros", "tareas", "tarifas_km", "tarifas_tramo", "tipos_documento", "tipos_os", "tipos_trabajo",
   "trabajos", "unidades_medida", "usuarios", "vehiculo_asignaciones", "vehiculos",
   "viajes",
 ];

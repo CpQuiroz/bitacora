@@ -888,6 +888,8 @@ export type Cliente = {
   // Folio correlativo por empresa (migración 112). Null en clientes
   // creados antes de esta migración, no se backfillea histórico.
   folio: number | null;
+  // Forma de cobro por defecto al crear un viaje (tarea 135, migración 141).
+  modo_precio_default: ModoPrecioViaje | null;
 };
 
 export type EntidadPortal = "trabajo" | "cotizacion" | "factura" | "tarea";
@@ -1579,7 +1581,42 @@ export type Viaje = {
   // no sale en el cobro.
   viatico_tipo: TipoViatico | null;
   viatico_monto: number | null;
+  // Cómo se calculó el precio (tarea 135, migración 141). El subtotal sigue
+  // siendo el monto final (el Admin puede ajustar lo propuesto).
+  modo_precio: ModoPrecioViaje;
+  distancia_km: number | null;
+  precio_km: number | null;
+  tramos_detalle: TramoPrecio[] | null;
 };
+
+export type ModoPrecioViaje = "fijo" | "tramos" | "km";
+// Un tramo tal como se cobró (fijo en el viaje aunque cambie la tarifa).
+export type TramoPrecio = { origen: string; destino: string; precio: number | null; km?: number | null };
+
+// Tarifas de viajes (tarea 135, migración 141). Solo Admin y Supervisor.
+export type TarifaTramo = {
+  id: string;
+  empresa_id: string;
+  cliente_id: string | null;
+  origen: string;
+  destino: string;
+  par_a: string;
+  par_b: string;
+  precio: number;
+  activo: boolean;
+  creado_en: string;
+  actualizado_en: string;
+};
+export type TarifaKm = {
+  id: string;
+  empresa_id: string;
+  cliente_id: string | null;
+  precio_km: number;
+  activo: boolean;
+  creado_en: string;
+  actualizado_en: string;
+};
+export type DistanciaCache = { par_a: string; par_b: string; km: number; proveedor: string; calculado_en: string };
 
 export type TipoViatico = "local" | "interregional";
 
@@ -2101,6 +2138,9 @@ export type Database = {
       whatsapp_conversaciones: Tabla<ConversacionWhatsapp>;
       auditoria_usuarios: Tabla<AuditoriaUsuario>;
       auditoria_empresa: Tabla<AuditoriaEmpresa>;
+      tarifas_tramo: Tabla<TarifaTramo>;
+      tarifas_km: Tabla<TarifaKm>;
+      distancias_cache: Tabla<DistanciaCache>;
       accesos_usuario: Tabla<AccesoUsuario>;
       unidades_medida: Tabla<UnidadMedida>;
       notificaciones_cliente_log: Tabla<NotificacionClienteLog>;
