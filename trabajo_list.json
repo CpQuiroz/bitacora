@@ -1831,9 +1831,9 @@
       "id": 135,
       "name": "propuesta_precio_tramos_km",
       "title": "Viajes: precio por tramos y por km (Tarifas) + Cotización de viaje",
-      "status": "blocked",
+      "status": "done",
       "description": "Parte B del pedido de la usuaria 24-sep-2026. Entregar propuesta y esperar aprobación. | 24-sep: la usuaria pide implementarlo. Decisiones: km calculados con mapa desde origen y destino que pone el Admin (OpenRouteService, con caché; Waze no tiene API); tramo mismo precio en ambos sentidos; tarifas y detalle visibles solo para Admin y Supervisor. Etapas: 1 Tarifas, 2 precio en el viaje, 3 modo por cliente + cobro/PDF, 4 Cotización de viaje.",
-      "resolution": "Etapas 1-4 hechas y revisadas (commits ed2b2cb, 1e247eb, c98be3c, 4dd2533). DEV: migraciones 141-143 aplicadas; 25-sep EXPLAIN (Index Scan en las 6 consultas) y 0 grants anon/authenticated verificados. Bloqueada por: ORS_API_KEY (la carga la usuaria) y migraciones 141-143 en prod + OK para publicar."
+      "resolution": "Etapas 1-4 hechas y revisadas (commits ed2b2cb, 1e247eb, c98be3c, 4dd2533). DEV: migraciones 141-143 aplicadas; 25-sep EXPLAIN (Index Scan en las 6 consultas) y 0 grants anon/authenticated verificados. Bloqueada por: ORS_API_KEY (la carga la usuaria) y migraciones 141-143 en prod + OK para publicar. | 25-sep: migraciones 141-143 en prod y publicado (main cca391a). Falta ORS_API_KEY en Render para km con mapa (sin ella se ingresan a mano)."
     },
     {
       "id": 136,
@@ -1903,9 +1903,9 @@
       "id": 144,
       "name": "paso1_salida_prod",
       "title": "Salida a prod (PASO 1): prueba vencida con bloqueo total, ocultar Integraciones, quitar leyenda de viático, rubro obligatorio + sugerencias por rubro",
-      "status": "blocked",
+      "status": "done",
       "description": "Pedido de la usuaria 25-sep-2026 (diagnóstico PASO 0 entregado y aprobado). Decisiones: (1) prueba vencida bloquea web y mobile salvo Plan/pago, Mi cuenta y Cerrar sesión; también se cortan portal del cliente, reserva online y bot de WhatsApp; nunca se borran datos; Super-Admin 'Extender N días' / 'Reactivar' con historial. (2) Integraciones ocultas en web y mobile, sin link de pago simulado; no se borran tablas ni código. (3) Se quita la leyenda 'Viático local: $X'; el Admin sigue ajustando el monto por viaje; el cálculo no cambia. (4) Rubro obligatorio sin valor por defecto al crear empresa; la empresa nueva parte sin servicios, packs, catálogo, tipos de OS, categorías de gasto ni tipos de documento; los checklists de transporte se siguen precargando; sugerencias por rubro al crear (textos para los 4 rubros se muestran a la usuaria antes de cargarlos).",
-      "resolution": "PASO 1 hecho y revisado (commits 7b911a1, 74a283e, 427dd23; build 1.10.19 vc60 a094534). DEV: migración 144 aplicada, E2E 157/157, verificar verde. Bloqueada por: migraciones 141-144 en prod (las corre la usuaria) + OK para publicar. Pendiente decidir: encuesta pública con prueba vencida, impersonación con prueba vencida."
+      "resolution": "PASO 1 hecho y revisado (commits 7b911a1, 74a283e, 427dd23; build 1.10.19 vc60 a094534). DEV: migración 144 aplicada, E2E 157/157, verificar verde. Bloqueada por: migraciones 141-144 en prod (las corre la usuaria) + OK para publicar. Pendiente decidir: encuesta pública con prueba vencida, impersonación con prueba vencida. | 25-sep: migración 144 en prod y publicado (main cca391a)."
     },
     {
       "id": 145,
@@ -1919,9 +1919,9 @@
       "id": 146,
       "name": "equipos_mobile",
       "title": "Mobile: Equipos (lista, ficha, editar) y documentos de vehículos (ver, subir, editar)",
-      "status": "in_progress",
+      "status": "done",
       "description": "Pedido de la usuaria 25-sep-2026. Decisiones: sección Equipos en Más (Agenda/Hoy congeladas); ver y editar equipos (no crear); ficha con datos, documentos, plan de mantención preventiva, historial de OS, mantención y eventos (reutilizar), asignación. Documentos: Admin/Supervisor con módulo flota en todos los vehículos; el chofer solo en su vehículo asignado (ver, subir foto/galería/PDF, editar). Tablero de flota queda para después. Requiere expo-document-picker (build).",
-      "resolution": ""
+      "resolution": "Hecho y revisado (commits 67a8ea1, 6c09f15; review_146.md). E2E equiposDocumentos 21/21, total 178/178. Build 1.10.20 vc61 (cca391a). Publicado en main cca391a."
     }
   ]
 }

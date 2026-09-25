@@ -277,3 +277,13 @@ Formato:
 - **Verificación:** verificar.sh verde (mobile 12, web 8); bug de hooks inyectado detectado en mobile y web; npm run e2e 85/85 y 0 restos en DEV.
 - **Cierre:** 127 done. Siguiente: punto 5 (borrar usuarios QA de DEV) y propuesta de adicionales (tarea 125) con el informe de Flow.
 - **Punto 5 (24-sep noche):** borrados de DEV los 5 usuarios QA (qa.*@bitacora-qa.cl, en Transportes Gotra) y los datos de prueba que dejó la suite vieja de cobros (48 viajes, 12 cobros, 12 clientes "QA …", 37 notificaciones). Verificado 0 restos. Las pruebas nuevas (e2e/) usan su propia empresa y no dejan datos.
+
+## 2026-09-25 — Tareas 135, 144 y 146 publicadas (main cca391a)
+- **Agente:** Claude (sesión única; revisores independientes por tarea).
+- **Plan:** cerrar 135 (tarifas por tramo/km + cotización de viaje), hacer el PASO 1 de salida a prod (144) y Equipos en mobile (146).
+- **Cambios:**
+  - 135: migraciones 141-143, Viajes › Tarifas, forma de cobro en el viaje y cliente, cotización de viaje.
+  - 144: bloqueo total por prueba vencida (web, mobile, portal, reserva, bot; Super-Admin extender/reactivar con historial), Integraciones ocultas (INTEGRACIONES_VISIBLES=false, link simulado 410), sin leyenda de viático (montos también en Super-Admin), rubro obligatorio y empresa nueva sin precargas + sugerencias por rubro (migración 144).
+  - 146: Más → Equipos / Mi vehículo (lista, ficha, editar, documentos con foto/galería/PDF, plan, asignación); chofer con documentos de su vehículo asignado; plan de mantención ahora exige permiso; documentos validan entidad y tipo.
+- **Verificación:** verificar.sh verde; E2E DEV 178/178; revisiones progress/review_144.md y review_146.md corregidas; migraciones 141-144 aplicadas en DEV y prod (verificadas en solo lectura). APK 1.10.20 (vc61) en ~/builds/apk/.
+- **Cierre:** publicado en main. Pendiente: ORS_API_KEY en Render (km con mapa), decisiones de encuesta pública e impersonación con prueba vencida, tarea 145 (tipo de OS A/B), tablero de flota en mobile, borrar archivo en storage al eliminar un documento.
