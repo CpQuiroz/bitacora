@@ -30,6 +30,17 @@ export async function cotizacionViaje(ctx: Ctx): Promise<void> {
   const otra = await api(adm, "POST", `/api/cotizaciones/${cot.j.id}/convertir-a-viaje`);
   check("135-45 no se convierte dos veces (409)", otra.s === 409, `${otra.s}`);
 
+  // Revisión M4: convertida no se edita ni se borra; ítems de viaje no se editan a mano.
+  const editConv = await api(adm, "PATCH", `/api/cotizaciones/${cot.j.id}`, { descripcion: "cambio" });
+  const delConv = await api(adm, "DELETE", `/api/cotizaciones/${cot.j.id}`);
+  check("135-47 convertida en viaje: no se edita (409) ni se elimina (403)", editConv.s === 409 && delConv.s === 403, `${editConv.s} ${delConv.s}`);
+  const cot2 = await api(adm, "POST", "/api/cotizaciones", { cliente_id: cid, tipo: "viaje", viaje: { origen: "Santiago", destino: "Talca", monto: 100000 } });
+  const items2 = await api(adm, "PATCH", `/api/cotizaciones/${cot2.j.id}`, { items: [{ descripcion: "otra cosa", cantidad: 1, precio_unitario: 1 }] });
+  check("135-48 en una cotización de viaje los ítems no se editan a mano (409)", items2.s === 409, `${items2.s}`);
+  await api(adm, "PATCH", `/api/cotizaciones/${cot2.j.id}`, { estado: "aprobado" });
+  const aOs = await api(adm, "POST", `/api/cotizaciones/${cot2.j.id}/convertir-a-os`);
+  check("135-49 una cotización de viaje no se convierte en OS (400)", aOs.s === 400, `${aOs.s}`);
+
   const serv = await api(adm, "POST", "/api/cotizaciones", { cliente_id: cid, items: [{ descripcion: "Mantención", cantidad: 1, precio_unitario: 10000 }] });
   await api(adm, "PATCH", `/api/cotizaciones/${serv.j.id}`, { estado: "aprobado" });
   const servConv = await api(adm, "POST", `/api/cotizaciones/${serv.j.id}/convertir-a-viaje`);

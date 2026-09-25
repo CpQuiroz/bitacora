@@ -575,7 +575,12 @@ export default function CotizacionDetallePage() {
           </div>
         }
         seccionOtras={
-          !cotizacion.trabajo_id ? (
+          cotizacion.tipo === "viaje" ? (
+            // Tarea 135: el monto de una cotización de viaje sale del recorrido.
+            <p className="font-ds-body text-ds-small text-ds-text/70">
+              {cotizacion.viaje_id ? "Ya fue convertida en viaje — no se puede editar." : "Para cambiar el recorrido o el monto, crea una nueva cotización de viaje."}
+            </p>
+          ) : !cotizacion.trabajo_id ? (
             <Button
               variante="secundario"
               onPress={() => {

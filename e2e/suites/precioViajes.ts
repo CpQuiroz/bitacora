@@ -29,6 +29,19 @@ export async function precioViajes(ctx: Ctx): Promise<void> {
   const det = await api(cho, "GET", `/api/mis-viajes/${vt.j.id}`);
   check("135-24 tampoco en el detalle", det.s === 200 && !("tramos_detalle" in det.j) && !("precio_km" in det.j), `${det.s}`);
 
+  // Revisión M1/M2: guardar sin cambiar la forma de cobro no recalcula; cambiar
+  // el recorrido sin recalcular se rechaza (oficina y chofer).
+  await api(adm, "PATCH", "/api/viajes/tarifas/tramos/" + (await api(adm, "GET", "/api/viajes/tarifas")).j.tramos.find((t: { origen: string }) => t.origen === "Santiago").id, { precio: 999999 });
+  const coment = await api(adm, "PATCH", `/api/viajes/${vt.j.id}`, { comentarios: "solo un comentario", modo_precio: "tramos", paradas: ["Santiago", "Concepción", "Temuco"] });
+  check("135-31 guardar sin cambiar la forma de cobro no recalcula el detalle", coment.s === 200 && coment.j.tramos_detalle?.[0]?.precio === 300000, `${coment.s} ${JSON.stringify(coment.j?.tramos_detalle)}`);
+  const rec = await api(adm, "PATCH", `/api/viajes/${vt.j.id}`, { destino: "Puerto Montt" });
+  check("135-32 cambiar el recorrido de un viaje por tramos sin recalcular → 409", rec.s === 409, `${rec.s}`);
+  const recCho = await api(cho, "PATCH", `/api/mis-viajes/${vt.j.id}`, { origen: "Talca" });
+  check("135-33 el chofer no cambia el recorrido de un viaje por tramos (409)", recCho.s === 409, `${recCho.s}`);
+  const otraParada = await api(adm, "PATCH", `/api/viajes/${vt.j.id}`, { modo_precio: "tramos", paradas: ["Santiago", "Concepción"] });
+  check("135-34 cambiar las paradas sí recalcula con la tarifa vigente", otraParada.s === 200 && otraParada.j.tramos_detalle?.length === 1 && otraParada.j.tramos_detalle[0].precio === 999999 && otraParada.j.destino === "Concepción", `${otraParada.s} ${JSON.stringify(otraParada.j?.tramos_detalle)}`);
+  await api(adm, "PATCH", `/api/viajes/${vt.j.id}`, { modo_precio: "tramos", paradas: ["Santiago", "Concepción", "Temuco"] });
+
   const fijo = await api(adm, "PATCH", `/api/viajes/${vk.j.id}`, { modo_precio: "fijo" });
   check("135-25 volver a monto fijo limpia km y precio por km", fijo.s === 200 && fijo.j.modo_precio === "fijo" && fijo.j.distancia_km === null && fijo.j.precio_km === null, `${fijo.s}`);
 

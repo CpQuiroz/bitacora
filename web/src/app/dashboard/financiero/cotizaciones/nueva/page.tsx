@@ -58,6 +58,10 @@ function NuevaCotizacionContenido() {
   const [montoViaje, setMontoViaje] = useState("");
   const [ciudadesLibres, setCiudadesLibres] = useState<string[]>([]);
   const opcionesCiudad = useMemo(() => [...CIUDADES_CHILE, ...ciudadesLibres].map((c) => ({ id: c, label: c })), [ciudadesLibres]);
+  // Sin permiso de precios de viajes, ?tipo=viaje no abre el formulario de viaje.
+  useEffect(() => {
+    if (usuario && !puedeViaje) setTipo("servicio");
+  }, [usuario, puedeViaje]);
   function agregarCiudadLibre(texto: string) {
     if (texto && !CIUDADES_CHILE.includes(texto)) setCiudadesLibres((prev) => (prev.includes(texto) ? prev : [...prev, texto]));
   }

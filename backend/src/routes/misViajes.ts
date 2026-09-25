@@ -1,4 +1,3 @@
-import { ROLES_SUPERVISION } from "@bitacora/shared";
 import { Router } from "express";
 import multer from "multer";
 import type { EstadoViaje, Viaje } from "@bitacora/shared";
@@ -8,6 +7,7 @@ import { ROLES_EDITAN_MONTO_VIAJE, calcularMontos, nuevosMontosViaje } from "../
 import { registrarAuditoriaEmpresa } from "../auditoriaEmpresa";
 import { cobroDeViaje } from "../viajesCobros";
 import { borrarViajeConViatico, sincronizarGastoViatico, viaticoDeViaje } from "../viajesViaticos";
+import { sinCostos } from "../viajesPrecio";
 import { siguienteFolioViaje } from "../folios";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
@@ -34,13 +34,7 @@ const upload = multer({
 
 const esGestion = (req: RequestConEmpresa) => req.rol !== "colaborador";
 
-// Tarea 135: las tarifas y el detalle del cálculo (tramos con su precio,
-// precio por km) solo los ven Admin y Supervisor — no el chofer.
-function sinCostos<T extends Record<string, unknown>>(req: RequestConEmpresa, v: T): T {
-  if (ROLES_SUPERVISION.includes(req.rol ?? "")) return v;
-  const { precio_km: _pk, tramos_detalle: _td, ...resto } = v as T & { precio_km?: unknown; tramos_detalle?: unknown };
-  return resto as T;
-}
+
 
 misViajesRouter.get(
   "/",
@@ -291,7 +285,7 @@ misViajesRouter.post(
       res.status(500).json({ error: error.message });
       return;
     }
-    res.status(201).json(data);
+    res.status(201).json(sinCostos(req, data));
   })
 );
 
@@ -381,6 +375,19 @@ misViajesRouter.patch(
       return;
     }
     const cambios: Partial<Viaje> = {};
+
+    // Tarea 135: en un viaje por tramos o por km, el recorrido y el cliente
+    // definen el precio; se cambian desde la web, recalculando.
+    if (existente.modo_precio && existente.modo_precio !== "fijo") {
+      const cambiaRecorrido =
+        (origen !== undefined && String(origen).trim() !== existente.origen) ||
+        (destino !== undefined && String(destino).trim() !== existente.destino) ||
+        (cliente_id !== undefined && cliente_id && cliente_id !== existente.cliente_id);
+      if (cambiaRecorrido) {
+        res.status(409).json({ error: "Este viaje se cobra por tramos o por km: el recorrido y el cliente se cambian desde la web" });
+        return;
+      }
+    }
 
     if (numero_guia !== undefined) {
       if (typeof numero_guia !== "string" || !numero_guia.trim()) {

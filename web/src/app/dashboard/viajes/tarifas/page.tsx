@@ -54,7 +54,7 @@ export default function TarifasViajesPage() {
     setTramos(body.tramos);
     setKm(body.km);
     const general = (body.km as TarifaKm[]).find((t) => t.cliente_id === null);
-    setPrecioKmGeneral(general ? String(Math.round(Number(general.precio_km))) : "");
+    setPrecioKmGeneral(general ? String(Number(general.precio_km)) : "");
   }
 
   useEffect(() => {
@@ -147,6 +147,7 @@ export default function TarifasViajesPage() {
   }
 
   async function eliminarKm(t: TarifaKm) {
+    if (!window.confirm("¿Quitar este precio por km? Los viajes ya calculados no cambian.")) return;
     const res = await apiFetch(`/api/viajes/tarifas/km/${t.id}`, { method: "DELETE" });
     if (!res.ok) setErrorKm("No se pudo eliminar");
     await cargarTarifas();
@@ -216,7 +217,7 @@ export default function TarifasViajesPage() {
                         className="font-ds-body text-ds-small font-medium text-ds-text tabular-nums hover:text-ds-brand hover:underline"
                         onClick={() => {
                           const nuevo = window.prompt(`Nuevo precio para ${t.origen} ↔ ${t.destino}`, String(Math.round(Number(t.precio))));
-                          if (nuevo) void cambiarTramo(t, { precio: nuevo.replace(/\D/g, "") });
+                          if (nuevo) void cambiarTramo(t, { precio: nuevo.replace(/[^\d,]/g, "").replace(",", ".") });
                         }}
                       >
                         {formatMoneda(Number(t.precio), usuario.moneda)}

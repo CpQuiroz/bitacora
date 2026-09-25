@@ -1,7 +1,6 @@
-import { ROLES_SUPERVISION } from "@bitacora/shared";
 import { Router } from "express";
 import type { Cliente } from "@bitacora/shared";
-import { formatearRut, validarRut } from "@bitacora/shared";
+import { formatearRut, validarRut, ROLES_SUPERVISION } from "@bitacora/shared";
 import { supabase } from "../supabase";
 import { geocodificarDireccion } from "../geocodificar";
 import type { RequestConEmpresa } from "../empresa";

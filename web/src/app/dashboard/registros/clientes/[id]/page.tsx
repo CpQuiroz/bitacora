@@ -137,6 +137,7 @@ export default function ClienteDetallePage() {
     if (!cliente) return;
     const res = await apiFetch(`/api/clientes/${cliente.id}`, { method: "PATCH", body: JSON.stringify({ modo_precio_default: v || null }) });
     if (res.ok) setCliente({ ...cliente, modo_precio_default: (v || null) as Cliente["modo_precio_default"] });
+    else window.alert("No se pudo guardar la forma de cobro. Intenta de nuevo.");
   }
 
   async function onGuardar() {

@@ -67,3 +67,16 @@ export const limitarSolicitudesSuperAdmin = rateLimit({
   legacyHeaders: false,
   message: { error: "Ya enviaste varias solicitudes. Te vamos a responder al correo de tu cuenta." },
 });
+
+// Tarea 135: "Calcular km con el mapa" usa una sola clave de
+// OpenRouteService para todas las empresas (cuota diaria compartida). Tope
+// por empresa para que una no agote el cupo de todas; las distancias ya
+// calculadas salen de la caché igual.
+export const limitarDistancia = rateLimit({
+  keyGenerator: (req) => `empresa:${(req as { empresaId?: string }).empresaId ?? "desconocida"}`,
+  windowMs: 60 * 60 * 1000,
+  limit: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Demasiados cálculos de km en la última hora. Ingresa los km a mano o intenta más tarde." },
+});

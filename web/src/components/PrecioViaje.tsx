@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ModoPrecioViaje, TramoPrecio } from "@bitacora/shared";
 import { Button, Select } from "@bitacora/ui/web";
 import { apiFetch } from "@/lib/api";
@@ -34,6 +34,12 @@ export function PrecioViaje({ modo, onModo, origen, destino, paradas, onParadas,
   const [calculando, setCalculando] = useState<"precio" | "km" | null>(null);
 
   const recorrido = [origen, ...paradas, destino].map((p) => p.trim()).filter(Boolean);
+  // Si cambia el recorrido o el cliente, el cálculo mostrado ya no vale.
+  const firma = `${recorrido.join("|")}#${clienteId}#${modo}`;
+  useEffect(() => {
+    setTramos(null);
+    setAviso(null);
+  }, [firma]);
 
   async function calcularKm() {
     setError(null);
@@ -104,7 +110,7 @@ export function PrecioViaje({ modo, onModo, origen, destino, paradas, onParadas,
                 id="precio-viaje-km"
                 inputMode="decimal"
                 value={km}
-                onChange={(e) => onKm(e.target.value.replace(/[^\d.,]/g, "").replace(",", "."))}
+                onChange={(e) => onKm(normalizarKm(e.target.value))}
                 className="h-11 rounded-ds-pill border border-ds-divider bg-ds-surface px-ds-4 font-ds-body text-ds-body text-ds-text tabular-nums"
               />
             </div>
@@ -170,4 +176,10 @@ export function PrecioViaje({ modo, onModo, origen, destino, paradas, onParadas,
       {error ? <p className="font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
     </div>
   );
+}
+
+// "1.234,5" o "1234,5" → "1234.5"; "87.5" se respeta.
+function normalizarKm(texto: string): string {
+  const limpio = texto.replace(/[^\d.,]/g, "");
+  return limpio.includes(",") ? limpio.replace(/\./g, "").replace(",", ".") : limpio;
 }

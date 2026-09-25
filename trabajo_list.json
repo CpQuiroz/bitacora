@@ -1890,6 +1890,14 @@
       "status": "pending",
       "description": "Decisión de la usuaria 24-sep-2026: dejar Flow y pagos como deuda técnica. Incluye: (1) crear planes Esencial/Operación/Pro en Flow producción en UF con IVA (1,785 · 4,165 · 7,14) y cargar FLOW_API_KEY/SECRET/URL + FLOW_PLAN_ID_* en Render (cuenta cquirozit@gmail.com); (2) avisar el cambio de plan a Flow (subscription/changePlan + preview) — hoy Flow seguiría cobrando el plan anterior; (3) cancelar al fin del período (at_period_end); (4) adicionales en pausa (tarea 125, sin módulo extra). Probado en sandbox: progress/sandbox_flow_adicionales.md. Comisión Flow 2,89% + IVA; alternativas más baratas (Transbank Oneclick ~2,35%, Getnet) a evaluar con volumen.",
       "resolution": ""
+    },
+    {
+      "id": 143,
+      "name": "tarifa_km_por_tipo_camion",
+      "title": "Viajes: precio por km según tipo de camión (opcional de la propuesta, no implementado en 135)",
+      "status": "pending",
+      "description": "La propuesta §2.1 incluía tarifas_km por tipo de camión (equipos.tipo). En la tarea 135 quedó general y por cliente. Confirmar con la usuaria si lo necesita.",
+      "resolution": ""
     }
   ]
 }

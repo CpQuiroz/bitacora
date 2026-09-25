@@ -10,6 +10,7 @@ import { supabase } from "../supabase";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
 import { ErrorDistancia, distanciaRecorridoKm } from "../distancia";
+import { limitarDistancia } from "../rateLimiters";
 
 export const tarifasViajesRouter = Router();
 
@@ -23,9 +24,26 @@ tarifasViajesRouter.use(
   })
 );
 
+// Tope por las columnas numeric(12,2): evita un 500 por desborde.
+const MONTO_MAXIMO = 9_999_999_999;
+const LARGO_LUGAR = 120;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 function montoValido(v: unknown): number | null {
   const n = Number(v);
-  return v === "" || v === null || v === undefined || !Number.isFinite(n) || n < 0 ? null : Math.round(n * 100) / 100;
+  return v === "" || v === null || v === undefined || !Number.isFinite(n) || n < 0 || n > MONTO_MAXIMO ? null : Math.round(n * 100) / 100;
+}
+
+function lugarValido(v: unknown): v is string {
+  return typeof v === "string" && v.trim().length > 0 && v.trim().length <= LARGO_LUGAR;
+}
+
+// Paradas de un recorrido: texto no vacío, hasta 10 puntos.
+function paradasValidas(v: unknown): string[] | null {
+  if (!Array.isArray(v)) return null;
+  const lista = v.filter((p) => typeof p === "string" && p.trim()).map((p: string) => p.trim());
+  if (lista.length < 2 || lista.length > 10 || lista.some((p) => p.length > LARGO_LUGAR)) return null;
+  return lista;
 }
 
 // cliente_id opcional; si viene, tiene que ser de la empresa.
@@ -35,6 +53,14 @@ async function clienteDeEmpresa(empresaId: string, clienteId: unknown): Promise<
   const { data } = await supabase.from("clientes").select("id").eq("empresa_id", empresaId).eq("id", clienteId).maybeSingle();
   return data ? { id: data.id } : { error: "El cliente no existe en tu empresa" };
 }
+
+tarifasViajesRouter.param("id", (req, res, next, id) => {
+  if (!UUID.test(String(id))) {
+    res.status(404).json({ error: "Tarifa no encontrada" });
+    return;
+  }
+  next();
+});
 
 function responderError(res: Response, error: { code?: string; message: string }, duplicado: string) {
   if (error.code === "23505") res.status(409).json({ error: duplicado });
@@ -65,8 +91,8 @@ tarifasViajesRouter.post(
   "/tramos",
   ah<RequestConEmpresa>(async (req, res) => {
     const { origen, destino, precio, cliente_id } = req.body ?? {};
-    if (typeof origen !== "string" || !origen.trim() || typeof destino !== "string" || !destino.trim()) {
-      res.status(400).json({ error: "Indica origen y destino" });
+    if (!lugarValido(origen) || !lugarValido(destino)) {
+      res.status(400).json({ error: "Indica origen y destino (hasta 120 caracteres)" });
       return;
     }
     const par = parTramo(origen, destino);
@@ -110,7 +136,13 @@ tarifasViajesRouter.patch(
       }
       cambios.precio = monto;
     }
-    if (activo !== undefined) cambios.activo = activo === true;
+    if (activo !== undefined) {
+      if (typeof activo !== "boolean") {
+        res.status(400).json({ error: "activo debe ser verdadero o falso" });
+        return;
+      }
+      cambios.activo = activo;
+    }
     const { data, error } = await supabase
       .from("tarifas_tramo")
       .update(cambios)
@@ -214,8 +246,9 @@ tarifasViajesRouter.post(
       return;
     }
     if (modo === "tramos") {
-      if (!Array.isArray(paradas) || paradas.filter((p) => typeof p === "string" && p.trim()).length < 2) {
-        res.status(400).json({ error: "Indica al menos origen y destino" });
+      const lista = paradasValidas(paradas);
+      if (!lista) {
+        res.status(400).json({ error: "Indica origen y destino (hasta 10 puntos)" });
         return;
       }
       const { data: tarifas, error } = await supabase
@@ -227,7 +260,7 @@ tarifasViajesRouter.post(
         res.status(500).json({ error: error.message });
         return;
       }
-      res.json({ modo, ...calcularPorTramos(paradas.filter((p): p is string => typeof p === "string"), tarifas ?? [], cliente.id) });
+      res.json({ modo, ...calcularPorTramos(lista, tarifas ?? [], cliente.id) });
       return;
     }
     if (modo === "km") {
@@ -251,10 +284,10 @@ tarifasViajesRouter.post(
 // Km por carretera de un recorrido (origen, paradas, destino) con el mapa.
 tarifasViajesRouter.post(
   "/distancia",
+  limitarDistancia,
   ah<RequestConEmpresa>(async (req, res) => {
-    const { paradas } = req.body ?? {};
-    const lista = Array.isArray(paradas) ? paradas.filter((p): p is string => typeof p === "string" && p.trim().length > 0) : [];
-    if (lista.length < 2 || lista.length > 10) {
+    const lista = paradasValidas(req.body?.paradas);
+    if (!lista) {
       res.status(400).json({ error: "Indica origen y destino (hasta 10 puntos)" });
       return;
     }

@@ -15,6 +15,7 @@ import { camposPrecio, leerPedidoPrecio } from "../viajesPrecio";
 import { calcularMontos } from "../viajesMontos";
 import { modulosVisiblesDeUsuario } from "../permisos";
 import { siguienteFolioViaje } from "../folios";
+import { hoyChile } from "../fechaChile";
 
 export const cotizacionesRouter = Router();
 
@@ -229,7 +230,12 @@ cotizacionesRouter.get(
       osFolio = orden?.folio ?? null;
     }
 
-    res.json({ ...cotizacion, items: items ?? [], os_folio: osFolio });
+    // Tarea 135: el detalle de tarifas de una cotización de viaje solo lo ven
+    // Admin y Supervisor (el ítem con el total sí lo ve quien tenga el módulo).
+    const viajeDatos = cotizacion.viaje_datos as CotizacionViajeDatos | null;
+    const datosVisibles =
+      viajeDatos && !ROLES_SUPERVISION.includes(req.rol ?? "") ? { ...viajeDatos, precio_km: null, tramos_detalle: null } : viajeDatos;
+    res.json({ ...cotizacion, viaje_datos: datosVisibles, items: items ?? [], os_folio: osFolio });
   })
 );
 
@@ -315,6 +321,22 @@ cotizacionesRouter.patch(
   "/:id",
   ah<RequestConEmpresa>(async (req, res) => {
     const { descripcion, fecha_vencimiento, estado, etapa_id, items: itemsRaw } = req.body ?? {};
+    // Tarea 135: una cotización ya convertida en viaje no se edita, y en una
+    // de viaje los ítems salen del recorrido (no se editan a mano).
+    const { data: actual } = await supabase
+      .from("presupuestos")
+      .select("tipo, viaje_id")
+      .eq("empresa_id", req.empresaId!)
+      .eq("id", req.params.id)
+      .maybeSingle();
+    if (actual?.viaje_id) {
+      res.status(409).json({ error: "Esta cotización ya fue convertida en un viaje y no se puede modificar" });
+      return;
+    }
+    if (actual?.tipo === "viaje" && itemsRaw !== undefined) {
+      res.status(409).json({ error: "En una cotización de viaje el monto sale del recorrido: crea una nueva cotización para cambiarlo" });
+      return;
+    }
     const cambios: Partial<Presupuesto> = {};
 
     if (descripcion !== undefined) cambios.descripcion = descripcion?.trim() || null;
@@ -412,12 +434,16 @@ cotizacionesRouter.delete(
   ah<RequestConEmpresa>(async (req, res) => {
     const { data: cotizacion } = await supabase
       .from("presupuestos")
-      .select("id, trabajo_id")
+      .select("id, trabajo_id, viaje_id")
       .eq("empresa_id", req.empresaId!)
       .eq("id", req.params.id)
       .maybeSingle();
     if (!cotizacion) {
       res.status(404).json({ error: "Cotización no encontrada" });
+      return;
+    }
+    if (cotizacion.viaje_id) {
+      res.status(403).json({ error: "Esta cotización ya fue convertida en un viaje y no se puede eliminar" });
       return;
     }
     if (cotizacion.trabajo_id) {
@@ -467,6 +493,10 @@ cotizacionesRouter.post(
       res.status(409).json({ error: "Esta cotización ya fue convertida en un viaje", viaje_id: cot.viaje_id });
       return;
     }
+    if (cot.trabajo_id) {
+      res.status(409).json({ error: "Esta cotización ya fue convertida en una OS" });
+      return;
+    }
     const d = cot.viaje_datos as CotizacionViajeDatos;
     const neto = Number(cot.subtotal ?? 0);
     const { subtotal, iva, total } = calcularMontos(neto, true);
@@ -475,7 +505,7 @@ cotizacionesRouter.post(
       .from("viajes")
       .insert({
         empresa_id: req.empresaId!,
-        fecha: d.fecha ?? new Date().toISOString().slice(0, 10),
+        fecha: d.fecha ?? hoyChile(),
         // La guía real se pone al despachar; mientras, la de la cotización.
         numero_guia: `COT-${cot.numero ?? folio}`,
         folio,
@@ -510,7 +540,8 @@ cotizacionesRouter.post(
       .is("viaje_id", null)
       .select("id");
     if (!marcada?.length) {
-      await supabase.from("viajes").delete().eq("empresa_id", req.empresaId!).eq("id", viajeCreado.id);
+      const { error: errBorrar } = await supabase.from("viajes").delete().eq("empresa_id", req.empresaId!).eq("id", viajeCreado.id);
+      if (errBorrar) console.error(`[cotizaciones] no se pudo borrar el viaje duplicado ${viajeCreado.id}: ${errBorrar.message}`);
       res.status(409).json({ error: "Esta cotización ya fue convertida en un viaje" });
       return;
     }
@@ -538,6 +569,10 @@ cotizacionesRouter.post(
     }
     if (cotizacion.estado !== "aprobado") {
       res.status(400).json({ error: "Solo una cotización aprobada puede convertirse en OS" });
+      return;
+    }
+    if (cotizacion.tipo === "viaje") {
+      res.status(400).json({ error: "Una cotización de viaje se convierte en viaje, no en OS" });
       return;
     }
     if (cotizacion.trabajo_id) {

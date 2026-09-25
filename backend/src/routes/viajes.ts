@@ -9,7 +9,7 @@ import { requiereAccion, requiereRol } from "../permisos";
 import { ROLES_EDITAN_MONTO_VIAJE, calcularMontos, normalizarHora, nuevosMontosViaje } from "../viajesMontos";
 import { registrarAuditoriaEmpresa } from "../auditoriaEmpresa";
 import { cobroDeViaje } from "../viajesCobros";
-import { camposPrecio, leerPedidoPrecio, type CamposPrecio } from "../viajesPrecio";
+import { camposPrecio, leerPedidoPrecio, mismaFormaDeCobro, paradasDelViaje, sinCostos, type CamposPrecio, type PedidoPrecio } from "../viajesPrecio";
 import { avisarViajeAsignado, validarChofer } from "../viajesAsignacion";
 import { siguienteFolioCobro, siguienteFolioViaje } from "../folios";
 import {
@@ -121,7 +121,7 @@ viajesRouter.get(
       res.status(500).json({ error: error.message });
       return;
     }
-    res.json(data ?? []);
+    res.json((data ?? []).map((v) => sinCostos(req, v)));
   })
 );
 
@@ -564,19 +564,37 @@ viajesRouter.patch(
       cambios.estado = estado;
     }
 
-    // Forma de cobro (tarea 135).
+    // Forma de cobro (tarea 135). El detalle se recalcula solo si cambia la
+    // forma de cobro, las paradas, los km o el cliente; si no, queda fijo.
     const pedidoPrecio = leerPedidoPrecio(req.body ?? {});
     if ("error" in pedidoPrecio) {
       res.status(400).json({ error: pedidoPrecio.error });
       return;
     }
+    const clienteCambia = cambios.cliente_id !== undefined && cambios.cliente_id !== existente.cliente_id;
+    let pedidoAplicar: PedidoPrecio | null = null;
     if ("pedido" in pedidoPrecio) {
-      const cambiaForma = pedidoPrecio.pedido.modo !== existente.modo_precio || pedidoPrecio.pedido.modo !== "fijo";
-      if (cambiaForma && !ROLES_EDITAN_MONTO_VIAJE.includes(req.rol ?? "")) {
+      if (!mismaFormaDeCobro(existente, pedidoPrecio.pedido) || (clienteCambia && pedidoPrecio.pedido.modo !== "fijo")) pedidoAplicar = pedidoPrecio.pedido;
+    } else if (existente.modo_precio !== "fijo") {
+      const recorridoCambia =
+        (cambios.origen !== undefined && cambios.origen !== existente.origen) || (cambios.destino !== undefined && cambios.destino !== existente.destino);
+      if (recorridoCambia) {
+        res.status(409).json({ error: "Este viaje se cobra por tramos o por km: al cambiar el recorrido, vuelve a calcular la forma de cobro" });
+        return;
+      }
+      if (clienteCambia) {
+        pedidoAplicar =
+          existente.modo_precio === "tramos"
+            ? { modo: "tramos", paradas: paradasDelViaje(existente) }
+            : { modo: "km", distanciaKm: Number(existente.distancia_km ?? 0) };
+      }
+    }
+    if (pedidoAplicar) {
+      if (!ROLES_EDITAN_MONTO_VIAJE.includes(req.rol ?? "") && (pedidoAplicar.modo !== "fijo" || existente.modo_precio !== "fijo")) {
         res.status(403).json({ error: "Solo el administrador o un supervisor pueden cambiar la forma de cobro" });
         return;
       }
-      const c = await camposPrecio(req.empresaId!, cambios.cliente_id ?? existente.cliente_id, pedidoPrecio.pedido);
+      const c = await camposPrecio(req.empresaId!, cambios.cliente_id ?? existente.cliente_id, pedidoAplicar);
       if ("error" in c) {
         res.status(400).json({ error: c.error });
         return;
@@ -637,7 +655,19 @@ viajesRouter.patch(
     }
     // El gasto del viático sigue al viaje (monto, fecha, guía y chofer).
     if (viaticoFinal || viaticoAnterior) {
-      const sync = await sincronizarGastoViatico(req.empresaId!, data, viaticoFinal);
+      // Se sincroniza con lo que quedó guardado en el viaje (no con lo que
+      // traía este pedido) y se verifica: con dos guardados a la vez, el
+      // último en sincronizar deja el gasto igual al viaje.
+      const leerGuardado = async () =>
+        (await supabase.from("viajes").select("viatico_tipo, viatico_monto").eq("empresa_id", req.empresaId!).eq("id", existente.id).single()).data;
+      let guardado = await leerGuardado();
+      let sync = await sincronizarGastoViatico(req.empresaId!, data, guardado ? viaticoDeViaje(guardado) : viaticoFinal);
+      for (let intento = 0; intento < 3 && "ok" in sync; intento++) {
+        const ahora = await leerGuardado();
+        if (!ahora || !guardado || mismoViatico(viaticoDeViaje(ahora), viaticoDeViaje(guardado))) break;
+        guardado = ahora;
+        sync = await sincronizarGastoViatico(req.empresaId!, data, viaticoDeViaje(ahora));
+      }
       if ("pagado" in sync) {
         // Se pagó mientras se guardaba: el viaje vuelve al viático y chofer
         // del gasto pagado, que manda.
