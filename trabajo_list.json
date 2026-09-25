@@ -1922,6 +1922,14 @@
       "status": "done",
       "description": "Pedido de la usuaria 25-sep-2026. Decisiones: sección Equipos en Más (Agenda/Hoy congeladas); ver y editar equipos (no crear); ficha con datos, documentos, plan de mantención preventiva, historial de OS, mantención y eventos (reutilizar), asignación. Documentos: Admin/Supervisor con módulo flota en todos los vehículos; el chofer solo en su vehículo asignado (ver, subir foto/galería/PDF, editar). Tablero de flota queda para después. Requiere expo-document-picker (build).",
       "resolution": "Hecho y revisado (commits 67a8ea1, 6c09f15; review_146.md). E2E equiposDocumentos 21/21, total 178/178. Build 1.10.20 vc61 (cca391a). Publicado en main cca391a."
+    },
+    {
+      "id": 147,
+      "name": "push_notificaciones_asignacion",
+      "title": "Notificaciones push al teléfono cuando a alguien le asignan un viaje, cita, OS o levantamiento",
+      "status": "pending",
+      "description": "Pedido de la usuaria 25-sep-2026 (backlog). La app debe avisar al teléfono, con la app cerrada, cuando a un usuario (cualquier rol, típicamente colaborador) le asignan un viaje, una cita, una OS o un levantamiento nuevo. Estado actual: no hay push; existe el feed de notificaciones en la app (tabla notificaciones, backend/src/notificar.ts, /api/notificaciones-feed, preferencias en notificaciones_preferencias) que solo se ve con la app abierta. Propuesta a validar antes de implementar: expo-notifications (nativo → build), tabla de tokens por usuario/dispositivo con RLS y empresa_id, registrar el token al iniciar sesión y borrarlo al cerrar, enviar desde el backend con el servicio de push de Expo al crear o reasignar (viajes, tareas/citas, trabajos/OS, levantamientos), respetar notificaciones_preferencias, tocar la notificación abre el detalle. Android requiere configurar FCM (credenciales las carga la usuaria). Definir con la usuaria: qué eventos (también reasignación, cambio de fecha, cancelación), texto de cada aviso, y si el Admin recibe copia.",
+      "resolution": ""
     }
   ]
 }
