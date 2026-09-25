@@ -53,8 +53,20 @@ export async function equiposDocumentos(ctx: Ctx): Promise<void> {
 
   const ajenoAdmin = await subir(admin, "POST", "/api/documentos", { ...base, entidad_id: ajeno });
   check("146-8 el Admin sube a cualquier vehículo", ajenoAdmin.s === 201, `${ajenoAdmin.s}`);
-  const otraEmpresa = await subir(admin, "POST", "/api/documentos", { ...base, entidad_id: crypto.randomUUID() });
-  check("146-9 no se puede colgar un documento de un vehículo de otra empresa", otraEmpresa.s === 400, `${otraEmpresa.s}`);
+  // Vehículo real de OTRA empresa (se crea y se borra acá).
+  const { data: empresaB } = await supabase.from("empresas").insert({ nombre: `E2E otra ${crypto.randomBytes(3).toString("hex")}`, rubro: "transporte", plan: "pro" }).select("id").single();
+  try {
+    const { data: vehiculoB } = await supabase.from("equipos").insert({ empresa_id: empresaB!.id, nombre: "Camión otra empresa", categoria: "Vehículo", patente: "ZZZZ99" }).select("id").single();
+    const otraEmpresa = await subir(admin, "POST", "/api/documentos", { ...base, entidad_id: vehiculoB!.id });
+    check("146-9 no se puede colgar un documento de un vehículo de otra empresa", otraEmpresa.s === 400, `${otraEmpresa.s}`);
+    const verOtra = await api(admin, "GET", `/api/documentos?entidad_tipo=vehiculo&entidad_id=${vehiculoB!.id}`);
+    check("146-9b tampoco se listan documentos de otra empresa", verOtra.s === 200 && Array.isArray(verOtra.j) && verOtra.j.length === 0, `${verOtra.s}`);
+  } finally {
+    await supabase.from("empresas").delete().eq("id", empresaB!.id);
+  }
+  const { data: tipoColab } = await supabase.from("tipos_documento").insert({ empresa_id: empresaId, nombre: "Licencia E2E", aplica_a: "colaborador", activo: true }).select("id").single();
+  const tipoMalo = await subir(admin, "POST", "/api/documentos", { ...base, entidad_id: ajeno, tipo_documento_id: tipoColab!.id });
+  check("146-9c un tipo de colaborador no se usa en un vehículo", tipoMalo.s === 400, `${tipoMalo.s}`);
   const borrarAdmin = await api(admin, "DELETE", `/api/documentos/${docId}`);
   check("146-10 el Admin borra documentos", borrarAdmin.s === 204, `${borrarAdmin.s}`);
 

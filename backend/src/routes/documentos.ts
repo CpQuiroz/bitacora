@@ -7,7 +7,7 @@ import { subirDocumento, urlFirmadaDocumento } from "../storage";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
 import { rolPuedeVerModulo } from "../roles";
-import { equipoAsignadoAColaborador } from "./equipos";
+import { colaboradorTieneEquipo } from "./equipos";
 
 export const documentosRouter = Router();
 
@@ -38,10 +38,7 @@ async function autorizado(
 ): Promise<boolean> {
   if (entidadTipo === "colaborador" && entidadId === req.userId) return true;
   if (await rolPuedeVerModulo(req.rol ?? "colaborador", "flota", req.empresaId)) return true;
-  if (entidadTipo === "vehiculo" && accion !== "borrar") {
-    const asignado = await equipoAsignadoAColaborador(req.empresaId!, req.userId!);
-    return asignado?.id === entidadId;
-  }
+  if (entidadTipo === "vehiculo" && accion !== "borrar") return colaboradorTieneEquipo(req.empresaId!, req.userId!, entidadId);
   return false;
 }
 
@@ -54,6 +51,14 @@ async function entidadDeEmpresa(empresaId: string, entidadTipo: EntidadDocumento
 }
 
 const ENTIDADES: EntidadDocumento[] = ["colaborador", "vehiculo"];
+
+// El tipo tiene que ser de la empresa y aplicar a esa entidad (un tipo de
+// "colaborador" no se usa en un vehículo, y al revés).
+async function tipoValidoPara(empresaId: string, tipoId: unknown, entidadTipo: EntidadDocumento): Promise<boolean> {
+  if (typeof tipoId !== "string" || !tipoId) return false;
+  const { data } = await supabase.from("tipos_documento").select("aplica_a").eq("empresa_id", empresaId).eq("id", tipoId).maybeSingle();
+  return Boolean(data) && (data!.aplica_a === "ambos" || data!.aplica_a === entidadTipo);
+}
 
 documentosRouter.get(
   "/",
@@ -151,9 +156,8 @@ documentosRouter.post(
       res.status(400).json({ error: "Falta tipo_documento_id" });
       return;
     }
-    const { data: tipoDoc } = await supabase.from("tipos_documento").select("id").eq("empresa_id", req.empresaId!).eq("id", tipo_documento_id).maybeSingle();
-    if (!tipoDoc) {
-      res.status(400).json({ error: "tipo_documento_id inválido" });
+    if (!(await tipoValidoPara(req.empresaId!, tipo_documento_id, entidad_tipo))) {
+      res.status(400).json({ error: "tipo_documento_id inválido para este documento" });
       return;
     }
 
@@ -206,10 +210,11 @@ documentosRouter.patch(
     if (numero !== undefined) cambios.numero = numero?.trim() || null;
     if (fecha_emision !== undefined) cambios.fecha_emision = fecha_emision || null;
     if (fecha_vencimiento !== undefined) cambios.fecha_vencimiento = fecha_vencimiento || null;
-    if (tipo_documento_id !== undefined) {
-      const { data: tipoDoc } = await supabase.from("tipos_documento").select("id").eq("empresa_id", req.empresaId!).eq("id", tipo_documento_id).maybeSingle();
-      if (!tipoDoc) {
-        res.status(400).json({ error: "tipo_documento_id inválido" });
+    // Solo se valida si cambia: un documento viejo puede tener un tipo que
+    // hoy ya no aplica y editarle la fecha no debe fallar por eso.
+    if (tipo_documento_id !== undefined && tipo_documento_id !== actual.tipo_documento_id) {
+      if (!(await tipoValidoPara(req.empresaId!, tipo_documento_id, actual.entidad_tipo))) {
+        res.status(400).json({ error: "tipo_documento_id inválido para este documento" });
         return;
       }
       cambios.tipo_documento_id = tipo_documento_id;

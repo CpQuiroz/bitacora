@@ -21,17 +21,20 @@ export function PlanMantencionFormScreen({ navigation, route }: NativeStackScree
 
   useEffect(() => {
     if (!planId) return;
-    planesDeEquipo(equipoId).then((planes) => {
-      const p = planes.find((x) => x.id === planId);
-      if (!p) {
-        setError("No se encontró el plan");
-        return;
-      }
-      setFrecuencia(String(p.frecuencia_dias));
-      setProxima(p.proxima_fecha);
-      setNotas(p.notas ?? "");
-      setCargado(true);
-    });
+    planesDeEquipo(equipoId).then(
+      (planes) => {
+        const p = planes.find((x) => x.id === planId);
+        if (!p) {
+          setError("No se encontró el plan");
+          return;
+        }
+        setFrecuencia(String(p.frecuencia_dias));
+        setProxima(p.proxima_fecha);
+        setNotas(p.notas ?? "");
+        setCargado(true);
+      },
+      (x: Error) => setError(x.message || "No se pudo cargar el plan. Revisa tu conexión.")
+    );
   }, [equipoId, planId]);
 
   const titulo = planId ? "Editar plan" : "Nuevo plan de mantención";

@@ -32,6 +32,8 @@ export default function EquipoDetallePage() {
   const [planes, setPlanes] = useState<PlanMantencion[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
+  // Error al pausar/eliminar un plan (p. ej. 403 sin el módulo Flota en un vehículo).
+  const [errorAccion, setErrorAccion] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("datos");
 
   const [formPlanAbierto, setFormPlanAbierto] = useState(false);
@@ -129,14 +131,26 @@ export default function EquipoDetallePage() {
   }
 
   async function onAlternarPlan(plan: PlanMantencion) {
+    setErrorAccion(null);
     const res = await apiFetch(`/api/planes-mantencion/${plan.id}`, { method: "PATCH", body: JSON.stringify({ activo: !plan.activo }) });
-    if (res.ok) cargar();
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setErrorAccion(body.error ?? "No se pudo actualizar el plan");
+      return;
+    }
+    cargar();
   }
 
   async function onEliminarPlan(plan: PlanMantencion) {
     if (!confirm("¿Eliminar este plan de mantención?")) return;
+    setErrorAccion(null);
     const res = await apiFetch(`/api/planes-mantencion/${plan.id}`, { method: "DELETE" });
-    if (res.ok) cargar();
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setErrorAccion(body.error ?? "No se pudo eliminar el plan");
+      return;
+    }
+    cargar();
   }
 
   if (!usuario) return null;
@@ -165,6 +179,7 @@ export default function EquipoDetallePage() {
       </div>
 
       {aviso ? <p className="mt-ds-6 font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}
+      {errorAccion ? <p className="mt-ds-6 font-ds-body text-ds-small text-ds-accent-700">{errorAccion}</p> : null}
 
       <nav className="mt-ds-6 flex gap-ds-1 overflow-x-auto border-b border-ds-divider" aria-label="Secciones del equipo">
         {tabs.map((t) => (

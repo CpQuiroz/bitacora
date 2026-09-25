@@ -132,7 +132,8 @@ export async function urlArchivoDocumento(id: string): Promise<string> {
 // ── Plan de mantención preventiva ──
 export async function planesDeEquipo(equipoId: string): Promise<PlanMantencion[]> {
   const res = await apiJson<PlanMantencion[]>(`/api/planes-mantencion?equipo_id=${encodeURIComponent(equipoId)}`);
-  return res.ok ? res.data : [];
+  if (!res.ok) throw new Error(res.error);
+  return res.data;
 }
 
 export type BorradorPlan = { frecuencia_dias: number; proxima_fecha: string; notas: string };

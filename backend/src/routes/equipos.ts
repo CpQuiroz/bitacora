@@ -38,6 +38,23 @@ export async function asignacionVigentePorEquipo(empresaId: string, equipoIds: s
   return mapa;
 }
 
+// ¿El colaborador tiene HOY una asignación vigente de ese equipo? (tarea
+// 146: autoriza los documentos del vehículo; no depende de cuál sea "el
+// más reciente" si tuviera más de uno a la vez).
+export async function colaboradorTieneEquipo(empresaId: string, colaboradorId: string, equipoId: string): Promise<boolean> {
+  const hoy = new Date().toISOString().slice(0, 10);
+  const { data } = await supabase
+    .from("vehiculo_asignaciones")
+    .select("id")
+    .eq("empresa_id", empresaId)
+    .eq("colaborador_id", colaboradorId)
+    .eq("equipo_id", equipoId)
+    .lte("desde", hoy)
+    .or(`hasta.is.null,hasta.gt.${hoy}`)
+    .limit(1);
+  return Boolean(data?.length);
+}
+
 // Sentido inverso — el equipo (si hay alguno) asignado hoy a un
 // colaborador puntual. Usado en Ruteo (Nueva ruta) y en /api/usuarios/me/vehiculo.
 export async function equipoAsignadoAColaborador(empresaId: string, colaboradorId: string): Promise<Equipo | null> {

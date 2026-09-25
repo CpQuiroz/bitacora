@@ -130,11 +130,11 @@ export function MasScreen({ navigation }: NativeStackScreenProps<MasStackParamLi
   }
   accesos.push({ titulo: "Mantención", Icono: Wrench, ir: () => navigation.navigate("MantencionVehiculo") });
   // Tarea 146: Equipos (con Flota/Equipos, la lista; el chofer, su vehículo).
-  accesos.push({
-    titulo: visibles.includes("flota") || visibles.includes("equipos") ? "Equipos" : "Mi vehículo",
-    Icono: Truck,
-    ir: () => navigation.navigate("Equipos"),
-  });
+  if (visibles.includes("flota") || visibles.includes("equipos")) {
+    accesos.push({ titulo: "Equipos", Icono: Truck, ir: () => navigation.navigate("Equipos") });
+  } else if (listo && auth.usuario.funcion === "chofer") {
+    accesos.push({ titulo: "Mi vehículo", Icono: Truck, ir: () => navigation.navigate("Equipos") });
+  }
   // Dinero, separado en 3 módulos activables independientemente desde
   // el 23-sep-2026 (antes "financiero" bundleaba los 3 — pedido
   // explícito: una empresa puede necesitar solo Gastos, sin Cobros ni

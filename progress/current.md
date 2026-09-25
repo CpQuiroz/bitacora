@@ -14,7 +14,12 @@ flota para después; equipos se ven y editan (no se crean) desde mobile.
   asignación, documentos, plan, mantención/eventos existentes, historial OS), EquipoForm, DocumentoForm (foto/galería/
   PDF con expo-document-picker, abre archivo con expo-web-browser), PlanMantencionForm. permisos.ts espejo del backend.
 - Tests: EquipoDetalleScreen.test.tsx 3/3; E2E equiposDocumentos 19/19; total 176/176; verificar verde.
-- Pendiente: revisor; build (expo-document-picker es nativo).
+- Revisión (progress/review_146.md, RECHAZADO sin B) corregida: M1 pruebas de EquiposLista, DocumentoForm, EquipoForm y
+  PlanMantencionForm (mobile 23 tests); m1 web muestra errores al pausar/eliminar plan; m2 texto de eliminar; m3 autoriza
+  por asignación vigente (colaboradorTieneEquipo); m4 tipo de documento debe aplicar a la entidad; m5 "Mi vehículo" solo
+  chofer; m6 plan sin conexión; m7 E2E con vehículo real de otra empresa; m8 quitar emisión; m9 sin doble lectura.
+  E2E 178/178; verificar verde.
+- Pendiente: build (expo-document-picker es nativo), a pedido.
 
 ## Tarea 144 — Salida a prod PASO 1 (en curso, 25-sep)
 Diagnóstico PASO 0 entregado y aprobado ("Ok"). Decisiones en trabajo_list.json #144. Tarea 135 queda `blocked` (solo

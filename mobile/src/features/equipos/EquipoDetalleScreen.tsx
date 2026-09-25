@@ -59,7 +59,7 @@ export function EquipoDetalleScreen({ navigation, route }: NativeStackScreenProp
       const asignadoAMi = Boolean(miId && e.asignacion_vigente?.colaborador_id === miId);
       const [docs, pl] = await Promise.all([
         vehiculo && permisos.documentos(asignadoAMi) ? listarDocumentosVehiculo(e.id).then((d) => ({ d, err: null }), (x: Error) => ({ d: [], err: x.message })) : Promise.resolve({ d: [], err: null }),
-        planesDeEquipo(e.id),
+        planesDeEquipo(e.id).catch(() => []),
       ]);
       setDocumentos(docs.d);
       setErrorDocs(docs.err);
@@ -130,7 +130,7 @@ export function EquipoDetalleScreen({ navigation, route }: NativeStackScreenProp
         text: "Eliminar",
         style: "destructive",
         onPress: () =>
-          Alert.alert("Eliminar documento", `Se elimina "${d.tipo?.nombre ?? "Documento"}" y su archivo.`, [
+          Alert.alert("Eliminar documento", `Se elimina "${d.tipo?.nombre ?? "Documento"}" de la lista de este vehículo.`, [
             { text: "No", style: "cancel" },
             { text: "Sí, eliminar", style: "destructive", onPress: () => void conOcupado(() => borrarDocumento(d.id)) },
           ]),

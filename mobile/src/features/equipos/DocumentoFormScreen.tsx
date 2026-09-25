@@ -117,6 +117,11 @@ export function DocumentoFormScreen({ navigation, route }: NativeStackScreenProp
           <Select etiqueta="Tipo de documento" valor={tipoId} onCambio={setTipoId} placeholder="Elegir" opciones={tipos.map((t) => ({ valor: t.id, etiqueta: t.nombre }))} />
           <Input etiqueta="Número (opcional)" valor={numero} onCambio={setNumero} />
           <DatePicker etiqueta="Fecha de emisión (opcional)" valor={aFecha(emision)} onCambio={(f) => setEmision(aIso(f))} placeholder="Sin fecha" />
+          {emision ? (
+            <Button variante="ghost" onPress={() => setEmision(null)}>
+              Quitar fecha de emisión
+            </Button>
+          ) : null}
           <DatePicker etiqueta="Fecha de vencimiento" valor={aFecha(vencimiento)} onCambio={(f) => setVencimiento(aIso(f))} placeholder="No vence" />
           {vencimiento ? (
             <Button variante="ghost" onPress={() => setVencimiento(null)}>

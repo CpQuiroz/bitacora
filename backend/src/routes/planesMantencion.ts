@@ -24,8 +24,8 @@ async function equipoDeEmpresa(empresaId: string, equipoId: string) {
 // Tarea 146: antes ningún handler de escritura chequeaba permisos. Mismo
 // criterio que editar el equipo (equipos.ts): vehículo → "flota"; otro
 // equipo → "equipos" o "flota".
-async function puedeGestionarPlanDe(req: RequestConEmpresa, equipoId: string): Promise<boolean> {
-  const equipo = await equipoDeEmpresa(req.empresaId!, equipoId);
+async function puedeGestionarPlanDe(req: RequestConEmpresa, equipoId: string, yaLeido?: { categoria: string | null; patente: string | null } | null): Promise<boolean> {
+  const equipo = yaLeido ?? (await equipoDeEmpresa(req.empresaId!, equipoId));
   return Boolean(equipo) && (await puedeEscribirEquipo(req, esVehiculo(equipo)));
 }
 
@@ -54,11 +54,12 @@ planesMantencionRouter.post(
   ah<RequestConEmpresa>(async (req, res) => {
     const { equipo_id, frecuencia_dias, proxima_fecha, notas } = req.body ?? {};
 
-    if (typeof equipo_id !== "string" || !equipo_id || !(await equipoDeEmpresa(req.empresaId!, equipo_id))) {
+    const equipo = typeof equipo_id === "string" && equipo_id ? await equipoDeEmpresa(req.empresaId!, equipo_id) : null;
+    if (!equipo) {
       res.status(400).json({ error: "equipo_id inválido" });
       return;
     }
-    if (!(await puedeGestionarPlanDe(req, equipo_id))) {
+    if (!(await puedeGestionarPlanDe(req, equipo_id, equipo))) {
       res.status(403).json({ error: SIN_PERMISO });
       return;
     }
