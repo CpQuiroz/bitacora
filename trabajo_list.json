@@ -1881,6 +1881,14 @@
       "status": "done",
       "description": "progress/auditoria_indices.md §5 C2. Pendiente de OK de la usuaria.",
       "resolution": "Migración 140: usuarios.telefono_sufijo (columna generada, últimos 8 dígitos) + índice parcial. Webhook filtra por sufijo y elige con elegirChofer (misma regla). Tests 4/4; DEV: migración aplicada, E2E 141 5/5, regresión 84/84. BLOQUEADA: correr la 140 en prod ANTES de publicar este código (si no, el webhook no encuentra al chofer). | PUBLICADO 24-sep-2026: migraciones 139 y 140 en prod (verificadas), main e48af51 (Render live, Vercel READY)."
+    },
+    {
+      "id": 142,
+      "name": "deuda_cobro_flow_produccion",
+      "title": "Deuda técnica: cobro con Flow en producción (planes en Flow, claves en Render, cambio de plan y cancelación, adicionales)",
+      "status": "pending",
+      "description": "Decisión de la usuaria 24-sep-2026: dejar Flow y pagos como deuda técnica. Incluye: (1) crear planes Esencial/Operación/Pro en Flow producción en UF con IVA (1,785 · 4,165 · 7,14) y cargar FLOW_API_KEY/SECRET/URL + FLOW_PLAN_ID_* en Render (cuenta cquirozit@gmail.com); (2) avisar el cambio de plan a Flow (subscription/changePlan + preview) — hoy Flow seguiría cobrando el plan anterior; (3) cancelar al fin del período (at_period_end); (4) adicionales en pausa (tarea 125, sin módulo extra). Probado en sandbox: progress/sandbox_flow_adicionales.md. Comisión Flow 2,89% + IVA; alternativas más baratas (Transbank Oneclick ~2,35%, Getnet) a evaluar con volumen.",
+      "resolution": ""
     }
   ]
 }
