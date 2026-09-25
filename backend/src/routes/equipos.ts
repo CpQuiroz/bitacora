@@ -67,12 +67,12 @@ export async function equipoAsignadoAColaborador(empresaId: string, colaboradorI
 //   · Vehículo (categoría "Vehículo" o con patente) → módulo "flota".
 //   · Cualquier otro equipo → "equipos" (su propia sección desde la
 //     tarea 124; antes "registros") o "flota".
-function esVehiculo(e: { categoria?: unknown; patente?: unknown } | null | undefined): boolean {
+export function esVehiculo(e: { categoria?: unknown; patente?: unknown } | null | undefined): boolean {
   if (!e) return false;
   return e.categoria === "Vehículo" || (typeof e.patente === "string" && e.patente.trim() !== "");
 }
 
-async function puedeEscribirEquipo(req: RequestConEmpresa, vehiculo: boolean): Promise<boolean> {
+export async function puedeEscribirEquipo(req: RequestConEmpresa, vehiculo: boolean): Promise<boolean> {
   const rol = req.rol ?? "colaborador";
   if (await rolPuedeVerModulo(rol, "flota", req.empresaId)) return true;
   return !vehiculo && (await rolPuedeVerModulo(rol, "equipos", req.empresaId));

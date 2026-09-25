@@ -13,6 +13,7 @@ import {
   Route,
   Search,
   Tags,
+  Truck,
   Wrench,
   type LucideIcon,
 } from "lucide-react-native";
@@ -128,6 +129,12 @@ export function MasScreen({ navigation }: NativeStackScreenProps<MasStackParamLi
     accesos.push({ titulo: "Viajes", Icono: Route, ir: () => navigation.navigate("Viajes") });
   }
   accesos.push({ titulo: "Mantención", Icono: Wrench, ir: () => navigation.navigate("MantencionVehiculo") });
+  // Tarea 146: Equipos (con Flota/Equipos, la lista; el chofer, su vehículo).
+  accesos.push({
+    titulo: visibles.includes("flota") || visibles.includes("equipos") ? "Equipos" : "Mi vehículo",
+    Icono: Truck,
+    ir: () => navigation.navigate("Equipos"),
+  });
   // Dinero, separado en 3 módulos activables independientemente desde
   // el 23-sep-2026 (antes "financiero" bundleaba los 3 — pedido
   // explícito: una empresa puede necesitar solo Gastos, sin Cobros ni

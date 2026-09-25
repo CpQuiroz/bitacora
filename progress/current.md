@@ -4,6 +4,18 @@
 > `progress/history.md` y vaciar este archivo. Historial anterior al
 > 23-sep-2026: `progress/archivo/current_2026-09-11_a_2026-09-23.md`.
 
+## Tarea 146 — Equipos en mobile (en curso, 25-sep)
+Decisiones de la usuaria: documentos → Admin (Flota) en todos los vehículos, chofer en su vehículo asignado; tablero de
+flota para después; equipos se ven y editan (no se crean) desde mobile.
+- Backend: documentos.ts autoriza vehículo asignado hoy (ver/subir/editar, no borrar) + valida que la entidad sea de la
+  empresa + update con empresa_id. planesMantencion.ts: antes SIN permisos de escritura → ahora puedeEscribirEquipo
+  (flota/equipos), fecha YYYY-MM-DD, activo booleano. equipos.ts exporta esVehiculo/puedeEscribirEquipo.
+- Mobile (Más → Equipos / Mi vehículo): EquiposLista (buscador, filtro, alertas de documentos), EquipoDetalle (datos,
+  asignación, documentos, plan, mantención/eventos existentes, historial OS), EquipoForm, DocumentoForm (foto/galería/
+  PDF con expo-document-picker, abre archivo con expo-web-browser), PlanMantencionForm. permisos.ts espejo del backend.
+- Tests: EquipoDetalleScreen.test.tsx 3/3; E2E equiposDocumentos 19/19; total 176/176; verificar verde.
+- Pendiente: revisor; build (expo-document-picker es nativo).
+
 ## Tarea 144 — Salida a prod PASO 1 (en curso, 25-sep)
 Diagnóstico PASO 0 entregado y aprobado ("Ok"). Decisiones en trabajo_list.json #144. Tarea 135 queda `blocked` (solo
 falta ORS_API_KEY + migraciones 141-143 en prod; EXPLAIN y grants de DEV verificados 25-sep). Tipo de OS → tarea 145.

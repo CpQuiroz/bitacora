@@ -7,6 +7,7 @@ import { subirDocumento, urlFirmadaDocumento } from "../storage";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
 import { rolPuedeVerModulo } from "../roles";
+import { equipoAsignadoAColaborador } from "./equipos";
 
 export const documentosRouter = Router();
 
@@ -23,14 +24,33 @@ const upload = multer({
 });
 
 // Un colaborador siempre puede ver/editar SUS PROPIOS documentos (sin el
-// módulo "flota", igual criterio que /api/usuarios/me) — para cualquier
-// otra entidad (otro colaborador, o un vehículo) hace falta el módulo.
+// módulo "flota", igual criterio que /api/usuarios/me). Tarea 146: el
+// chofer también ve, sube y edita los de SU vehículo asignado hoy (no los
+// borra). Para cualquier otra entidad hace falta el módulo "flota".
 // rolPuedeVerModulo (roles dinámicos de la tabla `roles` + overrides por
 // empresa) y no puedeVerModulo (matriz semilla fija): antes un rol
 // personalizado con "flota" recibía 403 acá (23-sep-2026).
-async function autorizado(req: RequestConEmpresa, entidadTipo: EntidadDocumento, entidadId: string): Promise<boolean> {
+async function autorizado(
+  req: RequestConEmpresa,
+  entidadTipo: EntidadDocumento,
+  entidadId: string,
+  accion: "ver" | "editar" | "borrar" = "ver"
+): Promise<boolean> {
   if (entidadTipo === "colaborador" && entidadId === req.userId) return true;
-  return rolPuedeVerModulo(req.rol ?? "colaborador", "flota", req.empresaId);
+  if (await rolPuedeVerModulo(req.rol ?? "colaborador", "flota", req.empresaId)) return true;
+  if (entidadTipo === "vehiculo" && accion !== "borrar") {
+    const asignado = await equipoAsignadoAColaborador(req.empresaId!, req.userId!);
+    return asignado?.id === entidadId;
+  }
+  return false;
+}
+
+// La entidad tiene que ser de la empresa (un vehículo = equipo de la
+// empresa; un colaborador = usuario de la empresa).
+async function entidadDeEmpresa(empresaId: string, entidadTipo: EntidadDocumento, entidadId: string): Promise<boolean> {
+  const tabla = entidadTipo === "vehiculo" ? "equipos" : "usuarios";
+  const { data } = await supabase.from(tabla).select("id").eq("empresa_id", empresaId).eq("id", entidadId).maybeSingle();
+  return Boolean(data);
 }
 
 const ENTIDADES: EntidadDocumento[] = ["colaborador", "vehiculo"];
@@ -119,8 +139,12 @@ documentosRouter.post(
       res.status(400).json({ error: "Falta entidad_id" });
       return;
     }
-    if (!(await autorizado(req, entidad_tipo, entidad_id))) {
+    if (!(await autorizado(req, entidad_tipo, entidad_id, "editar"))) {
       res.status(403).json({ error: "No tienes permiso para agregar este documento" });
+      return;
+    }
+    if (!(await entidadDeEmpresa(req.empresaId!, entidad_tipo, entidad_id))) {
+      res.status(400).json({ error: entidad_tipo === "vehiculo" ? "El vehículo no existe en tu empresa" : "La persona no existe en tu empresa" });
       return;
     }
     if (typeof tipo_documento_id !== "string" || !tipo_documento_id) {
@@ -161,10 +185,10 @@ documentosRouter.post(
   })
 );
 
-async function documentoAutorizado(req: RequestConEmpresa, id: string): Promise<Documento | null> {
+async function documentoAutorizado(req: RequestConEmpresa, id: string, accion: "ver" | "editar" | "borrar" = "ver"): Promise<Documento | null> {
   const { data } = await supabase.from("documentos").select("*").eq("empresa_id", req.empresaId!).eq("id", id).maybeSingle();
   if (!data) return null;
-  if (!(await autorizado(req, data.entidad_tipo, data.entidad_id))) return null;
+  if (!(await autorizado(req, data.entidad_tipo, data.entidad_id, accion))) return null;
   return data;
 }
 
@@ -172,7 +196,7 @@ documentosRouter.patch(
   "/:id",
   upload.single("archivo"),
   ah<RequestConEmpresa>(async (req, res) => {
-    const actual = await documentoAutorizado(req, req.params.id);
+    const actual = await documentoAutorizado(req, req.params.id, "editar");
     if (!actual) {
       res.status(404).json({ error: "Documento no encontrado" });
       return;
@@ -194,7 +218,7 @@ documentosRouter.patch(
       cambios.archivo_key = await subirDocumento(req.empresaId!, actual.entidad_tipo, actual.entidad_id, req.file.originalname, req.file.buffer, req.file.mimetype);
     }
 
-    const { data, error } = await supabase.from("documentos").update(cambios).eq("id", req.params.id).select("*, tipo:tipos_documento(nombre)").single();
+    const { data, error } = await supabase.from("documentos").update(cambios).eq("empresa_id", req.empresaId!).eq("id", req.params.id).select("*, tipo:tipos_documento(nombre)").single();
     if (error) {
       res.status(500).json({ error: error.message });
       return;
@@ -206,7 +230,7 @@ documentosRouter.patch(
 documentosRouter.delete(
   "/:id",
   ah<RequestConEmpresa>(async (req, res) => {
-    const actual = await documentoAutorizado(req, req.params.id);
+    const actual = await documentoAutorizado(req, req.params.id, "borrar");
     if (!actual) {
       res.status(404).json({ error: "Documento no encontrado" });
       return;

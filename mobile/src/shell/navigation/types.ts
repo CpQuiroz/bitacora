@@ -72,6 +72,12 @@ export type MasStackParamList = {
   MantencionDetalle: { equipoId: string; registroId: string };
   // Eventos semanales de flota (migración 128, 23-sep-2026).
   EventosFlota: { equipoId: string; patente: string | null };
+  // Equipos (tarea 146): lista, ficha y formularios (editar, documento, plan).
+  Equipos: undefined;
+  EquipoDetalle: { equipoId: string };
+  EquipoForm: { equipoId: string };
+  DocumentoForm: { equipoId: string; documentoId?: string };
+  PlanMantencionForm: { equipoId: string; planId?: string };
   Levantamientos: undefined;
   LevantamientoDetalle: { id: string };
   // Fase 5.3 — historial de levantamientos/OS terminados del colaborador.
