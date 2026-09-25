@@ -31,7 +31,13 @@ falta ORS_API_KEY + migraciones 141-143 en prod; EXPLAIN y grants de DEV verific
    columna datos, textos para 4 rubros); componente web SugerenciasRubro en Servicios y Tipos de pack (Agenda Pro config).
    Mobile: los modales de servicio/pack viven en la pestaña Agenda (congelada) → sin sugerencias ahí. Gasto mobile avisa
    si no hay categorías y el usuario no puede crearlas.
-E2E: suite pruebaVencida 28/30 (144-29/30 esperan migración 144); total 151/153. verificar verde. Commits 7b911a1 + este.
+Revisión (progress/review_144.md, RECHAZADO sin B) corregida: M1 Mi cuenta con lista cerrada (/me/vehiculo bloqueado),
+M2 empresaOperativa.test.ts + E2E portal por RUT/reservar/vehículo, m1 segmento en shell, m2 ocultar Eliminar empresa,
+m3 reactivar no acorta, m4 tope PATCH, m5 filas afectadas, m6 fecha de alta en Chile, m7 portal sin N+1, m8 cola mobile
+queda pendiente con TRIAL_VENCIDO y sin "Descartar" en la pila bloqueada, m9 2FA antes que prueba vencida en mobile.
+Pendiente con la usuaria: m10 (encuesta pública) e impersonación bloqueada con prueba vencida. m11: se deja select("*")
+a propósito (datos llega con la 144). Commit 427dd23. Build 1.10.19 (vc60): ~/builds/apk/bitacora-1.10.19-vc60.apk (a094534).
+E2E: suite pruebaVencida 32/34 (antes 28/30 (144-29/30 esperan migración 144); total 151/153. verificar verde. Commits 7b911a1 + este.
 
 ## Tarea 135 — Precio por tramos y por km + Cotización de viaje (en curso, 24-sep noche)
 Propuesta base: docs/PROPUESTA_PRECIOS_VIAJES.md §2 (aprobada). Decisiones de la usuaria: km con mapa (origen/destino del
