@@ -6,6 +6,7 @@ import type { AgendaProConfig, AgendaProHorario, Servicio, TipoPack } from "@bit
 import { apiFetch } from "@/lib/api";
 import { Button, Card, Input, LoadingState, Select, StatusBadge, Table } from "@bitacora/ui/web";
 import { InputMonto } from "@/components/InputMonto";
+import { SugerenciasRubro } from "@/components/SugerenciasRubro";
 import { useConfiguracion } from "../ConfiguracionContext";
 
 const DIAS = [
@@ -114,6 +115,16 @@ function ServiciosCard({ servicios, onCambio }: { servicios: Servicio[] | null; 
 
       {editandoId !== null && (
         <form onSubmit={onSubmit} className="mb-ds-4 flex flex-col gap-ds-4 rounded-ds-lg border border-ds-divider p-ds-3">
+          {editandoId === "nuevo" ? (
+            <SugerenciasRubro
+              tipo="servicio"
+              existentes={(servicios ?? []).map((s) => s.nombre)}
+              onElegir={(s) => {
+                setNombre(s.valor);
+                if (s.datos?.duracion_min) setDuracion(s.datos.duracion_min);
+              }}
+            />
+          ) : null}
           <div className="grid gap-ds-4 sm:grid-cols-3">
             <Input etiqueta="Nombre" placeholder="Ej: Manicure" valor={nombre} onCambio={setNombre} />
             <div className="flex flex-col gap-ds-1">
@@ -289,6 +300,17 @@ function TiposPackCard({ servicios }: { servicios: Servicio[] | null }) {
 
       {editandoId !== null && (
         <form onSubmit={onSubmit} className="mb-ds-4 flex flex-col gap-ds-4 rounded-ds-lg border border-ds-divider p-ds-3">
+          {editandoId === "nuevo" ? (
+            <SugerenciasRubro
+              tipo="tipo_pack"
+              existentes={(tipos ?? []).map((t) => t.nombre)}
+              onElegir={(s) => {
+                setNombre(s.valor);
+                if (s.datos?.sesiones) setCantidadSesiones(s.datos.sesiones);
+                setVigenciaDias(s.datos?.vigencia_dias ? String(s.datos.vigencia_dias) : "");
+              }}
+            />
+          ) : null}
           <div className="grid gap-ds-4 sm:grid-cols-3">
             <Input etiqueta="Nombre" placeholder="Ej: Pack 5 sesiones" valor={nombre} onCambio={setNombre} />
             <Input

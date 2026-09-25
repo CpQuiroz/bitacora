@@ -564,9 +564,8 @@ superadminRouter.post(
       return;
     }
 
-    // Deja la empresa con las sugerencias de su rubro ya cargadas
-    // (tipos de documento, categorías de gasto, tipos de OS) en vez de
-    // arrancar completamente vacía. No bloquea ni falla la creación.
+    // Transporte: checklists de mantención de flota. El resto parte vacío y
+    // se crea desde las sugerencias del rubro (tarea 144). No falla el alta.
     await sembrarSugerenciasRubro(empresa.id, empresa.rubro as Rubro);
 
     await registrarAuditoria(req.superAdminId!, "crear_empresa", {

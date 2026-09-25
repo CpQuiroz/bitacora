@@ -44,6 +44,17 @@ export type Ctx = {
   hoy: string;
 };
 
+// Sesión de Supabase Auth con correo y clave (usuarios de las pruebas).
+export async function tokenDe(correo: string, password: string): Promise<string> {
+  const r = await fetch(`${env.SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+    method: "POST",
+    headers: { apikey: claveAnonima(), "Content-Type": "application/json" },
+    body: JSON.stringify({ email: correo, password }),
+  }).then((x) => x.json());
+  if (!r.access_token) throw new Error(`Sin sesión para ${correo}`);
+  return r.access_token as string;
+}
+
 export type Resultado = { ok: boolean; nombre: string; detalle: string };
 
 export async function esperarBackend(): Promise<void> {
@@ -98,19 +109,13 @@ export async function provisionar(resultados: Resultado[]): Promise<Ctx> {
     u[p.quien] = { id: data.user.id, correo, password, nombre };
   }
 
-  const anon = claveAnonima();
   const cache = new Map<Quien, string>();
   const sesion = async (q: Quien) => {
     const guardada = cache.get(q);
     if (guardada) return guardada;
-    const r = await fetch(`${env.SUPABASE_URL}/auth/v1/token?grant_type=password`, {
-      method: "POST",
-      headers: { apikey: anon, "Content-Type": "application/json" },
-      body: JSON.stringify({ email: u[q].correo, password: u[q].password }),
-    }).then((x) => x.json());
-    if (!r.access_token) throw new Error(`Sin sesión para ${q}`);
-    cache.set(q, r.access_token);
-    return r.access_token as string;
+    const token = await tokenDe(u[q].correo, u[q].password);
+    cache.set(q, token);
+    return token;
   };
   const api: Ctx["api"] = async (token, metodo, ruta, body) => {
     const r = await fetch(`${API}${ruta}`, {

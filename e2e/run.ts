@@ -13,6 +13,7 @@ import { whatsappChofer } from "./suites/whatsappChofer";
 import { tarifasViajes } from "./suites/tarifasViajes";
 import { precioViajes } from "./suites/precioViajes";
 import { cotizacionViaje } from "./suites/cotizacionViaje";
+import { pruebaVencida } from "./suites/pruebaVencida";
 
 const SUITES: Record<string, (ctx: Ctx) => Promise<void>> = {
   clientesEliminar,
@@ -26,6 +27,7 @@ const SUITES: Record<string, (ctx: Ctx) => Promise<void>> = {
   tarifasViajes,
   precioViajes,
   cotizacionViaje,
+  pruebaVencida,
 };
 
 async function main(): Promise<number> {

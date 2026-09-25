@@ -308,6 +308,13 @@ export function NuevoGastoScreen({ navigation, route }: NativeStackScreenProps<M
             ? { alCrear: crearCategoriaAlVuelo, etiquetaCrear: "Crear categoría" }
             : {})}
         />
+        {/* Tarea 144: una empresa nueva parte sin categorías (se crean desde las
+            sugerencias de su rubro). Sin permiso para crearlas, se avisa. */}
+        {categorias.length === 0 && !(auth.fase === "listo" && auth.modulosVisibles.includes("configuracion")) ? (
+          <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
+            Tu empresa todavía no tiene categorías de gasto. Pídele a la oficina que las cree en Configuración → Categorías de gastos.
+          </Texto>
+        ) : null}
 
         {centros.length > 0 ? (
           <PickerBuscable

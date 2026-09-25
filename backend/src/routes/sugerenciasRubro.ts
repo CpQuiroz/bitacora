@@ -7,11 +7,9 @@
 // rubro de la empresa — cada pantalla filtra por su propio
 // tipo_sugerencia.
 //
-// TODO: decisión pendiente — solo hay contenido real cargado para el
-// rubro "transporte" (ver migración 54). Para "servicio_tecnico" y
-// "otro" esto devuelve un arreglo vacío hasta que se defina el
-// contenido — las pantallas ya están armadas para no romperse en ese
-// caso (siguen mostrando su fallback genérico anterior).
+// Tarea 144: hay contenido para los 4 rubros (migración 144), también
+// para servicios y tipos de pack. Una empresa nueva parte vacía y crea
+// desde estas sugerencias.
 // ============================================================
 import { Router } from "express";
 import { supabase } from "../supabase";

@@ -36,7 +36,8 @@ export default function SuperAdminEmpresasPage() {
 
   const [modalAbierto, setModalAbierto] = useState(false);
   const [nombre, setNombre] = useState("");
-  const [rubro, setRubro] = useState<Rubro>("transporte");
+  // Sin valor por defecto (tarea 144): el rubro define las sugerencias.
+  const [rubro, setRubro] = useState<Rubro | "">("");
   const [rut, setRut] = useState("");
   const [giro, setGiro] = useState("");
   const [telefono, setTelefono] = useState("");
@@ -48,7 +49,7 @@ export default function SuperAdminEmpresasPage() {
 
   function abrirModal() {
     setNombre("");
-    setRubro("transporte");
+    setRubro("");
     setRut("");
     setGiro("");
     setTelefono("");
@@ -62,6 +63,10 @@ export default function SuperAdminEmpresasPage() {
   async function onCrear(e: FormEvent) {
     e.preventDefault();
     setErrorCrear(null);
+    if (!rubro) {
+      setErrorCrear("Elige el rubro de la empresa");
+      return;
+    }
     setCreando(true);
     const res = await superadminFetch("/api/superadmin/empresas", {
       method: "POST",
@@ -133,7 +138,13 @@ export default function SuperAdminEmpresasPage() {
         <form onSubmit={onCrear} className="flex flex-col gap-ds-4">
           <div className="grid gap-ds-4 sm:grid-cols-2">
             <Input etiqueta="Nombre de la empresa" requerido valor={nombre} onCambio={setNombre} />
-            <Select etiqueta="Rubro" valor={rubro} onCambio={(v) => setRubro(v as Rubro)} opciones={RUBROS.map((r) => ({ valor: r.value, etiqueta: r.label }))} />
+            <Select
+              etiqueta="Rubro"
+              placeholder="Elige el rubro"
+              valor={rubro}
+              onCambio={(v) => setRubro(v as Rubro)}
+              opciones={RUBROS.map((r) => ({ valor: r.value, etiqueta: r.label }))}
+            />
             <Input etiqueta="RUT (opcional)" placeholder="76.123.456-7" valor={rut} onCambio={setRut} />
             <Input etiqueta="Giro (opcional)" valor={giro} onCambio={setGiro} />
             <Input etiqueta="Teléfono (opcional)" valor={telefono} onCambio={setTelefono} />

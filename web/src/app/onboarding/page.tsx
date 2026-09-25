@@ -22,7 +22,8 @@ export default function OnboardingPage() {
   const [verificando, setVerificando] = useState(true);
   const [nombreUsuario, setNombreUsuario] = useState("");
   const [nombreEmpresa, setNombreEmpresa] = useState("");
-  const [rubro, setRubro] = useState<Rubro>("transporte");
+  // Sin valor por defecto (tarea 144): el rubro define las sugerencias.
+  const [rubro, setRubro] = useState<Rubro | "">("");
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [acepto, setAcepto] = useState(false);
@@ -56,6 +57,10 @@ export default function OnboardingPage() {
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
+    if (!rubro) {
+      setError("Elige el rubro de tu empresa");
+      return;
+    }
     setCargando(true);
 
     const res = await apiFetch("/api/registro-empresa", {
@@ -84,7 +89,14 @@ export default function OnboardingPage() {
       <form onSubmit={onSubmit} className="flex flex-col gap-ds-4">
         <Input etiqueta="Tu nombre" requerido valor={nombreUsuario} onCambio={setNombreUsuario} />
         <Input etiqueta="Nombre de la empresa" requerido valor={nombreEmpresa} onCambio={setNombreEmpresa} />
-        <Select etiqueta="Rubro" valor={rubro} onCambio={(v) => setRubro(v as Rubro)} opciones={RUBROS} />
+        <Select
+          etiqueta="Rubro"
+          placeholder="Elige el rubro de tu empresa"
+          valor={rubro}
+          onCambio={(v) => setRubro(v as Rubro)}
+          opciones={RUBROS}
+          ayuda="Con esto te sugerimos servicios, categorías y tipos de trabajo al configurar."
+        />
         <label className="flex items-start gap-ds-2 font-ds-body text-ds-small text-ds-text/70">
           <input
             type="checkbox"

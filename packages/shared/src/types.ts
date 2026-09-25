@@ -1481,7 +1481,10 @@ export type InventarioMovimiento = {
 
 // Bloque E: sugerencias iniciales de categorías/tipos según el rubro
 // de la empresa — mecanismo genérico basado en datos.
-export type TipoSugerenciaRubro = "categoria_gasto" | "categoria_catalogo" | "tipo_os" | "tipo_documento";
+// Tarea 144: también servicios (Agenda Pro) y tipos de pack, para los 4
+// rubros; `datos` precarga el formulario (migración 144).
+export type TipoSugerenciaRubro = "categoria_gasto" | "categoria_catalogo" | "tipo_os" | "tipo_documento" | "servicio" | "tipo_pack";
+export type DatosSugerenciaRubro = { duracion_min?: number; sesiones?: number; vigencia_dias?: number };
 export type SugerenciaRubro = {
   id: string;
   rubro: Rubro;
@@ -1489,6 +1492,7 @@ export type SugerenciaRubro = {
   valor: string;
   color: string | null;
   aplica_a: string | null;
+  datos?: DatosSugerenciaRubro | null;
   orden: number;
 };
 

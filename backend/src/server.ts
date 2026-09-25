@@ -318,8 +318,8 @@ app.post("/api/registro-empresa", requiereAuth, ah<RequestConUsuario>(async (req
     { empresaId: empresa.id, ip: req.ip ?? null, userAgent: req.headers["user-agent"] ?? null }
   );
 
-  // Deja la empresa con las sugerencias de su rubro ya cargadas en vez
-  // de arrancar vacía. No bloquea ni falla el alta.
+  // Transporte: checklists de mantención de flota. El resto parte vacío y
+  // se crea desde las sugerencias del rubro (tarea 144). No falla el alta.
   await sembrarSugerenciasRubro(empresa.id, empresa.rubro as Rubro);
 
   res.status(201).json({ empresa, usuario });

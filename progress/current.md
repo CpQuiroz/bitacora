@@ -21,7 +21,17 @@ falta ORS_API_KEY + migraciones 141-143 en prod; EXPLAIN y grants de DEV verific
      redirección; Configuración filtra a cuenta/plan/modulos/seguridad.
    - Mobile: fase "prueba-vencida" (PruebaVencidaScreen + Mi plan + Perfil + cerrar sesión, sin botón de pago por
      Play); api.ts avisa TRIAL_VENCIDO y AuthProvider re-lee /api/me. Requiere build.
-2. Integraciones — pendiente.  3. Leyenda viático — pendiente.  4. Rubro + sugerencias — pendiente.
+2. Integraciones — HECHO: shared INTEGRACIONES_VISIBLES=false; /api/integraciones 404, generar-link-pago 410; nav y
+   página web ocultas (redirige); columna "Link de pago" fuera de Cobros web; botón "Abrir link de pago" fuera de mobile;
+   el asistente ya no lee la tabla integraciones.
+3. Leyenda viático — HECHO: fuera de Viajes web y de la ficha del chofer (mobile; test ajustado). Monto por viaje sigue
+   editable (CampoViatico). Super-Admin: GET/PATCH /empresas/:id/viaticos con auditoría + tarjeta en la ficha.
+4. Rubro + sugerencias — HECHO (falta migración 144 en DEV): seedRubro solo siembra checklists de transporte; rubro sin
+   default y obligatorio en onboarding y alta del Super-Admin; migración 144 (cosmetologia, tipos servicio/tipo_pack,
+   columna datos, textos para 4 rubros); componente web SugerenciasRubro en Servicios y Tipos de pack (Agenda Pro config).
+   Mobile: los modales de servicio/pack viven en la pestaña Agenda (congelada) → sin sugerencias ahí. Gasto mobile avisa
+   si no hay categorías y el usuario no puede crearlas.
+E2E: suite pruebaVencida 28/30 (144-29/30 esperan migración 144); total 151/153. verificar verde. Commits 7b911a1 + este.
 
 ## Tarea 135 — Precio por tramos y por km + Cotización de viaje (en curso, 24-sep noche)
 Propuesta base: docs/PROPUESTA_PRECIOS_VIAJES.md §2 (aprobada). Decisiones de la usuaria: km con mapa (origen/destino del
