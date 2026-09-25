@@ -71,6 +71,17 @@ async function tokenConTimeout(): Promise<string | undefined> {
   return data.session?.access_token;
 }
 
+// Tarea 144: el backend responde 403 TRIAL_VENCIDO cuando la prueba de la
+// empresa venció. AuthProvider se suscribe para pasar a la pantalla de
+// bloqueo sin esperar a reabrir la app.
+const oyentesPruebaVencida = new Set<() => void>();
+export function alPruebaVencida(oyente: () => void): () => void {
+  oyentesPruebaVencida.add(oyente);
+  return () => {
+    oyentesPruebaVencida.delete(oyente);
+  };
+}
+
 export type TipoErrorApi = "red" | "timeout" | "servidor";
 
 export type ResultadoApi<T> =
@@ -148,6 +159,9 @@ export async function apiJson<T>(path: string, options: RequestInit = {}): Promi
       if (res.status >= 500 && intento < REINTENTOS) {
         ultimoTipo = "servidor";
         continue;
+      }
+      if (res.status === 403 && (body as { code?: string }).code === "TRIAL_VENCIDO") {
+        for (const oyente of oyentesPruebaVencida) oyente();
       }
       return {
         ok: false,

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import Anthropic from "@anthropic-ai/sdk";
 import type { CategoriaIntegracion, ProveedorIntegracion } from "@bitacora/shared";
+import { INTEGRACIONES_VISIBLES } from "@bitacora/shared";
 import { supabase } from "../supabase";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
@@ -9,6 +10,16 @@ import { cifrarJson, descifrarJson } from "../crypto";
 import { env } from "../env";
 
 export const integracionesRouter = Router();
+
+// Tarea 144: sección oculta (INTEGRACIONES_VISIBLES = false). No se borran
+// tablas ni código; mientras tanto la API responde 404.
+integracionesRouter.use((_req, res, next) => {
+  if (!INTEGRACIONES_VISIBLES) {
+    res.status(404).json({ error: "Integraciones no está disponible" });
+    return;
+  }
+  next();
+});
 
 const DEFINICIONES: Record<
   ProveedorIntegracion,

@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
-import { Alert, Linking, Pressable, ScrollView, View } from "react-native";
+import { Alert, Pressable, ScrollView, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { ArrowLeft, ExternalLink } from "lucide-react-native";
+import { ArrowLeft } from "lucide-react-native";
 import type { MedioPago } from "@bitacora/shared";
 import { formatearFolio } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
@@ -137,17 +137,6 @@ export function CobroDetalleScreen({ route, navigation }: NativeStackScreenProps
             {cobro.observaciones_pago ? <Fila etiqueta="Observaciones" valor={cobro.observaciones_pago} /> : null}
           </View>
         </Card>
-
-        {cobro.link_pago ? (
-          <Button
-            variante="secundario"
-            bloque
-            iconoIzq={<ExternalLink size={16} strokeWidth={2.5} color={tokens.color.text} />}
-            onPress={() => Linking.openURL(cobro.link_pago!)}
-          >
-            Abrir link de pago
-          </Button>
-        ) : null}
 
         {cobro.estado !== "pagada" ? (
           pagando ? (

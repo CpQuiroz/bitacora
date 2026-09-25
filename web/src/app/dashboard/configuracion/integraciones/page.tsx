@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { INTEGRACIONES_VISIBLES } from "@bitacora/shared";
 import { CreditCard, MessageCircle, Sparkles } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { Button, Card, Input, LoadingState, StatusBadge } from "@bitacora/ui/web";
@@ -38,7 +40,17 @@ const ETIQUETA_CAMPO: Record<string, string> = {
 };
 
 // PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
+// Tarea 144: sección oculta (INTEGRACIONES_VISIBLES = false); quien entre
+// por la URL vuelve a Configuración. El contenido queda para reactivarla.
 export default function IntegracionesPage() {
+  const router = useRouter();
+  useEffect(() => {
+    if (!INTEGRACIONES_VISIBLES) router.replace("/dashboard/configuracion/cuenta");
+  }, [router]);
+  return INTEGRACIONES_VISIBLES ? <IntegracionesContenido /> : null;
+}
+
+function IntegracionesContenido() {
   const [integraciones, setIntegraciones] = useState<IntegracionPublica[] | null>(null);
   const [categoria, setCategoria] = useState<(typeof CATEGORIAS)[number]["valor"]>("todas");
   const [abierta, setAbierta] = useState<string | null>(null);

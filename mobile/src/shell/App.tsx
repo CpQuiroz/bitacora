@@ -19,7 +19,7 @@ import { aplicarTemaMobile } from "../theme/aplicarTema";
 // con el mismo color_primario/foreground para no divergir.
 function ConTema({ children }: { children: React.ReactNode }) {
   const auth = useAuth();
-  const empresa = auth.fase === "listo" || auth.fase === "mfa-requerido" ? auth.usuario.empresa : null;
+  const empresa = auth.fase === "listo" || auth.fase === "mfa-requerido" || auth.fase === "prueba-vencida" ? auth.usuario.empresa : null;
   return (
     <ThemeProvider
       marca={
@@ -55,7 +55,8 @@ function ConTema({ children }: { children: React.ReactNode }) {
 // que leen tokens.color.* directo.
 function NavegacionConTema() {
   const auth = useAuth();
-  const tema = auth.fase === "listo" || auth.fase === "mfa-requerido" ? (auth.usuario.empresa.tema ?? "faena") : "faena";
+  const tema =
+    auth.fase === "listo" || auth.fase === "mfa-requerido" || auth.fase === "prueba-vencida" ? (auth.usuario.empresa.tema ?? "faena") : "faena";
   // Se llama en el cuerpo del render (no en un useEffect): tokens.color es
   // un singleton externo a React, no estado de este componente, así que
   // sincronizarlo acá — ANTES de que <RootNavigator> (recién montado por

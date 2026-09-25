@@ -484,7 +484,7 @@ async function buscarClientes(input: Record<string, unknown>, empresaId: string)
 }
 
 async function consultarEstadoConfiguracion(empresaId: string): Promise<Record<string, unknown>> {
-  const [{ data: empresa }, { data: notif }, { data: integraciones }] = await Promise.all([
+  const [{ data: empresa }, { data: notif }] = await Promise.all([
     supabase
       .from("empresas")
       .select("nombre, rut, direccion_calle, telefono_empresa, whatsapp, logo_url, plan, prueba_termina_en")
@@ -495,7 +495,6 @@ async function consultarEstadoConfiguracion(empresaId: string): Promise<Record<s
       .select("correo_activado, whatsapp_activado")
       .eq("empresa_id", empresaId)
       .maybeSingle(),
-    supabase.from("integraciones").select("proveedor, categoria, conectado").eq("empresa_id", empresaId),
   ]);
 
   const faltanDatosEmpresa = [
@@ -504,8 +503,6 @@ async function consultarEstadoConfiguracion(empresaId: string): Promise<Record<s
     !empresa?.telefono_empresa && "teléfono",
     !empresa?.logo_url && "logo",
   ].filter(Boolean);
-
-  const pagos = (integraciones ?? []).filter((i) => i.categoria === "pagos");
 
   return {
     empresa: {
@@ -525,8 +522,8 @@ async function consultarEstadoConfiguracion(empresaId: string): Promise<Record<s
       nota: "La conexión del bot de WhatsApp la hace el equipo de Bitácora, no se configura desde la app.",
     },
     pasarelas_de_pago: {
-      conectadas: pagos.filter((p) => p.conectado).map((p) => p.proveedor),
-      nota: "El link de pago al cliente final hoy es simulado — la integración real de pasarela la habilita el equipo de Bitácora.",
+      disponible: false,
+      nota: "Bitácora todavía no genera links de pago para el cliente final: el pago se registra a mano en el cobro.",
     },
   };
 }

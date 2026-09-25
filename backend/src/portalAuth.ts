@@ -10,6 +10,7 @@ import crypto from "node:crypto";
 import type { Request } from "express";
 import { env } from "./env";
 import { ah } from "./asyncHandler";
+import { empresaOperativa } from "./empresaOperativa";
 
 const DURACION_SESION_MS = 24 * 60 * 60 * 1000;
 
@@ -48,6 +49,8 @@ export function verificarTokenPortal(token: string): { clienteId: string; empres
   }
 }
 
+export const PORTAL_NO_DISPONIBLE = "El portal de esta empresa no está disponible por ahora — contacta directamente a la empresa.";
+
 export interface RequestConPortal extends Request {
   clienteId?: string;
   empresaId?: string;
@@ -64,6 +67,13 @@ export const requierePortal = ah<RequestConPortal>(async (req, res, next) => {
   const sesion = verificarTokenPortal(token);
   if (!sesion) {
     res.status(401).json({ error: "Sesión inválida o expirada — vuelve a entrar desde el link o con tu código" });
+    return;
+  }
+
+  // Tarea 144: empresa suspendida, dada de baja o con la prueba vencida →
+  // el portal se corta (también una sesión ya abierta).
+  if (!(await empresaOperativa(sesion.empresaId))) {
+    res.status(403).json({ error: PORTAL_NO_DISPONIBLE, code: "PORTAL_NO_DISPONIBLE" });
     return;
   }
 

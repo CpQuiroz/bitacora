@@ -1831,9 +1831,9 @@
       "id": 135,
       "name": "propuesta_precio_tramos_km",
       "title": "Viajes: precio por tramos y por km (Tarifas) + Cotización de viaje",
-      "status": "in_progress",
+      "status": "blocked",
       "description": "Parte B del pedido de la usuaria 24-sep-2026. Entregar propuesta y esperar aprobación. | 24-sep: la usuaria pide implementarlo. Decisiones: km calculados con mapa desde origen y destino que pone el Admin (OpenRouteService, con caché; Waze no tiene API); tramo mismo precio en ambos sentidos; tarifas y detalle visibles solo para Admin y Supervisor. Etapas: 1 Tarifas, 2 precio en el viaje, 3 modo por cliente + cobro/PDF, 4 Cotización de viaje.",
-      "resolution": "Propuesta entregada en docs/PROPUESTA_PRECIOS_VIAJES.md (viáticos + precio por tramos/km). Esperando aprobación de la usuaria; sin código."
+      "resolution": "Etapas 1-4 hechas y revisadas (commits ed2b2cb, 1e247eb, c98be3c, 4dd2533). DEV: migraciones 141-143 aplicadas; 25-sep EXPLAIN (Index Scan en las 6 consultas) y 0 grants anon/authenticated verificados. Bloqueada por: ORS_API_KEY (la carga la usuaria) y migraciones 141-143 en prod + OK para publicar."
     },
     {
       "id": 136,
@@ -1897,6 +1897,22 @@
       "title": "Viajes: precio por km según tipo de camión (opcional de la propuesta, no implementado en 135)",
       "status": "pending",
       "description": "La propuesta §2.1 incluía tarifas_km por tipo de camión (equipos.tipo). En la tarea 135 quedó general y por cliente. Confirmar con la usuaria si lo necesita.",
+      "resolution": ""
+    },
+    {
+      "id": 144,
+      "name": "paso1_salida_prod",
+      "title": "Salida a prod (PASO 1): prueba vencida con bloqueo total, ocultar Integraciones, quitar leyenda de viático, rubro obligatorio + sugerencias por rubro",
+      "status": "in_progress",
+      "description": "Pedido de la usuaria 25-sep-2026 (diagnóstico PASO 0 entregado y aprobado). Decisiones: (1) prueba vencida bloquea web y mobile salvo Plan/pago, Mi cuenta y Cerrar sesión; también se cortan portal del cliente, reserva online y bot de WhatsApp; nunca se borran datos; Super-Admin 'Extender N días' / 'Reactivar' con historial. (2) Integraciones ocultas en web y mobile, sin link de pago simulado; no se borran tablas ni código. (3) Se quita la leyenda 'Viático local: $X'; el Admin sigue ajustando el monto por viaje; el cálculo no cambia. (4) Rubro obligatorio sin valor por defecto al crear empresa; la empresa nueva parte sin servicios, packs, catálogo, tipos de OS, categorías de gasto ni tipos de documento; los checklists de transporte se siguen precargando; sugerencias por rubro al crear (textos para los 4 rubros se muestran a la usuaria antes de cargarlos).",
+      "resolution": ""
+    },
+    {
+      "id": 145,
+      "name": "tipo_os_selector",
+      "title": "Tipo de OS: volver a poner el selector en Nueva OS (opción A) o quitarlo (opción B)",
+      "status": "pending",
+      "description": "Diagnóstico PASO 0 A6 (25-sep): tipos_os_trabajo configurables pero la Nueva OS no permite elegir tipo desde commit 2d926e2, así que checklist/color/campos por tipo e informe por tipo no funcionan. Recomendado A. Esperando decisión de la usuaria.",
       "resolution": ""
     }
   ]

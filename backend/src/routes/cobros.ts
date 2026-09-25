@@ -9,7 +9,7 @@ import { siguienteFolioCobro } from "../folios";
 import { detalleViajesDeCobro } from "../viajesCobros";
 import { generarPdfEnWorker } from "../pdfWorkerPool";
 import type { DatosCobroPdf } from "../generarPdfCobro";
-import { ROLES_SUPERVISION, sustituirVariables, sustituirVariablesEnBloques } from "@bitacora/shared";
+import { INTEGRACIONES_VISIBLES, ROLES_SUPERVISION, sustituirVariables, sustituirVariablesEnBloques } from "@bitacora/shared";
 
 export const cobrosRouter = Router();
 
@@ -445,8 +445,9 @@ cobrosRouter.delete(
   })
 );
 
-// Genera un link de pago con la pasarela conectada en Configuración →
-// Integraciones. IMPORTANTE: no hay credenciales de sandbox de
+// Tarea 144: apagado (INTEGRACIONES_VISIBLES = false) — ningún flujo
+// puede dejar un link de pago simulado a la vista del cliente final. El
+// código queda para cuando haya pasarela real. IMPORTANTE (histórico): no hay credenciales de sandbox de
 // Webpay/Flow/Mercado Pago disponibles en este entorno, así que esto
 // NUNCA llama a una API real — solo exige que la integración esté
 // "conectada" y guarda un link simulado, dejando clarísimo en la
@@ -454,6 +455,10 @@ cobrosRouter.delete(
 cobrosRouter.post(
   "/:id/generar-link-pago",
   ah<RequestConEmpresa>(async (req, res) => {
+    if (!INTEGRACIONES_VISIBLES) {
+      res.status(410).json({ error: "Los links de pago no están disponibles por ahora — registra el pago a mano en el cobro." });
+      return;
+    }
     const { proveedor: proveedorRaw } = req.body ?? {};
     if (typeof proveedorRaw !== "string" || !PROVEEDORES_PASARELA.includes(proveedorRaw as MedioPago)) {
       res.status(400).json({ error: `proveedor debe ser uno de: ${PROVEEDORES_PASARELA.join(", ")}` });

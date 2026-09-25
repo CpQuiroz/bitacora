@@ -15,6 +15,7 @@ import {
   type MensajeEntranteWhatsapp,
 } from "../whatsapp";
 import { hayConversacionActiva, manejarConversacionViaje, type ImagenEntrante } from "../whatsappFlujoViaje";
+import { empresaOperativa } from "../empresaOperativa";
 
 export const whatsappRouter = Router();
 
@@ -32,6 +33,8 @@ whatsappRouter.get("/webhook", (req, res) => {
   }
   res.sendStatus(403);
 });
+
+const BOT_NO_DISPONIBLE = "Bitácora no está disponible para tu empresa por ahora. Avísale a tu encargado.";
 
 async function yaProcesado(mensajeId: string): Promise<boolean> {
   const { error } = await supabase.from("whatsapp_mensajes_procesados").insert({ id: mensajeId });
@@ -247,6 +250,12 @@ whatsappRouter.post(
           await registrarChoferNoEncontrado(desde);
           continue;
         }
+        // Tarea 144: empresa con la prueba vencida (o suspendida) → el bot
+        // no registra nada.
+        if (!(await empresaOperativa(chofer.empresa_id))) {
+          await enviarMensajeWhatsapp(desde, BOT_NO_DISPONIBLE);
+          continue;
+        }
 
         if (mensaje.type === "image") {
           const telefono = normalizarTelefono(desde);
@@ -323,6 +332,10 @@ if (process.env.NODE_ENV !== "production") {
             "(número no vinculado a ningún usuario con rol colaborador — en producción el bot solo lo loguea y no responde)",
           ],
         });
+        return;
+      }
+      if (!(await empresaOperativa(chofer.empresa_id))) {
+        res.json({ telefono: tel, chofer: { id: chofer.id, empresa_id: chofer.empresa_id }, tomado_por_flujo: false, respuestas: [BOT_NO_DISPONIBLE] });
         return;
       }
       const imagenSim: ImagenEntrante | null = conImagen ? { buffer: JPEG_PRUEBA_1PX, mimeType: "image/jpeg" } : null;

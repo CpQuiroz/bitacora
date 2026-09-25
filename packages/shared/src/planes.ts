@@ -45,6 +45,31 @@ export const PRECIO_PLAN_UF: Record<PlanPago, number> = {
 // Duración de la prueba gratis de una empresa nueva.
 export const DIAS_PRUEBA = 7;
 
+// Prueba vencida (tarea 144): la empresa sigue en "trial" pasada la fecha
+// de fin (último día con acceso). `hoy` es la fecha de Chile YYYY-MM-DD.
+// Sale de "trial" solo al confirmarse el pago (cambiarPlanEmpresa).
+export function pruebaVencida(plan: string | null | undefined, pruebaTerminaEn: string | null | undefined, hoy: string): boolean {
+  return plan === "trial" && pruebaTerminaEn != null && pruebaTerminaEn < hoy;
+}
+
+// Tope de una extensión de cortesía del Super-Admin.
+export const MAX_DIAS_EXTENSION_PRUEBA = 90;
+
+// Suma días a una fecha YYYY-MM-DD (aritmética en UTC: sin saltos por
+// cambio de hora).
+export function sumarDiasFecha(fecha: string, dias: number): string {
+  const d = new Date(`${fecha}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + dias);
+  return d.toISOString().slice(0, 10);
+}
+
+// "Extender N días": desde la fecha de fin si la prueba sigue vigente,
+// o desde hoy si ya venció (así la extensión nunca queda en el pasado).
+export function fechaPruebaExtendida(pruebaTerminaEn: string | null | undefined, dias: number, hoy: string): string {
+  const base = pruebaTerminaEn && pruebaTerminaEn >= hoy ? pruebaTerminaEn : hoy;
+  return sumarDiasFecha(base, dias);
+}
+
 // Secciones que cuentan para el tope de módulos del plan: todas las que
 // se prenden y apagan, menos las de base (configuracion, gestion_control)
 // y las de IA (que dependen del plan y del rol, no del tope).

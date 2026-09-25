@@ -12,7 +12,8 @@ import { supabase } from "../supabase";
 import { env } from "../env";
 import { enviarConReintento } from "../email";
 import { notificarGerencia } from "../notificar";
-import { crearTokenPortal, requierePortal, type RequestConPortal } from "../portalAuth";
+import { PORTAL_NO_DISPONIBLE, crearTokenPortal, requierePortal, type RequestConPortal } from "../portalAuth";
+import { empresaOperativa } from "../empresaOperativa";
 import { calcularEstadoCancelacion, obtenerOCrearAgendaProConfig } from "../agendaPro";
 import { datosPersonalesDeCliente } from "../exportarDatosPersonales";
 import { armarDatosPdf } from "./trabajos";
@@ -106,7 +107,9 @@ async function buscarClientesPorRut(rut: string, empresaId?: string) {
     .not("correo", "is", null);
   if (empresaId) query = query.eq("empresa_id", empresaId);
   const { data } = await query;
-  return data ?? [];
+  // Tarea 144: solo empresas operativas (sin prueba vencida, ni suspendidas).
+  const operativas = await Promise.all((data ?? []).map((c) => empresaOperativa(c.empresa_id)));
+  return (data ?? []).filter((_, i) => operativas[i]);
 }
 
 // ---------- Acceso ----------
@@ -122,6 +125,10 @@ portalRouter.get(
     const { data: acceso } = await supabase.from("portal_accesos").select("*").eq("id", req.params.id).maybeSingle();
     if (!acceso || new Date(acceso.expira_en) < new Date()) {
       res.status(404).json({ error: "Este link ya no es válido — pídenos uno nuevo" });
+      return;
+    }
+    if (!(await empresaOperativa(acceso.empresa_id))) {
+      res.status(403).json({ error: PORTAL_NO_DISPONIBLE, code: "PORTAL_NO_DISPONIBLE" });
       return;
     }
     const token = crearTokenPortal(acceso.cliente_id, acceso.empresa_id);

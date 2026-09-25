@@ -10,7 +10,7 @@
 // ni el chofer del viaje, ni se borra el viaje. Para corregirlo se marca
 // el gasto como pendiente en Gastos.
 // ============================================================
-import type { AgruparViaticos, FilaResumenViaticos, TipoViatico } from "@bitacora/shared";
+import type { AgruparViaticos, ConfigViaticos, FilaResumenViaticos, TipoViatico } from "@bitacora/shared";
 import { formatearFolio } from "@bitacora/shared";
 import { supabase } from "./supabase";
 import { siguienteFolioGasto } from "./folios";
@@ -19,6 +19,27 @@ export const CATEGORIA_VIATICOS = "Viáticos";
 const TIPOS: TipoViatico[] = ["local", "interregional"];
 
 export type Viatico = { tipo: TipoViatico; monto: number } | null;
+
+// Montos por defecto del viático de la empresa (valor interno: lo edita el
+// Admin en Configuración › Viajes y el Super-Admin en la ficha de la
+// empresa). Vacío o null = sin monto por defecto.
+const MONTO_VIATICO_MAXIMO = 99_999_999;
+export function leerConfigViaticos(body: unknown): { cambios: Partial<ConfigViaticos> } | { error: string } {
+  const cambios: Partial<ConfigViaticos> = {};
+  for (const campo of ["viatico_local_monto", "viatico_interregional_monto"] as const) {
+    const v = (body as Record<string, unknown> | null | undefined)?.[campo];
+    if (v === undefined) continue;
+    if (v === null || v === "") {
+      cambios[campo] = null;
+      continue;
+    }
+    const n = Number(v);
+    if (!Number.isFinite(n) || n < 0 || n > MONTO_VIATICO_MAXIMO) return { error: "Monto de viático inválido" };
+    cambios[campo] = Math.round(n);
+  }
+  if (Object.keys(cambios).length === 0) return { error: "Nada que actualizar" };
+  return { cambios };
+}
 
 // Lee viatico_tipo/viatico_monto del body. Ambos ausentes = no se toca;
 // tipo vacío o null = quitar el viático.

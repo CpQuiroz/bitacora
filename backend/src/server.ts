@@ -81,6 +81,7 @@ import { limpiarDatosVencidosSiCorresponde } from "./retencion";
 import { verificarTokenBajaAvisos } from "./bajaAvisos";
 import { medirLatencia } from "./instrumentacion";
 import { ah } from "./asyncHandler";
+import { empresaConPruebaVencida } from "./empresaOperativa";
 
 const RUBROS: Rubro[] = ["transporte", "servicio_tecnico", "cosmetologia", "otro"];
 
@@ -202,7 +203,9 @@ app.get("/api/me", requiereAuth, ah<RequestConUsuario>(async (req, res) => {
   // (cualquier navegación del dashboard lo llama), así que es donde
   // más chances hay de que el chequeo corra el día justo. No bloquea
   // la respuesta.
-  if (usuario) revisarCumpleanosSiCorresponde(usuario.empresa_id);
+  const pruebaVencidaEmpresa = usuario ? empresaConPruebaVencida((usuario as unknown as { empresa?: { plan: string; prueba_termina_en: string | null } | null }).empresa) : false;
+  // Con la prueba vencida no salen avisos a los clientes de la empresa (tarea 144).
+  if (usuario && !pruebaVencidaEmpresa) revisarCumpleanosSiCorresponde(usuario.empresa_id);
   // Ley 21.719 — limpieza perezosa de logs/tokens vencidos (ver retencion.ts).
   if (usuario) limpiarDatosVencidosSiCorresponde();
   res.json({
@@ -228,6 +231,10 @@ app.get("/api/me", requiereAuth, ah<RequestConUsuario>(async (req, res) => {
     // anterior de) la Política de Privacidad / Términos. El frontend
     // muestra un aviso para que lo acepte.
     consentimiento_pendiente: usuario ? !consentimientoVigente : false,
+    // Tarea 144: prueba vencida sin plan pago — web y mobile bloquean todo
+    // salvo Plan/pago, Mi cuenta y cerrar sesión (el gate real lo hace
+    // requiereEmpresa; /api/me no pasa por ahí).
+    prueba_vencida: pruebaVencidaEmpresa,
   });
 }));
 

@@ -1,5 +1,6 @@
 // Prueba de regresión (tarea 127): formulario de viaje en la app.
-// Chofer: ve su viaje, el monto en solo lectura y su viático.
+// Chofer: ve su viaje y el monto en solo lectura; el viático no se muestra
+// (tarea 144: es un valor interno de la oficina).
 // Gestión: puede crear el viaje. Servicios simulados (sin red ni base).
 import { render, screen } from "@testing-library/react-native";
 import { ViajeFormScreen } from "./ViajeFormScreen";
@@ -46,13 +47,13 @@ async function abrir(viajeId?: string) {
 }
 
 describe("formulario de viaje (ViajeFormScreen)", () => {
-  test("chofer editando: monto en solo lectura y su viático visible", async () => {
+  test("chofer editando: monto en solo lectura y sin leyenda de viático", async () => {
     mockRol = "colaborador";
     await abrir("v1");
     expect(await screen.findByText(/El monto lo cambia la oficina/)).toBeTruthy();
     expect(screen.getByText("$150.000 + IVA")).toBeTruthy();
-    expect(screen.getByText("Viático interregional")).toBeTruthy();
-    expect(screen.getByText("$25.000")).toBeTruthy();
+    expect(screen.queryByText(/Viático/)).toBeNull();
+    expect(screen.queryByText("$25.000")).toBeNull();
   });
 
   test("gestión creando: puede ingresar el monto (no aparece el aviso de oficina)", async () => {

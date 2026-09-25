@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Bell, Box, Briefcase, Calendar, ClipboardCheck, CreditCard, Flag, Layers, Paperclip, Plug, Share2, Shield, Tag, Truck, User, Users, Wallet, LayoutGrid } from "lucide-react";
 import type { Modulo } from "@bitacora/shared";
-import { puedeVerModulo } from "@bitacora/shared";
+import { INTEGRACIONES_VISIBLES, puedeVerModulo } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell } from "@/components/DashboardShell";
@@ -26,7 +26,8 @@ const SECCIONES: { valor: string; label: string; icon: typeof User; modulo: Modu
   { valor: "plantillas", label: "Plantillas", icon: Paperclip, modulo: "configuracion" },
   { valor: "checklists", label: "Checklists", icon: ClipboardCheck, modulo: "configuracion" },
   { valor: "tipos-os-trabajo", label: "Tipos de OS/Trabajo", icon: Tag, modulo: "configuracion" },
-  { valor: "integraciones", label: "Integraciones", icon: Plug, modulo: "configuracion" },
+  // Tarea 144: oculta mientras INTEGRACIONES_VISIBLES sea false.
+  ...(INTEGRACIONES_VISIBLES ? [{ valor: "integraciones", label: "Integraciones", icon: Plug, modulo: "configuracion" as Modulo }] : []),
   { valor: "inventario", label: "Inventario", icon: Box, modulo: "configuracion" },
   { valor: "categorias-gastos", label: "Categorías de Gastos", icon: Wallet, modulo: "configuracion" },
   { valor: "centros-costo", label: "Centros de Costo", icon: Layers, modulo: "configuracion" },
@@ -43,6 +44,10 @@ const SECCIONES: { valor: string; label: string; icon: typeof User; modulo: Modu
   { valor: "seguridad", label: "Seguridad", icon: Shield, modulo: null },
 ];
 
+// Tarea 144: con la prueba vencida solo quedan Plan, Módulos (para caber
+// en el tope del plan), Mi cuenta y Seguridad.
+const SECCIONES_CON_PRUEBA_VENCIDA = ["cuenta", "plan", "modulos", "seguridad"];
+
 // PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export default function ConfiguracionLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -50,6 +55,7 @@ export default function ConfiguracionLayout({ children }: { children: ReactNode 
   const [usuario, setUsuario] = useState<UsuarioConEmpresa | null>(null);
   const [modulosDeshabilitados, setModulosDeshabilitados] = useState<Modulo[]>([]);
   const [modulosVisibles, setModulosVisibles] = useState<Modulo[] | null>(null);
+  const [pruebaVencida, setPruebaVencida] = useState(false);
 
   const cargar = useCallback(async () => {
     const { data } = await supabase.auth.getSession();
@@ -70,6 +76,7 @@ export default function ConfiguracionLayout({ children }: { children: ReactNode 
     setUsuario(body.usuario);
     setModulosDeshabilitados(body.modulos_deshabilitados ?? []);
     if (Array.isArray(body.modulos_visibles)) setModulosVisibles(body.modulos_visibles);
+    setPruebaVencida(Boolean(body.prueba_vencida));
   }, [router]);
 
   useEffect(() => {
@@ -83,7 +90,9 @@ export default function ConfiguracionLayout({ children }: { children: ReactNode 
       ? modulosVisibles.includes(m)
       : puedeVerModulo(usuario.rol, m) && !modulosDeshabilitados.includes(m);
 
-  const secciones = SECCIONES.filter((s) => s.modulo === null || moduloVisible(s.modulo));
+  const secciones = SECCIONES.filter(
+    (s) => (s.modulo === null || moduloVisible(s.modulo)) && (!pruebaVencida || SECCIONES_CON_PRUEBA_VENCIDA.includes(s.valor))
+  );
 
   return (
     <DashboardShell

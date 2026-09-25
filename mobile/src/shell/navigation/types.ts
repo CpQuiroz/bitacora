@@ -1,5 +1,12 @@
 import type { NavigatorScreenParams } from "@react-navigation/native";
 
+// Tarea 144: lo único navegable con la prueba vencida.
+export type PruebaVencidaStackParamList = {
+  PruebaVencida: undefined;
+  MiPlan: undefined;
+  Perfil: undefined;
+};
+
 export type RootStackParamList = {
   Login: undefined;
   Verify2fa: { ticket: string; metodo: "totp" | "email" };

@@ -202,22 +202,6 @@ function CobrosContenido() {
     if (res.ok) cargar();
   }
 
-  const [generandoLink, setGenerandoLink] = useState<string | null>(null);
-  const [errorLink, setErrorLink] = useState<string | null>(null);
-
-  async function generarLinkPago(id: string, proveedor: "webpay" | "flow" | "mercadopago") {
-    setGenerandoLink(id);
-    setErrorLink(null);
-    const res = await apiFetch(`/api/cobros/${id}/generar-link-pago`, { method: "POST", body: JSON.stringify({ proveedor }) });
-    setGenerandoLink(null);
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      setErrorLink(body.error ?? "No se pudo generar el link de pago");
-      return;
-    }
-    cargar();
-  }
-
   if (!usuario) return null;
 
   const lista = cobros ?? [];
@@ -367,7 +351,6 @@ function CobrosContenido() {
       )}
 
       {error ? <ErrorState mensaje={error} onReintentar={cargar} /> : null}
-      {errorLink ? <p className="mb-ds-4 font-ds-body text-ds-small text-ds-accent-700">{errorLink}</p> : null}
       {cobros === null && !error ? <LoadingState /> : null}
 
       {cobros?.length === 0 && (
@@ -400,7 +383,6 @@ function CobrosContenido() {
                   <th className="px-ds-4 py-ds-3">Estado</th>
                   <th className="px-ds-4 py-ds-3">Emisión</th>
                   <th className="px-ds-4 py-ds-3">Pago</th>
-                  <th className="px-ds-4 py-ds-3">Link de pago</th>
                   <th className="px-ds-4 py-ds-3">Cambiar estado</th>
                 </tr>
               </thead>
@@ -420,28 +402,6 @@ function CobrosContenido() {
                     </td>
                     <td className="px-ds-4 py-ds-3 text-ds-text/70">{c.fecha_emision}</td>
                     <td className="px-ds-4 py-ds-3 text-ds-text/70">{c.fecha_pago ?? "—"}</td>
-                    <td className="px-ds-4 py-ds-3">
-                      {c.link_pago ? (
-                        <a href={c.link_pago} target="_blank" rel="noopener noreferrer" className="font-ds-body text-ds-caption font-medium text-ds-brand hover:underline">
-                          Ver link (simulado)
-                        </a>
-                      ) : (
-                        <div className="flex flex-col gap-1">
-                          {(["webpay", "flow", "mercadopago"] as const).map((prov) => (
-                            <button
-                              key={prov}
-                              type="button"
-                              disabled={generandoLink === c.id}
-                              onClick={() => generarLinkPago(c.id, prov)}
-                              title="Genera un link simulado — no se conecta con la pasarela real todavía"
-                              className="text-left font-ds-body text-ds-caption font-medium text-ds-text/60 hover:text-ds-brand disabled:opacity-50"
-                            >
-                              Generar con {MEDIOS_ETIQUETA[prov]} (simulado)
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </td>
                     <td className="px-ds-4 py-ds-3">
                       <Select
                         valor={c.estado}

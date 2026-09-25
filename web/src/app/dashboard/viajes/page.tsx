@@ -796,11 +796,6 @@ export default function ViajesPage() {
                               {v.modo_precio === "tramos" ? `Por tramos (${v.tramos_detalle?.length ?? 0})` : `Por km · ${v.distancia_km ?? 0} km`}
                             </p>
                           ) : null}
-                          {puedeViatico && v.viatico_tipo ? (
-                            <p className="font-ds-body text-ds-caption text-ds-text/60">
-                              Viático {v.viatico_tipo}: {formatMoneda(Number(v.viatico_monto ?? 0), usuario.moneda)}
-                            </p>
-                          ) : null}
                         </td>
                         <td className="px-ds-4 py-ds-3">
                           <StatusBadge estado={v.estado} tonoForzado={v.estado === "confirmado" || v.estado === "facturado" ? "completado" : "en_progreso"} />

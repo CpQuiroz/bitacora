@@ -15,6 +15,7 @@ import { suscribirAPlan, cancelarSuscripcionFlow, flowPlanIdDe } from "../flow";
 import { avisarSuperAdmins, escaparHtml } from "../avisosSuperAdmin";
 import { limitarSolicitudesSuperAdmin } from "../rateLimiters";
 import { modulosActivosContables, verificarModulosCabenEnPlan } from "../limites";
+import { empresaConPruebaVencida } from "../empresaOperativa";
 
 export const planRouter = Router();
 
@@ -33,9 +34,8 @@ planRouter.get(
       .order("creado_en", { ascending: false })
       .limit(20);
 
-    const HOY = new Date().toISOString().slice(0, 10);
     const planActual = empresa?.plan ?? "trial";
-    const trialVencido = planActual === "trial" && empresa?.prueba_termina_en != null && empresa.prueba_termina_en < HOY;
+    const trialVencido = empresaConPruebaVencida(empresa);
 
     // Planes que la empresa puede contratar hoy con tarjeta (tienen Plan
     // de Flow). El plan Empresa no aparece mientras esté apagado.

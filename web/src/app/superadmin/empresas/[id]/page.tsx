@@ -4,13 +4,27 @@ import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import type { Empresa, EstadoEmpresa, Plan, Rubro, Suscripcion, SuscripcionCobro } from "@bitacora/shared";
-import { ETIQUETA_PLAN, GRUPOS_MODULOS, LIMITES_POR_PLAN, cuentaParaTope, planPermiteIACompleta, type Modulo } from "@bitacora/shared";
+import { DIAS_PRUEBA, ETIQUETA_PLAN, GRUPOS_MODULOS, LIMITES_POR_PLAN, MAX_DIAS_EXTENSION_PRUEBA, cuentaParaTope, planPermiteIACompleta, type Modulo } from "@bitacora/shared";
 import { SuperAdminShell } from "@/components/SuperAdminShell";
 import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText, Textarea } from "@/components/ui";
 import { IconChevronDown, IconChevronLeft, IconShield } from "@/components/icons";
 import { obtenerTokenSuperAdmin, superadminFetch } from "@/lib/superadminApi";
 import { guardarImpersonacion } from "@/lib/impersonacion";
 import { ETIQUETA_MODULO } from "@/lib/etiquetasModulo";
+
+// Historial de la prueba (super_admin_auditoria, tarea 144).
+type HistorialPrueba = {
+  id: string;
+  accion: string;
+  detalle: string | null;
+  creado_en: string;
+  super_admin: { nombre: string; correo: string } | null;
+};
+
+// Hoy en Chile (YYYY-MM-DD), mismo criterio que el backend (fechaChile.ts).
+function hoyChileWeb(): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Santiago" }).format(new Date());
+}
 
 const ESTADOS: EstadoEmpresa[] = ["activa", "suspendida", "dada_de_baja"];
 const PLANES: Plan[] = ["trial", "basico", "operacion", "pro", "empresa"];
@@ -167,7 +181,13 @@ export default function SuperAdminSaludEmpresaPage() {
   const [suscripcion, setSuscripcion] = useState<{ prueba_termina_en: string | null; suscripcion: Suscripcion | null; cobros: SuscripcionCobro[] } | null>(
     null
   );
-  const [nuevaFechaPrueba, setNuevaFechaPrueba] = useState("");
+  const [diasExtension, setDiasExtension] = useState("7");
+  const [historialPrueba, setHistorialPrueba] = useState<HistorialPrueba[]>([]);
+  // Montos por defecto del viático (tarea 144): valor interno de la empresa.
+  const [viaticoLocal, setViaticoLocal] = useState("");
+  const [viaticoInterregional, setViaticoInterregional] = useState("");
+  const [guardandoViaticos, setGuardandoViaticos] = useState(false);
+  const [msgViaticos, setMsgViaticos] = useState<{ tipo: "ok" | "error"; texto: string } | null>(null);
   const [guardandoPrueba, setGuardandoPrueba] = useState(false);
   const [errorPrueba, setErrorPrueba] = useState<string | null>(null);
 
@@ -298,8 +318,33 @@ export default function SuperAdminSaludEmpresaPage() {
     if (res.ok) {
       const datos = await res.json();
       setSuscripcion(datos);
-      setNuevaFechaPrueba(datos.prueba_termina_en ?? "");
     }
+    const resHist = await superadminFetch(`/api/superadmin/empresas/${params.id}/prueba/historial`);
+    if (resHist.ok) setHistorialPrueba(await resHist.json());
+  }
+
+  async function cargarViaticos() {
+    const res = await superadminFetch(`/api/superadmin/empresas/${params.id}/viaticos`);
+    if (!res.ok) return;
+    const datos = await res.json();
+    setViaticoLocal(datos.viatico_local_monto != null ? String(Math.round(Number(datos.viatico_local_monto))) : "");
+    setViaticoInterregional(datos.viatico_interregional_monto != null ? String(Math.round(Number(datos.viatico_interregional_monto))) : "");
+  }
+
+  async function onGuardarViaticos() {
+    setMsgViaticos(null);
+    setGuardandoViaticos(true);
+    const res = await superadminFetch(`/api/superadmin/empresas/${params.id}/viaticos`, {
+      method: "PATCH",
+      body: JSON.stringify({ viatico_local_monto: viaticoLocal.trim() || null, viatico_interregional_monto: viaticoInterregional.trim() || null }),
+    });
+    setGuardandoViaticos(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setMsgViaticos({ tipo: "error", texto: body.error ?? "No se pudo guardar" });
+      return;
+    }
+    setMsgViaticos({ tipo: "ok", texto: "Guardado. Aplica a los viajes nuevos." });
   }
 
   async function cargarUsuarios() {
@@ -331,6 +376,7 @@ export default function SuperAdminSaludEmpresaPage() {
     cargarModulos();
     cargarPerfiles();
     cargarSuscripcion();
+    cargarViaticos();
     cargarUsuarios();
     cargarRoles();
     cargarAccesos();
@@ -547,17 +593,24 @@ export default function SuperAdminSaludEmpresaPage() {
     setClienteAnonNombre("");
   }
 
-  async function onExtenderPrueba() {
+  // Tarea 144: extender N días o reactivar (DIAS_PRUEBA desde hoy). El
+  // backend valida y deja el registro en super_admin_auditoria.
+  async function onCambiarPrueba(accion: "extender" | "reactivar") {
     setErrorPrueba(null);
+    const dias = Number(diasExtension);
+    if (accion === "extender" && (!Number.isInteger(dias) || dias < 1 || dias > MAX_DIAS_EXTENSION_PRUEBA)) {
+      setErrorPrueba(`Indica entre 1 y ${MAX_DIAS_EXTENSION_PRUEBA} días`);
+      return;
+    }
     setGuardandoPrueba(true);
-    const res = await superadminFetch(`/api/superadmin/empresas/${params.id}/prueba`, {
-      method: "PATCH",
-      body: JSON.stringify({ prueba_termina_en: nuevaFechaPrueba }),
+    const res = await superadminFetch(`/api/superadmin/empresas/${params.id}/prueba/${accion}`, {
+      method: "POST",
+      body: JSON.stringify(accion === "extender" ? { dias } : {}),
     });
     setGuardandoPrueba(false);
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      setErrorPrueba(body.error ?? "No se pudo extender la prueba");
+      setErrorPrueba(body.error ?? "No se pudo cambiar la prueba");
       return;
     }
     cargarSuscripcion();
@@ -940,6 +993,84 @@ export default function SuperAdminSaludEmpresaPage() {
           </div>
 
           <Card className="mt-4">
+            {/* Tarea 144: con la prueba vencida la empresa queda bloqueada
+                (solo Plan/pago, Mi cuenta y cerrar sesión). */}
+            <h2 className="text-sm font-semibold text-foreground">Período de prueba</h2>
+            {salud.empresa.plan !== "trial" ? (
+              <p className="mt-2 text-sm text-muted">La empresa tiene un plan pago: la prueba no aplica.</p>
+            ) : (
+              <div className="mt-3 flex flex-col gap-3">
+                <p className="text-sm text-foreground">
+                  {suscripcion?.prueba_termina_en
+                    ? `Último día de prueba: ${new Date(`${suscripcion.prueba_termina_en}T00:00:00`).toLocaleDateString("es-CL")}`
+                    : "Sin fecha de fin de prueba"}
+                  {suscripcion?.prueba_termina_en && suscripcion.prueba_termina_en < hoyChileWeb() ? (
+                    <span className="ml-2 font-semibold text-danger">Vencida — la empresa está bloqueada</span>
+                  ) : null}
+                </p>
+                <div className="flex flex-wrap items-end gap-2">
+                  <div>
+                    <Label>Días a extender</Label>
+                    <Input type="number" min={1} max={MAX_DIAS_EXTENSION_PRUEBA} value={diasExtension} onChange={(e) => setDiasExtension(e.target.value)} className="w-28" />
+                  </div>
+                  <Button type="button" variant="outline" disabled={guardandoPrueba} onClick={() => onCambiarPrueba("extender")}>
+                    {guardandoPrueba ? "Guardando…" : "Extender"}
+                  </Button>
+                  <Button type="button" variant="outline" disabled={guardandoPrueba} onClick={() => onCambiarPrueba("reactivar")}>
+                    Reactivar ({DIAS_PRUEBA} días desde hoy)
+                  </Button>
+                </div>
+                {errorPrueba && <ErrorText>{errorPrueba}</ErrorText>}
+                <p className="text-[11px] text-muted">
+                  Extender suma días desde el último día de prueba (o desde hoy si ya venció). Al confirmarse el pago de un plan, la empresa
+                  sale de la prueba sola. Nunca se borran datos.
+                </p>
+              </div>
+            )}
+            {historialPrueba.length > 0 && (
+              <div className="mt-3 overflow-x-auto border-t border-border pt-3">
+                <p className="mb-1 text-xs font-medium text-muted">Historial</p>
+                <table className="w-full text-left text-xs">
+                  <tbody>
+                    {historialPrueba.map((h) => (
+                      <tr key={h.id} className="border-t border-border first:border-t-0">
+                        <td className="py-1.5 pr-4 text-muted">{new Date(h.creado_en).toLocaleString("es-CL")}</td>
+                        <td className="py-1.5 pr-4 text-foreground">{h.accion === "reactivar_prueba_empresa" ? "Reactivó" : "Extendió"}</td>
+                        <td className="py-1.5 pr-4 text-foreground">{h.super_admin?.nombre ?? h.super_admin?.correo ?? "—"}</td>
+                        <td className="py-1.5 text-muted">{h.detalle ?? ""}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
+
+          <Card className="mt-4">
+            <h2 className="text-sm font-semibold text-foreground">Viático del chofer — montos por defecto</h2>
+            <p className="mt-1 text-[11px] text-muted">
+              Valor interno: se precarga al asignar el viático en un viaje (el Admin puede ajustarlo por viaje) y se registra como gasto
+              “Viáticos”. No aparece en el cobro ni cambia viajes ya creados.
+            </p>
+            <div className="mt-3 flex flex-wrap items-end gap-2">
+              <div>
+                <Label>Local (dentro de la RM)</Label>
+                <Input type="number" min={0} value={viaticoLocal} onChange={(e) => setViaticoLocal(e.target.value)} className="w-40" />
+              </div>
+              <div>
+                <Label>Interregional</Label>
+                <Input type="number" min={0} value={viaticoInterregional} onChange={(e) => setViaticoInterregional(e.target.value)} className="w-40" />
+              </div>
+              <Button type="button" variant="outline" disabled={guardandoViaticos} onClick={onGuardarViaticos}>
+                {guardandoViaticos ? "Guardando…" : "Guardar"}
+              </Button>
+            </div>
+            {msgViaticos && (
+              <div className="mt-2">{msgViaticos.tipo === "ok" ? <SuccessText>{msgViaticos.texto}</SuccessText> : <ErrorText>{msgViaticos.texto}</ErrorText>}</div>
+            )}
+          </Card>
+
+          <Card className="mt-4">
             <CabeceraColapsable
               titulo="Suscripción"
               abierto={suscripcionAbierta}
@@ -1003,25 +1134,6 @@ export default function SuperAdminSaludEmpresaPage() {
                     </table>
                   </div>
                 )}
-
-                <div className="border-t border-border pt-3">
-                  <Label>Extender período de prueba (cortesía comercial)</Label>
-                  <div className="flex items-end gap-2">
-                    <Input type="date" value={nuevaFechaPrueba} onChange={(e) => setNuevaFechaPrueba(e.target.value)} className="max-w-xs" />
-                    <Button type="button" variant="outline" disabled={guardandoPrueba || !nuevaFechaPrueba} onClick={onExtenderPrueba}>
-                      {guardandoPrueba ? "Guardando…" : "Guardar"}
-                    </Button>
-                  </div>
-                  {errorPrueba && (
-                    <div className="mt-2">
-                      <ErrorText>{errorPrueba}</ErrorText>
-                    </div>
-                  )}
-                  <p className="mt-2 text-[11px] text-muted">
-                    El estado de facturación en sí (activa/suspendida por pago/cancelada) lo actualiza automáticamente el webhook de
-                    Flow — acá solo se puede extender la fecha de fin de prueba.
-                  </p>
-                </div>
               </div>
             )}
               </div>

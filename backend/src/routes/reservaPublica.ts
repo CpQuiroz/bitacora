@@ -13,6 +13,7 @@ import { empresaTieneModulo } from "../permisos";
 import { avisarCitaAgendada } from "../agendaProAvisos";
 import { siguienteFolioCita } from "../folios";
 import { ah } from "../asyncHandler";
+import { empresaConPruebaVencida } from "../empresaOperativa";
 
 export const reservaPublicaRouter = Router();
 
@@ -20,8 +21,13 @@ const HORA_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
 const FECHA_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 
 async function empresaHabilitada(empresaId: string) {
-  const { data: empresa } = await supabase.from("empresas").select("id, nombre, logo_url, color_primario, estado").eq("id", empresaId).maybeSingle();
-  if (!empresa || empresa.estado !== "activa") return null;
+  const { data: empresa } = await supabase
+    .from("empresas")
+    .select("id, nombre, logo_url, color_primario, estado, plan, prueba_termina_en")
+    .eq("id", empresaId)
+    .maybeSingle();
+  // Tarea 144: con la prueba vencida la reserva pública también se corta.
+  if (!empresa || empresa.estado !== "activa" || empresaConPruebaVencida(empresa)) return null;
   if (!(await empresaTieneModulo(empresaId, "agenda_pro"))) return null;
   return empresa;
 }

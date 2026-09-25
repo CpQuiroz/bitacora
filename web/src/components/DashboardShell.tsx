@@ -188,6 +188,24 @@ function iniciales(nombre: string) {
     .join("");
 }
 
+// Tarea 144: con la prueba vencida solo quedan estas páginas (Plan y
+// Módulos para elegir plan dentro del tope; Mi cuenta y Seguridad).
+const RUTAS_CON_PRUEBA_VENCIDA = [
+  "/dashboard/configuracion/plan",
+  "/dashboard/configuracion/modulos",
+  "/dashboard/configuracion/cuenta",
+  "/dashboard/configuracion/seguridad",
+];
+
+function navConPruebaVencida(puedeGestionarPlan: boolean): NavGroup[] {
+  const items: NavItem[] = [
+    ...(puedeGestionarPlan ? [{ href: "/dashboard/configuracion/plan", label: "Plan y pago", icon: CreditCard, modulo: null }] : []),
+    { href: "/dashboard/configuracion/cuenta", label: "Mi cuenta", icon: User, modulo: null },
+    { href: "/dashboard/configuracion/seguridad", label: "Seguridad", icon: Settings, modulo: null },
+  ];
+  return [{ titulo: "Tu cuenta", items }];
+}
+
 export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -204,6 +222,10 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
   const [impersonando, setImpersonando] = useState(false);
   const [consentimientoPendiente, setConsentimientoPendiente] = useState(false);
   const [aceptandoConsentimiento, setAceptandoConsentimiento] = useState(false);
+  // Tarea 144: prueba vencida sin plan pago → solo Plan/pago, Mi cuenta,
+  // Seguridad y cerrar sesión (el backend bloquea todo lo demás).
+  const [pruebaVencida, setPruebaVencida] = useState(false);
+  const [puedeGestionarPlan, setPuedeGestionarPlan] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -228,6 +250,8 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
         if (body.impersonacion) setImpersonando(true);
         else if (obtenerImpersonacion()) limpiarImpersonacion();
         setConsentimientoPendiente(Boolean(body.consentimiento_pendiente));
+        setPruebaVencida(Boolean(body.prueba_vencida));
+        setPuedeGestionarPlan(Array.isArray(body.acciones) && body.acciones.includes("gestionar_plan"));
       }
     }
     void cargarMe();
@@ -290,21 +314,13 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
     })();
   }, [usuario.rol, pathname, router]);
 
-  // Trial vencido sin plan elegido (backend lo exige en requiereEmpresa,
-  // código TRIAL_VENCIDO) — mismo criterio que el gate de 2FA de arriba:
-  // fetch propio acá contra una ruta exceptuada del gate (/api/plan), en
-  // vez de propagar el dato por props. Lo manda a Configuración > Plan.
+  // Prueba vencida (tarea 144; el backend responde TRIAL_VENCIDO): fuera
+  // de las páginas permitidas lo manda a Plan (quien puede pagar) o a Mi
+  // cuenta (el resto del equipo).
   useEffect(() => {
-    // Módulos también queda abierta: para caber en el tope de un plan
-    // puede tener que apagar secciones antes de elegirlo (tarea 124).
-    if (pathname === "/dashboard/configuracion/plan" || pathname === "/dashboard/configuracion/modulos") return;
-    (async () => {
-      const res = await apiFetch("/api/plan");
-      if (!res.ok) return;
-      const body = await res.json().catch(() => ({}));
-      if (body.trialVencido) router.replace("/dashboard/configuracion/plan");
-    })();
-  }, [pathname, router]);
+    if (!pruebaVencida || RUTAS_CON_PRUEBA_VENCIDA.some((r) => pathname.startsWith(r))) return;
+    router.replace(puedeGestionarPlan ? "/dashboard/configuracion/plan" : "/dashboard/configuracion/cuenta");
+  }, [pruebaVencida, puedeGestionarPlan, pathname, router]);
 
   useEffect(() => {
     setGruposAbiertos((prev) => {
@@ -386,20 +402,22 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
   // Un grupo entero se oculta si, tras filtrar por módulo, no le queda
   // ningún ítem visible (ej. "Datos" para un rol acotado) — nunca se
   // muestra un encabezado de sección flotando sin nada debajo.
-  const gruposVisibles = NAV_GROUPS.map((g) => ({
+  const gruposVisibles = pruebaVencida
+    ? navConPruebaVencida(puedeGestionarPlan)
+    : NAV_GROUPS.map((g) => ({
     ...g,
     items: g.items
       .filter((item) => (item.modulos ? item.modulos.some(moduloVisible) : item.modulo === null || moduloVisible(item.modulo)))
       // Subitems con su propio módulo: se ocultan los que no se ven.
       .map((item) => (item.children ? { ...item, children: item.children.filter((c) => !c.modulo || moduloVisible(c.modulo)) } : item))
       .filter((item) => !item.children || item.children.length > 0),
-  })).filter((g) => g.items.length > 0);
+      })).filter((g) => g.items.length > 0);
 
   function esActivoLeaf(href: string): boolean {
     if (href === "/dashboard") return pathname === "/dashboard";
     // Configuración enlaza a /cuenta pero debe verse activo en cualquiera
     // de sus subsecciones (seguridad, empresa, plantillas, etc.).
-    if (href === "/dashboard/configuracion/cuenta") return pathname.startsWith("/dashboard/configuracion");
+    if (href === "/dashboard/configuracion/cuenta") return pathname.startsWith(pruebaVencida ? href : "/dashboard/configuracion");
     // Rendiciones es subsección de Gastos (ver GastosSubnav) — sin ítem
     // propio en el nav, así que el de Gastos queda activo ahí también.
     if (href === "/dashboard/gastos")
@@ -528,6 +546,15 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
           </button>
         </div>
       )}
+      {pruebaVencida && !impersonando && !consentimientoPendiente && (
+        <div className="fixed inset-x-0 top-0 z-[60] flex flex-wrap items-center justify-center gap-x-3 gap-y-1 bg-ds-accent-700 px-4 py-2 text-center font-ds-body text-xs font-medium text-white print:hidden">
+          <span>
+            {puedeGestionarPlan
+              ? "Tu período de prueba terminó. Elige un plan para seguir usando Bitácora — tus datos están guardados."
+              : "El período de prueba de tu empresa terminó. Pídele a quien administra Bitácora que elija un plan — tus datos están guardados."}
+          </span>
+        </div>
+      )}
       {consentimientoPendiente && !impersonando && (
         <div className="fixed inset-x-0 top-0 z-[60] flex flex-wrap items-center justify-center gap-x-3 gap-y-1 bg-ds-accent2-700 px-4 py-2 text-center font-ds-body text-xs font-medium text-white print:hidden">
           <span>
@@ -545,7 +572,7 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
         </div>
       )}
       <div
-        className={`flex min-h-screen bg-ds-bg ${impersonando || (consentimientoPendiente && !impersonando) ? "pt-9" : ""}`}
+        className={`flex min-h-screen bg-ds-bg ${impersonando || consentimientoPendiente || pruebaVencida ? "pt-9" : ""}`}
         style={temaStyle}
         data-tema={usuario.tema ?? "faena"}
       >
@@ -604,9 +631,7 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
             <Menu size={20} strokeWidth={2.75} />
           </button>
 
-          <div className="ml-auto">
-            <NotificacionesBell />
-          </div>
+          <div className="ml-auto">{pruebaVencida ? null : <NotificacionesBell />}</div>
 
           <div className="relative" ref={dropdownRef}>
             <button
@@ -625,14 +650,16 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
 
             {dropdownAbierto && (
               <div className="absolute right-0 top-full mt-2 w-52 overflow-hidden rounded-lg border border-ds-divider bg-ds-surface py-1 shadow-ds-md">
-                <Link
-                  href="/dashboard/perfil"
-                  onClick={() => setDropdownAbierto(false)}
-                  className="flex items-center gap-2 px-4 py-2 font-ds-body text-sm text-ds-text hover:bg-ds-brand/[0.08] hover:text-ds-brand"
-                >
-                  <User size={16} strokeWidth={2.75} />
-                  Perfil
-                </Link>
+                {pruebaVencida ? null : (
+                  <Link
+                    href="/dashboard/perfil"
+                    onClick={() => setDropdownAbierto(false)}
+                    className="flex items-center gap-2 px-4 py-2 font-ds-body text-sm text-ds-text hover:bg-ds-brand/[0.08] hover:text-ds-brand"
+                  >
+                    <User size={16} strokeWidth={2.75} />
+                    Perfil
+                  </Link>
+                )}
                 <Link
                   href="/dashboard/configuracion/cuenta"
                   onClick={() => setDropdownAbierto(false)}
@@ -674,7 +701,7 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
           a mostrar el botón. El backend (server.ts, requiereRol("admin"))
           es la protección real — esto es solo para no ofrecer un botón
           que de todas formas va a devolver 403. */}
-      {usuario.rol === "admin" && moduloVisible("asistente") && <AsistenteChat />}
+      {usuario.rol === "admin" && !pruebaVencida && moduloVisible("asistente") && <AsistenteChat />}
       </div>
     </>
   );

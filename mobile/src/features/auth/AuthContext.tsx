@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 import type { Session } from "@supabase/supabase-js";
 import type { Accion, Empresa, Modulo, Usuario } from "@bitacora/shared";
 import { supabase } from "../../lib/supabase";
-import { apiJson } from "../../services/api";
+import { alPruebaVencida, apiJson } from "../../services/api";
 import { guardarCache, leerCache, limpiarCacheLecturas } from "../../services/sync/cache";
 
 type UsuarioConEmpresa = Usuario & { empresa: Empresa };
@@ -14,6 +14,9 @@ type EstadoAuth =
   // está asociado a ningún usuario/empresa en Bitácora.
   | { fase: "sin-empresa" }
   | { fase: "mfa-requerido"; usuario: UsuarioConEmpresa }
+  // Tarea 144: prueba vencida sin plan pago — la app queda bloqueada salvo
+  // Mi plan (solo lectura), Mi cuenta (Perfil) y cerrar sesión.
+  | { fase: "prueba-vencida"; usuario: UsuarioConEmpresa }
   | {
       fase: "listo";
       usuario: UsuarioConEmpresa;
@@ -54,6 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         acciones?: Accion[];
         rol_exige_2fa?: boolean;
         consentimiento_pendiente?: boolean;
+        prueba_vencida?: boolean;
       }>("/api/me"),
       apiJson<{ activado: boolean }>("/api/usuarios/me/mfa"),
     ]);
@@ -96,6 +100,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const acciones = resMe.data.acciones ?? [];
     await guardarCache(CACHE_ME, { usuario, modulos, visibles, acciones });
 
+    if (resMe.data.prueba_vencida) {
+      setEstado({ fase: "prueba-vencida", usuario });
+      return;
+    }
+
     // La exigencia de 2FA la define roles.requiere_2fa (editable desde el
     // Panel de Super-Admin) — el backend la manda en /api/me.
     const rolExigeMfa = resMe.data.rol_exige_2fa ?? false;
@@ -132,6 +141,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void resolverUsuario();
   }, [session, resolverUsuario]);
 
+  // Si la prueba vence con la app abierta, la primera llamada que responda
+  // TRIAL_VENCIDO vuelve a leer /api/me y pasa a la pantalla de bloqueo.
+  useEffect(() => alPruebaVencida(() => void resolverUsuario()), [resolverUsuario]);
+
   const cerrarSesion = useCallback(async () => {
     await supabase.auth.signOut();
     // Deja la caché de lecturas limpia para el próximo login — si no,
@@ -162,7 +175,7 @@ export function useAuth(): AuthContexto {
 /** Atajo: el usuario ya autenticado y listo. Úsalo dentro de pantallas de la app. */
 export function useUsuario(): UsuarioConEmpresa {
   const ctx = useAuth();
-  if (ctx.fase !== "listo" && ctx.fase !== "mfa-requerido") {
+  if (ctx.fase !== "listo" && ctx.fase !== "mfa-requerido" && ctx.fase !== "prueba-vencida") {
     throw new Error("useUsuario usado antes de que la sesión esté lista");
   }
   return ctx.usuario;

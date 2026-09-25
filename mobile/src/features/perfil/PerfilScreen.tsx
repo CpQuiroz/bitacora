@@ -119,7 +119,7 @@ export function PerfilScreen({ navigation }: NativeStackScreenProps<MasStackPara
 
   const volver = { icono: <ArrowLeft size={20} strokeWidth={2.5} color={tokens.color.text} />, onPress: () => navigation.goBack(), etiquetaAccesible: "Volver" };
 
-  if (auth.fase !== "listo" && auth.fase !== "mfa-requerido") {
+  if (auth.fase !== "listo" && auth.fase !== "mfa-requerido" && auth.fase !== "prueba-vencida") {
     return (
       <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
         <ScreenHeader titulo="Perfil" accion={volver} />
@@ -161,7 +161,7 @@ export function PerfilScreen({ navigation }: NativeStackScreenProps<MasStackPara
 
         {/* Tema de la empresa (20-sep-2026) — solo admin, mismo criterio
             de acceso que Configuración > Empresa en la web. */}
-        {u.rol === "admin" && (
+        {u.rol === "admin" && auth.fase !== "prueba-vencida" && (
           <Card>
             <View style={{ gap: tokens.space["2"] }}>
               <Texto tamano={tokens.size.small} peso="semibold" color={tokens.color.text}>

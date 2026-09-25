@@ -3,6 +3,7 @@ import type { RequestConUsuario } from "./auth";
 import { ah } from "./asyncHandler";
 import { registrarAccesoSiCorresponde } from "./accesos";
 import { rolExigeMfa as rolExigeMfaFn } from "./roles";
+import { MENSAJE_PRUEBA_VENCIDA, empresaConPruebaVencida, esRuta, rutaPermitidaConPruebaVencida } from "./empresaOperativa";
 
 export interface RequestConEmpresa extends RequestConUsuario {
   empresaId?: string;
@@ -16,13 +17,6 @@ export interface RequestConEmpresa extends RequestConUsuario {
 // datos de la empresa (incluye la autobaja), gestionar el equipo/roles,
 // ni las credenciales de integraciones. Regla conservadora a propósito
 // (Ley 21.719) — ajustable si estorba demasiado al debugging real.
-// ¿La URL es `base` o algo debajo de `base/`? Compara por segmento: un
-// startsWith("/api/plan") a secas también calzaba con /api/plantillas y
-// /api/planes-mantencion (review etapa 3, tarea 124).
-function esRuta(url: string, base: string): boolean {
-  return url === base || url.startsWith(`${base}/`) || url.startsWith(`${base}?`);
-}
-
 function mutacionBloqueadaEnImpersonacion(req: RequestConUsuario): boolean {
   if (!req.impersonacion) return false;
   if (req.method === "GET" || req.method === "HEAD") return false;
@@ -71,21 +65,11 @@ export const requiereEmpresa = ah<RequestConEmpresa>(async (req, res, next) => {
     return;
   }
 
-  // Trial vencido sin haber elegido un plan pago: empresas.plan solo
-  // sale de "trial" al confirmarse una tarjeta (ver cambiarPlanEmpresa
-  // en planes.ts) — así que si sigue en "trial" pasada la fecha, es
-  // que nunca eligió plan. Se deja pasar /api/plan*, /api/suscripcion* y
-  // /api/modulos* (tarea 124: para caber en el tope de Esencial u
-  // Operación puede tener que apagar módulos) para que salga del bloqueo.
-  const HOY = new Date().toISOString().slice(0, 10);
-  const trialVencido = empresa?.plan === "trial" && empresa.prueba_termina_en != null && empresa.prueba_termina_en < HOY;
-  const rutaDePlan =
-    esRuta(req.originalUrl, "/api/plan") || esRuta(req.originalUrl, "/api/suscripcion") || esRuta(req.originalUrl, "/api/modulos");
-  if (trialVencido && !rutaDePlan) {
-    res.status(403).json({
-      error: "Tu período de prueba terminó — elige un plan para seguir usando Bitácora.",
-      code: "TRIAL_VENCIDO",
-    });
+  // Prueba vencida sin plan pago (tarea 144): bloqueo total salvo Plan/
+  // pago y Mi cuenta (ver empresaOperativa.ts). empresas.plan solo sale
+  // de "trial" al confirmarse el pago (cambiarPlanEmpresa en planes.ts).
+  if (empresaConPruebaVencida(empresa) && !rutaPermitidaConPruebaVencida(req.originalUrl)) {
+    res.status(403).json({ error: MENSAJE_PRUEBA_VENCIDA, code: "TRIAL_VENCIDO" });
     return;
   }
 

@@ -16,6 +16,7 @@ import {
   borrarViajeConViatico,
   errorViaticoPagado,
   gastoViaticoDe,
+  leerConfigViaticos,
   leerViatico,
   mismoViatico,
   sincronizarGastoViatico,
@@ -65,25 +66,12 @@ viajesRouter.patch(
   "/config",
   requiereRol("admin"),
   ah<RequestConEmpresa>(async (req, res) => {
-    const cambios: Partial<ConfigViaticos> = {};
-    for (const campo of ["viatico_local_monto", "viatico_interregional_monto"] as const) {
-      const v = req.body?.[campo];
-      if (v === undefined) continue;
-      if (v === null || v === "") {
-        cambios[campo] = null;
-        continue;
-      }
-      const n = Number(v);
-      if (!Number.isFinite(n) || n < 0) {
-        res.status(400).json({ error: "Monto de viático inválido" });
-        return;
-      }
-      cambios[campo] = Math.round(n);
-    }
-    if (Object.keys(cambios).length === 0) {
-      res.status(400).json({ error: "Nada que actualizar" });
+    const leido = leerConfigViaticos(req.body);
+    if ("error" in leido) {
+      res.status(400).json({ error: leido.error });
       return;
     }
+    const cambios = leido.cambios;
     const { data, error } = await supabase
       .from("empresas")
       .update(cambios)

@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { MODULOS } from "./permisos";
-import { DIAS_PRUEBA, GRUPOS_MODULOS, MODULOS_CONTABLES, PLANES_CONTRATABLES, cuentaParaTope, esPlanPago, filtrarModulosVisibles, modulosContablesActivos, modulosSobrantesParaPlan } from "./planes";
+import { DIAS_PRUEBA, GRUPOS_MODULOS, MODULOS_CONTABLES, PLANES_CONTRATABLES, cuentaParaTope, esPlanPago, fechaPruebaExtendida, filtrarModulosVisibles, modulosContablesActivos, modulosSobrantesParaPlan, pruebaVencida, sumarDiasFecha } from "./planes";
 
 test("las 17 secciones del menú cuentan para el tope", () => {
   assert.equal(MODULOS_CONTABLES.length, 17);
@@ -78,4 +78,18 @@ test("grupos del menú: cada módulo aparece una sola vez y `cuenta` coincide co
   assert.equal(new Set(todos).size, todos.length);
   assert.deepEqual([...todos].sort(), [...MODULOS].sort());
   for (const g of GRUPOS_MODULOS) for (const m of g.modulos) assert.equal(cuentaParaTope(m), g.cuenta, m);
+});
+
+test("prueba vencida: solo en trial y pasado el último día", () => {
+  assert.equal(pruebaVencida("trial", "2026-09-24", "2026-09-25"), true);
+  assert.equal(pruebaVencida("trial", "2026-09-25", "2026-09-25"), false);
+  assert.equal(pruebaVencida("trial", null, "2026-09-25"), false);
+  assert.equal(pruebaVencida("pro", "2026-01-01", "2026-09-25"), false);
+});
+
+test("extender la prueba parte de hoy si ya venció y de la fecha de fin si sigue vigente", () => {
+  assert.equal(fechaPruebaExtendida("2026-09-20", 7, "2026-09-25"), "2026-10-02");
+  assert.equal(fechaPruebaExtendida("2026-09-30", 7, "2026-09-25"), "2026-10-07");
+  assert.equal(fechaPruebaExtendida(null, 3, "2026-12-30"), "2027-01-02");
+  assert.equal(sumarDiasFecha("2026-02-27", 2), "2026-03-01");
 });

@@ -4,6 +4,25 @@
 > `progress/history.md` y vaciar este archivo. Historial anterior al
 > 23-sep-2026: `progress/archivo/current_2026-09-11_a_2026-09-23.md`.
 
+## Tarea 144 — Salida a prod PASO 1 (en curso, 25-sep)
+Diagnóstico PASO 0 entregado y aprobado ("Ok"). Decisiones en trabajo_list.json #144. Tarea 135 queda `blocked` (solo
+falta ORS_API_KEY + migraciones 141-143 en prod; EXPLAIN y grants de DEV verificados 25-sep). Tipo de OS → tarea 145.
+1. Prueba vencida — HECHO (falta E2E):
+   - shared: pruebaVencida, fechaPruebaExtendida, sumarDiasFecha, MAX_DIAS_EXTENSION_PRUEBA (+ tests).
+   - backend/src/empresaOperativa.ts: empresaConPruebaVencida (hoy en Chile), empresaOperativa (entradas públicas),
+     rutaPermitidaConPruebaVencida (plan, suscripcion, modulos, usuarios/me*, notificaciones-feed/preferencias).
+     Decisión: DELETE /api/empresa NO queda abierto (borra la empresa de verdad; regla "nunca borrar datos").
+   - requiereEmpresa usa eso; /api/me devuelve prueba_vencida y no dispara cumpleaños a clientes si venció.
+   - Portal (requierePortal + link + login por RUT), reserva online y bot de WhatsApp cortados si no está operativa.
+   - Super-Admin: POST /empresas/:id/prueba/extender {dias}, /reactivar (DIAS_PRUEBA desde hoy), GET /prueba/historial
+     (super_admin_auditoria); PATCH fecha exacta valida no-pasado. Solo plan trial (409 si tiene plan pago).
+     Web: tarjeta "Período de prueba" (antes estaba dentro de Suscripción y no se veía sin suscripción).
+   - Web: DashboardShell con menú "Tu cuenta" (Plan y pago si gestionar_plan, Mi cuenta, Seguridad), aviso arriba,
+     redirección; Configuración filtra a cuenta/plan/modulos/seguridad.
+   - Mobile: fase "prueba-vencida" (PruebaVencidaScreen + Mi plan + Perfil + cerrar sesión, sin botón de pago por
+     Play); api.ts avisa TRIAL_VENCIDO y AuthProvider re-lee /api/me. Requiere build.
+2. Integraciones — pendiente.  3. Leyenda viático — pendiente.  4. Rubro + sugerencias — pendiente.
+
 ## Tarea 135 — Precio por tramos y por km + Cotización de viaje (en curso, 24-sep noche)
 Propuesta base: docs/PROPUESTA_PRECIOS_VIAJES.md §2 (aprobada). Decisiones de la usuaria: km con mapa (origen/destino del
 Admin) → OpenRouteService con caché de distancias (ORS_API_KEY la crea ella); tramo simétrico; tarifas y detalle solo

@@ -1,7 +1,7 @@
-import { Router } from "express";
+import { Router, type Response } from "express";
 import crypto from "node:crypto";
 import type { Accion, Empresa, EstadoEmpresa, Modulo, Plan, Rol, Rubro } from "@bitacora/shared";
-import { ACCIONES, DIAS_PRUEBA, MODULOS, MODULOS_DELEGABLES_POR_EMPRESA, moduloActivadoPorDefecto, formatearRut, validarRut } from "@bitacora/shared";
+import { ACCIONES, DIAS_PRUEBA, MAX_DIAS_EXTENSION_PRUEBA, MODULOS, fechaPruebaExtendida, sumarDiasFecha, MODULOS_DELEGABLES_POR_EMPRESA, moduloActivadoPorDefecto, formatearRut, validarRut } from "@bitacora/shared";
 import {
   invalidarCacheRoles,
   empresaPuedeUsarRol,
@@ -13,6 +13,8 @@ import { empresaTieneModulo } from "../permisos";
 import { anonimizarUsuario, anonimizarCliente } from "../anonimizar";
 import { validarValorAcceso } from "../accesosAutorizados";
 import { supabase } from "../supabase";
+import { hoyChile } from "../fechaChile";
+import { leerConfigViaticos } from "../viajesViaticos";
 import { env } from "../env";
 import { ah } from "../asyncHandler";
 import { cifrarJson, descifrarJson } from "../crypto";
@@ -1790,31 +1792,150 @@ superadminRouter.get(
   })
 );
 
+// Prueba de la empresa (tarea 144). Con la prueba vencida la empresa
+// queda bloqueada (empresaOperativa.ts); el Super-Admin la extiende N
+// días o la reactiva (DIAS_PRUEBA desde hoy). Cada cambio queda en
+// super_admin_auditoria (quién, cuándo, antes → después) y se ve en la
+// ficha de la empresa. No aplica a una empresa con plan pago.
+const ACCIONES_PRUEBA = ["extender_prueba_empresa", "reactivar_prueba_empresa"] as const;
+
+async function cambiarFinPrueba(
+  req: RequestConSuperAdmin,
+  res: Response,
+  accion: (typeof ACCIONES_PRUEBA)[number],
+  calcular: (actual: string | null, hoy: string) => string
+) {
+  const { data: empresa } = await supabase.from("empresas").select("nombre, plan, prueba_termina_en").eq("id", req.params.id).maybeSingle();
+  if (!empresa) {
+    res.status(404).json({ error: "Empresa no encontrada" });
+    return;
+  }
+  if (empresa.plan !== "trial") {
+    res.status(409).json({ error: "La empresa ya tiene un plan pago: la prueba no aplica" });
+    return;
+  }
+  const hoy = hoyChile();
+  const nueva = calcular(empresa.prueba_termina_en, hoy);
+  if (nueva < hoy) {
+    res.status(400).json({ error: "La nueva fecha de fin no puede quedar en el pasado" });
+    return;
+  }
+  const { error } = await supabase.from("empresas").update({ prueba_termina_en: nueva }).eq("id", req.params.id).eq("plan", "trial");
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
+  }
+  await registrarAuditoria(req.superAdminId!, accion, {
+    empresaId: req.params.id,
+    ip: req.ip ?? null,
+    detalle: `${empresa.nombre}: ${empresa.prueba_termina_en ?? "—"} → ${nueva}`,
+  });
+  res.json({ prueba_termina_en: nueva });
+}
+
+superadminRouter.post(
+  "/empresas/:id/prueba/extender",
+  requiereSuperAdmin,
+  ah<RequestConSuperAdmin>(async (req, res) => {
+    const dias = req.body?.dias;
+    if (!Number.isInteger(dias) || dias < 1 || dias > MAX_DIAS_EXTENSION_PRUEBA) {
+      res.status(400).json({ error: `Indica los días a extender (entre 1 y ${MAX_DIAS_EXTENSION_PRUEBA})` });
+      return;
+    }
+    await cambiarFinPrueba(req, res, "extender_prueba_empresa", (actual, hoy) => fechaPruebaExtendida(actual, dias, hoy));
+  })
+);
+
+superadminRouter.post(
+  "/empresas/:id/prueba/reactivar",
+  requiereSuperAdmin,
+  ah<RequestConSuperAdmin>(async (req, res) => {
+    await cambiarFinPrueba(req, res, "reactivar_prueba_empresa", (_actual, hoy) => sumarDiasFecha(hoy, DIAS_PRUEBA));
+  })
+);
+
+// Fecha exacta (se mantiene por compatibilidad): no puede quedar en el pasado.
 superadminRouter.patch(
   "/empresas/:id/prueba",
   requiereSuperAdmin,
   ah<RequestConSuperAdmin>(async (req, res) => {
     const { prueba_termina_en } = req.body ?? {};
-    if (typeof prueba_termina_en !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(prueba_termina_en)) {
+    if (typeof prueba_termina_en !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(prueba_termina_en) || Number.isNaN(Date.parse(prueba_termina_en))) {
       res.status(400).json({ error: "prueba_termina_en debe ser una fecha YYYY-MM-DD" });
       return;
     }
-    const { data: empresa } = await supabase.from("empresas").select("nombre, prueba_termina_en").eq("id", req.params.id).maybeSingle();
-    if (!empresa) {
-      res.status(404).json({ error: "Empresa no encontrada" });
-      return;
-    }
-    const { error } = await supabase.from("empresas").update({ prueba_termina_en }).eq("id", req.params.id);
+    await cambiarFinPrueba(req, res, "extender_prueba_empresa", () => prueba_termina_en);
+  })
+);
+
+superadminRouter.get(
+  "/empresas/:id/prueba/historial",
+  requiereSuperAdmin,
+  ah<RequestConSuperAdmin>(async (req, res) => {
+    const { data, error } = await supabase
+      .from("super_admin_auditoria")
+      .select("id, accion, detalle, creado_en, super_admin:super_admins(nombre, correo)")
+      .eq("empresa_id", req.params.id)
+      .in("accion", [...ACCIONES_PRUEBA])
+      .order("creado_en", { ascending: false })
+      .limit(50);
     if (error) {
       res.status(500).json({ error: error.message });
       return;
     }
-    await registrarAuditoria(req.superAdminId!, "extender_prueba_empresa", {
+    res.json(data ?? []);
+  })
+);
+
+// Montos por defecto del viático (tarea 144): valor interno de la empresa
+// que también ajusta el Super-Admin. No cambia viajes ya creados.
+superadminRouter.get(
+  "/empresas/:id/viaticos",
+  requiereSuperAdmin,
+  ah<RequestConSuperAdmin>(async (req, res) => {
+    const { data } = await supabase.from("empresas").select("viatico_local_monto, viatico_interregional_monto").eq("id", req.params.id).maybeSingle();
+    if (!data) {
+      res.status(404).json({ error: "Empresa no encontrada" });
+      return;
+    }
+    res.json(data);
+  })
+);
+
+superadminRouter.patch(
+  "/empresas/:id/viaticos",
+  requiereSuperAdmin,
+  ah<RequestConSuperAdmin>(async (req, res) => {
+    const leido = leerConfigViaticos(req.body);
+    if ("error" in leido) {
+      res.status(400).json({ error: leido.error });
+      return;
+    }
+    const { data: actual } = await supabase
+      .from("empresas")
+      .select("nombre, viatico_local_monto, viatico_interregional_monto")
+      .eq("id", req.params.id)
+      .maybeSingle();
+    if (!actual) {
+      res.status(404).json({ error: "Empresa no encontrada" });
+      return;
+    }
+    const { data, error } = await supabase
+      .from("empresas")
+      .update(leido.cambios)
+      .eq("id", req.params.id)
+      .select("viatico_local_monto, viatico_interregional_monto")
+      .single();
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    await registrarAuditoria(req.superAdminId!, "cambiar_viaticos_empresa", {
       empresaId: req.params.id,
       ip: req.ip ?? null,
-      detalle: `${empresa.nombre}: ${empresa.prueba_termina_en ?? "—"} → ${prueba_termina_en}`,
+      detalle: `${actual.nombre}: local ${actual.viatico_local_monto ?? "—"} → ${data.viatico_local_monto ?? "—"}, interregional ${actual.viatico_interregional_monto ?? "—"} → ${data.viatico_interregional_monto ?? "—"}`,
     });
-    res.json({ prueba_termina_en });
+    res.json(data);
   })
 );
 
