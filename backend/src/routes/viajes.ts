@@ -89,7 +89,7 @@ viajesRouter.patch(
 viajesRouter.get(
   "/",
   ah<RequestConEmpresa>(async (req, res) => {
-    const { desde, hasta, estado, cliente_id, chofer_id } = req.query;
+    const { desde, hasta, estado, cliente_id, chofer_id, equipo_id } = req.query;
 
     let query = supabase
       .from("viajes")
@@ -103,6 +103,8 @@ viajesRouter.get(
     if (typeof estado === "string" && ESTADOS.includes(estado as EstadoViaje)) query = query.eq("estado", estado as EstadoViaje);
     if (typeof cliente_id === "string" && cliente_id) query = query.eq("cliente_id", cliente_id);
     if (typeof chofer_id === "string" && chofer_id) query = query.eq("chofer_id", chofer_id);
+    // Tarea 148: viajes de un equipo (pestaña Viajes de la ficha del vehículo).
+    if (typeof equipo_id === "string" && equipo_id) query = query.eq("equipo_id", equipo_id);
 
     const { data, error } = await query;
     if (error) {

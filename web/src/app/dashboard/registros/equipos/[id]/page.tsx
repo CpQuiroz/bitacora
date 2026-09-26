@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { ChevronLeft, ClipboardCheck, Plus, Wrench } from "lucide-react";
-import type { Equipo, OrdenServicio, PlanMantencion, Trabajo } from "@bitacora/shared";
+import type { Equipo, EstadoDocumento, Modulo, OrdenServicio, PlanMantencion, Trabajo } from "@bitacora/shared";
 import { ROLES_SUPERVISION, estadoOsDeTrabajo } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
@@ -12,6 +12,8 @@ import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Button, Card, EmptyState, Input, StatusBadge, Textarea } from "@bitacora/ui/web";
 import { RegistrosMantencion } from "./RegistrosMantencion";
 import { EventosFlota } from "./EventosFlota";
+import { ViajesDelEquipo } from "./ViajesDelEquipo";
+import { DocumentoForm } from "@/components/DocumentoForm";
 
 type TrabajoConOrden = Trabajo & { orden: Pick<OrdenServicio, "folio" | "estado_os"> | null };
 type EquipoDetalle = Equipo & {
@@ -20,7 +22,10 @@ type EquipoDetalle = Equipo & {
   historico_mantenciones: TrabajoConOrden[];
 };
 
-type Tab = "datos" | "plan" | "historico_os" | "mantencion" | "eventos";
+// Tarea 148 (aprobado por la usuaria, referencia Fleetio): Resumen ·
+// Mantención (plan + registros en una sola pestaña) · OS · Viajes ·
+// Documentos · Eventos.
+type Tab = "resumen" | "mantencion" | "os" | "viajes" | "documentos" | "eventos";
 
 // PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export default function EquipoDetallePage() {
@@ -34,7 +39,9 @@ export default function EquipoDetallePage() {
   const [aviso, setAviso] = useState<string | null>(null);
   // Error al pausar/eliminar un plan (p. ej. 403 sin el módulo Flota en un vehículo).
   const [errorAccion, setErrorAccion] = useState<string | null>(null);
-  const [tab, setTab] = useState<Tab>("datos");
+  const [tab, setTab] = useState<Tab>("resumen");
+  const [modulos, setModulos] = useState<Modulo[]>([]);
+  const [estadoDocs, setEstadoDocs] = useState<{ vencidos: number; porVencer: number } | null>(null);
 
   const [formPlanAbierto, setFormPlanAbierto] = useState(false);
   const [frecuenciaDias, setFrecuenciaDias] = useState("90");
@@ -57,6 +64,7 @@ export default function EquipoDetallePage() {
     if (resMe.ok) {
       const cuerpoMe = await resMe.json();
       const u = cuerpoMe.usuario;
+      if (Array.isArray(cuerpoMe.modulos_visibles)) setModulos(cuerpoMe.modulos_visibles);
       if (u) {
         setRol(u.rol);
         setUsuario({
@@ -77,8 +85,17 @@ export default function EquipoDetallePage() {
       setError("No se pudo cargar el equipo");
       return;
     }
-    setEquipo(await resEquipo.json());
+    const eq: EquipoDetalle = await resEquipo.json();
+    setEquipo(eq);
     if (resPlanes.ok) setPlanes(await resPlanes.json());
+    // Resumen de documentos para el encabezado (solo vehículos y con permiso).
+    if (eq.categoria === "Vehículo") {
+      const resDocs = await apiFetch(`/api/documentos?entidad_tipo=vehiculo&entidad_id=${eq.id}`);
+      if (resDocs.ok) {
+        const docs: { estado: EstadoDocumento | null }[] = await resDocs.json();
+        setEstadoDocs({ vencidos: docs.filter((d) => d.estado === "vencido").length, porVencer: docs.filter((d) => d.estado === "por_vencer").length });
+      }
+    }
   }, [params.id, router]);
 
   useEffect(() => {
@@ -88,20 +105,21 @@ export default function EquipoDetallePage() {
   const esVehiculo = equipo?.categoria === "Vehículo";
   const puedeGestionar = ROLES_SUPERVISION.includes(rol ?? "");
 
+  const veViajes = modulos.includes("viajes");
+  const veDocumentos = modulos.includes("flota");
   const tabs = useMemo<{ id: Tab; label: string }[]>(
     () => [
-      { id: "datos", label: "Datos básicos" },
-      { id: "plan", label: "Plan de mantención" },
-      { id: "historico_os", label: "Histórico de OS" },
-      ...(esVehiculo
-        ? [
-            { id: "mantencion" as Tab, label: "Mantención" },
-            { id: "eventos" as Tab, label: "Eventos" },
-          ]
-        : []),
+      { id: "resumen", label: "Resumen" },
+      { id: "mantencion", label: "Mantención" },
+      { id: "os", label: "OS" },
+      ...(esVehiculo && veViajes ? [{ id: "viajes" as Tab, label: "Viajes" }] : []),
+      ...(esVehiculo && veDocumentos ? [{ id: "documentos" as Tab, label: "Documentos" }] : []),
+      ...(esVehiculo ? [{ id: "eventos" as Tab, label: "Eventos" }] : []),
     ],
-    [esVehiculo]
+    [esVehiculo, veViajes, veDocumentos]
   );
+  // Próxima mantención: la fecha más cercana entre los planes activos.
+  const proximaMantencion = planes.filter((p) => p.activo).map((p) => p.proxima_fecha).sort()[0] ?? null;
 
   function abrirFormPlan() {
     setFrecuenciaDias("90");
@@ -178,6 +196,20 @@ export default function EquipoDetallePage() {
         <StatusBadge estado={equipo.activo ? "activo" : "inactivo"} />
       </div>
 
+      <div className="mt-ds-4 flex flex-wrap gap-ds-2 font-ds-body text-ds-caption">
+        {esVehiculo && equipo.patente ? <Dato etiqueta="Patente" valor={equipo.patente} mono /> : null}
+        {esVehiculo ? <Dato etiqueta="Chofer" valor={equipo.asignacion_vigente?.colaborador_nombre ?? "Sin asignar"} /> : null}
+        <Dato etiqueta="Próxima mantención" valor={proximaMantencion ?? "Sin plan"} mono={Boolean(proximaMantencion)} onPress={() => setTab("mantencion")} />
+        {estadoDocs ? (
+          <Dato
+            etiqueta="Documentos"
+            valor={estadoDocs.vencidos ? `${estadoDocs.vencidos} vencido${estadoDocs.vencidos > 1 ? "s" : ""}` : estadoDocs.porVencer ? `${estadoDocs.porVencer} por vencer` : "Al día"}
+            alerta={estadoDocs.vencidos > 0 ? "peligro" : estadoDocs.porVencer > 0 ? "aviso" : undefined}
+            onPress={veDocumentos ? () => setTab("documentos") : undefined}
+          />
+        ) : null}
+      </div>
+
       {aviso ? <p className="mt-ds-6 font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}
       {errorAccion ? <p className="mt-ds-6 font-ds-body text-ds-small text-ds-accent-700">{errorAccion}</p> : null}
 
@@ -197,7 +229,7 @@ export default function EquipoDetallePage() {
         ))}
       </nav>
 
-      {tab === "datos" && (
+      {tab === "resumen" && (
         <div className="mt-ds-6">
           <Card>
             <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Datos del equipo</p>
@@ -242,8 +274,8 @@ export default function EquipoDetallePage() {
         </div>
       )}
 
-      {tab === "plan" && (
-        <div className="mt-ds-6">
+      {tab === "mantencion" && (
+        <div className="mt-ds-6 flex flex-col gap-ds-6">
           <Card>
             <div className="mb-ds-4 flex items-center justify-between">
               <p className="font-ds-body text-ds-small font-semibold text-ds-text">Plan de Mantención Preventiva</p>
@@ -294,10 +326,11 @@ export default function EquipoDetallePage() {
               </div>
             )}
           </Card>
+          {esVehiculo ? <RegistrosMantencion equipo={equipo} puedeGestionar={puedeGestionar} /> : null}
         </div>
       )}
 
-      {tab === "historico_os" && (
+      {tab === "os" && (
         <div className="mt-ds-6">
           <Card>
             <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Histórico de OS</p>
@@ -328,9 +361,15 @@ export default function EquipoDetallePage() {
         </div>
       )}
 
-      {tab === "mantencion" && esVehiculo && (
+      {tab === "viajes" && esVehiculo && veViajes && (
         <div className="mt-ds-6">
-          <RegistrosMantencion equipo={equipo} puedeGestionar={puedeGestionar} />
+          <ViajesDelEquipo equipoId={equipo.id} verMontos={puedeGestionar} moneda={usuario.moneda} />
+        </div>
+      )}
+
+      {tab === "documentos" && esVehiculo && veDocumentos && (
+        <div className="mt-ds-6">
+          <DocumentoForm entidadTipo="vehiculo" entidadId={equipo.id} />
         </div>
       )}
 
@@ -340,6 +379,25 @@ export default function EquipoDetallePage() {
         </div>
       )}
     </DashboardShell>
+  );
+}
+
+// Dato del encabezado de la ficha (resumen tipo Fleetio). Con onPress lleva a su pestaña.
+function Dato({ etiqueta, valor, mono, alerta, onPress }: { etiqueta: string; valor: string; mono?: boolean; alerta?: "peligro" | "aviso"; onPress?: () => void }) {
+  const color = alerta === "peligro" ? "text-ds-accent-700" : alerta === "aviso" ? "text-ds-accent-800" : "text-ds-text";
+  const contenido = (
+    <>
+      <span className="text-ds-text/60">{etiqueta}</span>
+      <span className={`font-semibold ${color} ${mono ? "font-mono" : ""}`}>{valor}</span>
+    </>
+  );
+  const clase = "inline-flex items-center gap-ds-2 rounded-ds-pill border border-ds-divider bg-ds-surface px-ds-3 py-1";
+  return onPress ? (
+    <button type="button" onClick={onPress} className={`${clase} hover:border-ds-brand`}>
+      {contenido}
+    </button>
+  ) : (
+    <span className={clase}>{contenido}</span>
   );
 }
 

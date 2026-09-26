@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useState, type FormEvent } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Plus, Truck } from "lucide-react";
@@ -229,6 +229,19 @@ export default function ViajesPage() {
     setSeleccionados(new Set());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filtroEstado]);
+
+  // Enlace directo ?editar=<id> (tarea 148: desde la pestaña Viajes de la
+  // ficha de un equipo). Se abre una sola vez, cuando ya cargaron los viajes.
+  const deepLinkUsado = useRef(false);
+  useEffect(() => {
+    if (deepLinkUsado.current || !viajes || !usuario) return;
+    deepLinkUsado.current = true;
+    const id = new URLSearchParams(window.location.search).get("editar");
+    const v = id ? viajes.find((x) => x.id === id) : undefined;
+    if (v) abrirEdicion(v);
+    if (id) router.replace("/dashboard/viajes");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viajes, usuario]);
 
   useEffect(() => {
     cargarResumen(agrupacion);

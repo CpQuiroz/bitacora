@@ -1928,7 +1928,23 @@
       "name": "push_notificaciones_asignacion",
       "title": "Notificaciones push al teléfono cuando a alguien le asignan un viaje, cita, OS o levantamiento",
       "status": "pending",
-      "description": "Pedido de la usuaria 25-sep-2026 (backlog). La app debe avisar al teléfono, con la app cerrada, cuando a un usuario (cualquier rol, típicamente colaborador) le asignan un viaje, una cita, una OS o un levantamiento nuevo. Estado actual: no hay push; existe el feed de notificaciones en la app (tabla notificaciones, backend/src/notificar.ts, /api/notificaciones-feed, preferencias en notificaciones_preferencias) que solo se ve con la app abierta. Propuesta a validar antes de implementar: expo-notifications (nativo → build), tabla de tokens por usuario/dispositivo con RLS y empresa_id, registrar el token al iniciar sesión y borrarlo al cerrar, enviar desde el backend con el servicio de push de Expo al crear o reasignar (viajes, tareas/citas, trabajos/OS, levantamientos), respetar notificaciones_preferencias, tocar la notificación abre el detalle. Android requiere configurar FCM (credenciales las carga la usuaria). Definir con la usuaria: qué eventos (también reasignación, cambio de fecha, cancelación), texto de cada aviso, y si el Admin recibe copia. | 25-sep decisiones: también avisan reasignación, cambio de fecha y cancelación; el Admin NO recibe copia, solo el colaborador asignado (OS, levantamiento, viaje); 'cita' es concepto de Agenda Pro (cosmetología): aviso al profesional asignado a confirmar; textos: mockup mostrado a la usuaria para aprobación.",
+      "description": "Pedido de la usuaria 25-sep-2026 (backlog). La app debe avisar al teléfono, con la app cerrada, cuando a un usuario (cualquier rol, típicamente colaborador) le asignan un viaje, una cita, una OS o un levantamiento nuevo. Estado actual: no hay push; existe el feed de notificaciones en la app (tabla notificaciones, backend/src/notificar.ts, /api/notificaciones-feed, preferencias en notificaciones_preferencias) que solo se ve con la app abierta. Propuesta a validar antes de implementar: expo-notifications (nativo → build), tabla de tokens por usuario/dispositivo con RLS y empresa_id, registrar el token al iniciar sesión y borrarlo al cerrar, enviar desde el backend con el servicio de push de Expo al crear o reasignar (viajes, tareas/citas, trabajos/OS, levantamientos), respetar notificaciones_preferencias, tocar la notificación abre el detalle. Android requiere configurar FCM (credenciales las carga la usuaria). Definir con la usuaria: qué eventos (también reasignación, cambio de fecha, cancelación), texto de cada aviso, y si el Admin recibe copia. | 25-sep decisiones: también avisan reasignación, cambio de fecha y cancelación; el Admin NO recibe copia, solo el colaborador asignado (OS, levantamiento, viaje); 'cita' es concepto de Agenda Pro (cosmetología): aviso al profesional asignado a confirmar; textos: mockup mostrado a la usuaria para aprobación. | 25-sep: textos aprobados tal como la maqueta (https://claude.ai/artifact/TRbyHXqPgf8z7fjoafx5rL); la cita avisa al profesional asignado en Agenda Pro.",
+      "resolution": ""
+    },
+    {
+      "id": 148,
+      "name": "ficha_equipo_pestanas",
+      "title": "Ficha del equipo: pestañas Resumen · Mantención (plan + registros) · OS · Viajes · Documentos · Eventos, y fila clicable en Equipos",
+      "status": "in_progress",
+      "description": "Aprobado por la usuaria 25-sep-2026 (referencia Fleetio). Web y mobile. Viajes del vehículo (monto solo Admin/Supervisor). Lista de Equipos web: clic/doble clic/Enter abre la ficha; acciones en menú ⋯. Regla registrada en docs/harness/convenciones.md §Listas y tablas.",
+      "resolution": ""
+    },
+    {
+      "id": 149,
+      "name": "fila_clicable_todas_tablas",
+      "title": "Aplicar la regla 'toda fila abre su objeto' a las tablas web que no la cumplen",
+      "status": "pending",
+      "description": "Seguimiento de la tarea 148 (aprobado 25-sep-2026). Tablas sin onFilaClick: catálogo, proveedores, viajes/tarifas, ordenes/[id], viajes/rutas, configuracion/plan, viajes, configuracion/seguridad, configuracion/agenda-pro, rendiciones, rendiciones/[id], agenda/paquetes, viáticos, gastos. Usar onFilaClick + accionesEnMenu del Table de @bitacora/ui/web.",
       "resolution": ""
     }
   ]

@@ -1,7 +1,7 @@
 // Tarea 146: ficha del equipo en la app. Chofer con su vehículo asignado:
 // ve y sube documentos, pero no edita el equipo ni lo reasigna. Admin con
 // Flota: edita, sube documentos, agrega plan y reasigna. Servicios simulados.
-import { render, screen } from "@testing-library/react-native";
+import { fireEvent, render, screen } from "@testing-library/react-native";
 import { EquipoDetalleScreen } from "./EquipoDetalleScreen";
 
 let mockModulos: string[] = [];
@@ -13,6 +13,10 @@ jest.mock("@react-navigation/native", () => ({
   useFocusEffect: (efecto: () => void) => require("react").useEffect(efecto, [efecto]),
 }));
 jest.mock("expo-web-browser", () => ({ openBrowserAsync: jest.fn() }));
+jest.mock("../../services/mantencion", () => ({
+  obtenerHistorialEquipo: jest.fn(async () => ({ registros: [], error: null })),
+  obtenerMantencionInicio: jest.fn(async () => ({ datos: { vehiculo: null, registros: [] }, desdeCache: false })),
+}));
 jest.mock("../../services/equipos", () => ({
   esVehiculo: (e: { categoria?: string | null; patente?: string | null }) => e.categoria === "Vehículo" || Boolean(e.patente),
   obtenerEquipo: jest.fn(async () => ({
@@ -38,6 +42,7 @@ jest.mock("../../services/equipos", () => ({
   borrarPlan: jest.fn(),
   cambiarEstadoPlan: jest.fn(),
   urlArchivoDocumento: jest.fn(),
+  listarViajesDeEquipo: jest.fn(async () => []),
 }));
 
 async function abrir() {
@@ -54,24 +59,30 @@ describe("ficha del equipo (EquipoDetalleScreen)", () => {
     mockModulos = [];
     mockAsignadoA = "u1";
     await abrir();
+    expect(await screen.findByText("1 vencido")).toBeTruthy();
+    expect(screen.queryByText("Editar")).toBeNull();
+    expect(screen.queryByText("Cambiar chofer")).toBeNull();
+    await fireEvent.press(screen.getAllByText("Documentos")[0]!);
     expect(await screen.findByText("SOAP · N° 123")).toBeTruthy();
     expect(screen.getByText("Vencido")).toBeTruthy();
     expect(screen.getByText("Subir")).toBeTruthy();
-    expect(screen.queryByText("Editar")).toBeNull();
-    expect(screen.queryByText("Cambiar chofer")).toBeNull();
+    await fireEvent.press(screen.getByText("Mantención"));
     expect(screen.queryByText("Agregar")).toBeNull();
+    expect(screen.getByText("Registrar mantención")).toBeTruthy();
   });
 
   test("admin con Flota: edita, sube documentos, agrega plan y reasigna", async () => {
     mockModulos = ["flota", "equipos"];
     mockAsignadoA = "u9";
     await abrir();
-    expect(await screen.findByText("SOAP · N° 123")).toBeTruthy();
-    expect(screen.getByText("Editar")).toBeTruthy();
-    expect(screen.getByText("Subir")).toBeTruthy();
-    expect(screen.getByText("Agregar")).toBeTruthy();
+    expect(await screen.findByText("Editar")).toBeTruthy();
     expect(screen.getByText("Cambiar chofer")).toBeTruthy();
     expect(screen.getByText("Quitar asignación")).toBeTruthy();
+    await fireEvent.press(screen.getAllByText("Documentos")[0]!);
+    expect(await screen.findByText("SOAP · N° 123")).toBeTruthy();
+    expect(screen.getByText("Subir")).toBeTruthy();
+    await fireEvent.press(screen.getByText("Mantención"));
+    expect(screen.getByText("Agregar")).toBeTruthy();
   });
 
   test("sin Flota y con un vehículo que no es suyo: no ve documentos", async () => {
@@ -81,5 +92,6 @@ describe("ficha del equipo (EquipoDetalleScreen)", () => {
     expect(await screen.findByText("Camión 1")).toBeTruthy();
     expect(screen.queryByText("Documentos")).toBeNull();
     expect(screen.queryByText("Editar")).toBeNull();
+    expect(screen.getByText("Eventos")).toBeTruthy();
   });
 });

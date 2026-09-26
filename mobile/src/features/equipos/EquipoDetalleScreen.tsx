@@ -19,14 +19,19 @@ import {
   desasignarVehiculo,
   esVehiculo,
   listarDocumentosVehiculo,
+  listarViajesDeEquipo,
   obtenerEquipo,
   planesDeEquipo,
   urlArchivoDocumento,
   type DocumentoConTipo,
   type EquipoDetalle,
+  type ViajeDeEquipo,
 } from "../../services/equipos";
+import { obtenerHistorialEquipo, obtenerMantencionInicio, type MantencionResumen } from "../../services/mantencion";
 import { permisosEquipos } from "./permisos";
 import { fechaLegible } from "./fechas";
+
+type Tab = "resumen" | "mantencion" | "os" | "viajes" | "documentos" | "eventos";
 
 const ETIQUETA_ESTADO_DOC = { vigente: "Vigente", por_vencer: "Por vencer", vencido: "Vencido" } as const;
 const TONO_ESTADO_DOC = { vigente: "completado", por_vencer: "advertencia", vencido: "peligro" } as const;
@@ -49,6 +54,12 @@ export function EquipoDetalleScreen({ navigation, route }: NativeStackScreenProp
   const [error, setError] = useState<string | null>(null);
   const [refrescando, setRefrescando] = useState(false);
   const [ocupado, setOcupado] = useState(false);
+  // Tarea 148: pestañas (mismas que la web): Resumen · Mantención · OS ·
+  // Viajes · Documentos · Eventos.
+  const [tab, setTab] = useState<Tab>("resumen");
+  const [viajes, setViajes] = useState<ViajeDeEquipo[] | null>(null);
+  const [registros, setRegistros] = useState<MantencionResumen[]>([]);
+  const veViajes = auth.fase === "listo" && auth.modulosVisibles.includes("viajes");
 
   const cargar = useCallback(async () => {
     setError(null);
@@ -65,12 +76,19 @@ export function EquipoDetalleScreen({ navigation, route }: NativeStackScreenProp
       setErrorDocs(docs.err);
       setPlanes(pl);
       if (vehiculo && permisos.asignar) setColaboradores(await colaboradoresAsignables());
+      if (vehiculo) {
+        // Últimos registros de mantención: con Flota, los del equipo; el
+        // chofer, los de su camión asignado.
+        if (permisos.flota) setRegistros((await obtenerHistorialEquipo(e.id)).registros.slice(0, 5));
+        else if (asignadoAMi) setRegistros((await obtenerMantencionInicio(5)).datos.registros);
+        if (veViajes) setViajes(await listarViajesDeEquipo(e.id).catch(() => []));
+      }
     } catch (x) {
       setError(x instanceof Error ? x.message : "No se pudo cargar");
     }
     // permisos se recalcula en cada render; basta con sus valores.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [equipoId, miId, permisos.flota, permisos.asignar]);
+  }, [equipoId, miId, permisos.flota, permisos.asignar, veViajes]);
 
   useFocusEffect(
     useCallback(() => {
@@ -180,10 +198,26 @@ export function EquipoDetalleScreen({ navigation, route }: NativeStackScreenProp
   ];
 
   const historial = equipo.historico_mantenciones ?? [];
+  const pestanas: { valor: Tab; etiqueta: string }[] = [
+    { valor: "resumen", etiqueta: "Resumen" },
+    { valor: "mantencion", etiqueta: "Mantención" },
+    { valor: "os", etiqueta: "OS" },
+    ...(vehiculo && veViajes ? [{ valor: "viajes" as Tab, etiqueta: "Viajes" }] : []),
+    ...(vehiculo && puedeDocs ? [{ valor: "documentos" as Tab, etiqueta: "Documentos" }] : []),
+    ...(vehiculo ? [{ valor: "eventos" as Tab, etiqueta: "Eventos" }] : []),
+  ];
+  const proximaMantencion = planes.filter((p) => p.activo).map((p) => p.proxima_fecha).sort()[0] ?? null;
+  const vencidos = documentos.filter((d) => d.estado === "vencido").length;
+  const porVencer = documentos.filter((d) => d.estado === "por_vencer").length;
 
   return (
     <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
-      <ScreenHeader antetitulo={vehiculo ? (equipo.patente ?? "Vehículo") : (equipo.categoria ?? "Equipo")} titulo={equipo.nombre} accion={volver} />
+      <ScreenHeader
+        antetitulo={vehiculo ? (equipo.patente ?? "Vehículo") : (equipo.categoria ?? "Equipo")}
+        titulo={equipo.nombre}
+        accion={volver}
+        filtros={{ opciones: pestanas, valor: tab, onCambio: (v) => setTab(v as Tab) }}
+      />
       <ScrollView
         contentContainerStyle={{ padding: tokens.space["4"], gap: tokens.space["3"], paddingBottom: tokens.space["8"] }}
         refreshControl={
@@ -197,149 +231,235 @@ export function EquipoDetalleScreen({ navigation, route }: NativeStackScreenProp
           />
         }
       >
-        <Card>
-          <Encabezado titulo="Datos">
-            {puedeEditar ? <Accion texto="Editar" color={marca.base} onPress={() => navigation.navigate("EquipoForm", { equipoId: equipo.id })} /> : null}
-          </Encabezado>
-          {datos
-            .filter(([, v]) => v)
-            .map(([k, v]) => (
-              <Fila key={k} etiqueta={k} valor={v!} />
-            ))}
-        </Card>
-
-        {vehiculo ? (
+        {tab === "resumen" ? (
+          <>
           <Card>
-            <Encabezado titulo="Asignado a" />
-            <Texto tamano={tokens.size.body} color={tokens.color.text}>
-              {equipo.asignacion_vigente?.colaborador_nombre ?? "Sin asignar"}
-            </Texto>
-            {permisos.asignar ? (
-              <View style={{ gap: tokens.space["2"], marginTop: tokens.space["2"] }}>
-                <PickerBuscable
-                  etiqueta="Cambiar chofer"
-                  placeholder="Elegir chofer"
-                  valor={equipo.asignacion_vigente?.colaborador_id ?? ""}
-                  opciones={colaboradores.map((c) => ({ id: c.id, label: c.nombre }))}
-                  onElegir={(id) => {
-                    if (id && id !== equipo.asignacion_vigente?.colaborador_id) void conOcupado(() => asignarVehiculo(equipo.id, id));
-                  }}
-                />
-                {equipo.asignacion_vigente ? (
-                  <Button variante="ghost" deshabilitado={ocupado} onPress={() => void conOcupado(() => desasignarVehiculo(equipo.id))}>
-                    Quitar asignación
-                  </Button>
-                ) : null}
-              </View>
+            <Encabezado titulo="Resumen" />
+            <Fila etiqueta="Próxima mantención" valor={proximaMantencion ? fechaLegible(proximaMantencion) : "Sin plan"} />
+            {vehiculo ? <Fila etiqueta="Chofer" valor={equipo.asignacion_vigente?.colaborador_nombre ?? "Sin asignar"} /> : null}
+            {vehiculo && puedeDocs ? (
+              <Fila etiqueta="Documentos" valor={vencidos ? `${vencidos} vencido${vencidos > 1 ? "s" : ""}` : porVencer ? `${porVencer} por vencer` : "Al día"} />
             ) : null}
           </Card>
+          <Card>
+            <Encabezado titulo="Datos">
+              {puedeEditar ? <Accion texto="Editar" color={marca.base} onPress={() => navigation.navigate("EquipoForm", { equipoId: equipo.id })} /> : null}
+            </Encabezado>
+            {datos
+              .filter(([, v]) => v)
+              .map(([k, v]) => (
+                <Fila key={k} etiqueta={k} valor={v!} />
+              ))}
+          </Card>
+
+          {vehiculo ? (
+            <Card>
+              <Encabezado titulo="Asignado a" />
+              <Texto tamano={tokens.size.body} color={tokens.color.text}>
+                {equipo.asignacion_vigente?.colaborador_nombre ?? "Sin asignar"}
+              </Texto>
+              {permisos.asignar ? (
+                <View style={{ gap: tokens.space["2"], marginTop: tokens.space["2"] }}>
+                  <PickerBuscable
+                    etiqueta="Cambiar chofer"
+                    placeholder="Elegir chofer"
+                    valor={equipo.asignacion_vigente?.colaborador_id ?? ""}
+                    opciones={colaboradores.map((c) => ({ id: c.id, label: c.nombre }))}
+                    onElegir={(id) => {
+                      if (id && id !== equipo.asignacion_vigente?.colaborador_id) void conOcupado(() => asignarVehiculo(equipo.id, id));
+                    }}
+                  />
+                  {equipo.asignacion_vigente ? (
+                    <Button variante="ghost" deshabilitado={ocupado} onPress={() => void conOcupado(() => desasignarVehiculo(equipo.id))}>
+                      Quitar asignación
+                    </Button>
+                  ) : null}
+                </View>
+              ) : null}
+            </Card>
+          ) : null}
+          </>
         ) : null}
 
-        {vehiculo && puedeDocs ? (
+        {tab === "mantencion" ? (
+          <>
           <Card>
-            <Encabezado titulo="Documentos">
-              <Accion texto="Subir" color={marca.base} onPress={() => navigation.navigate("DocumentoForm", { equipoId: equipo.id })} />
+            <Encabezado titulo="Plan de mantención preventiva">
+              {puedeEditar ? <Accion texto="Agregar" color={marca.base} onPress={() => navigation.navigate("PlanMantencionForm", { equipoId: equipo.id })} /> : null}
             </Encabezado>
-            {errorDocs ? (
-              <Texto tamano={tokens.size.caption} color={tokens.color.accentRamp["700"]}>
-                {errorDocs}
-              </Texto>
-            ) : documentos.length === 0 ? (
+            {planes.length === 0 ? (
               <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`}>
-                Este vehículo todavía no tiene documentos.
+                Sin plan de mantención.
               </Texto>
             ) : (
-              documentos.map((d) => (
-                <Pressable key={d.id} onPress={() => opcionesDocumento(d)} style={filaTocable}>
-                  <FileText size={18} strokeWidth={2.5} color={`${tokens.color.text}99`} />
+              planes.map((p) => (
+                <Pressable key={p.id} disabled={!puedeEditar || ocupado} onPress={() => opcionesPlan(p)} style={filaTocable}>
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <Texto tamano={tokens.size.small} color={tokens.color.text}>
+                      Cada {p.frecuencia_dias} días · próxima {fechaLegible(p.proxima_fecha)}
+                    </Texto>
+                    {p.notas ? (
+                      <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`} numberOfLines={2}>
+                        {p.notas}
+                      </Texto>
+                    ) : null}
+                  </View>
+                  <StatusBadge estado={p.activo ? "activo" : "pausado"} etiqueta={p.activo ? "Activo" : "Pausado"} tonoForzado={p.activo ? "completado" : "cerrado"} />
+                </Pressable>
+              ))
+            )}
+          </Card>
+
+          {vehiculo ? (
+            <Card>
+              <Encabezado titulo="Registros de mantención" />
+              {registros.length === 0 ? (
+                <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`}>
+                  Todavía no hay mantenciones registradas.
+                </Texto>
+              ) : (
+                registros.map((r) => (
+                  <Pressable key={r.id} onPress={() => navigation.navigate("MantencionDetalle", { equipoId: equipo.id, registroId: r.id })} style={filaTocable}>
+                    <View style={{ flex: 1, gap: 2 }}>
+                      <Texto tamano={tokens.size.small} color={tokens.color.text} numberOfLines={1}>
+                        {r.tipo === "programa" ? "Programa (service)" : "Checklist diario"}
+                        {r.realizado_por_nombre ? ` · ${r.realizado_por_nombre}` : ""}
+                      </Texto>
+                      <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`}>
+                        {fechaLegible(r.fecha)}
+                      </Texto>
+                    </View>
+                    {r.con_novedades ? (
+                      <StatusBadge estado="con_novedades" etiqueta="Novedades" tonoForzado="advertencia" />
+                    ) : (
+                      <StatusBadge estado="ok" etiqueta="OK" tonoForzado="completado" />
+                    )}
+                  </Pressable>
+                ))
+              )}
+              <View style={{ gap: tokens.space["2"], marginTop: tokens.space["3"] }}>
+                <Button variante="secundario" bloque iconoIzq={<Plus size={16} strokeWidth={2.5} color={tokens.color.text} />} onPress={registrarMantencion}>
+                  Registrar mantención
+                </Button>
+                <Button variante="secundario" bloque onPress={() => navigation.navigate("MantencionHistorial", { equipoId: equipo.id, patente: equipo.patente ?? null })}>
+                  Ver todo el historial
+                </Button>
+              </View>
+            </Card>
+          ) : null}
+          </>
+        ) : null}
+
+        {tab === "os" ? (
+          <>
+          <Card>
+            <Encabezado titulo="Historial de OS" />
+            {historial.length === 0 ? (
+              <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`}>
+                Sin órdenes de servicio asociadas a este equipo.
+              </Texto>
+            ) : (
+              historial.slice(0, 15).map((t) => (
+                <View key={t.id} style={filaTocable}>
                   <View style={{ flex: 1, gap: 2 }}>
                     <Texto tamano={tokens.size.small} color={tokens.color.text} numberOfLines={1}>
-                      {d.tipo?.nombre ?? "Documento"}
-                      {d.numero ? ` · N° ${d.numero}` : ""}
+                      {t.orden?.folio != null ? `OS N° ${t.orden.folio}` : t.descripcion || "Sin folio"}
                     </Texto>
                     <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`}>
-                      {d.fecha_vencimiento ? `Vence ${fechaLegible(d.fecha_vencimiento)}` : "Sin vencimiento"}
-                      {d.archivo_key ? " · con archivo" : " · sin archivo"}
+                      {fechaLegible(t.fecha)}
                     </Texto>
                   </View>
-                  {d.estado ? <StatusBadge estado={d.estado} etiqueta={ETIQUETA_ESTADO_DOC[d.estado]} tonoForzado={TONO_ESTADO_DOC[d.estado]} /> : null}
+                  <StatusBadge estado={t.orden?.estado_os ?? t.estado} />
+                </View>
+              ))
+            )}
+            {historial.length > 15 ? (
+              <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`} style={{ marginTop: tokens.space["2"] }}>
+                y {historial.length - 15} más — el historial completo está en la web.
+              </Texto>
+            ) : null}
+          </Card>
+          </>
+        ) : null}
+
+        {tab === "viajes" && vehiculo && veViajes ? (
+          <Card>
+            <Encabezado titulo="Viajes de este vehículo" />
+            {viajes === null ? (
+              <LoadingState />
+            ) : viajes.length === 0 ? (
+              <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`}>
+                Este vehículo todavía no tiene viajes.
+              </Texto>
+            ) : (
+              viajes.slice(0, 30).map((v) => (
+                <Pressable key={v.id} onPress={() => navigation.navigate("Viajes", { screen: "ViajeDetalle", params: { viajeId: v.id } })} style={filaTocable}>
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <Texto tamano={tokens.size.small} color={tokens.color.text} numberOfLines={1}>
+                      {v.origen} → {v.destino}
+                    </Texto>
+                    <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`} numberOfLines={1}>
+                      {fechaLegible(v.fecha)}
+                      {v.numero_guia ? ` · Guía ${v.numero_guia}` : ""}
+                      {v.chofer ? ` · ${v.chofer.nombre}` : ""}
+                    </Texto>
+                  </View>
+                  <StatusBadge estado={v.estado} />
                 </Pressable>
               ))
             )}
           </Card>
         ) : null}
 
-        <Card>
-          <Encabezado titulo="Plan de mantención preventiva">
-            {puedeEditar ? <Accion texto="Agregar" color={marca.base} onPress={() => navigation.navigate("PlanMantencionForm", { equipoId: equipo.id })} /> : null}
-          </Encabezado>
-          {planes.length === 0 ? (
-            <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`}>
-              Sin plan de mantención.
-            </Texto>
-          ) : (
-            planes.map((p) => (
-              <Pressable key={p.id} disabled={!puedeEditar || ocupado} onPress={() => opcionesPlan(p)} style={filaTocable}>
-                <View style={{ flex: 1, gap: 2 }}>
-                  <Texto tamano={tokens.size.small} color={tokens.color.text}>
-                    Cada {p.frecuencia_dias} días · próxima {fechaLegible(p.proxima_fecha)}
-                  </Texto>
-                  {p.notas ? (
-                    <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`} numberOfLines={2}>
-                      {p.notas}
-                    </Texto>
-                  ) : null}
-                </View>
-                <StatusBadge estado={p.activo ? "activo" : "pausado"} etiqueta={p.activo ? "Activo" : "Pausado"} tonoForzado={p.activo ? "completado" : "cerrado"} />
-              </Pressable>
-            ))
-          )}
-        </Card>
-
-        {vehiculo ? (
-          <Card>
-            <Encabezado titulo="Mantención y eventos" />
-            <View style={{ gap: tokens.space["2"] }}>
-              <Button variante="secundario" bloque iconoIzq={<Plus size={16} strokeWidth={2.5} color={tokens.color.text} />} onPress={registrarMantencion}>
-                Registrar mantención
-              </Button>
-              <Button variante="secundario" bloque onPress={() => navigation.navigate("MantencionHistorial", { equipoId: equipo.id, patente: equipo.patente ?? null })}>
-                Historial de mantenciones
-              </Button>
-              <Button variante="secundario" bloque onPress={() => navigation.navigate("EventosFlota", { equipoId: equipo.id, patente: equipo.patente ?? null })}>
-                Eventos de flota
-              </Button>
-            </View>
-          </Card>
+        {tab === "documentos" ? (
+          <>
+          {vehiculo && puedeDocs ? (
+            <Card>
+              <Encabezado titulo="Documentos">
+                <Accion texto="Subir" color={marca.base} onPress={() => navigation.navigate("DocumentoForm", { equipoId: equipo.id })} />
+              </Encabezado>
+              {errorDocs ? (
+                <Texto tamano={tokens.size.caption} color={tokens.color.accentRamp["700"]}>
+                  {errorDocs}
+                </Texto>
+              ) : documentos.length === 0 ? (
+                <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`}>
+                  Este vehículo todavía no tiene documentos.
+                </Texto>
+              ) : (
+                documentos.map((d) => (
+                  <Pressable key={d.id} onPress={() => opcionesDocumento(d)} style={filaTocable}>
+                    <FileText size={18} strokeWidth={2.5} color={`${tokens.color.text}99`} />
+                    <View style={{ flex: 1, gap: 2 }}>
+                      <Texto tamano={tokens.size.small} color={tokens.color.text} numberOfLines={1}>
+                        {d.tipo?.nombre ?? "Documento"}
+                        {d.numero ? ` · N° ${d.numero}` : ""}
+                      </Texto>
+                      <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`}>
+                        {d.fecha_vencimiento ? `Vence ${fechaLegible(d.fecha_vencimiento)}` : "Sin vencimiento"}
+                        {d.archivo_key ? " · con archivo" : " · sin archivo"}
+                      </Texto>
+                    </View>
+                    {d.estado ? <StatusBadge estado={d.estado} etiqueta={ETIQUETA_ESTADO_DOC[d.estado]} tonoForzado={TONO_ESTADO_DOC[d.estado]} /> : null}
+                  </Pressable>
+                ))
+              )}
+            </Card>
+          ) : null}
+          </>
         ) : null}
 
-        <Card>
-          <Encabezado titulo="Historial de OS" />
-          {historial.length === 0 ? (
-            <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`}>
-              Sin órdenes de servicio asociadas a este equipo.
+        {tab === "eventos" && vehiculo ? (
+          <Card>
+            <Encabezado titulo="Eventos de flota" />
+            <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`} style={{ marginBottom: tokens.space["3"] }}>
+              Multas, choques, panas y otros eventos del vehículo, semana a semana.
             </Texto>
-          ) : (
-            historial.slice(0, 15).map((t) => (
-              <View key={t.id} style={filaTocable}>
-                <View style={{ flex: 1, gap: 2 }}>
-                  <Texto tamano={tokens.size.small} color={tokens.color.text} numberOfLines={1}>
-                    {t.orden?.folio != null ? `OS N° ${t.orden.folio}` : t.descripcion || "Sin folio"}
-                  </Texto>
-                  <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`}>
-                    {fechaLegible(t.fecha)}
-                  </Texto>
-                </View>
-                <StatusBadge estado={t.orden?.estado_os ?? t.estado} />
-              </View>
-            ))
-          )}
-          {historial.length > 15 ? (
-            <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`} style={{ marginTop: tokens.space["2"] }}>
-              y {historial.length - 15} más — el historial completo está en la web.
-            </Texto>
-          ) : null}
-        </Card>
+            <Button variante="secundario" bloque onPress={() => navigation.navigate("EventosFlota", { equipoId: equipo.id, patente: equipo.patente ?? null })}>
+              Abrir eventos de flota
+            </Button>
+          </Card>
+        ) : null}
       </ScrollView>
     </View>
   );

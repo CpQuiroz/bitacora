@@ -423,32 +423,17 @@ export default function EquiposPage() {
             { encabezado: "Patente", celda: (e) => e.patente ?? "—" },
             { encabezado: "Asignado a", celda: (e) => (e.categoria === "Vehículo" ? e.asignacion_vigente?.colaborador_nombre ?? "Sin asignar" : "—") },
             { encabezado: "Estado", celda: (e) => <StatusBadge estado={e.activo ? "activo" : "inactivo"} /> },
-            {
-              encabezado: "Acciones",
-              celda: (e) => (
-                <div className="flex flex-wrap gap-ds-2">
-                  <Button variante="secundario" onPress={() => router.push(`/dashboard/registros/equipos/${e.id}`)}>
-                    Ver ficha
-                  </Button>
-                  <Button variante="secundario" onPress={() => abrirEdicion(e)}>
-                    Editar
-                  </Button>
-                  {e.categoria === "Vehículo" && (
-                    <>
-                      <Button variante="secundario" onPress={() => abrirAsignacion(e)}>
-                        Asignación
-                      </Button>
-                      <Button variante="secundario" onPress={() => setEquipoDocumentos(e)}>
-                        Documentos
-                      </Button>
-                    </>
-                  )}
-                  <Button variante="ghost" onPress={() => onAlternarActivo(e)}>
-                    {e.activo ? "Desactivar" : "Activar"}
-                  </Button>
-                </div>
-              ),
-            },
+          ]}
+          // Tarea 148: clic (o doble clic, o Enter) en la fila abre la ficha;
+          // el resto de las acciones van en el menú "⋯".
+          onFilaClick={(e) => router.push(`/dashboard/registros/equipos/${e.id}`)}
+          accionesEnMenu
+          acciones={[
+            { etiqueta: "Ver ficha", onPress: (e) => router.push(`/dashboard/registros/equipos/${e.id}`) },
+            { etiqueta: "Editar", onPress: (e) => abrirEdicion(e) },
+            { etiqueta: "Asignación", onPress: (e) => abrirAsignacion(e), oculta: (e) => e.categoria !== "Vehículo" },
+            { etiqueta: "Documentos", onPress: (e) => setEquipoDocumentos(e), oculta: (e) => e.categoria !== "Vehículo" },
+            { etiqueta: (e) => (e.activo ? "Desactivar" : "Activar"), onPress: (e) => onAlternarActivo(e), tono: "muted" },
           ]}
         />
       )}

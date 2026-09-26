@@ -89,6 +89,18 @@ export async function equiposDocumentos(ctx: Ctx): Promise<void> {
   const borrarPlan = await api(admin, "DELETE", `/api/planes-mantencion/${plan.j?.id}`);
   check("146-17 el Admin elimina el plan", borrarPlan.s === 204, `${borrarPlan.s}`);
 
+  // Tarea 148: pestaña Viajes de la ficha → /api/viajes?equipo_id=
+  await supabase.from("viajes").insert([
+    { empresa_id: empresaId, fecha: hoy, numero_guia: "E2E-148-A", cliente: "Cliente E2E", origen: "Santiago", destino: "Rancagua", equipo_id: propio },
+    { empresa_id: empresaId, fecha: hoy, numero_guia: "E2E-148-B", cliente: "Cliente E2E", origen: "Santiago", destino: "Talca", equipo_id: ajeno },
+  ]);
+  const viajesPropio = await api(admin, "GET", `/api/viajes?equipo_id=${propio}`);
+  check(
+    "148-1 los viajes se filtran por equipo",
+    viajesPropio.s === 200 && viajesPropio.j?.length === 1 && viajesPropio.j[0].numero_guia === "E2E-148-A",
+    JSON.stringify((viajesPropio.j ?? []).map((v: { numero_guia: string }) => v.numero_guia))
+  );
+
   const editarChofer = await api(chofer, "PATCH", `/api/equipos/${propio}`, { nombre: "Hackeado" });
   check("146-18 el chofer no edita los datos del vehículo", editarChofer.s === 403, `${editarChofer.s}`);
   const editarAdmin = await api(admin, "PATCH", `/api/equipos/${propio}`, { marca: "Volvo", anio: 2021 });

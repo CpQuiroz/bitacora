@@ -178,3 +178,22 @@ export async function desasignarVehiculo(equipoId: string): Promise<{ ok: true }
   const res = await apiJson<unknown>(`/api/equipos/${equipoId}/desasignar`, { method: "POST" });
   return res.ok ? { ok: true } : { ok: false, error: res.error };
 }
+
+// ── Viajes del vehículo (tarea 148) ──
+export type ViajeDeEquipo = {
+  id: string;
+  fecha: string;
+  numero_guia: string | null;
+  origen: string;
+  destino: string;
+  estado: string;
+  total: number | null;
+  chofer: { id: string; nombre: string } | null;
+  cliente_info: { id: string; nombre: string } | null;
+};
+
+export async function listarViajesDeEquipo(equipoId: string): Promise<ViajeDeEquipo[]> {
+  const res = await apiJson<ViajeDeEquipo[]>(`/api/viajes?equipo_id=${encodeURIComponent(equipoId)}`);
+  if (!res.ok) throw new Error(res.error);
+  return res.data;
+}

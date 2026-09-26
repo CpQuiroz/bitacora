@@ -84,6 +84,18 @@ ejecuta nada.
   en otra máquina/usuario no se instala encima del existente.
 - Fotos y archivos: `multipart/form-data`, nunca base64 en JSON.
 
+## Listas y tablas (UI)
+
+Decisión de la usuaria (25-sep-2026, tarea 148): **todo objeto que se lista
+tiene acción al tocarlo**.
+- **Web:** en `Table` (`@bitacora/ui/web`) pasar `onFilaClick`: clic, doble
+  clic y Enter sobre la fila abren el objeto (su ficha o su edición). Las
+  demás acciones van en el menú "⋯" (`accionesEnMenu` + `acciones`), no
+  como botones sueltos en la fila. Controles dentro de la fila deben frenar
+  la propagación.
+- **Mobile:** tocar la fila abre el detalle (ListRow `onPress` / `Pressable`).
+- Las tablas que aún no cumplen están en la tarea 149.
+
 ## Tests
 
 - Runner: `node:test` vía `tsx --test` (como `packages/shared`).
