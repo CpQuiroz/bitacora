@@ -39,11 +39,14 @@ export function TipoPackModal({
 
   async function guardar() {
     const nombreLimpio = nombre.trim();
+    // alerta-nativa: dentro de un Modal (el toast quedaría tapado)
     if (!nombreLimpio) return Alert.alert("Falta el nombre", "Ponle un nombre al pack.");
     const cant = Number(sesiones.replace(/\D/g, ""));
+    // alerta-nativa: dentro de un Modal (el toast quedaría tapado)
     if (!Number.isInteger(cant) || cant <= 0) return Alert.alert("Sesiones inválidas", "Debe ser un número mayor a 0.");
     const precioNum = precio.trim() ? Number(precio.replace(/\D/g, "")) : null;
     const vig = vigenciaDias.trim() ? Number(vigenciaDias.replace(/\D/g, "")) : null;
+    // alerta-nativa: dentro de un Modal (el toast quedaría tapado)
     if (vig !== null && (!Number.isInteger(vig) || vig <= 0)) return Alert.alert("Vigencia inválida", "Días mayor a 0, o vacío para no vencer.");
 
     const cuerpo = {
@@ -57,6 +60,7 @@ export function TipoPackModal({
     setGuardando(true);
     const r = tipoPack ? await editarTipoPack(tipoPack.id, { ...cuerpo, activo }) : await crearTipoPack(cuerpo);
     setGuardando(false);
+    // alerta-nativa: dentro de un Modal (el toast quedaría tapado)
     if (!r.ok) return Alert.alert("No se pudo guardar", r.error);
     onGuardado(r.tipoPack);
   }

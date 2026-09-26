@@ -18,13 +18,14 @@ import type {
 import { puedeVerModulo, formatearFolio, estadoAgendaDeLevantamiento, estadoAgendaDeOS, estadoAgendaDeTarea, estadoAgendaDeViaje, ETIQUETA_ESTADO_AGENDA, ETIQUETA_TIPO_AGENDA, TONO_ESTADO_AGENDA, type EstadoAgendaUnificado, type TipoEventoAgenda } from "@bitacora/shared";
 import { Calendar, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, ClipboardCheck, Info, Plus, Search, Truck, Wrench } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, exigirOk } from "@/lib/api";
+import { reponer } from "@/lib/reponer";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Modal } from "@/components/Modal";
 import { ComboboxCliente } from "@/components/ComboboxCliente";
 import { ComboboxResponsable } from "@/components/ComboboxResponsable";
 import { EstadoCitaRiel } from "@/components/EstadoCitaRiel";
-import { Button, Card, DatePicker, Input, Select, StatusBadge, Textarea, type TonoEstado } from "@bitacora/ui/web";
+import { Button, Card, DatePicker, Input, Select, StatusBadge, Textarea, useConfirmar, useDeshacer, type TonoEstado } from "@bitacora/ui/web";
 
 type OrdenListado = Trabajo & {
   cliente_info: { nombre: string } | null;
@@ -197,6 +198,8 @@ function AgendaContenido() {
   const [fechaActual, setFechaActual] = useState(() => new Date());
   const [ordenes, setOrdenes] = useState<OrdenListado[] | null>(null);
   const [tareas, setTareas] = useState<TareaListado[] | null>(null);
+  const confirmar = useConfirmar();
+  const conDeshacer = useDeshacer();
   const [levantamientos, setLevantamientos] = useState<LevantamientoListado[]>([]);
   const [viajesAgenda, setViajesAgenda] = useState<ViajeListado[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -741,9 +744,13 @@ function AgendaContenido() {
       const momentoSesion = new Date(`${fechaTarea}T${horaSesion}:00`);
       const diffHoras = (momentoSesion.getTime() - Date.now()) / (1000 * 60 * 60);
       if (diffHoras < ventanaCancelacionHoras) {
-        const confirmado = confirm(
-          `Esta cancelación es con menos de ${ventanaCancelacionHoras} horas de anticipación y se descontará del paquete de todas formas. ¿Confirmas?`
-        );
+        const confirmado = await confirmar({
+          titulo: "¿Cancelar la cita igual?",
+          mensaje: `Esta cancelación es con menos de ${ventanaCancelacionHoras} horas de anticipación y se descontará del paquete de todas formas.`,
+          accion: "Cancelar cita",
+          cancelar: "Volver",
+          destructivo: true,
+        });
         if (!confirmado) return;
       }
     }
@@ -777,14 +784,18 @@ function AgendaContenido() {
     cargar();
   }
 
-  async function onEliminarTarea() {
+  function onEliminarTarea() {
     if (!tareaEditandoId) return;
-    if (!confirm("¿Eliminar esta tarea?")) return;
-    const res = await apiFetch(`/api/tareas/${tareaEditandoId}`, { method: "DELETE" });
-    if (res.ok) {
-      setFormTareaAbierto(false);
-      cargar();
-    }
+    const id = tareaEditandoId;
+    const tarea = tareas?.find((t) => t.id === id);
+    const indice = tareas?.findIndex((t) => t.id === id) ?? 0;
+    setFormTareaAbierto(false);
+    conDeshacer({
+      mensaje: "Tarea eliminada",
+      ocultar: () => setTareas((l) => l?.filter((t) => t.id !== id) ?? l),
+      restaurar: () => setTareas((l) => (l && tarea ? reponer(l, tarea, indice) : l)),
+      ejecutar: async () => exigirOk(await apiFetch(`/api/tareas/${id}`, { method: "DELETE" }), "No se pudo eliminar la tarea"),
+    });
   }
 
   if (!usuario) return null;

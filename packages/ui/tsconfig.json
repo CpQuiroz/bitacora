@@ -12,5 +12,5 @@
     "forceConsistentCasingInFileNames": true
   },
   "//": "Solo el lado web + tipos compartidos. src/native lo typechea el tsc de mobile (tiene los tipos de react-native en scope).",
-  "include": ["src/tipos.ts", "src/web"]
+  "include": ["src/tipos.ts", "src/compartido", "src/web"]
 }

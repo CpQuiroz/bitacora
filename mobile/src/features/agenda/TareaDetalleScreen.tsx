@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Alert, Linking, Platform, ScrollView, View } from "react-native";
+import { Linking, Platform, ScrollView, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { ArrowLeft, MapPin, MessageCircle, Navigation, Pencil, Phone } from "lucide-react-native";
 import type { EstadoTarea } from "@bitacora/shared";
 import { ETIQUETA_ESTADO_TAREA, formatearFolio } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
-import { Button, Card, ErrorState, LoadingState, ScreenHeader, StatusBadge, Texto } from "@bitacora/ui/native";
+import { Button, Card, ErrorState, LoadingState, ScreenHeader, StatusBadge, Texto, useConfirmar, useToast } from "@bitacora/ui/native";
 import { OfflineBanner } from "../../components/OfflineBanner";
 import { useRed } from "../../services/sync/NetworkProvider";
 import { useAuth } from "../auth/AuthContext";
@@ -38,6 +38,8 @@ export function TareaDetalleScreen({ route, navigation }: NativeStackScreenProps
   const { tareaId } = route.params;
   const { pendientes, enLinea } = useRed();
   const auth = useAuth();
+  const toast = useToast();
+  const confirmar = useConfirmar();
   const esGestion = auth.fase === "listo" && auth.usuario.rol !== "colaborador";
   const accionesAqui = useMemo(() => pendientes.filter((a) => a.recurso === `tarea:${tareaId}`), [pendientes, tareaId]);
 
@@ -105,68 +107,64 @@ export function TareaDetalleScreen({ route, navigation }: NativeStackScreenProps
     await encolarEstadoTarea(tareaId, estadoNuevo);
     setEstadoLocal(estadoNuevo);
     setEnviando(false);
-    Alert.alert(
-      estadoNuevo === "completada" ? "Cita completada" : "Cita confirmada",
-      enLinea ? "Listo." : "Se enviará a la oficina cuando vuelvas a tener señal."
-    );
+    const titulo = estadoNuevo === "completada" ? "Cita completada" : "Cita confirmada";
+    if (enLinea) toast(titulo, { tono: "exito" });
+    else toast(`${titulo}. Se enviará a la oficina cuando vuelvas a tener señal.`, { tono: "info" });
   }
 
-  function eliminar() {
-    Alert.alert("Eliminar la cita", "Se borra de la agenda para siempre. ¿Seguro?", [
-      { text: "No", style: "cancel" },
-      {
-        text: "Sí, eliminar",
-        style: "destructive",
-        onPress: async () => {
-          if (!enLinea) {
-            Alert.alert("Sin conexión", "Necesitas conexión para eliminar una cita.");
-            return;
-          }
-          setEliminando(true);
-          const r = await eliminarCita(tareaId);
-          setEliminando(false);
-          if (!r.ok) {
-            Alert.alert("No se pudo eliminar", r.error ?? "Intenta de nuevo.");
-            return;
-          }
-          navigation.goBack();
-        },
-      },
-    ]);
+  async function eliminar() {
+    const ok = await confirmar({
+      titulo: "¿Eliminar la cita?",
+      mensaje: "Se borra de la agenda para siempre.",
+      accion: "Sí, eliminar",
+      cancelar: "No",
+      destructivo: true,
+    });
+    if (!ok) return;
+    if (!enLinea) {
+      toast("Sin conexión: necesitas conexión para eliminar una cita.", { tono: "error" });
+      return;
+    }
+    setEliminando(true);
+    const r = await eliminarCita(tareaId);
+    setEliminando(false);
+    if (!r.ok) {
+      toast(`No se pudo eliminar: ${r.error ?? "intenta de nuevo."}`, { tono: "error" });
+      return;
+    }
+    navigation.goBack();
   }
 
-  function cancelar() {
-    Alert.alert("Cancelar la reserva", "La cita no se va a realizar. ¿Confirmas?", [
-      { text: "No", style: "cancel" },
-      {
-        text: "Sí, cancelar",
-        style: "destructive",
-        onPress: async () => {
-          setEnviando(true);
-          // El backend decide "cancelada" o "cancelada_anticipada" según
-          // la ventana de aviso — ambas se ven como "Cancelado" acá.
-          await encolarCancelarTarea(tareaId);
-          setEstadoLocal("cancelada");
-          setEnviando(false);
-        },
-      },
-    ]);
+  async function cancelar() {
+    const ok = await confirmar({
+      titulo: "¿Cancelar la reserva?",
+      mensaje: "La cita no se va a realizar.",
+      accion: "Sí, cancelar",
+      cancelar: "No",
+      destructivo: true,
+    });
+    if (!ok) return;
+    setEnviando(true);
+    // El backend decide "cancelada" o "cancelada_anticipada" según
+    // la ventana de aviso — ambas se ven como "Cancelado" acá.
+    await encolarCancelarTarea(tareaId);
+    setEstadoLocal("cancelada");
+    setEnviando(false);
   }
 
-  function noAsistio() {
-    Alert.alert("Marcar que no asistió", "Se descuenta 1 sesión del pack si esta cita tiene uno asociado. ¿Confirmas?", [
-      { text: "No", style: "cancel" },
-      {
-        text: "Sí, no asistió",
-        style: "destructive",
-        onPress: async () => {
-          setEnviando(true);
-          await encolarEstadoTarea(tareaId, "no_asistio");
-          setEstadoLocal("no_asistio");
-          setEnviando(false);
-        },
-      },
-    ]);
+  async function noAsistio() {
+    const ok = await confirmar({
+      titulo: "¿Marcar que no asistió?",
+      mensaje: "Se descuenta 1 sesión del pack si esta cita tiene uno asociado.",
+      accion: "Sí, no asistió",
+      cancelar: "No",
+      destructivo: true,
+    });
+    if (!ok) return;
+    setEnviando(true);
+    await encolarEstadoTarea(tareaId, "no_asistio");
+    setEstadoLocal("no_asistio");
+    setEnviando(false);
   }
 
   // Tema por rubro: cosmetología tiene su propia pantalla de detalle

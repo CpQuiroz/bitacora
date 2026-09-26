@@ -11,7 +11,7 @@ import { registrarEvento } from "@/lib/analytics";
 import { useRolesDisponibles } from "@/lib/roles";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Modal } from "@/components/Modal";
-import { Button, Card, EmptyState, ErrorState, Input, LoadingState, Select, StatusBadge, Table, Tag } from "@bitacora/ui/web";
+import { Button, Card, EmptyState, ErrorState, Input, LoadingState, Select, StatusBadge, Table, Tag, useToast } from "@bitacora/ui/web";
 
 // Ficha única de personas — reemplaza Flota → Colaboradores, Grupo y
 // usuario, y Remuneraciones → Datos del equipo. Esta pantalla lista al
@@ -45,7 +45,7 @@ export default function PersonasPage() {
   const [funcion, setFuncion] = useState("");
   const [invitando, setInvitando] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const [exito, setExito] = useState<string | null>(null);
+  const toast = useToast();
 
   // Accesos autorizados
   const [accesos, setAccesos] = useState<AccesoFila[] | null>(null);
@@ -105,7 +105,6 @@ export default function PersonasPage() {
   async function onInvitar(e: FormEvent) {
     e.preventDefault();
     setFormError(null);
-    setExito(null);
     setInvitando(true);
     const res = await apiFetch("/api/usuarios/invitar", {
       method: "POST",
@@ -123,11 +122,10 @@ export default function PersonasPage() {
       setFormError(body.error ?? "No se pudo invitar");
       return;
     }
-    // No se cierra el modal solo: se muestra "Invitación enviada" y el
-    // formulario queda listo para invitar a otra persona más — cerrarlo
-    // solo de encima haría desaparecer esa confirmación antes de verla.
+    // No se cierra el modal solo: el toast avisa "Invitación enviada" y el
+    // formulario queda listo para invitar a otra persona más.
     registrarEvento(EVENTOS.usuarioInvitado, { rol });
-    setExito(`Invitación enviada a ${email}`);
+    toast(`Invitación enviada a ${email}`, { tono: "exito" });
     setEmail("");
     setNombre("");
     setTelefono("");
@@ -218,7 +216,6 @@ export default function PersonasPage() {
               </div>
             </div>
             {formError ? <p className="font-ds-body text-ds-small text-ds-accent-700">{formError}</p> : null}
-            {exito ? <p className="font-ds-body text-ds-small font-medium text-ds-accent2-800">{exito}</p> : null}
             <div>
               <Button tipo="submit" cargando={invitando}>
                 Invitar

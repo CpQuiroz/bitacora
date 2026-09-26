@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
-import { Alert, Image, Pressable, ScrollView, View } from "react-native";
+import { Image, Pressable, ScrollView, View } from "react-native";
 import { ArrowLeft, Camera, Trash2 } from "lucide-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { ItemChecklistMantencion } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
-import { Button, ErrorState, LoadingState, ScreenHeader, StatusBadge, Texto, type TonoEstado } from "@bitacora/ui/native";
+import { Button, ErrorState, LoadingState, ScreenHeader, StatusBadge, Texto, useDeshacer, useToast, type TonoEstado } from "@bitacora/ui/native";
 import { elegirFotos } from "../../lib/imagen";
 import type { MasStackParamList } from "../../shell/navigation/types";
 import {
@@ -52,10 +52,12 @@ const TONO_RESPUESTA: Record<string, TonoEstado> = { no: "en_progreso", si: "com
 // color a mano.
 export function MantencionDetalleScreen({ route, navigation }: NativeStackScreenProps<MasStackParamList, "MantencionDetalle">) {
   const { equipoId, registroId } = route.params;
+  const toast = useToast();
+  const conDeshacer = useDeshacer();
   const [detalle, setDetalle] = useState<DetalleMantencion | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [subiendo, setSubiendo] = useState(false);
-  const [eliminandoId, setEliminandoId] = useState<string | null>(null);
+  const [fotosOcultas, setFotosOcultas] = useState<string[]>([]);
 
   const cargar = useCallback(async () => {
     setError(null);
@@ -72,36 +74,29 @@ export function MantencionDetalleScreen({ route, navigation }: NativeStackScreen
   }, [cargar]);
 
   async function agregarFoto() {
-    const [elegida] = await elegirFotos();
+    const [elegida] = await elegirFotos({ avisar: toast });
     if (!elegida) return;
     setSubiendo(true);
     const res = await subirFotoARegistro(equipoId, registroId, elegida, null);
     setSubiendo(false);
     if (!res.ok) {
-      Alert.alert("No se pudo subir la foto", res.error);
+      toast(`No se pudo subir la foto: ${res.error}`, { tono: "error" });
       return;
     }
     void cargar();
   }
 
-  function confirmarEliminar(fotoId: string) {
-    Alert.alert("Eliminar foto", "¿Eliminar esta foto de respaldo?", [
-      { text: "Cancelar", style: "cancel" },
-      {
-        text: "Eliminar",
-        style: "destructive",
-        onPress: async () => {
-          setEliminandoId(fotoId);
-          const res = await eliminarFotoDeRegistro(equipoId, registroId, fotoId);
-          setEliminandoId(null);
-          if (!res.ok) {
-            Alert.alert("No se pudo eliminar", res.error);
-            return;
-          }
-          void cargar();
-        },
+  function eliminarFoto(fotoId: string) {
+    conDeshacer({
+      mensaje: "Foto eliminada",
+      ocultar: () => setFotosOcultas((ids) => [...ids, fotoId]),
+      restaurar: () => setFotosOcultas((ids) => ids.filter((id) => id !== fotoId)),
+      ejecutar: async () => {
+        const res = await eliminarFotoDeRegistro(equipoId, registroId, fotoId);
+        if (!res.ok) throw new Error(`No se pudo eliminar: ${res.error}`);
       },
-    ]);
+      alTerminar: () => void cargar(),
+    });
   }
 
   const volver = { icono: <ArrowLeft size={20} strokeWidth={2.5} color={tokens.color.text} />, onPress: () => navigation.goBack(), etiquetaAccesible: "Volver" };
@@ -125,6 +120,7 @@ export function MantencionDetalleScreen({ route, navigation }: NativeStackScreen
     );
   }
   if (!detalle) return null;
+  const fotosVisibles = detalle.fotos.filter((f) => !fotosOcultas.includes(f.id));
 
   const secciones = agruparPorSeccion(detalle.checklist ?? []);
   const quien = detalle.origen === "externo" ? (detalle.proveedor?.nombre ?? "Taller externo") : (detalle.responsable?.nombre ?? "—");
@@ -183,14 +179,13 @@ export function MantencionDetalleScreen({ route, navigation }: NativeStackScreen
               Agregar
             </Button>
           </View>
-          {detalle.fotos.length > 0 ? (
+          {fotosVisibles.length > 0 ? (
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: tokens.space["2"] }}>
-              {detalle.fotos.map((f) => (
+              {fotosVisibles.map((f) => (
                 <View key={f.id} style={{ width: 96, height: 96 }}>
                   <Image source={{ uri: f.url }} style={{ width: 96, height: 96, borderRadius: tokens.radius.md, backgroundColor: tokens.color.neutral["200"] }} />
                   <Pressable accessibilityRole="button" accessibilityLabel="Eliminar foto"
-                    onPress={() => confirmarEliminar(f.id)}
-                    disabled={eliminandoId === f.id}
+                    onPress={() => eliminarFoto(f.id)}
                     style={{
                       position: "absolute",
                       right: -6,
@@ -201,7 +196,6 @@ export function MantencionDetalleScreen({ route, navigation }: NativeStackScreen
                       backgroundColor: tokens.color.accentRamp["700"],
                       alignItems: "center",
                       justifyContent: "center",
-                      opacity: eliminandoId === f.id ? 0.6 : 1,
                     }}
                   >
                     <Trash2 size={14} strokeWidth={2.5} color={tokens.color.neutral["100"]} />

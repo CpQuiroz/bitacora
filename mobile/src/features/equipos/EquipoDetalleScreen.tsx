@@ -7,7 +7,7 @@ import { ArrowLeft, ClipboardCheck, FileText, Plus, Route } from "lucide-react-n
 import type { PlanMantencion, Usuario } from "@bitacora/shared";
 import { ROLES_SUPERVISION } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
-import { Button, Card, ErrorState, LoadingState, ScreenHeader, StatusBadge, Texto, useMarca } from "@bitacora/ui/native";
+import { Button, Card, ErrorState, LoadingState, ScreenHeader, StatusBadge, Texto, useConfirmar, useDeshacer, useMarca, useToast } from "@bitacora/ui/native";
 import { PickerBuscable } from "../../components/ui";
 import { useAuth } from "../auth/AuthContext";
 import type { MasStackParamList } from "../../shell/navigation/types";
@@ -45,11 +45,15 @@ export function EquipoDetalleScreen({ navigation, route }: NativeStackScreenProp
   const { equipoId } = route.params;
   const auth = useAuth();
   const marca = useMarca();
+  const toast = useToast();
+  const confirmar = useConfirmar();
+  const conDeshacer = useDeshacer();
   const permisos = permisosEquipos(auth);
   const miId = auth.fase === "listo" ? auth.usuario.id : null;
 
   const [equipo, setEquipo] = useState<EquipoDetalle | null>(null);
   const [documentos, setDocumentos] = useState<DocumentoConTipo[]>([]);
+  const [docsOcultos, setDocsOcultos] = useState<string[]>([]);
   const [errorDocs, setErrorDocs] = useState<string | null>(null);
   const [planes, setPlanes] = useState<PlanMantencion[]>([]);
   const [colaboradores, setColaboradores] = useState<Usuario[]>([]);
@@ -136,10 +140,10 @@ export function EquipoDetalleScreen({ navigation, route }: NativeStackScreenProp
     const r = await accion();
     setOcupado(false);
     if (!r.ok) {
-      Alert.alert("No se pudo", r.error);
+      toast(`No se pudo: ${r.error}`, { tono: "error" });
       return;
     }
-    if (exito) Alert.alert(exito);
+    if (exito) toast(exito, { tono: "exito" });
     await cargar();
   }
 
@@ -148,7 +152,7 @@ export function EquipoDetalleScreen({ navigation, route }: NativeStackScreenProp
       const url = await urlArchivoDocumento(d.id);
       await WebBrowser.openBrowserAsync(url);
     } catch (x) {
-      Alert.alert("No se pudo abrir", x instanceof Error ? x.message : "Intenta de nuevo con conexión.");
+      toast(`No se pudo abrir: ${x instanceof Error ? x.message : "intenta de nuevo con conexión."}`, { tono: "error" });
     }
   }
 
@@ -161,28 +165,37 @@ export function EquipoDetalleScreen({ navigation, route }: NativeStackScreenProp
         text: "Eliminar",
         style: "destructive",
         onPress: () =>
-          Alert.alert("Eliminar documento", `Se elimina "${d.tipo?.nombre ?? "Documento"}" de la lista de este vehículo.`, [
-            { text: "No", style: "cancel" },
-            { text: "Sí, eliminar", style: "destructive", onPress: () => void conOcupado(() => borrarDocumento(d.id)) },
-          ]),
+          conDeshacer({
+            mensaje: `"${d.tipo?.nombre ?? "Documento"}" eliminado`,
+            ocultar: () => setDocsOcultos((ids) => [...ids, d.id]),
+            restaurar: () => setDocsOcultos((ids) => ids.filter((id) => id !== d.id)),
+            ejecutar: async () => {
+              const r = await borrarDocumento(d.id);
+              if (!r.ok) throw new Error(`No se pudo eliminar: ${r.error}`);
+            },
+            alTerminar: () => void cargar(),
+          }),
       });
     }
     botones.push({ text: "Cancelar", style: "cancel" });
+    // alerta-nativa: menú de opciones del documento (no hay hoja de acciones en @bitacora/ui)
     Alert.alert(d.tipo?.nombre ?? "Documento", d.numero ? `N° ${d.numero}` : undefined, botones);
   }
 
+  async function eliminarPlan(p: PlanMantencion) {
+    const ok = await confirmar({ titulo: "¿Eliminar el plan de mantención?", mensaje: `Cada ${p.frecuencia_dias} días`, accion: "Sí, eliminar", cancelar: "No", destructivo: true });
+    if (ok) await conOcupado(() => borrarPlan(p.id));
+  }
+
   function opcionesPlan(p: PlanMantencion) {
+    // alerta-nativa: menú de opciones del plan (no hay hoja de acciones en @bitacora/ui)
     Alert.alert("Plan de mantención", `Cada ${p.frecuencia_dias} días`, [
       { text: "Editar", onPress: () => navigation.navigate("PlanMantencionForm", { equipoId: equipo!.id, planId: p.id }) },
       { text: p.activo ? "Pausar" : "Reactivar", onPress: () => void conOcupado(() => cambiarEstadoPlan(p.id, !p.activo)) },
       {
         text: "Eliminar",
         style: "destructive",
-        onPress: () =>
-          Alert.alert("Eliminar plan", "¿Seguro?", [
-            { text: "No", style: "cancel" },
-            { text: "Sí, eliminar", style: "destructive", onPress: () => void conOcupado(() => borrarPlan(p.id)) },
-          ]),
+        onPress: () => void eliminarPlan(p),
       },
       { text: "Cancelar", style: "cancel" },
     ]);
@@ -190,6 +203,7 @@ export function EquipoDetalleScreen({ navigation, route }: NativeStackScreenProp
 
   function registrarMantencion() {
     const patente = equipo!.patente ?? null;
+    // alerta-nativa: menú para elegir el tipo de registro (no hay hoja de acciones en @bitacora/ui)
     Alert.alert("Registrar mantención", undefined, [
       { text: "Checklist diario", onPress: () => navigation.navigate("ChecklistMantencion", { equipoId: equipo!.id, tipo: "diario", patente }) },
       { text: "Programa (service)", onPress: () => navigation.navigate("ChecklistMantencion", { equipoId: equipo!.id, tipo: "programa", patente }) },
@@ -250,8 +264,9 @@ export function EquipoDetalleScreen({ navigation, route }: NativeStackScreenProp
       : []),
   ].sort((a, b) => (a.fecha < b.fecha ? 1 : a.fecha > b.fecha ? -1 : 0));
   const proximaMantencion = planes.filter((p) => p.activo).map((p) => p.proxima_fecha).sort()[0] ?? null;
-  const vencidos = documentos.filter((d) => d.estado === "vencido").length;
-  const porVencer = documentos.filter((d) => d.estado === "por_vencer").length;
+  const docsVisibles = documentos.filter((d) => !docsOcultos.includes(d.id));
+  const vencidos = docsVisibles.filter((d) => d.estado === "vencido").length;
+  const porVencer = docsVisibles.filter((d) => d.estado === "por_vencer").length;
 
   return (
     <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
@@ -479,12 +494,12 @@ export function EquipoDetalleScreen({ navigation, route }: NativeStackScreenProp
                 <Texto tamano={tokens.size.caption} color={tokens.color.accentRamp["700"]}>
                   {errorDocs}
                 </Texto>
-              ) : documentos.length === 0 ? (
+              ) : docsVisibles.length === 0 ? (
                 <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
                   Este vehículo todavía no tiene documentos.
                 </Texto>
               ) : (
-                documentos.map((d) => (
+                docsVisibles.map((d) => (
                   <Pressable key={d.id} onPress={() => opcionesDocumento(d)} style={filaTocable}>
                     <FileText size={18} strokeWidth={2.5} color={tokens.color.textSecondary} />
                     <View style={{ flex: 1, gap: 2 }}>

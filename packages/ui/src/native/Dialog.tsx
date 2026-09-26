@@ -51,7 +51,7 @@ export function Dialog({ abierto, onCerrar, titulo, children }: PropsDialog) {
             <Texto tamano={tokens.size.h5} color={tokens.color.text} style={{ fontFamily: FUENTE_NATIVE.heading }}>
               {titulo}
             </Texto>
-            <Pressable onPress={onCerrar} hitSlop={8}>
+            <Pressable onPress={onCerrar} hitSlop={12} accessibilityRole="button" accessibilityLabel="Cerrar">
               <X size={18} strokeWidth={2.75} color={tokens.color.textSecondary} />
             </Pressable>
           </View>

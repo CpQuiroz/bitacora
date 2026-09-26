@@ -11,7 +11,7 @@ import { apiFetch } from "@/lib/api";
 import { abrirPdfOS } from "@/lib/descargarPdf";
 import { CATEGORIAS_FOTO_OS, ETIQUETA_CATEGORIA_FOTO_OS, formatearCLP, formatearFolio, planPermiteIACompleta } from "@bitacora/shared";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Button, Card, Cifra, DatePicker, Input, Select, StatusBadge, Table, Textarea } from "@bitacora/ui/web";
+import { Button, Card, Cifra, DatePicker, Input, Select, StatusBadge, Table, Textarea, useConfirmar, useToast } from "@bitacora/ui/web";
 import { InputMonto } from "@/components/InputMonto";
 import { CatalogoSelectorModal, type ItemSeleccionadoCatalogo } from "@/components/CatalogoSelectorModal";
 import { ComboboxResponsable } from "@/components/ComboboxResponsable";
@@ -69,7 +69,8 @@ export default function DetalleOrdenServicioPage() {
 
   const [email, setEmail] = useState("");
   const [enviando, setEnviando] = useState(false);
-  const [avisoEnvio, setAvisoEnvio] = useState<string | null>(null);
+  const toast = useToast();
+  const confirmar = useConfirmar();
   const [errorEnvio, setErrorEnvio] = useState<string | null>(null);
 
   const [generandoInforme, setGenerandoInforme] = useState(false);
@@ -219,7 +220,6 @@ export default function DetalleOrdenServicioPage() {
 
   async function onEnviarEmail(e: FormEvent) {
     e.preventDefault();
-    setAvisoEnvio(null);
     setErrorEnvio(null);
     if (!email.trim()) return;
     setEnviando(true);
@@ -233,7 +233,7 @@ export default function DetalleOrdenServicioPage() {
       setErrorEnvio(body.error ?? "No se pudo enviar el correo");
       return;
     }
-    setAvisoEnvio(`PDF enviado a ${email.trim()}`);
+    toast(`PDF enviado a ${email.trim()}`, { tono: "exito" });
     setEmail("");
   }
 
@@ -336,7 +336,7 @@ export default function DetalleOrdenServicioPage() {
   // trabajoBloqueado()) ya rechaza el delete en ese caso igual — doble
   // resguardo, no solo el frontend.
   async function onEliminar() {
-    if (!confirm("¿Eliminar esta orden de servicio? Esta acción no se puede deshacer.")) return;
+    if (!(await confirmar({ titulo: "¿Eliminar esta orden de servicio?", mensaje: "Esta acción no se puede deshacer.", accion: "Eliminar", destructivo: true }))) return;
     setErrorEliminar(null);
     setEliminando(true);
     const res = await apiFetch(`/api/trabajos/${params.id}`, { method: "DELETE" });
@@ -889,7 +889,6 @@ export default function DetalleOrdenServicioPage() {
                     </Button>
                   </form>
                 </div>
-                {avisoEnvio ? <p className="mt-ds-3 font-ds-body text-ds-small font-medium text-ds-accent2-800">{avisoEnvio}</p> : null}
                 {errorEnvio ? <p className="mt-ds-3 font-ds-body text-ds-small text-ds-accent-700">{errorEnvio}</p> : null}
               </Card>
             </div>

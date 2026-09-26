@@ -6,7 +6,7 @@ import type { Empresa } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Card, LoadingState } from "@bitacora/ui/web";
+import { Card, LoadingState, useToast } from "@bitacora/ui/web";
 
 // Destino "Portal del cliente" (grupo CLIENTES). El portal ya existe
 // (/portal/login → el cliente entra con su RUT + código por correo).
@@ -29,7 +29,7 @@ export default function PortalClientePage() {
   const [empresa, setEmpresa] = useState<Empresa | null>(null);
   const [puede, setPuede] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [aviso, setAviso] = useState<string | null>(null);
+  const toast = useToast();
   const [guardando, setGuardando] = useState<SeccionKey | null>(null);
   const [copiado, setCopiado] = useState(false);
 
@@ -73,17 +73,15 @@ export default function PortalClientePage() {
     const nuevo = !empresa[key];
     setEmpresa({ ...empresa, [key]: nuevo });
     setGuardando(key);
-    setError(null);
-    setAviso(null);
     const res = await apiFetch("/api/empresa", { method: "PATCH", body: JSON.stringify({ [key]: nuevo }) });
     setGuardando(null);
     if (!res.ok) {
       setEmpresa({ ...empresa, [key]: !nuevo });
       const b = await res.json().catch(() => ({}));
-      setError(b.error ?? "No se pudo guardar");
+      toast(b.error ?? "No se pudo guardar", { tono: "error" });
       return;
     }
-    setAviso("Cambio guardado — ya aplica en el portal.");
+    toast("Cambio guardado — ya aplica en el portal.", { tono: "exito" });
   }
 
   async function copiar() {
@@ -127,7 +125,6 @@ export default function PortalClientePage() {
       </p>
 
       {error ? <p className="mt-ds-4 font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
-      {aviso ? <p className="mt-ds-4 font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}
 
       <div className="mt-ds-6">
         <Card>

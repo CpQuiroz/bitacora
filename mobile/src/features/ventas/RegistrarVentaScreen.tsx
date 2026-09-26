@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { Alert, FlatList, Modal, Pressable, ScrollView, View } from "react-native";
+import { FlatList, Modal, Pressable, ScrollView, View } from "react-native";
 import { ArrowLeft, Minus, Plus, X } from "lucide-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { CatalogoItem, MedioPagoVenta, Servicio, TipoLineaVenta, TipoPack } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
-import { Button, ScreenHeader, Tag, Texto, type TonoTag, useMarca } from "@bitacora/ui/native";
+import { Button, ScreenHeader, Tag, Texto, type TonoTag, useMarca, useToast } from "@bitacora/ui/native";
 import { pesos } from "../../lib/plata";
 import type { TrabajosStackParamList } from "../../shell/navigation/types";
 import { useAuth } from "../auth/AuthContext";
@@ -36,6 +36,7 @@ type LineaLocal = LineaBorrador & { detalle?: string; maxCantidad?: number };
 export function RegistrarVentaScreen({ route, navigation }: NativeStackScreenProps<TrabajosStackParamList, "RegistrarVenta">) {
   const marca = useMarca();
   const auth = useAuth();
+  const toast = useToast();
   const puedeEditarPrecio = auth.fase === "listo" && auth.acciones.includes("facturar");
 
   const { origenTipo, origenId, clienteNombre, clienteRut, folio, heredado } = route.params;
@@ -108,8 +109,8 @@ export function RegistrarVentaScreen({ route, navigation }: NativeStackScreenPro
   }
 
   async function confirmar() {
-    if (lineas.length === 0) return Alert.alert("Venta vacía", "Agrega al menos una línea.");
-    if (!medio) return Alert.alert("Falta el medio de pago", "Elige efectivo, transferencia o tarjeta.");
+    if (lineas.length === 0) return toast("Venta vacía: agrega al menos una línea.", { tono: "error" });
+    if (!medio) return toast("Falta el medio de pago: elige efectivo, transferencia o tarjeta.", { tono: "error" });
     setGuardando(true);
     const r = await crearVenta({
       origen_tipo: origenTipo,
@@ -119,9 +120,10 @@ export function RegistrarVentaScreen({ route, navigation }: NativeStackScreenPro
     });
     setGuardando(false);
     if (r.ok) {
-      Alert.alert("Venta registrada", `Total ${pesos(r.venta.total)} — pagada.`, [{ text: "Listo", onPress: () => navigation.goBack() }]);
+      toast(`Venta registrada. Total ${pesos(r.venta.total)} — pagada.`, { tono: "exito" });
+      navigation.goBack();
     } else {
-      Alert.alert("No se pudo registrar", r.error);
+      toast(`No se pudo registrar: ${r.error}`, { tono: "error" });
     }
   }
 

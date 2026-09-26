@@ -155,6 +155,7 @@ export function MasScreen({ navigation }: NativeStackScreenProps<MasStackParamLi
       titulo: "Gastos",
       Icono: Receipt,
       ir: () =>
+        // alerta-nativa: menú para elegir Nuevo gasto o Rendiciones (no hay hoja de acciones en @bitacora/ui)
         Alert.alert("Gastos", "¿Qué querés hacer?", [
           { text: "Nuevo gasto", onPress: () => navigation.navigate("GastoForm") },
           { text: "Rendiciones", onPress: () => navigation.navigate("RendicionesLista") },

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { ConfigViaticos } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
-import { Button, Card } from "@bitacora/ui/web";
+import { Button, Card, LoadingState, useToast } from "@bitacora/ui/web";
 import { InputMonto } from "@/components/InputMonto";
 import { useConfiguracion } from "../ConfiguracionContext";
 
@@ -17,7 +17,7 @@ export default function ConfigViajesPage() {
   const [interregional, setInterregional] = useState("");
   const [cargado, setCargado] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [aviso, setAviso] = useState<string | null>(null);
+  const toast = useToast();
   const [guardando, setGuardando] = useState(false);
 
   const aTexto = (v: number | null) => (v != null ? String(Math.round(Number(v))) : "");
@@ -41,7 +41,6 @@ export default function ConfigViajesPage() {
 
   async function guardar() {
     setError(null);
-    setAviso(null);
     setGuardando(true);
     const res = await apiFetch("/api/viajes/config", {
       method: "PATCH",
@@ -53,7 +52,7 @@ export default function ConfigViajesPage() {
       setError(body.error ?? "No se pudo guardar");
       return;
     }
-    setAviso("Montos guardados.");
+    toast("Montos guardados.", { tono: "exito" });
   }
 
   return (
@@ -66,7 +65,7 @@ export default function ConfigViajesPage() {
       </div>
       <Card>
         <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Montos por defecto del viático</p>
-        {!cargado && !error ? <p className="font-ds-body text-ds-small text-ds-text-secondary">Cargando…</p> : null}
+        {!cargado && !error ? <LoadingState /> : null}
         {cargado ? (
           <div className="grid gap-ds-4 sm:grid-cols-2">
             <div className="flex flex-col gap-ds-1">
@@ -80,7 +79,6 @@ export default function ConfigViajesPage() {
           </div>
         ) : null}
         {error ? <p className="mt-ds-3 font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
-        {aviso ? <p className="mt-ds-3 font-ds-body text-ds-small text-ds-text/70">{aviso}</p> : null}
         {cargado && esAdmin ? (
           <div className="mt-ds-4">
             <Button onPress={guardar} cargando={guardando}>

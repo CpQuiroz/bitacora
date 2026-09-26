@@ -11,7 +11,7 @@ import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { AsignarPackForm } from "@/components/AsignarPackForm";
-import { Button, Card, Dialog, Input, Select, StatusBadge } from "@bitacora/ui/web";
+import { Button, Card, Dialog, Input, Select, StatusBadge, useToast } from "@bitacora/ui/web";
 import { linkWhatsapp } from "@/lib/whatsapp";
 
 type TrabajoConOrden = Trabajo & { orden: Pick<OrdenServicio, "folio" | "estado_os"> | null };
@@ -62,7 +62,7 @@ export default function ClienteDetallePage() {
   const [fechaNacimiento, setFechaNacimiento] = useState("");
   const [guardando, setGuardando] = useState(false);
   const [errorForm, setErrorForm] = useState<string | null>(null);
-  const [aviso, setAviso] = useState<string | null>(null);
+  const toast = useToast();
   // Eliminar cliente (tarea 131): solo Admin. Antes de ofrecer el borrado
   // se pregunta cuántos registros tiene; con historial se ofrece desactivar.
   const [eliminarAbierto, setEliminarAbierto] = useState(false);
@@ -77,7 +77,6 @@ export default function ClienteDetallePage() {
   const [asignandoPack, setAsignandoPack] = useState(false);
   // Pack agotado que se está renovando (precarga el form con sus datos).
   const [renovandoPack, setRenovandoPack] = useState<PaqueteSesionesConSaldo | null>(null);
-  const [avisoPack, setAvisoPack] = useState<string | null>(null);
 
   const cargarPacks = useCallback(async () => {
     const [resPaquetes, resTipos] = await Promise.all([
@@ -137,12 +136,11 @@ export default function ClienteDetallePage() {
     if (!cliente) return;
     const res = await apiFetch(`/api/clientes/${cliente.id}`, { method: "PATCH", body: JSON.stringify({ modo_precio_default: v || null }) });
     if (res.ok) setCliente({ ...cliente, modo_precio_default: (v || null) as Cliente["modo_precio_default"] });
-    else window.alert("No se pudo guardar la forma de cobro. Intenta de nuevo.");
+    else toast("No se pudo guardar la forma de cobro. Intenta de nuevo.", { tono: "error" });
   }
 
   async function onGuardar() {
     setErrorForm(null);
-    setAviso(null);
     if (rut.trim() && !validarRut(rut)) {
       setErrorForm("El RUT no es válido (revisa el dígito verificador)");
       return;
@@ -168,7 +166,7 @@ export default function ClienteDetallePage() {
       return;
     }
     setEditando(false);
-    setAviso("Cliente actualizado");
+    toast("Cliente actualizado", { tono: "exito" });
     cargar();
   }
 
@@ -209,7 +207,7 @@ export default function ClienteDetallePage() {
   async function onDesactivarDesdeEliminar() {
     await onAlternarActivo();
     setEliminarAbierto(false);
-    setAviso("Cliente desactivado");
+    toast("Cliente desactivado", { tono: "exito" });
   }
 
   const eventosHistorial: EventoHistorial[] = useMemo(() => {
@@ -385,7 +383,6 @@ export default function ClienteDetallePage() {
               </Card>
             </div>
           )}
-          {aviso ? <p className="my-ds-4 font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}
 
           <div className="mb-ds-6">
             <Card>
@@ -589,8 +586,6 @@ export default function ClienteDetallePage() {
                     )}
                   </div>
 
-                  {avisoPack ? <p className="mb-ds-4 font-ds-body text-ds-small font-medium text-ds-accent2-800">{avisoPack}</p> : null}
-
                   {asignandoPack && (
                     <div className="mb-ds-4 rounded-ds-md border border-ds-divider p-ds-3">
                       <AsignarPackForm
@@ -599,7 +594,7 @@ export default function ClienteDetallePage() {
                         moneda={usuario.moneda ?? "CLP"}
                         onAsignado={() => {
                           setAsignandoPack(false);
-                          setAvisoPack("Pack asignado.");
+                          toast("Pack asignado.", { tono: "exito" });
                           cargarPacks();
                         }}
                         onCancelar={() => setAsignandoPack(false)}
@@ -628,7 +623,7 @@ export default function ClienteDetallePage() {
                         }}
                         onAsignado={() => {
                           setRenovandoPack(null);
-                          setAvisoPack("Pack renovado.");
+                          toast("Pack renovado.", { tono: "exito" });
                           cargarPacks();
                         }}
                         onCancelar={() => setRenovandoPack(null)}
@@ -658,10 +653,7 @@ export default function ClienteDetallePage() {
                             {p.saldo <= 0 && !renovandoPack && !asignandoPack && (
                               <Button
                                 variante="secundario"
-                                onPress={() => {
-                                  setAvisoPack(null);
-                                  setRenovandoPack(p);
-                                }}
+                                onPress={() => setRenovandoPack(p)}
                               >
                                 Renovar
                               </Button>

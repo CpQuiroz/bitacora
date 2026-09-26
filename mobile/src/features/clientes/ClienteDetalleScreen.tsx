@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Alert, Linking, Pressable, ScrollView, View } from "react-native";
+import { Linking, Pressable, ScrollView, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { ArrowLeft, Banknote, HardHat, Mail, MessageCircle, Phone, Receipt } from "lucide-react-native";
 import type { PaqueteSesionesConSaldo, VentaConLineas } from "@bitacora/shared";
 import { formatearFolio } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
-import { Button, Card, ErrorState, ListRow, ListRowGrupo, LoadingState, ScreenHeader, Skeleton, StatusBadge, Texto, useMarca } from "@bitacora/ui/native";
+import { Button, Card, ErrorState, ListRow, ListRowGrupo, LoadingState, ScreenHeader, Skeleton, StatusBadge, Texto, useConfirmar, useMarca, useToast } from "@bitacora/ui/native";
 import { useRed } from "../../services/sync/NetworkProvider";
 import { useAuth } from "../auth/AuthContext";
 import { accesoDesdeAuth } from "../../lib/modulos";
@@ -43,6 +43,8 @@ const ETIQUETA_OS: Record<string, string> = {
 // primaria fija abajo ("Registrar venta").
 export function ClienteDetalleScreen({ route, navigation }: NativeStackScreenProps<ClientesStackParamList, "ClienteDetalle">) {
   const marca = useMarca();
+  const toast = useToast();
+  const confirmar = useConfirmar();
   const { clienteId } = route.params;
   const { enLinea } = useRed();
   const auth = useAuth();
@@ -80,43 +82,43 @@ export function ClienteDetalleScreen({ route, navigation }: NativeStackScreenPro
   // registros se explica cuántos y se ofrece desactivar.
   async function eliminar() {
     if (!cliente) return;
-    if (!enLinea) return Alert.alert("Sin conexión", "Necesitas conexión para esto.");
+    if (!enLinea) return toast("Sin conexión: necesitas conexión para esto.", { tono: "error" });
     setOcupado(true);
     const uso = await usoDelCliente(clienteId);
     setOcupado(false);
-    if (!uso.ok) return Alert.alert("No se pudo revisar", uso.error);
+    if (!uso.ok) return toast(`No se pudo revisar: ${uso.error}`, { tono: "error" });
     if (!uso.data.eliminable) {
+      if (!cliente.activo) {
+        const resumen = uso.data.uso.map((u) => `${u.cantidad} ${u.etiqueta}`).join(", ");
+        return toast(`No se puede eliminar: ${cliente.nombre} tiene historial (${resumen}).`, { tono: "error" });
+      }
       const detalle = uso.data.uso.map((u) => `• ${u.cantidad} ${u.etiqueta}`).join("\n");
-      return Alert.alert(
-        "No se puede eliminar",
-        `${cliente.nombre} tiene historial:\n${detalle}\n\nPuedes desactivarlo; su historial se conserva.`,
-        cliente.activo
-          ? [
-              { text: "Cerrar", style: "cancel" },
-              { text: "Desactivar", onPress: () => void alternarActivo() },
-            ]
-          : [{ text: "Cerrar", style: "cancel" }]
-      );
+      const desactivar = await confirmar({
+        titulo: "No se puede eliminar",
+        mensaje: `${cliente.nombre} tiene historial:\n${detalle}\n\nPuedes desactivarlo; su historial se conserva.`,
+        accion: "Desactivar",
+        cancelar: "Cerrar",
+      });
+      if (desactivar) void alternarActivo();
+      return;
     }
-    Alert.alert("Eliminar cliente", `Se eliminará ${cliente.nombre} para siempre. No se puede deshacer.`, [
-      { text: "Cancelar", style: "cancel" },
-      {
-        text: "Eliminar",
-        style: "destructive",
-        onPress: async () => {
-          setOcupado(true);
-          const r = await eliminarCliente(clienteId);
-          setOcupado(false);
-          if (!r.ok) return Alert.alert("No se pudo eliminar", r.error);
-          navigation.goBack();
-        },
-      },
-    ]);
+    const ok = await confirmar({
+      titulo: "¿Eliminar cliente?",
+      mensaje: `Se eliminará ${cliente.nombre} para siempre. No se puede deshacer.`,
+      accion: "Eliminar",
+      destructivo: true,
+    });
+    if (!ok) return;
+    setOcupado(true);
+    const r = await eliminarCliente(clienteId);
+    setOcupado(false);
+    if (!r.ok) return toast(`No se pudo eliminar: ${r.error}`, { tono: "error" });
+    navigation.goBack();
   }
 
   async function alternarActivo() {
     if (!cliente) return;
-    if (!enLinea) return Alert.alert("Sin conexión", "Necesitas conexión para esto.");
+    if (!enLinea) return toast("Sin conexión: necesitas conexión para esto.", { tono: "error" });
     setOcupado(true);
     const r = await editarCliente(clienteId, {
       nombre: cliente.nombre,
@@ -130,7 +132,7 @@ export function ClienteDetalleScreen({ route, navigation }: NativeStackScreenPro
       activo: !cliente.activo,
     });
     setOcupado(false);
-    if (!r.ok) return Alert.alert("No se pudo guardar", r.error);
+    if (!r.ok) return toast(`No se pudo guardar: ${r.error}`, { tono: "error" });
     cargar();
   }
 
@@ -167,7 +169,7 @@ export function ClienteDetalleScreen({ route, navigation }: NativeStackScreenPro
   const puedeVender = accesoDesdeAuth(auth).registrarVenta;
 
   function registrarVenta() {
-    if (!ultimoTrabajo) return Alert.alert("Sin OS", "Una venta nace de una cita o de una OS. Este cliente todavía no tiene ninguna.");
+    if (!ultimoTrabajo) return toast("Sin OS: una venta nace de una cita o de una OS. Este cliente todavía no tiene ninguna.", { tono: "info" });
     navigation.navigate("RegistrarVenta", {
       origenTipo: "os",
       origenId: ultimoTrabajo.id,

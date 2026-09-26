@@ -4,7 +4,7 @@ import * as ImagePicker from "expo-image-picker";
 import { Camera, RefreshCw, AlertCircle } from "lucide-react-native";
 import type { CampoTipoTrabajo } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
-import { Button, Input, Select, Texto } from "@bitacora/ui/native";
+import { Button, Input, Select, Texto, useConfirmar, useToast } from "@bitacora/ui/native";
 import { comprimirImagen } from "../../../lib/imagen";
 import type { FotoConUrl } from "../../../services/trabajos";
 import type { FotoPendiente } from "./FotosSection";
@@ -32,6 +32,8 @@ function CampoFoto({
   onQuitarPendiente?: (id: string) => void;
   onEliminar?: (fotoId: string) => Promise<void> | void;
 }) {
+  const toast = useToast();
+  const confirmar = useConfirmar();
   const [ocupado, setOcupado] = useState(false);
   const total = fotos.length + pendientes.length;
   const cuadro = { width: LADO, height: LADO, borderRadius: tokens.radius.md, backgroundColor: tokens.color.neutral["200"] } as const;
@@ -50,19 +52,20 @@ function CampoFoto({
 
   async function camara() {
     const permiso = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permiso.granted) return Alert.alert("Permiso necesario", "Necesitamos la cámara para continuar.");
+    if (!permiso.granted) return toast("Permiso necesario: necesitamos la cámara para continuar.", { tono: "error" });
     const r = await ImagePicker.launchCameraAsync({ quality: 0.8 });
     if (!r.canceled) await procesar(r.assets);
   }
 
   async function galeria() {
     const permiso = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permiso.granted) return Alert.alert("Permiso necesario", "Necesitamos acceso a tus fotos.");
+    if (!permiso.granted) return toast("Permiso necesario: necesitamos acceso a tus fotos.", { tono: "error" });
     const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.8, allowsMultipleSelection: true });
     if (!r.canceled) await procesar(r.assets);
   }
 
   function agregar() {
+    // alerta-nativa: menú para elegir cámara o galería (no hay hoja de acciones en @bitacora/ui)
     Alert.alert("Agregar foto", undefined, [
       { text: "Tomar foto", onPress: () => void camara() },
       { text: "Elegir de galería", onPress: () => void galeria() },
@@ -70,12 +73,9 @@ function CampoFoto({
     ]);
   }
 
-  function confirmarEliminar(fotoId: string) {
+  async function confirmarEliminar(fotoId: string) {
     if (!onEliminar) return;
-    Alert.alert("Eliminar foto", "¿Eliminar esta foto?", [
-      { text: "Cancelar", style: "cancel" },
-      { text: "Eliminar", style: "destructive", onPress: () => void onEliminar(fotoId) },
-    ]);
+    if (await confirmar({ titulo: "¿Eliminar esta foto?", accion: "Eliminar", destructivo: true })) void onEliminar(fotoId);
   }
 
   return (

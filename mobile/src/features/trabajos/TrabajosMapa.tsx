@@ -3,7 +3,8 @@ import { Linking, Platform, Pressable, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { useTema } from "../../theme";
-import { Button, ErrorState, LoadingScreen, Text } from "../../components/ui";
+import { LoadingState } from "@bitacora/ui/native";
+import { Button, ErrorState, Text } from "../../components/ui";
 import { obtenerRutaDelDia, type Parada } from "../../services/ruta";
 import { distanciaMetros, ubicacionActual } from "../../lib/geo";
 import { MapaLienzo, type PuntoMapa } from "./MapaLienzo";
@@ -62,7 +63,13 @@ export function TrabajosMapa({ onVerOS }: { onVerOS: (trabajoId: string) => void
     [conCoords]
   );
 
-  if (!paradas && !error) return <LoadingScreen />;
+  if (!paradas && !error) {
+    return (
+      <View style={{ flex: 1, backgroundColor: t.colores.bg, padding: t.espacio(4) }}>
+        <LoadingState />
+      </View>
+    );
+  }
   if (error && !paradas) return <ErrorState mensaje={error} onReintentar={cargar} />;
 
   const seleccionada = conCoords.find((p) => p.trabajo_id === seleccion) ?? conCoords[0] ?? null;

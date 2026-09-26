@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from "react-native";
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { Cliente, MedioPago } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
-import { Button, LoadingState, Texto, useMarca } from "@bitacora/ui/native";
+import { Button, LoadingState, Texto, useMarca, useToast } from "@bitacora/ui/native";
 import { InputMonto } from "../../components/InputMonto";
 import { SelectorCliente } from "../../components/SelectorCliente";
 import { useRed } from "../../services/sync/NetworkProvider";
@@ -43,6 +43,7 @@ const VENC_OPCIONES = [
 // acá solo se recolorea el contenido. Sin ScreenHeader propio.
 export function CobroFormScreen({ navigation }: NativeStackScreenProps<MasStackParamList, "CobroForm">) {
   const marca = useMarca();
+  const toast = useToast();
   // Pantalla modal (presentation: "modal" en MasStack.tsx) — no vive
   // dentro del pager de AppTabs.tsx, así que no hereda el fix de
   // paddingBottom de la tab bar (ver ese archivo, 20-sep-2026). Necesita
@@ -74,15 +75,16 @@ export function CobroFormScreen({ navigation }: NativeStackScreenProps<MasStackP
   }
 
   async function guardar() {
-    if (!b.cliente_id) return Alert.alert("Falta el cliente", "Elige un cliente.");
-    if (!(Number(b.monto.replace(/\D/g, "")) > 0)) return Alert.alert("Falta el monto", "Ingresa el monto del cobro.");
-    if (!enLinea) return Alert.alert("Sin conexión", "Necesitas conexión para crear un cobro.");
+    if (!b.cliente_id) return toast("Falta el cliente: elige un cliente.", { tono: "error" });
+    if (!(Number(b.monto.replace(/\D/g, "")) > 0)) return toast("Falta el monto: ingresa el monto del cobro.", { tono: "error" });
+    if (!enLinea) return toast("Sin conexión: necesitas conexión para crear un cobro.", { tono: "error" });
 
     setGuardando(true);
     const r = await crearCobro(b);
     setGuardando(false);
-    if (!r.ok) return Alert.alert("No se pudo crear", r.error);
-    Alert.alert("Cobro creado", "Quedó como pendiente.", [{ text: "Listo", onPress: () => navigation.goBack() }]);
+    if (!r.ok) return toast(`No se pudo crear: ${r.error}`, { tono: "error" });
+    toast("Cobro creado. Quedó como pendiente.", { tono: "exito" });
+    navigation.goBack();
   }
 
   if (clientes === null) {

@@ -8,7 +8,7 @@ import { formatearFolio, formatearRut, validarRut } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Button, Card, EmptyState, Input, LoadingState, StatusBadge, Table } from "@bitacora/ui/web";
+import { Button, Card, EmptyState, Input, LoadingState, StatusBadge, Table, useToast } from "@bitacora/ui/web";
 import { linkWhatsapp } from "@/lib/whatsapp";
 import { descargarCSV } from "@/lib/exportCsv";
 import { ImportarCsvModal, type ColumnaImport } from "@/components/ImportarCsvModal";
@@ -40,7 +40,7 @@ export default function ClientesPage() {
   const [formAbierto, setFormAbierto] = useState(false);
   const [importAbierto, setImportAbierto] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const [aviso, setAviso] = useState<string | null>(null);
+  const toast = useToast();
   const [guardando, setGuardando] = useState(false);
   const [nombre, setNombre] = useState("");
   const [rut, setRut] = useState("");
@@ -88,7 +88,6 @@ export default function ClientesPage() {
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setFormError(null);
-    setAviso(null);
     if (rut.trim() && !validarRut(rut)) {
       setFormError("El RUT no es válido (revisa el dígito verificador)");
       return;
@@ -113,10 +112,11 @@ export default function ClientesPage() {
       return;
     }
     const nuevo = await res.json();
-    setAviso(
+    toast(
       nuevo.geocodificado
         ? "Cliente creado y ubicado en el mapa."
-        : "Cliente creado, pero no encontramos esa dirección en el mapa — revisa que esté bien escrita."
+        : "Cliente creado, pero no encontramos esa dirección en el mapa — revisa que esté bien escrita.",
+      { tono: nuevo.geocodificado ? "exito" : "info" }
     );
     setNombre("");
     setRut("");
@@ -233,7 +233,6 @@ export default function ClientesPage() {
           </Card>
         </div>
       )}
-      {aviso ? <p className="mb-ds-6 font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}
 
       <div className="mb-ds-4 flex flex-col gap-ds-3">
         <div className="max-w-sm">

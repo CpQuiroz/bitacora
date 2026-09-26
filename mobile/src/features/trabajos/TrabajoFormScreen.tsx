@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from "react-native";
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { Cliente, EstadoTrabajo, Usuario } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
-import { Button, Input, LoadingState, SelectorDias, Skeleton, Texto, useMarca } from "@bitacora/ui/native";
+import { Button, Input, LoadingState, SelectorDias, Skeleton, Texto, useMarca, useToast } from "@bitacora/ui/native";
 import { PickerBuscable } from "../../components/ui";
 import { SelectorCliente } from "../../components/SelectorCliente";
 import { InputMonto } from "../../components/InputMonto";
@@ -49,6 +49,7 @@ const VACIO: BorradorTrabajo = {
 // SelectorCliente/PickerBuscable/InputMonto tal cual (sin equivalente v2).
 export function TrabajoFormScreen({ navigation, route }: NativeStackScreenProps<TrabajosStackParamList, "TrabajoForm">) {
   const marca = useMarca();
+  const toast = useToast();
   // Pantalla modal (presentation: "modal" en TrabajosStack.tsx) — no
   // vive dentro del pager de AppTabs.tsx, así que no hereda el fix de
   // paddingBottom de la tab bar (ver ese archivo, 20-sep-2026). Necesita
@@ -91,7 +92,7 @@ export function TrabajoFormScreen({ navigation, route }: NativeStackScreenProps<
           estado: trabajo.estado,
         });
       })
-      .catch((e) => Alert.alert("No se pudo cargar el trabajo", e instanceof Error ? e.message : "Intenta de nuevo"))
+      .catch((e) => toast(`No se pudo cargar el trabajo: ${e instanceof Error ? e.message : "intenta de nuevo"}`, { tono: "error" }))
       .finally(() => setCargando(false));
   }, [editandoId]);
 
@@ -104,8 +105,8 @@ export function TrabajoFormScreen({ navigation, route }: NativeStackScreenProps<
   }
 
   async function guardar() {
-    if (!b.cliente.trim()) return Alert.alert("Falta el cliente", "Escribe el nombre del cliente.");
-    if (!b.fecha) return Alert.alert("Falta la fecha", "Elige una fecha.");
+    if (!b.cliente.trim()) return toast("Falta el cliente: escribe el nombre del cliente.", { tono: "error" });
+    if (!b.fecha) return toast("Falta la fecha: elige una fecha.", { tono: "error" });
 
     const volver = () => navigation.goBack();
     setGuardando(true);
@@ -113,36 +114,36 @@ export function TrabajoFormScreen({ navigation, route }: NativeStackScreenProps<
     if (editandoId) {
       if (!enLinea) {
         setGuardando(false);
-        return Alert.alert("Sin conexión", "Necesitas conexión para editar un trabajo.");
+        return toast("Sin conexión: necesitas conexión para editar un trabajo.", { tono: "error" });
       }
       const r = await editarTrabajo(editandoId, b);
       setGuardando(false);
-      if (!r.ok) return Alert.alert("No se pudo guardar", r.error);
-      return Alert.alert("Trabajo actualizado", "Listo.", [{ text: "Listo", onPress: volver }]);
+      if (!r.ok) return toast(`No se pudo guardar: ${r.error}`, { tono: "error" });
+      toast("Trabajo actualizado", { tono: "exito" });
+      return volver();
     }
 
     if (enLinea) {
       const r = await crearTrabajo(b);
       if (r.ok) {
         setGuardando(false);
-        return Alert.alert("Trabajo creado", "Listo.", [{ text: "Listo", onPress: volver }]);
+        toast("Trabajo creado", { tono: "exito" });
+        return volver();
       }
       if (!r.reintentable) {
         setGuardando(false);
-        return Alert.alert("No se pudo crear", r.error);
+        return toast(`No se pudo crear: ${r.error}`, { tono: "error" });
       }
       await encolarTrabajo(b);
       setGuardando(false);
-      return Alert.alert(
-        "Se reintentará solo",
-        "No se pudo enviar ahora (conexión o servidor). Lo guardamos y se reenvía cuando haya señal.",
-        [{ text: "Listo", onPress: volver }]
-      );
+      toast("No se pudo enviar ahora (conexión o servidor). Lo guardamos y se reenvía cuando haya señal.", { tono: "info" });
+      return volver();
     }
 
     await encolarTrabajo(b);
     setGuardando(false);
-    Alert.alert("Guardado sin conexión", "Se enviará cuando vuelvas a tener señal.", [{ text: "Listo", onPress: volver }]);
+    toast("Guardado sin conexión. Se enviará cuando vuelvas a tener señal.", { tono: "info" });
+    volver();
   }
 
   if (clientes === null || cargando) {

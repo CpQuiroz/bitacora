@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { Alert, AppState } from "react-native";
+import { AppState } from "react-native";
+import { useToast } from "@bitacora/ui/native";
 import NetInfo from "@react-native-community/netinfo";
 import {
   activas,
@@ -36,6 +37,7 @@ const Ctx = createContext<RedContexto>({
 });
 
 export function NetworkProvider({ children }: { children: ReactNode }) {
+  const toast = useToast();
   const [enLinea, setEnLinea] = useState(true);
   const [cola, setCola] = useState<AccionPendiente[]>([]);
 
@@ -86,17 +88,14 @@ export function NetworkProvider({ children }: { children: ReactNode }) {
       // siempre, indistinguible de "no hay nada para enviar".
       sincronizarAhora: () => {
         procesar().catch((e) => {
-          Alert.alert(
-            "No se pudo sincronizar",
-            `Hubo un error inesperado al reintentar:\n\n${e instanceof Error ? e.message : String(e)}`
-          );
+          toast(`No se pudo sincronizar: ${e instanceof Error ? e.message : String(e)}`, { tono: "error" });
         });
       },
       reintentar: (id) => void reintentar(id),
       descartar: (id) => void descartar(id),
       descartarTodo: () => void descartarTodo(),
     }),
-    [enLinea, cola]
+    [enLinea, cola, toast]
   );
 
   return <Ctx.Provider value={valor}>{children}</Ctx.Provider>;

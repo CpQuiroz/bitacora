@@ -9,7 +9,7 @@ import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { estadoStock, ETIQUETA_ESTADO_STOCK } from "@/lib/estadoStock";
 import { DashboardShell } from "@/components/DashboardShell";
-import { Button, Card, EmptyState, Input, LoadingState, Select, StatusBadge, Table, type TonoEstado } from "@bitacora/ui/web";
+import { Button, Card, EmptyState, Input, LoadingState, Select, StatusBadge, Table, useToast, type TonoEstado } from "@bitacora/ui/web";
 import { Stat } from "@/components/Stat";
 
 type UsuarioConEmpresa = Usuario & { empresa: Empresa };
@@ -33,7 +33,7 @@ export default function InventarioRegistroPage() {
   const [cantidad, setCantidad] = useState("");
   const [motivo, setMotivo] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
-  const [aviso, setAviso] = useState<string | null>(null);
+  const toast = useToast();
   const [guardando, setGuardando] = useState(false);
 
   async function cargar() {
@@ -75,7 +75,6 @@ export default function InventarioRegistroPage() {
     e.preventDefault();
     if (!ajustandoId) return;
     setFormError(null);
-    setAviso(null);
     setGuardando(true);
     const res = await apiFetch("/api/inventario/movimientos", {
       method: "POST",
@@ -87,7 +86,7 @@ export default function InventarioRegistroPage() {
       setFormError(body.error ?? "No se pudo registrar el movimiento");
       return;
     }
-    setAviso("Movimiento registrado.");
+    toast("Movimiento registrado.", { tono: "exito" });
     setAjustandoId(null);
     cargar();
   }
@@ -128,7 +127,6 @@ export default function InventarioRegistroPage() {
       ) : (
         <>
           {error ? <p className="my-ds-6 font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
-          {aviso ? <p className="my-ds-4 font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}
 
           {productos === null && !error ? <LoadingState /> : null}
 

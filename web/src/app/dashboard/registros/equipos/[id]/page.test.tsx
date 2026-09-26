@@ -4,8 +4,9 @@
 // Actividad muestra solo OS (sin filtros).
 import type { ReactNode } from "react";
 import { describe, expect, test, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { ME_ADMIN } from "@/test/simulacros";
+import { ProveedoresFeedback } from "@/components/ProveedoresFeedback";
 import EquipoDetallePage from "./page";
 
 const h = vi.hoisted(() => ({ respuestas: {} as Record<string, unknown> }));
@@ -92,5 +93,31 @@ describe("ficha del equipo en pestañas", () => {
     expect(await screen.findByText("OS N° 77")).toBeTruthy();
     expect(screen.queryByText("Viaje · Guía G-1")).toBeNull();
     expect(screen.queryByRole("button", { name: "Viajes" })).toBeNull();
+  });
+
+  test("eliminar un plan pide confirmación (tarea 156): Cancelar no borra, Eliminar sí", async () => {
+    simular({ ...ME_ADMIN, modulos_visibles: [...ME_ADMIN.modulos_visibles, "flota"] });
+    const borrados: string[] = [];
+    h.respuestas["DELETE /api/planes-mantencion/p1"] = () => {
+      borrados.push("p1");
+      return new Response(null, { status: 204 });
+    };
+    render(
+      <ProveedoresFeedback>
+        <EquipoDetallePage />
+      </ProveedoresFeedback>
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Mantención" }));
+    fireEvent.click(screen.getByRole("button", { name: "Eliminar" }));
+    const dialogo = await screen.findByRole("dialog", { name: "¿Eliminar este plan de mantención?" });
+    fireEvent.click(within(dialogo).getByRole("button", { name: "Cancelar" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(borrados).toEqual([]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Eliminar" }));
+    const otra = await screen.findByRole("dialog", { name: "¿Eliminar este plan de mantención?" });
+    fireEvent.click(within(otra).getByRole("button", { name: "Eliminar" }));
+    await waitFor(() => expect(borrados).toEqual(["p1"]));
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 });

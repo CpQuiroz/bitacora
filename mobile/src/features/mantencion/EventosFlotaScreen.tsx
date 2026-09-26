@@ -1,12 +1,12 @@
 import { useCallback, useMemo, useState } from "react";
-import { Alert, Pressable, ScrollView, View } from "react-native";
+import { Pressable, ScrollView, View } from "react-native";
 import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { EventoFlotaConAutor, TipoEventoFlota } from "@bitacora/shared";
 import { ETIQUETA_TIPO_EVENTO_FLOTA, TIPOS_EVENTO_FLOTA } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
-import { Button, Card, ErrorState, Input, LoadingState, ScreenHeader, Textarea, Texto, useMarca } from "@bitacora/ui/native";
+import { Button, Card, ErrorState, Input, LoadingState, ScreenHeader, Textarea, Texto, useMarca, useToast } from "@bitacora/ui/native";
 import { useRed } from "../../services/sync/NetworkProvider";
 import { encolarEventoFlota, listarEventosSemana } from "../../services/eventosFlota";
 import type { MasStackParamList } from "../../shell/navigation/types";
@@ -35,6 +35,7 @@ function sumarDias(d: Date, n: number): Date {
 export function EventosFlotaScreen({ route, navigation }: NativeStackScreenProps<MasStackParamList, "EventosFlota">) {
   const { equipoId, patente } = route.params;
   const marca = useMarca();
+  const toast = useToast();
   const { enLinea } = useRed();
   const hoy = useMemo(() => new Date(), []);
   const [lunes, setLunes] = useState(() => lunesDe(new Date()));
@@ -81,15 +82,16 @@ export function EventosFlotaScreen({ route, navigation }: NativeStackScreenProps
   }
 
   async function guardar() {
-    if (!tipo) return Alert.alert("Falta el tipo", "Elige qué tipo de evento fue.");
-    if (tipo === "otro" && !descripcion.trim()) return Alert.alert("Falta la descripción", "Describe el evento cuando el tipo es \"Otro\".");
+    if (!tipo) return toast("Falta el tipo: elige qué tipo de evento fue.", { tono: "error" });
+    if (tipo === "otro" && !descripcion.trim()) return toast("Falta la descripción: describe el evento cuando el tipo es \"Otro\".", { tono: "error" });
     setGuardando(true);
     await encolarEventoFlota(equipoId, { tipo, fecha, descripcion, kilometraje });
     setGuardando(false);
     setTipo(null);
     setDescripcion("");
     setKilometraje("");
-    Alert.alert("Evento registrado", enLinea ? "Quedó guardado." : "Se enviará apenas vuelvas a tener señal.");
+    if (enLinea) toast("Evento registrado", { tono: "exito" });
+    else toast("Evento registrado. Se enviará apenas vuelvas a tener señal.", { tono: "info" });
     // Pequeña espera para que la cola alcance a enviarlo antes de recargar.
     setTimeout(() => void cargar(), 800);
   }

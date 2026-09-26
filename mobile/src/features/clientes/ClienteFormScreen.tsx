@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { ArrowLeft } from "lucide-react-native";
 import { tokens } from "@bitacora/design-tokens";
-import { Button, Input, LoadingState, ScreenHeader, Textarea } from "@bitacora/ui/native";
+import { Button, Input, LoadingState, ScreenHeader, Textarea, useToast } from "@bitacora/ui/native";
 import { useRed } from "../../services/sync/NetworkProvider";
 import { crearCliente, editarCliente, obtenerCliente, type BorradorCliente } from "../../services/clientes";
 import type { ClientesStackParamList } from "../../shell/navigation/types";
@@ -18,6 +18,7 @@ const VACIO: BorradorCliente = { nombre: "", rut: "", direccion: "", comuna: "",
 // acá) — ahora es un valor calculado que se le pasa directo a ScreenHeader.
 export function ClienteFormScreen({ navigation, route }: NativeStackScreenProps<ClientesStackParamList, "ClienteForm">) {
   const { enLinea } = useRed();
+  const toast = useToast();
   const editandoId = route.params?.clienteId ?? null;
 
   const [b, setB] = useState<BorradorCliente>(VACIO);
@@ -40,22 +41,21 @@ export function ClienteFormScreen({ navigation, route }: NativeStackScreenProps<
           contacto_nombre: c.contacto_nombre ?? "",
         })
       )
-      .catch((e) => Alert.alert("No se pudo cargar", e instanceof Error ? e.message : "Intenta de nuevo"))
+      .catch((e) => toast(`No se pudo cargar: ${e instanceof Error ? e.message : "intenta de nuevo"}`, { tono: "error" }))
       .finally(() => setCargando(false));
   }, [editandoId]);
 
   async function guardar() {
-    if (!b.nombre.trim()) return Alert.alert("Falta el nombre", "Escribe el nombre del cliente.");
-    if (!b.direccion.trim()) return Alert.alert("Falta la dirección", "La dirección es obligatoria.");
-    if (!enLinea) return Alert.alert("Sin conexión", "Necesitas conexión para guardar un cliente.");
+    if (!b.nombre.trim()) return toast("Falta el nombre: escribe el nombre del cliente.", { tono: "error" });
+    if (!b.direccion.trim()) return toast("Falta la dirección: la dirección es obligatoria.", { tono: "error" });
+    if (!enLinea) return toast("Sin conexión: necesitas conexión para guardar un cliente.", { tono: "error" });
 
     setGuardando(true);
     const r = editandoId ? await editarCliente(editandoId, b) : await crearCliente(b);
     setGuardando(false);
-    if (!r.ok) return Alert.alert("No se pudo guardar", r.error);
-    Alert.alert(editandoId ? "Cliente actualizado" : "Cliente creado", "Listo.", [
-      { text: "Listo", onPress: () => navigation.goBack() },
-    ]);
+    if (!r.ok) return toast(`No se pudo guardar: ${r.error}`, { tono: "error" });
+    toast(editandoId ? "Cliente actualizado" : "Cliente creado", { tono: "exito" });
+    navigation.goBack();
   }
 
   const titulo = editandoId ? "Editar cliente" : "Nuevo cliente";

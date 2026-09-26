@@ -1,12 +1,12 @@
 import { useCallback, useState } from "react";
-import { Alert, ScrollView, View } from "react-native";
+import { ScrollView, View } from "react-native";
 import { ArrowLeft, ChevronRight, Paperclip, Plus } from "lucide-react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { EstadoRendicion } from "@bitacora/shared";
 import { formatearFolio } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
-import { Button, EmptyState, ListRow, ListRowGrupo, LoadingState, ScreenHeader, StatusBadge, Texto, type TonoEstado } from "@bitacora/ui/native";
+import { Button, EmptyState, ListRow, ListRowGrupo, LoadingState, ScreenHeader, StatusBadge, Texto, useConfirmar, useToast, type TonoEstado } from "@bitacora/ui/native";
 import { enviarRendicion, obtenerRendicion, type DetalleRendicion } from "../../services/rendiciones";
 import { useAuth } from "../auth/AuthContext";
 import type { MasStackParamList } from "../../shell/navigation/types";
@@ -40,6 +40,8 @@ const ETIQUETA_METODO_ENTREGA: Record<string, string> = { efectivo: "Efectivo", 
 // modificarlo").
 export function RendicionDetalleScreen({ navigation, route }: NativeStackScreenProps<MasStackParamList, "RendicionDetalle">) {
   const auth = useAuth();
+  const toast = useToast();
+  const confirmar = useConfirmar();
   const [detalle, setDetalle] = useState<DetalleRendicion | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
@@ -64,19 +66,17 @@ export function RendicionDetalleScreen({ navigation, route }: NativeStackScreenP
 
   async function onEnviar() {
     if (!detalle) return;
-    Alert.alert("¿Enviar esta rendición?", "Ya no vas a poder agregar más gastos hasta que se revise.", [
-      { text: "Cancelar", style: "cancel" },
-      {
-        text: "Enviar",
-        onPress: async () => {
-          setEnviando(true);
-          const r = await enviarRendicion(detalle.id);
-          setEnviando(false);
-          if (!r.ok) return Alert.alert("No se pudo enviar", r.error);
-          await cargar();
-        },
-      },
-    ]);
+    const ok = await confirmar({
+      titulo: "¿Enviar esta rendición?",
+      mensaje: "Ya no vas a poder agregar más gastos hasta que se revise.",
+      accion: "Enviar",
+    });
+    if (!ok) return;
+    setEnviando(true);
+    const r = await enviarRendicion(detalle.id);
+    setEnviando(false);
+    if (!r.ok) return toast(`No se pudo enviar: ${r.error}`, { tono: "error" });
+    await cargar();
   }
 
   if (!detalle && !error) {

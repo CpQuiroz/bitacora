@@ -4,7 +4,7 @@ import * as ImagePicker from "expo-image-picker";
 import { AlertCircle, AlertTriangle, Camera, RefreshCw, Trash2, X } from "lucide-react-native";
 import { CATEGORIAS_FOTO_OS, ETIQUETA_CATEGORIA_FOTO_OS, type CategoriaFotoOS } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
-import { Button, Textarea, Texto, useMarca } from "@bitacora/ui/native";
+import { Button, Textarea, Texto, useConfirmar, useMarca, useToast } from "@bitacora/ui/native";
 import { comprimirImagen } from "../../../lib/imagen";
 import type { FotoConUrl } from "../../../services/trabajos";
 
@@ -41,6 +41,8 @@ export function FotosSection({
   onDescripcion?: (fotoId: string, descripcion: string) => Promise<void> | void;
 }) {
   const marca = useMarca();
+  const toast = useToast();
+  const confirmar = useConfirmar();
   const [ocupado, setOcupado] = useState(false);
   const [abierta, setAbierta] = useState<FotoConUrl | null>(null);
   const [categoria, setCategoria] = useState<CategoriaFotoOS | null>(null);
@@ -68,11 +70,10 @@ export function FotosSection({
     setAbierta(null);
   }
 
-  function confirmarEliminar() {
-    Alert.alert("Eliminar foto", "¿Eliminar esta foto de la orden de servicio?", [
-      { text: "Cancelar", style: "cancel" },
-      { text: "Eliminar", style: "destructive", onPress: () => void eliminar() },
-    ]);
+  async function confirmarEliminar() {
+    if (await confirmar({ titulo: "¿Eliminar esta foto?", mensaje: "Se quita de la orden de servicio.", accion: "Eliminar", destructivo: true })) {
+      void eliminar();
+    }
   }
 
   async function procesar(assets: ImagePicker.ImagePickerAsset[]) {
@@ -89,19 +90,20 @@ export function FotosSection({
 
   async function camara() {
     const permiso = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permiso.granted) return Alert.alert("Permiso necesario", "Necesitamos la cámara para continuar.");
+    if (!permiso.granted) return toast("Permiso necesario: necesitamos la cámara para continuar.", { tono: "error" });
     const r = await ImagePicker.launchCameraAsync({ quality: 0.8 });
     if (!r.canceled) await procesar(r.assets);
   }
 
   async function galeria() {
     const permiso = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permiso.granted) return Alert.alert("Permiso necesario", "Necesitamos acceso a tus fotos.");
+    if (!permiso.granted) return toast("Permiso necesario: necesitamos acceso a tus fotos.", { tono: "error" });
     const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.8, allowsMultipleSelection: true });
     if (!r.canceled) await procesar(r.assets);
   }
 
   function agregar() {
+    // alerta-nativa: menú para elegir cámara o galería (no hay hoja de acciones en @bitacora/ui)
     Alert.alert("Agregar foto", undefined, [
       { text: "Tomar foto", onPress: () => void camara() },
       { text: "Elegir de galería", onPress: () => void galeria() },

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Sans, IBM_Plex_Mono, Caprasimo, Figtree, Archivo } from "next/font/google";
 import "./globals.css";
+import { ProveedoresFeedback } from "@/components/ProveedoresFeedback";
 
 // Faena (en migración) — se quitan cuando ninguna pantalla use --font-sans/mono.
 const plexSans = IBM_Plex_Sans({
@@ -66,7 +67,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <head>
         <script dangerouslySetInnerHTML={{ __html: SCRIPT_TEMA }} />
       </head>
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <ProveedoresFeedback>{children}</ProveedoresFeedback>
+      </body>
     </html>
   );
 }

@@ -11,6 +11,7 @@ import { IconChevronDown, IconChevronLeft, IconShield } from "@/components/icons
 import { obtenerTokenSuperAdmin, superadminFetch } from "@/lib/superadminApi";
 import { guardarImpersonacion } from "@/lib/impersonacion";
 import { ETIQUETA_MODULO } from "@/lib/etiquetasModulo";
+import { useConfirmar } from "@bitacora/ui/web";
 
 // Historial de la prueba (super_admin_auditoria, tarea 144).
 type HistorialPrueba = {
@@ -195,12 +196,13 @@ export default function SuperAdminSaludEmpresaPage() {
     { id: string; nombre: string; rol: string; activo: boolean; correo: string | null; mfa_activado: boolean; mfa_metodo: string | null }[] | null
   >(null);
   const [errorUsuarios, setErrorUsuarios] = useState<string | null>(null);
+  const confirmar = useConfirmar();
   const [restableciendoId, setRestableciendoId] = useState<string | null>(null);
   const [passwordGenerada, setPasswordGenerada] = useState<{ usuarioId: string; nombre: string; password: string } | null>(null);
   // Panel de restablecer contraseña (21-sep-2026, pedido: poder dejar
   // una clave personalizada en vez de solo la temporal al azar) — mismo
   // patrón de panel inline que impersonarUsuario/eliminarUsuario, en vez
-  // de un confirm() de una sola pregunta.
+  // de una confirmación de una sola pregunta.
   const [restablecerUsuario, setRestablecerUsuario] = useState<{ id: string; nombre: string } | null>(null);
   const [passwordPersonalizada, setPasswordPersonalizada] = useState("");
   const [cambiandoMfaId, setCambiandoMfaId] = useState<string | null>(null);
@@ -479,7 +481,14 @@ export default function SuperAdminSaludEmpresaPage() {
   }
 
   async function onActivarMfa(usuarioId: string, nombre: string) {
-    if (!confirm(`¿Activar 2FA (TOTP) para ${nombre}? Se genera una clave nueva — si ya tenía una configurada en su app, dejará de servir.`)) return;
+    if (
+      !(await confirmar({
+        titulo: `¿Activar 2FA (TOTP) para ${nombre}?`,
+        mensaje: "Se genera una clave nueva — si ya tenía una configurada en su app, dejará de servir.",
+        accion: "Activar 2FA",
+      }))
+    )
+      return;
     setErrorUsuarios(null);
     setSecretoTotpGenerado(null);
     setCambiandoMfaId(usuarioId);
@@ -502,7 +511,7 @@ export default function SuperAdminSaludEmpresaPage() {
       rol === "admin"
         ? " Su rol EXIGE 2FA activo — hasta que lo vuelva a activar (o cambie de rol), va a quedar bloqueado del resto de la app."
         : "";
-    if (!confirm(`¿Desactivar el 2FA de ${nombre}?${avisoRol}`)) return;
+    if (!(await confirmar({ titulo: `¿Desactivar el 2FA de ${nombre}?`, mensaje: avisoRol.trim() || undefined, accion: "Desactivar 2FA", destructivo: true }))) return;
     setErrorUsuarios(null);
     setCambiandoMfaId(usuarioId);
     const res = await superadminFetch(`/api/superadmin/empresas/${params.id}/usuarios/${usuarioId}/mfa/desactivar`, { method: "POST" });
@@ -520,7 +529,15 @@ export default function SuperAdminSaludEmpresaPage() {
     const aviso = activo
       ? ""
       : " No podrá entrar a la app hasta que lo reactives. Su historial queda intacto.";
-    if (!confirm(`¿${activo ? "Reactivar" : "Desactivar"} a ${nombre}?${aviso}`)) return;
+    if (
+      !(await confirmar({
+        titulo: `¿${activo ? "Reactivar" : "Desactivar"} a ${nombre}?`,
+        mensaje: aviso.trim() || undefined,
+        accion: activo ? "Reactivar" : "Desactivar",
+        destructivo: !activo,
+      }))
+    )
+      return;
     setErrorUsuarios(null);
     setCambiandoEstadoId(usuarioId);
     const res = await superadminFetch(`/api/superadmin/empresas/${params.id}/usuarios/${usuarioId}/${accion}`, { method: "POST" });
@@ -673,7 +690,7 @@ export default function SuperAdminSaludEmpresaPage() {
   }
 
   async function onCambiarEstado(nuevo: EstadoEmpresa) {
-    if (!confirm(`¿Cambiar el estado a "${nuevo.replaceAll("_", " ")}"?`)) return;
+    if (!(await confirmar({ titulo: `¿Cambiar el estado a "${nuevo.replaceAll("_", " ")}"?`, accion: "Cambiar estado" }))) return;
     setErrorEstado(null);
     setGuardandoEstado(true);
     const res = await superadminFetch(`/api/superadmin/empresas/${params.id}/estado`, {

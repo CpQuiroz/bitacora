@@ -45,6 +45,19 @@ export function PortalShell({ children }: { children: ReactNode }) {
   // y el cliente nunca veía el color de SU empresa en su propio portal.
   // Fondo y texto con contraste AA (tarea 154), como en DashboardShell.
   const legible = marca?.color_primario ? marcaLegible(marca.color_primario) : null;
+
+  // Toasts y diálogos de confirmación se montan en el layout raíz, fuera
+  // de este contenedor: se les pasa la marca por el elemento <html>.
+  useEffect(() => {
+    if (!legible) return;
+    const raiz = document.documentElement.style;
+    raiz.setProperty("--ds-brand", legible.fondo);
+    raiz.setProperty("--ds-brand-foreground", legible.texto);
+    return () => {
+      raiz.removeProperty("--ds-brand");
+      raiz.removeProperty("--ds-brand-foreground");
+    };
+  }, [legible?.fondo, legible?.texto]); // eslint-disable-line react-hooks/exhaustive-deps
   const marcaStyle: CSSProperties = legible
     ? ({
         "--accent": legible.fondo,

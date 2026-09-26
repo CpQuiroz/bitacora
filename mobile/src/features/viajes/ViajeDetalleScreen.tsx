@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
-import { Alert, Image, Linking, Pressable, ScrollView, View } from "react-native";
+import { Image, Linking, Pressable, ScrollView, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { ArrowLeft, Camera, Map, Navigation, Pencil, RefreshCw, X } from "lucide-react-native";
 import type { EstadoViaje } from "@bitacora/shared";
 import { formatearFolio } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
-import { Button, Card, ErrorState, LoadingState, ScreenHeader, Skeleton, StatusBadge, Texto } from "@bitacora/ui/native";
+import { Button, Card, ErrorState, LoadingState, ScreenHeader, Skeleton, StatusBadge, Texto, useConfirmar, useDeshacer, useToast } from "@bitacora/ui/native";
 import { pesos } from "../../lib/plata";
 import { OfflineBanner } from "../../components/OfflineBanner";
 import { useRed } from "../../services/sync/NetworkProvider";
@@ -29,14 +29,14 @@ const TONO_VIAJE: Record<string, "en_progreso" | "completado" | "cerrado"> = {
   facturado: "cerrado",
 };
 
-function abrirEnMapa(app: "google" | "waze", origen: string, destino: string) {
+function abrirEnMapa(app: "google" | "waze", origen: string, destino: string, alFallar: () => void) {
   const o = encodeURIComponent(origen);
   const d = encodeURIComponent(destino);
   const url =
     app === "waze"
       ? `https://waze.com/ul?q=${d}&navigate=yes`
       : `https://www.google.com/maps/dir/?api=1&origin=${o}&destination=${d}&travelmode=driving`;
-  Linking.openURL(url).catch(() => Alert.alert("No se pudo abrir", "Revisa que tengas la app instalada."));
+  Linking.openURL(url).catch(alFallar);
 }
 
 // Sistema visual móvil v2 (14-sep-2026) — ScreenHeader propio (volver) +
@@ -45,6 +45,10 @@ export function ViajeDetalleScreen({ route, navigation }: NativeStackScreenProps
   const { viajeId } = route.params;
   const { enLinea, pendientes } = useRed();
   const auth = useAuth();
+  const toast = useToast();
+  const confirmar = useConfirmar();
+  const conDeshacer = useDeshacer();
+  const avisarSinApp = () => toast("No se pudo abrir: revisa que tengas la app instalada.", { tono: "error" });
 
   const fotosEnCola = pendientes.filter((a) => a.recurso === `viaje:${viajeId}` && a.etiqueta === "Foto de viaje");
   const esGestion = auth.fase === "listo" && auth.usuario.rol !== "colaborador";
@@ -53,7 +57,7 @@ export function ViajeDetalleScreen({ route, navigation }: NativeStackScreenProps
   const [error, setError] = useState<string | null>(null);
   const [guardadoEn, setGuardadoEn] = useState<number | undefined>();
   const [ocupado, setOcupado] = useState(false);
-  const [eliminandoFotoId, setEliminandoFotoId] = useState<string | null>(null);
+  const [fotosOcultas, setFotosOcultas] = useState<string[]>([]);
 
   const cargar = useCallback(async () => {
     setError(null);
@@ -77,54 +81,49 @@ export function ViajeDetalleScreen({ route, navigation }: NativeStackScreenProps
   }, [fotosEnCola.length, cargar]);
 
   async function agregarFoto() {
-    const [elegida] = await elegirFotos({ titulo: "Foto del viaje" });
+    const [elegida] = await elegirFotos({ titulo: "Foto del viaje", avisar: toast });
     if (!elegida) return;
     await encolarFotoViaje(viajeId, elegida);
   }
 
-  function confirmarEliminarFoto(fotoId: string) {
-    Alert.alert("Eliminar foto", "¿Eliminar esta foto del viaje?", [
-      { text: "Cancelar", style: "cancel" },
-      {
-        text: "Eliminar",
-        style: "destructive",
-        onPress: async () => {
-          if (!enLinea) return Alert.alert("Sin conexión", "Necesitas conexión para eliminar una foto.");
-          setEliminandoFotoId(fotoId);
-          const res = await eliminarFotoViaje(viajeId, fotoId);
-          setEliminandoFotoId(null);
-          if (!res.ok) return Alert.alert("No se pudo eliminar", res.error);
-          void cargar();
-        },
+  function eliminarFoto(fotoId: string) {
+    if (!enLinea) return toast("Sin conexión: necesitas conexión para eliminar una foto.", { tono: "error" });
+    conDeshacer({
+      mensaje: "Foto eliminada",
+      ocultar: () => setFotosOcultas((ids) => [...ids, fotoId]),
+      restaurar: () => setFotosOcultas((ids) => ids.filter((id) => id !== fotoId)),
+      ejecutar: async () => {
+        const res = await eliminarFotoViaje(viajeId, fotoId);
+        if (!res.ok) throw new Error(`No se pudo eliminar: ${res.error}`);
       },
-    ]);
+      alTerminar: () => void cargar(),
+    });
   }
 
   async function aprobar() {
-    if (!enLinea) return Alert.alert("Sin conexión", "Necesitas conexión para aprobar un viaje.");
+    if (!enLinea) return toast("Sin conexión: necesitas conexión para aprobar un viaje.", { tono: "error" });
     setOcupado(true);
     const r = await aprobarViaje(viajeId);
     setOcupado(false);
-    if (!r.ok) return Alert.alert("No se pudo aprobar", r.error ?? "Intenta de nuevo.");
+    if (!r.ok) return toast(`No se pudo aprobar: ${r.error ?? "intenta de nuevo."}`, { tono: "error" });
     cargar();
   }
 
-  function rechazar() {
-    Alert.alert("Rechazar el viaje", "Se elimina de la lista. El chofer tendrá que registrarlo de nuevo si corresponde.", [
-      { text: "No", style: "cancel" },
-      {
-        text: "Sí, rechazar",
-        style: "destructive",
-        onPress: async () => {
-          if (!enLinea) return Alert.alert("Sin conexión", "Necesitas conexión para rechazar un viaje.");
-          setOcupado(true);
-          const r = await rechazarViaje(viajeId);
-          setOcupado(false);
-          if (!r.ok) return Alert.alert("No se pudo rechazar", r.error ?? "Intenta de nuevo.");
-          navigation.goBack();
-        },
-      },
-    ]);
+  async function rechazar() {
+    const ok = await confirmar({
+      titulo: "¿Rechazar el viaje?",
+      mensaje: "Se elimina de la lista. El chofer tendrá que registrarlo de nuevo si corresponde.",
+      accion: "Sí, rechazar",
+      cancelar: "No",
+      destructivo: true,
+    });
+    if (!ok) return;
+    if (!enLinea) return toast("Sin conexión: necesitas conexión para rechazar un viaje.", { tono: "error" });
+    setOcupado(true);
+    const r = await rechazarViaje(viajeId);
+    setOcupado(false);
+    if (!r.ok) return toast(`No se pudo rechazar: ${r.error ?? "intenta de nuevo."}`, { tono: "error" });
+    navigation.goBack();
   }
 
   const volver = { icono: <ArrowLeft size={20} strokeWidth={2.5} color={tokens.color.text} />, onPress: () => navigation.goBack(), etiquetaAccesible: "Volver" };
@@ -189,14 +188,14 @@ export function ViajeDetalleScreen({ route, navigation }: NativeStackScreenProps
               <Button
                 variante="secundario"
                 iconoIzq={<Map size={16} strokeWidth={2.25} color={tokens.color.text} />}
-                onPress={() => abrirEnMapa("google", viaje.origen, viaje.destino)}
+                onPress={() => abrirEnMapa("google", viaje.origen, viaje.destino, avisarSinApp)}
               >
                 Google Maps
               </Button>
               <Button
                 variante="secundario"
                 iconoIzq={<Navigation size={16} strokeWidth={2.25} color={tokens.color.text} />}
-                onPress={() => abrirEnMapa("waze", viaje.origen, viaje.destino)}
+                onPress={() => abrirEnMapa("waze", viaje.origen, viaje.destino, avisarSinApp)}
               >
                 Waze
               </Button>
@@ -229,7 +228,7 @@ export function ViajeDetalleScreen({ route, navigation }: NativeStackScreenProps
         {(() => {
           const subidas = [
             ...(viaje.foto_guia_url_firmada ? [{ id: "guia", url: viaje.foto_guia_url_firmada }] : []),
-            ...(viaje.fotos ?? []),
+            ...(viaje.fotos ?? []).filter((f) => !fotosOcultas.includes(f.id)),
           ];
           const total = subidas.length + fotosEnCola.length;
           return (
@@ -252,8 +251,7 @@ export function ViajeDetalleScreen({ route, navigation }: NativeStackScreenProps
                       <Image source={{ uri: f.url }} style={{ width: 78, height: 78, borderRadius: tokens.radius.sm, borderWidth: 1, borderColor: tokens.color.divider }} />
                       {f.id !== "guia" && viaje.estado !== "facturado" ? (
                         <Pressable accessibilityRole="button" accessibilityLabel="Eliminar foto"
-                          onPress={() => confirmarEliminarFoto(f.id)}
-                          disabled={eliminandoFotoId === f.id}
+                          onPress={() => eliminarFoto(f.id)}
                           hitSlop={8}
                           style={{
                             position: "absolute",
@@ -265,7 +263,6 @@ export function ViajeDetalleScreen({ route, navigation }: NativeStackScreenProps
                             backgroundColor: tokens.color.accentRamp["700"],
                             alignItems: "center",
                             justifyContent: "center",
-                            opacity: eliminandoFotoId === f.id ? 0.6 : 1,
                           }}
                         >
                           <X size={13} strokeWidth={2.5} color="#ffffff" />

@@ -40,8 +40,10 @@ export function NuevoServicioModal({
 
   async function guardar() {
     const nombreLimpio = nombre.trim();
+    // alerta-nativa: dentro de un Modal (el toast quedaría tapado)
     if (!nombreLimpio) return Alert.alert("Falta el nombre", "Ponle un nombre al servicio.");
     const precioNum = Number(precio.replace(/\D/g, "")) || 0;
+    // alerta-nativa: dentro de un Modal (el toast quedaría tapado)
     if (!Number.isInteger(duracion) || duracion <= 0) return Alert.alert("Duración inválida", "Elige una duración mayor a 0.");
 
     setGuardando(true);
@@ -49,6 +51,7 @@ export function NuevoServicioModal({
       ? await editarServicio(servicio.id, { nombre: nombreLimpio, precio: precioNum, duracion_sugerida_min: duracion, activo })
       : await crearServicio({ nombre: nombreLimpio, precio: precioNum, duracion_sugerida_min: duracion });
     setGuardando(false);
+    // alerta-nativa: dentro de un Modal (el toast quedaría tapado)
     if (!r.ok) return Alert.alert("No se pudo guardar", r.error);
 
     onGuardado(r.servicio);

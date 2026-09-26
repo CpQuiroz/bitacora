@@ -121,3 +121,14 @@ export async function apiFetch(
 
   return respuestaError(mensajeFalloRed(ultimoTipo));
 }
+
+/**
+ * Para `ejecutar` de useDeshacer (tarea 156): convierte una respuesta no
+ * ok en un Error con el mensaje del backend, así el toast rojo muestra
+ * la causa real.
+ */
+export async function exigirOk(res: Response, mensajePorDefecto: string): Promise<Response> {
+  if (res.ok) return res;
+  const body = await res.json().catch(() => ({}));
+  throw new Error(typeof body?.error === "string" && body.error ? body.error : mensajePorDefecto);
+}

@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ActivityIndicator, Alert, FlatList, KeyboardAvoidingView, Platform, Pressable, TextInput, View } from "react-native";
+import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, Pressable, TextInput, View } from "react-native";
 import { ArrowUp, Sparkles, Trash2 } from "lucide-react-native";
 import type { NativeStackNavigationOptions } from "@react-navigation/native-stack";
 import type { MensajeAsistente } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
-import { EmptyState, ErrorState, LoadingState, Texto, useMarca } from "@bitacora/ui/native";
+import { EmptyState, ErrorState, LoadingState, Texto, useConfirmar, useMarca } from "@bitacora/ui/native";
 import { borrarHistorialAsistente, enviarAlAsistente, historialAsistente } from "../../services/asistente";
 import { ESCALA_FUENTE_MAX } from "@bitacora/ui/native";
 
@@ -33,6 +33,7 @@ const SUGERENCIAS = [
 // los primitivos v2.
 export function AsistenteScreen({ navigation }: { navigation: NavConOpciones }) {
   const marca = useMarca();
+  const confirmar = useConfirmar();
   const listaRef = useRef<FlatList<Fila>>(null);
   const [mensajes, setMensajes] = useState<MensajeAsistente[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -54,18 +55,17 @@ export function AsistenteScreen({ navigation }: { navigation: NavConOpciones }) 
   }, [cargar]);
 
   async function limpiar() {
-    Alert.alert("Borrar la conversación", "Se borra todo el historial con el asistente. ¿Seguro?", [
-      { text: "No", style: "cancel" },
-      {
-        text: "Sí, borrar",
-        style: "destructive",
-        onPress: async () => {
-          await borrarHistorialAsistente().catch(() => {});
-          setMensajes([]);
-          setAviso(null);
-        },
-      },
-    ]);
+    const ok = await confirmar({
+      titulo: "¿Borrar la conversación?",
+      mensaje: "Se borra todo el historial con el asistente.",
+      accion: "Sí, borrar",
+      cancelar: "No",
+      destructivo: true,
+    });
+    if (!ok) return;
+    await borrarHistorialAsistente().catch(() => {});
+    setMensajes([]);
+    setAviso(null);
   }
 
   useLayoutEffect(() => {

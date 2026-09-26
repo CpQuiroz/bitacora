@@ -11,7 +11,8 @@ export { LoadingState } from "./LoadingState";
 export { EmptyState } from "./EmptyState";
 export { ErrorState } from "./ErrorState";
 export { Dialog } from "./Dialog";
-export { ToastProvider, useToast } from "./Toast";
+export { ToastProvider, useToast, useDeshacer } from "./Toast";
+export { ConfirmarProvider, useConfirmar } from "./Confirmar";
 export { Cifra } from "./Cifra";
 export { ProveedorMarca, useMarca, resolverMarca, type Marca } from "./marca";
 export { FUENTE_NATIVE } from "./fuentes";
@@ -47,6 +48,12 @@ export type {
   PropsLoadingState,
   PropsDialog,
   MostrarToast,
+  OpcionesToast,
+  TonoToast,
+  Confirmar,
+  OpcionesConfirmar,
+  ConDeshacer,
+  OpcionesDeshacer,
   PropsCifra,
 } from "../tipos";
 export { MAPA_ESTADO_TONO } from "../tipos";

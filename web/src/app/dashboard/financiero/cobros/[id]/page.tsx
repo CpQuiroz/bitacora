@@ -10,7 +10,7 @@ import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Button, Card, DatePicker, Input, Select, StatusBadge, Textarea, type TonoEstado } from "@bitacora/ui/web";
+import { Button, Card, DatePicker, Input, Select, StatusBadge, Textarea, useConfirmar, useToast, type TonoEstado } from "@bitacora/ui/web";
 import { InputMonto } from "@/components/InputMonto";
 import { Modal } from "@/components/Modal";
 import { PanelAcciones } from "@/components/PanelAcciones";
@@ -38,7 +38,8 @@ export default function CobroDetallePage() {
   const [usuario, setUsuario] = useState<UsuarioShell | null>(null);
   const [cobro, setCobro] = useState<CobroDetalle | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [aviso, setAviso] = useState<string | null>(null);
+  const toast = useToast();
+  const confirmar = useConfirmar();
 
   const [panelAbierto, setPanelAbierto] = useState(false);
   const [eliminando, setEliminando] = useState(false);
@@ -110,8 +111,10 @@ export default function CobroDetallePage() {
   async function cambiarEstado(estado: EstadoFactura) {
     const res = await apiFetch(`/api/cobros/${params.id}`, { method: "PATCH", body: JSON.stringify({ estado }) });
     if (res.ok) {
-      setAviso("Estado actualizado.");
+      toast("Estado actualizado.", { tono: "exito" });
       cargar();
+    } else {
+      toast((await res.json().catch(() => ({}))).error ?? "No se pudo actualizar el estado", { tono: "error" });
     }
   }
 
@@ -146,12 +149,12 @@ export default function CobroDetallePage() {
     }
     setPagoAbierto(false);
     setPanelAbierto(false);
-    setAviso("Pago registrado.");
+    toast("Pago registrado.", { tono: "exito" });
     cargar();
   }
 
   async function onEliminar() {
-    if (!confirm("¿Eliminar este cobro? Esta acción no se puede deshacer.")) return;
+    if (!(await confirmar({ titulo: "¿Eliminar este cobro?", mensaje: "Esta acción no se puede deshacer.", accion: "Eliminar", destructivo: true }))) return;
     setErrorEliminar(null);
     setEliminando(true);
     const res = await apiFetch(`/api/cobros/${params.id}`, { method: "DELETE" });
@@ -194,7 +197,6 @@ export default function CobroDetallePage() {
         </div>
       </div>
 
-      {aviso ? <p className="my-ds-4 font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}
 
       <div className="my-ds-6 grid gap-ds-6 lg:grid-cols-2">
         <Card>

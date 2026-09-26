@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { X } from "lucide-react-native";
 import { tokens } from "@bitacora/design-tokens";
-import { Button, DatePicker, ErrorState, Input, LoadingState, ScreenHeader, Select, Textarea } from "@bitacora/ui/native";
+import { Button, DatePicker, ErrorState, Input, LoadingState, ScreenHeader, Select, Textarea, useToast } from "@bitacora/ui/native";
 import type { MasStackParamList } from "../../shell/navigation/types";
 import { actualizarEquipo, obtenerEquipo, type EquipoDetalle } from "../../services/equipos";
 import { aFecha, aIso } from "./fechas";
@@ -29,6 +29,7 @@ type Borrador = {
 // backend valida permisos (vehículo → Flota; otro equipo → Equipos).
 export function EquipoFormScreen({ navigation, route }: NativeStackScreenProps<MasStackParamList, "EquipoForm">) {
   const { equipoId } = route.params;
+  const toast = useToast();
   const [original, setOriginal] = useState<EquipoDetalle | null>(null);
   const [b, setB] = useState<Borrador | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -72,10 +73,10 @@ export function EquipoFormScreen({ navigation, route }: NativeStackScreenProps<M
 
   async function guardar() {
     if (!b) return;
-    if (!b.nombre.trim()) return Alert.alert("Falta el nombre", "El equipo necesita un nombre.");
+    if (!b.nombre.trim()) return toast("Falta el nombre: el equipo necesita un nombre.", { tono: "error" });
     const anio = b.anio.trim();
     if (anio && (!/^\d{4}$/.test(anio) || Number(anio) < 1950 || Number(anio) > new Date().getFullYear() + 1)) {
-      return Alert.alert("Año inválido", "Escribe el año con 4 dígitos.");
+      return toast("Año inválido: escribe el año con 4 dígitos.", { tono: "error" });
     }
     setGuardando(true);
     const r = await actualizarEquipo(equipoId, {
@@ -92,7 +93,7 @@ export function EquipoFormScreen({ navigation, route }: NativeStackScreenProps<M
       notas: b.notas.trim() || null,
     });
     setGuardando(false);
-    if (!r.ok) return Alert.alert("No se pudo guardar", r.error);
+    if (!r.ok) return toast(`No se pudo guardar: ${r.error}`, { tono: "error" });
     navigation.goBack();
   }
 

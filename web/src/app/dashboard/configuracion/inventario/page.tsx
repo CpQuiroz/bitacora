@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Box, Layers } from "lucide-react";
 import type { CatalogoItem, EstadoOS, UnidadMedida } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
-import { Button, Card, Input } from "@bitacora/ui/web";
+import { Button, Card, Input, useToast } from "@bitacora/ui/web";
 import { DataTable } from "@/components/DataTable";
 import { useConfiguracion } from "../ConfiguracionContext";
 
@@ -39,7 +39,7 @@ export default function InventarioPage() {
   const [permitirNegativo, setPermitirNegativo] = useState(usuario.empresa.inventario_permitir_negativo);
   const [descontarUnaVez, setDescontarUnaVez] = useState(usuario.empresa.inventario_descontar_una_vez);
   const [guardando, setGuardando] = useState(false);
-  const [aviso, setAviso] = useState<string | null>(null);
+  const toast = useToast();
   const [error, setError] = useState<string | null>(null);
 
   const [hayProductos, setHayProductos] = useState<boolean | null>(null);
@@ -73,7 +73,6 @@ export default function InventarioPage() {
 
   async function onGuardar() {
     setError(null);
-    setAviso(null);
     const minimo = Number(stockMinimoDefault);
     if (!Number.isInteger(minimo) || minimo < 0) {
       setError("El umbral de stock mínimo debe ser un entero positivo");
@@ -97,7 +96,7 @@ export default function InventarioPage() {
       return;
     }
     await recargar();
-    setAviso("Configuración guardada");
+    toast("Configuración guardada", { tono: "exito" });
   }
 
   async function crearUnidadRapida(s: { nombre: string; abreviatura: string }) {
@@ -269,7 +268,6 @@ export default function InventarioPage() {
         </div>
 
         {error ? <p className="mt-ds-4 font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
-        {aviso ? <p className="mt-ds-4 font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}
         <div className="mt-ds-4">
           <Button onPress={onGuardar} cargando={guardando}>
             Guardar configuración

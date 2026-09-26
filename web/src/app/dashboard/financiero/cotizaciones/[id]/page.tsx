@@ -10,7 +10,7 @@ import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { abrirPdfCotizacion, urlCompartirPdfCotizacion } from "@/lib/descargarPdf";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Button, Card, DatePicker, Input, Select, StatusBadge } from "@bitacora/ui/web";
+import { Button, Card, DatePicker, Input, Select, StatusBadge, useConfirmar, useToast } from "@bitacora/ui/web";
 import { InputMonto } from "@/components/InputMonto";
 import { CatalogoSelectorModal, type ItemSeleccionadoCatalogo } from "@/components/CatalogoSelectorModal";
 import { PanelAcciones } from "@/components/PanelAcciones";
@@ -38,7 +38,8 @@ export default function CotizacionDetallePage() {
   const [usuario, setUsuario] = useState<UsuarioShell | null>(null);
   const [cotizacion, setCotizacion] = useState<CotizacionDetalle | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [aviso, setAviso] = useState<string | null>(null);
+  const toast = useToast();
+  const confirmar = useConfirmar();
   const [convirtiendo, setConvirtiendo] = useState(false);
   const [errorConversion, setErrorConversion] = useState<string | null>(null);
   const [folioGenerado, setFolioGenerado] = useState<number | null>(null);
@@ -51,7 +52,6 @@ export default function CotizacionDetallePage() {
   const [errorCompartir, setErrorCompartir] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [enviando, setEnviando] = useState(false);
-  const [avisoEnvio, setAvisoEnvio] = useState<string | null>(null);
   const [errorEnvio, setErrorEnvio] = useState<string | null>(null);
 
   const [editando, setEditando] = useState(false);
@@ -104,8 +104,10 @@ export default function CotizacionDetallePage() {
   async function cambiarEstado(estado: EstadoPresupuesto) {
     const res = await apiFetch(`/api/cotizaciones/${params.id}`, { method: "PATCH", body: JSON.stringify({ estado }) });
     if (res.ok) {
-      setAviso("Estado actualizado.");
+      toast("Estado actualizado.", { tono: "exito" });
       cargar();
+    } else {
+      toast((await res.json().catch(() => ({}))).error ?? "No se pudo actualizar el estado", { tono: "error" });
     }
   }
 
@@ -188,7 +190,7 @@ export default function CotizacionDetallePage() {
       return;
     }
     setEditando(false);
-    setAviso("Cotización actualizada.");
+    toast("Cotización actualizada.", { tono: "exito" });
     cargar();
   }
 
@@ -216,7 +218,6 @@ export default function CotizacionDetallePage() {
 
   async function onEnviarEmail(e: FormEvent) {
     e.preventDefault();
-    setAvisoEnvio(null);
     setErrorEnvio(null);
     if (!email.trim()) return;
     setEnviando(true);
@@ -230,12 +231,12 @@ export default function CotizacionDetallePage() {
       setErrorEnvio(body.error ?? "No se pudo enviar el correo");
       return;
     }
-    setAvisoEnvio(`PDF enviado a ${email.trim()}`);
+    toast(`PDF enviado a ${email.trim()}`, { tono: "exito" });
     setEmail("");
   }
 
   async function onEliminar() {
-    if (!confirm("¿Eliminar esta cotización? Esta acción no se puede deshacer.")) return;
+    if (!(await confirmar({ titulo: "¿Eliminar esta cotización?", mensaje: "Esta acción no se puede deshacer.", accion: "Eliminar", destructivo: true }))) return;
     setErrorEliminar(null);
     setEliminando(true);
     const res = await apiFetch(`/api/cotizaciones/${params.id}`, { method: "DELETE" });
@@ -309,7 +310,6 @@ export default function CotizacionDetallePage() {
         </div>
       </div>
 
-      {aviso ? <p className="my-ds-4 font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}
 
       <div className="my-ds-6 grid gap-ds-6 lg:grid-cols-3">
         <div className="flex flex-col gap-ds-6 lg:col-span-2">
@@ -569,7 +569,6 @@ export default function CotizacionDetallePage() {
                 </Button>
               </div>
             </form>
-            {avisoEnvio ? <p className="font-ds-body text-ds-small font-medium text-ds-accent2-800">{avisoEnvio}</p> : null}
             {errorEnvio ? <p className="font-ds-body text-ds-small text-ds-accent-700">{errorEnvio}</p> : null}
             {errorCompartir ? <p className="font-ds-body text-ds-small text-ds-accent-700">{errorCompartir}</p> : null}
           </div>

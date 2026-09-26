@@ -1,9 +1,11 @@
 // Prueba de regresión (tarea 127): crear una OS desde la app.
 // Servicios simulados (sin red ni base): se comprueba que el formulario
 // cargue, valide y mande el borrador correcto.
-import { Alert } from "react-native";
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import { TrabajoFormScreen } from "./TrabajoFormScreen";
+
+const mockToast = jest.fn();
+jest.mock("@bitacora/ui/native", () => ({ ...jest.requireActual("@bitacora/ui/native"), useToast: () => mockToast }));
 
 const mockCrear = jest.fn();
 const mockEncolar = jest.fn();
@@ -29,24 +31,25 @@ describe("crear una OS (TrabajoFormScreen)", () => {
   beforeEach(() => {
     mockCrear.mockReset();
     mockEncolar.mockReset();
-    jest.spyOn(Alert, "alert").mockImplementation(() => {});
+    mockToast.mockReset();
   });
 
   test("sin cliente no envía y avisa", async () => {
     await abrir();
     await fireEvent.press(await screen.findByText("Crear trabajo"));
-    expect(Alert.alert).toHaveBeenCalledWith("Falta el cliente", expect.any(String));
+    expect(mockToast).toHaveBeenCalledWith(expect.stringMatching(/^Falta el cliente/), { tono: "error" });
     expect(mockCrear).not.toHaveBeenCalled();
   });
 
-  test("con cliente crea la OS y confirma", async () => {
+  test("con cliente crea la OS, avisa con toast y vuelve", async () => {
     mockCrear.mockResolvedValue({ ok: true });
-    await abrir();
+    const nav = await abrir();
     await fireEvent.changeText(await screen.findByLabelText("Cliente (nombre a mostrar / facturar)"), "Cliente Nuevo Ltda");
     await fireEvent.press(screen.getByText("Crear trabajo"));
     await screen.findByText("Crear trabajo");
     expect(mockCrear).toHaveBeenCalledWith(expect.objectContaining({ cliente: "Cliente Nuevo Ltda" }));
-    expect(Alert.alert).toHaveBeenCalledWith("Trabajo creado", "Listo.", expect.any(Array));
+    expect(mockToast).toHaveBeenCalledWith("Trabajo creado", { tono: "exito" });
+    expect(nav.goBack).toHaveBeenCalled();
   });
 
   test("si el servidor falla por conexión, lo guarda para reintentar", async () => {
@@ -56,5 +59,6 @@ describe("crear una OS (TrabajoFormScreen)", () => {
     await fireEvent.press(screen.getByText("Crear trabajo"));
     await screen.findByText("Crear trabajo");
     expect(mockEncolar).toHaveBeenCalledWith(expect.objectContaining({ cliente: "Cliente Nuevo Ltda" }));
+    expect(mockToast).toHaveBeenCalledWith(expect.stringContaining("se reenvía cuando haya señal"), { tono: "info" });
   });
 });

@@ -12,7 +12,7 @@ import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { GastosSubnav } from "@/components/GastosSubnav";
 import { SelectCrear } from "@/components/SelectCrear";
-import { Button, Card, Cifra, DatePicker, EmptyState, ErrorState, Input, LoadingState, Select, StatusBadge, Table, type TonoEstado } from "@bitacora/ui/web";
+import { Button, Card, Cifra, DatePicker, EmptyState, ErrorState, Input, LoadingState, Select, StatusBadge, Table, useToast, type TonoEstado } from "@bitacora/ui/web";
 import { InputMonto } from "@/components/InputMonto";
 
 type GastoConDatos = Gasto & {
@@ -55,7 +55,7 @@ export default function GastosPage() {
   const [formAbierto, setFormAbierto] = useState(false);
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
-  const [aviso, setAviso] = useState<string | null>(null);
+  const toast = useToast();
   const [guardando, setGuardando] = useState(false);
   const [descripcion, setDescripcion] = useState("");
   const [monto, setMonto] = useState("");
@@ -154,7 +154,6 @@ export default function GastosPage() {
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setFormError(null);
-    setAviso(null);
     if (!categoriaGastoId) {
       setFormError("Selecciona una categoría");
       return;
@@ -181,7 +180,7 @@ export default function GastosPage() {
       setFormError(respBody.error ?? (editandoId ? "No se pudo guardar el gasto" : "No se pudo crear el gasto"));
       return;
     }
-    setAviso(editandoId ? "Gasto actualizado." : "Gasto creado.");
+    toast(editandoId ? "Gasto actualizado." : "Gasto creado.", { tono: "exito" });
     setFormAbierto(false);
     setEditandoId(null);
     cargar();
@@ -348,7 +347,6 @@ export default function GastosPage() {
           </Card>
         </div>
       )}
-      {aviso ? <p className="mb-ds-6 font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}
 
       <div className="mb-ds-4 flex flex-wrap gap-ds-3">
         <div className="max-w-sm">

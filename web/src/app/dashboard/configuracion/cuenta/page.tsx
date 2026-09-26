@@ -6,7 +6,7 @@ import { Bell, User } from "lucide-react";
 import type { NotificacionPreferencia, TipoNotificacion } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
-import { Button, Card, Input, LoadingState, Select } from "@bitacora/ui/web";
+import { Button, Card, Input, LoadingState, Select, useToast } from "@bitacora/ui/web";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useConfiguracion } from "../ConfiguracionContext";
 
@@ -74,7 +74,7 @@ export default function CuentaPage() {
   const [pais, setPais] = useState(usuario.pais);
   const [husoHorario, setHusoHorario] = useState(usuario.huso_horario);
   const [guardando, setGuardando] = useState(false);
-  const [aviso, setAviso] = useState<string | null>(null);
+  const toast = useToast();
   const [error, setError] = useState<string | null>(null);
 
   const [preferencias, setPreferencias] = useState<NotificacionPreferencia[] | null>(null);
@@ -119,7 +119,6 @@ export default function CuentaPage() {
     }
   }
   const [errorPass, setErrorPass] = useState<string | null>(null);
-  const [avisoPass, setAvisoPass] = useState<string | null>(null);
 
   async function onSubirFoto(e: React.ChangeEvent<HTMLInputElement>) {
     const archivo = e.target.files?.[0];
@@ -141,7 +140,6 @@ export default function CuentaPage() {
 
   async function onGuardarDatos() {
     setError(null);
-    setAviso(null);
     setGuardando(true);
     const res = await apiFetch("/api/usuarios/me", {
       method: "PATCH",
@@ -154,13 +152,12 @@ export default function CuentaPage() {
       return;
     }
     await recargar();
-    setAviso("Datos guardados");
+    toast("Datos guardados", { tono: "exito" });
   }
 
   async function onCambiarPassword(e: React.FormEvent) {
     e.preventDefault();
     setErrorPass(null);
-    setAvisoPass(null);
     if (nuevaPass.length < 8) {
       setErrorPass("La nueva contraseña debe tener al menos 8 caracteres");
       return;
@@ -190,7 +187,7 @@ export default function CuentaPage() {
     setActualPass("");
     setNuevaPass("");
     setConfirmarPass("");
-    setAvisoPass("Contraseña actualizada");
+    toast("Contraseña actualizada", { tono: "exito" });
   }
 
   return (
@@ -259,7 +256,6 @@ export default function CuentaPage() {
         </div>
 
         {error ? <p className="mt-ds-4 font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
-        {aviso ? <p className="mt-ds-4 font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}
         <div className="mt-ds-4">
           <Button onPress={onGuardarDatos} cargando={guardando}>
             Guardar
@@ -304,7 +300,6 @@ export default function CuentaPage() {
             <Input etiqueta="Confirmar contraseña" tipo="password" requerido minLongitud={8} valor={confirmarPass} onCambio={setConfirmarPass} />
           </div>
           {errorPass ? <p className="font-ds-body text-ds-small text-ds-accent-700">{errorPass}</p> : null}
-          {avisoPass ? <p className="font-ds-body text-ds-small font-medium text-ds-accent2-800">{avisoPass}</p> : null}
           <div className="self-start">
             <Button tipo="submit" cargando={cambiandoPass}>
               Cambiar contraseña

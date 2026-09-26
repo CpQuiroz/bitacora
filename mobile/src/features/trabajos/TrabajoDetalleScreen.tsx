@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Linking, Platform, Pressable, ScrollView, View } from "react-native";
+import { Linking, Platform, Pressable, ScrollView, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { EstadoTrabajo, ItemChecklist } from "@bitacora/shared";
 import { estadoOsDeTrabajo, formatearFolio } from "@bitacora/shared";
 import { ArrowLeft, ChevronRight, Navigation, Phone, type LucideIcon } from "lucide-react-native";
 import { tokens } from "@bitacora/design-tokens";
-import { Button, ErrorState, LoadingState, ScreenHeader, Skeleton, StatusBadge, Textarea, Texto, useMarca } from "@bitacora/ui/native";
+import { Button, ErrorState, LoadingState, ScreenHeader, Skeleton, StatusBadge, Textarea, Texto, useMarca, useToast } from "@bitacora/ui/native";
 import { OfflineBanner } from "../../components/OfflineBanner";
 import { useRed } from "../../services/sync/NetworkProvider";
 import { useAuth } from "../auth/AuthContext";
@@ -100,6 +100,7 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
   const { trabajoId, titulo: tituloRuta } = route.params;
   const auth = useAuth();
   const marca = useMarca();
+  const toast = useToast();
   const esGestion = auth.fase === "listo" && auth.usuario.rol !== "colaborador";
   const { pendientes, fallidas, enLinea, descartar } = useRed();
   // Clave del campo tipo "foto" al que apunta una acción encolada de
@@ -258,7 +259,7 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
     setMarcando("Check-in");
     const ubic = await ubicacionActual();
     if (!ubic) {
-      Alert.alert("Sin ubicación", "Se registrará la llegada sin coordenadas (permiso denegado o GPS no disponible).");
+      toast("Sin ubicación: se registrará la llegada sin coordenadas (permiso denegado o GPS no disponible).", { tono: "info" });
     }
     await encolarCheckin(trabajoId, "Check-in", ubic);
     setMarcando(null);
@@ -323,11 +324,9 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
       // 3) Cierre real.
       await encolarFinalizar(trabajoId);
       registrarEvento(EVENTOS.osCerradaFirmada, { con_firma: payload.tipo === "firma", sin_conexion: !enLinea });
-      Alert.alert(
-        "Orden de servicio cerrada",
-        enLinea ? "Quedó cerrada." : "Quedó cerrada. Se enviará a la oficina apenas vuelvas a tener señal.",
-        [{ text: "Listo", onPress: () => navigation.goBack() }]
-      );
+      if (enLinea) toast("Orden de servicio cerrada", { tono: "exito" });
+      else toast("Orden de servicio cerrada. Se enviará a la oficina apenas vuelvas a tener señal.", { tono: "info" });
+      navigation.goBack();
     } finally {
       setConfirmando(false);
     }
@@ -460,7 +459,7 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
             onEliminarFoto={async (fotoId) => {
               const res = await eliminarFoto(trabajoId, fotoId);
               if (!res.ok) {
-                Alert.alert("No se pudo eliminar", res.error);
+                toast(`No se pudo eliminar: ${res.error}`, { tono: "error" });
                 return;
               }
               void cargar();
@@ -485,7 +484,7 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
             onEliminar={async (fotoId) => {
               const res = await eliminarFoto(trabajoId, fotoId);
               if (!res.ok) {
-                Alert.alert("No se pudo eliminar", res.error);
+                toast(`No se pudo eliminar: ${res.error}`, { tono: "error" });
                 return;
               }
               void cargar();

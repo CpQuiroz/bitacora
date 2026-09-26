@@ -7,7 +7,7 @@ import { Shield } from "lucide-react";
 import type { AccesoUsuario } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
-import { Button, Card, Input, LoadingState, Table } from "@bitacora/ui/web";
+import { Button, Card, Input, LoadingState, Table, useConfirmar, useToast } from "@bitacora/ui/web";
 import { useConfiguracion } from "../ConfiguracionContext";
 
 function detectarNavegador(userAgent: string): string {
@@ -45,6 +45,8 @@ export default function SeguridadPage() {
   const [errorMfa, setErrorMfa] = useState<string | null>(null);
   const [avisoMfa, setAvisoMfa] = useState<string | null>(null);
   const [desactivando, setDesactivando] = useState(false);
+  const toast = useToast();
+  const confirmar = useConfirmar();
 
   useEffect(() => {
     apiFetch("/api/usuarios/me/mfa").then(async (res) => {
@@ -133,11 +135,12 @@ export default function SeguridadPage() {
   }
 
   async function onDesactivarMfa() {
-    if (!confirm("¿Desactivar la verificación en dos pasos?")) return;
+    if (!(await confirmar({ titulo: "¿Desactivar la verificación en dos pasos?", accion: "Desactivar", destructivo: true }))) return;
     setDesactivando(true);
     const res = await apiFetch("/api/usuarios/me/mfa/desactivar", { method: "POST" });
     setDesactivando(false);
     if (res.ok) setMfa((prev) => ({ ...prev, activado: false, metodo: null }));
+    else toast((await res.json().catch(() => ({}))).error ?? "No se pudo desactivar la verificación en dos pasos", { tono: "error" });
   }
 
   const [sesion, setSesion] = useState<{ navegador: string; so: string; actualizado: string | null } | null>(null);
@@ -154,12 +157,10 @@ export default function SeguridadPage() {
   }, []);
 
   const [cerrandoOtras, setCerrandoOtras] = useState(false);
-  const [avisoCerrarOtras, setAvisoCerrarOtras] = useState<string | null>(null);
   const [errorCerrarOtras, setErrorCerrarOtras] = useState<string | null>(null);
 
   async function onCerrarOtrasSesiones() {
     setErrorCerrarOtras(null);
-    setAvisoCerrarOtras(null);
     setCerrandoOtras(true);
     const { error } = await supabase.auth.signOut({ scope: "others" });
     setCerrandoOtras(false);
@@ -167,7 +168,7 @@ export default function SeguridadPage() {
       setErrorCerrarOtras(error.message);
       return;
     }
-    setAvisoCerrarOtras("Se cerró la sesión en tus otros dispositivos");
+    toast("Se cerró la sesión en tus otros dispositivos", { tono: "exito" });
   }
 
   const [accesos, setAccesos] = useState<AccesoUsuario[] | null>(null);
@@ -236,7 +237,6 @@ export default function SeguridadPage() {
           celular) sin necesidad de saber cuál es.
         </p>
         {errorCerrarOtras ? <p className="mt-ds-3 font-ds-body text-ds-small text-ds-accent-700">{errorCerrarOtras}</p> : null}
-        {avisoCerrarOtras ? <p className="mt-ds-3 font-ds-body text-ds-small font-medium text-ds-accent2-800">{avisoCerrarOtras}</p> : null}
         <div className="mt-ds-4">
           <Button variante="secundario" onPress={onCerrarOtrasSesiones} cargando={cerrandoOtras}>
             Cerrar sesión en otros dispositivos

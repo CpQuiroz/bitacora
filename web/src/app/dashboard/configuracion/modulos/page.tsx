@@ -7,7 +7,7 @@ import { ETIQUETA_PLAN, GRUPOS_MODULOS } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
 import { avisarModulosCambiados } from "@/lib/eventosModulos";
 import { ETIQUETA_MODULO } from "@/lib/etiquetasModulo";
-import { Button, Card, Textarea } from "@bitacora/ui/web";
+import { Button, Card, LoadingState, Textarea } from "@bitacora/ui/web";
 import { useConfiguracion } from "../ConfiguracionContext";
 
 type EstadoModulos = {
@@ -81,7 +81,7 @@ export default function ModulosPage() {
     return (
       <div className="flex flex-col gap-ds-2">
         <p className="ds-heading text-ds-h3 text-ds-text">Módulos</p>
-        <p className="font-ds-body text-ds-small text-ds-text/70">{error ?? "Cargando…"}</p>
+        {error ? <p className="font-ds-body text-ds-small text-ds-accent-700">{error}</p> : <LoadingState />}
       </div>
     );
   }

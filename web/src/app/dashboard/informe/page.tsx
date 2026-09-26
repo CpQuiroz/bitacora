@@ -10,6 +10,7 @@ import { abrirPdfInforme } from "@/lib/descargarPdf";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Button, Card, ErrorText, Label, PageHeader, Select, Textarea } from "@/components/ui";
 import { IconCamera, IconSparkle } from "@/components/icons";
+import { useConfirmar } from "@bitacora/ui/web";
 
 type InformeConUsuario = InformeGenerado & { usuario?: { nombre: string } | null };
 type PlantillaConCreador = InformePersonalizado & { creador?: { nombre: string } | null };
@@ -201,6 +202,7 @@ function DatosAgregados({ datos, moneda }: { datos: Record<string, unknown>; mon
 export default function InformePage() {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
+  const confirmar = useConfirmar();
   const [usuario, setUsuario] = useState<UsuarioShell | null>(null);
   const [tab, setTab] = useState<"estructurado" | "personalizado" | "libre">("estructurado");
 
@@ -383,7 +385,7 @@ export default function InformePage() {
   }
 
   async function eliminarPlantilla(id: string) {
-    if (!window.confirm("¿Eliminar esta plantilla? Esta acción no se puede deshacer.")) return;
+    if (!(await confirmar({ titulo: "¿Eliminar esta plantilla?", mensaje: "Esta acción no se puede deshacer.", accion: "Eliminar", destructivo: true }))) return;
     const res = await apiFetch(`/api/informe/plantillas/${id}`, { method: "DELETE" });
     if (res.ok) {
       if (plantillaActivaId === id) setPlantillaActivaId(null);

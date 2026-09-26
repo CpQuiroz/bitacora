@@ -13,7 +13,7 @@ import {
   sustituirVariablesEnBloques,
 } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
-import { Button, Card, Input, LoadingState, Select, Textarea } from "@bitacora/ui/web";
+import { Button, Card, Input, LoadingState, Select, Textarea, useToast } from "@bitacora/ui/web";
 import { useConfiguracion } from "../ConfiguracionContext";
 
 const VARIABLES_POR_TIPO: Record<TipoPlantilla, VariablePlantilla[]> = {
@@ -217,12 +217,11 @@ export default function PlantillasPage() {
 
   const [guardando, setGuardando] = useState(false);
   const [restaurando, setRestaurando] = useState(false);
-  const [aviso, setAviso] = useState<string | null>(null);
+  const toast = useToast();
 
   const cargarTab = useCallback(async (tipo: TipoPlantilla) => {
     setCargando(true);
     setError(null);
-    setAviso(null);
     const res = await apiFetch(`/api/plantillas/${tipo}`);
     setCargando(false);
     if (!res.ok) {
@@ -250,7 +249,6 @@ export default function PlantillasPage() {
 
   async function onGuardar() {
     setError(null);
-    setAviso(null);
     setGuardando(true);
     const res = await apiFetch(`/api/plantillas/${tab}`, {
       method: "PATCH",
@@ -274,12 +272,11 @@ export default function PlantillasPage() {
       return;
     }
     setPlantilla(await res.json());
-    setAviso("Plantilla guardada");
+    toast("Plantilla guardada", { tono: "exito" });
   }
 
   async function onRestaurar() {
     setError(null);
-    setAviso(null);
     setRestaurando(true);
     const res = await apiFetch(`/api/plantillas/${tab}/restaurar`, { method: "POST" });
     setRestaurando(false);
@@ -289,7 +286,7 @@ export default function PlantillasPage() {
       return;
     }
     await cargarTab(tab);
-    setAviso("Se restauró a los valores por defecto");
+    toast("Se restauró a los valores por defecto", { tono: "exito" });
   }
 
   const justify = posicionLogo === "izquierda" ? "justify-start" : posicionLogo === "derecha" ? "justify-end" : "justify-center";
@@ -416,7 +413,6 @@ export default function PlantillasPage() {
               ) : null}
 
               {error ? <p className="font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
-              {aviso ? <p className="font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}
               <div className="flex gap-ds-3">
                 <Button onPress={onGuardar} cargando={guardando}>
                   Guardar plantilla

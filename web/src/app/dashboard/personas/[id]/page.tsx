@@ -11,7 +11,7 @@ import { apiFetch } from "@/lib/api";
 import { useRolesDisponibles } from "@/lib/roles";
 import { remuneraciones } from "@/lib/remuneracionesApi";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Button, Card, Input, LoadingState, Select, StatusBadge } from "@bitacora/ui/web";
+import { Button, Card, Input, LoadingState, Select, StatusBadge, useConfirmar, useToast } from "@bitacora/ui/web";
 import { InputMonto } from "@/components/InputMonto";
 import { DocumentoForm } from "@/components/DocumentoForm";
 import { HistorialTrabajos } from "@/components/HistorialTrabajos";
@@ -80,7 +80,8 @@ export default function PersonaFichaPage() {
   const [zona, setZona] = useState("");
   const [rutas, setRutas] = useState<RutaPlanificada[]>([]);
   const [guardandoId, setGuardandoId] = useState(false);
-  const [avisoId, setAvisoId] = useState<string | null>(null);
+  const toast = useToast();
+  const confirmar = useConfirmar();
   const [errorId, setErrorId] = useState<string | null>(null);
 
   // ── Acceso y permisos ──
@@ -88,7 +89,6 @@ export default function PersonaFichaPage() {
   const [editActivo, setEditActivo] = useState(true);
   const [guardandoAcc, setGuardandoAcc] = useState(false);
   const [errorAcc, setErrorAcc] = useState<string | null>(null);
-  const [avisoAcc, setAvisoAcc] = useState<string | null>(null);
   const [reseteando, setReseteando] = useState(false);
   const [passwordGenerada, setPasswordGenerada] = useState<string | null>(null);
   const [auditoria, setAuditoria] = useState<AuditoriaFila[]>([]);
@@ -98,7 +98,6 @@ export default function PersonaFichaPage() {
   const [formLaboral, setFormLaboral] = useState<Record<string, unknown>>(LABORAL_VACIO);
   const [guardandoLab, setGuardandoLab] = useState(false);
   const [errorLab, setErrorLab] = useState<string | null>(null);
-  const [avisoLab, setAvisoLab] = useState<string | null>(null);
 
   const cargar = useCallback(async () => {
     const { data } = await supabase.auth.getSession();
@@ -200,7 +199,6 @@ export default function PersonaFichaPage() {
 
   async function guardarIdentidad() {
     setErrorId(null);
-    setAvisoId(null);
     if (!nombre.trim()) {
       setErrorId("El nombre no puede quedar vacío");
       return;
@@ -216,19 +214,18 @@ export default function PersonaFichaPage() {
       setErrorId(body.error ?? "No se pudo guardar");
       return;
     }
-    setAvisoId("Datos actualizados");
+    toast("Datos actualizados", { tono: "exito" });
     cargar();
   }
 
   async function guardarAcceso() {
     if (!persona) return;
     setErrorAcc(null);
-    setAvisoAcc(null);
     const cambios: Record<string, unknown> = {};
     if (editRol !== persona.rol) cambios.rol = editRol;
     if (editActivo !== persona.activo) cambios.activo = editActivo;
     if (Object.keys(cambios).length === 0) {
-      setAvisoAcc("Sin cambios");
+      toast("Sin cambios", { tono: "info" });
       return;
     }
     setGuardandoAcc(true);
@@ -239,13 +236,20 @@ export default function PersonaFichaPage() {
       setErrorAcc(body.error ?? "No se pudo actualizar");
       return;
     }
-    setAvisoAcc("Cambios guardados");
+    toast("Cambios guardados", { tono: "exito" });
     cargar();
   }
 
   async function restablecerPassword() {
     if (!persona) return;
-    if (!confirm(`¿Generar una contraseña nueva para ${persona.nombre}? La actual deja de funcionar de inmediato.`)) return;
+    if (
+      !(await confirmar({
+        titulo: `¿Generar una contraseña nueva para ${persona.nombre}?`,
+        mensaje: "La actual deja de funcionar de inmediato.",
+        accion: "Generar contraseña",
+      }))
+    )
+      return;
     setReseteando(true);
     setErrorAcc(null);
     const res = await apiFetch(`/api/usuarios/${params.id}/restablecer-password`, { method: "POST" });
@@ -262,10 +266,9 @@ export default function PersonaFichaPage() {
   async function guardarLaboral() {
     setGuardandoLab(true);
     setErrorLab(null);
-    setAvisoLab(null);
     try {
       await remuneraciones.guardarDatosLaborales(params.id, formLaboral);
-      setAvisoLab("Datos guardados");
+      toast("Datos guardados", { tono: "exito" });
       await cargar();
     } catch (e) {
       setErrorLab(e instanceof Error ? e.message : "No se pudo guardar");
@@ -389,7 +392,6 @@ export default function PersonaFichaPage() {
             </div>
             {!puedeEditarIdentidad && <p className="mt-ds-3 font-ds-body text-ds-caption text-ds-text-secondary">Solo lectura — editar identidad requiere el módulo de Flota.</p>}
             {errorId ? <p className="mt-ds-3 font-ds-body text-ds-small text-ds-accent-700">{errorId}</p> : null}
-            {avisoId ? <p className="mt-ds-3 font-ds-body text-ds-small font-medium text-ds-accent2-800">{avisoId}</p> : null}
             {puedeEditarIdentidad && (
               <div className="mt-ds-4">
                 <Button onPress={guardarIdentidad} cargando={guardandoId}>
@@ -447,7 +449,6 @@ export default function PersonaFichaPage() {
                   </label>
                 </div>
                 {errorAcc ? <p className="font-ds-body text-ds-small text-ds-accent-700">{errorAcc}</p> : null}
-                {avisoAcc ? <p className="font-ds-body text-ds-small font-medium text-ds-accent2-800">{avisoAcc}</p> : null}
                 <div className="flex flex-wrap gap-ds-2">
                   <Button onPress={guardarAcceso} cargando={guardandoAcc}>
                     Guardar
@@ -581,7 +582,6 @@ export default function PersonaFichaPage() {
               </label>
             </div>
             {errorLab ? <p className="mt-ds-3 font-ds-body text-ds-small text-ds-accent-700">{errorLab}</p> : null}
-            {avisoLab ? <p className="mt-ds-3 font-ds-body text-ds-small font-medium text-ds-accent2-800">{avisoLab}</p> : null}
             <div className="mt-ds-4">
               <Button onPress={guardarLaboral} cargando={guardandoLab}>
                 Guardar

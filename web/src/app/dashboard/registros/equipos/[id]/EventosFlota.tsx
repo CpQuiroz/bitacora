@@ -9,8 +9,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
 import type { Equipo, EventoFlotaConAutor, TipoEventoFlota } from "@bitacora/shared";
 import { ETIQUETA_TIPO_EVENTO_FLOTA, TIPOS_EVENTO_FLOTA } from "@bitacora/shared";
-import { apiFetch } from "@/lib/api";
-import { Button, Card, DatePicker, EmptyState, ErrorState, Input, LoadingState, Select, Textarea } from "@bitacora/ui/web";
+import { apiFetch, exigirOk } from "@/lib/api";
+import { reponer } from "@/lib/reponer";
+import { Button, Card, DatePicker, EmptyState, ErrorState, Input, LoadingState, Select, Textarea, useDeshacer } from "@bitacora/ui/web";
 
 const DIAS = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
 const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
@@ -42,6 +43,7 @@ export function EventosFlota({ equipo, puedeGestionar }: { equipo: Equipo; puede
   const [kilometraje, setKilometraje] = useState("");
   const [guardando, setGuardando] = useState(false);
   const [errorForm, setErrorForm] = useState<string | null>(null);
+  const conDeshacer = useDeshacer();
 
   const cargar = useCallback(async () => {
     setError(null);
@@ -82,15 +84,14 @@ export function EventosFlota({ equipo, puedeGestionar }: { equipo: Equipo; puede
     else void cargar();
   }
 
-  async function eliminar(id: string) {
-    if (!confirm("¿Eliminar este evento?")) return;
-    const res = await apiFetch(`/api/equipos/${equipo.id}/eventos/${id}`, { method: "DELETE" });
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      alert(body.error ?? "No se pudo eliminar");
-      return;
-    }
-    void cargar();
+  function eliminar(evento: EventoFlotaConAutor) {
+    const indice = eventos?.findIndex((e) => e.id === evento.id) ?? 0;
+    conDeshacer({
+      mensaje: "Evento eliminado",
+      ocultar: () => setEventos((l) => l?.filter((e) => e.id !== evento.id) ?? l),
+      restaurar: () => setEventos((l) => (l ? reponer(l, evento, indice) : l)),
+      ejecutar: async () => exigirOk(await apiFetch(`/api/equipos/${equipo.id}/eventos/${evento.id}`, { method: "DELETE" }), "No se pudo eliminar"),
+    });
   }
 
   const esSemanaActual = iso(lunes) === iso(lunesDe(new Date()));
@@ -195,7 +196,7 @@ export function EventosFlota({ equipo, puedeGestionar }: { equipo: Equipo; puede
                           </p>
                         </div>
                         {puedeGestionar ? (
-                          <button type="button" onClick={() => void eliminar(e.id)} className="shrink-0 rounded-ds-sm p-1 text-ds-text-secondary hover:text-ds-danger" aria-label="Eliminar evento">
+                          <button type="button" onClick={() => eliminar(e)} className="shrink-0 rounded-ds-sm p-1 text-ds-text-secondary hover:text-ds-danger" aria-label="Eliminar evento">
                             <Trash2 size={16} />
                           </button>
                         ) : null}

@@ -6,12 +6,13 @@ import { useRouter } from "next/navigation";
 import { Plus, Truck } from "lucide-react";
 import { CIUDADES_CHILE, ROLES_SUPERVISION, formatearFolio, type Cliente, type ConfigViaticos, type EstadoViaje, type ModoPrecioViaje, type TipoViatico, type Usuario, type Viaje } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, exigirOk } from "@/lib/api";
+import { reponer } from "@/lib/reponer";
 import { EVENTOS } from "@bitacora/shared";
 import { registrarEvento } from "@/lib/analytics";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Button, Card, DatePicker, EmptyState, ErrorState, Input, LoadingState, Select, StatusBadge } from "@bitacora/ui/web";
+import { Button, Card, DatePicker, EmptyState, ErrorState, Input, LoadingState, Select, StatusBadge, useConfirmar, useDeshacer, useToast } from "@bitacora/ui/web";
 import { InputMonto } from "@/components/InputMonto";
 import { Modal } from "@/components/Modal";
 import { ComboboxCliente } from "@/components/ComboboxCliente";
@@ -71,7 +72,9 @@ export default function ViajesPage() {
 
   const [formAbierto, setFormAbierto] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const [aviso, setAviso] = useState<string | null>(null);
+  const toast = useToast();
+  const confirmar = useConfirmar();
+  const conDeshacer = useDeshacer();
   const [guardando, setGuardando] = useState(false);
   const [fecha, setFecha] = useState(() => HOY());
   const [numeroGuia, setNumeroGuia] = useState("");
@@ -203,21 +206,21 @@ export default function ViajesPage() {
 
   async function cambiarAprobAuto(next: boolean) {
     setAprobAuto(next);
-    setAviso(null);
     const res = await apiFetch("/api/empresa", {
       method: "PATCH",
       body: JSON.stringify({ viajes_aprobacion_automatica: next }),
     });
     if (res.ok) {
-      setAviso(
+      toast(
         next
           ? "Listo. Los viajes que registren los choferes quedarán confirmados automáticamente."
-          : "Listo. Los viajes de los choferes volverán a entrar como borrador para que los revises."
+          : "Listo. Los viajes de los choferes volverán a entrar como borrador para que los revises.",
+        { tono: "exito" }
       );
     } else {
       setAprobAuto(!next);
       const body = await res.json().catch(() => ({}));
-      setError(body.error ?? "No se pudo guardar el ajuste");
+      toast(body.error ?? "No se pudo guardar el ajuste", { tono: "error" });
     }
   }
 
@@ -243,7 +246,7 @@ export default function ViajesPage() {
     if (v) {
       // Un viaje facturado no se edita (el backend responde 409): se avisa y
       // se muestra la fila, igual que la lista, que no ofrece "Editar".
-      if (v.estado === "facturado") setAviso(`El viaje guía ${v.numero_guia} ya está facturado: no se puede editar.`);
+      if (v.estado === "facturado") toast(`El viaje guía ${v.numero_guia} ya está facturado: no se puede editar.`, { tono: "info" });
       else abrirEdicion(v);
       setTimeout(() => document.getElementById(`viaje-${v.id}`)?.scrollIntoView({ block: "center", behavior: "smooth" }), 100);
     }
@@ -281,7 +284,6 @@ export default function ViajesPage() {
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setFormError(null);
-    setAviso(null);
     if (!clienteId) {
       setFormError("Selecciona un cliente");
       return;
@@ -316,7 +318,7 @@ export default function ViajesPage() {
       setFormError(body.error ?? "No se pudo crear el viaje");
       return;
     }
-    setAviso("Viaje creado.");
+    toast("Viaje creado.", { tono: "exito" });
     setFormAbierto(false);
     cargar();
   }
@@ -384,16 +386,16 @@ export default function ViajesPage() {
     setFotosViaje({ ...fotosViaje, subiendo: false, fotos: [...fotosViaje.fotos, nueva] });
   }
 
-  async function eliminarFotoViaje(fotoId: string) {
+  function eliminarFotoViaje(foto: { id: string; url: string }) {
     if (!fotosViaje) return;
-    if (!window.confirm("¿Eliminar esta foto?")) return;
-    const res = await apiFetch(`/api/viajes/${fotosViaje.id}/fotos/${fotoId}`, { method: "DELETE" });
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      setFotosViaje({ ...fotosViaje, error: body.error ?? "No se pudo eliminar la foto" });
-      return;
-    }
-    setFotosViaje({ ...fotosViaje, fotos: fotosViaje.fotos.filter((f) => f.id !== fotoId) });
+    const viajeId = fotosViaje.id;
+    const indice = fotosViaje.fotos.findIndex((f) => f.id === foto.id);
+    conDeshacer({
+      mensaje: "Foto eliminada",
+      ocultar: () => setFotosViaje((fv) => (fv?.id === viajeId ? { ...fv, fotos: fv.fotos.filter((f) => f.id !== foto.id) } : fv)),
+      restaurar: () => setFotosViaje((fv) => (fv?.id === viajeId ? { ...fv, fotos: reponer(fv.fotos, foto, indice) } : fv)),
+      ejecutar: async () => exigirOk(await apiFetch(`/api/viajes/${viajeId}/fotos/${foto.id}`, { method: "DELETE" }), "No se pudo eliminar la foto"),
+    });
   }
 
   // confirmar: solo tiene sentido viniendo de "borrador" (los dos botones
@@ -445,7 +447,7 @@ export default function ViajesPage() {
       return;
     }
     setEditId(null);
-    setAviso(confirmar === true ? "Viaje confirmado." : confirmar === false ? "Cambios guardados." : "Cambios guardados.");
+    toast(confirmar === true ? "Viaje confirmado." : "Cambios guardados.", { tono: "exito" });
     cargar();
   }
 
@@ -459,14 +461,14 @@ export default function ViajesPage() {
   }
 
   async function eliminar(id: string) {
-    if (!window.confirm("¿Eliminar este viaje?")) return;
+    if (!(await confirmar({ titulo: "¿Eliminar este viaje?", accion: "Eliminar", destructivo: true }))) return;
     const res = await apiFetch(`/api/viajes/${id}`, { method: "DELETE" });
     if (res.ok) {
       cargar();
       return;
     }
     const body = await res.json().catch(() => ({}));
-    setError(body.error ?? "No se pudo eliminar el viaje");
+    toast(body.error ?? "No se pudo eliminar el viaje", { tono: "error" });
   }
 
   const viajesSeleccionados = useMemo(
@@ -481,15 +483,13 @@ export default function ViajesPage() {
   const totalSeleccionado = viajesSeleccionados.reduce((acc, v) => acc + v.total, 0);
 
   async function facturarSeleccionados() {
-    setAviso(null);
-    setError(null);
     const res = await apiFetch("/api/viajes/facturar", {
       method: "POST",
       body: JSON.stringify({ viaje_ids: Array.from(seleccionados) }),
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      setError(body.error ?? "No se pudo generar la factura");
+      toast(body.error ?? "No se pudo generar la factura", { tono: "error" });
       return;
     }
     // Tarea 134: al generar, se abre el cobro con el detalle por viaje y
@@ -501,7 +501,7 @@ export default function ViajesPage() {
       router.push(`/dashboard/financiero/cobros/${cobro.id}`);
       return;
     }
-    setAviso("Cobro generado a partir de los viajes seleccionados.");
+    toast("Cobro generado a partir de los viajes seleccionados.", { tono: "exito" });
     cargar();
   }
 
@@ -704,7 +704,6 @@ export default function ViajesPage() {
           </Card>
         </div>
       )}
-      {aviso ? <p className="mb-ds-6 font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}
 
       {usuario.rol === "admin" && (
         <label className="mb-ds-4 flex items-center gap-ds-2 font-ds-body text-ds-small text-ds-text">
@@ -1029,7 +1028,7 @@ export default function ViajesPage() {
 
       <Modal open={historialMonto != null} onClose={() => setHistorialMonto(null)} title={`Cambios de monto — guía ${historialMonto?.guia ?? ""}`}>
         {historialMonto?.cargando ? (
-          <p className="font-ds-body text-ds-small text-ds-text/70">Cargando…</p>
+          <LoadingState />
         ) : historialMonto?.error ? (
           <p className="font-ds-body text-ds-small text-ds-accent-700">{historialMonto.error}</p>
         ) : historialMonto && historialMonto.filas.length === 0 ? (
@@ -1052,7 +1051,7 @@ export default function ViajesPage() {
 
       <Modal open={fotosViaje != null} onClose={() => setFotosViaje(null)} title="Fotos del viaje" wide>
         {fotosViaje?.cargando ? (
-          <p className="font-ds-body text-ds-small text-ds-text/70">Cargando…</p>
+          <LoadingState />
         ) : fotosViaje ? (
           <div className="flex flex-col gap-ds-4">
             {fotosViaje.guiaUrl && (
@@ -1076,7 +1075,7 @@ export default function ViajesPage() {
                       </a>
                       <button
                         type="button"
-                        onClick={() => eliminarFotoViaje(f.id)}
+                        onClick={() => eliminarFotoViaje(f)}
                         className="absolute right-1.5 top-1.5 rounded-ds-pill bg-ds-accent-700 px-2 py-0.5 font-ds-body text-[11px] font-medium text-white opacity-0 transition-opacity group-hover:opacity-100"
                       >
                         Eliminar

@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
-import { Alert, FlatList, Image, Linking, Platform, Pressable, ScrollView, View } from "react-native";
+import { FlatList, Image, Linking, Platform, Pressable, ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { AlertCircle, ArrowLeft, Camera, MapPin, Minus, Plus, RefreshCw, X } from "lucide-react-native";
 import type { CatalogoItem, EstadoLevantamiento } from "@bitacora/shared";
 import { formatearFolio } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
-import { Button, Dialog, ErrorState, Input, LoadingState, ScreenHeader, StatusBadge, Textarea, Texto, useMarca, type TonoEstado } from "@bitacora/ui/native";
+import { Button, Dialog, ErrorState, Input, LoadingState, ScreenHeader, StatusBadge, Textarea, Texto, useMarca, useToast, type TonoEstado } from "@bitacora/ui/native";
 import { elegirFotos } from "../../lib/imagen";
 import { useAuth } from "../auth/AuthContext";
 import { useRed } from "../../services/sync/NetworkProvider";
@@ -62,6 +62,7 @@ type MaterialLocal = { catalogo_item_id: string; cantidad: number; nombre: strin
 export function LevantamientoDetalleScreen({ route, navigation }: NativeStackScreenProps<MasStackParamList, "LevantamientoDetalle">) {
   const marca = useMarca();
   const auth = useAuth();
+  const toast = useToast();
   const { enLinea, pendientes } = useRed();
   const { id } = route.params;
   const fotosEnCola = pendientes.filter((a) => a.recurso === `levantamiento:${id}` && a.etiqueta === "Foto de levantamiento");
@@ -163,22 +164,20 @@ export function LevantamientoDetalleScreen({ route, navigation }: NativeStackScr
       const res = await completarLevantamiento(id, datos);
       if (res.ok) {
         setGuardando(false);
-        Alert.alert("Guardado", "El levantamiento quedó completado.", [{ text: "Listo" }]);
+        toast("Guardado. El levantamiento quedó completado.", { tono: "exito" });
         return void cargar();
       }
       if (!res.reintentable) {
         setGuardando(false);
-        return Alert.alert("No se pudo guardar", res.error);
+        return toast(`No se pudo guardar: ${res.error}`, { tono: "error" });
       }
     }
 
     await encolarCompletarLevantamiento(id, datos);
     setGuardando(false);
-    Alert.alert(
-      enLinea ? "Se reintentará solo" : "Guardado sin conexión",
-      "Quedó guardado en el teléfono y se envía a la oficina cuando haya señal.",
-      [{ text: "Listo" }]
-    );
+    toast(`${enLinea ? "Se reintentará solo" : "Guardado sin conexión"}. Quedó guardado en el teléfono y se envía a la oficina cuando haya señal.`, {
+      tono: "info",
+    });
   }
 
   // Siempre por la cola, nunca un intento inline antes — mismo bug real
@@ -192,7 +191,7 @@ export function LevantamientoDetalleScreen({ route, navigation }: NativeStackScr
   // el medio se pide una descripción opcional (Dialog más abajo) antes
   // de mandarla a la cola.
   async function agregarFoto() {
-    const [elegida] = await elegirFotos();
+    const [elegida] = await elegirFotos({ avisar: toast });
     if (!elegida) return;
     setDescripcionFoto("");
     setFotoElegida(elegida);
@@ -219,7 +218,7 @@ export function LevantamientoDetalleScreen({ route, navigation }: NativeStackScr
     setGuardandoDireccion(true);
     const r = await actualizarDireccionCliente(detalle.cliente.id, direccionNueva);
     setGuardandoDireccion(false);
-    if (!r.ok) return Alert.alert("No se pudo guardar", r.error);
+    if (!r.ok) return toast(`No se pudo guardar: ${r.error}`, { tono: "error" });
     setDireccionNueva("");
     await cargar();
   }

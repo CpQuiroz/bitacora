@@ -9,7 +9,7 @@ import { formatearFolio } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Button, Card, EmptyState, ErrorState, Input, LoadingState, StatusBadge, Table } from "@bitacora/ui/web";
+import { Button, Card, EmptyState, ErrorState, Input, LoadingState, StatusBadge, Table, useToast } from "@bitacora/ui/web";
 import { AsignarPackForm } from "@/components/AsignarPackForm";
 import { formatMoneda } from "@/lib/formatMoneda";
 
@@ -28,7 +28,7 @@ export default function PaquetesSesionesPage() {
   const [formAbierto, setFormAbierto] = useState(false);
   // Pack agotado que se está renovando (precarga el form).
   const [renovando, setRenovando] = useState<PaqueteListado | null>(null);
-  const [aviso, setAviso] = useState<string | null>(null);
+  const toast = useToast();
 
   async function cargar() {
     const { data } = await supabase.auth.getSession();
@@ -106,7 +106,7 @@ export default function PaquetesSesionesPage() {
               moneda={usuario.moneda ?? "CLP"}
               onAsignado={() => {
                 setFormAbierto(false);
-                setAviso("Paquete creado.");
+                toast("Paquete creado.", { tono: "exito" });
                 cargar();
               }}
               onCancelar={() => setFormAbierto(false)}
@@ -138,7 +138,7 @@ export default function PaquetesSesionesPage() {
               }}
               onAsignado={() => {
                 setRenovando(null);
-                setAviso("Paquete renovado.");
+                toast("Paquete renovado.", { tono: "exito" });
                 cargar();
               }}
               onCancelar={() => setRenovando(null)}
@@ -146,8 +146,6 @@ export default function PaquetesSesionesPage() {
           </Card>
         </div>
       )}
-
-      {aviso ? <p className="mb-ds-6 font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}
 
       <div className="mb-ds-4 max-w-sm">
         <Input placeholder="Buscar por cliente o nombre del paquete..." valor={busqueda} onCambio={setBusqueda} />
@@ -186,10 +184,7 @@ export default function PaquetesSesionesPage() {
             { etiqueta: "Ver cliente", onPress: (p) => p.cliente_id && router.push(`/dashboard/registros/clientes/${p.cliente_id}`), oculta: (p) => !p.cliente_id },
             {
               etiqueta: "Renovar",
-              onPress: (p) => {
-                setAviso(null);
-                setRenovando(p);
-              },
+              onPress: (p) => setRenovando(p),
               oculta: (p) => p.saldo > 0 || Boolean(renovando) || formAbierto,
             },
           ]}

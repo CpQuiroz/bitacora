@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { Alert, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from "react-native";
+import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from "react-native";
 import { ArrowLeft, Check, Square } from "lucide-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { CIUDADES_CHILE, ROLES_SUPERVISION, type Cliente, type Equipo, type Usuario } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
-import { Button, Card, DatePicker, Input, LoadingState, ScreenHeader, Skeleton, Texto, useMarca } from "@bitacora/ui/native";
+import { Button, Card, DatePicker, Input, LoadingState, ScreenHeader, Skeleton, Texto, useMarca, useToast } from "@bitacora/ui/native";
 import { PickerBuscable } from "../../components/ui";
 import { SelectorCliente } from "../../components/SelectorCliente";
 import { InputMonto } from "../../components/InputMonto";
@@ -40,6 +40,7 @@ const VACIO: BorradorViaje = {
 // equivalente v2, mismo criterio que NuevaCitaScreen/CobroFormScreen).
 export function ViajeFormScreen({ navigation, route }: NativeStackScreenProps<ViajesStackParamList, "ViajeForm">) {
   const marca = useMarca();
+  const toast = useToast();
   const { enLinea } = useRed();
   const editandoId = route.params?.viajeId ?? null;
   // Tarea 132: al EDITAR, el monto solo lo cambian Admin y Supervisor (el
@@ -85,33 +86,33 @@ export function ViajeFormScreen({ navigation, route }: NativeStackScreenProps<Vi
           aplica_iva: viaje.aplica_iva,
         });
       })
-      .catch((e) => Alert.alert("No se pudo cargar el viaje", e instanceof Error ? e.message : "Intenta de nuevo"))
+      .catch((e) => toast(`No se pudo cargar el viaje: ${e instanceof Error ? e.message : "intenta de nuevo"}`, { tono: "error" }))
       .finally(() => setCargandoViaje(false));
   }, [editandoId]);
 
   const set = (k: keyof BorradorViaje, v: string | boolean) => setB((prev) => ({ ...prev, [k]: v }));
 
   async function adjuntarFoto() {
-    const [elegida] = await elegirFotos({ titulo: "Foto de la guía" });
+    const [elegida] = await elegirFotos({ titulo: "Foto de la guía", avisar: toast });
     if (elegida) setFoto(elegida);
   }
 
   async function guardar() {
-    if (!b.cliente_id) return Alert.alert("Falta el cliente", "Elige un cliente.");
-    if (!b.numero_guia.trim()) return Alert.alert("Falta la guía", "Ingresa el número de guía.");
-    if (!b.origen.trim() || !b.destino.trim()) return Alert.alert("Falta la ruta", "Completa el origen y el destino.");
-    if (!(Number(b.subtotal.replace(/\D/g, "")) > 0)) return Alert.alert("Falta el monto", "Ingresa el monto del viaje.");
+    if (!b.cliente_id) return toast("Falta el cliente: elige un cliente.", { tono: "error" });
+    if (!b.numero_guia.trim()) return toast("Falta la guía: ingresa el número de guía.", { tono: "error" });
+    if (!b.origen.trim() || !b.destino.trim()) return toast("Falta la ruta: completa el origen y el destino.", { tono: "error" });
+    if (!(Number(b.subtotal.replace(/\D/g, "")) > 0)) return toast("Falta el monto: ingresa el monto del viaje.", { tono: "error" });
     const ki = Number(b.km_inicial),
       kf = Number(b.km_final);
     if (b.km_inicial && b.km_final && kf < ki) {
-      return Alert.alert("Revisa los kilómetros", "El km final no puede ser menor que el inicial.");
+      return toast("Revisa los kilómetros: el km final no puede ser menor que el inicial.", { tono: "error" });
     }
 
     const f = fechaViaje;
     const fechaTexto = `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, "0")}-${String(f.getDate()).padStart(2, "0")}`;
     const borrador = { ...b, subtotal: b.subtotal.replace(/\D/g, ""), ...(b.chofer_id ? { fecha: fechaTexto } : {}) };
     if (borrador.hora && !/^([01]\d|2[0-3]):[0-5]\d$/.test(borrador.hora)) {
-      return Alert.alert("Revisa la hora", "Usa el formato HH:MM, por ejemplo 08:30.");
+      return toast("Revisa la hora: usa el formato HH:MM, por ejemplo 08:30.", { tono: "error" });
     }
     const volverForm = () => navigation.goBack();
     setGuardando(true);
@@ -119,7 +120,7 @@ export function ViajeFormScreen({ navigation, route }: NativeStackScreenProps<Vi
     if (editandoId) {
       if (!enLinea) {
         setGuardando(false);
-        return Alert.alert("Sin conexión", "Necesitas conexión para editar un viaje.");
+        return toast("Sin conexión: necesitas conexión para editar un viaje.", { tono: "error" });
       }
       const r = await editarViaje(editandoId, {
         numero_guia: borrador.numero_guia,
@@ -132,8 +133,9 @@ export function ViajeFormScreen({ navigation, route }: NativeStackScreenProps<Vi
         aplica_iva: borrador.aplica_iva,
       });
       setGuardando(false);
-      if (!r.ok) return Alert.alert("No se pudo guardar", r.error);
-      Alert.alert("Viaje actualizado", "Listo.", [{ text: "Listo", onPress: volverForm }]);
+      if (!r.ok) return toast(`No se pudo guardar: ${r.error}`, { tono: "error" });
+      toast("Viaje actualizado", { tono: "exito" });
+      volverForm();
       return;
     }
 
@@ -141,43 +143,41 @@ export function ViajeFormScreen({ navigation, route }: NativeStackScreenProps<Vi
     // y le avisa en el momento (no pasa por la cola offline).
     if (borrador.chofer_id && !enLinea) {
       setGuardando(false);
-      return Alert.alert("Sin conexión", "Necesitas conexión para asignar un viaje a un chofer.");
+      return toast("Sin conexión: necesitas conexión para asignar un viaje a un chofer.", { tono: "error" });
     }
 
     if (enLinea) {
       const r = await crearViaje(borrador, foto ?? undefined);
       if (r.ok) {
         setGuardando(false);
-        Alert.alert(
-          "Viaje registrado",
+        toast(
           r.fotoPendiente
-            ? "Llegó a la oficina. La foto de la guía se está subiendo y se reintenta sola si falla."
-            : "Llegó a la oficina. Queda pendiente de aprobación.",
-          [{ text: "Listo", onPress: volverForm }]
+            ? "Viaje registrado. La foto de la guía se está subiendo y se reintenta sola si falla."
+            : "Viaje registrado. Queda pendiente de aprobación.",
+          { tono: "exito" }
         );
+        volverForm();
         return;
       }
       if (!r.reintentable) {
         setGuardando(false);
-        Alert.alert("No se pudo registrar", r.error);
+        toast(`No se pudo registrar: ${r.error}`, { tono: "error" });
         return;
       }
       // Señal inestable o servidor caído: lo guardamos y la cola lo reintenta sola.
       await encolarViaje(borrador, foto ?? undefined);
       setGuardando(false);
-      Alert.alert(
-        "Se reintentará solo",
-        "No se pudo enviar ahora (conexión o servidor). Lo guardamos y se reenvía cuando haya señal — lo ves en la lista de Viajes.",
-        [{ text: "Listo", onPress: volverForm }]
-      );
+      toast("No se pudo enviar ahora (conexión o servidor). Lo guardamos y se reenvía cuando haya señal — lo ves en la lista de Viajes.", {
+        tono: "info",
+      });
+      volverForm();
       return;
     }
 
     await encolarViaje(borrador, foto ?? undefined);
     setGuardando(false);
-    Alert.alert("Guardado sin conexión", "Se enviará a la oficina cuando vuelvas a tener señal.", [
-      { text: "Listo", onPress: volverForm },
-    ]);
+    toast("Guardado sin conexión. Se enviará a la oficina cuando vuelvas a tener señal.", { tono: "info" });
+    volverForm();
   }
 
   const volver = { icono: <ArrowLeft size={20} strokeWidth={2.5} color={tokens.color.text} />, onPress: () => navigation.goBack(), etiquetaAccesible: "Volver" };

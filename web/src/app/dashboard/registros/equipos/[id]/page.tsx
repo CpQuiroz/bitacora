@@ -9,7 +9,7 @@ import { ROLES_SUPERVISION } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Button, Card, Input, StatusBadge, Textarea } from "@bitacora/ui/web";
+import { Button, Card, Input, StatusBadge, Textarea, useConfirmar, useToast } from "@bitacora/ui/web";
 import { RegistrosMantencion } from "./RegistrosMantencion";
 import { EventosFlota } from "./EventosFlota";
 import { ActividadDelEquipo, type TrabajoConOrden } from "./ActividadDelEquipo";
@@ -35,9 +35,8 @@ export default function EquipoDetallePage() {
   const [equipo, setEquipo] = useState<EquipoDetalle | null>(null);
   const [planes, setPlanes] = useState<PlanMantencion[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [aviso, setAviso] = useState<string | null>(null);
-  // Error al pausar/eliminar un plan (p. ej. 403 sin el módulo Flota en un vehículo).
-  const [errorAccion, setErrorAccion] = useState<string | null>(null);
+  const toast = useToast();
+  const confirmar = useConfirmar();
   const [tab, setTab] = useState<Tab>("resumen");
   const [modulos, setModulos] = useState<Modulo[]>([]);
   const [estadoDocs, setEstadoDocs] = useState<{ vencidos: number; porVencer: number } | null>(null);
@@ -147,28 +146,26 @@ export default function EquipoDetallePage() {
       return;
     }
     setFormPlanAbierto(false);
-    setAviso("Plan de mantención creado.");
+    toast("Plan de mantención creado.", { tono: "exito" });
     cargar();
   }
 
   async function onAlternarPlan(plan: PlanMantencion) {
-    setErrorAccion(null);
     const res = await apiFetch(`/api/planes-mantencion/${plan.id}`, { method: "PATCH", body: JSON.stringify({ activo: !plan.activo }) });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      setErrorAccion(body.error ?? "No se pudo actualizar el plan");
+      toast(body.error ?? "No se pudo actualizar el plan", { tono: "error" });
       return;
     }
     cargar();
   }
 
   async function onEliminarPlan(plan: PlanMantencion) {
-    if (!confirm("¿Eliminar este plan de mantención?")) return;
-    setErrorAccion(null);
+    if (!(await confirmar({ titulo: "¿Eliminar este plan de mantención?", accion: "Eliminar", destructivo: true }))) return;
     const res = await apiFetch(`/api/planes-mantencion/${plan.id}`, { method: "DELETE" });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      setErrorAccion(body.error ?? "No se pudo eliminar el plan");
+      toast(body.error ?? "No se pudo eliminar el plan", { tono: "error" });
       return;
     }
     cargar();
@@ -213,8 +210,6 @@ export default function EquipoDetallePage() {
         ) : null}
       </div>
 
-      {aviso ? <p className="mt-ds-6 font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}
-      {errorAccion ? <p className="mt-ds-6 font-ds-body text-ds-small text-ds-accent-700">{errorAccion}</p> : null}
 
       <nav className="mt-ds-6 flex gap-ds-1 overflow-x-auto border-b border-ds-divider" aria-label="Secciones del equipo">
         {tabs.map((t) => (

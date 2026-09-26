@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from "react-native";
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { Cliente, PaqueteSesionesConSaldo, Prioridad, TipoPack, Usuario } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
-import { Button, Input, LoadingState, SelectorDias, Textarea, Texto, useMarca } from "@bitacora/ui/native";
+import { Button, Input, LoadingState, SelectorDias, Textarea, Texto, useMarca, useToast } from "@bitacora/ui/native";
 import { PickerBuscable, SelectorHora } from "../../components/ui";
 import { SelectorCliente } from "../../components/SelectorCliente";
 import { SelectorResponsable } from "../../components/SelectorResponsable";
@@ -41,6 +41,7 @@ export function NuevaCitaScreen(props: NativeStackScreenProps<AgendaStackParamLi
 
 function NuevaCitaGenerica({ navigation, route }: NativeStackScreenProps<AgendaStackParamList, "NuevaCita">) {
   const marca = useMarca();
+  const toast = useToast();
   // Pantalla modal (presentation: "modal" en AgendaStack.tsx) — no vive
   // dentro del pager de AppTabs.tsx, así que no hereda el fix de
   // paddingBottom de la tab bar (ver ese archivo, 20-sep-2026). Necesita
@@ -135,16 +136,16 @@ function NuevaCitaGenerica({ navigation, route }: NativeStackScreenProps<AgendaS
           prioridad: tarea.prioridad,
         });
       })
-      .catch((e) => Alert.alert("No se pudo cargar la cita", e instanceof Error ? e.message : "Intenta de nuevo"))
+      .catch((e) => toast(`No se pudo cargar la cita: ${e instanceof Error ? e.message : "intenta de nuevo"}`, { tono: "error" }))
       .finally(() => setCargandoCita(false));
   }, [editandoId]);
 
   async function guardar() {
-    if (!b.titulo.trim()) return Alert.alert("Falta el título", "Escribe de qué se trata la cita.");
+    if (!b.titulo.trim()) return toast("Falta el título: escribe de qué se trata la cita.", { tono: "error" });
     if (b.hora && !/^([01]\d|2[0-3]):[0-5]\d$/.test(b.hora)) {
-      return Alert.alert("Hora inválida", "Usa el formato HH:MM (ej. 09:30).");
+      return toast("Hora inválida: usa el formato HH:MM (ej. 09:30).", { tono: "error" });
     }
-    if (!enLinea) return Alert.alert("Sin conexión", "Necesitas conexión para guardar la cita.");
+    if (!enLinea) return toast("Sin conexión: necesitas conexión para guardar la cita.", { tono: "error" });
 
     // Al crear (no al editar): si hay hora y no hay duración cargada
     // (ya no se pide a mano), se usa el default de empresa.
@@ -155,12 +156,11 @@ function NuevaCitaGenerica({ navigation, route }: NativeStackScreenProps<AgendaS
     const r = editandoId ? await editarCita(editandoId, payload) : await crearCita(payload);
     setGuardando(false);
     if (!r.ok) {
-      Alert.alert("No se pudo guardar", r.error);
+      toast(`No se pudo guardar: ${r.error}`, { tono: "error" });
       return;
     }
-    Alert.alert(editandoId ? "Cita actualizada" : "Cita agendada", "Listo.", [
-      { text: "Listo", onPress: () => navigation.goBack() },
-    ]);
+    toast(editandoId ? "Cita actualizada" : "Cita agendada", { tono: "exito" });
+    navigation.goBack();
   }
 
   if (clientes === null || cargandoCita) {
@@ -252,7 +252,7 @@ function NuevaCitaGenerica({ navigation, route }: NativeStackScreenProps<AgendaS
                       onPress={async () => {
                         const cant = Number(cantidadPaquete) || 0;
                         if (!nombrePaquete.trim() || cant <= 0) {
-                          Alert.alert("Faltan datos", "Ponle un nombre y una cantidad de sesiones.");
+                          toast("Faltan datos: ponle un nombre y una cantidad de sesiones.", { tono: "error" });
                           return;
                         }
                         setCreandoPaquete(true);
@@ -264,7 +264,7 @@ function NuevaCitaGenerica({ navigation, route }: NativeStackScreenProps<AgendaS
                         });
                         setCreandoPaquete(false);
                         if (!r.ok) {
-                          Alert.alert("No se pudo crear el paquete", r.error);
+                          toast(`No se pudo crear el paquete: ${r.error}`, { tono: "error" });
                           return;
                         }
                         const ps = await listarPaquetesCliente(b.cliente_id);

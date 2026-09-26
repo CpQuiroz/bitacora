@@ -6,7 +6,7 @@ import { File, Paths } from "expo-file-system";
 import { FileText, X } from "lucide-react-native";
 import type { TipoDocumento } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
-import { Button, Card, DatePicker, EmptyState, ErrorState, Input, LoadingState, ScreenHeader, Select, Texto } from "@bitacora/ui/native";
+import { Button, Card, DatePicker, EmptyState, ErrorState, Input, LoadingState, ScreenHeader, Select, Texto, useToast } from "@bitacora/ui/native";
 import { elegirFotos } from "../../lib/imagen";
 import type { MasStackParamList } from "../../shell/navigation/types";
 import { guardarDocumento, listarDocumentosVehiculo, tiposDocumentoVehiculo, type ArchivoDocumento } from "../../services/equipos";
@@ -20,6 +20,7 @@ const MAX_BYTES = 10 * 1024 * 1024;
 // Necesita conexión: el archivo no pasa por la cola offline.
 export function DocumentoFormScreen({ navigation, route }: NativeStackScreenProps<MasStackParamList, "DocumentoForm">) {
   const { equipoId, documentoId } = route.params;
+  const toast = useToast();
   const [tipos, setTipos] = useState<TipoDocumento[] | null>(null);
   const [tipoId, setTipoId] = useState("");
   const [numero, setNumero] = useState("");
@@ -82,7 +83,7 @@ export function DocumentoFormScreen({ navigation, route }: NativeStackScreenProp
     const r = await DocumentPicker.getDocumentAsync({ type: "application/pdf", copyToCacheDirectory: true, multiple: false });
     if (r.canceled || !r.assets?.[0]) return;
     const a = r.assets[0];
-    if (a.size && a.size > MAX_BYTES) return Alert.alert("Archivo muy grande", "El PDF puede pesar hasta 10 MB.");
+    if (a.size && a.size > MAX_BYTES) return toast("Archivo muy grande: el PDF puede pesar hasta 10 MB.", { tono: "error" });
     // El tipo del archivo sale de su extensión: si el proveedor lo entregó
     // sin ".pdf", se copia al caché con ese nombre para que llegue como PDF.
     let uri = a.uri;
@@ -95,11 +96,12 @@ export function DocumentoFormScreen({ navigation, route }: NativeStackScreenProp
   }
 
   function elegirArchivo() {
+    // alerta-nativa: menú para elegir foto o PDF (no hay hoja de acciones en @bitacora/ui)
     Alert.alert("Adjuntar archivo", undefined, [
       {
         text: "Foto o imagen",
         onPress: () =>
-          void elegirFotos({ titulo: "Foto del documento" }).then((fotos) => {
+          void elegirFotos({ titulo: "Foto del documento", avisar: toast }).then((fotos) => {
             if (fotos[0]) setArchivo({ uri: fotos[0].uri, name: fotos[0].name, type: fotos[0].type });
           }),
       },
@@ -109,12 +111,12 @@ export function DocumentoFormScreen({ navigation, route }: NativeStackScreenProp
   }
 
   async function guardar() {
-    if (!tipoId) return Alert.alert("Falta el tipo", "Elige qué documento es.");
-    if (emision && vencimiento && vencimiento < emision) return Alert.alert("Fechas inválidas", "El vencimiento no puede ser anterior a la emisión.");
+    if (!tipoId) return toast("Falta el tipo: elige qué documento es.", { tono: "error" });
+    if (emision && vencimiento && vencimiento < emision) return toast("Fechas inválidas: el vencimiento no puede ser anterior a la emisión.", { tono: "error" });
     setGuardando(true);
     const r = await guardarDocumento({ id: documentoId, equipoId, tipoDocumentoId: tipoId, numero, fechaEmision: emision, fechaVencimiento: vencimiento, archivo });
     setGuardando(false);
-    if (!r.ok) return Alert.alert("No se pudo guardar", r.error);
+    if (!r.ok) return toast(`No se pudo guardar: ${r.error}`, { tono: "error" });
     navigation.goBack();
   }
 

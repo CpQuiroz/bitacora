@@ -67,6 +67,7 @@ export const LienzoFirma = forwardRef<LienzoFirmaHandle, { alto?: number }>(func
     // el base64 puro (Buffer.from(firma_base64, "base64")).
     const base64 = dataUrl.replace(/^data:image\/\w+;base64,/, "");
     if (!base64) {
+      // alerta-nativa: dentro de un Modal (el toast quedaría tapado)
       Alert.alert("No se pudo guardar la firma", "Intenta de nuevo.");
       return;
     }
@@ -75,6 +76,7 @@ export const LienzoFirma = forwardRef<LienzoFirmaHandle, { alto?: number }>(func
   }
 
   function onEmpty() {
+    // alerta-nativa: dentro de un Modal (el toast quedaría tapado)
     Alert.alert("Falta la firma", "Dibuja en el recuadro antes de guardar.");
   }
 

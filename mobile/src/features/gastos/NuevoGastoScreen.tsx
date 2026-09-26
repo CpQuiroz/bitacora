@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
-import { Alert, Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, View } from "react-native";
+import { Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Camera } from "lucide-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { CategoriaGasto, CentroCosto, EstadoGasto, Proveedor } from "@bitacora/shared";
 import { formatearFolio } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
-import { Button, Input, LoadingState, SelectorDias, Texto, useMarca } from "@bitacora/ui/native";
+import { Button, Input, LoadingState, SelectorDias, Texto, useMarca, useToast } from "@bitacora/ui/native";
 import { PickerBuscable } from "../../components/ui";
 import { InputMonto } from "../../components/InputMonto";
 import { useRed } from "../../services/sync/NetworkProvider";
@@ -77,6 +77,7 @@ export function NuevoGastoScreen({ navigation, route }: NativeStackScreenProps<M
   const insets = useSafeAreaInsets();
   const { enLinea } = useRed();
   const auth = useAuth();
+  const toast = useToast();
   const [categorias, setCategorias] = useState<CategoriaGasto[] | null>(null);
   const [centros, setCentros] = useState<CentroCosto[]>([]);
   const [proveedores, setProveedores] = useState<Proveedor[]>([]);
@@ -118,7 +119,7 @@ export function NuevoGastoScreen({ navigation, route }: NativeStackScreenProps<M
           fecha_pago: g.fecha_pago ?? clave(new Date()),
         });
       } else {
-        Alert.alert("No se pudo cargar el gasto", rGasto.error);
+        toast(`No se pudo cargar el gasto: ${rGasto.error}`, { tono: "error" });
       }
       setFotoExistenteUrl(url);
       setCargandoGasto(false);
@@ -140,7 +141,7 @@ export function NuevoGastoScreen({ navigation, route }: NativeStackScreenProps<M
   }, []);
 
   async function adjuntarFoto() {
-    const [elegida] = await elegirFotos({ titulo: "Foto del comprobante" });
+    const [elegida] = await elegirFotos({ titulo: "Foto del comprobante", avisar: toast });
     if (elegida) setFoto(elegida);
   }
 
@@ -153,7 +154,7 @@ export function NuevoGastoScreen({ navigation, route }: NativeStackScreenProps<M
   async function crearProveedorAlVuelo(nombre: string) {
     if (!nombre) return;
     const r = await crearProveedor(nombre);
-    if (!r.ok) return Alert.alert("No se pudo crear el proveedor", r.error);
+    if (!r.ok) return toast(`No se pudo crear el proveedor: ${r.error}`, { tono: "error" });
     setProveedores((p) => [...p, r.proveedor]);
     set("proveedor_id", r.proveedor.id);
   }
@@ -161,50 +162,50 @@ export function NuevoGastoScreen({ navigation, route }: NativeStackScreenProps<M
   async function crearCategoriaAlVuelo(nombre: string) {
     if (!nombre) return;
     const r = await crearCategoriaGasto(nombre);
-    if (!r.ok) return Alert.alert("No se pudo crear la categoría", r.error);
+    if (!r.ok) return toast(`No se pudo crear la categoría: ${r.error}`, { tono: "error" });
     setCategorias((c) => [...(c ?? []), r.categoria]);
     set("categoria_gasto_id", r.categoria.id);
   }
 
   async function guardar() {
-    if (!b.categoria_gasto_id) return Alert.alert("Falta la categoría", "Elige una categoría de gasto.");
-    if (!(Number(b.monto || 0) > 0)) return Alert.alert("Falta el monto", "Ingresa el monto del gasto.");
+    if (!b.categoria_gasto_id) return toast("Falta la categoría: elige una categoría de gasto.", { tono: "error" });
+    if (!(Number(b.monto || 0) > 0)) return toast("Falta el monto del gasto.", { tono: "error" });
 
     const volver = () => navigation.goBack();
 
     if (gastoId) {
-      if (!foto && !fotoExistenteUrl) return Alert.alert("Falta la foto", "Un gasto de rendición siempre necesita comprobante.");
+      if (!foto && !fotoExistenteUrl) return toast("Falta la foto: un gasto de rendición siempre necesita comprobante.", { tono: "error" });
       // Igual que "agregar gasto": sin cola para la edición en sí
       // (necesita conexión). La foto nueva, si la hay, sí va por la
       // cola de siempre.
-      if (!enLinea) return Alert.alert("Sin conexión", "Necesitás conexión para guardar los cambios.");
+      if (!enLinea) return toast("Sin conexión: necesitás conexión para guardar los cambios.", { tono: "error" });
       setGuardando(true);
       const r = await actualizarGasto(gastoId, b);
       if (!r.ok) {
         setGuardando(false);
-        return Alert.alert("No se pudo guardar", r.error);
+        return toast(`No se pudo guardar: ${r.error}`, { tono: "error" });
       }
       if (foto) await encolarComprobante(gastoId, foto);
       setGuardando(false);
-      return Alert.alert(
-        "Cambios guardados",
-        foto ? "La foto nueva se está subiendo y se reintenta sola si falla." : "Listo.",
-        [{ text: "Listo", onPress: volver }]
-      );
+      toast(foto ? "Cambios guardados. La foto nueva se está subiendo y se reintenta sola si falla." : "Cambios guardados", {
+        tono: "exito",
+      });
+      return volver();
     }
 
     if (rendicionId) {
-      if (!foto) return Alert.alert("Falta la foto", "Un gasto de rendición siempre necesita comprobante.");
+      if (!foto) return toast("Falta la foto: un gasto de rendición siempre necesita comprobante.", { tono: "error" });
       // Sin cola offline para la creación en sí (mismo criterio que
       // "crear al vuelo" de categoría/proveedor): necesita conexión. La
       // foto sí va por la cola de siempre (agregarGastoRendicion la
       // encola aparte) — eso nunca se pierde aunque falte señal después.
-      if (!enLinea) return Alert.alert("Sin conexión", "Necesitás conexión para agregar un gasto a la rendición.");
+      if (!enLinea) return toast("Sin conexión: necesitás conexión para agregar un gasto a la rendición.", { tono: "error" });
       setGuardando(true);
       const r = await agregarGastoRendicion(rendicionId, b, foto);
       setGuardando(false);
-      if (!r.ok) return Alert.alert("No se pudo agregar", r.error);
-      return Alert.alert("Gasto agregado", "El comprobante se está subiendo y se reintenta solo si falla.", [{ text: "Listo", onPress: volver }]);
+      if (!r.ok) return toast(`No se pudo agregar: ${r.error}`, { tono: "error" });
+      toast("Gasto agregado. El comprobante se está subiendo y se reintenta solo si falla.", { tono: "exito" });
+      return volver();
     }
 
     setGuardando(true);
@@ -213,28 +214,25 @@ export function NuevoGastoScreen({ navigation, route }: NativeStackScreenProps<M
       const r = await crearGasto(b, foto ?? undefined);
       if (r.ok) {
         setGuardando(false);
-        return Alert.alert(
-          "Gasto registrado",
-          r.comprobantePendiente ? "El comprobante se está subiendo y se reintenta solo si falla." : "Listo.",
-          [{ text: "Listo", onPress: volver }]
-        );
+        toast(r.comprobantePendiente ? "Gasto registrado. El comprobante se está subiendo y se reintenta solo si falla." : "Gasto registrado", {
+          tono: "exito",
+        });
+        return volver();
       }
       if (!r.reintentable) {
         setGuardando(false);
-        return Alert.alert("No se pudo registrar", r.error);
+        return toast(`No se pudo registrar: ${r.error}`, { tono: "error" });
       }
       await encolarGasto(b, foto ?? undefined);
       setGuardando(false);
-      return Alert.alert(
-        "Se reintentará solo",
-        "No se pudo enviar ahora (conexión o servidor). Lo guardamos y se reenvía cuando haya señal.",
-        [{ text: "Listo", onPress: volver }]
-      );
+      toast("No se pudo enviar ahora (conexión o servidor). Lo guardamos y se reenvía cuando haya señal.", { tono: "info" });
+      return volver();
     }
 
     await encolarGasto(b, foto ?? undefined);
     setGuardando(false);
-    Alert.alert("Guardado sin conexión", "Se enviará cuando vuelvas a tener señal.", [{ text: "Listo", onPress: volver }]);
+    toast("Guardado sin conexión. Se enviará cuando vuelvas a tener señal.", { tono: "info" });
+    volver();
   }
 
   if (categorias === null || cargandoGasto) {

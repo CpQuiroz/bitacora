@@ -7,12 +7,13 @@ import { ChevronLeft, Download, Paperclip, Pencil, Plus, Send, Sliders, Trash2 }
 import type { CategoriaGasto, EstadoRendicion, Gasto, MetodoEntregaRendicion, PeriodoRendicion, Proveedor, Rendicion, Usuario } from "@bitacora/shared";
 import { formatearFolio } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, exigirOk } from "@/lib/api";
+import { reponer } from "@/lib/reponer";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { SelectCrear } from "@/components/SelectCrear";
 import { InputMonto } from "@/components/InputMonto";
-import { Button, Card, DatePicker, Input, Select, StatusBadge, Table, Textarea, type TonoEstado } from "@bitacora/ui/web";
+import { Button, Card, DatePicker, Input, Select, StatusBadge, Table, Textarea, useConfirmar, useDeshacer, type TonoEstado } from "@bitacora/ui/web";
 import { PanelAcciones } from "@/components/PanelAcciones";
 
 type GastoConDatos = Gasto & {
@@ -73,6 +74,8 @@ export default function DetalleRendicionPage() {
   const [motivoRechazo, setMotivoRechazo] = useState("");
   const [guardando, setGuardando] = useState(false);
   const [errorAccion, setErrorAccion] = useState<string | null>(null);
+  const confirmar = useConfirmar();
+  const conDeshacer = useDeshacer();
 
   const [editando, setEditando] = useState(false);
   const [edColaboradorId, setEdColaboradorId] = useState("");
@@ -208,7 +211,7 @@ export default function DetalleRendicionPage() {
   }
 
   async function onEnviar() {
-    if (!window.confirm("¿Enviar esta rendición a revisión? No vas a poder agregar ni editar gastos después.")) return;
+    if (!(await confirmar({ titulo: "¿Enviar esta rendición a revisión?", mensaje: "No vas a poder agregar ni editar gastos después.", accion: "Enviar a revisión" }))) return;
     setErrorAccion(null);
     setGuardando(true);
     const res = await apiFetch(`/api/rendiciones/${params.id}/enviar`, { method: "POST" });
@@ -259,7 +262,7 @@ export default function DetalleRendicionPage() {
   }
 
   async function onEliminarRendicion() {
-    if (!window.confirm("¿Eliminar esta rendición y todos sus gastos? Esta acción no se puede deshacer.")) return;
+    if (!(await confirmar({ titulo: "¿Eliminar esta rendición?", mensaje: "Se eliminan también todos sus gastos. Esta acción no se puede deshacer.", accion: "Eliminar", destructivo: true }))) return;
     setErrorAccion(null);
     const res = await apiFetch(`/api/rendiciones/${params.id}`, { method: "DELETE" });
     if (!res.ok) {
@@ -329,15 +332,15 @@ export default function DetalleRendicionPage() {
     await cargar();
   }
 
-  async function onEliminarItem(gastoId: string) {
-    if (!window.confirm("¿Quitar este gasto de la rendición?")) return;
-    const res = await apiFetch(`/api/rendiciones/${params.id}/items/${gastoId}`, { method: "DELETE" });
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      setErrorAccion(body.error ?? "No se pudo quitar el gasto");
-      return;
-    }
-    await cargar();
+  function onEliminarItem(gasto: GastoConDatos) {
+    const indice = detalle?.gastos.findIndex((g) => g.id === gasto.id) ?? 0;
+    conDeshacer({
+      mensaje: "Gasto quitado de la rendición",
+      ocultar: () => setDetalle((d) => (d ? { ...d, gastos: d.gastos.filter((g) => g.id !== gasto.id) } : d)),
+      restaurar: () => setDetalle((d) => (d ? { ...d, gastos: reponer(d.gastos, gasto, indice) } : d)),
+      ejecutar: async () => exigirOk(await apiFetch(`/api/rendiciones/${params.id}/items/${gasto.id}`, { method: "DELETE" }), "No se pudo quitar el gasto"),
+      alTerminar: () => void cargar(),
+    });
   }
 
   if (!usuario) return null;
@@ -575,7 +578,7 @@ export default function DetalleRendicionPage() {
                 acciones={[
                   { etiqueta: "Editar", onPress: (g) => abrirEdicionItem(g), oculta: () => !permisoEditar },
                   { etiqueta: "Ver comprobante", onPress: (g) => verComprobante(g.id), oculta: (g) => !g.comprobante_url },
-                  { etiqueta: "Quitar", onPress: (g) => onEliminarItem(g.id), tono: "peligro", oculta: () => !permisoEditar },
+                  { etiqueta: "Quitar", onPress: (g) => onEliminarItem(g), tono: "peligro", oculta: () => !permisoEditar },
                 ]}
                 columnas={[
                   { encabezado: "Fecha", celda: (g) => g.fecha },

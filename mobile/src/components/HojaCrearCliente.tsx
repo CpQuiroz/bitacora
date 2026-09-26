@@ -53,6 +53,7 @@ export function HojaCrearCliente({
 
   async function crear() {
     if (!nombre.trim()) {
+      // alerta-nativa: dentro de un Modal (el toast quedaría tapado)
       Alert.alert("Falta el nombre", "Escribe el nombre o la razón social.");
       return;
     }
@@ -69,6 +70,7 @@ export function HojaCrearCliente({
     });
     setGuardando(false);
     if (!r.ok) {
+      // alerta-nativa: dentro de un Modal (el toast quedaría tapado)
       Alert.alert("No se pudo crear el cliente", r.error);
       return;
     }

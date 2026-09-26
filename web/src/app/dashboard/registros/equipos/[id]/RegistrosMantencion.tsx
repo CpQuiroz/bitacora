@@ -5,10 +5,11 @@ import Image from "next/image";
 import { ChevronDown, Camera, Eye, Plus, Receipt, Truck, X } from "lucide-react";
 import type { Equipo, Proveedor, RegistroMantencionEquipo, RespuestaChecklistMantencion } from "@bitacora/shared";
 import { MANTENCION_EXIGE_FOTO_EN_NO } from "@bitacora/shared";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, exigirOk } from "@/lib/api";
+import { reponer } from "@/lib/reponer";
 import { comprimirImagen } from "@/lib/comprimirImagen";
 import { abrirPdfRegistroMantencion } from "@/lib/descargarPdf";
-import { Button, Cifra, DatePicker, EmptyState, ErrorState, LoadingState, Select, Textarea } from "@bitacora/ui/web";
+import { Button, Cifra, DatePicker, EmptyState, ErrorState, LoadingState, Select, Textarea, useDeshacer } from "@bitacora/ui/web";
 import { Modal } from "@/components/Modal";
 import { SelectCrear } from "@/components/SelectCrear";
 
@@ -237,7 +238,7 @@ function DetalleRegistro({ equipoId, registroId, onCambio }: { equipoId: string;
   const [datos, setDatos] = useState<DetalleRegistroData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [subiendo, setSubiendo] = useState(false);
-  const [eliminandoId, setEliminandoId] = useState<string | null>(null);
+  const conDeshacer = useDeshacer();
   const fileRef = useRef<HTMLInputElement>(null);
 
   const cargar = useCallback(async () => {
@@ -270,18 +271,22 @@ function DetalleRegistro({ equipoId, registroId, onCambio }: { equipoId: string;
     onCambio();
   }
 
-  async function eliminarFoto(fotoId: string) {
-    if (!window.confirm("¿Eliminar esta foto de respaldo?")) return;
-    setEliminandoId(fotoId);
-    const res = await apiFetch(`/api/equipos/${equipoId}/registros-mantencion/${registroId}/fotos/${fotoId}`, { method: "DELETE" });
-    setEliminandoId(null);
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      setError(body.error ?? "No se pudo eliminar la foto");
-      return;
-    }
-    await cargar();
-    onCambio();
+  function eliminarFoto(foto: FotoDetalle) {
+    const indice = datos?.fotos.findIndex((f) => f.id === foto.id) ?? 0;
+    conDeshacer({
+      mensaje: "Foto eliminada",
+      ocultar: () => setDatos((d) => (d ? { ...d, fotos: d.fotos.filter((f) => f.id !== foto.id) } : d)),
+      restaurar: () => setDatos((d) => (d ? { ...d, fotos: reponer(d.fotos, foto, indice) } : d)),
+      ejecutar: async () =>
+        exigirOk(
+          await apiFetch(`/api/equipos/${equipoId}/registros-mantencion/${registroId}/fotos/${foto.id}`, { method: "DELETE" }),
+          "No se pudo eliminar la foto"
+        ),
+      alTerminar: () => {
+        cargar();
+        onCambio();
+      },
+    });
   }
 
   if (error && !datos) return <ErrorState mensaje={error} onReintentar={cargar} />;
@@ -378,11 +383,10 @@ function DetalleRegistro({ equipoId, registroId, onCambio }: { equipoId: string;
                 {f.item && <span className="absolute inset-x-0 bottom-0 truncate rounded-b-ds-md bg-ds-text/[0.7] px-1.5 py-0.5 text-[10px] text-white">{f.item}</span>}
                 <button
                   type="button"
-                  onClick={() => eliminarFoto(f.id)}
-                  disabled={eliminandoId === f.id}
+                  onClick={() => eliminarFoto(f)}
                   className="absolute right-1.5 top-1.5 rounded-ds-pill bg-ds-accent-700 px-2 py-0.5 font-ds-body text-[11px] font-medium text-white opacity-0 transition-opacity group-hover:opacity-100 disabled:opacity-50"
                 >
-                  {eliminandoId === f.id ? "…" : "Eliminar"}
+                  Eliminar
                 </button>
               </div>
             ))}

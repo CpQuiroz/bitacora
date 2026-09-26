@@ -4,10 +4,11 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { CIUDADES_CHILE, ROLES_SUPERVISION, type Cliente, type TarifaKm, type TarifaTramo } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, exigirOk } from "@/lib/api";
+import { reponer } from "@/lib/reponer";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Button, Card, ErrorState, LoadingState, StatusBadge, Table } from "@bitacora/ui/web";
+import { Button, Card, Dialog, ErrorState, LoadingState, StatusBadge, Table, useDeshacer, useToast } from "@bitacora/ui/web";
 import { InputMonto } from "@/components/InputMonto";
 import { Combobox } from "@/components/Combobox";
 import { ComboboxCliente } from "@/components/ComboboxCliente";
@@ -24,7 +25,9 @@ export default function TarifasViajesPage() {
   const [km, setKm] = useState<ConCliente<TarifaKm>[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [aviso, setAviso] = useState<string | null>(null);
+  const toast = useToast();
+  const conDeshacer = useDeshacer();
+  const [editandoPrecio, setEditandoPrecio] = useState<{ tramo: TarifaTramo; precio: string } | null>(null);
 
   const [origen, setOrigen] = useState("");
   const [destino, setDestino] = useState("");
@@ -96,7 +99,6 @@ export default function TarifasViajesPage() {
   async function agregarTramo(e: FormEvent) {
     e.preventDefault();
     setErrorTramo(null);
-    setAviso(null);
     if (!origen || !destino) return setErrorTramo("Indica origen y destino");
     if (!precioTramo) return setErrorTramo("Indica el precio del tramo");
     setGuardandoTramo(true);
@@ -110,40 +112,47 @@ export default function TarifasViajesPage() {
     setOrigen("");
     setDestino("");
     setPrecioTramo("");
-    setAviso(`Tramo ${body.origen} ↔ ${body.destino} guardado.`);
+    toast(`Tramo ${body.origen} ↔ ${body.destino} guardado.`, { tono: "exito" });
     await cargarTarifas();
   }
 
   async function cambiarTramo(t: TarifaTramo, cambios: { precio?: string; activo?: boolean }) {
-    setError(null);
     const res = await apiFetch(`/api/viajes/tarifas/tramos/${t.id}`, { method: "PATCH", body: JSON.stringify(cambios) });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      setError(body.error ?? "No se pudo actualizar el tramo");
+      toast(body.error ?? "No se pudo actualizar el tramo", { tono: "error" });
     }
     await cargarTarifas();
   }
 
   function editarPrecioTramo(t: TarifaTramo) {
-    const nuevo = window.prompt(`Nuevo precio para ${t.origen} ↔ ${t.destino}`, String(Math.round(Number(t.precio))));
-    if (nuevo) void cambiarTramo(t, { precio: nuevo.replace(/[^\d,]/g, "").replace(",", ".") });
+    setEditandoPrecio({ tramo: t, precio: String(Math.round(Number(t.precio))) });
   }
 
-  async function eliminarTramo(t: TarifaTramo) {
-    if (!window.confirm(`¿Eliminar la tarifa ${t.origen} ↔ ${t.destino}? Los viajes ya calculados no cambian.`)) return;
-    const res = await apiFetch(`/api/viajes/tarifas/tramos/${t.id}`, { method: "DELETE" });
-    if (!res.ok) setError("No se pudo eliminar el tramo");
-    await cargarTarifas();
+  function guardarPrecioTramo() {
+    if (!editandoPrecio?.precio) return;
+    void cambiarTramo(editandoPrecio.tramo, { precio: editandoPrecio.precio });
+    setEditandoPrecio(null);
+  }
+
+  function eliminarTramo(t: ConCliente<TarifaTramo>) {
+    const indice = tramos?.findIndex((x) => x.id === t.id) ?? 0;
+    conDeshacer({
+      mensaje: `Tarifa ${t.origen} ↔ ${t.destino} eliminada`,
+      ocultar: () => setTramos((l) => l?.filter((x) => x.id !== t.id) ?? l),
+      restaurar: () => setTramos((l) => (l ? reponer(l, t, indice) : l)),
+      ejecutar: async () => exigirOk(await apiFetch(`/api/viajes/tarifas/tramos/${t.id}`, { method: "DELETE" }), "No se pudo eliminar el tramo"),
+      alTerminar: () => void cargarTarifas(),
+    });
   }
 
   async function guardarKm(clienteId: string | null, precio: string) {
     setErrorKm(null);
-    setAviso(null);
     if (!precio) return setErrorKm("Indica el precio por km");
     const res = await apiFetch("/api/viajes/tarifas/km", { method: "PUT", body: JSON.stringify({ cliente_id: clienteId, precio_km: precio }) });
     const body = await res.json().catch(() => ({}));
     if (!res.ok) return setErrorKm(body.error ?? "No se pudo guardar el precio por km");
-    setAviso("Precio por km guardado.");
+    toast("Precio por km guardado.", { tono: "exito" });
     if (clienteId) {
       setClienteKm("");
       setPrecioKmCliente("");
@@ -151,11 +160,15 @@ export default function TarifasViajesPage() {
     await cargarTarifas();
   }
 
-  async function eliminarKm(t: TarifaKm) {
-    if (!window.confirm("¿Quitar este precio por km? Los viajes ya calculados no cambian.")) return;
-    const res = await apiFetch(`/api/viajes/tarifas/km/${t.id}`, { method: "DELETE" });
-    if (!res.ok) setErrorKm("No se pudo eliminar");
-    await cargarTarifas();
+  function eliminarKm(t: ConCliente<TarifaKm>) {
+    const indice = km.findIndex((x) => x.id === t.id);
+    conDeshacer({
+      mensaje: "Precio por km quitado",
+      ocultar: () => setKm((l) => l.filter((x) => x.id !== t.id)),
+      restaurar: () => setKm((l) => reponer(l, t, indice)),
+      ejecutar: async () => exigirOk(await apiFetch(`/api/viajes/tarifas/km/${t.id}`, { method: "DELETE" }), "No se pudo eliminar"),
+      alTerminar: () => void cargarTarifas(),
+    });
   }
 
   if (!usuario) return null;
@@ -175,7 +188,6 @@ export default function TarifasViajesPage() {
         <LoadingState />
       ) : (
         <div className="flex flex-col gap-ds-6">
-          {aviso ? <p className="font-ds-body text-ds-small text-ds-text/70">{aviso}</p> : null}
           {error ? <p className="font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
 
           <Card>
@@ -216,7 +228,7 @@ export default function TarifasViajesPage() {
                 acciones={[
                   { etiqueta: "Cambiar precio", onPress: (t) => editarPrecioTramo(t) },
                   { etiqueta: (t) => (t.activo ? "Desactivar" : "Activar"), onPress: (t) => void cambiarTramo(t, { activo: !t.activo }), tono: "muted" },
-                  { etiqueta: "Eliminar", onPress: (t) => void eliminarTramo(t), tono: "peligro" },
+                  { etiqueta: "Eliminar", onPress: (t) => eliminarTramo(t), tono: "peligro" },
                 ]}
                 columnas={[
                   { encabezado: "Tramo", celda: (t) => `${t.origen} ↔ ${t.destino}` },
@@ -263,7 +275,7 @@ export default function TarifasViajesPage() {
                     <span>
                       {t.cliente?.nombre ?? "Cliente"} · <span className="tabular-nums">{formatMoneda(Number(t.precio_km), usuario.moneda)}</span> por km
                     </span>
-                    <button type="button" onClick={() => void eliminarKm(t)} className="font-ds-body text-ds-caption font-medium text-ds-accent-700 hover:underline">
+                    <button type="button" onClick={() => eliminarKm(t)} className="font-ds-body text-ds-caption font-medium text-ds-accent-700 hover:underline">
                       Quitar
                     </button>
                   </li>
@@ -273,6 +285,37 @@ export default function TarifasViajesPage() {
           </Card>
         </div>
       )}
+      <Dialog
+        abierto={editandoPrecio != null}
+        onCerrar={() => setEditandoPrecio(null)}
+        titulo={editandoPrecio ? `Nuevo precio para ${editandoPrecio.tramo.origen} ↔ ${editandoPrecio.tramo.destino}` : ""}
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            guardarPrecioTramo();
+          }}
+          className="flex flex-col gap-ds-4"
+        >
+          <div className="flex flex-col gap-ds-1">
+            <label htmlFor="tramo-precio-nuevo" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Precio del tramo</label>
+            <InputMonto
+              id="tramo-precio-nuevo"
+              value={editandoPrecio?.precio ?? ""}
+              onChange={(precio) => setEditandoPrecio((e) => (e ? { ...e, precio } : e))}
+              moneda={usuario.moneda}
+            />
+          </div>
+          <div className="flex flex-wrap justify-end gap-ds-2">
+            <Button variante="secundario" onPress={() => setEditandoPrecio(null)}>
+              Cancelar
+            </Button>
+            <Button tipo="submit" deshabilitado={!editandoPrecio?.precio}>
+              Guardar
+            </Button>
+          </div>
+        </form>
+      </Dialog>
     </DashboardShell>
   );
 }

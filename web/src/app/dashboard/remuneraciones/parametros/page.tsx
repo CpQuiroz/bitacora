@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { DashboardShell } from "@/components/DashboardShell";
-import { Button, Card, Input, LoadingState, Select } from "@bitacora/ui/web";
+import { Button, Card, Input, LoadingState, Select, useToast } from "@bitacora/ui/web";
 import { useUsuarioShell } from "@/lib/useUsuarioShell";
 import { nombrePeriodo, periodoRelativo, remuneraciones, type AfpParametro } from "@/lib/remuneracionesApi";
 import type { ParametroPrevisional } from "@bitacora/shared";
@@ -31,7 +31,7 @@ export default function ParametrosPage() {
   const [form, setForm] = useState<Record<string, string>>({});
   const [afpForm, setAfpForm] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
-  const [aviso, setAviso] = useState<string | null>(null);
+  const toast = useToast();
   const [guardando, setGuardando] = useState(false);
 
   const cargar = useCallback(async () => {
@@ -54,7 +54,6 @@ export default function ParametrosPage() {
 
   async function guardar() {
     setGuardando(true);
-    setAviso(null);
     setError(null);
     try {
       const body: Record<string, unknown> = Object.fromEntries(
@@ -64,7 +63,7 @@ export default function ParametrosPage() {
       const r = await remuneraciones.guardarParametros(periodo, body);
       setParams(r.parametros);
       setAfp(r.afp);
-      setAviso("Parámetros guardados.");
+      toast("Parámetros guardados.", { tono: "exito" });
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo guardar");
     } finally {
@@ -135,7 +134,6 @@ export default function ParametrosPage() {
             </Card>
           </div>
 
-          {aviso ? <p className="mt-ds-4 font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}
           <div className="mt-ds-4">
             <Button onPress={guardar} cargando={guardando}>
               Guardar parámetros

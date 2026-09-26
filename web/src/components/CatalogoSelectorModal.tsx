@@ -6,7 +6,7 @@ import type { CatalogoItem, TipoCatalogoItem } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { estadoStock, ETIQUETA_ESTADO_STOCK } from "@/lib/estadoStock";
-import { Button, Input, StatusBadge, type TonoEstado } from "@bitacora/ui/web";
+import { Button, Input, LoadingState, StatusBadge, type TonoEstado } from "@bitacora/ui/web";
 import { Modal } from "./Modal";
 
 export type ItemSeleccionadoCatalogo = {
@@ -221,7 +221,7 @@ export function CatalogoSelectorModal({
         )}
 
         {error ? <p className="font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
-        {catalogo === null && !error && <p className="py-ds-8 text-center font-ds-body text-ds-small text-ds-text/70">Cargando…</p>}
+        {catalogo === null && !error && <LoadingState />}
 
         {catalogo !== null && catalogo.length === 0 && (
           <p className="py-ds-4 font-ds-body text-ds-small text-ds-text/70">No tienes ítems activos en el Catálogo todavía — puedes agregar uno manual.</p>

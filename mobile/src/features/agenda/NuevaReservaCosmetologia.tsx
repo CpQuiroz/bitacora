@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { Alert, Pressable, ScrollView, View } from "react-native";
+import { Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ArrowLeft, X } from "lucide-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { Cliente, PaqueteSesionesConSaldo, Servicio, Usuario } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
-import { Button, Input, LoadingState, ScreenHeader, Textarea, Texto, useMarca } from "@bitacora/ui/native";
+import { Button, Input, LoadingState, ScreenHeader, Textarea, Texto, useMarca, useToast } from "@bitacora/ui/native";
 import { InputMonto } from "../../components/InputMonto";
 import { SelectorCliente } from "../../components/SelectorCliente";
 import { useRed } from "../../services/sync/NetworkProvider";
@@ -66,6 +66,7 @@ function Filete() {
  */
 export function NuevaReservaCosmetologia({ navigation, route }: NativeStackScreenProps<AgendaStackParamList, "NuevaCita">) {
   const marca = useMarca();
+  const toast = useToast();
   // Pantalla modal (presentation: "modal" en AgendaStack.tsx, misma
   // ruta "NuevaCita" que NuevaCitaScreen.tsx) — no vive dentro del pager
   // de AppTabs.tsx, así que no hereda el fix de paddingBottom de la tab
@@ -158,10 +159,10 @@ export function NuevaReservaCosmetologia({ navigation, route }: NativeStackScree
   }
 
   async function guardar() {
-    if (!clienteId) return Alert.alert("Falta el cliente", "Elige o crea un cliente para la reserva.");
-    if (!servicioId) return Alert.alert("Falta el servicio", "Elige qué servicio se va a realizar.");
-    if (!hora) return Alert.alert("Falta la hora", "Elige un horario en el bloque de arriba.");
-    if (!enLinea) return Alert.alert("Sin conexión", "Necesitas conexión para agendar.");
+    if (!clienteId) return toast("Falta el cliente: elige o crea un cliente para la reserva.", { tono: "error" });
+    if (!servicioId) return toast("Falta el servicio: elige qué servicio se va a realizar.", { tono: "error" });
+    if (!hora) return toast("Falta la hora: elige un horario en el bloque de arriba.", { tono: "error" });
+    if (!enLinea) return toast("Sin conexión: necesitas conexión para agendar.", { tono: "error" });
 
     const nombreServicio = servicioElegido?.nombre ?? "Reserva";
     const adicionalesLimpios = adicionales
@@ -189,7 +190,7 @@ export function NuevaReservaCosmetologia({ navigation, route }: NativeStackScree
     const r = await crearCita(borrador);
     setGuardando(false);
     if (!r.ok) {
-      Alert.alert("No se pudo agendar", r.error);
+      toast(`No se pudo agendar: ${r.error}`, { tono: "error" });
       return;
     }
     if (estadoInicial === "confirmada") {
@@ -197,7 +198,8 @@ export function NuevaReservaCosmetologia({ navigation, route }: NativeStackScree
       // reservas nace en "pendiente", que ya vino en el POST.
       await editarCita(r.tarea.id, { estado: "confirmada" });
     }
-    Alert.alert("Reserva agendada", "Listo.", [{ text: "Listo", onPress: () => navigation.goBack() }]);
+    toast("Reserva agendada", { tono: "exito" });
+    navigation.goBack();
   }
 
   if (clientes === null) {

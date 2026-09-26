@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { Alert, ScrollView, View } from "react-native";
+import { ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { Rubro } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
-import { Button, Input, Select, Texto } from "@bitacora/ui/native";
+import { Button, Input, Select, Texto, useToast } from "@bitacora/ui/native";
 import { crearEmpresaSuperAdmin, type BorradorEmpresa } from "../../services/superadmin";
 import type { SuperAdminStackParamList } from "./types";
 
@@ -31,6 +31,7 @@ const VACIO: BorradorEmpresa = {
 // invitación por correo al admin inicial, no crea ninguna contraseña
 // acá.
 export function SuperAdminNuevaEmpresaScreen({ navigation }: NativeStackScreenProps<SuperAdminStackParamList, "NuevaEmpresa">) {
+  const toast = useToast();
   const [b, setB] = useState<BorradorEmpresa>(VACIO);
   const set = <K extends keyof BorradorEmpresa>(k: K, v: BorradorEmpresa[K]) => setB((p) => ({ ...p, [k]: v }));
   const [guardando, setGuardando] = useState(false);
@@ -46,9 +47,8 @@ export function SuperAdminNuevaEmpresaScreen({ navigation }: NativeStackScreenPr
     const r = await crearEmpresaSuperAdmin(b);
     setGuardando(false);
     if (!r.ok) return setError(r.error);
-    Alert.alert("Empresa creada", `Se le mandó una invitación a ${b.admin_correo.trim()}.`, [
-      { text: "Ok", onPress: () => navigation.replace("EmpresaDetalle", { id: r.id }) },
-    ]);
+    toast(`Empresa creada. Se le mandó una invitación a ${b.admin_correo.trim()}.`, { tono: "exito" });
+    navigation.replace("EmpresaDetalle", { id: r.id });
   }
 
   return (

@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Image, Pressable, ScrollView, View } from "react-native";
+import { Image, Pressable, ScrollView, View } from "react-native";
 import { ArrowLeft, Camera, ChevronDown, ChevronUp, X } from "lucide-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { Proveedor, RespuestaChecklistMantencion } from "@bitacora/shared";
 import { MANTENCION_EXIGE_FOTO_EN_NO } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
-import { Button, Input, LoadingState, ScreenHeader, Textarea, Texto, useMarca } from "@bitacora/ui/native";
+import { Button, Input, LoadingState, ScreenHeader, Textarea, Texto, useMarca, useToast } from "@bitacora/ui/native";
 import { PickerBuscable } from "../../components/ui";
 import { LienzoFirma, type LienzoFirmaHandle } from "../../components/LienzoFirma";
 import { useRed } from "../../services/sync/NetworkProvider";
@@ -54,6 +54,7 @@ type FotoLocal = { uri: string; item: string | null };
 // ViajesScreen.
 export function ChecklistMantencionScreen({ route, navigation }: NativeStackScreenProps<MasStackParamList, "ChecklistMantencion">) {
   const marca = useMarca();
+  const toast = useToast();
   const { enLinea } = useRed();
   const { equipoId, tipo, patente } = route.params;
 
@@ -95,8 +96,8 @@ export function ChecklistMantencionScreen({ route, navigation }: NativeStackScre
   }, [plantilla, respuestas, fotos]);
 
   async function tomarFoto(item: string | null) {
-    if (fotos.length >= MAX_FOTOS) return Alert.alert("Máximo de fotos", `Puedes adjuntar hasta ${MAX_FOTOS}.`);
-    const elegidas = await elegirFotos({ multiple: !item });
+    if (fotos.length >= MAX_FOTOS) return toast(`Máximo de fotos: puedes adjuntar hasta ${MAX_FOTOS}.`, { tono: "error" });
+    const elegidas = await elegirFotos({ multiple: !item, avisar: toast });
     if (!elegidas.length) return;
     const cupo = MAX_FOTOS - fotos.length;
     setFotos((prev) => [...prev, ...elegidas.slice(0, cupo).map((f) => ({ uri: f.uri, item }))]);
@@ -167,11 +168,12 @@ export function ChecklistMantencionScreen({ route, navigation }: NativeStackScre
       const r = await crearRegistroMantencion(borrador);
       if (r.ok) {
         setGuardando(false);
-        return Alert.alert("Registro guardado", "Quedó en la oficina.", [{ text: "Listo", onPress: volverALista }]);
+        toast("Registro guardado. Quedó en la oficina.", { tono: "exito" });
+        return volverALista();
       }
       if (!r.reintentable) {
         setGuardando(false);
-        return Alert.alert("No se pudo guardar", r.error);
+        return toast(`No se pudo guardar: ${r.error}`, { tono: "error" });
       }
     }
 
@@ -181,13 +183,15 @@ export function ChecklistMantencionScreen({ route, navigation }: NativeStackScre
     // habido ningún fallo — no es un "reintento". Mismo texto que usa
     // Viaje para la foto de la guía, que va por el mismo camino.
     const conFotos = (borrador.fotos ?? []).length > 0;
-    Alert.alert(
-      !enLinea ? "Guardado sin conexión" : conFotos ? "Registro guardado" : "Se reintentará solo",
-      !enLinea || !conFotos
-        ? "El chequeo en curso quedó guardado en el teléfono y se envía a la oficina cuando haya señal."
-        : "Quedó en la oficina. Las fotos se están subiendo y se reintentan solas si falla.",
-      [{ text: "Listo", onPress: volverALista }]
-    );
+    if (enLinea && conFotos) {
+      toast("Registro guardado. Las fotos se están subiendo y se reintentan solas si falla.", { tono: "exito" });
+    } else {
+      toast(
+        `${!enLinea ? "Guardado sin conexión" : "Se reintentará solo"}. El chequeo quedó guardado en el teléfono y se envía a la oficina cuando haya señal.`,
+        { tono: "info" }
+      );
+    }
+    volverALista();
   }
 
   const volver = { icono: <ArrowLeft size={20} strokeWidth={2.5} color={tokens.color.text} />, onPress: () => navigation.goBack(), etiquetaAccesible: "Volver" };

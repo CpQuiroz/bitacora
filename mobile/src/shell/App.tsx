@@ -6,7 +6,7 @@ import { AuthProvider, useAuth } from "../features/auth/AuthContext";
 import { SuperAdminGate } from "../features/superadmin/SuperAdminGate";
 import { NetworkProvider } from "../services/sync/NetworkProvider";
 import { useEffect } from "react";
-import { ProveedorMarca } from "@bitacora/ui/native";
+import { ConfirmarProvider, ProveedorMarca, ToastProvider } from "@bitacora/ui/native";
 import { ThemeProvider, fuentesFaena, fuentesDS } from "../theme";
 import { cargarPreferencias } from "../lib/preferencias";
 import { RootNavigator } from "./navigation/RootNavigator";
@@ -88,17 +88,23 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <SuperAdminGate>
-        <AuthProvider>
-          <NetworkProvider>
-            <ConTema>
-              <BloqueoBiometrico>
-                <NavegacionConTema />
-              </BloqueoBiometrico>
-            </ConTema>
-          </NetworkProvider>
-        </AuthProvider>
-      </SuperAdminGate>
+      {/* Toasts y confirmaciones (tarea 156): afuera de todo, para que
+          también los tenga el modo Super-Admin. */}
+      <ToastProvider>
+        <ConfirmarProvider>
+          <SuperAdminGate>
+            <AuthProvider>
+              <NetworkProvider>
+                <ConTema>
+                  <BloqueoBiometrico>
+                    <NavegacionConTema />
+                  </BloqueoBiometrico>
+                </ConTema>
+              </NetworkProvider>
+            </AuthProvider>
+          </SuperAdminGate>
+        </ConfirmarProvider>
+      </ToastProvider>
     </SafeAreaProvider>
   );
 }

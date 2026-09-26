@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { Alert, Pressable, View } from "react-native";
+import { Pressable, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { tokens } from "@bitacora/design-tokens";
-import { Button, FUENTE_NATIVE, Input, Texto } from "@bitacora/ui/native";
+import { Button, FUENTE_NATIVE, Input, Texto, useToast } from "@bitacora/ui/native";
 import { supabase } from "../../lib/supabase";
 import { apiJson } from "../../services/api";
 import { entrarConGoogle } from "./googleAuth";
@@ -33,6 +33,7 @@ const VENTANA_TOQUES_MS = 3000;
 // PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export function LoginScreen({ navigation }: NativeStackScreenProps<RootStackParamList, "Login">) {
   const activarModoSuperAdmin = useActivarModoSuperAdmin();
+  const toast = useToast();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [cargando, setCargando] = useState(false);
@@ -145,10 +146,7 @@ export function LoginScreen({ navigation }: NativeStackScreenProps<RootStackPara
         hitSlop={10}
         style={{ alignSelf: "center", paddingVertical: tokens.space["2"], minHeight: 44, justifyContent: "center" }}
         onPress={() =>
-          Alert.alert(
-            "¿Olvidaste tu contraseña?",
-            "Pídele a quien administra Bitácora en tu empresa que te genere una clave nueva desde el panel web."
-          )
+          toast("Pídele a quien administra Bitácora en tu empresa que te genere una clave nueva desde el panel web.", { tono: "info", duracionMs: 6000 })
         }
       >
         <Texto tamano={tokens.size.small} color={`${tokens.color.text}b3`}>

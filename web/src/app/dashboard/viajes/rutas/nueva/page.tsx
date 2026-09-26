@@ -16,7 +16,7 @@ import type {
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Button, Card, Input, Select, StatusBadge, Tag, Textarea } from "@bitacora/ui/web";
+import { Button, Card, Input, Select, StatusBadge, Tag, Textarea, useToast } from "@bitacora/ui/web";
 import { ComboboxCliente } from "@/components/ComboboxCliente";
 import { ComboboxResponsable } from "@/components/ComboboxResponsable";
 import dynamic from "next/dynamic";
@@ -75,7 +75,7 @@ export default function NuevaRutaPage() {
   const [almuerzoFin, setAlmuerzoFin] = useState("14:00");
   const [creandoRuta, setCreandoRuta] = useState(false);
   const [errorRuta, setErrorRuta] = useState<string | null>(null);
-  const [avisoRuta, setAvisoRuta] = useState<string | null>(null);
+  const toast = useToast();
 
   // --- form: nueva tarea ---
   const [mostrarFormTarea, setMostrarFormTarea] = useState(false);
@@ -178,10 +178,11 @@ export default function NuevaRutaPage() {
       return;
     }
     const nueva = await res.json();
-    setAvisoRuta(
+    toast(
       nueva.geocodificado
         ? "Ruta creada — punto base ubicado en el mapa."
-        : "Ruta creada, pero no encontramos el punto base en el mapa — revisa la dirección."
+        : "Ruta creada, pero no encontramos el punto base en el mapa — revisa la dirección.",
+      { tono: nueva.geocodificado ? "exito" : "info" }
     );
     setRuta(nueva);
     setTareas([]);
@@ -389,9 +390,6 @@ export default function NuevaRutaPage() {
 
       {ruta && (
         <>
-          {avisoRuta ? (
-            <p className="my-ds-4 font-ds-body text-ds-small font-medium text-ds-accent2-800">{avisoRuta}</p>
-          ) : null}
           {ruta.advertencias && ruta.advertencias.length > 0 && (
             <div className="my-ds-4 flex flex-col gap-ds-2">
               {ruta.advertencias.map((a, i) => (

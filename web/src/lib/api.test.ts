@@ -9,7 +9,7 @@
 //   npx tsx --env-file=web/.env.local --test web/src/lib/api.test.ts
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { esSeguroReintentar, mensajeFalloRed } from "./api";
+import { esSeguroReintentar, exigirOk, mensajeFalloRed } from "./api";
 
 test("PATCH y DELETE son seguros de reintentar sin Idempotency-Key (idempotentes por convención)", () => {
   assert.equal(esSeguroReintentar("PATCH"), true);
@@ -38,4 +38,11 @@ test("timeout menciona explícitamente que puede ser el servidor iniciando", () 
 test("red (sin respuesta ni timeout) apunta a la conexión del usuario, no al servidor", () => {
   assert.match(mensajeFalloRed("red"), /conexión|conectar/i);
   assert.doesNotMatch(mensajeFalloRed("red"), /iniciando/i);
+});
+
+test("exigirOk deja pasar una respuesta ok y lanza el error del backend si no", async () => {
+  const ok = new Response("{}", { status: 200 });
+  assert.equal(await exigirOk(ok, "x"), ok);
+  await assert.rejects(exigirOk(new Response(JSON.stringify({ error: "En uso" }), { status: 409 }), "x"), /En uso/);
+  await assert.rejects(exigirOk(new Response("no json", { status: 500 }), "No se pudo eliminar"), /No se pudo eliminar/);
 });

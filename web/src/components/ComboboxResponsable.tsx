@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { Usuario } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
 import { useRolesDisponibles } from "@/lib/roles";
-import { Button, Input, Select } from "@bitacora/ui/web";
+import { Button, Input, Select, useToast } from "@bitacora/ui/web";
 import { Combobox } from "./Combobox";
 
 // Selector de Responsable con búsqueda + invitación — a diferencia de
@@ -42,14 +42,13 @@ export function ComboboxResponsable({
   const [rol, setRol] = useState("colaborador");
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [aviso, setAviso] = useState<string | null>(null);
+  const toast = useToast();
 
   function iniciarInvitacion(texto: string) {
     setNombre(texto);
     setCorreo("");
     setRol("colaborador");
     setError(null);
-    setAviso(null);
     setInvitando(true);
   }
 
@@ -79,7 +78,7 @@ export function ComboboxResponsable({
     // tiene cuenta activa todavía, no se puede asignar como
     // responsable hasta que acepte la invitación.
     setInvitando(false);
-    setAviso(`Invitación enviada a ${correo.trim()}. Podrás asignarlo como responsable una vez que acepte la invitación.`);
+    toast(`Invitación enviada a ${correo.trim()}. Podrás asignarlo como responsable una vez que acepte la invitación.`, { tono: "exito" });
   }
 
   if (invitando) {
@@ -117,7 +116,6 @@ export function ComboboxResponsable({
         gestionHref={gestionHref}
         gestionLabel={gestionLabel}
       />
-      {aviso ? <p className="font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}
     </div>
   );
 }

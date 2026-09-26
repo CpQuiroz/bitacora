@@ -374,6 +374,19 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
 
   const fuenteInfo = fuenteDe(usuario.fuente);
   const marca = usuario.colorPrimario ? marcaLegible(usuario.colorPrimario) : null;
+
+  // Toasts y diálogos de confirmación se montan en el layout raíz, fuera
+  // de este contenedor: se les pasa la marca por el elemento <html>.
+  useEffect(() => {
+    if (!marca) return;
+    const raiz = document.documentElement.style;
+    raiz.setProperty("--ds-brand", marca.fondo);
+    raiz.setProperty("--ds-brand-foreground", marca.texto);
+    return () => {
+      raiz.removeProperty("--ds-brand");
+      raiz.removeProperty("--ds-brand-foreground");
+    };
+  }, [marca?.fondo, marca?.texto]); // eslint-disable-line react-hooks/exhaustive-deps
   const temaStyle: CSSProperties = {
     // font-family (no solo la custom property) para que el valor local
     // de --font-sans efectivamente se aplique acá y herede hacia abajo —

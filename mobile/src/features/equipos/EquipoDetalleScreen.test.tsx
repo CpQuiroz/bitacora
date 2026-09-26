@@ -1,9 +1,12 @@
 // Tarea 146: ficha del equipo en la app. Chofer con su vehículo asignado:
 // ve y sube documentos, pero no edita el equipo ni lo reasigna. Admin con
 // Flota: edita, sube documentos, agrega plan y reasigna. Servicios simulados.
-import { fireEvent, render, screen } from "@testing-library/react-native";
+import { Alert, type AlertButton } from "react-native";
+import { act, fireEvent, render, screen } from "@testing-library/react-native";
+import { ToastProvider } from "@bitacora/ui/native";
 import { EquipoDetalleScreen } from "./EquipoDetalleScreen";
 
+const mockBorrarDocumento = jest.fn();
 let mockModulos: string[] = [];
 let mockAsignadoA = "u1";
 let mockRol = "colaborador";
@@ -39,7 +42,7 @@ jest.mock("../../services/equipos", () => ({
   colaboradoresAsignables: jest.fn(async () => [{ id: "u2", nombre: "Otro chofer" }]),
   asignarVehiculo: jest.fn(),
   desasignarVehiculo: jest.fn(),
-  borrarDocumento: jest.fn(),
+  borrarDocumento: (...a: unknown[]) => mockBorrarDocumento(...a),
   borrarPlan: jest.fn(),
   cambiarEstadoPlan: jest.fn(),
   urlArchivoDocumento: jest.fn(),
@@ -121,5 +124,33 @@ describe("ficha del equipo (EquipoDetalleScreen)", () => {
     await fireEvent.press(await screen.findByText("Actividad"));
     expect(await screen.findByText("Viaje · Guía G-1")).toBeTruthy();
     expect(screen.queryByText("$150.000")).toBeNull();
+  });
+
+  test("admin borra un documento con Deshacer: se oculta, y la API se llama recién al terminar la espera (tarea 156)", async () => {
+    mockModulos = ["flota"];
+    mockAsignadoA = "u9";
+    mockBorrarDocumento.mockReset().mockResolvedValue({ ok: true });
+    const menu = jest.spyOn(Alert, "alert").mockImplementation(() => {});
+    const navigation = { goBack: jest.fn(), navigate: jest.fn() };
+    await render(
+      <ToastProvider>
+        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+        <EquipoDetalleScreen route={{ key: "k", name: "EquipoDetalle", params: { equipoId: "e1" } } as any} navigation={navigation as any} />
+      </ToastProvider>
+    );
+    await fireEvent.press((await screen.findAllByText("Documentos"))[0]!);
+    await fireEvent.press(await screen.findByText("SOAP · N° 123"));
+    const botones = menu.mock.calls.at(-1)![2] as AlertButton[];
+    jest.useFakeTimers();
+    await act(async () => botones.find((b) => b.text === "Eliminar")!.onPress!());
+    expect(screen.getByText('"SOAP" eliminado')).toBeTruthy();
+    expect(screen.queryByText("SOAP · N° 123")).toBeNull();
+    expect(mockBorrarDocumento).not.toHaveBeenCalled();
+    await act(async () => {
+      jest.advanceTimersByTime(5000);
+    });
+    expect(mockBorrarDocumento).toHaveBeenCalledWith("d1");
+    jest.useRealTimers();
+    menu.mockRestore();
   });
 });

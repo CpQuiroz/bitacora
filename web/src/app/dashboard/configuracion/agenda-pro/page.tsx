@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Calendar, Check, Layers, Plus, Wrench } from "lucide-react";
 import type { AgendaProConfig, AgendaProHorario, Servicio, TipoPack } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
-import { Button, Card, Input, LoadingState, Select, StatusBadge, Table } from "@bitacora/ui/web";
+import { Button, Card, Input, LoadingState, Select, StatusBadge, Table, useToast } from "@bitacora/ui/web";
 import { InputMonto } from "@/components/InputMonto";
 import { SugerenciasRubro } from "@/components/SugerenciasRubro";
 import { useConfiguracion } from "../ConfiguracionContext";
@@ -32,7 +32,7 @@ function formatoPrecio(precio: number | null) {
 function ServiciosCard({ servicios, onCambio }: { servicios: Servicio[] | null; onCambio: () => void }) {
   const { usuario } = useConfiguracion();
   const [error, setError] = useState<string | null>(null);
-  const [aviso, setAviso] = useState<string | null>(null);
+  const toast = useToast();
 
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [nombre, setNombre] = useState("");
@@ -85,15 +85,14 @@ function ServiciosCard({ servicios, onCambio }: { servicios: Servicio[] | null; 
       return;
     }
     setEditandoId(null);
-    setAviso(editandoId === "nuevo" ? "Servicio creado." : "Servicio actualizado.");
+    toast(editandoId === "nuevo" ? "Servicio creado." : "Servicio actualizado.", { tono: "exito" });
     onCambio();
   }
 
   async function alternarActivo(s: Servicio) {
-    setAviso(null);
     const res = await apiFetch(`/api/servicios/${s.id}`, { method: "PATCH", body: JSON.stringify({ activo: !s.activo }) });
     if (!res.ok) {
-      setError("No se pudo actualizar el estado");
+      toast("No se pudo actualizar el estado", { tono: "error" });
       return;
     }
     onCambio();
@@ -153,7 +152,6 @@ function ServiciosCard({ servicios, onCambio }: { servicios: Servicio[] | null; 
       )}
 
       {error ? <p className="font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
-      {aviso ? <p className="font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}
       {servicios === null && !error && <LoadingState />}
 
       {servicios && (
@@ -187,7 +185,7 @@ function TiposPackCard({ servicios }: { servicios: Servicio[] | null }) {
   const { usuario } = useConfiguracion();
   const [tipos, setTipos] = useState<TipoPack[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [aviso, setAviso] = useState<string | null>(null);
+  const toast = useToast();
 
   const [editandoId, setEditandoId] = useState<string | null>(null); // null = form cerrado; "nuevo" = creando
   const [nombre, setNombre] = useState("");
@@ -271,15 +269,14 @@ function TiposPackCard({ servicios }: { servicios: Servicio[] | null }) {
       return;
     }
     setEditandoId(null);
-    setAviso(editandoId === "nuevo" ? "Tipo de pack creado." : "Tipo de pack actualizado.");
+    toast(editandoId === "nuevo" ? "Tipo de pack creado." : "Tipo de pack actualizado.", { tono: "exito" });
     cargar();
   }
 
   async function alternarActivo(t: TipoPack) {
-    setAviso(null);
     const res = await apiFetch(`/api/tipos-pack/${t.id}`, { method: "PATCH", body: JSON.stringify({ activo: !t.activo }) });
     if (!res.ok) {
-      setError("No se pudo actualizar el estado");
+      toast("No se pudo actualizar el estado", { tono: "error" });
       return;
     }
     cargar();
@@ -356,7 +353,6 @@ function TiposPackCard({ servicios }: { servicios: Servicio[] | null }) {
       )}
 
       {error ? <p className="font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
-      {aviso ? <p className="font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}
       {tipos === null && !error && <LoadingState />}
 
       {tipos && (
@@ -392,7 +388,7 @@ export default function AgendaProConfigPage() {
   const [dias, setDias] = useState<Record<number, DiaEditable>>({});
   const [servicios, setServicios] = useState<Servicio[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [aviso, setAviso] = useState<string | null>(null);
+  const toast = useToast();
   const [guardando, setGuardando] = useState(false);
   const [copiado, setCopiado] = useState(false);
 
@@ -433,7 +429,6 @@ export default function AgendaProConfigPage() {
   async function onGuardar() {
     if (!config) return;
     setError(null);
-    setAviso(null);
     for (const d of DIAS) {
       const info = dias[d.valor];
       if (info.abierto && info.hora_fin <= info.hora_inicio) {
@@ -468,7 +463,7 @@ export default function AgendaProConfigPage() {
       setError("No se pudo guardar");
       return;
     }
-    setAviso("Configuración guardada");
+    toast("Configuración guardada", { tono: "exito" });
   }
 
   function copiarLink() {
@@ -591,7 +586,6 @@ export default function AgendaProConfigPage() {
       </Card>
 
       {error ? <p className="font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
-      {aviso ? <p className="font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}
       <div className="self-start">
         <Button onPress={onGuardar} cargando={guardando}>
           Guardar cambios

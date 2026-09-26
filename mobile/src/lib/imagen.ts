@@ -1,6 +1,7 @@
 import { Alert } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
+import type { MostrarToast } from "@bitacora/ui/native";
 import { persistirFoto } from "./fotoCola";
 
 // Redimensiona (si hace falta) y recomprime a JPEG antes de subir —
@@ -33,10 +34,17 @@ async function procesarAssets(assets: ImagePicker.ImagePickerAsset[]): Promise<F
   return out;
 }
 
-async function fotosDesdeCamara(): Promise<FotoElegida[]> {
+// Sin hooks acá: la pantalla pasa su toast (useToast) en `avisar`.
+function avisarPermiso(mensaje: string, avisar?: MostrarToast) {
+  if (avisar) return avisar(`Permiso necesario: ${mensaje}`, { tono: "error" });
+  // alerta-nativa: respaldo si quien llama no pasó su toast (util sin hooks)
+  Alert.alert("Permiso necesario", mensaje);
+}
+
+async function fotosDesdeCamara(avisar?: MostrarToast): Promise<FotoElegida[]> {
   const permiso = await ImagePicker.requestCameraPermissionsAsync();
   if (!permiso.granted) {
-    Alert.alert("Permiso necesario", "Necesitamos la cámara para la foto.");
+    avisarPermiso("Necesitamos la cámara para la foto.", avisar);
     return [];
   }
   const r = await ImagePicker.launchCameraAsync({ quality: 0.8 });
@@ -44,10 +52,10 @@ async function fotosDesdeCamara(): Promise<FotoElegida[]> {
   return procesarAssets(r.assets);
 }
 
-async function fotosDesdeGaleria(multiple: boolean): Promise<FotoElegida[]> {
+async function fotosDesdeGaleria(multiple: boolean, avisar?: MostrarToast): Promise<FotoElegida[]> {
   const permiso = await ImagePicker.requestMediaLibraryPermissionsAsync();
   if (!permiso.granted) {
-    Alert.alert("Permiso necesario", "Necesitamos acceso a tus fotos.");
+    avisarPermiso("Necesitamos acceso a tus fotos.", avisar);
     return [];
   }
   const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.8, allowsMultipleSelection: multiple });
@@ -60,11 +68,12 @@ async function fotosDesdeGaleria(multiple: boolean): Promise<FotoElegida[]> {
 // reimplementar"). Antes cada pantalla solo ofrecía cámara; pedido real
 // de la usuaria (2026-09-11): también poder elegir desde la galería
 // (fotos ya tomadas, o para reemplazar una que salió borrosa).
-export function elegirFotos(opciones?: { multiple?: boolean; titulo?: string }): Promise<FotoElegida[]> {
+export function elegirFotos(opciones?: { multiple?: boolean; titulo?: string; avisar?: MostrarToast }): Promise<FotoElegida[]> {
   return new Promise((resolve) => {
+    // alerta-nativa: menú para elegir cámara o galería (no hay hoja de acciones en @bitacora/ui)
     Alert.alert(opciones?.titulo ?? "Agregar foto", undefined, [
-      { text: "Tomar foto", onPress: () => void fotosDesdeCamara().then(resolve) },
-      { text: "Elegir de galería", onPress: () => void fotosDesdeGaleria(Boolean(opciones?.multiple)).then(resolve) },
+      { text: "Tomar foto", onPress: () => void fotosDesdeCamara(opciones?.avisar).then(resolve) },
+      { text: "Elegir de galería", onPress: () => void fotosDesdeGaleria(Boolean(opciones?.multiple), opciones?.avisar).then(resolve) },
       { text: "Cancelar", style: "cancel", onPress: () => resolve([]) },
     ]);
   });

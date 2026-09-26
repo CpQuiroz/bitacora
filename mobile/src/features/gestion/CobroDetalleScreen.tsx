@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
-import { Alert, Pressable, ScrollView, View } from "react-native";
+import { Pressable, ScrollView, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { ArrowLeft } from "lucide-react-native";
 import type { MedioPago } from "@bitacora/shared";
 import { formatearFolio } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
-import { Button, Card, ErrorState, LoadingState, ScreenHeader, StatusBadge, Textarea, Texto, useMarca } from "@bitacora/ui/native";
+import { Button, Card, ErrorState, LoadingState, ScreenHeader, StatusBadge, Textarea, Texto, useConfirmar, useMarca, useToast } from "@bitacora/ui/native";
 import { pesos } from "../../lib/plata";
 import { InputMonto } from "../../components/InputMonto";
 import { useRed } from "../../services/sync/NetworkProvider";
@@ -30,6 +30,8 @@ const MEDIOS: { v: MedioPago; label: string }[] = [
 // filas de datos y para la sección de "registrar pago".
 export function CobroDetalleScreen({ route, navigation }: NativeStackScreenProps<MasStackParamList, "CobroDetalle">) {
   const marca = useMarca();
+  const toast = useToast();
+  const confirmar = useConfirmar();
   const { cobroId } = route.params;
   const { enLinea } = useRed();
   const [cobro, setCobro] = useState<CobroConCliente | null>(null);
@@ -56,7 +58,7 @@ export function CobroDetalleScreen({ route, navigation }: NativeStackScreenProps
   useFocusEffect(useCallback(() => void cargar(), [cargar]));
 
   async function confirmarPago() {
-    if (!enLinea) return Alert.alert("Sin conexión", "Necesitas conexión para registrar el pago.");
+    if (!enLinea) return toast("Sin conexión: necesitas conexión para registrar el pago.", { tono: "error" });
     setOcupado(true);
     const r = await marcarPagado(cobroId, {
       fecha_pago: hoyKey(),
@@ -65,27 +67,26 @@ export function CobroDetalleScreen({ route, navigation }: NativeStackScreenProps
       observaciones_pago: obs || undefined,
     });
     setOcupado(false);
-    if (!r.ok) return Alert.alert("No se pudo registrar", r.error);
+    if (!r.ok) return toast(`No se pudo registrar: ${r.error}`, { tono: "error" });
     setPagando(false);
     cargar();
   }
 
-  function reabrir() {
-    Alert.alert("Reabrir el cobro", "Vuelve a quedar pendiente y se borra el registro del pago. ¿Seguro?", [
-      { text: "No", style: "cancel" },
-      {
-        text: "Sí, reabrir",
-        style: "destructive",
-        onPress: async () => {
-          if (!enLinea) return Alert.alert("Sin conexión", "Necesitas conexión para esto.");
-          setOcupado(true);
-          const r = await reabrirCobro(cobroId);
-          setOcupado(false);
-          if (!r.ok) return Alert.alert("No se pudo reabrir", r.error);
-          cargar();
-        },
-      },
-    ]);
+  async function reabrir() {
+    const ok = await confirmar({
+      titulo: "¿Reabrir el cobro?",
+      mensaje: "Vuelve a quedar pendiente y se borra el registro del pago.",
+      accion: "Sí, reabrir",
+      cancelar: "No",
+      destructivo: true,
+    });
+    if (!ok) return;
+    if (!enLinea) return toast("Sin conexión: necesitas conexión para esto.", { tono: "error" });
+    setOcupado(true);
+    const r = await reabrirCobro(cobroId);
+    setOcupado(false);
+    if (!r.ok) return toast(`No se pudo reabrir: ${r.error}`, { tono: "error" });
+    cargar();
   }
 
   const volver = { icono: <ArrowLeft size={20} strokeWidth={2.5} color={tokens.color.text} />, onPress: () => navigation.goBack(), etiquetaAccesible: "Volver" };

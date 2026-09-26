@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import Constants from "expo-constants";
-import { Alert, Linking, Pressable, ScrollView, Share, Switch, View } from "react-native";
+import { Linking, Pressable, ScrollView, Share, Switch, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { AlertCircle, ArrowLeft, Download } from "lucide-react-native";
 import { tokens } from "@bitacora/design-tokens";
 import type { Empresa } from "@bitacora/shared";
-import { Button, Card, ScreenHeader, Select, Texto, useMarca } from "@bitacora/ui/native";
+import { Button, Card, ScreenHeader, Select, Texto, useConfirmar, useMarca, useToast } from "@bitacora/ui/native";
 import { useAuth } from "../auth/AuthContext";
 import { useRed } from "../../services/sync/NetworkProvider";
 import { MAX_INTENTOS, ultimoErrorGlobal } from "../../services/sync/queue";
@@ -44,6 +44,8 @@ const OPCIONES_TEMA: { valor: Empresa["tema"]; etiqueta: string }[] = [
 export function PerfilScreen({ navigation }: NativeStackScreenProps<MasStackParamList, "Perfil">) {
   const marca = useMarca();
   const auth = useAuth();
+  const toast = useToast();
+  const confirmar = useConfirmar();
   const { enLinea, pendientes, fallidas, sincronizarAhora, reintentar, descartar, descartarTodo } = useRed();
 
   const [prefs, setPrefs] = useState<Preferencias>(preferencias());
@@ -59,7 +61,7 @@ export function PerfilScreen({ navigation }: NativeStackScreenProps<MasStackPara
     const r = await apiJson("/api/consentimiento", { method: "POST" });
     setOcupado(false);
     if (r.ok) setConsentPend(false);
-    else Alert.alert("No se pudo guardar", "Intenta de nuevo con conexión.");
+    else toast("No se pudo guardar: intenta de nuevo con conexión.", { tono: "error" });
   }
 
   async function descargarMisDatos() {
@@ -67,13 +69,13 @@ export function PerfilScreen({ navigation }: NativeStackScreenProps<MasStackPara
     try {
       const res = await apiFetch("/api/usuarios/me/datos", {}, 30000);
       if (!res.ok) {
-        Alert.alert("No se pudo generar", "Intenta de nuevo.");
+        toast("No se pudo generar: intenta de nuevo.", { tono: "error" });
         return;
       }
       const texto = await res.text();
       await Share.share({ message: texto });
     } catch {
-      Alert.alert("Sin conexión", "Necesitas conexión para esto.");
+      toast("Sin conexión: necesitas conexión para esto.", { tono: "error" });
     } finally {
       setOcupado(false);
     }
@@ -110,7 +112,7 @@ export function PerfilScreen({ navigation }: NativeStackScreenProps<MasStackPara
     }
     const ok = await pedirBiometria(`Confirma con ${bioNombre} para activar el bloqueo`);
     if (!ok) {
-      Alert.alert("No se pudo activar", "No se verificó tu identidad.");
+      toast("No se pudo activar: no se verificó tu identidad.", { tono: "error" });
       return;
     }
     await setBiometriaActivada(true);
@@ -253,12 +255,16 @@ export function PerfilScreen({ navigation }: NativeStackScreenProps<MasStackPara
               {auth.fase === "prueba-vencida" ? null : (
                 <Button
                   variante="ghost"
-                  onPress={() =>
-                    Alert.alert("Descartar lo pendiente", `Se borran ${pendientes.length} acción(es). Úsalo solo si quedó algo trancado que ya no necesitas.`, [
-                      { text: "No", style: "cancel" },
-                      { text: "Sí, descartar", style: "destructive", onPress: descartarTodo },
-                    ])
-                  }
+                  onPress={async () => {
+                    const ok = await confirmar({
+                      titulo: "¿Descartar lo pendiente?",
+                      mensaje: `Se borran ${pendientes.length} acción(es). Úsalo solo si quedó algo trancado que ya no necesitas.`,
+                      accion: "Sí, descartar",
+                      cancelar: "No",
+                      destructivo: true,
+                    });
+                    if (ok) descartarTodo();
+                  }}
                 >
                   Descartar
                 </Button>

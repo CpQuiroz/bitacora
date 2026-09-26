@@ -9,7 +9,7 @@ import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Modal } from "@/components/Modal";
 import { DocumentoForm } from "@/components/DocumentoForm";
-import { Button, Card, EmptyState, ErrorState, Input, LoadingState, Select, StatusBadge, Table } from "@bitacora/ui/web";
+import { Button, Card, EmptyState, ErrorState, Input, LoadingState, Select, StatusBadge, Table, useToast } from "@bitacora/ui/web";
 import { ComboboxCliente } from "@/components/ComboboxCliente";
 import { ComboboxResponsable } from "@/components/ComboboxResponsable";
 import { descargarCSV } from "@/lib/exportCsv";
@@ -58,7 +58,7 @@ export default function EquiposPage() {
   const [importAbierto, setImportAbierto] = useState(false);
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
-  const [aviso, setAviso] = useState<string | null>(null);
+  const toast = useToast();
   const [guardando, setGuardando] = useState(false);
   const [clienteId, setClienteId] = useState(SIN_CLIENTE);
   const [nombre, setNombre] = useState("");
@@ -174,7 +174,6 @@ export default function EquiposPage() {
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setFormError(null);
-    setAviso(null);
     setGuardando(true);
     const body = JSON.stringify({
       cliente_id: clienteId || null,
@@ -198,7 +197,7 @@ export default function EquiposPage() {
       setFormError(respBody.error ?? "No se pudo guardar el equipo");
       return;
     }
-    setAviso(editandoId ? "Equipo actualizado." : "Equipo creado.");
+    toast(editandoId ? "Equipo actualizado." : "Equipo creado.", { tono: "exito" });
     setFormAbierto(false);
     setEditandoId(null);
     cargar();
@@ -365,7 +364,6 @@ export default function EquiposPage() {
           </Card>
         </div>
       )}
-      {aviso ? <p className="mb-ds-6 font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}
 
       <div className="mb-ds-4 flex flex-col gap-ds-3">
         <div className="flex flex-wrap gap-ds-3">

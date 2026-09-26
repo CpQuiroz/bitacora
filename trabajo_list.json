@@ -1994,6 +1994,14 @@
       "status": "done",
       "description": "Aprobado 26-sep-2026. Medido: 110 hallazgos jsx-a11y en 35 archivos web (95 labels sin control asociado). Primitivas @bitacora/ui sin id/htmlFor. Hoy (mobile) sigue congelada; Agenda se descongeló.",
       "resolution": "Web: primitivas @bitacora/ui con useId+htmlFor+aria-describedby y props opcionales id/etiquetaAccesible; 111 hallazgos jsx-a11y → 0 en 35 archivos (labels asociados, títulos de grupo a span, radiogroup, Combobox con id/aria-controls, Escape cierra menú móvil, logo operable con teclado); reglas jsx-a11y activas como error en web/eslint.config.mjs. Mobile: accesibilidad.ts (ESCALA_FUENTE_MAX 1.4, HIT_SLOP_TEXTO); roles/nombres en ListRow, QuickAccessCard, Card, CardDetalle, Select, DatePicker, chips; tope de letra en Texto/Cifra/Button/inputs/Text propio; 37 botones solo ícono con accessibilityLabel; KeyboardAvoidingView en 7 formularios; scripts/check-accesibilidad-mobile.mjs en verificar. Tests: CamposAccesibles, CamposPropiosAccesibles (web), AccesibilidadBase (mobile). Requiere build mobile; teclado en Android a validar en dispositivo."
+    },
+    {
+      "id": 156,
+      "name": "feedback_unificado",
+      "title": "Feedback unificado (auditoría UX ronda 4): Toast con tonos y acción, useConfirmar en vez de confirm()/Alert.alert, Deshacer con espera de 5 s, esqueletos de carga",
+      "status": "in_progress",
+      "description": "Aprobado 26-sep-2026. Medido: web 32 confirm() + 2 alert() + 1 prompt(); mobile 183 Alert.alert (47 confirmaciones, ~54 errores, ~82 avisos). Decisiones: errores de red/guardado en mobile → toast rojo (alerta solo si requiere decisión); Deshacer = ocultar + ejecutar la API tras 5 s (borrados simples y marcar pagado viáticos). OS, cobros, cotizaciones, rendiciones y superadmin siguen con confirmación. Hoy congelada.",
+      "resolution": ""
     }
   ]
 }

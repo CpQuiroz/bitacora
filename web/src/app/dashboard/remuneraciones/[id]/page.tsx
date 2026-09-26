@@ -6,7 +6,7 @@ import { useParams } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell } from "@/components/DashboardShell";
-import { Button, Card, Input, LoadingState, StatusBadge, type TonoEstado } from "@bitacora/ui/web";
+import { Button, Card, Input, LoadingState, StatusBadge, useConfirmar, useToast, type TonoEstado } from "@bitacora/ui/web";
 import { InputMonto } from "@/components/InputMonto";
 import { useUsuarioShell } from "@/lib/useUsuarioShell";
 import { nombrePeriodo, remuneraciones, type LiquidacionConNombre } from "@/lib/remuneracionesApi";
@@ -30,7 +30,8 @@ export default function LiquidacionDetallePage() {
   const [liq, setLiq] = useState<LiquidacionConNombre | null>(null);
   const [form, setForm] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
-  const [aviso, setAviso] = useState<string | null>(null);
+  const toast = useToast();
+  const confirmar = useConfirmar();
   const [guardando, setGuardando] = useState(false);
   const [emitiendo, setEmitiendo] = useState(false);
   const [tuvoLicencia, setTuvoLicencia] = useState(false);
@@ -60,13 +61,12 @@ export default function LiquidacionDetallePage() {
 
   async function guardar() {
     setGuardando(true);
-    setAviso(null);
     setError(null);
     try {
       const body: Record<string, unknown> = Object.fromEntries(VARIABLES.map((v) => [v.clave, Number(form[v.clave]) || 0]));
       body.tuvo_licencia = tuvoLicencia;
       setLiq(await remuneraciones.editar(params.id, body));
-      setAviso("Recalculado.");
+      toast("Recalculado.", { tono: "exito" });
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo guardar");
     } finally {
@@ -76,13 +76,20 @@ export default function LiquidacionDetallePage() {
 
   async function emitir() {
     setError(null);
-    if (liq?.tuvo_licencia && !window.confirm("Esta liquidación tiene licencia médica marcada. ¿Confirmás que ajustaste los valores a mano y querés emitirla?")) {
+    if (
+      liq?.tuvo_licencia &&
+      !(await confirmar({
+        titulo: "¿Emitir la liquidación?",
+        mensaje: "Esta liquidación tiene licencia médica marcada. Confirmá que ajustaste los valores a mano antes de emitirla.",
+        accion: "Emitir",
+      }))
+    ) {
       return;
     }
     setEmitiendo(true);
     try {
       setLiq(await remuneraciones.emitir(params.id, Boolean(liq?.tuvo_licencia)));
-      setAviso("Liquidación emitida.");
+      toast("Liquidación emitida.", { tono: "exito" });
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo emitir");
     } finally {
@@ -127,7 +134,6 @@ export default function LiquidacionDetallePage() {
             </div>
           </div>
 
-          {aviso ? <p className="mb-ds-4 font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}
 
           {liq.tuvo_licencia && (
             <p className="mb-ds-4 rounded-ds-md bg-ds-accent-100 px-ds-4 py-ds-3 font-ds-body text-ds-small text-ds-accent-800">

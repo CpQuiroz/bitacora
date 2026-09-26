@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Paperclip, Plus } from "lucide-react";
 import type { Documento, EntidadDocumento, EstadoDocumento, TipoDocumento } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
-import { Button, Card, Input, Select, StatusBadge } from "@bitacora/ui/web";
+import { Button, Card, Input, LoadingState, Select, StatusBadge } from "@bitacora/ui/web";
 
 type DocumentoConTipo = Documento & { tipo: { nombre: string } | null; estado: EstadoDocumento | null };
 
@@ -236,7 +236,7 @@ export function DocumentoForm({ entidadTipo, entidadId }: { entidadTipo: Entidad
       )}
 
       {error ? <p className="font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
-      {documentos === null && !error && <p className="font-ds-body text-ds-small text-ds-text/70">Cargando…</p>}
+      {documentos === null && !error && <LoadingState />}
       {documentos?.length === 0 && <p className="font-ds-body text-ds-small text-ds-text/70">Sin documentos registrados.</p>}
 
       {documentos && documentos.length > 0 && (

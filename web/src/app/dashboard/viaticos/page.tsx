@@ -5,11 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { AgruparViaticos, FilaResumenViaticos } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, exigirOk } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { GastosSubnav } from "@/components/GastosSubnav";
-import { Button, Card, DatePicker, ErrorState, LoadingState, Select, Table } from "@bitacora/ui/web";
+import { Button, Card, DatePicker, ErrorState, LoadingState, Select, Table, useDeshacer } from "@bitacora/ui/web";
 
 // Gastos › Viáticos (tarea 137): cuánto hay que pagarle a cada chofer
 // por semana o por mes. Cada viático es un gasto "Viáticos" ligado a un
@@ -51,9 +51,7 @@ export default function ViaticosPage() {
   const [agrupar, setAgrupar] = useState<AgruparViaticos>("semana");
   const [filas, setFilas] = useState<FilaResumenViaticos[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [aviso, setAviso] = useState<string | null>(null);
-  const [errorPago, setErrorPago] = useState<string | null>(null);
-  const [pagando, setPagando] = useState<string | null>(null);
+  const conDeshacer = useDeshacer();
 
   async function cargarResumen() {
     setError(null);
@@ -104,26 +102,23 @@ export default function ViaticosPage() {
     [filas]
   );
 
-  async function marcarPagado(f: FilaResumenViaticos) {
+  function marcarPagado(f: FilaResumenViaticos) {
     if (!f.chofer_id) return;
     // El período se recorta al rango filtrado: solo se paga lo que se ve.
     const d = f.periodo > desde ? f.periodo : desde;
     const fin = finDelPeriodo(f.periodo, agrupar);
     const h = fin < hasta ? fin : hasta;
-    if (!window.confirm(`¿Marcar como pagados ${formatMoneda(f.pendiente, usuario?.moneda)} de viáticos a ${f.chofer}?`)) return;
-    setAviso(null);
-    setErrorPago(null);
-    setPagando(`${f.periodo}|${f.chofer_id}`);
-    const res = await apiFetch("/api/gastos/viaticos/pagar", { method: "POST", body: JSON.stringify({ chofer_id: f.chofer_id, desde: d, hasta: h }) });
-    setPagando(null);
-    const body = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      setErrorPago(body.error ?? "No se pudo marcar como pagado");
-      cargarResumen();
-      return;
-    }
-    setAviso(`Listo: ${body.pagados} viático(s) de ${f.chofer} marcados como pagados (${formatMoneda(body.total, usuario?.moneda)}).`);
-    cargarResumen();
+    const clave = (x: FilaResumenViaticos) => `${x.periodo}|${x.chofer_id}`;
+    conDeshacer({
+      mensaje: `${formatMoneda(f.pendiente, usuario?.moneda)} de viáticos a ${f.chofer} marcados como pagados`,
+      ocultar: () => setFilas((l) => l?.map((x) => (clave(x) === clave(f) ? { ...x, pendiente: 0, pagado: x.pagado + x.pendiente } : x)) ?? l),
+      restaurar: () => setFilas((l) => l?.map((x) => (clave(x) === clave(f) ? f : x)) ?? l),
+      ejecutar: async () =>
+        exigirOk(
+          await apiFetch("/api/gastos/viaticos/pagar", { method: "POST", body: JSON.stringify({ chofer_id: f.chofer_id, desde: d, hasta: h }) }),
+          "No se pudo marcar como pagado"
+        ),
+    });
   }
 
   if (!usuario) return null;
@@ -169,8 +164,6 @@ export default function ViaticosPage() {
         </div>
       </Card>
 
-      {aviso ? <p className="mt-ds-4 font-ds-body text-ds-small text-ds-text/70">{aviso}</p> : null}
-      {errorPago ? <p className="mt-ds-4 font-ds-body text-ds-small text-ds-accent-700">{errorPago}</p> : null}
 
       <div className="mt-ds-6">
         {error ? (
@@ -193,7 +186,7 @@ export default function ViaticosPage() {
                 encabezado: "",
                 celda: (f) =>
                   f.pendiente > 0 && f.chofer_id ? (
-                    <Button variante="secundario" onPress={() => void marcarPagado(f)} cargando={pagando === `${f.periodo}|${f.chofer_id}`}>
+                    <Button variante="secundario" onPress={() => marcarPagado(f)}>
                       Marcar pagado
                     </Button>
                   ) : null,

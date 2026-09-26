@@ -7,9 +7,10 @@ import { Camera, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import type { Cliente, DetalleLevantamiento, EstadoLevantamiento, LevantamientoResumen, Usuario } from "@bitacora/shared";
 import { FUNCIONES_LEVANTAMIENTOS, formatearFolio } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, exigirOk } from "@/lib/api";
+import { reponer } from "@/lib/reponer";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Button, DatePicker, ErrorState, Input, LoadingState, StatusBadge, Table } from "@bitacora/ui/web";
+import { Button, DatePicker, ErrorState, Input, LoadingState, StatusBadge, Table, useConfirmar, useDeshacer } from "@bitacora/ui/web";
 import { Modal } from "@/components/Modal";
 import { ComboboxCliente } from "@/components/ComboboxCliente";
 import { ComboboxResponsable } from "@/components/ComboboxResponsable";
@@ -92,7 +93,8 @@ function LevantamientosContenido() {
 
   const fileRef = useRef<HTMLInputElement>(null);
   const [subiendoFoto, setSubiendoFoto] = useState(false);
-  const [eliminandoFotoId, setEliminandoFotoId] = useState<string | null>(null);
+  const confirmar = useConfirmar();
+  const conDeshacer = useDeshacer();
   const [eliminando, setEliminando] = useState(false);
 
   // Dirección del cliente (23-sep-2026, pedido explícito) — se muestra
@@ -312,23 +314,21 @@ function LevantamientosContenido() {
     }
   }
 
-  async function eliminarFoto(fotoId: string) {
+  function eliminarFoto(foto: Detalle["fotos"][number]) {
     if (!detalle) return;
-    if (!confirm("¿Eliminar esta foto?")) return;
-    setEliminandoFotoId(fotoId);
-    const res = await apiFetch(`/api/levantamientos/${detalle.id}/fotos/${fotoId}`, { method: "DELETE" });
-    setEliminandoFotoId(null);
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      setDetalleError(body.error ?? "No se pudo eliminar la foto");
-      return;
-    }
-    await abrirDetalle(detalle.id);
+    const levantamientoId = detalle.id;
+    const indice = detalle.fotos.findIndex((f) => f.id === foto.id);
+    conDeshacer({
+      mensaje: "Foto eliminada",
+      ocultar: () => setDetalle((d) => (d?.id === levantamientoId ? { ...d, fotos: d.fotos.filter((f) => f.id !== foto.id) } : d)),
+      restaurar: () => setDetalle((d) => (d?.id === levantamientoId ? { ...d, fotos: reponer(d.fotos, foto, indice) } : d)),
+      ejecutar: async () => exigirOk(await apiFetch(`/api/levantamientos/${levantamientoId}/fotos/${foto.id}`, { method: "DELETE" }), "No se pudo eliminar la foto"),
+    });
   }
 
   async function eliminarLevantamiento() {
     if (!detalle) return;
-    if (!confirm("¿Eliminar este levantamiento? No se puede deshacer.")) return;
+    if (!(await confirmar({ titulo: "¿Eliminar este levantamiento?", mensaje: "No se puede deshacer.", accion: "Eliminar", destructivo: true }))) return;
     setEliminando(true);
     const res = await apiFetch(`/api/levantamientos/${detalle.id}`, { method: "DELETE" });
     setEliminando(false);
@@ -374,7 +374,7 @@ function LevantamientosContenido() {
 
   async function rechazar() {
     if (!detalle) return;
-    if (!confirm("¿Rechazar este levantamiento? No se creará ninguna orden de servicio.")) return;
+    if (!(await confirmar({ titulo: "¿Rechazar este levantamiento?", mensaje: "No se creará ninguna orden de servicio.", accion: "Rechazar", destructivo: true }))) return;
     setAccionando(true);
     const res = await apiFetch(`/api/levantamientos/${detalle.id}/rechazar`, { method: "POST" });
     setAccionando(false);
@@ -675,8 +675,8 @@ function LevantamientosContenido() {
                         {puedeEditar ? (
                           <button
                             type="button"
-                            onClick={() => eliminarFoto(f.id)}
-                            disabled={eliminandoFotoId === f.id}
+                            onClick={() => eliminarFoto(f)}
+                            aria-label="Eliminar foto"
                             className="absolute right-1 top-1 rounded-ds-pill bg-ds-accent-700 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100 disabled:opacity-50"
                           >
                             <Trash2 size={13} />

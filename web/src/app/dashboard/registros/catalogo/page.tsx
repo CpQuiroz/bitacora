@@ -11,7 +11,7 @@ import { estadoStock, ETIQUETA_ESTADO_STOCK } from "@/lib/estadoStock";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { SelectCrear } from "@/components/SelectCrear";
 import { Combobox } from "@/components/Combobox";
-import { Button, Card, EmptyState, ErrorState, Input, LoadingState, Select, StatusBadge, Table, Tag, type TonoEstado } from "@bitacora/ui/web";
+import { Button, Card, EmptyState, ErrorState, Input, LoadingState, Select, StatusBadge, Table, Tag, useToast, type TonoEstado } from "@bitacora/ui/web";
 import { InputMonto } from "@/components/InputMonto";
 import { ICONO_TIPO } from "@/components/CatalogoSelectorModal";
 import { descargarCSV } from "@/lib/exportCsv";
@@ -78,7 +78,7 @@ export default function CatalogoPage() {
   const [importAbierto, setImportAbierto] = useState(false);
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
-  const [aviso, setAviso] = useState<string | null>(null);
+  const toast = useToast();
   const [guardando, setGuardando] = useState(false);
   const [tipo, setTipo] = useState<TipoCatalogoItem>("producto");
   const [nombre, setNombre] = useState("");
@@ -210,7 +210,6 @@ export default function CatalogoPage() {
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setFormError(null);
-    setAviso(null);
     setGuardando(true);
     const payload: Record<string, unknown> = {
       nombre,
@@ -242,7 +241,7 @@ export default function CatalogoPage() {
       setFormError(body.error ?? "No se pudo guardar el ítem");
       return;
     }
-    setAviso(editandoId ? "Ítem actualizado." : "Ítem creado.");
+    toast(editandoId ? "Ítem actualizado." : "Ítem creado.", { tono: "exito" });
     setFormAbierto(false);
     setEditandoId(null);
     cargar();
@@ -495,7 +494,6 @@ export default function CatalogoPage() {
           </Card>
         </div>
       )}
-      {aviso ? <p className="mb-ds-6 font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}
 
       <div className="mb-ds-4 flex flex-col gap-ds-3">
         <div className="max-w-sm">

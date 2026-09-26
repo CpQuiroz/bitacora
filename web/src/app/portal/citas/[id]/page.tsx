@@ -8,6 +8,7 @@ import { Badge, Button, Card, ErrorText, SuccessText, WarningText } from "@/comp
 import { IconChevronLeft } from "@/components/icons";
 import { EstadoCargando } from "@/components/estados";
 import { obtenerTokenPortal, portalFetch } from "@/lib/portalApi";
+import { useConfirmar } from "@bitacora/ui/web";
 
 type CitaDetalle = {
   id: string;
@@ -23,6 +24,7 @@ export default function PortalCitaDetallePage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const [cita, setCita] = useState<CitaDetalle | null>(null);
+  const confirmar = useConfirmar();
   const [error, setError] = useState<string | null>(null);
   const [decidiendo, setDecidiendo] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
@@ -52,9 +54,13 @@ export default function PortalCitaDetallePage() {
   async function decidir(accion: "confirmar" | "cancelar") {
     if (accion === "cancelar" && cita?.advertencia_cancelacion?.descuenta_si_cancela_ahora) {
       const horas = cita.advertencia_cancelacion.ventana_horas;
-      const confirmado = confirm(
-        `Esta cancelación es con menos de ${horas} horas de anticipación y se descontará del paquete de todas formas. ¿Confirmas?`
-      );
+      const confirmado = await confirmar({
+        titulo: "¿Cancelar la cita igual?",
+        mensaje: `Esta cancelación es con menos de ${horas} horas de anticipación y se descontará del paquete de todas formas.`,
+        accion: "Cancelar cita",
+        cancelar: "Volver",
+        destructivo: true,
+      });
       if (!confirmado) return;
     }
     setDecidiendo(true);

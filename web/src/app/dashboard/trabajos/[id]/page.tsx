@@ -6,7 +6,9 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import type { AnalisisFoto, Anexo, ItemChecklist, OrdenServicio, Trabajo, TipoOsTrabajo } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, exigirOk } from "@/lib/api";
+import { reponer } from "@/lib/reponer";
+import { useDeshacer } from "@bitacora/ui/web";
 import { comprimirImagen } from "@/lib/comprimirImagen";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Badge, Button, Card, ErrorText, PageHeader } from "@/components/ui";
@@ -31,7 +33,7 @@ export default function TrabajoDetallePage() {
   const [error, setError] = useState<string | null>(null);
   const [subiendo, setSubiendo] = useState(false);
   const [subiendoAnexo, setSubiendoAnexo] = useState(false);
-  const [borrandoFotoId, setBorrandoFotoId] = useState<string | null>(null);
+  const conDeshacer = useDeshacer();
 
   const cargar = useCallback(async () => {
     const { data } = await supabase.auth.getSession();
@@ -90,18 +92,15 @@ export default function TrabajoDetallePage() {
     setTimeout(cargar, 15000);
   }
 
-  async function onEliminarFoto(fotoId: string) {
-    if (!window.confirm("¿Eliminar esta foto? No se puede deshacer.")) return;
-    setError(null);
-    setBorrandoFotoId(fotoId);
-    const res = await apiFetch(`/api/trabajos/${params.id}/fotos/${fotoId}`, { method: "DELETE" });
-    setBorrandoFotoId(null);
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      setError(body.error ?? "No se pudo eliminar la foto");
-      return;
-    }
-    cargar();
+  function onEliminarFoto(foto: AnalisisFotoConUrl) {
+    const indice = fotos.findIndex((f) => f.id === foto.id);
+    conDeshacer({
+      mensaje: "Foto eliminada",
+      ocultar: () => setFotos((l) => l.filter((f) => f.id !== foto.id)),
+      restaurar: () => setFotos((l) => reponer(l, foto, indice)),
+      ejecutar: async () => exigirOk(await apiFetch(`/api/trabajos/${params.id}/fotos/${foto.id}`, { method: "DELETE" }), "No se pudo eliminar la foto"),
+      alTerminar: () => void cargar(),
+    });
   }
 
   async function onSubirAnexo(e: React.ChangeEvent<HTMLInputElement>) {
@@ -244,11 +243,10 @@ export default function TrabajoDetallePage() {
                       {!osBloqueada && (
                         <button
                           type="button"
-                          onClick={() => onEliminarFoto(f.id)}
-                          disabled={borrandoFotoId === f.id}
+                          onClick={() => onEliminarFoto(f)}
                           className="mt-2 text-xs font-medium text-danger hover:underline disabled:opacity-50"
                         >
-                          {borrandoFotoId === f.id ? "Eliminando…" : "Eliminar"}
+                          Eliminar
                         </button>
                       )}
                     </div>

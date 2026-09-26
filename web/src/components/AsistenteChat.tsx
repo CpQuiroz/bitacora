@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { MensajeAsistente } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
+import { useConfirmar } from "@bitacora/ui/web";
 import { IconArrowRight, IconChat, IconPanelRight, IconX } from "./icons";
 
 function idTemporal() {
@@ -19,6 +20,7 @@ const MEDIA_QUERY_MOBILE = "(max-width: 639px)";
 export function AsistenteChat() {
   const [abierto, setAbierto] = useState(false);
   const [modo, setModo] = useState<ModoAsistente>("burbuja");
+  const confirmar = useConfirmar();
   const [esMobile, setEsMobile] = useState(false);
   const [cargado, setCargado] = useState(false);
   const [mensajes, setMensajes] = useState<MensajeAsistente[]>([]);
@@ -96,7 +98,7 @@ export function AsistenteChat() {
   }
 
   async function limpiar() {
-    if (!window.confirm("¿Limpiar toda la conversación?")) return;
+    if (!(await confirmar({ titulo: "¿Limpiar toda la conversación?", accion: "Limpiar", destructivo: true }))) return;
     const res = await apiFetch("/api/asistente", { method: "DELETE" });
     if (res.ok) setMensajes([]);
   }

@@ -12,7 +12,7 @@ import { EVENTOS } from "@bitacora/shared";
 import { registrarEvento } from "@/lib/analytics";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Button, Card, Cifra, DatePicker, EmptyState, ErrorState, Input, LoadingState, Select, StatusBadge, type TonoEstado } from "@bitacora/ui/web";
+import { Button, Card, Cifra, DatePicker, EmptyState, ErrorState, Input, LoadingState, Select, StatusBadge, useToast, type TonoEstado } from "@bitacora/ui/web";
 import { InputMonto } from "@/components/InputMonto";
 import { ComboboxCliente } from "@/components/ComboboxCliente";
 import { Combobox } from "@/components/Combobox";
@@ -53,7 +53,7 @@ function CobrosContenido() {
   const [formAbierto, setFormAbierto] = useState(false);
   const [modo, setModo] = useState<"manual" | "trabajos">("manual");
   const [formError, setFormError] = useState<string | null>(null);
-  const [aviso, setAviso] = useState<string | null>(null);
+  const toast = useToast();
   const [guardando, setGuardando] = useState(false);
 
   const [clienteId, setClienteId] = useState("");
@@ -157,7 +157,6 @@ function CobrosContenido() {
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setFormError(null);
-    setAviso(null);
     setGuardando(true);
 
     if (!claveIdempotencia.current) claveIdempotencia.current = crypto.randomUUID();
@@ -195,7 +194,7 @@ function CobrosContenido() {
     }
     claveIdempotencia.current = ""; // cobro creado — el próximo usa clave nueva
     registrarEvento(EVENTOS.cobroCreado, { origen: modo === "manual" ? "manual" : "trabajos" });
-    setAviso("Cobro creado.");
+    toast("Cobro creado.", { tono: "exito" });
     setFormAbierto(false);
     cargar();
   }
@@ -311,7 +310,6 @@ function CobrosContenido() {
           </Card>
         </div>
       )}
-      {aviso ? <p className="mb-ds-6 font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}
 
       <div className="mb-ds-4 flex flex-wrap items-center gap-ds-3">
         <div className="max-w-sm">

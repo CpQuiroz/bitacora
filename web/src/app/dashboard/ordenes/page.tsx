@@ -12,7 +12,7 @@ import { abrirPdfOS } from "@/lib/descargarPdf";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Combobox } from "@/components/Combobox";
-import { Button, Card, Cifra, DatePicker, Dialog, Input, Select, StatusBadge, Table } from "@bitacora/ui/web";
+import { Button, Card, Cifra, DatePicker, Dialog, Input, Select, StatusBadge, Table, useToast } from "@bitacora/ui/web";
 
 type OrdenListado = Trabajo & {
   cliente_info: { nombre: string } | null;
@@ -62,7 +62,7 @@ export default function OrdenesServicioPage() {
   const [diasPlazoCobro, setDiasPlazoCobro] = useState("30");
   const [guardandoCobro, setGuardandoCobro] = useState(false);
   const [errorCobro, setErrorCobro] = useState<string | null>(null);
-  const [aviso, setAviso] = useState<string | null>(null);
+  const toast = useToast();
 
   const cargarOrdenes = useCallback(async () => {
     setError(null);
@@ -166,7 +166,7 @@ export default function OrdenesServicioPage() {
     claveCobro.current = "";
     setModalCobroAbierto(false);
     setSeleccionados(new Set());
-    setAviso("Cobro generado a partir de las OS seleccionadas.");
+    toast("Cobro generado a partir de las OS seleccionadas.", { tono: "exito" });
     cargarOrdenes();
   }
 
@@ -229,7 +229,6 @@ export default function OrdenesServicioPage() {
         </Card>
       </div>
 
-      {aviso ? <p className="mb-ds-4 font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}
 
       {seleccionados.size > 0 ? (
         <div className="mb-ds-4">

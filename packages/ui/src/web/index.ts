@@ -12,7 +12,8 @@ export { EmptyState } from "./EmptyState";
 export { ErrorState } from "./ErrorState";
 export { Table, type ColumnaTabla, type AccionFila, type PropsTable } from "./Table";
 export { Dialog } from "./Dialog";
-export { ToastProvider, useToast } from "./Toast";
+export { ToastProvider, useToast, useDeshacer } from "./Toast";
+export { ConfirmarProvider, useConfirmar } from "./Confirmar";
 export { Cifra } from "./Cifra";
 export type {
   PropsBoton,
@@ -36,6 +37,12 @@ export type {
   PropsLoadingState,
   PropsDialog,
   MostrarToast,
+  OpcionesToast,
+  TonoToast,
+  Confirmar,
+  OpcionesConfirmar,
+  ConDeshacer,
+  OpcionesDeshacer,
   PropsCifra,
 } from "../tipos";
 export { MAPA_ESTADO_TONO } from "../tipos";

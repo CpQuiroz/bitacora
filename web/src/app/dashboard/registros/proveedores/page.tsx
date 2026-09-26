@@ -9,7 +9,7 @@ import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { SelectCrear } from "@/components/SelectCrear";
-import { Button, Card, EmptyState, ErrorState, Input, LoadingState, StatusBadge, Table } from "@bitacora/ui/web";
+import { Button, Card, EmptyState, ErrorState, Input, LoadingState, StatusBadge, Table, useToast } from "@bitacora/ui/web";
 import { descargarCSV } from "@/lib/exportCsv";
 import { ImportarCsvModal, type ColumnaImport } from "@/components/ImportarCsvModal";
 
@@ -36,7 +36,7 @@ export default function ProveedoresPage() {
   const [importAbierto, setImportAbierto] = useState(false);
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
-  const [aviso, setAviso] = useState<string | null>(null);
+  const toast = useToast();
   const [guardando, setGuardando] = useState(false);
   const [nombre, setNombre] = useState("");
   const [razonSocial, setRazonSocial] = useState("");
@@ -126,7 +126,6 @@ export default function ProveedoresPage() {
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setFormError(null);
-    setAviso(null);
     setGuardando(true);
     const body = JSON.stringify({
       nombre,
@@ -145,7 +144,7 @@ export default function ProveedoresPage() {
       setFormError(respBody.error ?? "No se pudo guardar el proveedor");
       return;
     }
-    setAviso(editandoId ? "Proveedor actualizado." : "Proveedor creado.");
+    toast(editandoId ? "Proveedor actualizado." : "Proveedor creado.", { tono: "exito" });
     setFormAbierto(false);
     setEditandoId(null);
     cargar();
@@ -245,7 +244,6 @@ export default function ProveedoresPage() {
           </Card>
         </div>
       )}
-      {aviso ? <p className="mb-ds-6 font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}
 
       <div className="mb-ds-4 max-w-sm">
         <Input placeholder="Buscar proveedores..." valor={busqueda} onCambio={setBusqueda} />

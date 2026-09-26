@@ -115,6 +115,7 @@ else
   }
   test_ws packages/shared
   test_ws packages/design-tokens
+  test_ws packages/ui
   test_ws backend
   # Pruebas de pantallas (tarea 127): Jest + Testing Library, sin red.
   test_ws mobile
@@ -188,6 +189,12 @@ if node scripts/check-accesibilidad-mobile.mjs; then
   :
 else
   fail "botones de mobile sin nombre accesible — ver arriba"
+  EXIT_CODE=1
+fi
+if node scripts/check-dialogos-nativos.mjs; then
+  :
+else
+  fail "diálogos nativos (confirm/alert/Alert.alert) — ver arriba"
   EXIT_CODE=1
 fi
 

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronDown, ChevronRight, Shield } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { ETIQUETA_MODULO } from "@/lib/etiquetasModulo";
-import { Button, Card } from "@bitacora/ui/web";
+import { Button, Card, useToast } from "@bitacora/ui/web";
 
 type RolFila = { slug: string; nombre: string; es_sistema: boolean; modulos: string[] };
 type CatalogoItem = { modulo: string; contratado: boolean };
@@ -14,7 +14,7 @@ type Respuesta = { roles: RolFila[]; catalogo: CatalogoItem[] };
 export default function PerfilesPage() {
   const [data, setData] = useState<Respuesta | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [okMsg, setOkMsg] = useState<string | null>(null);
+  const toast = useToast();
 
   // Estado editable: slug -> Set<modulo>
   const [edicion, setEdicion] = useState<Record<string, Set<string>>>({});
@@ -57,7 +57,6 @@ export default function PerfilesPage() {
   );
 
   function toggle(slug: string, modulo: string) {
-    setOkMsg(null);
     setEdicion((prev) => {
       const next = new Set(prev[slug] ?? []);
       if (next.has(modulo)) next.delete(modulo);
@@ -77,7 +76,6 @@ export default function PerfilesPage() {
   async function guardar(slug: string) {
     setGuardando(slug);
     setError(null);
-    setOkMsg(null);
     const res = await apiFetch(`/api/empresa/roles/${slug}/modulos`, {
       method: "PUT",
       body: JSON.stringify({ modulos: Array.from(edicion[slug] ?? []) }),
@@ -88,7 +86,7 @@ export default function PerfilesPage() {
       setError(b.error ?? "No se pudo guardar");
       return;
     }
-    setOkMsg("Cambios guardados. Las personas con ese perfil los verán al recargar.");
+    toast("Cambios guardados. Las personas con ese perfil los verán al recargar.", { tono: "exito" });
     cargar();
   }
 
@@ -122,7 +120,6 @@ export default function PerfilesPage() {
       </Card>
 
       {error ? <p className="font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
-      {okMsg ? <p className="font-ds-body text-ds-small font-medium text-ds-accent2-800">{okMsg}</p> : null}
 
       {data.roles.map((rol) => {
         const expandido = abiertos.has(rol.slug) || sucio(rol.slug);

@@ -8,6 +8,7 @@ import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, SuccessText }
 import { IconPlus } from "@/components/icons";
 import { obtenerTokenSuperAdmin, superadminFetch } from "@/lib/superadminApi";
 import { ETIQUETA_ACCION, ETIQUETA_MODULO } from "@/lib/etiquetasModulo";
+import { useConfirmar } from "@bitacora/ui/web";
 
 type Rol = {
   slug: string;
@@ -129,6 +130,7 @@ function RolCard({
   const [empresasSel, setEmpresasSel] = useState<string[]>(rol.empresas);
   const [guardando, setGuardando] = useState(false);
   const [msg, setMsg] = useState<{ tipo: "ok" | "error"; texto: string } | null>(null);
+  const confirmar = useConfirmar();
 
   // Resetea el formulario al re-expandir con datos frescos.
   useEffect(() => {
@@ -177,7 +179,7 @@ function RolCard({
   }
 
   async function borrar() {
-    if (!window.confirm(`¿Borrar el rol "${rol.nombre}"? Esta acción no se puede deshacer.`)) return;
+    if (!(await confirmar({ titulo: `¿Borrar el rol "${rol.nombre}"?`, mensaje: "Esta acción no se puede deshacer.", accion: "Borrar", destructivo: true }))) return;
     setGuardando(true);
     setMsg(null);
     const res = await superadminFetch(`/api/superadmin/roles/${rol.slug}`, { method: "DELETE" });

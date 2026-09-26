@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell } from "@/components/DashboardShell";
-import { Button, Card, Cifra, LoadingState, Select, StatusBadge, type TonoEstado } from "@bitacora/ui/web";
+import { Button, Card, Cifra, LoadingState, Select, StatusBadge, useToast, type TonoEstado } from "@bitacora/ui/web";
 import { Stat } from "@/components/Stat";
 import { useUsuarioShell } from "@/lib/useUsuarioShell";
 import { nombrePeriodo, periodoRelativo, remuneraciones, type FormatoExport, type LiquidacionConNombre } from "@/lib/remuneracionesApi";
@@ -20,7 +20,7 @@ export default function RemuneracionesPage() {
   const [periodo, setPeriodo] = useState(periodoRelativo(0));
   const [filas, setFilas] = useState<LiquidacionConNombre[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [aviso, setAviso] = useState<string | null>(null);
+  const toast = useToast();
   const [generando, setGenerando] = useState(false);
   const [emitiendo, setEmitiendo] = useState<string | null>(null);
 
@@ -49,14 +49,13 @@ export default function RemuneracionesPage() {
 
   async function generar() {
     setGenerando(true);
-    setAviso(null);
     setError(null);
     try {
       const r = await remuneraciones.generar(periodo);
       const partes = [`${r.generadas} liquidación(es) generada(s)`];
       if (r.omitidas_emitidas) partes.push(`${r.omitidas_emitidas} ya emitidas, sin cambios`);
       if (r.prorrateadas) partes.push(`${r.prorrateadas} prorrateada(s) por fecha de ingreso`);
-      setAviso(partes.join(" · ") + ".");
+      toast(partes.join(" · ") + ".", { tono: "exito" });
       if (r.incompletas.length > 0) {
         setError(
           `${r.incompletas.length} colaborador(es) sin liquidación por datos incompletos: ` +
@@ -112,7 +111,6 @@ export default function RemuneracionesPage() {
       </div>
 
       {error ? <p className="font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
-      {aviso ? <p className="mb-ds-4 font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}
 
       {filas && filas.length > 0 && (
         <div className="mb-ds-4 grid gap-ds-3 sm:grid-cols-3">

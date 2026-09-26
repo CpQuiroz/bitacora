@@ -8,7 +8,7 @@ import { comunasDeRegion, formatearRut, REGIONES, validarRut } from "@bitacora/s
 import { marcaLegible } from "@bitacora/design-tokens";
 import { apiFetch } from "@/lib/api";
 import { FUENTES, fuenteDe } from "@/lib/fuentes";
-import { Button, Card, Input, Select } from "@bitacora/ui/web";
+import { Button, Card, Input, Select, useToast } from "@bitacora/ui/web";
 import { useConfiguracion } from "../ConfiguracionContext";
 
 const MONEDAS = [
@@ -88,7 +88,7 @@ export default function EmpresaPage() {
 
   const [guardandoDatos, setGuardandoDatos] = useState(false);
   const [errorDatos, setErrorDatos] = useState<string | null>(null);
-  const [avisoDatos, setAvisoDatos] = useState<string | null>(null);
+  const toast = useToast();
 
   // --- marca ---
   const [color, setColor] = useState(usuario.empresa.color_primario || COLOR_PRIMARIO_DEFAULT);
@@ -98,13 +98,11 @@ export default function EmpresaPage() {
   const [moneda, setMoneda] = useState(usuario.empresa.moneda ?? "CLP");
   const [guardandoMarca, setGuardandoMarca] = useState(false);
   const [restableciendo, setRestableciendo] = useState(false);
-  const [avisoMarca, setAvisoMarca] = useState<string | null>(null);
   const [errorMarca, setErrorMarca] = useState<string | null>(null);
 
   // --- agenda ---
   const [duracionCitaDefault, setDuracionCitaDefault] = useState(String(usuario.empresa.duracion_cita_default_min ?? 60));
   const [guardandoAgenda, setGuardandoAgenda] = useState(false);
-  const [avisoAgenda, setAvisoAgenda] = useState<string | null>(null);
   const [errorAgenda, setErrorAgenda] = useState<string | null>(null);
 
   const rutValido = rut.trim() === "" || validarRut(rut);
@@ -139,7 +137,6 @@ export default function EmpresaPage() {
 
   async function onGuardarDatos() {
     setErrorDatos(null);
-    setAvisoDatos(null);
     if (rut.trim() && !validarRut(rut)) {
       setErrorDatos("El RUT no es válido (revisa el dígito verificador)");
       return;
@@ -177,12 +174,11 @@ export default function EmpresaPage() {
     const empresaActualizada = await res.json();
     setRut(empresaActualizada.rut ?? "");
     await recargar();
-    setAvisoDatos("Datos guardados");
+    toast("Datos guardados", { tono: "exito" });
   }
 
   async function onGuardarMarca() {
     setErrorMarca(null);
-    setAvisoMarca(null);
     setGuardandoMarca(true);
     const res = await apiFetch("/api/empresa", {
       method: "PATCH",
@@ -195,12 +191,11 @@ export default function EmpresaPage() {
       return;
     }
     await recargar();
-    setAvisoMarca("Cambios guardados");
+    toast("Cambios guardados", { tono: "exito" });
   }
 
   async function onRestablecerMarca() {
     setErrorMarca(null);
-    setAvisoMarca(null);
     setRestableciendo(true);
     const res = await apiFetch("/api/empresa", {
       method: "PATCH",
@@ -216,14 +211,13 @@ export default function EmpresaPage() {
     setColor(COLOR_PRIMARIO_DEFAULT);
     setColorSecundario(COLOR_SECUNDARIO_DEFAULT);
     setFuente("sistema");
-    setAvisoMarca("Se restableció a los valores por defecto");
+    toast("Se restableció a los valores por defecto", { tono: "exito" });
   }
 
   // Duración por defecto de una cita nueva de Agenda (mobile y web ya no
   // preguntan el campo "Duración en minutos" — usan este valor solo).
   async function onGuardarAgenda() {
     setErrorAgenda(null);
-    setAvisoAgenda(null);
     const minutos = parseInt(duracionCitaDefault, 10);
     if (!Number.isInteger(minutos) || minutos <= 0) {
       setErrorAgenda("Ingresa un número de minutos válido (mayor a 0)");
@@ -241,7 +235,7 @@ export default function EmpresaPage() {
       return;
     }
     await recargar();
-    setAvisoAgenda("Cambios guardados");
+    toast("Cambios guardados", { tono: "exito" });
   }
 
   const fuenteInfo = fuenteDe(fuente);
@@ -376,7 +370,6 @@ export default function EmpresaPage() {
       </Card>
 
       {errorDatos ? <p className="font-ds-body text-ds-small text-ds-accent-700">{errorDatos}</p> : null}
-      {avisoDatos ? <p className="font-ds-body text-ds-small font-medium text-ds-accent2-800">{avisoDatos}</p> : null}
       <div className="self-start">
         <Button onPress={onGuardarDatos} cargando={guardandoDatos}>
           Guardar datos de la empresa
@@ -489,7 +482,6 @@ export default function EmpresaPage() {
           </Card>
 
           {errorMarca ? <p className="font-ds-body text-ds-small text-ds-accent-700">{errorMarca}</p> : null}
-          {avisoMarca ? <p className="font-ds-body text-ds-small font-medium text-ds-accent2-800">{avisoMarca}</p> : null}
           <div className="flex gap-ds-3">
             <Button onPress={onGuardarMarca} cargando={guardandoMarca}>
               Guardar marca
@@ -508,7 +500,6 @@ export default function EmpresaPage() {
               <Input etiqueta="Duración por defecto (min)" tipo="numero" valor={duracionCitaDefault} onCambio={setDuracionCitaDefault} />
             </div>
             {errorAgenda ? <p className="mt-ds-3 font-ds-body text-ds-small text-ds-accent-700">{errorAgenda}</p> : null}
-            {avisoAgenda ? <p className="mt-ds-3 font-ds-body text-ds-small font-medium text-ds-accent2-800">{avisoAgenda}</p> : null}
             <div className="mt-ds-4">
               <Button onPress={onGuardarAgenda} cargando={guardandoAgenda}>
                 Guardar agenda

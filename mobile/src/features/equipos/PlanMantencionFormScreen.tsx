@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { X } from "lucide-react-native";
 import { tokens } from "@bitacora/design-tokens";
-import { Button, DatePicker, ErrorState, Input, LoadingState, ScreenHeader, Textarea } from "@bitacora/ui/native";
+import { Button, DatePicker, ErrorState, Input, LoadingState, ScreenHeader, Textarea, useToast } from "@bitacora/ui/native";
 import type { MasStackParamList } from "../../shell/navigation/types";
 import { guardarPlan, planesDeEquipo } from "../../services/equipos";
 import { aFecha, aIso } from "./fechas";
@@ -12,6 +12,7 @@ import { aFecha, aIso } from "./fechas";
 // (frecuencia en días + próxima fecha), igual que en la web.
 export function PlanMantencionFormScreen({ navigation, route }: NativeStackScreenProps<MasStackParamList, "PlanMantencionForm">) {
   const { equipoId, planId } = route.params;
+  const toast = useToast();
   const [cargado, setCargado] = useState(!planId);
   const [error, setError] = useState<string | null>(null);
   const [frecuencia, setFrecuencia] = useState("180");
@@ -51,12 +52,12 @@ export function PlanMantencionFormScreen({ navigation, route }: NativeStackScree
 
   async function guardar() {
     const dias = Number(frecuencia);
-    if (!Number.isInteger(dias) || dias <= 0 || dias > 3650) return Alert.alert("Frecuencia inválida", "Escribe cada cuántos días (entre 1 y 3650).");
-    if (!proxima) return Alert.alert("Falta la fecha", "Elige la próxima fecha de mantención.");
+    if (!Number.isInteger(dias) || dias <= 0 || dias > 3650) return toast("Frecuencia inválida: escribe cada cuántos días (entre 1 y 3650).", { tono: "error" });
+    if (!proxima) return toast("Falta la fecha: elige la próxima fecha de mantención.", { tono: "error" });
     setGuardando(true);
     const r = await guardarPlan(equipoId, { frecuencia_dias: dias, proxima_fecha: proxima, notas: notas.trim() }, planId);
     setGuardando(false);
-    if (!r.ok) return Alert.alert("No se pudo guardar", r.error);
+    if (!r.ok) return toast(`No se pudo guardar: ${r.error}`, { tono: "error" });
     navigation.goBack();
   }
 

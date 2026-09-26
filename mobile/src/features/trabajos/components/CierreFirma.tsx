@@ -1,8 +1,8 @@
 import { useRef, useState } from "react";
-import { Alert, Image, Pressable, View } from "react-native";
+import { Image, Pressable, View } from "react-native";
 import { Camera } from "lucide-react-native";
 import { tokens } from "@bitacora/design-tokens";
-import { Button, Card, Input, Textarea, Texto, useMarca } from "@bitacora/ui/native";
+import { Button, Card, Input, Textarea, Texto, useMarca, useToast } from "@bitacora/ui/native";
 import { LienzoFirma, type LienzoFirmaHandle } from "../../../components/LienzoFirma";
 import { elegirFotos } from "../../../lib/imagen";
 import type { OrdenConFirma } from "../../../services/trabajos";
@@ -43,6 +43,7 @@ export function CierreFirma({
   onConfirmar: (payload: ConfirmarCierrePayload) => void | Promise<void>;
 }) {
   const marca = useMarca();
+  const toast = useToast();
   const [nombre, setNombre] = useState("");
   const lienzo = useRef<LienzoFirmaHandle>(null);
 
@@ -57,20 +58,20 @@ export function CierreFirma({
   ];
 
   async function elegirEvidencia() {
-    const [elegida] = await elegirFotos({ titulo: "Foto de evidencia" });
+    const [elegida] = await elegirFotos({ titulo: "Foto de evidencia", avisar: toast });
     if (elegida) setFotoEvidencia(elegida);
   }
 
   async function confirmar() {
     if (clienteNoDisponible) {
-      if (!motivo.trim()) return Alert.alert("Falta el motivo", "Explica por qué el cliente no está disponible.");
-      if (!fotoEvidencia) return Alert.alert("Falta la foto", "Agrega una foto de evidencia.");
+      if (!motivo.trim()) return toast("Falta el motivo: explica por qué el cliente no está disponible.", { tono: "error" });
+      if (!fotoEvidencia) return toast("Falta la foto: agrega una foto de evidencia.", { tono: "error" });
       await onConfirmar({ tipo: "no_disponible", motivo: motivo.trim(), foto: fotoEvidencia });
       return;
     }
-    if (!nombre.trim()) return Alert.alert("Falta un dato", "Escribe el nombre del cliente o encargado que firma.");
+    if (!nombre.trim()) return toast("Falta un dato: escribe el nombre del cliente o encargado que firma.", { tono: "error" });
     const base64 = await lienzo.current?.capturar();
-    if (!base64) return Alert.alert("Falta la firma", "Pide al cliente o encargado que firme en el recuadro.");
+    if (!base64) return toast("Falta la firma: pide al cliente o encargado que firme en el recuadro.", { tono: "error" });
     await onConfirmar({ tipo: "firma", firma_base64: base64, firmante_nombre: nombre.trim() });
   }
 

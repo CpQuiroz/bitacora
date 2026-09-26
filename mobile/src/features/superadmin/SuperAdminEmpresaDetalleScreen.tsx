@@ -1,12 +1,12 @@
 import { useCallback, useState } from "react";
-import { Alert, Pressable, ScrollView, Switch, View } from "react-native";
+import { Pressable, ScrollView, Switch, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { ArrowLeft } from "lucide-react-native";
 import type { Empresa, EstadoEmpresa, Modulo, Plan } from "@bitacora/shared";
 import { ETIQUETA_PLAN, NOMBRE_MODULO } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
-import { LoadingState, ScreenHeader, Texto, useMarca } from "@bitacora/ui/native";
+import { LoadingState, ScreenHeader, Texto, useConfirmar, useMarca } from "@bitacora/ui/native";
 import {
   cambiarEstadoEmpresa,
   cambiarModuloEmpresa,
@@ -53,6 +53,7 @@ const TEMAS: { valor: Empresa["tema"]; label: string }[] = [
 export function SuperAdminEmpresaDetalleScreen({ route, navigation }: NativeStackScreenProps<SuperAdminStackParamList, "EmpresaDetalle">) {
   const empresaId = route.params.id;
   const marca = useMarca();
+  const confirmar = useConfirmar();
   const [empresa, setEmpresa] = useState<EmpresaSuperAdmin | null>(null);
   const [modulos, setModulos] = useState<ModuloEstado[] | null>(null);
   const [guardandoEstado, setGuardandoEstado] = useState(false);
@@ -73,20 +74,14 @@ export function SuperAdminEmpresaDetalleScreen({ route, navigation }: NativeStac
 
   async function onCambiarEstado(nuevo: EstadoEmpresa) {
     if (!empresa || nuevo === empresa.estado) return;
-    Alert.alert("Cambiar estado", `¿Pasar "${empresa.nombre}" a ${ESTADOS.find((e) => e.valor === nuevo)?.label}?`, [
-      { text: "Cancelar", style: "cancel" },
-      {
-        text: "Confirmar",
-        onPress: async () => {
-          setGuardandoEstado(true);
-          setError(null);
-          const r = await cambiarEstadoEmpresa(empresaId, nuevo);
-          setGuardandoEstado(false);
-          if (!r.ok) return setError(r.error);
-          await cargar();
-        },
-      },
-    ]);
+    const ok = await confirmar({ titulo: "¿Cambiar estado?", mensaje: `¿Pasar "${empresa.nombre}" a ${ESTADOS.find((e) => e.valor === nuevo)?.label}?` });
+    if (!ok) return;
+    setGuardandoEstado(true);
+    setError(null);
+    const r = await cambiarEstadoEmpresa(empresaId, nuevo);
+    setGuardandoEstado(false);
+    if (!r.ok) return setError(r.error);
+    await cargar();
   }
 
   async function onCambiarTema(nuevo: Empresa["tema"]) {
@@ -101,20 +96,14 @@ export function SuperAdminEmpresaDetalleScreen({ route, navigation }: NativeStac
 
   async function onCambiarPlan(nuevo: Plan) {
     if (!empresa || nuevo === empresa.plan) return;
-    Alert.alert("Cambiar plan", `¿Pasar "${empresa.nombre}" a ${PLANES.find((p) => p.valor === nuevo)?.label}?`, [
-      { text: "Cancelar", style: "cancel" },
-      {
-        text: "Confirmar",
-        onPress: async () => {
-          setGuardandoPlan(true);
-          setError(null);
-          const r = await cambiarPlanEmpresa(empresaId, nuevo);
-          setGuardandoPlan(false);
-          if (!r.ok) return setError(r.error);
-          await cargar();
-        },
-      },
-    ]);
+    const ok = await confirmar({ titulo: "¿Cambiar plan?", mensaje: `¿Pasar "${empresa.nombre}" a ${PLANES.find((p) => p.valor === nuevo)?.label}?` });
+    if (!ok) return;
+    setGuardandoPlan(true);
+    setError(null);
+    const r = await cambiarPlanEmpresa(empresaId, nuevo);
+    setGuardandoPlan(false);
+    if (!r.ok) return setError(r.error);
+    await cargar();
   }
 
   async function onCambiarModulo(modulo: Modulo, activado: boolean) {

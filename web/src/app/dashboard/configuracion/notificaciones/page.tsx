@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Clock, Mail, MessageCircle } from "lucide-react";
 import type { MensajePersonalizado, NotificacionClienteLog, NotificacionesConfig, TipoMensajePersonalizado } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
-import { Button, Card, Input, LoadingState, Select, StatusBadge, Textarea } from "@bitacora/ui/web";
+import { Button, Card, Input, LoadingState, Select, StatusBadge, Textarea, useToast } from "@bitacora/ui/web";
 import { DataTable } from "@/components/DataTable";
 
 type Tab = "correo" | "whatsapp" | "recordatorios" | "historial";
@@ -97,7 +97,7 @@ export default function NotificacionesPage() {
   const [acordeonAbierto, setAcordeonAbierto] = useState<TipoMensajePersonalizado | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
-  const [aviso, setAviso] = useState<string | null>(null);
+  const toast = useToast();
 
   const [historial, setHistorial] = useState<NotificacionClienteLog[] | null>(null);
   const [errorHistorial, setErrorHistorial] = useState<string | null>(null);
@@ -147,7 +147,6 @@ export default function NotificacionesPage() {
   async function onGuardarPreferencias() {
     if (!config) return;
     setError(null);
-    setAviso(null);
     setGuardando(true);
     const res = await apiFetch("/api/notificaciones", {
       method: "PATCH",
@@ -177,7 +176,7 @@ export default function NotificacionesPage() {
       setError("No se pudo guardar");
       return;
     }
-    setAviso("Preferencias guardadas");
+    toast("Preferencias guardadas", { tono: "exito" });
   }
 
   async function onGuardarMensaje(tipo: TipoMensajePersonalizado, datos: { mensaje_whatsapp: string; asunto_correo: string; cuerpo_correo: string }) {
@@ -185,7 +184,7 @@ export default function NotificacionesPage() {
     if (res.ok) {
       const actualizado: MensajePersonalizado = await res.json();
       setMensajes((prev) => (prev ? { ...prev, [tipo]: actualizado } : prev));
-      setAviso("Mensaje guardado");
+      toast("Mensaje guardado", { tono: "exito" });
     }
   }
 
@@ -291,7 +290,6 @@ export default function NotificacionesPage() {
           </div>
 
           {error ? <p className="mt-ds-4 font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
-          {aviso ? <p className="mt-ds-4 font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}
           <div className="mt-ds-4">
             <Button onPress={onGuardarPreferencias} cargando={guardando}>
               Guardar preferencias
@@ -326,7 +324,6 @@ export default function NotificacionesPage() {
             personalizados” más abajo.
           </p>
           {error ? <p className="mt-ds-4 font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
-          {aviso ? <p className="mt-ds-4 font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}
           <div className="mt-ds-4">
             <Button onPress={onGuardarPreferencias} cargando={guardando}>
               Guardar
@@ -350,7 +347,6 @@ export default function NotificacionesPage() {
             />
           </div>
           {error ? <p className="mt-ds-4 font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
-          {aviso ? <p className="mt-ds-4 font-ds-body text-ds-small font-medium text-ds-accent2-800">{aviso}</p> : null}
           <div className="mt-ds-4">
             <Button onPress={onGuardarPreferencias} cargando={guardando}>
               Guardar

@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from "react-native";
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { MetodoEntregaRendicion, PeriodoRendicion } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
-import { Button, SelectorDias, Texto, useMarca } from "@bitacora/ui/native";
+import { Button, SelectorDias, Texto, useMarca, useToast } from "@bitacora/ui/native";
 import { InputMonto } from "../../components/InputMonto";
 import { crearRendicion, type BorradorRendicion } from "../../services/rendiciones";
 import type { MasStackParamList } from "../../shell/navigation/types";
@@ -37,6 +37,7 @@ const VACIO: BorradorRendicion = {
 // reusa el formulario de Nuevo Gasto.
 export function RendicionFormScreen({ navigation }: NativeStackScreenProps<MasStackParamList, "RendicionForm">) {
   const insets = useSafeAreaInsets();
+  const toast = useToast();
   const [b, setB] = useState<BorradorRendicion>(VACIO);
   const set = <K extends keyof BorradorRendicion>(k: K, v: BorradorRendicion[K]) => setB((p) => ({ ...p, [k]: v }));
   const [guardando, setGuardando] = useState(false);
@@ -46,13 +47,13 @@ export function RendicionFormScreen({ navigation }: NativeStackScreenProps<MasSt
   }, [navigation]);
 
   async function guardar() {
-    if (!(Number(b.monto_entregado || 0) > 0)) return Alert.alert("Falta el monto", "Ingresa cuánto se te entregó.");
-    if (b.fecha_termino < b.fecha_inicio) return Alert.alert("Fechas inválidas", "La fecha de término no puede ser antes que la de inicio.");
+    if (!(Number(b.monto_entregado || 0) > 0)) return toast("Falta el monto: ingresa cuánto se te entregó.", { tono: "error" });
+    if (b.fecha_termino < b.fecha_inicio) return toast("Fechas inválidas: la fecha de término no puede ser antes que la de inicio.", { tono: "error" });
 
     setGuardando(true);
     const r = await crearRendicion(b);
     setGuardando(false);
-    if (!r.ok) return Alert.alert("No se pudo crear la rendición", r.error);
+    if (!r.ok) return toast(`No se pudo crear la rendición: ${r.error}`, { tono: "error" });
     navigation.replace("RendicionDetalle", { id: r.rendicion.id });
   }
 

@@ -67,6 +67,7 @@ export function SelectorResponsable({
 
   async function invitar() {
     if (!nombre.trim() || !correo.trim()) {
+      // alerta-nativa: dentro de un Modal (el toast quedaría tapado)
       Alert.alert("Faltan datos", "Necesito el nombre y el correo del colaborador.");
       return;
     }
@@ -74,6 +75,7 @@ export function SelectorResponsable({
     const r = await invitarUsuario({ nombre, correo, rol });
     setEnviando(false);
     if (!r.ok) {
+      // alerta-nativa: dentro de un Modal (el toast quedaría tapado)
       Alert.alert("No se pudo invitar", r.error);
       return;
     }

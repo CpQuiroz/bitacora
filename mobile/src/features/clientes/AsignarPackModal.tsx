@@ -50,6 +50,7 @@ export function AsignarPackModal({
   }
 
   async function asignar() {
+    // alerta-nativa: dentro de un Modal (el toast quedaría tapado)
     if (!tipoId) return Alert.alert("Falta el tipo", "Elige un tipo de pack del catálogo.");
     setGuardando(true);
     const r = await crearPaquete({
@@ -60,6 +61,7 @@ export function AsignarPackModal({
       precio_pagado: precioPagado ? Number(precioPagado) : null,
     });
     setGuardando(false);
+    // alerta-nativa: dentro de un Modal (el toast quedaría tapado)
     if (!r.ok) return Alert.alert("No se pudo asignar", r.error);
     onAsignado();
   }

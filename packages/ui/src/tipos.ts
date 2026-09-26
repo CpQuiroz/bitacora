@@ -179,7 +179,51 @@ export type PropsDialog = {
 };
 
 // ── Toast ───────────────────────────────────────────────────────────
-export type MostrarToast = (mensaje: string) => void;
+// Feedback breve que no bloquea (tarea 156). "error" para fallas de red o
+// de guardado; los errores de un campo siguen junto al campo.
+export type TonoToast = "exito" | "error" | "info";
+export type OpcionesToast = {
+  tono?: TonoToast;
+  /** Botón dentro del toast (ej. "Deshacer"). Con acción dura más. */
+  accion?: { etiqueta: string; onPress: () => void };
+  duracionMs?: number;
+};
+export type MostrarToast = (mensaje: string, opciones?: OpcionesToast) => void;
+
+// ── Confirmar (reemplaza confirm() / Alert.alert con botones) ──────
+export type OpcionesConfirmar = {
+  titulo: string;
+  mensaje?: string;
+  /** Texto del botón que confirma. Default "Confirmar". */
+  accion?: string;
+  /** Texto del botón que cancela. Default "Cancelar". */
+  cancelar?: string;
+  /** Botón rojo: eliminar, desactivar, quitar. */
+  destructivo?: boolean;
+};
+/** Abre el diálogo y resuelve true si confirma, false si cancela o cierra. */
+export type Confirmar = (opciones: OpcionesConfirmar) => Promise<boolean>;
+
+// ── Deshacer ───────────────────────────────────────────────────────
+// La acción se ve hecha al instante, pero la API se llama recién al
+// terminar la espera; "Deshacer" la cancela. Si la API falla, se
+// restaura y se muestra el error.
+export type OpcionesDeshacer = {
+  /** Texto del toast, ej. "Viaje eliminado". */
+  mensaje: string;
+  /** Quita el elemento de la vista (optimista). */
+  ocultar: () => void;
+  /** Lo devuelve a la vista (Deshacer o error). */
+  restaurar: () => void;
+  /** Llamada real a la API, al terminar la espera. */
+  ejecutar: () => Promise<unknown>;
+  /** Tras ejecutar con éxito (ej. recargar la lista). */
+  alTerminar?: () => void;
+  /** Mensaje si la API falla. Default: el mensaje del error. */
+  mensajeError?: (error: unknown) => string;
+  esperaMs?: number;
+};
+export type ConDeshacer = (opciones: OpcionesDeshacer) => void;
 
 // ── Cifra: montos, cantidades, fechas, folios ──────────────────────
 // font-variant-numeric: tabular-nums, para que las columnas alineen.
