@@ -5,6 +5,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import * as WebBrowser from "expo-web-browser";
 import { ArrowLeft, FileText, Plus } from "lucide-react-native";
 import type { PlanMantencion, Usuario } from "@bitacora/shared";
+import { ROLES_SUPERVISION } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
 import { Button, Card, ErrorState, LoadingState, ScreenHeader, StatusBadge, Texto, useMarca } from "@bitacora/ui/native";
 import { PickerBuscable } from "../../components/ui";
@@ -58,6 +59,8 @@ export function EquipoDetalleScreen({ navigation, route }: NativeStackScreenProp
   // Viajes · Documentos · Eventos.
   const [tab, setTab] = useState<Tab>("resumen");
   const [viajes, setViajes] = useState<ViajeDeEquipo[] | null>(null);
+  const [errorViajes, setErrorViajes] = useState<string | null>(null);
+  const esSupervision = auth.fase === "listo" && ROLES_SUPERVISION.includes(auth.usuario.rol);
   const [registros, setRegistros] = useState<MantencionResumen[]>([]);
   const veViajes = auth.fase === "listo" && auth.modulosVisibles.includes("viajes");
 
@@ -81,7 +84,15 @@ export function EquipoDetalleScreen({ navigation, route }: NativeStackScreenProp
         // chofer, los de su camión asignado.
         if (permisos.flota) setRegistros((await obtenerHistorialEquipo(e.id)).registros.slice(0, 5));
         else if (asignadoAMi) setRegistros((await obtenerMantencionInicio(5)).datos.registros);
-        if (veViajes) setViajes(await listarViajesDeEquipo(e.id).catch(() => []));
+        if (veViajes) {
+          try {
+            setViajes(await listarViajesDeEquipo(e.id));
+            setErrorViajes(null);
+          } catch (x) {
+            setViajes([]);
+            setErrorViajes(x instanceof Error ? x.message : "No se pudieron cargar los viajes");
+          }
+        }
       }
     } catch (x) {
       setError(x instanceof Error ? x.message : "No se pudo cargar");
@@ -206,6 +217,8 @@ export function EquipoDetalleScreen({ navigation, route }: NativeStackScreenProp
     ...(vehiculo && puedeDocs ? [{ valor: "documentos" as Tab, etiqueta: "Documentos" }] : []),
     ...(vehiculo ? [{ valor: "eventos" as Tab, etiqueta: "Eventos" }] : []),
   ];
+  // Si la pestaña activa deja de existir (cambian módulos o categoría), volver al resumen.
+  if (!pestanas.some((p) => p.valor === tab)) setTab("resumen");
   const proximaMantencion = planes.filter((p) => p.activo).map((p) => p.proxima_fecha).sort()[0] ?? null;
   const vencidos = documentos.filter((d) => d.estado === "vencido").length;
   const porVencer = documentos.filter((d) => d.estado === "por_vencer").length;
@@ -360,7 +373,7 @@ export function EquipoDetalleScreen({ navigation, route }: NativeStackScreenProp
               </Texto>
             ) : (
               historial.slice(0, 15).map((t) => (
-                <View key={t.id} style={filaTocable}>
+                <Pressable key={t.id} onPress={() => navigation.navigate("Trabajos", { screen: "TrabajoDetalle", params: { trabajoId: t.id } })} style={filaTocable}>
                   <View style={{ flex: 1, gap: 2 }}>
                     <Texto tamano={tokens.size.small} color={tokens.color.text} numberOfLines={1}>
                       {t.orden?.folio != null ? `OS N° ${t.orden.folio}` : t.descripcion || "Sin folio"}
@@ -370,7 +383,7 @@ export function EquipoDetalleScreen({ navigation, route }: NativeStackScreenProp
                     </Texto>
                   </View>
                   <StatusBadge estado={t.orden?.estado_os ?? t.estado} />
-                </View>
+                </Pressable>
               ))
             )}
             {historial.length > 15 ? (
@@ -387,6 +400,10 @@ export function EquipoDetalleScreen({ navigation, route }: NativeStackScreenProp
             <Encabezado titulo="Viajes de este vehículo" />
             {viajes === null ? (
               <LoadingState />
+            ) : errorViajes ? (
+              <Texto tamano={tokens.size.caption} color={tokens.color.accentRamp["700"]}>
+                {errorViajes}
+              </Texto>
             ) : viajes.length === 0 ? (
               <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`}>
                 Este vehículo todavía no tiene viajes.
@@ -404,7 +421,14 @@ export function EquipoDetalleScreen({ navigation, route }: NativeStackScreenProp
                       {v.chofer ? ` · ${v.chofer.nombre}` : ""}
                     </Texto>
                   </View>
-                  <StatusBadge estado={v.estado} />
+                  <View style={{ alignItems: "flex-end", gap: 2 }}>
+                    <StatusBadge estado={v.estado} />
+                    {esSupervision && v.total != null ? (
+                      <Texto tamano={tokens.size.caption} color={tokens.color.text} style={{ fontVariant: ["tabular-nums"] }}>
+                        ${Math.round(Number(v.total)).toLocaleString("es-CL")}
+                      </Texto>
+                    ) : null}
+                  </View>
                 </Pressable>
               ))
             )}

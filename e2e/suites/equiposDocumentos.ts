@@ -101,6 +101,9 @@ export async function equiposDocumentos(ctx: Ctx): Promise<void> {
     JSON.stringify((viajesPropio.j ?? []).map((v: { numero_guia: string }) => v.numero_guia))
   );
 
+  const filtroMalo = await api(admin, "GET", "/api/viajes?equipo_id=no-es-uuid");
+  check("148-2 un equipo_id inválido responde 400 (no 500)", filtroMalo.s === 400, `${filtroMalo.s}`);
+
   const editarChofer = await api(chofer, "PATCH", `/api/equipos/${propio}`, { nombre: "Hackeado" });
   check("146-18 el chofer no edita los datos del vehículo", editarChofer.s === 403, `${editarChofer.s}`);
   const editarAdmin = await api(admin, "PATCH", `/api/equipos/${propio}`, { marca: "Volvo", anio: 2021 });

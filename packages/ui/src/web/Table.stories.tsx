@@ -45,6 +45,19 @@ export const ConAcciones: Story = {
 };
 
 export const FilaClickeable: Story = { args: { onFilaClick: () => {} } };
+
+// Convención de la app (tarea 148): la fila abre el objeto y las acciones van en el menú "⋯".
+export const FilaConMenu: Story = {
+  args: {
+    onFilaClick: () => {},
+    accionesEnMenu: true,
+    acciones: [
+      { etiqueta: "Ver detalle", onPress: () => {} },
+      { etiqueta: "Editar", onPress: () => {} },
+      { etiqueta: "Dar de baja", onPress: () => {}, tono: "peligro", oculta: (f: Equipo) => f.estado === "dada_de_baja" },
+    ],
+  },
+};
 export const Cargando: Story = { args: { cargando: true } };
 export const ConError: Story = { args: { error: "No se pudo cargar la lista de equipos.", onReintentar: () => {} } };
 export const Vacio: Story = {

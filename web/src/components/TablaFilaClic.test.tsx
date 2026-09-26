@@ -29,23 +29,35 @@ function montar() {
 }
 
 describe("tabla con fila clicable y menú de acciones", () => {
-  test("clic, doble clic y Enter abren la fila", () => {
+  test("un clic abre la fila una vez", () => {
     const { abrir, fila } = montar();
-    fireEvent.click(fila);
-    fireEvent.doubleClick(fila);
-    fireEvent.keyDown(fila, { key: "Enter" });
-    expect(abrir).toHaveBeenCalledTimes(3);
+    fireEvent.click(fila, { detail: 1 });
+    expect(abrir).toHaveBeenCalledTimes(1);
     expect(abrir).toHaveBeenCalledWith(filas[0]);
+  });
+
+  test("un doble clic real (clic, clic, dblclick) también abre, pero una sola vez", () => {
+    const { abrir, fila } = montar();
+    fireEvent.click(fila, { detail: 1 });
+    fireEvent.click(fila, { detail: 2 });
+    fireEvent.doubleClick(fila, { detail: 2 });
+    expect(abrir).toHaveBeenCalledTimes(1);
+  });
+
+  test("Enter con la fila enfocada la abre", () => {
+    const { abrir, fila } = montar();
+    fireEvent.keyDown(fila, { key: "Enter" });
+    expect(abrir).toHaveBeenCalledTimes(1);
   });
 
   test("el menú ⋯ muestra las acciones visibles y no abre la fila", () => {
     const { abrir, editar } = montar();
     fireEvent.click(screen.getByRole("button", { name: "Más acciones" }));
-    expect(screen.getByRole("menuitem", { name: "Editar" })).toBeTruthy();
-    expect(screen.queryByRole("menuitem", { name: "Oculta" })).toBeNull();
-    fireEvent.click(screen.getByRole("menuitem", { name: "Editar" }));
+    expect(screen.getByRole("button", { name: "Editar" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Oculta" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Editar" }));
     expect(editar).toHaveBeenCalledWith(filas[0]);
     expect(abrir).not.toHaveBeenCalled();
-    expect(screen.queryByRole("menu")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Editar" })).toBeNull();
   });
 });

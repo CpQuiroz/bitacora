@@ -118,6 +118,10 @@ export default function EquipoDetallePage() {
     ],
     [esVehiculo, veViajes, veDocumentos]
   );
+  // Si la pestaña activa deja de existir (cambian módulos o categoría), volver al resumen.
+  useEffect(() => {
+    if (!tabs.some((t) => t.id === tab)) setTab("resumen");
+  }, [tabs, tab]);
   // Próxima mantención: la fecha más cercana entre los planes activos.
   const proximaMantencion = planes.filter((p) => p.activo).map((p) => p.proxima_fecha).sort()[0] ?? null;
 
@@ -391,7 +395,7 @@ function Dato({ etiqueta, valor, mono, alerta, onPress }: { etiqueta: string; va
       <span className={`font-semibold ${color} ${mono ? "font-mono" : ""}`}>{valor}</span>
     </>
   );
-  const clase = "inline-flex items-center gap-ds-2 rounded-ds-pill border border-ds-divider bg-ds-surface px-ds-3 py-1";
+  const clase = "inline-flex items-center gap-ds-2 rounded-ds-pill border border-ds-divider bg-ds-surface px-ds-3 py-ds-1";
   return onPress ? (
     <button type="button" onClick={onPress} className={`${clase} hover:border-ds-brand`}>
       {contenido}

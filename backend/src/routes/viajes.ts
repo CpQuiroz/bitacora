@@ -86,10 +86,19 @@ viajesRouter.patch(
   })
 );
 
+const UUID_FILTRO = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 viajesRouter.get(
   "/",
   ah<RequestConEmpresa>(async (req, res) => {
     const { desde, hasta, estado, cliente_id, chofer_id, equipo_id } = req.query;
+    // Filtros por id: un valor que no es UUID daría un 500 de Postgres (22P02).
+    for (const [nombre, valor] of Object.entries({ cliente_id, chofer_id, equipo_id })) {
+      if (typeof valor === "string" && valor && !UUID_FILTRO.test(valor)) {
+        res.status(400).json({ error: `${nombre} inválido` });
+        return;
+      }
+    }
 
     let query = supabase
       .from("viajes")

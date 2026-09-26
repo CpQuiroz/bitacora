@@ -6,8 +6,9 @@ import { EquipoDetalleScreen } from "./EquipoDetalleScreen";
 
 let mockModulos: string[] = [];
 let mockAsignadoA = "u1";
+let mockRol = "colaborador";
 jest.mock("../auth/AuthContext", () => ({
-  useAuth: () => ({ fase: "listo", usuario: { id: "u1", rol: "colaborador", nombre: "QA" }, modulosVisibles: mockModulos, acciones: [] }),
+  useAuth: () => ({ fase: "listo", usuario: { id: "u1", rol: mockRol, nombre: "QA" }, modulosVisibles: mockModulos, acciones: [] }),
 }));
 jest.mock("@react-navigation/native", () => ({
   useFocusEffect: (efecto: () => void) => require("react").useEffect(efecto, [efecto]),
@@ -42,7 +43,9 @@ jest.mock("../../services/equipos", () => ({
   borrarPlan: jest.fn(),
   cambiarEstadoPlan: jest.fn(),
   urlArchivoDocumento: jest.fn(),
-  listarViajesDeEquipo: jest.fn(async () => []),
+  listarViajesDeEquipo: jest.fn(async () => [
+    { id: "v1", fecha: "2026-09-20", numero_guia: "G-1", origen: "Santiago", destino: "Rancagua", estado: "confirmado", total: 150000, chofer: { id: "u2", nombre: "Chofer QA" }, cliente_info: null },
+  ]),
 }));
 
 async function abrir() {
@@ -93,5 +96,24 @@ describe("ficha del equipo (EquipoDetalleScreen)", () => {
     expect(screen.queryByText("Documentos")).toBeNull();
     expect(screen.queryByText("Editar")).toBeNull();
     expect(screen.getByText("Eventos")).toBeTruthy();
+  });
+
+  test("Viajes: el admin ve la ruta y el monto; el chofer no ve el monto", async () => {
+    mockModulos = ["flota", "viajes"];
+    mockAsignadoA = "u9";
+    mockRol = "admin";
+    await abrir();
+    await fireEvent.press(await screen.findByText("Viajes"));
+    expect(await screen.findByText("Santiago → Rancagua")).toBeTruthy();
+    expect(screen.getByText("$150.000")).toBeTruthy();
+
+    mockModulos = ["viajes"];
+    mockAsignadoA = "u1";
+    mockRol = "colaborador";
+    await abrir();
+    await fireEvent.press((await screen.findAllByText("Viajes"))[0]!);
+    expect(await screen.findByText("Santiago → Rancagua")).toBeTruthy();
+    expect(screen.queryByText("$150.000")).toBeNull();
+    mockRol = "colaborador";
   });
 });

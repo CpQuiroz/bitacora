@@ -20,15 +20,19 @@ export function ViajesDelEquipo({ equipoId, verMontos, moneda }: { equipoId: str
 
   useEffect(() => {
     let vigente = true;
-    apiFetch(`/api/viajes?equipo_id=${encodeURIComponent(equipoId)}`).then(async (res) => {
-      if (!vigente) return;
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        setError(body.error ?? "No se pudieron cargar los viajes");
-        return;
-      }
-      setViajes(await res.json());
-    });
+    apiFetch(`/api/viajes?equipo_id=${encodeURIComponent(equipoId)}`)
+      .then(async (res) => {
+        if (!vigente) return;
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          setError(body.error ?? "No se pudieron cargar los viajes");
+          return;
+        }
+        setViajes(await res.json());
+      })
+      .catch(() => {
+        if (vigente) setError("No se pudieron cargar los viajes. Revisa tu conexión.");
+      });
     return () => {
       vigente = false;
     };

@@ -238,7 +238,13 @@ export default function ViajesPage() {
     deepLinkUsado.current = true;
     const id = new URLSearchParams(window.location.search).get("editar");
     const v = id ? viajes.find((x) => x.id === id) : undefined;
-    if (v) abrirEdicion(v);
+    if (v) {
+      // Un viaje facturado no se edita (el backend responde 409): se avisa y
+      // se muestra la fila, igual que la lista, que no ofrece "Editar".
+      if (v.estado === "facturado") setAviso(`El viaje guía ${v.numero_guia} ya está facturado: no se puede editar.`);
+      else abrirEdicion(v);
+      setTimeout(() => document.getElementById(`viaje-${v.id}`)?.scrollIntoView({ block: "center", behavior: "smooth" }), 100);
+    }
     if (id) router.replace("/dashboard/viajes");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viajes, usuario]);
@@ -769,7 +775,7 @@ export default function ViajesPage() {
                   const esBorrador = v.estado === "borrador";
                   return (
                     <Fragment key={v.id}>
-                      <tr className={`border-b border-ds-text/[0.08] last:border-0 hover:bg-ds-text/[0.04] ${esBorrador ? "bg-ds-accent-100/60" : ""}`}>
+                      <tr id={`viaje-${v.id}`} className={`border-b border-ds-text/[0.08] last:border-0 hover:bg-ds-text/[0.04] ${esBorrador ? "bg-ds-accent-100/60" : ""}`}>
                         <td className="px-ds-4 py-ds-3">
                           <input
                             type="checkbox"
