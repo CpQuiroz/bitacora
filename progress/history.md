@@ -287,3 +287,13 @@ Formato:
   - 146: Más → Equipos / Mi vehículo (lista, ficha, editar, documentos con foto/galería/PDF, plan, asignación); chofer con documentos de su vehículo asignado; plan de mantención ahora exige permiso; documentos validan entidad y tipo.
 - **Verificación:** verificar.sh verde; E2E DEV 178/178; revisiones progress/review_144.md y review_146.md corregidas; migraciones 141-144 aplicadas en DEV y prod (verificadas en solo lectura). APK 1.10.20 (vc61) en ~/builds/apk/.
 - **Cierre:** publicado en main. Pendiente: ORS_API_KEY en Render (km con mapa), decisiones de encuesta pública e impersonación con prueba vencida, tarea 145 (tipo de OS A/B), tablero de flota en mobile, borrar archivo en storage al eliminar un documento.
+
+## 2026-09-26 — Tareas 146 (arreglo subida) y 148 publicadas (main 55e522b)
+- **Agente:** Claude (revisor independiente en 148).
+- **Plan:** arreglar la subida de documentos desde mobile y ordenar la ficha del equipo en pestañas con fila clicable.
+- **Cambios:**
+  - 146: el archivo del documento va como File de expo-file-system (el objeto {uri,name,type} lo rechazaba el fetch de Expo); mensajes de error reales; PDF sin extensión se copia como .pdf. APK 1.10.21 (vc62).
+  - 148: ficha del equipo en pestañas Resumen · Mantención (plan + registros) · OS · Viajes · Documentos · Eventos (web y mobile); /api/viajes?equipo_id (valida UUID); Table con clic/Enter y menú ⋯ de posición fija; ?editar en Viajes web; regla en docs/harness/convenciones.md §Listas y tablas.
+  - Backlog: 147 (push de asignaciones, textos aprobados en maqueta), 149 (fila clicable en el resto de tablas).
+- **Verificación:** verificar.sh verde; E2E DEV 180/180; review_148.md corregida.
+- **Cierre:** publicado en main. Build mobile con las pestañas pendiente (a pedido).

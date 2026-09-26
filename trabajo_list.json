@@ -1935,9 +1935,9 @@
       "id": 148,
       "name": "ficha_equipo_pestanas",
       "title": "Ficha del equipo: pestañas Resumen · Mantención (plan + registros) · OS · Viajes · Documentos · Eventos, y fila clicable en Equipos",
-      "status": "in_progress",
+      "status": "done",
       "description": "Aprobado por la usuaria 25-sep-2026 (referencia Fleetio). Web y mobile. Viajes del vehículo (monto solo Admin/Supervisor). Lista de Equipos web: clic/doble clic/Enter abre la ficha; acciones en menú ⋯. Regla registrada en docs/harness/convenciones.md §Listas y tablas.",
-      "resolution": ""
+      "resolution": "Hecho y revisado (commits 9f1de19, 55e522b; review_148.md). E2E 180/180. Publicado en main 55e522b. Build mobile pendiente a pedido."
     },
     {
       "id": 149,
