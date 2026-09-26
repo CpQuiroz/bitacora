@@ -70,12 +70,12 @@ export default function ConfigViajesPage() {
         {cargado ? (
           <div className="grid gap-ds-4 sm:grid-cols-2">
             <div className="flex flex-col gap-ds-1">
-              <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Viático local (origen y destino en la Región Metropolitana)</label>
-              <InputMonto value={local} onChange={setLocal} moneda={usuario.empresa.moneda ?? undefined} disabled={!esAdmin} />
+              <label htmlFor="viatico-local" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Viático local (origen y destino en la Región Metropolitana)</label>
+              <InputMonto id="viatico-local" value={local} onChange={setLocal} moneda={usuario.empresa.moneda ?? undefined} disabled={!esAdmin} />
             </div>
             <div className="flex flex-col gap-ds-1">
-              <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Viático interregional (sale de la Región Metropolitana)</label>
-              <InputMonto value={interregional} onChange={setInterregional} moneda={usuario.empresa.moneda ?? undefined} disabled={!esAdmin} />
+              <label htmlFor="viatico-interregional" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Viático interregional (sale de la Región Metropolitana)</label>
+              <InputMonto id="viatico-interregional" value={interregional} onChange={setInterregional} moneda={usuario.empresa.moneda ?? undefined} disabled={!esAdmin} />
             </div>
           </div>
         ) : null}

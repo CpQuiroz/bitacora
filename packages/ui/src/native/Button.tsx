@@ -4,6 +4,7 @@ import type { PropsBoton, Tamano, VarianteBoton } from "../tipos";
 import { ALTURA_NATIVE } from "../tipos";
 import { useMarca } from "./marca";
 import { FUENTE_NATIVE } from "./fuentes";
+import { ESCALA_FUENTE_MAX } from "./accesibilidad";
 
 const RADIO_PILL = tokens.radius.pill;
 const PAD_H: Record<Tamano, number> = { sm: tokens.space["3"], md: tokens.space["4"], lg: tokens.space["6"] };
@@ -91,6 +92,7 @@ export function Button({
           (la forma cuadrada no tiene espacio pensado para él). */}
       {!circular ? (
         <Text
+          maxFontSizeMultiplier={ESCALA_FUENTE_MAX}
           style={{
             fontFamily,
             fontSize: TEXTO_TAMANO[tamano],

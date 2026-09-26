@@ -20,7 +20,7 @@ export function Card({ children, onPress, elevacion, sinRelleno = false }: Props
   };
   if (onPress) {
     return (
-      <Pressable onPress={onPress} style={({ pressed }) => [base, { opacity: pressed ? 0.9 : 1 }]}>
+      <Pressable onPress={onPress} accessibilityRole="button" style={({ pressed }) => [base, { opacity: pressed ? 0.9 : 1 }]}>
         {children}
       </Pressable>
     );

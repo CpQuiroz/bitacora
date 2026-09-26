@@ -251,7 +251,7 @@ export function ViajeDetalleScreen({ route, navigation }: NativeStackScreenProps
                     <View key={f.id} style={{ width: 78, height: 78 }}>
                       <Image source={{ uri: f.url }} style={{ width: 78, height: 78, borderRadius: tokens.radius.sm, borderWidth: 1, borderColor: tokens.color.divider }} />
                       {f.id !== "guia" && viaje.estado !== "facturado" ? (
-                        <Pressable
+                        <Pressable accessibilityRole="button" accessibilityLabel="Eliminar foto"
                           onPress={() => confirmarEliminarFoto(f.id)}
                           disabled={eliminandoFotoId === f.id}
                           hitSlop={8}
@@ -279,7 +279,7 @@ export function ViajeDetalleScreen({ route, navigation }: NativeStackScreenProps
                     </View>
                   ))}
                   {viaje.estado !== "facturado" ? (
-                    <Pressable
+                    <Pressable accessibilityRole="button" accessibilityLabel="Agregar foto"
                       onPress={agregarFoto}
                       style={{ width: 78, height: 78, borderRadius: tokens.radius.sm, borderWidth: 1.5, borderStyle: "dashed", borderColor: `${tokens.color.text}33`, alignItems: "center", justifyContent: "center" }}
                     >

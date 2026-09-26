@@ -77,7 +77,7 @@ export function SelectorHora({
           </Text>
         </Pressable>
         {valor ? (
-          <Pressable
+          <Pressable accessibilityRole="button" accessibilityLabel="Borrar hora"
             onPress={() => onCambiar("")}
             hitSlop={8}
             style={{ alignItems: "center", justifyContent: "center", paddingHorizontal: t.espacio(1) }}

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { TextInput, View, type TextInputProps } from "react-native";
 import { useTema } from "../../theme";
 import { Text } from "./Text";
+import { ESCALA_FUENTE_MAX } from "@bitacora/ui/native";
 
 export function Input({
   etiqueta,
@@ -22,7 +23,7 @@ export function Input({
           {etiqueta}
         </Text>
       ) : null}
-      <TextInput
+      <TextInput maxFontSizeMultiplier={ESCALA_FUENTE_MAX}
         placeholderTextColor={t.colores.faint}
         {...props}
         onFocus={(e) => {

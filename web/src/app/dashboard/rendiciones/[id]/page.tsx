@@ -429,8 +429,8 @@ export default function DetalleRendicionPage() {
                       ]}
                     />
                     <div className="flex flex-col gap-ds-1">
-                      <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Monto entregado</label>
-                      <InputMonto required value={edMonto} onChange={setEdMonto} moneda={usuario.moneda} />
+                      <label htmlFor="rendicion-monto" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Monto entregado</label>
+                      <InputMonto id="rendicion-monto" required value={edMonto} onChange={setEdMonto} moneda={usuario.moneda} />
                     </div>
                     <DatePicker etiqueta="Fecha de inicio" valor={aFecha(edFechaInicio)} onCambio={(f) => setEdFechaInicio(aTexto(f))} />
                     <DatePicker etiqueta="Fecha de término" valor={aFecha(edFechaTermino)} onCambio={(f) => setEdFechaTermino(aTexto(f))} />
@@ -497,12 +497,13 @@ export default function DetalleRendicionPage() {
                         <Input etiqueta="Descripción" valor={itDescripcion} onCambio={setItDescripcion} />
                       </div>
                       <div className="flex flex-col gap-ds-1">
-                        <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Monto</label>
-                        <InputMonto required value={itMonto} onChange={setItMonto} moneda={usuario.moneda} />
+                        <label htmlFor="item-monto" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Monto</label>
+                        <InputMonto id="item-monto" required value={itMonto} onChange={setItMonto} moneda={usuario.moneda} />
                       </div>
                       <div className="flex flex-col gap-ds-1">
-                        <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Categoría</label>
+                        <label htmlFor="item-categoria" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Categoría</label>
                         <SelectCrear
+                          id="item-categoria"
                           value={itCategoriaId}
                           onChange={setItCategoriaId}
                           opciones={categorias}
@@ -515,8 +516,9 @@ export default function DetalleRendicionPage() {
                         />
                       </div>
                       <div className="flex flex-col gap-ds-1">
-                        <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Proveedor (opcional)</label>
+                        <label htmlFor="item-proveedor" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Proveedor (opcional)</label>
                         <SelectCrear
+                          id="item-proveedor"
                           value={itProveedorId}
                           onChange={setItProveedorId}
                           opciones={proveedores}

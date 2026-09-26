@@ -119,13 +119,13 @@ export function EventosFlotaScreen({ route, navigation }: NativeStackScreenProps
       <ScreenHeader antetitulo={patente ?? undefined} titulo="Eventos de la semana" accion={volver} />
       <ScrollView contentContainerStyle={{ padding: tokens.space["4"], gap: tokens.space["4"], paddingBottom: tokens.space["8"] }}>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: tokens.space["3"] }}>
-          <Pressable onPress={() => moverSemana(-1)} hitSlop={10}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Semana anterior" onPress={() => moverSemana(-1)} hitSlop={10}>
             <ChevronLeft size={22} color={tokens.color.text} />
           </Pressable>
           <Texto tamano={tokens.size.body} peso="semibold" color={tokens.color.text}>
             {esSemanaActual ? "Esta semana" : `${lunes.getDate()} ${MESES[lunes.getMonth()]} – ${domingo.getDate()} ${MESES[domingo.getMonth()]}`}
           </Texto>
-          <Pressable onPress={() => moverSemana(1)} hitSlop={10} disabled={esSemanaActual} style={{ opacity: esSemanaActual ? 0.3 : 1 }}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Semana siguiente" onPress={() => moverSemana(1)} hitSlop={10} disabled={esSemanaActual} style={{ opacity: esSemanaActual ? 0.3 : 1 }}>
             <ChevronRight size={22} color={tokens.color.text} />
           </Pressable>
         </View>

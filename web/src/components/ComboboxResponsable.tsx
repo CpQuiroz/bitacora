@@ -22,6 +22,7 @@ export function ComboboxResponsable({
   placeholder = "Selecciona un responsable",
   gestionHref,
   gestionLabel,
+  id,
 }: {
   value: string;
   onChange: (id: string) => void;
@@ -32,6 +33,7 @@ export function ComboboxResponsable({
   placeholder?: string;
   gestionHref?: string;
   gestionLabel?: string;
+  id?: string;
 }) {
   const rolesDisponibles = useRolesDisponibles();
   const [invitando, setInvitando] = useState(false);
@@ -102,6 +104,7 @@ export function ComboboxResponsable({
   return (
     <div className="flex flex-col gap-ds-1">
       <Combobox
+        id={id}
         value={value}
         onChange={onChange}
         opciones={[

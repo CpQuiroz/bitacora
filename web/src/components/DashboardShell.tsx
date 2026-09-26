@@ -231,6 +231,15 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (!menuMovilAbierto) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setMenuMovilAbierto(false);
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [menuMovilAbierto]);
+
+  useEffect(() => {
     if (window.localStorage.getItem(CLAVE_COLAPSADO) === "1") setColapsado(true);
   }, []);
 
@@ -614,7 +623,7 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
       {/* Drawer móvil */}
       {menuMovilAbierto && (
         <div className="fixed inset-0 z-40 sm:hidden">
-          <div className="absolute inset-0 bg-ds-text/40" onClick={() => setMenuMovilAbierto(false)} />
+          <div role="presentation" className="absolute inset-0 bg-ds-text/40" onClick={() => setMenuMovilAbierto(false)} />
           <aside className="absolute inset-y-0 left-0 flex w-72 flex-col bg-ds-surface shadow-ds-lg">
             <Link href="/dashboard" onClick={() => setMenuMovilAbierto(false)} className="flex items-center gap-2 border-b border-ds-divider px-4 py-4">
               {usuario.empresaLogoUrl ? (

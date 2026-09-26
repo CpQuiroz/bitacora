@@ -185,20 +185,20 @@ export default function TarifasViajesPage() {
             </p>
             <form onSubmit={agregarTramo} className="grid gap-ds-3 sm:grid-cols-2 lg:grid-cols-5 lg:items-end">
               <div className="flex flex-col gap-ds-1">
-                <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Origen</label>
-                <Combobox value={origen} onChange={setOrigen} opciones={opcionesCiudad} placeholder="Ciudad" etiquetaCrear={(t) => `Usar "${t}"`} onCrear={(t) => usarCiudadLibre(t, setOrigen)} />
+                <label htmlFor="tramo-origen" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Origen</label>
+                <Combobox id="tramo-origen" value={origen} onChange={setOrigen} opciones={opcionesCiudad} placeholder="Ciudad" etiquetaCrear={(t) => `Usar "${t}"`} onCrear={(t) => usarCiudadLibre(t, setOrigen)} />
               </div>
               <div className="flex flex-col gap-ds-1">
-                <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Destino</label>
-                <Combobox value={destino} onChange={setDestino} opciones={opcionesCiudad} placeholder="Ciudad" etiquetaCrear={(t) => `Usar "${t}"`} onCrear={(t) => usarCiudadLibre(t, setDestino)} />
+                <label htmlFor="tramo-destino" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Destino</label>
+                <Combobox id="tramo-destino" value={destino} onChange={setDestino} opciones={opcionesCiudad} placeholder="Ciudad" etiquetaCrear={(t) => `Usar "${t}"`} onCrear={(t) => usarCiudadLibre(t, setDestino)} />
               </div>
               <div className="flex flex-col gap-ds-1">
-                <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Cliente (opcional)</label>
-                <ComboboxCliente value={clienteTramo} onChange={setClienteTramo} clientes={clientes} onClienteCreado={(c) => setClientes((p) => [...p, c])} opcionVacia="General (todos)" placeholder="General (todos)" />
+                <label htmlFor="tramo-cliente" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Cliente (opcional)</label>
+                <ComboboxCliente id="tramo-cliente" value={clienteTramo} onChange={setClienteTramo} clientes={clientes} onClienteCreado={(c) => setClientes((p) => [...p, c])} opcionVacia="General (todos)" placeholder="General (todos)" />
               </div>
               <div className="flex flex-col gap-ds-1">
-                <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Precio del tramo</label>
-                <InputMonto value={precioTramo} onChange={setPrecioTramo} moneda={usuario.moneda} />
+                <label htmlFor="tramo-precio" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Precio del tramo</label>
+                <InputMonto id="tramo-precio" value={precioTramo} onChange={setPrecioTramo} moneda={usuario.moneda} />
               </div>
               <Button tipo="submit" cargando={guardandoTramo}>
                 Agregar tramo
@@ -235,8 +235,8 @@ export default function TarifasViajesPage() {
             </p>
             <div className="flex flex-wrap items-end gap-ds-3">
               <div className="flex w-56 flex-col gap-ds-1">
-                <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Precio general por km</label>
-                <InputMonto value={precioKmGeneral} onChange={setPrecioKmGeneral} moneda={usuario.moneda} />
+                <label htmlFor="km-precio-general" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Precio general por km</label>
+                <InputMonto id="km-precio-general" value={precioKmGeneral} onChange={setPrecioKmGeneral} moneda={usuario.moneda} />
               </div>
               <Button variante="secundario" onPress={() => void guardarKm(null, precioKmGeneral)}>
                 {kmGeneral ? "Actualizar" : "Guardar"}
@@ -244,12 +244,12 @@ export default function TarifasViajesPage() {
             </div>
             <div className="mt-ds-5 flex flex-wrap items-end gap-ds-3">
               <div className="flex min-w-[220px] flex-col gap-ds-1">
-                <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Cliente</label>
-                <ComboboxCliente value={clienteKm} onChange={setClienteKm} clientes={clientes} onClienteCreado={(c) => setClientes((p) => [...p, c])} placeholder="Elegir cliente" />
+                <label htmlFor="km-cliente" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Cliente</label>
+                <ComboboxCliente id="km-cliente" value={clienteKm} onChange={setClienteKm} clientes={clientes} onClienteCreado={(c) => setClientes((p) => [...p, c])} placeholder="Elegir cliente" />
               </div>
               <div className="flex w-56 flex-col gap-ds-1">
-                <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Precio por km del cliente</label>
-                <InputMonto value={precioKmCliente} onChange={setPrecioKmCliente} moneda={usuario.moneda} />
+                <label htmlFor="km-precio-cliente" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Precio por km del cliente</label>
+                <InputMonto id="km-precio-cliente" value={precioKmCliente} onChange={setPrecioKmCliente} moneda={usuario.moneda} />
               </div>
               <Button variante="secundario" onPress={() => (clienteKm ? void guardarKm(clienteKm, precioKmCliente) : setErrorKm("Elige un cliente"))}>
                 Guardar para el cliente

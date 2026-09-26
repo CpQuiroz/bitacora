@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Alert, Image, Pressable, ScrollView, View } from "react-native";
+import { Alert, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from "react-native";
 import { ArrowLeft, Check, Square } from "lucide-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { CIUDADES_CHILE, ROLES_SUPERVISION, type Cliente, type Equipo, type Usuario } from "@bitacora/shared";
@@ -201,150 +201,152 @@ export function ViajeFormScreen({ navigation, route }: NativeStackScreenProps<Vi
   return (
     <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
       <ScreenHeader titulo={titulo} accion={volver} />
-      <ScrollView
-        contentContainerStyle={{ padding: tokens.space["4"], gap: tokens.space["4"], paddingBottom: tokens.space["8"] }}
-        keyboardShouldPersistTaps="handled"
-      >
-        <SelectorCliente
-          valor={b.cliente_id}
-          onElegir={(id) => set("cliente_id", id)}
-          clientes={clientes}
-          onClienteCreado={(c) => setClientes((prev) => [...(prev ?? []), c])}
-        />
-
-        <Input etiqueta="Número de guía" valor={b.numero_guia} onCambio={(v) => set("numero_guia", v)} />
-
-        {puedeAsignar ? (
-          <Card>
-            <View style={{ gap: tokens.space["2"] }}>
-              <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary} style={{ letterSpacing: 1 }}>
-                ASIGNAR A UN CHOFER (OPCIONAL)
-              </Texto>
-              <PickerBuscable
-                etiqueta="Chofer"
-                valor={b.chofer_id ?? ""}
-                opcionVacia="Yo mismo"
-                opciones={choferes.map((c) => ({ id: c.id, label: c.nombre }))}
-                onElegir={(v) => set("chofer_id", v)}
-              />
-              {b.chofer_id ? (
-                <>
-                  <DatePicker etiqueta="Fecha del viaje" valor={fechaViaje} onCambio={(d) => d && setFechaViaje(d)} />
-                  <Input etiqueta="Hora de salida (opcional)" tipo="hora" valor={b.hora ?? ""} onCambio={(v) => set("hora", v)} placeholder="08:30" />
-                </>
-              ) : null}
-            </View>
-          </Card>
-        ) : null}
-
-        {!editandoId ? (
-          <Card>
-            <View style={{ gap: tokens.space["2"] }}>
-              <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary} style={{ letterSpacing: 1 }}>
-                FOTO DE LA GUÍA
-              </Texto>
-              {foto ? (
-                <View style={{ flexDirection: "row", gap: tokens.space["3"], alignItems: "center" }}>
-                  <Image source={{ uri: foto.uri }} style={{ width: 72, height: 72, borderRadius: tokens.radius.md, backgroundColor: tokens.color.neutral["200"] }} />
-                  <View style={{ flex: 1, gap: tokens.space["2"] }}>
-                    <Button variante="secundario" bloque onPress={adjuntarFoto}>
-                      Cambiar
-                    </Button>
-                    <Button variante="peligro" bloque onPress={() => setFoto(null)}>
-                      Quitar
-                    </Button>
-                  </View>
-                </View>
-              ) : (
-                <Button variante="primario" bloque onPress={adjuntarFoto}>
-                  Adjuntar foto de la guía
-                </Button>
-              )}
-            </View>
-          </Card>
-        ) : null}
-
-        <PickerBuscable
-          etiqueta="Origen"
-          placeholder="Elegir ciudad de origen"
-          valor={b.origen}
-          opciones={CIUDADES_CHILE.map((c) => ({ id: c, label: c }))}
-          onElegir={(v) => set("origen", v)}
-          permitirLibre
-          textoLibre={(texto) => `Usar "${texto}" (no está en la lista)`}
-        />
-        <PickerBuscable
-          etiqueta="Destino"
-          placeholder="Elegir ciudad de destino"
-          valor={b.destino}
-          opciones={CIUDADES_CHILE.map((c) => ({ id: c, label: c }))}
-          onElegir={(v) => set("destino", v)}
-          permitirLibre
-          textoLibre={(texto) => `Usar "${texto}" (no está en la lista)`}
-        />
-
-        {equipos.length > 0 ? (
-          <PickerBuscable
-            etiqueta="Vehículo (opcional)"
-            valor={b.equipo_id ?? ""}
-            opcionVacia="Ninguno"
-            opciones={equipos.map((e) => ({ id: e.id, label: e.nombre, sublabel: e.patente ?? undefined }))}
-            onElegir={(id) => set("equipo_id", id)}
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
+        <ScrollView
+          contentContainerStyle={{ padding: tokens.space["4"], gap: tokens.space["4"], paddingBottom: tokens.space["8"] }}
+          keyboardShouldPersistTaps="handled"
+        >
+          <SelectorCliente
+            valor={b.cliente_id}
+            onElegir={(id) => set("cliente_id", id)}
+            clientes={clientes}
+            onClienteCreado={(c) => setClientes((prev) => [...(prev ?? []), c])}
           />
-        ) : null}
 
-        <View style={{ flexDirection: "row", gap: tokens.space["3"] }}>
-          <View style={{ flex: 1 }}>
-            <Input etiqueta="Km inicial" tipo="numero" valor={b.km_inicial ?? ""} onCambio={(v) => set("km_inicial", v)} />
+          <Input etiqueta="Número de guía" valor={b.numero_guia} onCambio={(v) => set("numero_guia", v)} />
+
+          {puedeAsignar ? (
+            <Card>
+              <View style={{ gap: tokens.space["2"] }}>
+                <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary} style={{ letterSpacing: 1 }}>
+                  ASIGNAR A UN CHOFER (OPCIONAL)
+                </Texto>
+                <PickerBuscable
+                  etiqueta="Chofer"
+                  valor={b.chofer_id ?? ""}
+                  opcionVacia="Yo mismo"
+                  opciones={choferes.map((c) => ({ id: c.id, label: c.nombre }))}
+                  onElegir={(v) => set("chofer_id", v)}
+                />
+                {b.chofer_id ? (
+                  <>
+                    <DatePicker etiqueta="Fecha del viaje" valor={fechaViaje} onCambio={(d) => d && setFechaViaje(d)} />
+                    <Input etiqueta="Hora de salida (opcional)" tipo="hora" valor={b.hora ?? ""} onCambio={(v) => set("hora", v)} placeholder="08:30" />
+                  </>
+                ) : null}
+              </View>
+            </Card>
+          ) : null}
+
+          {!editandoId ? (
+            <Card>
+              <View style={{ gap: tokens.space["2"] }}>
+                <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary} style={{ letterSpacing: 1 }}>
+                  FOTO DE LA GUÍA
+                </Texto>
+                {foto ? (
+                  <View style={{ flexDirection: "row", gap: tokens.space["3"], alignItems: "center" }}>
+                    <Image source={{ uri: foto.uri }} style={{ width: 72, height: 72, borderRadius: tokens.radius.md, backgroundColor: tokens.color.neutral["200"] }} />
+                    <View style={{ flex: 1, gap: tokens.space["2"] }}>
+                      <Button variante="secundario" bloque onPress={adjuntarFoto}>
+                        Cambiar
+                      </Button>
+                      <Button variante="peligro" bloque onPress={() => setFoto(null)}>
+                        Quitar
+                      </Button>
+                    </View>
+                  </View>
+                ) : (
+                  <Button variante="primario" bloque onPress={adjuntarFoto}>
+                    Adjuntar foto de la guía
+                  </Button>
+                )}
+              </View>
+            </Card>
+          ) : null}
+
+          <PickerBuscable
+            etiqueta="Origen"
+            placeholder="Elegir ciudad de origen"
+            valor={b.origen}
+            opciones={CIUDADES_CHILE.map((c) => ({ id: c, label: c }))}
+            onElegir={(v) => set("origen", v)}
+            permitirLibre
+            textoLibre={(texto) => `Usar "${texto}" (no está en la lista)`}
+          />
+          <PickerBuscable
+            etiqueta="Destino"
+            placeholder="Elegir ciudad de destino"
+            valor={b.destino}
+            opciones={CIUDADES_CHILE.map((c) => ({ id: c, label: c }))}
+            onElegir={(v) => set("destino", v)}
+            permitirLibre
+            textoLibre={(texto) => `Usar "${texto}" (no está en la lista)`}
+          />
+
+          {equipos.length > 0 ? (
+            <PickerBuscable
+              etiqueta="Vehículo (opcional)"
+              valor={b.equipo_id ?? ""}
+              opcionVacia="Ninguno"
+              opciones={equipos.map((e) => ({ id: e.id, label: e.nombre, sublabel: e.patente ?? undefined }))}
+              onElegir={(id) => set("equipo_id", id)}
+            />
+          ) : null}
+
+          <View style={{ flexDirection: "row", gap: tokens.space["3"] }}>
+            <View style={{ flex: 1 }}>
+              <Input etiqueta="Km inicial" tipo="numero" valor={b.km_inicial ?? ""} onCambio={(v) => set("km_inicial", v)} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Input etiqueta="Km final" tipo="numero" valor={b.km_final ?? ""} onCambio={(v) => set("km_final", v)} />
+            </View>
           </View>
-          <View style={{ flex: 1 }}>
-            <Input etiqueta="Km final" tipo="numero" valor={b.km_final ?? ""} onCambio={(v) => set("km_final", v)} />
-          </View>
-        </View>
 
-        {puedeEditarMonto ? (
-          <>
-            <InputMonto etiqueta="Monto del viaje (sin IVA)" valor={b.subtotal} onChangeText={(v) => set("subtotal", v)} />
+          {puedeEditarMonto ? (
+            <>
+              <InputMonto etiqueta="Monto del viaje (sin IVA)" valor={b.subtotal} onChangeText={(v) => set("subtotal", v)} />
 
-            <Pressable
-              onPress={() => set("aplica_iva", !b.aplica_iva)}
-              hitSlop={8}
-              style={({ pressed }) => ({
-                flexDirection: "row",
-                alignItems: "center",
-                gap: tokens.space["3"],
-                minHeight: 44,
-                opacity: pressed ? 0.7 : 1,
-              })}
-            >
-              {b.aplica_iva ? (
-                <View style={{ width: 24, height: 24, borderRadius: tokens.radius.sm, backgroundColor: marca.base, alignItems: "center", justifyContent: "center" }}>
-                  <Check size={16} strokeWidth={3} color={marca.foreground} />
-                </View>
-              ) : (
-                <Square size={24} strokeWidth={2} color={tokens.color.textSecondary} />
-              )}
-              <Texto tamano={tokens.size.body} color={tokens.color.text}>
-                Aplicar IVA (19%)
+              <Pressable
+                onPress={() => set("aplica_iva", !b.aplica_iva)}
+                hitSlop={8}
+                style={({ pressed }) => ({
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: tokens.space["3"],
+                  minHeight: 44,
+                  opacity: pressed ? 0.7 : 1,
+                })}
+              >
+                {b.aplica_iva ? (
+                  <View style={{ width: 24, height: 24, borderRadius: tokens.radius.sm, backgroundColor: marca.base, alignItems: "center", justifyContent: "center" }}>
+                    <Check size={16} strokeWidth={3} color={marca.foreground} />
+                  </View>
+                ) : (
+                  <Square size={24} strokeWidth={2} color={tokens.color.textSecondary} />
+                )}
+                <Texto tamano={tokens.size.body} color={tokens.color.text}>
+                  Aplicar IVA (19%)
+                </Texto>
+              </Pressable>
+            </>
+          ) : (
+            <View style={{ gap: tokens.space["1"] }}>
+              <Texto tamano={tokens.size.small} color={tokens.color.textSecondary}>
+                Monto del viaje
               </Texto>
-            </Pressable>
-          </>
-        ) : (
-          <View style={{ gap: tokens.space["1"] }}>
-            <Texto tamano={tokens.size.small} color={tokens.color.textSecondary}>
-              Monto del viaje
-            </Texto>
-            <Texto tamano={tokens.size.body} color={tokens.color.text} peso="semibold" style={{ fontVariant: ["tabular-nums"] }}>
-              ${Number(b.subtotal || 0).toLocaleString("es-CL")}
-              {b.aplica_iva ? " + IVA" : " (sin IVA)"}
-            </Texto>
-            <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
-              El monto lo cambia la oficina.
-            </Texto>
-          </View>
-        )}
+              <Texto tamano={tokens.size.body} color={tokens.color.text} peso="semibold" style={{ fontVariant: ["tabular-nums"] }}>
+                ${Number(b.subtotal || 0).toLocaleString("es-CL")}
+                {b.aplica_iva ? " + IVA" : " (sin IVA)"}
+              </Texto>
+              <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
+                El monto lo cambia la oficina.
+              </Texto>
+            </View>
+          )}
 
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       <View
         style={{

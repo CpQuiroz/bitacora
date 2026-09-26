@@ -324,6 +324,7 @@ export default function EmpresaPage() {
           <button
             type="button"
             role="switch"
+            aria-label="Datos de pago"
             aria-checked={pagoActivado}
             onClick={() => setPagoActivado((v) => !v)}
             className={`relative h-6 w-11 shrink-0 rounded-ds-pill transition-colors ${pagoActivado ? "bg-ds-brand" : "bg-ds-divider"}`}
@@ -355,6 +356,7 @@ export default function EmpresaPage() {
           <button
             type="button"
             role="switch"
+            aria-label="Costo y precios mayorista/minorista"
             aria-checked={preciosAvanzados}
             onClick={() => setPreciosAvanzados((v) => !v)}
             className={`relative h-6 w-11 shrink-0 rounded-ds-pill transition-colors ${preciosAvanzados ? "bg-ds-brand" : "bg-ds-divider"}`}
@@ -418,6 +420,14 @@ export default function EmpresaPage() {
                 onDragLeave={() => setArrastrando(false)}
                 onDrop={onSoltarLogo}
                 onClick={() => inputLogoRef.current?.click()}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    inputLogoRef.current?.click();
+                  }
+                }}
+                role="button"
+                tabIndex={0}
                 className={`flex flex-1 cursor-pointer flex-col items-center justify-center rounded-ds-lg border-2 border-dashed px-ds-4 py-5 text-center transition-colors ${
                   arrastrando ? "border-ds-brand bg-ds-brand/[0.08]" : "border-ds-divider hover:border-ds-brand hover:bg-ds-text/[0.04]"
                 }`}
@@ -438,9 +448,10 @@ export default function EmpresaPage() {
             </p>
             <div className="grid gap-ds-4 sm:grid-cols-2">
               <div>
-                <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Color de acento</label>
+                <label htmlFor="empresa-color-acento" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Color de acento</label>
                 <div className="mt-ds-1 flex items-center gap-ds-3">
                   <input
+                    id="empresa-color-acento"
                     type="color"
                     value={color}
                     onChange={(e) => setColor(e.target.value)}

@@ -1,5 +1,6 @@
 "use client";
 
+import { useId } from "react";
 import type { PropsDatePicker } from "../tipos";
 import { CAMPO_BASE, LABEL, MENSAJE_AYUDA, MENSAJE_ERROR, bordeDe } from "./campo";
 
@@ -19,10 +20,18 @@ function aFecha(texto: string): Date | null {
   return new Date(y, m - 1, d);
 }
 
-export function DatePicker({ etiqueta, error, ayuda, deshabilitado, valor, onCambio, placeholder, minimo, maximo }: PropsDatePicker) {
+export function DatePicker({ etiqueta, error, ayuda, deshabilitado, valor, onCambio, placeholder, minimo, maximo, id: idPropio, etiquetaAccesible }: PropsDatePicker) {
+  const idGenerado = useId();
+  const id = idPropio ?? idGenerado;
+  const idMensaje = `${id}-mensaje`;
+  const hayMensaje = Boolean(error || ayuda);
   return (
     <div className="flex flex-col gap-ds-1">
-      {etiqueta ? <label className={LABEL}>{etiqueta}</label> : null}
+      {etiqueta ? (
+        <label htmlFor={id} className={LABEL}>
+          {etiqueta}
+        </label>
+      ) : null}
       <input
         type="date"
         value={aTextoFecha(valor)}
@@ -31,10 +40,21 @@ export function DatePicker({ etiqueta, error, ayuda, deshabilitado, valor, onCam
         disabled={deshabilitado}
         min={minimo ? aTextoFecha(minimo) : undefined}
         max={maximo ? aTextoFecha(maximo) : undefined}
+        id={id}
+        aria-label={etiqueta ? undefined : etiquetaAccesible}
         aria-invalid={Boolean(error) || undefined}
+        aria-describedby={hayMensaje ? idMensaje : undefined}
         className={`h-11 rounded-ds-pill border ${bordeDe(error)} px-ds-4 ${CAMPO_BASE}`}
       />
-      {error ? <p className={MENSAJE_ERROR}>{error}</p> : ayuda ? <p className={MENSAJE_AYUDA}>{ayuda}</p> : null}
+      {error ? (
+        <p id={idMensaje} className={MENSAJE_ERROR}>
+          {error}
+        </p>
+      ) : ayuda ? (
+        <p id={idMensaje} className={MENSAJE_AYUDA}>
+          {ayuda}
+        </p>
+      ) : null}
     </div>
   );
 }

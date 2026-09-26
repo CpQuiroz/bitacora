@@ -1,5 +1,6 @@
 "use client";
 
+import { useId } from "react";
 import type { PropsInput, TipoInput } from "../tipos";
 import { CAMPO_BASE, LABEL, MENSAJE_AYUDA, MENSAJE_ERROR, bordeDe } from "./campo";
 
@@ -29,10 +30,20 @@ export function Input({
   autoFoco,
   autoCapitalizar = true,
   onSubmit,
+  id: idPropio,
+  etiquetaAccesible,
 }: PropsInput) {
+  const idGenerado = useId();
+  const id = idPropio ?? idGenerado;
+  const idMensaje = `${id}-mensaje`;
+  const hayMensaje = Boolean(error || ayuda);
   return (
     <div className="flex flex-col gap-ds-1">
-      {etiqueta ? <label className={LABEL}>{etiqueta}</label> : null}
+      {etiqueta ? (
+        <label htmlFor={id} className={LABEL}>
+          {etiqueta}
+        </label>
+      ) : null}
       <div className="relative">
         {iconoIzq ? (
           <span className="pointer-events-none absolute left-ds-3 top-1/2 -translate-y-1/2 text-ds-text-secondary">
@@ -53,11 +64,22 @@ export function Input({
           required={requerido}
           autoCapitalize={autoCapitalizar ? undefined : "off"}
           onKeyDown={onSubmit ? (e) => e.key === "Enter" && onSubmit() : undefined}
+          id={id}
+          aria-label={etiqueta ? undefined : etiquetaAccesible}
           aria-invalid={Boolean(error) || undefined}
+          aria-describedby={hayMensaje ? idMensaje : undefined}
           className={`h-11 rounded-ds-pill border ${bordeDe(error)} px-ds-4 ${iconoIzq ? "pl-ds-8" : ""} ${CAMPO_BASE}`}
         />
       </div>
-      {error ? <p className={MENSAJE_ERROR}>{error}</p> : ayuda ? <p className={MENSAJE_AYUDA}>{ayuda}</p> : null}
+      {error ? (
+        <p id={idMensaje} className={MENSAJE_ERROR}>
+          {error}
+        </p>
+      ) : ayuda ? (
+        <p id={idMensaje} className={MENSAJE_AYUDA}>
+          {ayuda}
+        </p>
+      ) : null}
     </div>
   );
 }

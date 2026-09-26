@@ -401,8 +401,9 @@ export default function DetalleOrdenServicioPage() {
 
                 {usuario?.rol !== "colaborador" ? (
                   <div className="mb-ds-5">
-                    <label className="mb-ds-1 block font-ds-body text-ds-caption font-medium text-ds-text/70">Colaborador asignado</label>
+                    <label htmlFor="os-responsable" className="mb-ds-1 block font-ds-body text-ds-caption font-medium text-ds-text/70">Colaborador asignado</label>
                     <ComboboxResponsable
+                      id="os-responsable"
                       value={responsableEdit}
                       onChange={setResponsableEdit}
                       equipo={equipo}
@@ -467,7 +468,7 @@ export default function DetalleOrdenServicioPage() {
 
                 <div className="mb-ds-5">
                   <div className="mb-ds-3 flex items-center justify-between">
-                    <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Ítems / materiales</label>
+                    <span className="font-ds-body text-ds-caption font-medium text-ds-text/70">Ítems / materiales</span>
                     {!tieneFirma ? (
                       <Button variante="secundario" tamano="sm" iconoIzq={<Plus size={14} strokeWidth={2.75} />} onPress={() => setSelectorAbierto(true)}>
                         Agregar del catálogo

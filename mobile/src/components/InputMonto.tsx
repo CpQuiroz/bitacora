@@ -3,6 +3,7 @@ import { TextInput, View } from "react-native";
 import { useTema } from "../theme";
 import { Text } from "./ui";
 import { agruparMiles, soloDigitos } from "../lib/plata";
+import { ESCALA_FUENTE_MAX } from "@bitacora/ui/native";
 
 /**
  * Campo de plata: muestra "$ 1.250.000" con separador de miles y letra
@@ -43,7 +44,7 @@ export function InputMonto({
         <Text variante="subtitulo" tono="muted" style={{ marginRight: t.espacio(2) }}>
           $
         </Text>
-        <TextInput
+        <TextInput maxFontSizeMultiplier={ESCALA_FUENTE_MAX}
           value={mostrado}
           onChangeText={(v) => onChangeText(soloDigitos(v))}
           keyboardType="numeric"

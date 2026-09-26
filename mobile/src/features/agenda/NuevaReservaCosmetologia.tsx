@@ -377,7 +377,7 @@ export function NuevaReservaCosmetologia({ navigation, route }: NativeStackScree
                     onChangeText={(d) => setAdicionales((prev) => prev.map((x, j) => (j === i ? { ...x, monto: d } : x)))}
                   />
                 </View>
-                <Pressable
+                <Pressable accessibilityRole="button" accessibilityLabel="Quitar servicio adicional"
                   onPress={() => setAdicionales((prev) => prev.filter((_, j) => j !== i))}
                   hitSlop={8}
                   style={{ marginBottom: tokens.space["2"] * 1.25 }}

@@ -179,7 +179,7 @@ export default function CotizacionesPage() {
             {
               encabezado: "Etapa",
               celda: (c) => (
-                <div onClick={(e) => e.stopPropagation()}>
+                <div role="presentation" onClick={(e) => e.stopPropagation()}>
                   <Select
                     valor={c.etapa_id ?? ""}
                     onCambio={(v) => cambiarEtapa(c.id, v)}

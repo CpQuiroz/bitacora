@@ -188,7 +188,7 @@ export function MantencionDetalleScreen({ route, navigation }: NativeStackScreen
               {detalle.fotos.map((f) => (
                 <View key={f.id} style={{ width: 96, height: 96 }}>
                   <Image source={{ uri: f.url }} style={{ width: 96, height: 96, borderRadius: tokens.radius.md, backgroundColor: tokens.color.neutral["200"] }} />
-                  <Pressable
+                  <Pressable accessibilityRole="button" accessibilityLabel="Eliminar foto"
                     onPress={() => confirmarEliminar(f.id)}
                     disabled={eliminandoId === f.id}
                     style={{

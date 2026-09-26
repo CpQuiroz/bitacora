@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Alert, Image, Modal, Pressable, ScrollView, View } from "react-native";
+import { Alert, Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Camera } from "lucide-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -260,7 +260,7 @@ export function NuevoGastoScreen({ navigation, route }: NativeStackScreenProps<M
               Foto del comprobante
             </Texto>
             {fotoExistenteUrl ? (
-              <Pressable onPress={() => setVerFotoGrande(true)}>
+              <Pressable accessibilityRole="imagebutton" accessibilityLabel="Ver foto en grande" onPress={() => setVerFotoGrande(true)}>
                 <Image
                   source={{ uri: fotoExistenteUrl }}
                   style={{ width: "100%", height: 220, borderRadius: tokens.radius.md, backgroundColor: tokens.color.surface }}
@@ -281,176 +281,178 @@ export function NuevoGastoScreen({ navigation, route }: NativeStackScreenProps<M
 
   return (
     <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
-      <ScrollView
-        contentContainerStyle={{ padding: tokens.space["4"], gap: tokens.space["4"], paddingBottom: tokens.space["8"] + insets.bottom }}
-        keyboardShouldPersistTaps="handled"
-      >
-        <Input
-          etiqueta="Descripción (opcional)"
-          placeholder="Ej. Bencina camión 3"
-          valor={b.descripcion}
-          onCambio={(v) => set("descripcion", v)}
-        />
-
-        <InputMonto valor={b.monto} onChangeText={(v) => set("monto", v)} />
-
-        <PickerBuscable
-          etiqueta="Categoría"
-          placeholder="Elegir categoría"
-          valor={b.categoria_gasto_id}
-          opciones={categorias.map((c) => ({ id: c.id, label: c.nombre }))}
-          onElegir={(id) => set("categoria_gasto_id", id)}
-          // El backend exige el módulo "configuracion" para crear
-          // categorías (no delegable a colaborador) — si el usuario
-          // logueado no lo tiene, no le ofrecemos un botón que le va a
-          // devolver 403.
-          {...(auth.fase === "listo" && auth.modulosVisibles.includes("configuracion")
-            ? { alCrear: crearCategoriaAlVuelo, etiquetaCrear: "Crear categoría" }
-            : {})}
-        />
-        {/* Tarea 144: una empresa nueva parte sin categorías (se crean desde las
-            sugerencias de su rubro). Sin permiso para crearlas, se avisa. */}
-        {categorias.length === 0 && !(auth.fase === "listo" && auth.modulosVisibles.includes("configuracion")) ? (
-          <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
-            Tu empresa todavía no tiene categorías de gasto. Pídele a la oficina que las cree en Configuración → Categorías de gastos.
-          </Texto>
-        ) : null}
-
-        {centros.length > 0 ? (
-          <PickerBuscable
-            etiqueta="Centro de costo (opcional)"
-            placeholder="Sin centro de costo"
-            opcionVacia="Sin centro de costo"
-            valor={b.centro_costo_id}
-            opciones={centros.map((c) => ({ id: c.id, label: c.nombre }))}
-            onElegir={(id) => set("centro_costo_id", id)}
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
+        <ScrollView
+          contentContainerStyle={{ padding: tokens.space["4"], gap: tokens.space["4"], paddingBottom: tokens.space["8"] + insets.bottom }}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Input
+            etiqueta="Descripción (opcional)"
+            placeholder="Ej. Bencina camión 3"
+            valor={b.descripcion}
+            onCambio={(v) => set("descripcion", v)}
           />
-        ) : null}
 
-        <PickerBuscable
-          etiqueta="Proveedor (opcional)"
-          placeholder="Sin proveedor"
-          opcionVacia="Sin proveedor"
-          valor={b.proveedor_id}
-          opciones={proveedores.map((p) => ({ id: p.id, label: p.nombre }))}
-          onElegir={(id) => set("proveedor_id", id)}
-          alCrear={crearProveedorAlVuelo}
-          etiquetaCrear="Crear proveedor"
-        />
+          <InputMonto valor={b.monto} onChangeText={(v) => set("monto", v)} />
 
-        {trabajos.length > 0 ? (
           <PickerBuscable
-            etiqueta="Orden de Servicio (opcional)"
-            placeholder="Sin vincular"
-            opcionVacia="Sin vincular"
-            valor={b.trabajo_id}
-            opciones={trabajos.map((tr) => ({
-              id: tr.id,
-              // Antes solo mostraba el nombre del cliente — con varias OS
-              // del mismo cliente era imposible distinguir cuál era cuál
-              // (20-sep-2026). El folio ya lo devuelve /api/trabajos
-              // (orden.folio, ver TrabajoLista) — solo faltaba usarlo acá.
-              label: tr.orden?.folio != null ? `${formatearFolio("OS", tr.orden.folio)} · ${tr.cliente}` : tr.cliente,
-              sublabel: tr.fecha,
-            }))}
-            onElegir={(id) => set("trabajo_id", id)}
+            etiqueta="Categoría"
+            placeholder="Elegir categoría"
+            valor={b.categoria_gasto_id}
+            opciones={categorias.map((c) => ({ id: c.id, label: c.nombre }))}
+            onElegir={(id) => set("categoria_gasto_id", id)}
+            // El backend exige el módulo "configuracion" para crear
+            // categorías (no delegable a colaborador) — si el usuario
+            // logueado no lo tiene, no le ofrecemos un botón que le va a
+            // devolver 403.
+            {...(auth.fase === "listo" && auth.modulosVisibles.includes("configuracion")
+              ? { alCrear: crearCategoriaAlVuelo, etiquetaCrear: "Crear categoría" }
+              : {})}
           />
-        ) : null}
+          {/* Tarea 144: una empresa nueva parte sin categorías (se crean desde las
+              sugerencias de su rubro). Sin permiso para crearlas, se avisa. */}
+          {categorias.length === 0 && !(auth.fase === "listo" && auth.modulosVisibles.includes("configuracion")) ? (
+            <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
+              Tu empresa todavía no tiene categorías de gasto. Pídele a la oficina que las cree en Configuración → Categorías de gastos.
+            </Texto>
+          ) : null}
 
-        <View style={{ gap: tokens.space["1"] * 1.5 }}>
-          <Texto tamano={tokens.size.small} peso="medium" color={tokens.color.textSecondary}>
-            Fecha
-          </Texto>
-          <SelectorDias valor={b.fecha} onElegir={(k) => set("fecha", k)} />
-        </View>
+          {centros.length > 0 ? (
+            <PickerBuscable
+              etiqueta="Centro de costo (opcional)"
+              placeholder="Sin centro de costo"
+              opcionVacia="Sin centro de costo"
+              valor={b.centro_costo_id}
+              opciones={centros.map((c) => ({ id: c.id, label: c.nombre }))}
+              onElegir={(id) => set("centro_costo_id", id)}
+            />
+          ) : null}
 
-        <View style={{ gap: tokens.space["1"] * 1.5 }}>
-          <Texto tamano={tokens.size.small} peso="medium" color={tokens.color.textSecondary}>
-            Estado
-          </Texto>
-          <View style={{ flexDirection: "row", gap: tokens.space["2"] }}>
-            {ESTADOS.map((e) => {
-              const activo = e.valor === b.estado;
-              return (
-                <EstadoChip key={e.valor} activo={activo} label={e.label} onPress={() => set("estado", e.valor)} />
-              );
-            })}
-          </View>
-        </View>
+          <PickerBuscable
+            etiqueta="Proveedor (opcional)"
+            placeholder="Sin proveedor"
+            opcionVacia="Sin proveedor"
+            valor={b.proveedor_id}
+            opciones={proveedores.map((p) => ({ id: p.id, label: p.nombre }))}
+            onElegir={(id) => set("proveedor_id", id)}
+            alCrear={crearProveedorAlVuelo}
+            etiquetaCrear="Crear proveedor"
+          />
 
-        {b.estado === "pagado" ? (
+          {trabajos.length > 0 ? (
+            <PickerBuscable
+              etiqueta="Orden de Servicio (opcional)"
+              placeholder="Sin vincular"
+              opcionVacia="Sin vincular"
+              valor={b.trabajo_id}
+              opciones={trabajos.map((tr) => ({
+                id: tr.id,
+                // Antes solo mostraba el nombre del cliente — con varias OS
+                // del mismo cliente era imposible distinguir cuál era cuál
+                // (20-sep-2026). El folio ya lo devuelve /api/trabajos
+                // (orden.folio, ver TrabajoLista) — solo faltaba usarlo acá.
+                label: tr.orden?.folio != null ? `${formatearFolio("OS", tr.orden.folio)} · ${tr.cliente}` : tr.cliente,
+                sublabel: tr.fecha,
+              }))}
+              onElegir={(id) => set("trabajo_id", id)}
+            />
+          ) : null}
+
           <View style={{ gap: tokens.space["1"] * 1.5 }}>
             <Texto tamano={tokens.size.small} peso="medium" color={tokens.color.textSecondary}>
-              Fecha de pago
+              Fecha
             </Texto>
-            <SelectorDias valor={b.fecha_pago} onElegir={(k) => set("fecha_pago", k)} />
+            <SelectorDias valor={b.fecha} onElegir={(k) => set("fecha", k)} />
           </View>
-        ) : null}
 
-        {/* Foto de la boleta — al final (20-sep-2026, pedido explícito:
-            la descripción va antes, la foto queda como lo último antes
-            de guardar). */}
-        {foto ? (
-          <View style={{ gap: tokens.space["2"] }}>
-            <Pressable onPress={() => setVerFotoGrande(true)}>
-              <Image source={{ uri: foto.uri }} style={{ width: "100%", height: 220, borderRadius: tokens.radius.md, backgroundColor: tokens.color.surface }} resizeMode="cover" />
-            </Pressable>
+          <View style={{ gap: tokens.space["1"] * 1.5 }}>
+            <Texto tamano={tokens.size.small} peso="medium" color={tokens.color.textSecondary}>
+              Estado
+            </Texto>
             <View style={{ flexDirection: "row", gap: tokens.space["2"] }}>
-              <View style={{ flex: 1 }}>
-                <Button variante="secundario" bloque onPress={adjuntarFoto}>
-                  Cambiar
-                </Button>
-              </View>
-              {/* "Quitar" solo tiene sentido si no hay una foto ya
-                  subida atrás — si la hay, sacar la nueva simplemente
-                  vuelve a mostrar esa (gastoId, edición). */}
-              {!gastoId ? (
-                <View style={{ flex: 1 }}>
-                  <Button variante="peligro" bloque onPress={() => setFoto(null)}>
-                    Quitar
-                  </Button>
-                </View>
-              ) : null}
+              {ESTADOS.map((e) => {
+                const activo = e.valor === b.estado;
+                return (
+                  <EstadoChip key={e.valor} activo={activo} label={e.label} onPress={() => set("estado", e.valor)} />
+                );
+              })}
             </View>
           </View>
-        ) : gastoId && fotoExistenteUrl ? (
-          <View style={{ gap: tokens.space["2"] }}>
-            <Pressable onPress={() => setVerFotoGrande(true)}>
-              <Image
-                source={{ uri: fotoExistenteUrl }}
-                style={{ width: "100%", height: 220, borderRadius: tokens.radius.md, backgroundColor: tokens.color.surface }}
-                resizeMode="cover"
-              />
-            </Pressable>
-            <Button variante="secundario" bloque onPress={adjuntarFoto}>
-              Cambiar foto
-            </Button>
-          </View>
-        ) : gastoId ? (
-          <Texto tamano={tokens.size.small} color={tokens.color.textSecondary}>
-            La foto todavía se está subiendo — volvé a entrar en un rato para verla o cambiarla.
-          </Texto>
-        ) : (
-          <Pressable
-            onPress={adjuntarFoto}
-            style={{
-              height: 160,
-              borderRadius: tokens.radius.md,
-              borderWidth: 1.5,
-              borderStyle: "dashed",
-              borderColor: tokens.color.divider,
-              alignItems: "center",
-              justifyContent: "center",
-              gap: tokens.space["2"],
-            }}
-          >
-            <Camera size={28} strokeWidth={2} color={tokens.color.textSecondary} />
-            <Texto tamano={tokens.size.small} peso="semibold" color={tokens.color.textSecondary}>
-              {rendicionId ? "Foto de la boleta (obligatoria)" : "Foto de la boleta"}
+
+          {b.estado === "pagado" ? (
+            <View style={{ gap: tokens.space["1"] * 1.5 }}>
+              <Texto tamano={tokens.size.small} peso="medium" color={tokens.color.textSecondary}>
+                Fecha de pago
+              </Texto>
+              <SelectorDias valor={b.fecha_pago} onElegir={(k) => set("fecha_pago", k)} />
+            </View>
+          ) : null}
+
+          {/* Foto de la boleta — al final (20-sep-2026, pedido explícito:
+              la descripción va antes, la foto queda como lo último antes
+              de guardar). */}
+          {foto ? (
+            <View style={{ gap: tokens.space["2"] }}>
+              <Pressable accessibilityRole="imagebutton" accessibilityLabel="Ver foto en grande" onPress={() => setVerFotoGrande(true)}>
+                <Image source={{ uri: foto.uri }} style={{ width: "100%", height: 220, borderRadius: tokens.radius.md, backgroundColor: tokens.color.surface }} resizeMode="cover" />
+              </Pressable>
+              <View style={{ flexDirection: "row", gap: tokens.space["2"] }}>
+                <View style={{ flex: 1 }}>
+                  <Button variante="secundario" bloque onPress={adjuntarFoto}>
+                    Cambiar
+                  </Button>
+                </View>
+                {/* "Quitar" solo tiene sentido si no hay una foto ya
+                    subida atrás — si la hay, sacar la nueva simplemente
+                    vuelve a mostrar esa (gastoId, edición). */}
+                {!gastoId ? (
+                  <View style={{ flex: 1 }}>
+                    <Button variante="peligro" bloque onPress={() => setFoto(null)}>
+                      Quitar
+                    </Button>
+                  </View>
+                ) : null}
+              </View>
+            </View>
+          ) : gastoId && fotoExistenteUrl ? (
+            <View style={{ gap: tokens.space["2"] }}>
+              <Pressable accessibilityRole="imagebutton" accessibilityLabel="Ver foto en grande" onPress={() => setVerFotoGrande(true)}>
+                <Image
+                  source={{ uri: fotoExistenteUrl }}
+                  style={{ width: "100%", height: 220, borderRadius: tokens.radius.md, backgroundColor: tokens.color.surface }}
+                  resizeMode="cover"
+                />
+              </Pressable>
+              <Button variante="secundario" bloque onPress={adjuntarFoto}>
+                Cambiar foto
+              </Button>
+            </View>
+          ) : gastoId ? (
+            <Texto tamano={tokens.size.small} color={tokens.color.textSecondary}>
+              La foto todavía se está subiendo — volvé a entrar en un rato para verla o cambiarla.
             </Texto>
-          </Pressable>
-        )}
-      </ScrollView>
+          ) : (
+            <Pressable
+              onPress={adjuntarFoto}
+              style={{
+                height: 160,
+                borderRadius: tokens.radius.md,
+                borderWidth: 1.5,
+                borderStyle: "dashed",
+                borderColor: tokens.color.divider,
+                alignItems: "center",
+                justifyContent: "center",
+                gap: tokens.space["2"],
+              }}
+            >
+              <Camera size={28} strokeWidth={2} color={tokens.color.textSecondary} />
+              <Texto tamano={tokens.size.small} peso="semibold" color={tokens.color.textSecondary}>
+                {rendicionId ? "Foto de la boleta (obligatoria)" : "Foto de la boleta"}
+              </Texto>
+            </Pressable>
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       <View
         style={{
@@ -492,7 +494,7 @@ function CampoLectura({ etiqueta, valor }: { etiqueta: string; valor: string }) 
 function VisorFotoGrande({ visible, url, onCerrar }: { visible: boolean; url: string | null; onCerrar: () => void }) {
   return (
     <Modal visible={visible && Boolean(url)} transparent animationType="fade" onRequestClose={onCerrar}>
-      <Pressable
+      <Pressable accessibilityRole="button" accessibilityLabel="Cerrar foto"
         onPress={onCerrar}
         style={{ flex: 1, backgroundColor: `${tokens.color.neutral["900"]}d9`, alignItems: "center", justifyContent: "center", padding: 16 }}
       >

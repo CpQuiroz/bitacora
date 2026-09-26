@@ -3,6 +3,7 @@ import { Pressable, View } from "react-native";
 import { tokens } from "@bitacora/design-tokens";
 import { Texto } from "./Texto";
 import { useMarca } from "./marca";
+import { HIT_SLOP_TEXTO } from "./accesibilidad";
 
 // Sistema visual móvil v2 (13-sep-2026) — variante NUEVA y distinta del
 // `Card` genérico de packages/ui (children/onPress/elevacion/sinRelleno,
@@ -99,7 +100,7 @@ export function CardDetalle({ folio, badge, titulo, subtitulo, metadatos, accion
           <View style={{ height: 1, backgroundColor: tokens.color.divider, marginHorizontal: -tokens.space["4"] }} />
           <View style={{ flexDirection: "row", gap: tokens.space["4"] }}>
             {acciones.map((a, i) => (
-              <Pressable key={i} onPress={a.onPress} hitSlop={4}>
+              <Pressable key={i} onPress={a.onPress} accessibilityRole="button" hitSlop={HIT_SLOP_TEXTO}>
                 <Texto tamano={tokens.size.small} color={colorAccion[a.tono ?? "muted"]} peso="semibold">
                   {a.etiqueta}
                 </Texto>
@@ -113,7 +114,7 @@ export function CardDetalle({ folio, badge, titulo, subtitulo, metadatos, accion
 
   if (!onPress) return contenido;
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => ({ opacity: pressed ? 0.92 : 1 })}>
+    <Pressable onPress={onPress} accessibilityRole="button" style={({ pressed }) => ({ opacity: pressed ? 0.92 : 1 })}>
       {contenido}
     </Pressable>
   );

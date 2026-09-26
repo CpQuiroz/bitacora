@@ -302,7 +302,7 @@ export function TrabajosScreen({ navigation }: NativeStackScreenProps<TrabajosSt
                         Continuar
                       </Button>
                     </View>
-                    <Pressable
+                    <Pressable accessibilityRole="button" accessibilityLabel="Cómo llegar"
                       onPress={() => abrirNavegacion(item.ubicacion)}
                       style={{
                         width: 50,

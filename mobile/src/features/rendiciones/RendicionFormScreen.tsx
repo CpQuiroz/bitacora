@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Alert, Pressable, ScrollView, View } from "react-native";
+import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { MetodoEntregaRendicion, PeriodoRendicion } from "@bitacora/shared";
@@ -58,53 +58,55 @@ export function RendicionFormScreen({ navigation }: NativeStackScreenProps<MasSt
 
   return (
     <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
-      <ScrollView
-        contentContainerStyle={{ padding: tokens.space["4"], gap: tokens.space["4"], paddingBottom: tokens.space["8"] + insets.bottom }}
-        keyboardShouldPersistTaps="handled"
-      >
-        <View style={{ gap: tokens.space["1"] * 1.5 }}>
-          <Texto tamano={tokens.size.small} peso="medium" color={tokens.color.textSecondary}>
-            Período
-          </Texto>
-          <View style={{ flexDirection: "row", gap: tokens.space["2"] }}>
-            {PERIODOS.map((p) => (
-              <Chip key={p.valor} activo={p.valor === b.periodo} label={p.label} onPress={() => set("periodo", p.valor)} />
-            ))}
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
+        <ScrollView
+          contentContainerStyle={{ padding: tokens.space["4"], gap: tokens.space["4"], paddingBottom: tokens.space["8"] + insets.bottom }}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={{ gap: tokens.space["1"] * 1.5 }}>
+            <Texto tamano={tokens.size.small} peso="medium" color={tokens.color.textSecondary}>
+              Período
+            </Texto>
+            <View style={{ flexDirection: "row", gap: tokens.space["2"] }}>
+              {PERIODOS.map((p) => (
+                <Chip key={p.valor} activo={p.valor === b.periodo} label={p.label} onPress={() => set("periodo", p.valor)} />
+              ))}
+            </View>
           </View>
-        </View>
 
-        <View style={{ gap: tokens.space["1"] * 1.5 }}>
-          <Texto tamano={tokens.size.small} peso="medium" color={tokens.color.textSecondary}>
-            Método de entrega
-          </Texto>
-          <View style={{ flexDirection: "row", gap: tokens.space["2"] }}>
-            {METODOS_ENTREGA.map((m) => (
-              <Chip key={m.valor} activo={m.valor === b.metodo_entrega} label={m.label} onPress={() => set("metodo_entrega", m.valor)} />
-            ))}
+          <View style={{ gap: tokens.space["1"] * 1.5 }}>
+            <Texto tamano={tokens.size.small} peso="medium" color={tokens.color.textSecondary}>
+              Método de entrega
+            </Texto>
+            <View style={{ flexDirection: "row", gap: tokens.space["2"] }}>
+              {METODOS_ENTREGA.map((m) => (
+                <Chip key={m.valor} activo={m.valor === b.metodo_entrega} label={m.label} onPress={() => set("metodo_entrega", m.valor)} />
+              ))}
+            </View>
           </View>
-        </View>
 
-        <View style={{ gap: tokens.space["1"] * 1.5 }}>
-          <Texto tamano={tokens.size.small} peso="medium" color={tokens.color.textSecondary}>
-            Desde
-          </Texto>
-          <SelectorDias valor={b.fecha_inicio} onElegir={(k) => set("fecha_inicio", k)} />
-        </View>
+          <View style={{ gap: tokens.space["1"] * 1.5 }}>
+            <Texto tamano={tokens.size.small} peso="medium" color={tokens.color.textSecondary}>
+              Desde
+            </Texto>
+            <SelectorDias valor={b.fecha_inicio} onElegir={(k) => set("fecha_inicio", k)} />
+          </View>
 
-        <View style={{ gap: tokens.space["1"] * 1.5 }}>
-          <Texto tamano={tokens.size.small} peso="medium" color={tokens.color.textSecondary}>
-            Hasta
-          </Texto>
-          <SelectorDias valor={b.fecha_termino} onElegir={(k) => set("fecha_termino", k)} />
-        </View>
+          <View style={{ gap: tokens.space["1"] * 1.5 }}>
+            <Texto tamano={tokens.size.small} peso="medium" color={tokens.color.textSecondary}>
+              Hasta
+            </Texto>
+            <SelectorDias valor={b.fecha_termino} onElegir={(k) => set("fecha_termino", k)} />
+          </View>
 
-        <View style={{ gap: tokens.space["1"] * 1.5 }}>
-          <Texto tamano={tokens.size.small} peso="medium" color={tokens.color.textSecondary}>
-            Monto entregado
-          </Texto>
-          <InputMonto valor={b.monto_entregado} onChangeText={(v) => set("monto_entregado", v)} />
-        </View>
-      </ScrollView>
+          <View style={{ gap: tokens.space["1"] * 1.5 }}>
+            <Texto tamano={tokens.size.small} peso="medium" color={tokens.color.textSecondary}>
+              Monto entregado
+            </Texto>
+            <InputMonto valor={b.monto_entregado} onChangeText={(v) => set("monto_entregado", v)} />
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       <View style={{ padding: tokens.space["4"], borderTopWidth: 1, borderTopColor: tokens.color.divider, backgroundColor: tokens.color.surface }}>
         <Button tamano="lg" bloque onPress={guardar} cargando={guardando}>

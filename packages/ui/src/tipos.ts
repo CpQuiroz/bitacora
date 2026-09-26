@@ -47,6 +47,11 @@ export type PropsCampoBase = {
   error?: string | null;
   ayuda?: string;
   deshabilitado?: boolean;
+  /** Web: id del control, para un <label htmlFor> propio cuando el rótulo
+   *  no cabe en `etiqueta` (lleva ícono, prefijo, etc.). Native lo ignora. */
+  id?: string;
+  /** Nombre para el lector de pantalla cuando no hay `etiqueta` visible. */
+  etiquetaAccesible?: string;
 };
 
 // "codigo": texto con teclado numérico (OTP/2FA) — a diferencia de

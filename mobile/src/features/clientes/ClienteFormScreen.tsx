@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Alert, ScrollView, View } from "react-native";
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { ArrowLeft } from "lucide-react-native";
 import { tokens } from "@bitacora/design-tokens";
@@ -75,23 +75,25 @@ export function ClienteFormScreen({ navigation, route }: NativeStackScreenProps<
   return (
     <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
       <ScreenHeader titulo={titulo} accion={volver} />
-      <ScrollView
-        contentContainerStyle={{ padding: tokens.space["6"], gap: tokens.space["4"], paddingBottom: tokens.space["8"] * 2 }}
-        keyboardShouldPersistTaps="handled"
-      >
-        <Input etiqueta="Nombre" valor={b.nombre} onCambio={(v) => set("nombre", v)} />
-        <Input etiqueta="Persona de contacto (opcional)" valor={b.contacto_nombre} onCambio={(v) => set("contacto_nombre", v)} />
-        <Input etiqueta="RUT (opcional)" valor={b.rut} onCambio={(v) => set("rut", v)} autoCapitalizar={false} />
-        <Input etiqueta="Dirección" valor={b.direccion} onCambio={(v) => set("direccion", v)} />
-        <Input etiqueta="Comuna (opcional)" valor={b.comuna} onCambio={(v) => set("comuna", v)} />
-        <Input etiqueta="Teléfono (opcional)" tipo="tel" valor={b.telefono} onCambio={(v) => set("telefono", v)} />
-        <Input etiqueta="Correo (opcional)" tipo="email" autoCapitalizar={false} valor={b.correo} onCambio={(v) => set("correo", v)} />
-        <Textarea etiqueta="Notas (opcional)" valor={b.notas} onCambio={(v) => set("notas", v)} />
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
+        <ScrollView
+          contentContainerStyle={{ padding: tokens.space["6"], gap: tokens.space["4"], paddingBottom: tokens.space["8"] * 2 }}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Input etiqueta="Nombre" valor={b.nombre} onCambio={(v) => set("nombre", v)} />
+          <Input etiqueta="Persona de contacto (opcional)" valor={b.contacto_nombre} onCambio={(v) => set("contacto_nombre", v)} />
+          <Input etiqueta="RUT (opcional)" valor={b.rut} onCambio={(v) => set("rut", v)} autoCapitalizar={false} />
+          <Input etiqueta="Dirección" valor={b.direccion} onCambio={(v) => set("direccion", v)} />
+          <Input etiqueta="Comuna (opcional)" valor={b.comuna} onCambio={(v) => set("comuna", v)} />
+          <Input etiqueta="Teléfono (opcional)" tipo="tel" valor={b.telefono} onCambio={(v) => set("telefono", v)} />
+          <Input etiqueta="Correo (opcional)" tipo="email" autoCapitalizar={false} valor={b.correo} onCambio={(v) => set("correo", v)} />
+          <Textarea etiqueta="Notas (opcional)" valor={b.notas} onCambio={(v) => set("notas", v)} />
 
-        <Button bloque tamano="lg" onPress={guardar} cargando={guardando}>
-          {editandoId ? "Guardar cambios" : "Crear cliente"}
-        </Button>
-      </ScrollView>
+          <Button bloque tamano="lg" onPress={guardar} cargando={guardando}>
+            {editandoId ? "Guardar cambios" : "Crear cliente"}
+          </Button>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }

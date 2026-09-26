@@ -60,6 +60,7 @@ export function ListRow({ icono, titulo, subtitulo, trailing, onPress }: PropsLi
   return (
     <Pressable
       onPress={onPress}
+      accessibilityRole="button"
       style={({ pressed }) => ({
         paddingHorizontal: tokens.space["4"],
         backgroundColor: pressed ? tokens.color.neutral["200"] : "transparent",

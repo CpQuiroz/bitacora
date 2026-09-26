@@ -178,6 +178,7 @@ export default function InventarioPage() {
           <button
             type="button"
             role="switch"
+            aria-label="Control de inventario"
             aria-checked={activado}
             onClick={() => setActivado((v) => !v)}
             className={`relative h-6 w-11 shrink-0 rounded-ds-pill transition-colors ${activado ? "bg-ds-brand" : "bg-ds-divider"}`}
@@ -201,8 +202,8 @@ export default function InventarioPage() {
         </div>
 
         <div className="mt-ds-5 border-t border-ds-divider pt-ds-5">
-          <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Descontar stock cuando la OS alcance el estado</label>
-          <div className="mt-ds-2 flex flex-col gap-ds-2">
+          <span id="descontar-en-estado" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Descontar stock cuando la OS alcance el estado</span>
+          <div role="radiogroup" aria-labelledby="descontar-en-estado" className="mt-ds-2 flex flex-col gap-ds-2">
             {ESTADOS_DISPARADOR.map((e) => (
               <label key={e.valor} className="flex cursor-pointer items-center gap-2.5 font-ds-body text-ds-small text-ds-text">
                 <input
@@ -230,6 +231,7 @@ export default function InventarioPage() {
           <button
             type="button"
             role="switch"
+            aria-label="Permitir stock negativo"
             aria-checked={permitirNegativo}
             onClick={() => setPermitirNegativo((v) => !v)}
             className={`relative h-6 w-11 shrink-0 rounded-ds-pill transition-colors ${permitirNegativo ? "bg-ds-brand" : "bg-ds-divider"}`}
@@ -253,6 +255,7 @@ export default function InventarioPage() {
           <button
             type="button"
             role="switch"
+            aria-label="Descontar solo una vez por OS"
             aria-checked={descontarUnaVez}
             onClick={() => setDescontarUnaVez((v) => !v)}
             className={`relative h-6 w-11 shrink-0 rounded-ds-pill transition-colors ${descontarUnaVez ? "bg-ds-brand" : "bg-ds-divider"}`}

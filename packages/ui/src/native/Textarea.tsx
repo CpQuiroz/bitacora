@@ -5,14 +5,17 @@ import type { PropsTextarea } from "../tipos";
 import { useMarca } from "./marca";
 import { FUENTE_NATIVE } from "./fuentes";
 import { Campo } from "./campo";
+import { ESCALA_FUENTE_MAX } from "./accesibilidad";
 
-export function Textarea({ etiqueta, error, ayuda, deshabilitado, valor, onCambio, placeholder, filas = 4 }: PropsTextarea) {
+export function Textarea({ etiqueta, error, ayuda, deshabilitado, valor, onCambio, placeholder, filas = 4, etiquetaAccesible }: PropsTextarea) {
   const marca = useMarca();
   const [enfocado, setEnfocado] = useState(false);
 
   return (
     <Campo etiqueta={etiqueta} error={error} ayuda={ayuda}>
       <TextInput
+        accessibilityLabel={etiqueta ?? etiquetaAccesible}
+        maxFontSizeMultiplier={ESCALA_FUENTE_MAX}
         value={valor}
         onChangeText={onCambio}
         placeholder={placeholder}

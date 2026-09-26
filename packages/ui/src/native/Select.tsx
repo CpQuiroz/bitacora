@@ -10,7 +10,7 @@ import { Texto } from "./Texto";
 
 // Hoja simple (sin buscador — para eso están los Selector* propios de la
 // app, ej. PickerBuscable). Esta es la primitiva base del sistema nuevo.
-export function Select({ etiqueta, error, ayuda, deshabilitado, valor, onCambio, opciones, placeholder }: PropsSelect) {
+export function Select({ etiqueta, error, ayuda, deshabilitado, valor, onCambio, opciones, placeholder, etiquetaAccesible }: PropsSelect) {
   const marca = useMarca();
   const insets = useSafeAreaInsets();
   const [abierto, setAbierto] = useState(false);
@@ -21,6 +21,10 @@ export function Select({ etiqueta, error, ayuda, deshabilitado, valor, onCambio,
       <Pressable
         disabled={deshabilitado}
         onPress={() => setAbierto(true)}
+        accessibilityRole="button"
+        accessibilityLabel={etiqueta ?? etiquetaAccesible ?? placeholder}
+        accessibilityValue={seleccionada ? { text: seleccionada.etiqueta } : undefined}
+        accessibilityState={{ disabled: deshabilitado, expanded: abierto }}
         style={{
           minHeight: 44,
           flexDirection: "row",
@@ -59,6 +63,8 @@ export function Select({ etiqueta, error, ayuda, deshabilitado, valor, onCambio,
               {opciones.map((o) => (
                 <Pressable
                   key={o.valor}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: o.valor === valor }}
                   onPress={() => {
                     onCambio(o.valor);
                     setAbierto(false);

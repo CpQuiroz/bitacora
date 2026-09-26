@@ -159,9 +159,10 @@ export default function CategoriasGastosPage() {
           <div className="grid gap-ds-4 sm:grid-cols-2">
             <Input etiqueta="Nombre" valor={nombre} onCambio={setNombre} />
             <div className="flex flex-col gap-ds-1">
-              <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Color</label>
+              <label htmlFor="categoria-color" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Color</label>
               <div className="flex items-center gap-ds-3">
                 <input
+                  id="categoria-color"
                   type="color"
                   value={color}
                   onChange={(e) => setColor(e.target.value)}

@@ -320,8 +320,8 @@ export default function EquiposPage() {
             <form onSubmit={onSubmit} className="flex flex-col gap-ds-4">
               <div className="grid gap-ds-4 sm:grid-cols-2">
                 <div className="flex flex-col gap-ds-1">
-                  <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Cliente (opcional)</label>
-                  <ComboboxCliente value={clienteId} onChange={setClienteId} clientes={clientes} onClienteCreado={(c) => setClientes((prev) => [...prev, c])} opcionVacia="Sin cliente — activo propio de la empresa" />
+                  <label htmlFor="equipo-cliente" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Cliente (opcional)</label>
+                  <ComboboxCliente id="equipo-cliente" value={clienteId} onChange={setClienteId} clientes={clientes} onClienteCreado={(c) => setClientes((prev) => [...prev, c])} opcionVacia="Sin cliente — activo propio de la empresa" />
                 </div>
                 <Input etiqueta="Nombre del equipo" requerido valor={nombre} onCambio={setNombre} />
                 <Select

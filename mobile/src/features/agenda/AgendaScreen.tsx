@@ -383,7 +383,7 @@ export function AgendaScreen({ navigation }: NativeStackScreenProps<AgendaStackP
           paddingVertical: tokens.space["2"],
         }}
       >
-        <Pressable onPress={() => mover(-1)} hitSlop={10}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Anterior" onPress={() => mover(-1)} hitSlop={10}>
           <ChevronLeft size={22} color={tokens.color.text} />
         </Pressable>
         <Pressable onPress={() => setAncla(hoyKey)} hitSlop={8}>
@@ -391,7 +391,7 @@ export function AgendaScreen({ navigation }: NativeStackScreenProps<AgendaStackP
             {titulo}
           </Texto>
         </Pressable>
-        <Pressable onPress={() => mover(1)} hitSlop={10}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Siguiente" onPress={() => mover(1)} hitSlop={10}>
           <ChevronRight size={22} color={tokens.color.text} />
         </Pressable>
       </View>
@@ -430,7 +430,7 @@ export function AgendaScreen({ navigation }: NativeStackScreenProps<AgendaStackP
             );
           })}
         </ScrollView>
-        <Pressable onPress={() => setLeyendaAbierta(true)} hitSlop={8}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Ver leyenda de colores" onPress={() => setLeyendaAbierta(true)} hitSlop={8}>
           <Info size={18} strokeWidth={2.25} color={tokens.color.textSecondary} />
         </Pressable>
       </View>
@@ -495,7 +495,7 @@ export function AgendaScreen({ navigation }: NativeStackScreenProps<AgendaStackP
 
       {/* FAB de nueva cita — a la izquierda: la derecha ya es del
           Asistente en las 4 pestañas, mismo alto/offset, espejado. */}
-      <Pressable
+      <Pressable accessibilityRole="button" accessibilityLabel="Nueva cita"
         onPress={() => nuevaCita(modo === "dia" ? ancla : undefined)}
         style={{
           position: "absolute",

@@ -7,6 +7,7 @@ import { Texto } from "./Texto";
 import { FUENTE_NATIVE } from "./fuentes";
 import { Button } from "./Button";
 import { ListRow, ListRowGrupo } from "./ListRow";
+import { ESCALA_FUENTE_MAX } from "./accesibilidad";
 
 // Sistema visual móvil v2 (13-sep-2026). Bottom sheet dedicado, NO el
 // `Dialog` genérico de packages/ui: el contenido (avatar+antetítulo en
@@ -82,6 +83,8 @@ export function AsistenteSheet({ abierto, onCerrar, atajos, mensaje, onCambiarMe
 
           <View style={{ flexDirection: "row", alignItems: "center", gap: tokens.space["2"] }}>
             <TextInput
+              accessibilityLabel="Mensaje para el Asistente"
+              maxFontSizeMultiplier={ESCALA_FUENTE_MAX}
               value={mensaje}
               onChangeText={onCambiarMensaje}
               placeholder="Preguntale algo al Asistente…"

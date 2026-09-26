@@ -331,8 +331,8 @@ export default function CotizacionDetallePage() {
                     <Input etiqueta={idx === 0 ? "Descripción" : undefined} requerido valor={l.descripcion} onCambio={(v) => cambiarLineaEdit(idx, { descripcion: v })} />
                     <Input etiqueta={idx === 0 ? "Cantidad" : undefined} tipo="numero" requerido valor={l.cantidad} onCambio={(v) => cambiarLineaEdit(idx, { cantidad: v })} />
                     <div className="flex flex-col gap-ds-1">
-                      {idx === 0 && <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Precio unitario</label>}
-                      <InputMonto required value={l.precio_unitario} onChange={(v) => cambiarLineaEdit(idx, { precio_unitario: v })} moneda={usuario.moneda} />
+                      {idx === 0 && <label htmlFor={`linea-${idx}-precio`} className="font-ds-body text-ds-caption font-medium text-ds-text/70">Precio unitario</label>}
+                      <InputMonto id={`linea-${idx}-precio`} required value={l.precio_unitario} onChange={(v) => cambiarLineaEdit(idx, { precio_unitario: v })} moneda={usuario.moneda} />
                     </div>
                     <Button variante="ghost" onPress={() => quitarLineaEdit(idx)} deshabilitado={lineasEdit.length === 1}>
                       Quitar
@@ -341,16 +341,16 @@ export default function CotizacionDetallePage() {
                   {preciosAvanzados && (
                     <div className="grid gap-ds-3 sm:grid-cols-3">
                       <div className="flex flex-col gap-ds-1">
-                        {idx === 0 && <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Costo (opcional)</label>}
-                        <InputMonto value={l.costo} onChange={(v) => cambiarLineaEdit(idx, { costo: v })} moneda={usuario.moneda} />
+                        {idx === 0 && <label htmlFor={`linea-${idx}-costo`} className="font-ds-body text-ds-caption font-medium text-ds-text/70">Costo (opcional)</label>}
+                        <InputMonto id={`linea-${idx}-costo`} value={l.costo} onChange={(v) => cambiarLineaEdit(idx, { costo: v })} moneda={usuario.moneda} />
                       </div>
                       <div className="flex flex-col gap-ds-1">
-                        {idx === 0 && <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">P. mayorista (opcional)</label>}
-                        <InputMonto value={l.precio_mayorista} onChange={(v) => cambiarLineaEdit(idx, { precio_mayorista: v })} moneda={usuario.moneda} />
+                        {idx === 0 && <label htmlFor={`linea-${idx}-mayorista`} className="font-ds-body text-ds-caption font-medium text-ds-text/70">P. mayorista (opcional)</label>}
+                        <InputMonto id={`linea-${idx}-mayorista`} value={l.precio_mayorista} onChange={(v) => cambiarLineaEdit(idx, { precio_mayorista: v })} moneda={usuario.moneda} />
                       </div>
                       <div className="flex flex-col gap-ds-1">
-                        {idx === 0 && <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">P. minorista (opcional)</label>}
-                        <InputMonto value={l.precio_minorista} onChange={(v) => cambiarLineaEdit(idx, { precio_minorista: v })} moneda={usuario.moneda} />
+                        {idx === 0 && <label htmlFor={`linea-${idx}-minorista`} className="font-ds-body text-ds-caption font-medium text-ds-text/70">P. minorista (opcional)</label>}
+                        <InputMonto id={`linea-${idx}-minorista`} value={l.precio_minorista} onChange={(v) => cambiarLineaEdit(idx, { precio_minorista: v })} moneda={usuario.moneda} />
                       </div>
                     </div>
                   )}
@@ -538,7 +538,7 @@ export default function CotizacionDetallePage() {
         subtitulo={cotizacion.cliente_info?.nombre ?? undefined}
         seccionEstado={
           <div className="flex flex-col gap-ds-3">
-            <Select valor={cotizacion.estado} onCambio={(v) => cambiarEstado(v as EstadoPresupuesto)} opciones={ESTADOS.map((e) => ({ valor: e, etiqueta: e }))} />
+            <Select etiquetaAccesible="Estado de la cotización" valor={cotizacion.estado} onCambio={(v) => cambiarEstado(v as EstadoPresupuesto)} opciones={ESTADOS.map((e) => ({ valor: e, etiqueta: e }))} />
             {cotizacion.estado === "borrador" && (
               <Button variante="secundario" onPress={() => cambiarEstado("enviado")}>
                 Marcar como Enviado
@@ -557,12 +557,12 @@ export default function CotizacionDetallePage() {
               </Button>
             </div>
             <form onSubmit={onEnviarEmail} className="flex flex-col gap-ds-2">
-              <label className="flex items-center gap-1 font-ds-body text-ds-caption font-medium text-ds-text/70">
+              <label htmlFor="cotizacion-email" className="flex items-center gap-1 font-ds-body text-ds-caption font-medium text-ds-text/70">
                 <Mail size={14} strokeWidth={2.75} /> Enviar por email
               </label>
               <div className="flex items-end gap-ds-2">
                 <div className="flex-1">
-                  <Input tipo="email" placeholder={cotizacion.cliente_info?.correo || "correo@cliente.cl"} valor={email} onCambio={setEmail} />
+                  <Input id="cotizacion-email" tipo="email" placeholder={cotizacion.cliente_info?.correo || "correo@cliente.cl"} valor={email} onCambio={setEmail} />
                 </div>
                 <Button tipo="submit" variante="secundario" deshabilitado={enviando || !email.trim()} cargando={enviando}>
                   Enviar

@@ -241,6 +241,7 @@ export default function NotificacionesPage() {
             <button
               type="button"
               role="switch"
+              aria-label="Notificaciones por correo"
               aria-checked={config.correo_activado}
               onClick={() => actualizarToggle("correo_activado", !config.correo_activado)}
               className={`relative h-6 w-11 shrink-0 rounded-ds-pill transition-colors ${config.correo_activado ? "bg-ds-brand" : "bg-ds-divider"}`}
@@ -309,6 +310,7 @@ export default function NotificacionesPage() {
             <button
               type="button"
               role="switch"
+              aria-label="Notificaciones por WhatsApp"
               aria-checked={config.whatsapp_activado}
               onClick={() => actualizarToggle("whatsapp_activado", !config.whatsapp_activado)}
               className={`relative h-6 w-11 shrink-0 rounded-ds-pill transition-colors ${config.whatsapp_activado ? "bg-ds-brand" : "bg-ds-divider"}`}

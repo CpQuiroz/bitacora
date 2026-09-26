@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Alert, Pressable, ScrollView, View } from "react-native";
+import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { Cliente, EstadoTrabajo, Usuario } from "@bitacora/shared";
@@ -159,75 +159,77 @@ export function TrabajoFormScreen({ navigation, route }: NativeStackScreenProps<
 
   return (
     <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
-      <ScrollView
-        contentContainerStyle={{ padding: tokens.space["4"], gap: tokens.space["4"], paddingBottom: tokens.space["8"] + insets.bottom }}
-        keyboardShouldPersistTaps="handled"
-      >
-        <SelectorCliente
-          etiqueta="Cliente guardado (opcional)"
-          valor={b.cliente_id}
-          onElegir={elegirClienteGuardado}
-          clientes={clientes}
-          onClienteCreado={(c) => {
-            setClientes((prev) => [...(prev ?? []), c]);
-            setB((p) => ({ ...p, cliente_id: c.id, cliente: c.nombre, ubicacion: c.direccion || p.ubicacion }));
-          }}
-        />
-
-        <Input etiqueta="Cliente (nombre a mostrar / facturar)" valor={b.cliente} onCambio={(v) => set("cliente", v)} />
-
-        {equipo.length > 0 ? (
-          <PickerBuscable
-            etiqueta="Responsable"
-            placeholder="Elegir responsable"
-            valor={b.responsable_id}
-            opciones={equipo.map((u) => ({ id: u.id, label: u.nombre }))}
-            onElegir={(id) => set("responsable_id", id)}
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
+        <ScrollView
+          contentContainerStyle={{ padding: tokens.space["4"], gap: tokens.space["4"], paddingBottom: tokens.space["8"] + insets.bottom }}
+          keyboardShouldPersistTaps="handled"
+        >
+          <SelectorCliente
+            etiqueta="Cliente guardado (opcional)"
+            valor={b.cliente_id}
+            onElegir={elegirClienteGuardado}
+            clientes={clientes}
+            onClienteCreado={(c) => {
+              setClientes((prev) => [...(prev ?? []), c]);
+              setB((p) => ({ ...p, cliente_id: c.id, cliente: c.nombre, ubicacion: c.direccion || p.ubicacion }));
+            }}
           />
-        ) : null}
 
-        <View style={{ gap: tokens.space["2"] }}>
-          <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
-            Fecha
-          </Texto>
-          <SelectorDias valor={b.fecha} onElegir={(k) => set("fecha", k)} cantidadDias={60} />
-        </View>
+          <Input etiqueta="Cliente (nombre a mostrar / facturar)" valor={b.cliente} onCambio={(v) => set("cliente", v)} />
 
-        <InputMonto valor={b.monto} onChangeText={(v) => set("monto", v)} />
-        <Input etiqueta="Código / n° guía" valor={b.codigo} onCambio={(v) => set("codigo", v)} />
-        <Input etiqueta="Ubicación" valor={b.ubicacion} onCambio={(v) => set("ubicacion", v)} />
+          {equipo.length > 0 ? (
+            <PickerBuscable
+              etiqueta="Responsable"
+              placeholder="Elegir responsable"
+              valor={b.responsable_id}
+              opciones={equipo.map((u) => ({ id: u.id, label: u.nombre }))}
+              onElegir={(id) => set("responsable_id", id)}
+            />
+          ) : null}
 
-        <View style={{ gap: tokens.space["2"] }}>
-          <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
-            Estado
-          </Texto>
-          <View style={{ flexDirection: "row", gap: tokens.space["2"] }}>
-            {ESTADOS.map((e) => {
-              const activo = e.valor === b.estado;
-              return (
-                <Pressable
-                  key={e.valor}
-                  onPress={() => set("estado", e.valor)}
-                  style={{
-                    flex: 1,
-                    minHeight: 44,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    borderRadius: tokens.radius.md,
-                    backgroundColor: activo ? marca.suave : tokens.color.surface,
-                    borderWidth: 1,
-                    borderColor: activo ? marca.base : tokens.color.divider,
-                  }}
-                >
-                  <Texto tamano={tokens.size.caption} peso="semibold" color={activo ? marca.fuerte : tokens.color.textSecondary}>
-                    {e.label}
-                  </Texto>
-                </Pressable>
-              );
-            })}
+          <View style={{ gap: tokens.space["2"] }}>
+            <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
+              Fecha
+            </Texto>
+            <SelectorDias valor={b.fecha} onElegir={(k) => set("fecha", k)} cantidadDias={60} />
           </View>
-        </View>
-      </ScrollView>
+
+          <InputMonto valor={b.monto} onChangeText={(v) => set("monto", v)} />
+          <Input etiqueta="Código / n° guía" valor={b.codigo} onCambio={(v) => set("codigo", v)} />
+          <Input etiqueta="Ubicación" valor={b.ubicacion} onCambio={(v) => set("ubicacion", v)} />
+
+          <View style={{ gap: tokens.space["2"] }}>
+            <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
+              Estado
+            </Texto>
+            <View style={{ flexDirection: "row", gap: tokens.space["2"] }}>
+              {ESTADOS.map((e) => {
+                const activo = e.valor === b.estado;
+                return (
+                  <Pressable
+                    key={e.valor}
+                    onPress={() => set("estado", e.valor)}
+                    style={{
+                      flex: 1,
+                      minHeight: 44,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      borderRadius: tokens.radius.md,
+                      backgroundColor: activo ? marca.suave : tokens.color.surface,
+                      borderWidth: 1,
+                      borderColor: activo ? marca.base : tokens.color.divider,
+                    }}
+                  >
+                    <Texto tamano={tokens.size.caption} peso="semibold" color={activo ? marca.fuerte : tokens.color.textSecondary}>
+                      {e.label}
+                    </Texto>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       <View
         style={{

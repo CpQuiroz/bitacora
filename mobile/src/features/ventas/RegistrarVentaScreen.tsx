@@ -175,7 +175,7 @@ export function RegistrarVentaScreen({ route, navigation }: NativeStackScreenPro
                   <Texto tamano={tokens.size.body} color={tokens.color.text} peso="semibold" style={{ flex: 1 }} numberOfLines={1}>
                     {l.nombre}
                   </Texto>
-                  <Pressable onPress={() => quitar(i)} hitSlop={8}>
+                  <Pressable accessibilityRole="button" accessibilityLabel="Quitar ítem" onPress={() => quitar(i)} hitSlop={8}>
                     <X size={18} color={tokens.color.textSecondary} />
                   </Pressable>
                 </View>
@@ -183,13 +183,13 @@ export function RegistrarVentaScreen({ route, navigation }: NativeStackScreenPro
                 <View style={{ flexDirection: "row", alignItems: "center", gap: tokens.space["2"] }}>
                   {l.tipo !== "pack" ? (
                     <View style={{ flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: tokens.color.divider, borderRadius: tokens.radius.sm }}>
-                      <Pressable onPress={() => setCantidad(i, -1)} style={{ width: 34, height: 34, alignItems: "center", justifyContent: "center" }}>
+                      <Pressable accessibilityRole="button" accessibilityLabel="Restar uno" hitSlop={5} onPress={() => setCantidad(i, -1)} style={{ width: 34, height: 34, alignItems: "center", justifyContent: "center" }}>
                         <Minus size={16} color={tokens.color.text} />
                       </Pressable>
                       <Texto tamano={tokens.size.body} color={tokens.color.text} peso="semibold" style={{ width: 28, textAlign: "center", fontVariant: ["tabular-nums"] }}>
                         {l.cantidad}
                       </Texto>
-                      <Pressable onPress={() => setCantidad(i, 1)} style={{ width: 34, height: 34, alignItems: "center", justifyContent: "center" }}>
+                      <Pressable accessibilityRole="button" accessibilityLabel="Sumar uno" hitSlop={5} onPress={() => setCantidad(i, 1)} style={{ width: 34, height: 34, alignItems: "center", justifyContent: "center" }}>
                         <Plus size={16} color={tokens.color.text} />
                       </Pressable>
                     </View>

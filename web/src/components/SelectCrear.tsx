@@ -22,6 +22,7 @@ export function SelectCrear<T extends { id: string; nombre: string }>({
   onCreado,
   gestionHref,
   gestionLabel,
+  id,
 }: {
   value: string;
   onChange: (id: string) => void;
@@ -35,6 +36,7 @@ export function SelectCrear<T extends { id: string; nombre: string }>({
   // Enlace a la pantalla de gestión de esta entidad (abre pestaña nueva).
   gestionHref?: string;
   gestionLabel?: string;
+  id?: string;
 }) {
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,6 +59,7 @@ export function SelectCrear<T extends { id: string; nombre: string }>({
   return (
     <div className="flex flex-col gap-ds-1">
       <Combobox
+        id={id}
         value={value}
         onChange={onChange}
         opciones={[

@@ -211,8 +211,9 @@ export default function ProveedoresPage() {
                 <Input etiqueta="Razón social" valor={razonSocial} onCambio={setRazonSocial} />
                 <Input etiqueta="RUT" placeholder="12.345.678-9" valor={rut} onCambio={setRut} />
                 <div className="flex flex-col gap-ds-1">
-                  <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Categoría de gasto</label>
+                  <label htmlFor="proveedor-categoria" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Categoría de gasto</label>
                   <SelectCrear
+                    id="proveedor-categoria"
                     value={categoriaGastoId}
                     onChange={setCategoriaGastoId}
                     opciones={categorias}
@@ -223,10 +224,10 @@ export default function ProveedoresPage() {
                   />
                 </div>
                 <div className="flex flex-col gap-ds-1">
-                  <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Teléfono</label>
+                  <label htmlFor="proveedor-telefono" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Teléfono</label>
                   <div className="flex items-center gap-ds-2">
                     <span className="shrink-0 rounded-ds-pill border border-ds-divider bg-ds-surface px-ds-3 py-2.5 font-ds-body text-ds-small text-ds-text-secondary">+56 9</span>
-                    <Input tipo="tel" placeholder="1234 5678" maxLongitud={8} valor={telefono} onCambio={(v) => setTelefono(v.replace(/\D/g, "").slice(0, 8))} />
+                    <Input id="proveedor-telefono" tipo="tel" placeholder="1234 5678" maxLongitud={8} valor={telefono} onCambio={(v) => setTelefono(v.replace(/\D/g, "").slice(0, 8))} />
                   </div>
                 </div>
                 <Input etiqueta="Correo" tipo="email" valor={correo} onCambio={setCorreo} />

@@ -537,16 +537,16 @@ export default function PersonaFichaPage() {
               />
               <FechaCampo etiqueta="Fecha de ingreso" valor={String(formLaboral.fecha_ingreso)} onCambio={(v) => setL("fecha_ingreso", v)} />
               <div className="flex flex-col gap-ds-1">
-                <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Sueldo base ($)</label>
-                <InputMonto value={String(formLaboral.sueldo_base)} onChange={(v) => setL("sueldo_base", v)} moneda={usuario?.moneda} />
+                <label htmlFor="laboral-sueldo-base" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Sueldo base ($)</label>
+                <InputMonto id="laboral-sueldo-base" value={String(formLaboral.sueldo_base)} onChange={(v) => setL("sueldo_base", v)} moneda={usuario?.moneda} />
               </div>
               <div className="flex flex-col gap-ds-1">
-                <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Colación mensual ($)</label>
-                <InputMonto value={String(formLaboral.colacion_mensual)} onChange={(v) => setL("colacion_mensual", v)} moneda={usuario?.moneda} />
+                <label htmlFor="laboral-colacion" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Colación mensual ($)</label>
+                <InputMonto id="laboral-colacion" value={String(formLaboral.colacion_mensual)} onChange={(v) => setL("colacion_mensual", v)} moneda={usuario?.moneda} />
               </div>
               <div className="flex flex-col gap-ds-1">
-                <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Movilización mensual ($)</label>
-                <InputMonto value={String(formLaboral.movilizacion_mensual)} onChange={(v) => setL("movilizacion_mensual", v)} moneda={usuario?.moneda} />
+                <label htmlFor="laboral-movilizacion" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Movilización mensual ($)</label>
+                <InputMonto id="laboral-movilizacion" value={String(formLaboral.movilizacion_mensual)} onChange={(v) => setL("movilizacion_mensual", v)} moneda={usuario?.moneda} />
               </div>
               <Select
                 etiqueta="AFP"

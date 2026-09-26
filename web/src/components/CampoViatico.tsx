@@ -1,5 +1,6 @@
 "use client";
 
+import { useId } from "react";
 import { sugerirTipoViatico, type ConfigViaticos, type TipoViatico } from "@bitacora/shared";
 import { Select } from "@bitacora/ui/web";
 import { InputMonto } from "@/components/InputMonto";
@@ -27,6 +28,7 @@ function montoPorDefecto(tipo: TipoViatico, config: ConfigViaticos | null): stri
 }
 
 export function CampoViatico({ tipo, monto, onCambio, origen, destino, config, moneda, deshabilitado }: Props) {
+  const uid = useId();
   const sugerido = origen && destino ? sugerirTipoViatico(origen, destino) : null;
 
   function cambiarTipo(nuevo: string) {
@@ -58,8 +60,8 @@ export function CampoViatico({ tipo, monto, onCambio, origen, destino, config, m
       />
       {tipo ? (
         <div className="flex flex-col gap-ds-1">
-          <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Monto del viático</label>
-          <InputMonto required value={monto} onChange={(m) => onCambio(tipo, m)} moneda={moneda} disabled={deshabilitado} />
+          <label htmlFor={`${uid}-monto`} className="font-ds-body text-ds-caption font-medium text-ds-text/70">Monto del viático</label>
+          <InputMonto id={`${uid}-monto`} required value={monto} onChange={(m) => onCambio(tipo, m)} moneda={moneda} disabled={deshabilitado} />
         </div>
       ) : null}
     </>

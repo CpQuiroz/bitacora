@@ -184,6 +184,12 @@ else
   fail "texto secundario con opacidad — ver arriba"
   EXIT_CODE=1
 fi
+if node scripts/check-accesibilidad-mobile.mjs; then
+  :
+else
+  fail "botones de mobile sin nombre accesible — ver arriba"
+  EXIT_CODE=1
+fi
 
 echo ""
 echo "── 9. Migraciones ────────────────────────────────────"

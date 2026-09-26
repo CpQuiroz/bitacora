@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { ChevronDown, Camera, Eye, Plus, Receipt, Truck, X } from "lucide-react";
 import type { Equipo, Proveedor, RegistroMantencionEquipo, RespuestaChecklistMantencion } from "@bitacora/shared";
@@ -401,6 +401,7 @@ function DetalleRegistro({ equipoId, registroId, onCambio }: { equipoId: string;
 // Modal — formulario de alta
 // ============================================================
 function ModalNuevoRegistro({ equipo, onListo }: { equipo: Equipo; onListo: () => void }) {
+  const uid = useId();
   const [plantilla, setPlantilla] = useState<Plantilla | null>(null);
   const [proveedores, setProveedores] = useState<Proveedor[]>([]);
   const [cargando, setCargando] = useState(true);
@@ -634,8 +635,9 @@ function ModalNuevoRegistro({ equipo, onListo }: { equipo: Equipo; onListo: () =
       {/* 4. Taller (solo Programa) */}
       {tipo === "programa" && (
         <div className="flex flex-col gap-ds-1">
-          <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Taller / lubricentro</label>
+          <label htmlFor={`${uid}-taller`} className="font-ds-body text-ds-caption font-medium text-ds-text/70">Taller / lubricentro</label>
           <SelectCrear<Proveedor>
+            id={`${uid}-taller`}
             value={proveedorId}
             onChange={setProveedorId}
             opciones={proveedores}

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Alert, Pressable, ScrollView, View } from "react-native";
+import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { Cliente, MedioPago } from "@bitacora/shared";
@@ -99,81 +99,83 @@ export function CobroFormScreen({ navigation }: NativeStackScreenProps<MasStackP
 
   return (
     <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
-      <ScrollView
-        contentContainerStyle={{ padding: tokens.space["6"], gap: tokens.space["4"], paddingBottom: tokens.space["8"] + insets.bottom }}
-        keyboardShouldPersistTaps="handled"
-      >
-        <SelectorCliente
-          valor={b.cliente_id}
-          onElegir={(id) => set("cliente_id", id)}
-          clientes={clientes}
-          onClienteCreado={(c) => setClientes((prev) => [...(prev ?? []), c])}
-        />
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
+        <ScrollView
+          contentContainerStyle={{ padding: tokens.space["6"], gap: tokens.space["4"], paddingBottom: tokens.space["8"] + insets.bottom }}
+          keyboardShouldPersistTaps="handled"
+        >
+          <SelectorCliente
+            valor={b.cliente_id}
+            onElegir={(id) => set("cliente_id", id)}
+            clientes={clientes}
+            onClienteCreado={(c) => setClientes((prev) => [...(prev ?? []), c])}
+          />
 
-        <InputMonto valor={b.monto} onChangeText={(v) => set("monto", v)} />
+          <InputMonto valor={b.monto} onChangeText={(v) => set("monto", v)} />
 
-        <View style={{ gap: tokens.space["1"] }}>
-          <Texto tamano={tokens.size.small} color={tokens.color.textSecondary}>
-            Vence en
-          </Texto>
-          <View style={{ flexDirection: "row", gap: tokens.space["2"] }}>
-            {VENC_OPCIONES.map((o) => {
-              const activo = o.dias === vencDiasActual;
-              return (
-                <Pressable
-                  key={o.dias}
-                  onPress={() => setVencDias(o.dias)}
-                  style={{
-                    flex: 1,
-                    minHeight: 44,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    borderRadius: tokens.radius.md,
-                    backgroundColor: activo ? marca.suave : tokens.color.surface,
-                    borderWidth: 1,
-                    borderColor: activo ? marca.base : tokens.color.divider,
-                  }}
-                >
-                  <Texto tamano={tokens.size.caption} peso="semibold" color={activo ? marca.fuerte : tokens.color.textSecondary}>
-                    {o.label}
-                  </Texto>
-                </Pressable>
-              );
-            })}
+          <View style={{ gap: tokens.space["1"] }}>
+            <Texto tamano={tokens.size.small} color={tokens.color.textSecondary}>
+              Vence en
+            </Texto>
+            <View style={{ flexDirection: "row", gap: tokens.space["2"] }}>
+              {VENC_OPCIONES.map((o) => {
+                const activo = o.dias === vencDiasActual;
+                return (
+                  <Pressable
+                    key={o.dias}
+                    onPress={() => setVencDias(o.dias)}
+                    style={{
+                      flex: 1,
+                      minHeight: 44,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      borderRadius: tokens.radius.md,
+                      backgroundColor: activo ? marca.suave : tokens.color.surface,
+                      borderWidth: 1,
+                      borderColor: activo ? marca.base : tokens.color.divider,
+                    }}
+                  >
+                    <Texto tamano={tokens.size.caption} peso="semibold" color={activo ? marca.fuerte : tokens.color.textSecondary}>
+                      {o.label}
+                    </Texto>
+                  </Pressable>
+                );
+              })}
+            </View>
+            <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
+              Vence el {fechaLarga(b.fecha_vencimiento)}
+            </Texto>
           </View>
-          <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
-            Vence el {fechaLarga(b.fecha_vencimiento)}
-          </Texto>
-        </View>
 
-        <View style={{ gap: tokens.space["1"] }}>
-          <Texto tamano={tokens.size.small} color={tokens.color.textSecondary}>
-            Medio de pago previsto (opcional)
-          </Texto>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: tokens.space["2"] }}>
-            {MEDIOS.map((m) => {
-              const activo = b.medio_pago === m.v;
-              return (
-                <Pressable
-                  key={m.label}
-                  onPress={() => set("medio_pago", m.v)}
-                  style={{
-                    minHeight: 40,
-                    justifyContent: "center",
-                    paddingHorizontal: tokens.space["3"],
-                    borderRadius: tokens.radius.md,
-                    backgroundColor: activo ? marca.suave : tokens.color.surface,
-                  }}
-                >
-                  <Texto tamano={tokens.size.caption} peso="semibold" color={activo ? marca.fuerte : tokens.color.textSecondary}>
-                    {m.label}
-                  </Texto>
-                </Pressable>
-              );
-            })}
+          <View style={{ gap: tokens.space["1"] }}>
+            <Texto tamano={tokens.size.small} color={tokens.color.textSecondary}>
+              Medio de pago previsto (opcional)
+            </Texto>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: tokens.space["2"] }}>
+              {MEDIOS.map((m) => {
+                const activo = b.medio_pago === m.v;
+                return (
+                  <Pressable
+                    key={m.label}
+                    onPress={() => set("medio_pago", m.v)}
+                    style={{
+                      minHeight: 40,
+                      justifyContent: "center",
+                      paddingHorizontal: tokens.space["3"],
+                      borderRadius: tokens.radius.md,
+                      backgroundColor: activo ? marca.suave : tokens.color.surface,
+                    }}
+                  >
+                    <Texto tamano={tokens.size.caption} peso="semibold" color={activo ? marca.fuerte : tokens.color.textSecondary}>
+                      {m.label}
+                    </Texto>
+                  </Pressable>
+                );
+              })}
+            </View>
           </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       <View
         style={{

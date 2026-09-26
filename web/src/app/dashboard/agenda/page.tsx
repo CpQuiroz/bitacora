@@ -863,8 +863,9 @@ function AgendaContenido() {
             <Input etiqueta="Hora (opcional)" tipo="hora" valor={horaTarea} onCambio={setHoraTarea} />
           </div>
           <div className="flex flex-col gap-ds-1">
-            <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Cliente (opcional)</label>
+            <label htmlFor="tarea-rapida-cliente" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Cliente (opcional)</label>
             <ComboboxCliente
+              id="tarea-rapida-cliente"
               value={clienteIdTarea}
               onChange={onCambiarClienteTarea}
               clientes={clientesOpciones}
@@ -874,8 +875,9 @@ function AgendaContenido() {
             />
           </div>
           <div className="flex flex-col gap-ds-1">
-            <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Responsable (opcional)</label>
+            <label htmlFor="tarea-rapida-responsable" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Responsable (opcional)</label>
             <ComboboxResponsable
+              id="tarea-rapida-responsable"
               value={responsableIdTarea}
               onChange={setResponsableIdTarea}
               equipo={usuariosOpciones}
@@ -992,8 +994,9 @@ function AgendaContenido() {
               <DatePicker etiqueta="Fecha" valor={fechaTarea ? fechaDesdeString(fechaTarea) : null} onCambio={(f) => setFechaTarea(f ? fmtLocal(f) : "")} />
               <Input etiqueta="Hora (opcional)" tipo="hora" valor={horaTarea} onCambio={setHoraTarea} />
               <div className="flex flex-col gap-ds-1">
-                <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Cliente (opcional)</label>
+                <label htmlFor="tarea-cliente" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Cliente (opcional)</label>
                 <ComboboxCliente
+                  id="tarea-cliente"
                   value={clienteIdTarea}
                   onChange={onCambiarClienteTarea}
                   clientes={clientesOpciones}
@@ -1049,8 +1052,9 @@ function AgendaContenido() {
                 </div>
               )}
               <div className="flex flex-col gap-ds-1">
-                <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Responsable (opcional)</label>
+                <label htmlFor="tarea-responsable" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Responsable (opcional)</label>
                 <ComboboxResponsable
+                  id="tarea-responsable"
                   value={responsableIdTarea}
                   onChange={setResponsableIdTarea}
                   equipo={usuariosOpciones}

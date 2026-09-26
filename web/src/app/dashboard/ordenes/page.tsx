@@ -204,8 +204,9 @@ export default function OrdenesServicioPage() {
               opciones={[{ valor: "", etiqueta: "Todos" }, ...ESTADOS_OS.map((e) => ({ valor: e, etiqueta: e.replace("_", " ") }))]}
             />
             <div className="flex flex-col gap-ds-1">
-              <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Colaborador</label>
+              <label htmlFor="filtro-os-colaborador" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Colaborador</label>
               <Combobox
+                id="filtro-os-colaborador"
                 value={responsableId}
                 onChange={setResponsableId}
                 opciones={[{ id: "", label: "Todos" }, ...equipo.map((u) => ({ id: u.id, label: u.nombre }))]}
@@ -213,8 +214,9 @@ export default function OrdenesServicioPage() {
               />
             </div>
             <div className="flex flex-col gap-ds-1">
-              <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Cliente</label>
+              <label htmlFor="filtro-os-cliente" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Cliente</label>
               <Combobox
+                id="filtro-os-cliente"
                 value={clienteId}
                 onChange={setClienteId}
                 opciones={[{ id: "", label: "Todos" }, ...clientes.map((c) => ({ id: c.id, label: c.nombre }))]}

@@ -79,7 +79,7 @@ export function AsignarPackModal({
             borderBottomColor: t.colores.border,
           }}
         >
-          <Pressable onPress={onCerrar} hitSlop={12}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Cerrar" onPress={onCerrar} hitSlop={12}>
             <Ionicons name="close" size={24} color={t.colores.foreground} />
           </Pressable>
           <Text variante="subtitulo" style={{ flex: 1 }}>

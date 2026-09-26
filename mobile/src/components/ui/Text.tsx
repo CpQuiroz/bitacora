@@ -1,3 +1,4 @@
+import { ESCALA_FUENTE_MAX } from "@bitacora/ui/native";
 import { Text as RNText, type TextProps, type TextStyle } from "react-native";
 import { useTema } from "../../theme";
 
@@ -69,6 +70,7 @@ export function Text({
 
   return (
     <RNText
+      maxFontSizeMultiplier={ESCALA_FUENTE_MAX}
       {...props}
       style={[{ fontSize: base.fontSize, fontWeight: fontWeightFinal, color: colorPorTono[tono], fontFamily }, style]}
     />

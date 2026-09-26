@@ -15,7 +15,7 @@ function formatear(f: Date): string {
 
 // Mismo patrón que components/ui/SelectorHora.tsx: Android es un diálogo
 // nativo que se cierra solo; iOS queda en nuestro modal con Listo/Cancelar.
-export function DatePicker({ etiqueta, error, ayuda, deshabilitado, valor, onCambio, placeholder, minimo, maximo }: PropsDatePicker) {
+export function DatePicker({ etiqueta, error, ayuda, deshabilitado, valor, onCambio, placeholder, minimo, maximo, etiquetaAccesible }: PropsDatePicker) {
   const insets = useSafeAreaInsets();
   const [abierto, setAbierto] = useState(false);
   const [borrador, setBorrador] = useState<Date>(valor ?? new Date());
@@ -35,6 +35,10 @@ export function DatePicker({ etiqueta, error, ayuda, deshabilitado, valor, onCam
       <Pressable
         disabled={deshabilitado}
         onPress={abrir}
+        accessibilityRole="button"
+        accessibilityLabel={etiqueta ?? etiquetaAccesible ?? placeholder ?? "Elegir fecha"}
+        accessibilityValue={valor ? { text: formatear(valor) } : undefined}
+        accessibilityState={{ disabled: deshabilitado }}
         style={{
           minHeight: 44,
           flexDirection: "row",

@@ -48,6 +48,9 @@ function FilaChips({ marca, filtros }: { marca: ReturnType<typeof useMarca>; fil
           <Pressable
             key={o.valor}
             onPress={() => filtros.onCambio(o.valor)}
+            accessibilityRole="button"
+            accessibilityState={{ selected: activo }}
+            hitSlop={{ top: 8, bottom: 8 }}
             style={{
               paddingHorizontal: tokens.space["2"],
               paddingVertical: 6,

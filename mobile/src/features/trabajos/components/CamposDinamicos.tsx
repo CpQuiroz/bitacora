@@ -97,14 +97,14 @@ function CampoFoto({
           </View>
         ))}
         {fotos.map((f) => (
-          <Pressable key={f.id} onPress={() => confirmarEliminar(f.id)} disabled={!editable}>
+          <Pressable accessibilityRole="imagebutton" accessibilityLabel="Foto adjunta, tocar para eliminar" key={f.id} onPress={() => confirmarEliminar(f.id)} disabled={!editable}>
             <View style={[cuadro, { overflow: "hidden", borderWidth: 1, borderColor: tokens.color.divider }]}>
               <Image source={{ uri: f.url }} style={{ width: "100%", height: "100%" }} />
             </View>
           </Pressable>
         ))}
         {editable ? (
-          <Pressable onPress={agregar} disabled={ocupado}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Agregar foto" onPress={agregar} disabled={ocupado}>
             <View style={[cuadro, { borderWidth: 1.5, borderStyle: "dashed", borderColor: tokens.color.divider, alignItems: "center", justifyContent: "center" }]}>
               {ocupado ? <ActivityIndicator size="small" color={tokens.color.textSecondary} /> : <Camera size={20} strokeWidth={2.75} color={tokens.color.textSecondary} />}
             </View>

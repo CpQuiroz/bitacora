@@ -254,12 +254,12 @@ function CobrosContenido() {
               {modo === "manual" ? (
                 <div className="grid gap-ds-4 sm:grid-cols-2">
                   <div className="flex flex-col gap-ds-1">
-                    <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Cliente</label>
-                    <ComboboxCliente value={clienteId} onChange={setClienteId} clientes={clientes} onClienteCreado={(c) => setClientes((prev) => [...prev, c])} placeholder="Selecciona un cliente…" />
+                    <label htmlFor="cobro-cliente" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Cliente</label>
+                    <ComboboxCliente id="cobro-cliente" value={clienteId} onChange={setClienteId} clientes={clientes} onClienteCreado={(c) => setClientes((prev) => [...prev, c])} placeholder="Selecciona un cliente…" />
                   </div>
                   <div className="flex flex-col gap-ds-1">
-                    <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Monto</label>
-                    <InputMonto required value={monto} onChange={setMonto} moneda={usuario.moneda} />
+                    <label htmlFor="cobro-monto" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Monto</label>
+                    <InputMonto id="cobro-monto" required value={monto} onChange={setMonto} moneda={usuario.moneda} />
                   </div>
                   <DatePicker etiqueta="Fecha de emisión" valor={aFecha(fechaEmision)} onCambio={(f) => setFechaEmision(aTexto(f))} />
                   <DatePicker etiqueta="Fecha de vencimiento" valor={aFecha(fechaVencimiento)} onCambio={(f) => setFechaVencimiento(aTexto(f))} />
@@ -282,7 +282,7 @@ function CobrosContenido() {
                     <Input etiqueta="Plazo de pago (días)" tipo="numero" valor={diasPlazo} onCambio={setDiasPlazo} />
                   </div>
                   <div className="flex flex-col gap-ds-1">
-                    <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Órdenes de Trabajo/Servicio a incluir</label>
+                    <span className="font-ds-body text-ds-caption font-medium text-ds-text/70">Órdenes de Trabajo/Servicio a incluir</span>
                     {trabajos.length === 0 && <p className="font-ds-body text-ds-small text-ds-text/70">No hay trabajos todavía.</p>}
                     <div className="flex max-h-48 flex-col gap-1 overflow-y-auto rounded-ds-md border border-ds-divider p-ds-2">
                       {trabajos.map((t) => (
@@ -338,8 +338,9 @@ function CobrosContenido() {
                 ]}
               />
               <div className="flex flex-col gap-ds-1">
-                <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Cliente</label>
+                <label htmlFor="filtro-cobros-cliente" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Cliente</label>
                 <Combobox
+                  id="filtro-cobros-cliente"
                   value={filtroClienteId}
                   onChange={setFiltroClienteId}
                   opciones={[{ id: "todos", label: "Todos" }, ...clientes.map((c) => ({ id: c.id, label: c.nombre }))]}

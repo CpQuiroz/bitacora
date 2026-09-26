@@ -5,6 +5,7 @@ import type { PropsInput, TipoInput } from "../tipos";
 import { useMarca } from "./marca";
 import { FUENTE_NATIVE } from "./fuentes";
 import { Campo } from "./campo";
+import { ESCALA_FUENTE_MAX } from "./accesibilidad";
 
 const TECLADO: Record<TipoInput, KeyboardTypeOptions> = {
   texto: "default",
@@ -40,6 +41,7 @@ export function Input({
   autoFoco,
   autoCapitalizar = true,
   onSubmit,
+  etiquetaAccesible,
 }: PropsInput) {
   const marca = useMarca();
   const [enfocado, setEnfocado] = useState(false);
@@ -54,7 +56,8 @@ export function Input({
         ) : null}
         <TextInput
           // El lector de pantalla (y las pruebas) ubican el campo por su etiqueta.
-          accessibilityLabel={etiqueta}
+          accessibilityLabel={etiqueta ?? etiquetaAccesible}
+          maxFontSizeMultiplier={ESCALA_FUENTE_MAX}
           value={valor}
           onChangeText={onCambio}
           placeholder={placeholder}

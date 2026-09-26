@@ -313,8 +313,9 @@ export default function NuevaRutaPage() {
           <form onSubmit={onCrearRuta} className="flex flex-col gap-ds-4">
             <div className="grid gap-ds-4 sm:grid-cols-2">
               <div className="flex flex-col gap-ds-1">
-                <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Colaborador</label>
+                <label htmlFor="ruta-colaborador" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Colaborador</label>
                 <ComboboxResponsable
+                  id="ruta-colaborador"
                   value={responsableId}
                   onChange={setResponsableId}
                   equipo={equipo}
@@ -328,8 +329,8 @@ export default function NuevaRutaPage() {
               </div>
               <DatePickerCampo etiqueta="Fecha de la primera tarea" valor={fechaInicio} onCambio={setFechaInicio} />
               <div className="flex flex-col gap-ds-1 sm:col-span-2">
-                <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Punto base / origen de la ruta</label>
                 <Input
+                  etiqueta="Punto base / origen de la ruta"
                   tipo="texto"
                   requerido
                   placeholder="Dirección — se ubica sola en el mapa"
@@ -340,7 +341,7 @@ export default function NuevaRutaPage() {
             </div>
 
             <div className="flex flex-col gap-ds-1">
-              <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Jornada de trabajo (días)</label>
+              <span className="font-ds-body text-ds-caption font-medium text-ds-text/70">Jornada de trabajo (días)</span>
               <div className="flex flex-wrap gap-ds-2">
                 {DIAS.map((d) => (
                   <button
@@ -361,19 +362,19 @@ export default function NuevaRutaPage() {
 
             <div className="grid gap-ds-4 sm:grid-cols-2">
               <div className="flex flex-col gap-ds-1">
-                <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Horario de trabajo</label>
+                <span className="font-ds-body text-ds-caption font-medium text-ds-text/70">Horario de trabajo</span>
                 <div className="flex items-center gap-ds-2">
-                  <Input tipo="hora" requerido valor={horaInicio} onCambio={setHoraInicio} />
+                  <Input tipo="hora" etiquetaAccesible="Inicio de la jornada" requerido valor={horaInicio} onCambio={setHoraInicio} />
                   <span className="text-ds-text-secondary">a</span>
-                  <Input tipo="hora" requerido valor={horaFin} onCambio={setHoraFin} />
+                  <Input tipo="hora" etiquetaAccesible="Fin de la jornada" requerido valor={horaFin} onCambio={setHoraFin} />
                 </div>
               </div>
               <div className="flex flex-col gap-ds-1">
-                <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Intervalo de almuerzo</label>
+                <span className="font-ds-body text-ds-caption font-medium text-ds-text/70">Intervalo de almuerzo</span>
                 <div className="flex items-center gap-ds-2">
-                  <Input tipo="hora" valor={almuerzoInicio} onCambio={setAlmuerzoInicio} />
+                  <Input tipo="hora" etiquetaAccesible="Inicio del almuerzo" valor={almuerzoInicio} onCambio={setAlmuerzoInicio} />
                   <span className="text-ds-text-secondary">a</span>
-                  <Input tipo="hora" valor={almuerzoFin} onCambio={setAlmuerzoFin} />
+                  <Input tipo="hora" etiquetaAccesible="Fin del almuerzo" valor={almuerzoFin} onCambio={setAlmuerzoFin} />
                 </div>
               </div>
             </div>
@@ -449,8 +450,9 @@ export default function NuevaRutaPage() {
                 <form onSubmit={onCrearTarea} className="mb-ds-6 flex flex-col gap-ds-4 rounded-ds-md border border-ds-divider p-ds-4">
                   <div className="grid gap-ds-4 sm:grid-cols-2">
                     <div className="flex flex-col gap-ds-1 sm:col-span-2">
-                      <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Cliente</label>
+                      <label htmlFor="tarea-cliente" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Cliente</label>
                       <ComboboxCliente
+                        id="tarea-cliente"
                         value={clienteId}
                         onChange={setClienteId}
                         clientes={clientes}
@@ -496,10 +498,11 @@ export default function NuevaRutaPage() {
                     </div>
                     <Input etiqueta="Email para encuesta de satisfacción (opcional)" tipo="email" valor={encuestaEmail} onCambio={setEncuestaEmail} />
                     <div className="flex flex-col gap-ds-1">
-                      <label className="flex items-center gap-1 font-ds-body text-ds-caption font-medium text-ds-text/70">
+                      <label htmlFor="tarea-anexos" className="flex items-center gap-1 font-ds-body text-ds-caption font-medium text-ds-text/70">
                         <Paperclip size={14} strokeWidth={2.75} /> Anexos (opcional, máx. 20MB c/u)
                       </label>
                       <input
+                        id="tarea-anexos"
                         ref={inputAnexosRef}
                         type="file"
                         multiple

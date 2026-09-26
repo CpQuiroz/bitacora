@@ -128,8 +128,8 @@ function ServiciosCard({ servicios, onCambio }: { servicios: Servicio[] | null; 
           <div className="grid gap-ds-4 sm:grid-cols-3">
             <Input etiqueta="Nombre" placeholder="Ej: Manicure" valor={nombre} onCambio={setNombre} />
             <div className="flex flex-col gap-ds-1">
-              <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Precio de lista</label>
-              <InputMonto value={precio} onChange={setPrecio} moneda={usuario.empresa.moneda} />
+              <label htmlFor="servicio-precio" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Precio de lista</label>
+              <InputMonto id="servicio-precio" value={precio} onChange={setPrecio} moneda={usuario.empresa.moneda} />
             </div>
             <Input
               etiqueta="Duración sugerida (min)"
@@ -323,8 +323,8 @@ function TiposPackCard({ servicios }: { servicios: Servicio[] | null }) {
               onCambio={(v) => setCantidadSesiones(Number(v) || 1)}
             />
             <div className="flex flex-col gap-ds-1">
-              <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Precio total (recomendado)</label>
-              <InputMonto placeholder="45000" value={precio} onChange={setPrecio} moneda={usuario.empresa.moneda} />
+              <label htmlFor="paquete-precio" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Precio total (recomendado)</label>
+              <InputMonto id="paquete-precio" placeholder="45000" value={precio} onChange={setPrecio} moneda={usuario.empresa.moneda} />
             </div>
             <Select
               etiqueta="Servicio al que aplica (opcional)"

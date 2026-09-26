@@ -120,7 +120,7 @@ export function SuperAdminEmpresasListScreen({ navigation }: NativeStackScreenPr
 function FabNuevaEmpresa({ onPress }: { onPress: () => void }) {
   const marca = useMarca();
   return (
-    <Pressable
+    <Pressable accessibilityRole="button" accessibilityLabel="Nueva empresa"
       onPress={onPress}
       style={{
         position: "absolute",

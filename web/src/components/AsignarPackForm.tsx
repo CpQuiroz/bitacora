@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useId, useState, type FormEvent } from "react";
 import type { Cliente, TipoPack } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
 import { Button, Input, Select, Textarea } from "@bitacora/ui/web";
@@ -38,6 +38,7 @@ export function AsignarPackForm({
   onAsignado: () => void;
   onCancelar: () => void;
 }) {
+  const uid = useId();
   const clienteFijo = Boolean(clienteIdFijo);
   const [clienteId, setClienteId] = useState(clienteIdFijo ?? "");
   const [tipoPackId, setTipoPackId] = useState(inicial?.tipoPackId ?? "");
@@ -111,8 +112,8 @@ export function AsignarPackForm({
       <div className="grid gap-ds-4 sm:grid-cols-2">
         {!clienteFijo && (
           <div className="flex flex-col gap-ds-1">
-            <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Cliente</label>
-            <ComboboxCliente value={clienteId} onChange={setClienteId} clientes={clientes ?? []} onClienteCreado={(c) => onClienteCreado?.(c)} />
+            <label htmlFor={`${uid}-cliente`} className="font-ds-body text-ds-caption font-medium text-ds-text/70">Cliente</label>
+            <ComboboxCliente id={`${uid}-cliente`} value={clienteId} onChange={setClienteId} clientes={clientes ?? []} onClienteCreado={(c) => onClienteCreado?.(c)} />
           </div>
         )}
         {tiposPack.length > 0 && (
@@ -146,8 +147,8 @@ export function AsignarPackForm({
           </>
         )}
         <div className="flex flex-col gap-ds-1">
-          <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Precio pagado (opcional)</label>
-          <InputMonto placeholder={tipoElegido?.precio != null ? String(tipoElegido.precio) : "0"} value={precioPagado} onChange={setPrecioPagado} moneda={moneda} />
+          <label htmlFor={`${uid}-precio`} className="font-ds-body text-ds-caption font-medium text-ds-text/70">Precio pagado (opcional)</label>
+          <InputMonto id={`${uid}-precio`} placeholder={tipoElegido?.precio != null ? String(tipoElegido.precio) : "0"} value={precioPagado} onChange={setPrecioPagado} moneda={moneda} />
           <p className="font-ds-body text-ds-caption text-ds-text-secondary">Lo realmente cobrado. Vacío = el precio de lista.</p>
         </div>
         <div className="sm:col-span-2">

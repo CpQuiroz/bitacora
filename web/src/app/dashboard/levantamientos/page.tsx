@@ -481,8 +481,9 @@ function LevantamientosContenido() {
             <Input etiqueta="Hora (opcional)" tipo="hora" valor={horaVisita} onCambio={setHoraVisita} />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-ds-small font-medium text-ds-text/80">Qué necesita evaluar el técnico</label>
+            <label htmlFor="levantamiento-descripcion" className="text-ds-small font-medium text-ds-text/80">Qué necesita evaluar el técnico</label>
             <textarea
+              id="levantamiento-descripcion"
               className="min-h-24 rounded-ds-md border border-ds-divider bg-ds-surface p-ds-3 text-ds-body text-ds-text outline-none focus-visible:ring-2 focus-visible:ring-ds-accent"
               value={descripcion}
               onChange={(e) => setDescripcion(e.target.value)}
@@ -704,8 +705,8 @@ function LevantamientosContenido() {
 
             {detalle.estado === "completado_tecnico" ? (
               <div className="flex flex-col gap-ds-2 border-t border-ds-divider pt-ds-3">
-                <label className="text-ds-small font-medium text-ds-text/80">Referencia de la cotización externa (opcional)</label>
-                <Input valor={referenciaExterna} onCambio={setReferenciaExterna} placeholder="Ej.: Defontana folio 4821" />
+                <label htmlFor="levantamiento-referencia" className="text-ds-small font-medium text-ds-text/80">Referencia de la cotización externa (opcional)</label>
+                <Input id="levantamiento-referencia" valor={referenciaExterna} onCambio={setReferenciaExterna} placeholder="Ej.: Defontana folio 4821" />
                 <Button variante="primario" cargando={accionando} onPress={marcarCotizado}>
                   Marcar cotizado externamente
                 </Button>

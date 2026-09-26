@@ -260,9 +260,10 @@ function TiposOsTrabajoContenido() {
           <div className="grid gap-ds-4 sm:grid-cols-2">
             <Input etiqueta="Nombre" placeholder="ej: Mantención Preventiva" valor={nombre} onCambio={setNombre} />
             <div className="flex flex-col gap-ds-1">
-              <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Color</label>
+              <label htmlFor="tipo-os-color" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Color</label>
               <div className="flex items-center gap-ds-3">
                 <input
+                  id="tipo-os-color"
                   type="color"
                   value={color}
                   onChange={(e) => setColor(e.target.value)}
@@ -296,7 +297,7 @@ function TiposOsTrabajoContenido() {
 
           <div className="mt-ds-5">
             <div className="mb-ds-2 flex items-center justify-between">
-              <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Campos personalizados</label>
+              <span className="font-ds-body text-ds-caption font-medium text-ds-text/70">Campos personalizados</span>
               <Button variante="secundario" tamano="sm" onPress={agregarCampo} iconoIzq={<Plus size={14} strokeWidth={2.75} />}>
                 Agregar campo
               </Button>

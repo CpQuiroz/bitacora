@@ -30,7 +30,7 @@ const ETIQUETA_PERIODO: Record<string, string> = { diario: "Diario", semanal: "S
 function FabNuevaRendicion({ onPress }: { onPress: () => void }) {
   const marca = useMarca();
   return (
-    <Pressable
+    <Pressable accessibilityRole="button" accessibilityLabel="Nueva rendición"
       onPress={onPress}
       style={{
         position: "absolute",

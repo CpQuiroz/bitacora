@@ -221,8 +221,8 @@ export default function RendicionesPage() {
                   ]}
                 />
                 <div className="flex flex-col gap-ds-1">
-                  <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Monto entregado</label>
-                  <InputMonto required value={montoEntregado} onChange={setMontoEntregado} moneda={usuario.moneda} />
+                  <label htmlFor="rendicion-monto-entregado" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Monto entregado</label>
+                  <InputMonto id="rendicion-monto-entregado" required value={montoEntregado} onChange={setMontoEntregado} moneda={usuario.moneda} />
                 </div>
                 <DatePicker etiqueta="Fecha de inicio" valor={aFecha(fechaInicio)} onCambio={(f) => setFechaInicio(aTexto(f))} />
                 <DatePicker etiqueta="Fecha de término" valor={aFecha(fechaTermino)} onCambio={(f) => setFechaTermino(aTexto(f))} />

@@ -6,6 +6,7 @@ import type { MensajeAsistente } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
 import { EmptyState, ErrorState, LoadingState, Texto, useMarca } from "@bitacora/ui/native";
 import { borrarHistorialAsistente, enviarAlAsistente, historialAsistente } from "../../services/asistente";
+import { ESCALA_FUENTE_MAX } from "@bitacora/ui/native";
 
 // Se entra desde el botón de la cabecera de "Hoy" y desde "Más" → solo
 // necesita setOptions, así que no se ata a un ParamList concreto.
@@ -71,7 +72,7 @@ export function AsistenteScreen({ navigation }: { navigation: NavConOpciones }) 
     navigation.setOptions({
       headerRight: () =>
         mensajes && mensajes.length > 0 ? (
-          <Pressable onPress={limpiar} hitSlop={10}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Borrar conversación" onPress={limpiar} hitSlop={10}>
             <Trash2 size={20} color={tokens.color.textSecondary} />
           </Pressable>
         ) : null,
@@ -222,7 +223,7 @@ export function AsistenteScreen({ navigation }: { navigation: NavConOpciones }) 
           backgroundColor: tokens.color.surface,
         }}
       >
-        <TextInput
+        <TextInput maxFontSizeMultiplier={ESCALA_FUENTE_MAX}
           value={texto}
           onChangeText={setTexto}
           placeholder="Escribe tu pregunta…"
@@ -243,7 +244,7 @@ export function AsistenteScreen({ navigation }: { navigation: NavConOpciones }) 
             paddingBottom: tokens.space["3"],
           }}
         />
-        <Pressable
+        <Pressable accessibilityRole="button" accessibilityLabel="Enviar"
           onPress={() => enviar(texto)}
           disabled={enviando || !texto.trim()}
           style={{

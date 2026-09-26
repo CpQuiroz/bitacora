@@ -414,7 +414,7 @@ export function ChecklistMantencionScreen({ route, navigation }: NativeStackScre
               {fotos.map((f, i) => (
                 <View key={`${f.uri}-${i}`} style={{ width: 84, height: 84 }}>
                   <Image source={{ uri: f.uri }} style={{ width: 84, height: 84, borderRadius: tokens.radius.md, backgroundColor: tokens.color.neutral["200"] }} />
-                  <Pressable
+                  <Pressable accessibilityRole="button" accessibilityLabel="Quitar foto"
                     onPress={() => quitarFoto(i)}
                     hitSlop={8}
                     style={{ position: "absolute", right: -6, top: -6, width: 24, height: 24, borderRadius: 12, backgroundColor: tokens.color.accentRamp["700"], alignItems: "center", justifyContent: "center" }}

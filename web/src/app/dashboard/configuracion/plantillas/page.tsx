@@ -340,9 +340,10 @@ export default function PlantillasPage() {
                 <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Colores</p>
                 <div className="grid gap-ds-4 sm:grid-cols-2">
                   <div>
-                    <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Color primario</label>
+                    <label htmlFor="plantilla-color-primario" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Color primario</label>
                     <div className="mt-ds-1 flex items-center gap-ds-3">
                       <input
+                        id="plantilla-color-primario"
                         type="color"
                         value={colorPrimario}
                         onChange={(e) => setColorPrimario(e.target.value)}
@@ -354,9 +355,10 @@ export default function PlantillasPage() {
                     </div>
                   </div>
                   <div>
-                    <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Color secundario</label>
+                    <label htmlFor="plantilla-color-secundario" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Color secundario</label>
                     <div className="mt-ds-1 flex items-center gap-ds-3">
                       <input
+                        id="plantilla-color-secundario"
                         type="color"
                         value={colorSecundario}
                         onChange={(e) => setColorSecundario(e.target.value)}
@@ -374,7 +376,7 @@ export default function PlantillasPage() {
                 <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Textos</p>
                 <div className="flex flex-col gap-ds-4">
                   <div>
-                    <label className="mb-ds-1 block font-ds-body text-ds-caption font-medium text-ds-text/70">Texto de encabezado</label>
+                    <span className="mb-ds-1 block font-ds-body text-ds-caption font-medium text-ds-text/70">Texto de encabezado</span>
                     <EditorEncabezado bloques={textoEncabezado} onCambiar={setTextoEncabezado} variables={variablesTab} />
                   </div>
                   <div>

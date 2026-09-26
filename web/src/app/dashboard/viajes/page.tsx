@@ -591,8 +591,9 @@ export default function ViajesPage() {
                 <DatePicker etiqueta="Fecha" valor={aFecha(fecha)} onCambio={(f) => setFecha(aTexto(f))} />
                 <Input etiqueta="Número de guía" requerido valor={numeroGuia} onCambio={setNumeroGuia} />
                 <div className="flex flex-col gap-ds-1">
-                  <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Cliente</label>
+                  <label htmlFor="viaje-cliente" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Cliente</label>
                   <ComboboxCliente
+                    id="viaje-cliente"
                     value={clienteId}
                     onChange={(id) => {
                       setClienteId(id);
@@ -606,16 +607,17 @@ export default function ViajesPage() {
                   />
                 </div>
                 <div className="flex flex-col gap-ds-1">
-                  <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Chofer (opcional)</label>
-                  <ComboboxResponsable value={choferId} onChange={setChoferId} equipo={choferes} opcionVacia="Sin asignar" placeholder="Sin asignar" />
+                  <label htmlFor="viaje-chofer" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Chofer (opcional)</label>
+                  <ComboboxResponsable id="viaje-chofer" value={choferId} onChange={setChoferId} equipo={choferes} opcionVacia="Sin asignar" placeholder="Sin asignar" />
                   {choferes.length === 0 ? (
                     <p className="font-ds-body text-ds-caption text-ds-text-secondary">Para asignar, marca a la persona con la función Chofer en Personas.</p>
                   ) : null}
                 </div>
                 <Input etiqueta="Hora de salida (opcional)" tipo="hora" valor={hora} onCambio={setHora} />
                 <div className="flex flex-col gap-ds-1">
-                  <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Origen</label>
+                  <label htmlFor="viaje-origen" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Origen</label>
                   <Combobox
+                    id="viaje-origen"
                     value={origen}
                     onChange={setOrigen}
                     opciones={opcionesCiudad}
@@ -628,8 +630,9 @@ export default function ViajesPage() {
                   />
                 </div>
                 <div className="flex flex-col gap-ds-1">
-                  <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Destino</label>
+                  <label htmlFor="viaje-destino" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Destino</label>
                   <Combobox
+                    id="viaje-destino"
                     value={destino}
                     onChange={setDestino}
                     opciones={opcionesCiudad}
@@ -644,8 +647,8 @@ export default function ViajesPage() {
                 <Input etiqueta="Km inicial (opcional)" tipo="numero" valor={kmInicial} onCambio={setKmInicial} />
                 <Input etiqueta="Km final (opcional)" tipo="numero" valor={kmFinal} onCambio={setKmFinal} />
                 <div className="flex flex-col gap-ds-1">
-                  <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Monto del viaje</label>
-                  <InputMonto required value={subtotal} onChange={setSubtotal} moneda={usuario.moneda} />
+                  <label htmlFor="viaje-monto" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Monto del viaje</label>
+                  <InputMonto id="viaje-monto" required value={subtotal} onChange={setSubtotal} moneda={usuario.moneda} />
                 </div>
                 <div className="flex items-end pb-2.5">
                   <label className="flex items-center gap-ds-2 font-ds-body text-ds-small text-ds-text">
@@ -867,8 +870,9 @@ export default function ViajesPage() {
                                 <Input etiqueta="Número de guía" valor={editNumeroGuia} onCambio={setEditNumeroGuia} />
                               </div>
                               <div className="min-w-[180px] flex-1">
-                                <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Origen</label>
+                                <label htmlFor={`viaje-${v.id}-origen`} className="font-ds-body text-ds-caption font-medium text-ds-text/70">Origen</label>
                                 <Combobox
+                                  id={`viaje-${v.id}-origen`}
                                   value={editOrigen}
                                   onChange={setEditOrigen}
                                   opciones={opcionesCiudad}
@@ -881,8 +885,9 @@ export default function ViajesPage() {
                                 />
                               </div>
                               <div className="min-w-[180px] flex-1">
-                                <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Destino</label>
+                                <label htmlFor={`viaje-${v.id}-destino`} className="font-ds-body text-ds-caption font-medium text-ds-text/70">Destino</label>
                                 <Combobox
+                                  id={`viaje-${v.id}-destino`}
                                   value={editDestino}
                                   onChange={setEditDestino}
                                   opciones={opcionesCiudad}
@@ -897,8 +902,9 @@ export default function ViajesPage() {
                             </div>
                             <div className="flex flex-wrap items-end gap-ds-3">
                               <div className="min-w-[220px]">
-                                <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Cliente</label>
+                                <label htmlFor={`viaje-${v.id}-cliente`} className="font-ds-body text-ds-caption font-medium text-ds-text/70">Cliente</label>
                                 <ComboboxCliente
+                                  id={`viaje-${v.id}-cliente`}
                                   value={editClienteId}
                                   onChange={setEditClienteId}
                                   clientes={clientes}
@@ -907,8 +913,9 @@ export default function ViajesPage() {
                                 />
                               </div>
                               <div className="min-w-[180px]">
-                                <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Chofer</label>
+                                <label htmlFor={`viaje-${v.id}-chofer`} className="font-ds-body text-ds-caption font-medium text-ds-text/70">Chofer</label>
                                 <ComboboxResponsable
+                                  id={`viaje-${v.id}-chofer`}
                                   value={editChoferId}
                                   onChange={setEditChoferId}
                                   equipo={v.chofer && !choferes.some((c) => c.id === v.chofer?.id) ? [...choferes, v.chofer as Usuario] : choferes}
@@ -926,9 +933,10 @@ export default function ViajesPage() {
                                 <Input etiqueta="Km final" tipo="numero" valor={editKmFinal} onCambio={setEditKmFinal} />
                               </div>
                               <div className="w-36">
-                                <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Monto del viaje</label>
+                                <label htmlFor={`viaje-${v.id}-monto`} className="font-ds-body text-ds-caption font-medium text-ds-text/70">Monto del viaje</label>
                                 {/* Solo Admin y Supervisor cambian el monto (tarea 132; el backend lo exige). */}
                                 <InputMonto
+                                  id={`viaje-${v.id}-monto`}
                                   value={editSubtotal}
                                   onChange={setEditSubtotal}
                                   moneda={usuario.moneda}

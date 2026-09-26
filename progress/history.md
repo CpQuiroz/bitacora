@@ -304,3 +304,10 @@ Formato:
 - **Cambios:** packages/design-tokens (tokens.json textSecondary, contraste.ts + test, build.ts), packages/shared/contraste.ts, backend miEmpresa.ts, web DashboardShell/PortalShell/configuracion/empresa, packages/ui marca.tsx, mobile ThemeProvider/color.ts, 576 reemplazos por codemod, scripts/check-contraste.mjs, verificar.sh, web/vercel.json (build:packages).
 - **Verificación:** ./verificar.sh verde (tokens 21, shared 51, backend 36, mobile 42, web 22); next build local OK.
 - **Cierre:** commit local, sin push ni build. Pendiente: build mobile a pedido; Agenda/Hoy mobile migrarán al descongelarse.
+
+## 2026-09-26 — Tarea 155: accesibilidad base (auditoría UX ronda 3)
+- **Agente:** Claude + implementador (pantallas web, `progress/impl_a11y_web.md`)
+- **Plan:** arreglar primitivas web/mobile y hallazgos por pantalla; dejar lint/check que impida regresiones.
+- **Cambios:** packages/ui (web y native), 35 pantallas web, web/eslint.config.mjs (jsx-a11y), mobile (labels, KeyboardAvoidingView, tope de letra), scripts/check-accesibilidad-mobile.mjs, verificar.sh. Agenda mobile descongelada (CLAUDE.md, arquitectura.md) y migrada a contraste AA.
+- **Verificación:** ./verificar.sh verde (web 30, mobile 45, tokens 21, shared 51, backend 36; eslint con jsx-a11y).
+- **Cierre:** commit local, sin push ni build. Próximo: ronda 4 (toasts y diálogos) cuando el humano lo apruebe.

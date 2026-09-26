@@ -355,19 +355,19 @@ export function LevantamientoDetalleScreen({ route, navigation }: NativeStackScr
                     </Texto>
                   ) : (
                     <View style={{ flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: tokens.color.divider, borderRadius: tokens.radius.sm }}>
-                      <Pressable onPress={() => cambiarCantidad(m.catalogo_item_id, -1)} style={{ width: 32, height: 32, alignItems: "center", justifyContent: "center" }}>
+                      <Pressable accessibilityRole="button" accessibilityLabel="Restar uno" hitSlop={6} onPress={() => cambiarCantidad(m.catalogo_item_id, -1)} style={{ width: 32, height: 32, alignItems: "center", justifyContent: "center" }}>
                         <Minus size={15} strokeWidth={2.5} color={tokens.color.text} />
                       </Pressable>
                       <Texto tamano={tokens.size.small} color={tokens.color.text} peso="semibold" style={{ width: 32, textAlign: "center", fontVariant: ["tabular-nums"] }}>
                         {m.cantidad}
                       </Texto>
-                      <Pressable onPress={() => cambiarCantidad(m.catalogo_item_id, 1)} style={{ width: 32, height: 32, alignItems: "center", justifyContent: "center" }}>
+                      <Pressable accessibilityRole="button" accessibilityLabel="Sumar uno" hitSlop={6} onPress={() => cambiarCantidad(m.catalogo_item_id, 1)} style={{ width: 32, height: 32, alignItems: "center", justifyContent: "center" }}>
                         <Plus size={15} strokeWidth={2.5} color={tokens.color.text} />
                       </Pressable>
                     </View>
                   )}
                   {!soloLecturaFila ? (
-                    <Pressable onPress={() => quitarMaterial(m.catalogo_item_id)} hitSlop={8}>
+                    <Pressable accessibilityRole="button" accessibilityLabel="Quitar material" onPress={() => quitarMaterial(m.catalogo_item_id)} hitSlop={8}>
                       <X size={18} strokeWidth={2.5} color={tokens.color.textSecondary} />
                     </Pressable>
                   ) : null}

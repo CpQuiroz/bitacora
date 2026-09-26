@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Alert, Pressable, ScrollView, View } from "react-native";
+import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { Cliente, PaqueteSesionesConSaldo, Prioridad, TipoPack, Usuario } from "@bitacora/shared";
@@ -175,178 +175,180 @@ function NuevaCitaGenerica({ navigation, route }: NativeStackScreenProps<AgendaS
 
   return (
     <View style={{ flex: 1, backgroundColor: tokens.color.bg }}>
-      <ScrollView
-        contentContainerStyle={{ padding: tokens.space["6"], gap: tokens.space["4"], paddingBottom: tokens.space["8"] + insets.bottom }}
-        keyboardShouldPersistTaps="handled"
-      >
-        <Input etiqueta="Título" placeholder="Ej. Manicure + esmaltado" valor={b.titulo} onCambio={(v) => set("titulo", v)} />
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
+        <ScrollView
+          contentContainerStyle={{ padding: tokens.space["6"], gap: tokens.space["4"], paddingBottom: tokens.space["8"] + insets.bottom }}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Input etiqueta="Título" placeholder="Ej. Manicure + esmaltado" valor={b.titulo} onCambio={(v) => set("titulo", v)} />
 
-        <View style={{ gap: tokens.space["1"] }}>
-          <Texto tamano={tokens.size.small} color={tokens.color.textSecondary}>
-            Fecha
-          </Texto>
-          <SelectorDias valor={b.fecha} onElegir={(k) => set("fecha", k)} diasAtras={0} />
-        </View>
-
-        <SelectorHora etiqueta="Hora (opcional)" valor={b.hora} onCambiar={(v) => set("hora", v)} />
-
-        <SelectorCliente
-          etiqueta="Cliente (opcional)"
-          valor={b.cliente_id}
-          onElegir={(id) => set("cliente_id", id)}
-          clientes={clientes}
-          onClienteCreado={(c) => setClientes((prev) => [...(prev ?? []), c])}
-        />
-
-        {agendaPro && b.cliente_id ? (
-          <View style={{ backgroundColor: tokens.color.surface, borderRadius: tokens.radius.md, borderWidth: 1, borderColor: tokens.color.divider, padding: tokens.space["4"], gap: tokens.space["3"] }}>
-            <Texto tamano={tokens.size.small} peso="semibold" color={tokens.color.text}>
-              Paquete de sesiones (Agenda Pro)
+          <View style={{ gap: tokens.space["1"] }}>
+            <Texto tamano={tokens.size.small} color={tokens.color.textSecondary}>
+              Fecha
             </Texto>
-            <PickerBuscable
-              etiqueta="Paquete"
-              placeholder="Sin paquete — cita suelta"
-              opcionVacia="Sin paquete — cita suelta"
-              valor={b.paquete_id}
-              opciones={paquetes.map((p) => ({
-                id: p.id,
-                label: p.nombre,
-                sublabel: `${p.saldo}/${p.cantidad_total} sesiones disponibles`,
-              }))}
-              onElegir={(id) => set("paquete_id", id)}
-            />
-            {b.paquete_id ? (
-              <Input
-                etiqueta="Sesiones que descuenta esta cita"
-                tipo="numero"
-                valor={String(b.sesiones_consumidas)}
-                onCambio={(v) => set("sesiones_consumidas", Math.max(1, Number(v.replace(/\D/g, "")) || 1))}
-              />
-            ) : null}
-
-            {nuevoPaqueteAbierto ? (
-              <View style={{ gap: tokens.space["2"], borderTopWidth: 1, borderTopColor: tokens.color.divider, paddingTop: tokens.space["3"] }}>
-                {tiposPack.length > 0 ? (
-                  <PickerBuscable
-                    etiqueta="Tipo de pack (opcional)"
-                    placeholder="Personalizado"
-                    opcionVacia="Personalizado — completar a mano"
-                    valor={tipoPackId}
-                    opciones={tiposPack.map((tp) => ({ id: tp.id, label: tp.nombre, sublabel: `${tp.cantidad_sesiones} sesiones` }))}
-                    onElegir={(id) => {
-                      setTipoPackId(id);
-                      const tipo = tiposPack.find((tp) => tp.id === id);
-                      if (tipo) {
-                        setNombrePaquete(tipo.nombre);
-                        setCantidadPaquete(String(tipo.cantidad_sesiones));
-                      }
-                    }}
-                  />
-                ) : null}
-                <Input etiqueta="Nombre del paquete" placeholder="Ej. Pack 10 sesiones" valor={nombrePaquete} onCambio={setNombrePaquete} />
-                <Input etiqueta="Cantidad de sesiones" tipo="numero" valor={cantidadPaquete} onCambio={(v) => setCantidadPaquete(v.replace(/\D/g, ""))} />
-                <View style={{ flexDirection: "row", gap: tokens.space["2"] }}>
-                  <Button
-                    cargando={creandoPaquete}
-                    onPress={async () => {
-                      const cant = Number(cantidadPaquete) || 0;
-                      if (!nombrePaquete.trim() || cant <= 0) {
-                        Alert.alert("Faltan datos", "Ponle un nombre y una cantidad de sesiones.");
-                        return;
-                      }
-                      setCreandoPaquete(true);
-                      const r = await crearPaquete({
-                        cliente_id: b.cliente_id,
-                        tipo_pack_id: tipoPackId || undefined,
-                        nombre: nombrePaquete,
-                        cantidad_total: cant,
-                      });
-                      setCreandoPaquete(false);
-                      if (!r.ok) {
-                        Alert.alert("No se pudo crear el paquete", r.error);
-                        return;
-                      }
-                      const ps = await listarPaquetesCliente(b.cliente_id);
-                      setPaquetes(ps);
-                      setB((p) => ({ ...p, paquete_id: r.paquete.id }));
-                      setNuevoPaqueteAbierto(false);
-                      setTipoPackId("");
-                      setNombrePaquete("");
-                      setCantidadPaquete("10");
-                    }}
-                  >
-                    Crear paquete
-                  </Button>
-                  <Button
-                    variante="ghost"
-                    onPress={() => {
-                      setNuevoPaqueteAbierto(false);
-                      setTipoPackId("");
-                    }}
-                  >
-                    Cancelar
-                  </Button>
-                </View>
-              </View>
-            ) : (
-              <Pressable onPress={() => setNuevoPaqueteAbierto(true)} hitSlop={6}>
-                <Texto tamano={tokens.size.caption} peso="semibold" color={marca.base}>
-                  ＋ Crear paquete nuevo para este cliente
-                </Texto>
-              </Pressable>
-            )}
+            <SelectorDias valor={b.fecha} onElegir={(k) => set("fecha", k)} diasAtras={0} />
           </View>
-        ) : null}
 
-        {esGestion ? (
-          <SelectorResponsable
-            etiqueta="Atiende (opcional)"
-            valor={b.responsable_id}
-            onElegir={(id) => set("responsable_id", id)}
-            equipo={equipo}
-            opcionVacia="Sin asignar"
-            permitirInvitar={auth.fase === "listo" && auth.modulosVisibles.includes("gestion_control")}
+          <SelectorHora etiqueta="Hora (opcional)" valor={b.hora} onCambiar={(v) => set("hora", v)} />
+
+          <SelectorCliente
+            etiqueta="Cliente (opcional)"
+            valor={b.cliente_id}
+            onElegir={(id) => set("cliente_id", id)}
+            clientes={clientes}
+            onClienteCreado={(c) => setClientes((prev) => [...(prev ?? []), c])}
           />
-        ) : null}
 
-        <View style={{ gap: tokens.space["1"] }}>
-          <Texto tamano={tokens.size.small} color={tokens.color.textSecondary}>
-            Prioridad
-          </Texto>
-          <View style={{ flexDirection: "row", gap: tokens.space["2"] }}>
-            {PRIORIDADES.map((p) => {
-              const activo = b.prioridad === p.valor;
-              return (
-                <Pressable
-                  key={p.valor}
-                  onPress={() => set("prioridad", p.valor)}
-                  style={{
-                    flex: 1,
-                    minHeight: 44,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    borderRadius: tokens.radius.md,
-                    backgroundColor: activo ? marca.suave : tokens.color.surface,
-                    borderWidth: 1,
-                    borderColor: activo ? marca.base : tokens.color.divider,
-                  }}
-                >
-                  <Texto tamano={tokens.size.small} peso="semibold" color={activo ? marca.fuerte : tokens.color.textSecondary}>
-                    {p.label}
+          {agendaPro && b.cliente_id ? (
+            <View style={{ backgroundColor: tokens.color.surface, borderRadius: tokens.radius.md, borderWidth: 1, borderColor: tokens.color.divider, padding: tokens.space["4"], gap: tokens.space["3"] }}>
+              <Texto tamano={tokens.size.small} peso="semibold" color={tokens.color.text}>
+                Paquete de sesiones (Agenda Pro)
+              </Texto>
+              <PickerBuscable
+                etiqueta="Paquete"
+                placeholder="Sin paquete — cita suelta"
+                opcionVacia="Sin paquete — cita suelta"
+                valor={b.paquete_id}
+                opciones={paquetes.map((p) => ({
+                  id: p.id,
+                  label: p.nombre,
+                  sublabel: `${p.saldo}/${p.cantidad_total} sesiones disponibles`,
+                }))}
+                onElegir={(id) => set("paquete_id", id)}
+              />
+              {b.paquete_id ? (
+                <Input
+                  etiqueta="Sesiones que descuenta esta cita"
+                  tipo="numero"
+                  valor={String(b.sesiones_consumidas)}
+                  onCambio={(v) => set("sesiones_consumidas", Math.max(1, Number(v.replace(/\D/g, "")) || 1))}
+                />
+              ) : null}
+
+              {nuevoPaqueteAbierto ? (
+                <View style={{ gap: tokens.space["2"], borderTopWidth: 1, borderTopColor: tokens.color.divider, paddingTop: tokens.space["3"] }}>
+                  {tiposPack.length > 0 ? (
+                    <PickerBuscable
+                      etiqueta="Tipo de pack (opcional)"
+                      placeholder="Personalizado"
+                      opcionVacia="Personalizado — completar a mano"
+                      valor={tipoPackId}
+                      opciones={tiposPack.map((tp) => ({ id: tp.id, label: tp.nombre, sublabel: `${tp.cantidad_sesiones} sesiones` }))}
+                      onElegir={(id) => {
+                        setTipoPackId(id);
+                        const tipo = tiposPack.find((tp) => tp.id === id);
+                        if (tipo) {
+                          setNombrePaquete(tipo.nombre);
+                          setCantidadPaquete(String(tipo.cantidad_sesiones));
+                        }
+                      }}
+                    />
+                  ) : null}
+                  <Input etiqueta="Nombre del paquete" placeholder="Ej. Pack 10 sesiones" valor={nombrePaquete} onCambio={setNombrePaquete} />
+                  <Input etiqueta="Cantidad de sesiones" tipo="numero" valor={cantidadPaquete} onCambio={(v) => setCantidadPaquete(v.replace(/\D/g, ""))} />
+                  <View style={{ flexDirection: "row", gap: tokens.space["2"] }}>
+                    <Button
+                      cargando={creandoPaquete}
+                      onPress={async () => {
+                        const cant = Number(cantidadPaquete) || 0;
+                        if (!nombrePaquete.trim() || cant <= 0) {
+                          Alert.alert("Faltan datos", "Ponle un nombre y una cantidad de sesiones.");
+                          return;
+                        }
+                        setCreandoPaquete(true);
+                        const r = await crearPaquete({
+                          cliente_id: b.cliente_id,
+                          tipo_pack_id: tipoPackId || undefined,
+                          nombre: nombrePaquete,
+                          cantidad_total: cant,
+                        });
+                        setCreandoPaquete(false);
+                        if (!r.ok) {
+                          Alert.alert("No se pudo crear el paquete", r.error);
+                          return;
+                        }
+                        const ps = await listarPaquetesCliente(b.cliente_id);
+                        setPaquetes(ps);
+                        setB((p) => ({ ...p, paquete_id: r.paquete.id }));
+                        setNuevoPaqueteAbierto(false);
+                        setTipoPackId("");
+                        setNombrePaquete("");
+                        setCantidadPaquete("10");
+                      }}
+                    >
+                      Crear paquete
+                    </Button>
+                    <Button
+                      variante="ghost"
+                      onPress={() => {
+                        setNuevoPaqueteAbierto(false);
+                        setTipoPackId("");
+                      }}
+                    >
+                      Cancelar
+                    </Button>
+                  </View>
+                </View>
+              ) : (
+                <Pressable onPress={() => setNuevoPaqueteAbierto(true)} hitSlop={6}>
+                  <Texto tamano={tokens.size.caption} peso="semibold" color={marca.base}>
+                    ＋ Crear paquete nuevo para este cliente
                   </Texto>
                 </Pressable>
-              );
-            })}
-          </View>
-        </View>
+              )}
+            </View>
+          ) : null}
 
-        <Textarea
-          etiqueta="Notas (opcional)"
-          placeholder="Detalle de la cita"
-          valor={b.descripcion}
-          onCambio={(v) => set("descripcion", v)}
-        />
-      </ScrollView>
+          {esGestion ? (
+            <SelectorResponsable
+              etiqueta="Atiende (opcional)"
+              valor={b.responsable_id}
+              onElegir={(id) => set("responsable_id", id)}
+              equipo={equipo}
+              opcionVacia="Sin asignar"
+              permitirInvitar={auth.fase === "listo" && auth.modulosVisibles.includes("gestion_control")}
+            />
+          ) : null}
+
+          <View style={{ gap: tokens.space["1"] }}>
+            <Texto tamano={tokens.size.small} color={tokens.color.textSecondary}>
+              Prioridad
+            </Texto>
+            <View style={{ flexDirection: "row", gap: tokens.space["2"] }}>
+              {PRIORIDADES.map((p) => {
+                const activo = b.prioridad === p.valor;
+                return (
+                  <Pressable
+                    key={p.valor}
+                    onPress={() => set("prioridad", p.valor)}
+                    style={{
+                      flex: 1,
+                      minHeight: 44,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      borderRadius: tokens.radius.md,
+                      backgroundColor: activo ? marca.suave : tokens.color.surface,
+                      borderWidth: 1,
+                      borderColor: activo ? marca.base : tokens.color.divider,
+                    }}
+                  >
+                    <Texto tamano={tokens.size.small} peso="semibold" color={activo ? marca.fuerte : tokens.color.textSecondary}>
+                      {p.label}
+                    </Texto>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+
+          <Textarea
+            etiqueta="Notas (opcional)"
+            placeholder="Detalle de la cita"
+            valor={b.descripcion}
+            onCambio={(v) => set("descripcion", v)}
+          />
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       <View
         style={{

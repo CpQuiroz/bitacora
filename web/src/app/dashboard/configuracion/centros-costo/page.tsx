@@ -93,7 +93,7 @@ export default function CentrosCostoPage() {
       <Input etiqueta="Nombre" valor={nombre} onCambio={setNombre} />
       {categorias.length > 0 && (
         <div className="mt-ds-4 flex flex-col gap-ds-1">
-          <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Categorías de gasto asociadas</label>
+          <span className="font-ds-body text-ds-caption font-medium text-ds-text/70">Categorías de gasto asociadas</span>
           <div className="flex flex-wrap gap-ds-2">
             {categorias.map((c) => (
               <button

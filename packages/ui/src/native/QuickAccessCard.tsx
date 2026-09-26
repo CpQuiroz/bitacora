@@ -28,7 +28,12 @@ export function QuickAccessCard({ titulo, Icono, badge, tinte = 0, onPress }: Pr
   const fondoIcono = tinte === 0 ? `${tokens.color.accent}22` : `${tokens.color.accent2}22`;
   const colorIcono = tinte === 0 ? tokens.color.accentRamp["700"] : tokens.color.accent2Ramp["700"];
   return (
-    <Pressable onPress={onPress} style={{ flex: 1 }}>
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={badge ? `${titulo}, ${badge} pendientes` : titulo}
+      style={{ flex: 1 }}
+    >
       <View
         style={{
           position: "relative",

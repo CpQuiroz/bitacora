@@ -14,6 +14,21 @@ const eslintConfig = defineConfig([
       "bitacora/no-literal-color-or-px": "error",
     },
   },
+  // Accesibilidad base (tarea 155): cada control con su nombre accesible
+  // (label asociado o aria-label) y nada clicable sin teclado.
+  {
+    files: ["src/**/*.tsx"],
+    rules: {
+      "jsx-a11y/label-has-associated-control": ["error", { assert: "either", depth: 3 }],
+      "jsx-a11y/control-has-associated-label": [
+        "error",
+        { ignoreElements: ["td", "th", "tr", "option", "input", "textarea", "select"], includeRoles: ["button"] },
+      ],
+      "jsx-a11y/no-static-element-interactions": "error",
+      "jsx-a11y/click-events-have-key-events": "error",
+      "jsx-a11y/role-has-required-aria-props": "error",
+    },
+  },
   {
     rules: {
       // "Calling setState synchronously within an effect can trigger

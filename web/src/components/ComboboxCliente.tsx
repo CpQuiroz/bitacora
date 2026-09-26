@@ -22,6 +22,7 @@ export function ComboboxCliente({
   placeholder = "Selecciona un cliente",
   gestionHref,
   gestionLabel,
+  id,
 }: {
   value: string;
   onChange: (id: string) => void;
@@ -33,6 +34,7 @@ export function ComboboxCliente({
   placeholder?: string;
   gestionHref?: string;
   gestionLabel?: string;
+  id?: string;
 }) {
   const [creando, setCreando] = useState(false);
   const [nombre, setNombre] = useState("");
@@ -108,6 +110,7 @@ export function ComboboxCliente({
 
   return (
     <Combobox
+      id={id}
       value={value}
       onChange={onChange}
       opciones={[

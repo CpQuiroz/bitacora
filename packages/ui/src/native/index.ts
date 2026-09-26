@@ -16,6 +16,7 @@ export { Cifra } from "./Cifra";
 export { ProveedorMarca, useMarca, resolverMarca, type Marca } from "./marca";
 export { FUENTE_NATIVE } from "./fuentes";
 export { Texto } from "./Texto";
+export { ESCALA_FUENTE_MAX, HIT_SLOP_TEXTO } from "./accesibilidad";
 // Sistema visual móvil v2 (13-sep-2026).
 export { ScreenHeader, type PropsScreenHeader, type OpcionFiltroHeader } from "./ScreenHeader";
 export { ListRow, ListRowGrupo, type PropsListRow } from "./ListRow";

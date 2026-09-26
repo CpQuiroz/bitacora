@@ -22,6 +22,7 @@ export function ComboboxEquipo({
   onEquipoCreado,
   opcionVacia = "Sin equipo específico",
   placeholder = "Selecciona un equipo",
+  id,
 }: {
   value: string;
   onChange: (id: string) => void;
@@ -32,6 +33,7 @@ export function ComboboxEquipo({
   onEquipoCreado: (equipo: Equipo) => void;
   opcionVacia?: string;
   placeholder?: string;
+  id?: string;
 }) {
   const [creando, setCreando] = useState(false);
   const [nombre, setNombre] = useState("");
@@ -93,6 +95,7 @@ export function ComboboxEquipo({
 
   return (
     <Combobox
+      id={id}
       value={value}
       onChange={onChange}
       opciones={[

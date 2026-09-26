@@ -1,5 +1,6 @@
 import { Text, type TextProps } from "react-native";
 import { FUENTE_NATIVE } from "./fuentes";
+import { ESCALA_FUENTE_MAX } from "./accesibilidad";
 
 /**
  * Texto mínimo para uso INTERNO de las primitivas (labels, mensajes de
@@ -14,5 +15,5 @@ export function Texto({
   ...props
 }: TextProps & { tamano: number; color: string; peso?: "regular" | "medium" | "semibold" }) {
   const familia = { regular: FUENTE_NATIVE.body, medium: FUENTE_NATIVE.bodyMedium, semibold: FUENTE_NATIVE.bodySemiBold }[peso];
-  return <Text {...props} style={[{ fontFamily: familia, fontSize: tamano, color }, style]} />;
+  return <Text maxFontSizeMultiplier={ESCALA_FUENTE_MAX} {...props} style={[{ fontFamily: familia, fontSize: tamano, color }, style]} />;
 }

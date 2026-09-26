@@ -171,7 +171,7 @@ export function FotosSection({
                   — indistinguible de "no se puede". Botón visible, mismo
                   lugar que el "Eliminar foto" de una foto ya subida. */}
               {onQuitarPendiente ? (
-                <Pressable
+                <Pressable accessibilityRole="button" accessibilityLabel="Quitar foto pendiente"
                   onPress={() => onQuitarPendiente(p.id)}
                   hitSlop={6}
                   style={{
@@ -217,7 +217,7 @@ export function FotosSection({
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: tokens.space["2"] }}>
               {delGrupo.map((f) => (
                 <View key={f.id} style={{ width: LADO, gap: 2 }}>
-                  <Pressable onPress={() => setAbierta(f)}>
+                  <Pressable accessibilityRole="imagebutton" accessibilityLabel="Ver foto" onPress={() => setAbierta(f)}>
                     <View style={[cuadro, { overflow: "hidden", borderWidth: 1, borderColor: tokens.color.divider }]}>
                       <Image source={{ uri: f.url }} style={{ width: "100%", height: "100%" }} />
                       {f.estado === "procesando" ? (
@@ -251,7 +251,7 @@ export function FotosSection({
                 </View>
               ))}
               {esActiva && total < MAX ? (
-                <Pressable onPress={agregar} disabled={ocupado}>
+                <Pressable accessibilityRole="button" accessibilityLabel="Agregar foto" onPress={agregar} disabled={ocupado}>
                   <View
                     style={[
                       cuadro,

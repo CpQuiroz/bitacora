@@ -198,8 +198,9 @@ function NuevaCotizacionContenido() {
         <Card>
           <div className="grid gap-ds-4 sm:grid-cols-2">
             <div className="flex flex-col gap-ds-1">
-              <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Cliente</label>
+              <label htmlFor="cotizacion-cliente" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Cliente</label>
               <ComboboxCliente
+                id="cotizacion-cliente"
                 value={clienteId}
                 onChange={setClienteId}
                 clientes={clientes}
@@ -239,12 +240,12 @@ function NuevaCotizacionContenido() {
             <div className="grid gap-ds-4 sm:grid-cols-2 lg:grid-cols-3">
               <DatePicker etiqueta="Fecha del viaje (opcional)" valor={aFecha(fechaViaje)} onCambio={(f) => setFechaViaje(aTexto(f))} />
               <div className="flex flex-col gap-ds-1">
-                <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Origen</label>
-                <Combobox value={origen} onChange={setOrigen} opciones={opcionesCiudad} placeholder="Ciudad de origen" etiquetaCrear={(t) => `Usar "${t}"`} onCrear={(t) => { agregarCiudadLibre(t); setOrigen(t); }} />
+                <label htmlFor="cotizacion-origen" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Origen</label>
+                <Combobox id="cotizacion-origen" value={origen} onChange={setOrigen} opciones={opcionesCiudad} placeholder="Ciudad de origen" etiquetaCrear={(t) => `Usar "${t}"`} onCrear={(t) => { agregarCiudadLibre(t); setOrigen(t); }} />
               </div>
               <div className="flex flex-col gap-ds-1">
-                <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Destino</label>
-                <Combobox value={destino} onChange={setDestino} opciones={opcionesCiudad} placeholder="Ciudad de destino" etiquetaCrear={(t) => `Usar "${t}"`} onCrear={(t) => { agregarCiudadLibre(t); setDestino(t); }} />
+                <label htmlFor="cotizacion-destino" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Destino</label>
+                <Combobox id="cotizacion-destino" value={destino} onChange={setDestino} opciones={opcionesCiudad} placeholder="Ciudad de destino" etiquetaCrear={(t) => `Usar "${t}"`} onCrear={(t) => { agregarCiudadLibre(t); setDestino(t); }} />
               </div>
               <PrecioViaje
                 modo={modoPrecio}
@@ -262,8 +263,8 @@ function NuevaCotizacionContenido() {
                 moneda={usuario.moneda}
               />
               <div className="flex flex-col gap-ds-1">
-                <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Monto del viaje (neto)</label>
-                <InputMonto required value={montoViaje} onChange={setMontoViaje} moneda={usuario.moneda} />
+                <label htmlFor="cotizacion-monto-viaje" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Monto del viaje (neto)</label>
+                <InputMonto id="cotizacion-monto-viaje" required value={montoViaje} onChange={setMontoViaje} moneda={usuario.moneda} />
               </div>
             </div>
             <div className="mt-ds-6 flex flex-col items-end gap-ds-1 border-t border-ds-divider pt-ds-4 font-ds-body text-ds-small">
@@ -285,8 +286,8 @@ function NuevaCotizacionContenido() {
                 <Input etiqueta="Descripción" requerido valor={l.descripcion} onCambio={(v) => cambiarLinea(idx, { descripcion: v })} />
                 <Input etiqueta="Cantidad" tipo="numero" requerido valor={l.cantidad} onCambio={(v) => cambiarLinea(idx, { cantidad: v })} />
                 <div className="flex flex-col gap-ds-1">
-                  <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Precio unitario</label>
-                  <InputMonto required value={l.precio_unitario} onChange={(v) => cambiarLinea(idx, { precio_unitario: v })} moneda={usuario.moneda} />
+                  <label htmlFor={`linea-${idx}-precio`} className="font-ds-body text-ds-caption font-medium text-ds-text/70">Precio unitario</label>
+                  <InputMonto id={`linea-${idx}-precio`} required value={l.precio_unitario} onChange={(v) => cambiarLinea(idx, { precio_unitario: v })} moneda={usuario.moneda} />
                 </div>
                 <Button variante="ghost" onPress={() => quitarLinea(idx)}>
                   Quitar
@@ -295,16 +296,16 @@ function NuevaCotizacionContenido() {
               {preciosAvanzados && (
                 <div className="grid gap-ds-3 sm:grid-cols-3">
                   <div className="flex flex-col gap-ds-1">
-                    <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Costo (opcional)</label>
-                    <InputMonto value={l.costo} onChange={(v) => cambiarLinea(idx, { costo: v })} moneda={usuario.moneda} />
+                    <label htmlFor={`linea-${idx}-costo`} className="font-ds-body text-ds-caption font-medium text-ds-text/70">Costo (opcional)</label>
+                    <InputMonto id={`linea-${idx}-costo`} value={l.costo} onChange={(v) => cambiarLinea(idx, { costo: v })} moneda={usuario.moneda} />
                   </div>
                   <div className="flex flex-col gap-ds-1">
-                    <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">P. mayorista (opcional)</label>
-                    <InputMonto value={l.precio_mayorista} onChange={(v) => cambiarLinea(idx, { precio_mayorista: v })} moneda={usuario.moneda} />
+                    <label htmlFor={`linea-${idx}-mayorista`} className="font-ds-body text-ds-caption font-medium text-ds-text/70">P. mayorista (opcional)</label>
+                    <InputMonto id={`linea-${idx}-mayorista`} value={l.precio_mayorista} onChange={(v) => cambiarLinea(idx, { precio_mayorista: v })} moneda={usuario.moneda} />
                   </div>
                   <div className="flex flex-col gap-ds-1">
-                    <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">P. minorista (opcional)</label>
-                    <InputMonto value={l.precio_minorista} onChange={(v) => cambiarLinea(idx, { precio_minorista: v })} moneda={usuario.moneda} />
+                    <label htmlFor={`linea-${idx}-minorista`} className="font-ds-body text-ds-caption font-medium text-ds-text/70">P. minorista (opcional)</label>
+                    <InputMonto id={`linea-${idx}-minorista`} value={l.precio_minorista} onChange={(v) => cambiarLinea(idx, { precio_minorista: v })} moneda={usuario.moneda} />
                   </div>
                 </div>
               )}

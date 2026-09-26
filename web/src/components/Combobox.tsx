@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
 
 export type ComboboxOpcion = { id: string; label: string };
@@ -27,6 +27,7 @@ export function Combobox({
   disabled,
   gestionHref,
   gestionLabel,
+  id,
 }: {
   value: string;
   onChange: (id: string) => void;
@@ -40,7 +41,9 @@ export function Combobox({
   // nombre). Se abre en una pestaña nueva para no perder el formulario.
   gestionHref?: string;
   gestionLabel?: string;
+  id?: string;
 }) {
+  const listboxId = useId();
   const [abierto, setAbierto] = useState(false);
   const [texto, setTexto] = useState("");
   const [indiceActivo, setIndiceActivo] = useState(0);
@@ -123,8 +126,10 @@ export function Combobox({
     <div ref={contenedorRef} className="relative">
       <input
         ref={inputRef}
+        id={id}
         type="text"
         role="combobox"
+        aria-controls={listboxId}
         aria-expanded={abierto}
         aria-autocomplete="list"
         autoComplete="off"
@@ -151,6 +156,7 @@ export function Combobox({
       />
       {abierto ? (
         <div
+          id={listboxId}
           role="listbox"
           className="absolute z-20 mt-ds-1 max-h-60 w-full overflow-auto rounded-ds-md border border-ds-divider bg-ds-surface py-ds-1 shadow-ds-md"
         >

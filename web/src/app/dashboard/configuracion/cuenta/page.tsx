@@ -214,7 +214,7 @@ export default function CuentaPage() {
             className="hidden"
             id="input-foto-perfil"
           />
-          <label htmlFor="input-foto-perfil" onClick={() => inputFotoRef.current?.click()} className="cursor-pointer">
+          <button type="button" aria-label="Cambiar foto de perfil" onClick={() => inputFotoRef.current?.click()} className="cursor-pointer rounded-ds-pill">
             {usuario.foto_url ? (
               <Image src={usuario.foto_url} alt={usuario.nombre} width={64} height={64} className="h-16 w-16 rounded-ds-pill border border-ds-divider object-cover" />
             ) : (
@@ -222,15 +222,11 @@ export default function CuentaPage() {
                 {iniciales(usuario.nombre)}
               </div>
             )}
-          </label>
+          </button>
           <div>
-            <label htmlFor="input-foto-perfil" onClick={() => inputFotoRef.current?.click()} className="inline-block cursor-pointer">
-              <div className="pointer-events-none">
-                <Button variante="secundario" deshabilitado={subiendoFoto}>
-                  {subiendoFoto ? "Subiendo…" : "Cambiar imagen"}
-                </Button>
-              </div>
-            </label>
+            <Button variante="secundario" deshabilitado={subiendoFoto} onPress={() => inputFotoRef.current?.click()}>
+              {subiendoFoto ? "Subiendo…" : "Cambiar imagen"}
+            </Button>
             <p className="mt-ds-2 font-ds-body text-ds-caption text-ds-text-secondary">JPG, PNG o WEBP · máx. 5MB</p>
             {errorFoto ? <p className="mt-ds-2 font-ds-body text-ds-small text-ds-accent-700">{errorFoto}</p> : null}
           </div>

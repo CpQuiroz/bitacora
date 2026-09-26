@@ -380,8 +380,8 @@ export default function CobroDetallePage() {
           </div>
           <DatePicker etiqueta="Fecha del pago" valor={aFecha(fechaPago)} onCambio={(f) => setFechaPago(aTexto(f))} />
           <div className="flex flex-col gap-ds-1">
-            <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Valor recibido</label>
-            <InputMonto required value={valorRecibido} onChange={setValorRecibido} moneda={usuario.moneda} />
+            <label htmlFor="pago-valor-recibido" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Valor recibido</label>
+            <InputMonto id="pago-valor-recibido" required value={valorRecibido} onChange={setValorRecibido} moneda={usuario.moneda} />
           </div>
           <Select etiqueta="Forma de pago" valor={medioPago} onCambio={(v) => setMedioPago(v as MedioPago)} opciones={Object.entries(MEDIOS_ETIQUETA).map(([valor, etiqueta]) => ({ valor, etiqueta }))} />
           <Textarea etiqueta="Observaciones (opcional)" filas={2} valor={observacionesPago} onCambio={setObservacionesPago} />

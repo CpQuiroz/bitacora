@@ -259,12 +259,13 @@ export default function GastosPage() {
                   <Input etiqueta="Descripción" valor={descripcion} onCambio={setDescripcion} />
                 </div>
                 <div className="flex flex-col gap-ds-1">
-                  <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Monto</label>
-                  <InputMonto required value={monto} onChange={setMonto} moneda={usuario.moneda} />
+                  <label htmlFor="gasto-monto" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Monto</label>
+                  <InputMonto id="gasto-monto" required value={monto} onChange={setMonto} moneda={usuario.moneda} />
                 </div>
                 <div className="flex flex-col gap-ds-1">
-                  <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Categoría</label>
+                  <label htmlFor="gasto-categoria" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Categoría</label>
                   <SelectCrear
+                    id="gasto-categoria"
                     value={categoriaGastoId}
                     onChange={setCategoriaGastoId}
                     opciones={categorias}
@@ -277,8 +278,9 @@ export default function GastosPage() {
                   />
                 </div>
                 <div className="flex flex-col gap-ds-1">
-                  <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Centro de costo (opcional)</label>
+                  <label htmlFor="gasto-centro-costo" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Centro de costo (opcional)</label>
                   <SelectCrear
+                    id="gasto-centro-costo"
                     value={centroCostoId}
                     onChange={setCentroCostoId}
                     opciones={centrosCosto}
@@ -291,8 +293,9 @@ export default function GastosPage() {
                   />
                 </div>
                 <div className="flex flex-col gap-ds-1">
-                  <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Proveedor (opcional)</label>
+                  <label htmlFor="gasto-proveedor" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Proveedor (opcional)</label>
                   <SelectCrear
+                    id="gasto-proveedor"
                     value={proveedorId}
                     onChange={setProveedorId}
                     opciones={proveedores}
@@ -322,8 +325,9 @@ export default function GastosPage() {
                 />
                 {estado === "pagado" && <DatePicker etiqueta="Fecha de pago" valor={aFecha(fechaPago)} onCambio={(f) => setFechaPago(aTexto(f))} />}
                 <div className="sm:col-span-2">
-                  <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Comprobante / factura (opcional)</label>
+                  <label htmlFor="gasto-comprobante" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Comprobante / factura (opcional)</label>
                   <input
+                    id="gasto-comprobante"
                     type="file"
                     accept="image/jpeg,image/png,image/webp,application/pdf"
                     onChange={(e) => setComprobante(e.target.files?.[0] ?? null)}

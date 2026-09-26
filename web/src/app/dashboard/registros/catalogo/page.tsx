@@ -340,17 +340,16 @@ export default function CatalogoPage() {
                 />
                 <Input etiqueta="Nombre" requerido valor={nombre} onCambio={setNombre} />
                 <div className="flex flex-col gap-ds-1">
-                  <label className="flex items-center gap-1.5 font-ds-body text-ds-caption font-medium text-ds-text/70">
+                  <label htmlFor="catalogo-sku" className="flex items-center gap-1.5 font-ds-body text-ds-caption font-medium text-ds-text/70">
                     SKU
                     <span title="Código interno para identificar y buscar este ítem rápido — no tiene que ser el mismo del proveedor, es solo tuyo.">
                       <HelpCircle size={14} strokeWidth={2.75} className="text-ds-text-secondary" />
                     </span>
                   </label>
-                  <Input valor={sku} onCambio={setSku} />
+                  <Input id="catalogo-sku" valor={sku} onCambio={setSku} />
                 </div>
                 <div className="flex flex-col gap-ds-1">
-                  <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Categoría</label>
-                  <Input valor={categoria} onCambio={setCategoria} />
+                  <Input etiqueta="Categoría" valor={categoria} onCambio={setCategoria} />
                   <div className="mt-1.5 flex flex-wrap gap-1.5">
                     {chipsCategoria.map((c) => (
                       <button
@@ -367,8 +366,9 @@ export default function CatalogoPage() {
                   </div>
                 </div>
                 <div className="flex flex-col gap-ds-1">
-                  <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Unidad</label>
+                  <label htmlFor="item-unidad" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Unidad</label>
                   <SelectCrear
+                    id="item-unidad"
                     value={unidades.find((u) => u.nombre === unidad)?.id ?? ""}
                     onChange={(id) => setUnidad(unidades.find((u) => u.id === id)?.nombre ?? unidad)}
                     opciones={unidades}
@@ -382,45 +382,45 @@ export default function CatalogoPage() {
                   />
                 </div>
                 <div className="flex flex-col gap-ds-1">
-                  <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Precio base (CLP)</label>
-                  <InputMonto required value={precioBase} onChange={setPrecioBase} moneda={usuario.moneda} />
+                  <label htmlFor="item-precio-base" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Precio base (CLP)</label>
+                  <InputMonto id="item-precio-base" required value={precioBase} onChange={setPrecioBase} moneda={usuario.moneda} />
                 </div>
                 {preciosAvanzados && (
                   <>
                     <div className="flex flex-col gap-ds-1">
-                      <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Costo (opcional)</label>
-                      <InputMonto value={costo} onChange={setCosto} moneda={usuario.moneda} />
+                      <label htmlFor="item-costo" className="font-ds-body text-ds-caption font-medium text-ds-text/70">Costo (opcional)</label>
+                      <InputMonto id="item-costo" value={costo} onChange={setCosto} moneda={usuario.moneda} />
                     </div>
                     <div className="flex flex-col gap-ds-1">
-                      <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">P. mayorista (opcional)</label>
-                      <InputMonto value={precioMayorista} onChange={setPrecioMayorista} moneda={usuario.moneda} />
+                      <label htmlFor="item-mayorista" className="font-ds-body text-ds-caption font-medium text-ds-text/70">P. mayorista (opcional)</label>
+                      <InputMonto id="item-mayorista" value={precioMayorista} onChange={setPrecioMayorista} moneda={usuario.moneda} />
                     </div>
                     <div className="flex flex-col gap-ds-1">
-                      <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">P. minorista (opcional)</label>
-                      <InputMonto value={precioMinorista} onChange={setPrecioMinorista} moneda={usuario.moneda} />
+                      <label htmlFor="item-minorista" className="font-ds-body text-ds-caption font-medium text-ds-text/70">P. minorista (opcional)</label>
+                      <InputMonto id="item-minorista" value={precioMinorista} onChange={setPrecioMinorista} moneda={usuario.moneda} />
                     </div>
                   </>
                 )}
                 {tipo === "producto" && !editandoId && (
                   <div className="flex flex-col gap-ds-1">
-                    <label className="flex items-center gap-1.5 font-ds-body text-ds-caption font-medium text-ds-text/70">
+                    <label htmlFor="catalogo-stock-inicial" className="flex items-center gap-1.5 font-ds-body text-ds-caption font-medium text-ds-text/70">
                       Stock inicial (opcional)
                       <span title="Cantidad con la que arranca este producto. Después, ajustá el stock desde Inventario para mantener el historial de movimientos.">
                         <HelpCircle size={14} strokeWidth={2.75} className="text-ds-text-secondary" />
                       </span>
                     </label>
-                    <Input tipo="numero" valor={stockInicial} onCambio={setStockInicial} />
+                    <Input id="catalogo-stock-inicial" tipo="numero" valor={stockInicial} onCambio={setStockInicial} />
                   </div>
                 )}
                 {tipo === "producto" && (
                   <div className="flex flex-col gap-ds-1">
-                    <label className="flex items-center gap-1.5 font-ds-body text-ds-caption font-medium text-ds-text/70">
+                    <label htmlFor="catalogo-stock-minimo" className="flex items-center gap-1.5 font-ds-body text-ds-caption font-medium text-ds-text/70">
                       Stock mínimo (opcional)
                       <span title="Cuando el stock baja de este número, el producto se marca como 'Stock bajo'. Vacío = usa el mínimo por defecto de la empresa (Configuración → Inventario).">
                         <HelpCircle size={14} strokeWidth={2.75} className="text-ds-text-secondary" />
                       </span>
                     </label>
-                    <Input tipo="numero" placeholder={`Por defecto: ${stockMinimoDefault}`} valor={stockMinimo} onCambio={setStockMinimo} />
+                    <Input id="catalogo-stock-minimo" tipo="numero" placeholder={`Por defecto: ${stockMinimoDefault}`} valor={stockMinimo} onCambio={setStockMinimo} />
                   </div>
                 )}
               </div>
@@ -460,12 +460,12 @@ export default function CatalogoPage() {
               )}
 
               <div className="flex flex-col gap-ds-1">
-                <label className="flex items-center gap-1.5 font-ds-body text-ds-caption font-medium text-ds-text/70">
+                <span className="flex items-center gap-1.5 font-ds-body text-ds-caption font-medium text-ds-text/70">
                   Aplica a tipo(s) de equipo (opcional)
                   <span title="Al armar una OS/Cotización con un equipo asociado, estos ítems se destacan primero — no oculta el resto del catálogo.">
                     <HelpCircle size={14} strokeWidth={2.75} className="text-ds-text-secondary" />
                   </span>
-                </label>
+                </span>
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
                   {tiposEquipoDisponibles.map((t) => (
                     <button
