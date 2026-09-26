@@ -7,7 +7,7 @@ import { EVENTOS } from "@bitacora/shared";
 import { registrarEvento } from "@/lib/analytics";
 import { resolverDestinoPostLogin } from "@/lib/accesoPostLogin";
 import { AuthLayout } from "@/components/AuthLayout";
-import { ErrorText } from "@/components/ui";
+import { Aviso } from "@bitacora/ui/web";
 
 // Destino de redirectTo del signInWithOAuth de Google
 // (web/src/app/login/page.tsx). supabase-js procesa el código/hash de
@@ -58,14 +58,14 @@ export default function AuthCallbackPage() {
     <AuthLayout title="Iniciando sesión…" subtitle={error ? undefined : "Un momento, estamos confirmando tu cuenta de Google"}>
       {error ? (
         <div className="flex flex-col gap-4">
-          <ErrorText>{error}</ErrorText>
-          <button type="button" onClick={() => router.replace("/login")} className="text-sm font-medium text-brand hover:underline">
+          <Aviso tono="error">{error}</Aviso>
+          <button type="button" onClick={() => router.replace("/login")} className="text-ds-small font-medium text-ds-brand hover:underline">
             Volver al inicio de sesión
           </button>
         </div>
       ) : (
         <div className="flex justify-center py-4">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-brand border-t-transparent" />
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-ds-brand border-t-transparent" />
         </div>
       )}
     </AuthLayout>

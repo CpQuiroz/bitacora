@@ -4,8 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Box, Layers } from "lucide-react";
 import type { CatalogoItem, EstadoOS, UnidadMedida } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
-import { Button, Card, Input, useToast } from "@bitacora/ui/web";
-import { DataTable } from "@/components/DataTable";
+import { Button, Card, Input, Table, useToast } from "@bitacora/ui/web";
 import { useConfiguracion } from "../ConfiguracionContext";
 
 // Mismos estados reales de EstadoOS (packages/shared/src/types.ts) —
@@ -320,20 +319,23 @@ export default function InventarioPage() {
           </div>
         )}
 
-        <DataTable
-          rows={unidades ?? []}
-          rowKey={(u) => u.id}
-          loading={unidades === null && !errorUnidades}
+        <Table
+          filas={unidades ?? []}
+          claveFila={(u) => u.id}
+          // Convención (tarea 149): la fila abre la edición; el resto en el menú ⋯.
+          onFilaClick={abrirEdicionUnidad}
+          accionesEnMenu
+          cargando={unidades === null && !errorUnidades}
           error={errorUnidades}
-          columns={[
-            { header: "Nombre", cell: (u) => <span className="font-medium text-ds-text">{u.nombre}</span> },
-            { header: "Abreviatura", cell: (u) => <span className="text-ds-text-secondary">{u.abreviatura ?? "—"}</span> },
+          columnas={[
+            { encabezado: "Nombre", celda: (u) => <span className="font-medium text-ds-text">{u.nombre}</span> },
+            { encabezado: "Abreviatura", celda: (u) => <span className="text-ds-text-secondary">{u.abreviatura ?? "—"}</span> },
           ]}
-          actions={[
-            { label: "Editar", onClick: abrirEdicionUnidad, variant: "brand" },
-            { label: "Eliminar", onClick: (u) => onEliminarUnidad(u.id), variant: "danger" },
+          acciones={[
+            { etiqueta: "Editar", onPress: abrirEdicionUnidad, tono: "brand" },
+            { etiqueta: "Eliminar", onPress: (u) => onEliminarUnidad(u.id), tono: "peligro" },
           ]}
-          emptyState={{ icon: Layers, message: "Todavía no hay unidades — usa las sugeridas de arriba o crea una nueva." }}
+          vacio={{ titulo: "Todavía no hay unidades — usa las sugeridas de arriba o crea una nueva.", icono: <Layers size={28} strokeWidth={2.75} /> }}
         />
       </Card>
     </div>

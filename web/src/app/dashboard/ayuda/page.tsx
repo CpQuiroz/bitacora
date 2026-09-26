@@ -6,7 +6,8 @@ import type { Empresa, Usuario } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell } from "@/components/DashboardShell";
-import { Card, PageHeader } from "@/components/ui";
+import { Card } from "@bitacora/ui/web";
+import { PageHeader } from "@/components/PageHeader";
 
 type UsuarioConEmpresa = Usuario & { empresa: Empresa };
 
@@ -45,9 +46,11 @@ export default function AyudaPage() {
       }}
     >
       <PageHeader title="Ayuda" subtitle="Próximamente: centro de ayuda" />
-      <Card className="my-6">
-        <p className="text-sm text-muted">Todavía no hay una base de ayuda — mientras tanto, escríbele directo a tu proveedor.</p>
-      </Card>
+      <div className="my-ds-6">
+        <Card>
+          <p className="font-ds-body text-ds-small text-ds-text-secondary">Todavía no hay una base de ayuda — mientras tanto, escríbele directo a tu proveedor.</p>
+        </Card>
+      </div>
     </DashboardShell>
   );
 }

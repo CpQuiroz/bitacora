@@ -8,9 +8,9 @@ import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { abrirPdfInforme } from "@/lib/descargarPdf";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Button, Card, ErrorText, Label, PageHeader, Select, Textarea } from "@/components/ui";
+import { PageHeader } from "@/components/PageHeader";
 import { IconCamera, IconSparkle } from "@/components/icons";
-import { useConfirmar } from "@bitacora/ui/web";
+import { Aviso, Button, Card, DatePicker, Input, Select, Textarea, useConfirmar } from "@bitacora/ui/web";
 
 type InformeConUsuario = InformeGenerado & { usuario?: { nombre: string } | null };
 type PlantillaConCreador = InformePersonalizado & { creador?: { nombre: string } | null };
@@ -30,6 +30,41 @@ const SECCIONES: { valor: SeccionInforme; etiqueta: string }[] = [
   { valor: "clientes", etiqueta: "Clientes" },
   { valor: "gastos", etiqueta: "Gastos" },
 ];
+
+// Rótulo con el mismo look que `etiqueta` de @bitacora/ui, para grupos
+// de controles que no son un solo campo (chips de secciones, adjuntos).
+const LABEL = "font-ds-body text-ds-caption font-medium text-ds-text/70";
+
+// Chip conmutable (secciones del informe personalizado).
+function claseChip(activo: boolean) {
+  return `rounded-ds-sm border px-ds-3 py-ds-1 font-ds-body text-ds-caption font-medium transition-colors ${
+    activo ? "border-ds-brand bg-ds-brand/[0.08] text-ds-brand" : "border-ds-divider text-ds-text-secondary hover:border-ds-text/30"
+  }`;
+}
+
+// Pestaña de la cabecera.
+function claseTab(activa: boolean) {
+  return `px-ds-3 py-ds-2 font-ds-body text-ds-small font-medium ${
+    activa ? "border-b-2 border-ds-brand text-ds-brand" : "text-ds-text-secondary"
+  }`;
+}
+
+// yyyy-mm-dd ↔ Date en hora local (mismo helper que ordenes/page.tsx).
+function aFecha(texto: string): Date | null {
+  if (!texto) return null;
+  const [y, m, d] = texto.split("-").map(Number);
+  return new Date(y, (m || 1) - 1, d || 1);
+}
+function aTexto(fecha: Date | null): string {
+  if (!fecha) return "";
+  const y = fecha.getFullYear();
+  const m = String(fecha.getMonth() + 1).padStart(2, "0");
+  const d = String(fecha.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+const TEXTO_INFORME = "whitespace-pre-wrap font-ds-body text-ds-body leading-relaxed text-ds-text";
+const SIN_RESUMEN = "No se pudo generar el resumen narrado con IA en este momento — arriba están los datos reales del período.";
 
 function humanizar(clave: string) {
   let texto = clave.replace(/_/g, " ").replace(/^pct\b/, "%").replace(/\bpct\b/g, "%").replace(/\bot\b/gi, "OT");
@@ -60,14 +95,14 @@ function SeccionDatos({ etiqueta, datos, moneda }: { etiqueta: string; datos: Re
   );
 
   return (
-    <div className="flex flex-col gap-3">
-      <h3 className="text-sm font-semibold text-foreground">{etiqueta}</h3>
+    <div className="flex flex-col gap-ds-3">
+      <h3 className="font-ds-body text-ds-small font-semibold text-ds-text">{etiqueta}</h3>
       {kpis && Object.keys(kpis).length > 0 && (
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-ds-3 sm:grid-cols-3">
           {Object.entries(kpis).map(([clave, valor]) => (
-            <div key={clave} className="rounded-lg border border-border p-3">
-              <p className="text-xs text-muted">{humanizar(clave)}</p>
-              <p className="mt-1 text-sm font-semibold tabular-nums text-foreground">
+            <div key={clave} className="rounded-ds-sm border border-ds-divider p-ds-3">
+              <p className="font-ds-body text-ds-caption text-ds-text-secondary">{humanizar(clave)}</p>
+              <p className="mt-ds-1 font-ds-body text-ds-small font-semibold tabular-nums text-ds-text">
                 <ValorCelda clave={clave} valor={valor} moneda={moneda} />
               </p>
             </div>
@@ -77,10 +112,10 @@ function SeccionDatos({ etiqueta, datos, moneda }: { etiqueta: string; datos: Re
       {listas.map(([clave, filas]) => {
         const columnas = Object.keys(filas[0] ?? {});
         return (
-          <div key={clave} className="overflow-x-auto rounded-lg border border-border">
-            <table className="w-full text-left text-sm">
+          <div key={clave} className="overflow-x-auto rounded-ds-sm border border-ds-divider">
+            <table className="w-full text-left font-ds-body text-ds-small">
               <thead>
-                <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
+                <tr className="border-b border-ds-divider bg-ds-neutral-100 font-mono text-ds-micro uppercase tracking-[0.1em] text-ds-text-secondary">
                   {columnas.map((c) => (
                     <th key={c} className="px-3 py-2 font-medium">
                       {humanizar(c)}
@@ -90,7 +125,7 @@ function SeccionDatos({ etiqueta, datos, moneda }: { etiqueta: string; datos: Re
               </thead>
               <tbody>
                 {filas.slice(0, 10).map((fila, i) => (
-                  <tr key={i} className="border-b border-border last:border-0">
+                  <tr key={i} className="border-b border-ds-divider last:border-0">
                     {columnas.map((c) => (
                       <td key={c} className="px-3 py-2">
                         <ValorCelda clave={c} valor={fila[c]} moneda={moneda} />
@@ -130,16 +165,16 @@ function DatosAgregados({ datos, moneda }: { datos: Record<string, unknown>; mon
     | undefined;
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-ds-4">
       {kpis && (
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-ds-3 sm:grid-cols-3">
           {Object.entries(kpis).map(([clave, valor]) => {
             const info = ETIQUETAS_KPI[clave];
             if (!info) return null;
             return (
-              <div key={clave} className="rounded-lg border border-border p-3">
-                <p className="text-xs text-muted">{info.etiqueta}</p>
-                <p className="mt-1 text-sm font-semibold tabular-nums text-foreground">
+              <div key={clave} className="rounded-ds-sm border border-ds-divider p-ds-3">
+                <p className="font-ds-body text-ds-caption text-ds-text-secondary">{info.etiqueta}</p>
+                <p className="mt-ds-1 font-ds-body text-ds-small font-semibold tabular-nums text-ds-text">
                   {info.moneda ? formatMoneda(valor, moneda) : valor.toFixed(valor % 1 === 0 ? 0 : 1)}
                 </p>
               </div>
@@ -148,10 +183,10 @@ function DatosAgregados({ datos, moneda }: { datos: Record<string, unknown>; mon
         </div>
       )}
       {topClientes && topClientes.length > 0 && (
-        <div className="overflow-x-auto rounded-lg border border-border">
-          <table className="w-full text-left text-sm">
+        <div className="overflow-x-auto rounded-ds-sm border border-ds-divider">
+          <table className="w-full text-left font-ds-body text-ds-small">
             <thead>
-              <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
+              <tr className="border-b border-ds-divider bg-ds-neutral-100 font-mono text-ds-micro uppercase tracking-[0.1em] text-ds-text-secondary">
                 <th className="px-3 py-2 font-medium">Cliente</th>
                 <th className="px-3 py-2 font-medium">Trabajos</th>
                 <th className="px-3 py-2 font-medium">Facturado</th>
@@ -160,8 +195,8 @@ function DatosAgregados({ datos, moneda }: { datos: Record<string, unknown>; mon
             </thead>
             <tbody>
               {topClientes.map((c) => (
-                <tr key={c.cliente} className="border-b border-border last:border-0">
-                  <td className="px-3 py-2 font-medium text-foreground">{c.cliente}</td>
+                <tr key={c.cliente} className="border-b border-ds-divider last:border-0">
+                  <td className="px-3 py-2 font-medium text-ds-text">{c.cliente}</td>
                   <td className="px-3 py-2">{c.cantidad_trabajos}</td>
                   <td className="px-3 py-2">{formatMoneda(c.monto_facturado, moneda)}</td>
                   <td className="px-3 py-2">{formatMoneda(c.monto_vencido, moneda)}</td>
@@ -172,10 +207,10 @@ function DatosAgregados({ datos, moneda }: { datos: Record<string, unknown>; mon
         </div>
       )}
       {desempeno && desempeno.length > 0 && (
-        <div className="overflow-x-auto rounded-lg border border-border">
-          <table className="w-full text-left text-sm">
+        <div className="overflow-x-auto rounded-ds-sm border border-ds-divider">
+          <table className="w-full text-left font-ds-body text-ds-small">
             <thead>
-              <tr className="border-b border-border bg-surface-sunken font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
+              <tr className="border-b border-ds-divider bg-ds-neutral-100 font-mono text-ds-micro uppercase tracking-[0.1em] text-ds-text-secondary">
                 <th className="px-3 py-2 font-medium">Colaborador</th>
                 <th className="px-3 py-2 font-medium">Trabajos</th>
                 <th className="px-3 py-2 font-medium">Completados</th>
@@ -184,8 +219,8 @@ function DatosAgregados({ datos, moneda }: { datos: Record<string, unknown>; mon
             </thead>
             <tbody>
               {desempeno.map((d) => (
-                <tr key={d.colaborador} className="border-b border-border last:border-0">
-                  <td className="px-3 py-2 font-medium text-foreground">{d.colaborador}</td>
+                <tr key={d.colaborador} className="border-b border-ds-divider last:border-0">
+                  <td className="px-3 py-2 font-medium text-ds-text">{d.colaborador}</td>
                   <td className="px-3 py-2">{d.total_trabajos}</td>
                   <td className="px-3 py-2">{d.completados}</td>
                   <td className="px-3 py-2">{d.calificacion_promedio != null ? d.calificacion_promedio.toFixed(1) : "—"}</td>
@@ -402,431 +437,383 @@ export default function InformePage() {
         subtitle="Resúmenes ejecutivos generados por Claude a partir de tus datos reales"
       />
 
-      <div className="my-6 flex gap-2 border-b border-border">
-        <button
-          type="button"
-          onClick={() => setTab("estructurado")}
-          className={`px-3 py-2 text-sm font-medium ${tab === "estructurado" ? "border-b-2 border-brand text-brand" : "text-muted"}`}
-        >
+      <div className="my-ds-6 flex gap-ds-2 border-b border-ds-divider">
+        <button type="button" onClick={() => setTab("estructurado")} className={claseTab(tab === "estructurado")}>
           Informe estructurado
         </button>
-        <button
-          type="button"
-          onClick={() => setTab("personalizado")}
-          className={`px-3 py-2 text-sm font-medium ${tab === "personalizado" ? "border-b-2 border-brand text-brand" : "text-muted"}`}
-        >
+        <button type="button" onClick={() => setTab("personalizado")} className={claseTab(tab === "personalizado")}>
           Personalizado
         </button>
-        <button
-          type="button"
-          onClick={() => setTab("libre")}
-          className={`px-3 py-2 text-sm font-medium ${tab === "libre" ? "border-b-2 border-brand text-brand" : "text-muted"}`}
-        >
+        <button type="button" onClick={() => setTab("libre")} className={claseTab(tab === "libre")}>
           Informe libre
         </button>
       </div>
 
       {tab === "estructurado" && (
         <>
-          <Card className="mb-6">
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <div>
-                <Label>Tipo de informe</Label>
-                <Select value={tipo} onChange={(e) => setTipo(e.target.value as TipoInforme)}>
-                  {TIPOS.map((t) => (
-                    <option key={t.valor} value={t.valor}>
-                      {t.etiqueta}
-                    </option>
-                  ))}
-                </Select>
+          <div className="mb-ds-6">
+            <Card>
+              <div className="grid gap-ds-4 sm:grid-cols-2 lg:grid-cols-4">
+                <Select
+                  etiqueta="Tipo de informe"
+                  valor={tipo}
+                  onCambio={(v) => setTipo(v as TipoInforme)}
+                  opciones={TIPOS.map((t) => ({ valor: t.valor, etiqueta: t.etiqueta }))}
+                />
+                <DatePicker etiqueta="Desde" valor={aFecha(desde)} onCambio={(f) => setDesde(aTexto(f))} />
+                <DatePicker etiqueta="Hasta" valor={aFecha(hasta)} onCambio={(f) => setHasta(aTexto(f))} />
               </div>
-              <div>
-                <Label>Desde</Label>
-                <input
-                  type="date"
-                  value={desde}
-                  onChange={(e) => setDesde(e.target.value)}
-                  className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground transition-colors hover:border-muted-soft focus:outline-none focus-visible:ring-[3px] focus-visible:ring-brand/25 focus-visible:border-brand"
+              <div className="mt-ds-4">
+                <Textarea
+                  etiqueta="Pregunta libre (opcional)"
+                  filas={2}
+                  placeholder="ej: ¿cómo fue mi facturación este trimestre comparado con el anterior?"
+                  valor={pregunta}
+                  onCambio={setPregunta}
                 />
               </div>
-              <div>
-                <Label>Hasta</Label>
-                <input
-                  type="date"
-                  value={hasta}
-                  onChange={(e) => setHasta(e.target.value)}
-                  className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground transition-colors hover:border-muted-soft focus:outline-none focus-visible:ring-[3px] focus-visible:ring-brand/25 focus-visible:border-brand"
-                />
-              </div>
-            </div>
-            <div className="mt-4">
-              <Label>Pregunta libre (opcional)</Label>
-              <Textarea
-                rows={2}
-                placeholder="ej: ¿cómo fue mi facturación este trimestre comparado con el anterior?"
-                value={pregunta}
-                onChange={(e) => setPregunta(e.target.value)}
-              />
-            </div>
-            <Button onClick={generarEstructurado} disabled={generando} className="mt-4">
-              <IconSparkle className="h-4 w-4" />
-              {generando ? "Generando…" : "Generar informe"}
-            </Button>
-            {errorEstructurado && (
-              <div className="mt-4">
-                <ErrorText>{errorEstructurado}</ErrorText>
-              </div>
-            )}
-          </Card>
-
-          {resultado && (
-            <Card className="mb-6">
-              <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-                <h2 className="text-sm font-semibold text-foreground">
-                  {TIPOS.find((t) => t.valor === resultado.tipo)?.etiqueta} · {resultado.desde} a {resultado.hasta}
-                </h2>
-                <Button type="button" variant="outline" onClick={() => abrirPdfInforme(resultado.id)}>
-                  Descargar PDF
+              <div className="mt-ds-4">
+                <Button onPress={generarEstructurado} deshabilitado={generando} iconoIzq={<IconSparkle className="h-4 w-4" />}>
+                  {generando ? "Generando…" : "Generar informe"}
                 </Button>
               </div>
-
-              <DatosAgregados datos={resultado.datos_agregados} moneda={usuario.moneda ?? "CLP"} />
-
-              <div className="mt-5 border-t border-border pt-5">
-                {resultado.resultado ? (
-                  <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-foreground">
-                    {resultado.resultado}
-                  </pre>
-                ) : (
-                  <p className="text-sm text-muted">
-                    No se pudo generar el resumen narrado con IA en este momento — arriba están los datos reales del período.
-                  </p>
-                )}
-              </div>
+              {errorEstructurado && (
+                <div className="mt-ds-4">
+                  <Aviso tono="error">{errorEstructurado}</Aviso>
+                </div>
+              )}
             </Card>
+          </div>
+
+          {resultado && (
+            <div className="mb-ds-6">
+              <Card>
+                <div className="mb-ds-4 flex flex-wrap items-center justify-between gap-ds-2">
+                  <h2 className="font-ds-body text-ds-small font-semibold text-ds-text">
+                    {TIPOS.find((t) => t.valor === resultado.tipo)?.etiqueta} · {resultado.desde} a {resultado.hasta}
+                  </h2>
+                  <Button variante="secundario" onPress={() => abrirPdfInforme(resultado.id)}>
+                    Descargar PDF
+                  </Button>
+                </div>
+
+                <DatosAgregados datos={resultado.datos_agregados} moneda={usuario.moneda ?? "CLP"} />
+
+                <div className="mt-ds-4 border-t border-ds-divider pt-ds-4">
+                  {resultado.resultado ? (
+                    <pre className={TEXTO_INFORME}>{resultado.resultado}</pre>
+                  ) : (
+                    <p className="font-ds-body text-ds-small text-ds-text-secondary">{SIN_RESUMEN}</p>
+                  )}
+                </div>
+              </Card>
+            </div>
           )}
         </>
       )}
 
       {tab === "personalizado" && (
         <>
-          <Card className="mb-6">
-            <Label>Secciones a incluir</Label>
-            <div className="flex flex-wrap gap-2">
-              {SECCIONES.map((s) => {
-                const activo = seccionesSel.includes(s.valor);
-                return (
-                  <button
-                    key={s.valor}
-                    type="button"
-                    onClick={() => toggleSeccion(s.valor)}
-                    className={`rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${
-                      activo ? "border-brand bg-brand-soft text-brand" : "border-border text-muted hover:border-muted-soft"
-                    }`}
-                  >
-                    {s.etiqueta}
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <div>
-                <Label>Desde</Label>
-                <input
-                  type="date"
-                  value={desdeP}
-                  onChange={(e) => setDesdeP(e.target.value)}
-                  className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground transition-colors hover:border-muted-soft focus:outline-none focus-visible:ring-[3px] focus-visible:ring-brand/25 focus-visible:border-brand"
-                />
-              </div>
-              <div>
-                <Label>Hasta</Label>
-                <input
-                  type="date"
-                  value={hastaP}
-                  onChange={(e) => setHastaP(e.target.value)}
-                  className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground transition-colors hover:border-muted-soft focus:outline-none focus-visible:ring-[3px] focus-visible:ring-brand/25 focus-visible:border-brand"
-                />
-              </div>
-            </div>
-
-            <div className="mt-4">
-              <Label>Pregunta libre (opcional)</Label>
-              <Textarea
-                rows={2}
-                placeholder="ej: ¿qué debería priorizar este mes?"
-                value={preguntaP}
-                onChange={(e) => setPreguntaP(e.target.value)}
-              />
-            </div>
-
-            <div className="mt-4 flex flex-wrap items-end gap-4">
-              <div className="min-w-[220px] flex-1">
-                <Label>Nombre {guardarPlantilla ? "" : "(opcional)"}</Label>
-                <input
-                  type="text"
-                  value={nombreP}
-                  onChange={(e) => setNombreP(e.target.value)}
-                  placeholder="ej: Resumen mensual para el dueño"
-                  className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground transition-colors hover:border-muted-soft focus:outline-none focus-visible:ring-[3px] focus-visible:ring-brand/25 focus-visible:border-brand"
-                />
-              </div>
-              <label className="flex items-center gap-2 pb-2.5 text-sm text-foreground">
-                <input
-                  type="checkbox"
-                  checked={guardarPlantilla}
-                  onChange={(e) => setGuardarPlantilla(e.target.checked)}
-                />
-                Guardar como plantilla
-              </label>
-            </div>
-
-            {plantillaActivaId && (
-              <p className="mt-2 text-xs text-muted">
-                Generando a partir de una plantilla guardada.{" "}
-                <button type="button" className="text-brand hover:underline" onClick={() => setPlantillaActivaId(null)}>
-                  Quitar
-                </button>
+          <div className="mb-ds-6">
+            <Card>
+              <p id="informe-secciones" className={`mb-ds-2 ${LABEL}`}>
+                Secciones a incluir
               </p>
-            )}
-
-            <Button onClick={generarPersonalizado} disabled={generandoP || seccionesSel.length === 0} className="mt-4">
-              <IconSparkle className="h-4 w-4" />
-              {generandoP ? "Generando…" : "Generar informe"}
-            </Button>
-            {errorP && (
-              <div className="mt-4">
-                <ErrorText>{errorP}</ErrorText>
+              <div role="group" aria-labelledby="informe-secciones" className="flex flex-wrap gap-ds-2">
+                {SECCIONES.map((s) => {
+                  const activo = seccionesSel.includes(s.valor);
+                  return (
+                    <button
+                      key={s.valor}
+                      type="button"
+                      aria-pressed={activo}
+                      onClick={() => toggleSeccion(s.valor)}
+                      className={claseChip(activo)}
+                    >
+                      {s.etiqueta}
+                    </button>
+                  );
+                })}
               </div>
-            )}
-          </Card>
 
-          {resultadoP && (
-            <Card className="mb-6">
-              <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-                <h2 className="text-sm font-semibold text-foreground">
-                  {resultadoP.nombre ?? "Informe personalizado"} · {resultadoP.desde} a {resultadoP.hasta}
-                </h2>
-                <Button type="button" variant="outline" onClick={() => abrirPdfInforme(resultadoP.id)}>
-                  Descargar PDF
+              <div className="mt-ds-4 grid gap-ds-4 sm:grid-cols-2">
+                <DatePicker etiqueta="Desde" valor={aFecha(desdeP)} onCambio={(f) => setDesdeP(aTexto(f))} />
+                <DatePicker etiqueta="Hasta" valor={aFecha(hastaP)} onCambio={(f) => setHastaP(aTexto(f))} />
+              </div>
+
+              <div className="mt-ds-4">
+                <Textarea
+                  etiqueta="Pregunta libre (opcional)"
+                  filas={2}
+                  placeholder="ej: ¿qué debería priorizar este mes?"
+                  valor={preguntaP}
+                  onCambio={setPreguntaP}
+                />
+              </div>
+
+              <div className="mt-ds-4 flex flex-wrap items-end gap-ds-4">
+                <div className="min-w-[220px] flex-1">
+                  <Input
+                    etiqueta={`Nombre ${guardarPlantilla ? "" : "(opcional)"}`}
+                    valor={nombreP}
+                    onCambio={setNombreP}
+                    placeholder="ej: Resumen mensual para el dueño"
+                  />
+                </div>
+                <label className="flex items-center gap-ds-2 pb-ds-3 font-ds-body text-ds-small text-ds-text">
+                  <input
+                    type="checkbox"
+                    checked={guardarPlantilla}
+                    onChange={(e) => setGuardarPlantilla(e.target.checked)}
+                  />
+                  Guardar como plantilla
+                </label>
+              </div>
+
+              {plantillaActivaId && (
+                <p className="mt-ds-2 font-ds-body text-ds-caption text-ds-text-secondary">
+                  Generando a partir de una plantilla guardada.{" "}
+                  <button type="button" className="text-ds-brand hover:underline" onClick={() => setPlantillaActivaId(null)}>
+                    Quitar
+                  </button>
+                </p>
+              )}
+
+              <div className="mt-ds-4">
+                <Button
+                  onPress={generarPersonalizado}
+                  deshabilitado={generandoP || seccionesSel.length === 0}
+                  iconoIzq={<IconSparkle className="h-4 w-4" />}
+                >
+                  {generandoP ? "Generando…" : "Generar informe"}
                 </Button>
               </div>
-
-              <div className="flex flex-col gap-6">
-                {(resultadoP.secciones ?? []).map((s) => (
-                  <SeccionDatos
-                    key={s}
-                    etiqueta={SECCIONES.find((x) => x.valor === s)?.etiqueta ?? s}
-                    datos={(resultadoP.datos_agregados as Record<string, Record<string, unknown>>)[s] ?? {}}
-                    moneda={usuario.moneda ?? "CLP"}
-                  />
-                ))}
-              </div>
-
-              <div className="mt-5 border-t border-border pt-5">
-                {resultadoP.resultado ? (
-                  <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-foreground">
-                    {resultadoP.resultado}
-                  </pre>
-                ) : (
-                  <p className="text-sm text-muted">
-                    No se pudo generar el resumen narrado con IA en este momento — arriba están los datos reales del período.
-                  </p>
-                )}
-              </div>
+              {errorP && (
+                <div className="mt-ds-4">
+                  <Aviso tono="error">{errorP}</Aviso>
+                </div>
+              )}
             </Card>
+          </div>
+
+          {resultadoP && (
+            <div className="mb-ds-6">
+              <Card>
+                <div className="mb-ds-4 flex flex-wrap items-center justify-between gap-ds-2">
+                  <h2 className="font-ds-body text-ds-small font-semibold text-ds-text">
+                    {resultadoP.nombre ?? "Informe personalizado"} · {resultadoP.desde} a {resultadoP.hasta}
+                  </h2>
+                  <Button variante="secundario" onPress={() => abrirPdfInforme(resultadoP.id)}>
+                    Descargar PDF
+                  </Button>
+                </div>
+
+                <div className="flex flex-col gap-ds-6">
+                  {(resultadoP.secciones ?? []).map((s) => (
+                    <SeccionDatos
+                      key={s}
+                      etiqueta={SECCIONES.find((x) => x.valor === s)?.etiqueta ?? s}
+                      datos={(resultadoP.datos_agregados as Record<string, Record<string, unknown>>)[s] ?? {}}
+                      moneda={usuario.moneda ?? "CLP"}
+                    />
+                  ))}
+                </div>
+
+                <div className="mt-ds-4 border-t border-ds-divider pt-ds-4">
+                  {resultadoP.resultado ? (
+                    <pre className={TEXTO_INFORME}>{resultadoP.resultado}</pre>
+                  ) : (
+                    <p className="font-ds-body text-ds-small text-ds-text-secondary">{SIN_RESUMEN}</p>
+                  )}
+                </div>
+              </Card>
+            </div>
           )}
 
           {plantillas && plantillas.length > 0 && (
-            <Card className="mb-6">
-              <h2 className="mb-4 text-sm font-semibold text-foreground">Mis plantillas</h2>
-              <div className="flex flex-col divide-y divide-border">
-                {plantillas.map((p) => (
-                  <div key={p.id} className="flex flex-col gap-2 py-3">
-                    {editId === p.id ? (
-                      <div className="flex flex-col gap-3">
-                        <input
-                          type="text"
-                          value={editNombre}
-                          onChange={(e) => setEditNombre(e.target.value)}
-                          className="w-full rounded-lg border border-border bg-surface px-3.5 py-2 text-sm text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-                        />
-                        <div className="flex flex-wrap gap-2">
-                          {SECCIONES.map((s) => {
-                            const activo = editSecciones.includes(s.valor);
-                            return (
-                              <button
-                                key={s.valor}
-                                type="button"
-                                onClick={() =>
-                                  setEditSecciones((prev) =>
-                                    activo ? prev.filter((x) => x !== s.valor) : [...prev, s.valor]
-                                  )
-                                }
-                                className={`rounded-md border px-3 py-1 text-xs font-medium transition-colors ${
-                                  activo ? "border-brand bg-brand-soft text-brand" : "border-border text-muted hover:border-muted-soft"
-                                }`}
-                              >
-                                {s.etiqueta}
-                              </button>
-                            );
-                          })}
-                        </div>
-                        <div className="flex gap-2">
-                          <Button type="button" onClick={() => guardarEdicionPlantilla(p.id)}>
-                            Guardar
-                          </Button>
-                          <Button type="button" variant="outline" onClick={() => setEditId(null)}>
-                            Cancelar
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-medium text-foreground">{p.nombre}</p>
-                          <div className="mt-1 flex flex-wrap gap-1">
-                            {p.secciones.map((s) => (
-                              <span key={s} className="rounded-full bg-brand-soft px-2 py-0.5 text-[11px] text-brand">
-                                {SECCIONES.find((x) => x.valor === s)?.etiqueta ?? s}
-                              </span>
-                            ))}
+            <div className="mb-ds-6">
+              <Card>
+                <h2 className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Mis plantillas</h2>
+                <div className="flex flex-col divide-y divide-ds-divider">
+                  {plantillas.map((p) => (
+                    <div key={p.id} className="flex flex-col gap-ds-2 py-ds-3">
+                      {editId === p.id ? (
+                        <div className="flex flex-col gap-ds-3">
+                          <Input etiquetaAccesible="Nombre de la plantilla" valor={editNombre} onCambio={setEditNombre} />
+                          <div className="flex flex-wrap gap-ds-2">
+                            {SECCIONES.map((s) => {
+                              const activo = editSecciones.includes(s.valor);
+                              return (
+                                <button
+                                  key={s.valor}
+                                  type="button"
+                                  aria-pressed={activo}
+                                  onClick={() =>
+                                    setEditSecciones((prev) =>
+                                      activo ? prev.filter((x) => x !== s.valor) : [...prev, s.valor]
+                                    )
+                                  }
+                                  className={claseChip(activo)}
+                                >
+                                  {s.etiqueta}
+                                </button>
+                              );
+                            })}
+                          </div>
+                          <div className="flex gap-ds-2">
+                            <Button onPress={() => guardarEdicionPlantilla(p.id)}>Guardar</Button>
+                            <Button variante="secundario" onPress={() => setEditId(null)}>
+                              Cancelar
+                            </Button>
                           </div>
                         </div>
-                        <div className="flex gap-2">
-                          <Button type="button" variant="outline" onClick={() => usarPlantilla(p)}>
-                            Usar
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => {
-                              setEditId(p.id);
-                              setEditNombre(p.nombre);
-                              setEditSecciones(p.secciones);
-                            }}
-                          >
-                            Editar
-                          </Button>
-                          <Button type="button" variant="outline" onClick={() => eliminarPlantilla(p.id)}>
-                            Eliminar
-                          </Button>
+                      ) : (
+                        <div className="flex flex-wrap items-center justify-between gap-ds-3">
+                          <div>
+                            <p className="font-ds-body text-ds-small font-medium text-ds-text">{p.nombre}</p>
+                            <div className="mt-ds-1 flex flex-wrap gap-ds-1">
+                              {p.secciones.map((s) => (
+                                <span key={s} className="rounded-ds-pill bg-ds-brand/[0.08] px-ds-2 py-0.5 text-ds-micro text-ds-brand">
+                                  {SECCIONES.find((x) => x.valor === s)?.etiqueta ?? s}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="flex gap-ds-2">
+                            <Button variante="secundario" onPress={() => usarPlantilla(p)}>
+                              Usar
+                            </Button>
+                            <Button
+                              variante="secundario"
+                              onPress={() => {
+                                setEditId(p.id);
+                                setEditNombre(p.nombre);
+                                setEditSecciones(p.secciones);
+                              }}
+                            >
+                              Editar
+                            </Button>
+                            <Button variante="secundario" onPress={() => eliminarPlantilla(p.id)}>
+                              Eliminar
+                            </Button>
+                          </div>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </Card>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            </div>
           )}
         </>
       )}
 
       {(tab === "estructurado" || tab === "personalizado") && historial && historial.length > 0 && (
-        <Card className="mb-6">
-          <h2 className="mb-4 text-sm font-semibold text-foreground">Historial</h2>
-          <div className="flex flex-col divide-y divide-border">
-            {historial.map((h) => (
-              <button
-                key={h.id}
-                type="button"
-                onClick={() => verHistorial(h.id)}
-                className="flex items-center justify-between gap-3 py-2.5 text-left text-sm hover:text-brand"
-              >
-                <span>
-                  {h.tipo === "personalizado"
-                    ? `${h.nombre ?? "Informe personalizado"} (${(h.secciones ?? [])
-                        .map((s) => SECCIONES.find((x) => x.valor === s)?.etiqueta ?? s)
-                        .join(", ")})`
-                    : `${TIPOS.find((t) => t.valor === h.tipo)?.etiqueta} · ${h.desde} a ${h.hasta}`}
-                </span>
-                <span className="text-xs text-muted">
-                  {h.usuario?.nombre ?? "—"} · {new Date(h.creado_en).toLocaleDateString("es-CL")}
-                </span>
-              </button>
-            ))}
-          </div>
-        </Card>
+        <div className="mb-ds-6">
+          <Card>
+            <h2 className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Historial</h2>
+            <div className="flex flex-col divide-y divide-ds-divider">
+              {historial.map((h) => (
+                <button
+                  key={h.id}
+                  type="button"
+                  onClick={() => verHistorial(h.id)}
+                  className="flex items-center justify-between gap-ds-3 py-ds-2 text-left font-ds-body text-ds-small hover:text-ds-brand"
+                >
+                  <span>
+                    {h.tipo === "personalizado"
+                      ? `${h.nombre ?? "Informe personalizado"} (${(h.secciones ?? [])
+                          .map((s) => SECCIONES.find((x) => x.valor === s)?.etiqueta ?? s)
+                          .join(", ")})`
+                      : `${TIPOS.find((t) => t.valor === h.tipo)?.etiqueta} · ${h.desde} a ${h.hasta}`}
+                  </span>
+                  <span className="text-ds-caption text-ds-text-secondary">
+                    {h.usuario?.nombre ?? "—"} · {new Date(h.creado_en).toLocaleDateString("es-CL")}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </Card>
+        </div>
       )}
 
       {tab === "libre" && (
         <>
-          <Card className="my-6">
-            <p className="text-sm text-muted">
-              Actividad reciente, estado de facturación, riesgos y una recomendación
-              concreta — generado en segundos.
-            </p>
+          <div className="my-ds-6">
+            <Card>
+              <p className="font-ds-body text-ds-small text-ds-text-secondary">
+                Actividad reciente, estado de facturación, riesgos y una recomendación
+                concreta — generado en segundos.
+              </p>
 
-            <div className="mt-4">
-              <Label>Instrucciones adicionales (opcional)</Label>
-              <Textarea
-                rows={3}
-                placeholder="ej: enfócate en Minera Los Andes, o compara con el mes pasado"
-                value={instrucciones}
-                onChange={(e) => setInstrucciones(e.target.value)}
-              />
-            </div>
+              <div className="mt-ds-4">
+                <Textarea
+                  etiqueta="Instrucciones adicionales (opcional)"
+                  filas={3}
+                  placeholder="ej: enfócate en Minera Los Andes, o compara con el mes pasado"
+                  valor={instrucciones}
+                  onCambio={setInstrucciones}
+                />
+              </div>
 
-            <div className="mt-4">
-              <Label>Adjuntar imágenes (opcional, máx. 5)</Label>
-              <input
-                ref={inputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                multiple
-                onChange={agregarImagenes}
-                className="hidden"
-                id="input-imagenes-informe"
-              />
-              <div className="flex flex-wrap items-center gap-2">
-                {imagenes.map((img, i) => (
-                  <span
-                    key={i}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-brand-soft px-3 py-1 text-xs text-brand"
-                  >
-                    {img.name}
-                    <button
-                      type="button"
-                      onClick={() => quitarImagen(i)}
-                      className="text-brand/70 hover:text-brand"
-                      aria-label={`Quitar ${img.name}`}
+              <div className="mt-ds-4">
+                <label htmlFor="input-imagenes-informe" className={`mb-ds-1 block ${LABEL}`}>
+                  Adjuntar imágenes (opcional, máx. 5)
+                </label>
+                <input
+                  ref={inputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  multiple
+                  onChange={agregarImagenes}
+                  className="hidden"
+                  id="input-imagenes-informe"
+                />
+                <div className="flex flex-wrap items-center gap-ds-2">
+                  {imagenes.map((img, i) => (
+                    <span
+                      key={i}
+                      className="inline-flex items-center gap-1.5 rounded-ds-pill bg-ds-brand/[0.08] px-ds-3 py-ds-1 font-ds-body text-ds-caption text-ds-brand"
                     >
-                      ×
-                    </button>
-                  </span>
-                ))}
-                {imagenes.length < 5 && (
-                  <label htmlFor="input-imagenes-informe">
+                      {img.name}
+                      <button
+                        type="button"
+                        onClick={() => quitarImagen(i)}
+                        className="text-ds-brand/70 hover:text-ds-brand"
+                        aria-label={`Quitar ${img.name}`}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                  {imagenes.length < 5 && (
                     <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => inputRef.current?.click()}
+                      variante="secundario"
+                      iconoIzq={<IconCamera className="h-4 w-4" />}
+                      onPress={() => inputRef.current?.click()}
                     >
-                      <IconCamera className="h-4 w-4" />
                       Agregar imagen
                     </Button>
-                  </label>
-                )}
+                  )}
+                </div>
               </div>
-            </div>
 
-            <Button onClick={generarLibre} disabled={cargandoLibre} className="mt-5">
-              <IconSparkle className="h-4 w-4" />
-              {cargandoLibre ? "Generando…" : informeLibre ? "Regenerar informe" : "Generar informe"}
-            </Button>
-            {errorLibre && (
-              <div className="mt-4">
-                <ErrorText>{errorLibre}</ErrorText>
+              <div className="mt-ds-4">
+                <Button onPress={generarLibre} deshabilitado={cargandoLibre} iconoIzq={<IconSparkle className="h-4 w-4" />}>
+                  {cargandoLibre ? "Generando…" : informeLibre ? "Regenerar informe" : "Generar informe"}
+                </Button>
               </div>
-            )}
-          </Card>
+              {errorLibre && (
+                <div className="mt-ds-4">
+                  <Aviso tono="error">{errorLibre}</Aviso>
+                </div>
+              )}
+            </Card>
+          </div>
 
           {informeLibre && (
             <Card>
-              <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-foreground">
-                {informeLibre}
-              </pre>
+              <pre className={TEXTO_INFORME}>{informeLibre}</pre>
             </Card>
           )}
         </>

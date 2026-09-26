@@ -4,7 +4,8 @@ import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { SuperAdminShell } from "@/components/SuperAdminShell";
-import { Button, Card, ErrorText, Input, Label, PageHeader, Select } from "@/components/ui";
+import { Aviso, Button, Card, Input, Select } from "@bitacora/ui/web";
+import { PageHeader } from "@/components/PageHeader";
 import { IconChevronLeft } from "@/components/icons";
 import { obtenerTokenSuperAdmin, superadminFetch } from "@/lib/superadminApi";
 import { guardarTemaSuperAdmin, type TemaSuperAdmin } from "@/lib/superadminTema";
@@ -140,30 +141,30 @@ export default function SuperAdminCuentaPage() {
 
   return (
     <SuperAdminShell>
-      <Link href="/superadmin" className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-brand hover:underline">
+      <Link href="/superadmin" className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-ds-brand hover:underline">
         <IconChevronLeft className="h-4 w-4" />
         Empresas
       </Link>
 
       <PageHeader title="Mi cuenta" subtitle="Credenciales de tu acceso al Panel de Super-Admin" />
 
-      {errorCarga && <ErrorText>{errorCarga}</ErrorText>}
+      {errorCarga && <Aviso tono="error">{errorCarga}</Aviso>}
 
       {cuenta && (
         <div className="my-6 flex flex-col gap-4">
           <Card>
             <div className="grid gap-3 sm:grid-cols-3">
               <div>
-                <p className="text-xs text-muted">Nombre</p>
-                <p className="text-sm font-medium text-foreground">{cuenta.nombre}</p>
+                <p className="text-xs text-ds-text-secondary">Nombre</p>
+                <p className="text-sm font-medium text-ds-text">{cuenta.nombre}</p>
               </div>
               <div>
-                <p className="text-xs text-muted">Correo</p>
-                <p className="text-sm font-medium text-foreground">{cuenta.correo}</p>
+                <p className="text-xs text-ds-text-secondary">Correo</p>
+                <p className="text-sm font-medium text-ds-text">{cuenta.correo}</p>
               </div>
               <div>
-                <p className="text-xs text-muted">Último ingreso</p>
-                <p className="text-sm font-medium text-foreground">
+                <p className="text-xs text-ds-text-secondary">Último ingreso</p>
+                <p className="text-sm font-medium text-ds-text">
                   {cuenta.ultimo_login_en ? new Date(cuenta.ultimo_login_en).toLocaleString("es-CL") : "—"}
                 </p>
               </div>
@@ -171,58 +172,57 @@ export default function SuperAdminCuentaPage() {
           </Card>
 
           <Card>
-            <h2 className="mb-1 text-sm font-semibold text-foreground">Mi estilo</h2>
-            <p className="mb-3 text-xs text-muted">
+            <h2 className="mb-1 text-sm font-semibold text-ds-text">Mi estilo</h2>
+            <p className="mb-3 text-xs text-ds-text-secondary">
               Cómo ves vos el Panel de Super-Admin, en web y en mobile. No cambia el estilo de ninguna empresa (eso se elige en cada
               empresa).
             </p>
             <div className="max-w-xs">
-              <Label>Tema</Label>
-              <Select value={cuenta.tema} disabled={guardandoTema} onChange={(e) => onCambiarTema(e.target.value as TemaSuperAdmin)}>
-                {TEMAS.map((t) => (
-                  <option key={t.value} value={t.value}>
-                    {t.label}
-                  </option>
-                ))}
-              </Select>
+              <Select
+                etiqueta="Tema"
+                valor={cuenta.tema}
+                deshabilitado={guardandoTema}
+                onCambio={(v) => onCambiarTema(v as TemaSuperAdmin)}
+                opciones={TEMAS.map((t) => ({ valor: t.value, etiqueta: t.label }))}
+              />
             </div>
             {errorTema && (
               <div className="mt-3">
-                <ErrorText>{errorTema}</ErrorText>
+                <Aviso tono="error">{errorTema}</Aviso>
               </div>
             )}
           </Card>
 
           <Card>
-            <h2 className="mb-1 text-sm font-semibold text-foreground">Cambiar contraseña</h2>
-            <p className="mb-4 text-xs text-muted">
+            <h2 className="mb-1 text-sm font-semibold text-ds-text">Cambiar contraseña</h2>
+            <p className="mb-4 text-xs text-ds-text-secondary">
               Para confirmar tu identidad se piden la contraseña actual y un código de tu app de autenticación.
             </p>
             <form onSubmit={onCambiarPassword} className="grid gap-3 sm:grid-cols-2">
               <div className="sm:col-span-2">
-                <Label>Contraseña actual</Label>
-                <Input type="password" autoComplete="current-password" value={passActual} onChange={(e) => setPassActual(e.target.value)} required />
+                <Input etiqueta="Contraseña actual" tipo="password" valor={passActual} onCambio={setPassActual} requerido />
               </div>
               <div>
-                <Label>Contraseña nueva (mín. 12)</Label>
-                <Input type="password" autoComplete="new-password" value={passNueva} onChange={(e) => setPassNueva(e.target.value)} required />
+                <Input etiqueta="Contraseña nueva (mín. 12)" tipo="password" valor={passNueva} onCambio={setPassNueva} requerido />
               </div>
               <div>
-                <Label>Repetir contraseña nueva</Label>
-                <Input type="password" autoComplete="new-password" value={passConfirma} onChange={(e) => setPassConfirma(e.target.value)} required />
+                <Input etiqueta="Repetir contraseña nueva" tipo="password" valor={passConfirma} onCambio={setPassConfirma} requerido />
               </div>
               <div>
-                <Label>Código (6 dígitos)</Label>
-                <Input type="text" inputMode="numeric" maxLength={6} value={codigoPass} onChange={(e) => setCodigoPass(e.target.value)} required />
+                <Input etiqueta="Código (6 dígitos)" tipo="codigo" maxLongitud={6} valor={codigoPass} onCambio={setCodigoPass} requerido />
               </div>
               {errorPass && (
                 <div className="sm:col-span-2">
-                  <ErrorText>{errorPass}</ErrorText>
+                  <Aviso tono="error">{errorPass}</Aviso>
                 </div>
               )}
-              {okPass && <p className="text-sm text-brand sm:col-span-2">Contraseña actualizada.</p>}
+              {okPass && (
+                <div className="sm:col-span-2">
+                  <Aviso tono="exito">Contraseña actualizada.</Aviso>
+                </div>
+              )}
               <div className="sm:col-span-2">
-                <Button type="submit" disabled={guardandoPass}>
+                <Button tipo="submit" deshabilitado={guardandoPass}>
                   {guardandoPass ? "Guardando…" : "Cambiar contraseña"}
                 </Button>
               </div>
@@ -230,36 +230,34 @@ export default function SuperAdminCuentaPage() {
           </Card>
 
           <Card>
-            <h2 className="mb-1 text-sm font-semibold text-foreground">Regenerar 2FA (TOTP)</h2>
-            <p className="mb-4 text-xs text-muted">
+            <h2 className="mb-1 text-sm font-semibold text-ds-text">Regenerar 2FA (TOTP)</h2>
+            <p className="mb-4 text-xs text-ds-text-secondary">
               Genera una clave nueva y <strong>anula la actual</strong>. Úsalo si perdiste el acceso a tu app de autenticación o
               querés cambiar de dispositivo. La clave nueva se muestra una sola vez.
             </p>
 
             {totpNuevo ? (
-              <div className="rounded-lg border border-brand/40 bg-brand-soft p-4 text-sm">
-                <p className="font-medium text-foreground">Clave nueva — cárgala ahora en tu app (borrá primero la entrada vieja):</p>
-                <p className="mt-2 font-mono text-base break-all text-foreground">{totpNuevo.secreto}</p>
-                <p className="mt-2 text-xs text-muted break-all">{totpNuevo.otpauthUri}</p>
-                <p className="mt-3 text-xs text-muted">No se vuelve a mostrar. La próxima vez que entres usá el código de esta clave.</p>
+              <div className="rounded-lg border border-ds-brand/40 bg-ds-brand/[0.08] p-4 text-sm">
+                <p className="font-medium text-ds-text">Clave nueva — cárgala ahora en tu app (borrá primero la entrada vieja):</p>
+                <p className="mt-2 font-mono text-base break-all text-ds-text">{totpNuevo.secreto}</p>
+                <p className="mt-2 text-xs text-ds-text-secondary break-all">{totpNuevo.otpauthUri}</p>
+                <p className="mt-3 text-xs text-ds-text-secondary">No se vuelve a mostrar. La próxima vez que entres usá el código de esta clave.</p>
               </div>
             ) : (
               <form onSubmit={onRegenerarTotp} className="grid gap-3 sm:grid-cols-2">
                 <div>
-                  <Label>Contraseña actual</Label>
-                  <Input type="password" autoComplete="current-password" value={passTotp} onChange={(e) => setPassTotp(e.target.value)} required />
+                  <Input etiqueta="Contraseña actual" tipo="password" valor={passTotp} onCambio={setPassTotp} requerido />
                 </div>
                 <div>
-                  <Label>Código actual (6 dígitos)</Label>
-                  <Input type="text" inputMode="numeric" maxLength={6} value={codigoTotp} onChange={(e) => setCodigoTotp(e.target.value)} required />
+                  <Input etiqueta="Código actual (6 dígitos)" tipo="codigo" maxLongitud={6} valor={codigoTotp} onCambio={setCodigoTotp} requerido />
                 </div>
                 {errorTotp && (
                   <div className="sm:col-span-2">
-                    <ErrorText>{errorTotp}</ErrorText>
+                    <Aviso tono="error">{errorTotp}</Aviso>
                   </div>
                 )}
                 <div className="sm:col-span-2">
-                  <Button type="submit" variant="outline" disabled={guardandoTotp}>
+                  <Button tipo="submit" variante="secundario" deshabilitado={guardandoTotp}>
                     {guardandoTotp ? "Generando…" : "Regenerar 2FA"}
                   </Button>
                 </div>

@@ -4,8 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Layers, Plus } from "lucide-react";
 import type { CategoriaGasto } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
-import { Button, Card, Input } from "@bitacora/ui/web";
-import { DataTable } from "@/components/DataTable";
+import { Button, Card, Input, Table } from "@bitacora/ui/web";
 
 type CentroConCategorias = { id: string; nombre: string; categoria_gasto_ids: string[]; categorias: string[]; creado_en: string };
 
@@ -152,18 +151,21 @@ export default function CentrosCostoPage() {
         </Card>
       )}
       {centros && centros.length > 0 && (
-        <DataTable
-          rows={centros}
-          rowKey={(c) => c.id}
-          columns={[
-            { header: "Nombre", cell: (c) => <span className="font-medium text-ds-text">{c.nombre}</span> },
-            { header: "Categorías", cell: (c) => <span className="text-ds-text-secondary">{c.categorias.length > 0 ? c.categorias.join(", ") : "—"}</span> },
+        <Table
+          filas={centros}
+          claveFila={(c) => c.id}
+          // Convención (tarea 149): la fila abre la edición; el resto en el menú ⋯.
+          onFilaClick={abrirEdicion}
+          accionesEnMenu
+          columnas={[
+            { encabezado: "Nombre", celda: (c) => <span className="font-medium text-ds-text">{c.nombre}</span> },
+            { encabezado: "Categorías", celda: (c) => <span className="text-ds-text-secondary">{c.categorias.length > 0 ? c.categorias.join(", ") : "—"}</span> },
           ]}
-          actions={[
-            { label: "Editar", onClick: abrirEdicion, variant: "brand" },
-            { label: "Eliminar", onClick: (c) => onEliminar(c.id), variant: "danger" },
+          acciones={[
+            { etiqueta: "Editar", onPress: abrirEdicion, tono: "brand" },
+            { etiqueta: "Eliminar", onPress: (c) => onEliminar(c.id), tono: "peligro" },
           ]}
-          emptyState={{ icon: Layers, message: "Ningún centro de costo registrado." }}
+          vacio={{ titulo: "Ningún centro de costo registrado.", icono: <Layers size={28} strokeWidth={2.75} /> }}
         />
       )}
     </div>

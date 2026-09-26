@@ -4,8 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ClipboardCheck, Plus } from "lucide-react";
 import type { ChecklistTemplate, ItemChecklistPregunta, SeccionChecklist } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
-import { Button, Card, Input, StatusBadge } from "@bitacora/ui/web";
-import { DataTable } from "@/components/DataTable";
+import { Button, Card, Input, StatusBadge, Table } from "@bitacora/ui/web";
 
 type Editor = { id: string | null; nombre: string; descripcion: string; secciones: SeccionChecklist[] };
 
@@ -242,32 +241,35 @@ export default function ChecklistsPage() {
       </div>
 
       {error ? <p className="font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
-      <DataTable
-        rows={filtrados}
-        rowKey={(t) => t.id}
-        loading={templates === null && !error}
-        columns={[
+      <Table
+        filas={filtrados}
+        claveFila={(t) => t.id}
+        // Convención (tarea 149): la fila abre la edición; el resto en el menú ⋯.
+        onFilaClick={(t) => setEditor(aEditor(t))}
+        accionesEnMenu
+        cargando={templates === null && !error}
+        columnas={[
           {
-            header: "Nombre",
-            cell: (t) => (
+            encabezado: "Nombre",
+            celda: (t) => (
               <>
                 <p className="font-medium text-ds-text">{t.nombre}</p>
                 {t.descripcion && <p className="font-ds-body text-ds-caption text-ds-text-secondary">{t.descripcion}</p>}
               </>
             ),
           },
-          { header: "Secciones", cell: (t) => t.secciones.length },
-          { header: "Preguntas", cell: (t) => t.secciones.reduce((acc, s) => acc + s.preguntas.length, 0) },
-          { header: "Versión", cell: (t) => `v${t.version}` },
-          { header: "Estado", cell: (t) => <StatusBadge estado={t.activo ? "activo" : "inactivo"} /> },
+          { encabezado: "Secciones", celda: (t) => t.secciones.length },
+          { encabezado: "Preguntas", celda: (t) => t.secciones.reduce((acc, s) => acc + s.preguntas.length, 0) },
+          { encabezado: "Versión", celda: (t) => `v${t.version}` },
+          { encabezado: "Estado", celda: (t) => <StatusBadge estado={t.activo ? "activo" : "inactivo"} /> },
         ]}
-        actions={[
-          { label: "Ver/Editar", onClick: (t) => setEditor(aEditor(t)), variant: "brand" },
-          { label: "Duplicar", onClick: (t) => onDuplicar(t.id), variant: "brand" },
-          { label: (t) => (t.activo ? "Desactivar" : "Activar"), onClick: onAlternarActivo, variant: "muted" },
-          { label: "Eliminar", onClick: (t) => onEliminar(t.id), variant: "danger" },
+        acciones={[
+          { etiqueta: "Ver/Editar", onPress: (t) => setEditor(aEditor(t)), tono: "brand" },
+          { etiqueta: "Duplicar", onPress: (t) => onDuplicar(t.id), tono: "brand" },
+          { etiqueta: (t) => (t.activo ? "Desactivar" : "Activar"), onPress: onAlternarActivo, tono: "muted" },
+          { etiqueta: "Eliminar", onPress: (t) => onEliminar(t.id), tono: "peligro" },
         ]}
-        emptyState={{ icon: ClipboardCheck, message: "No hay checklists que coincidan." }}
+        vacio={{ titulo: "No hay checklists que coincidan.", icono: <ClipboardCheck size={28} strokeWidth={2.75} /> }}
       />
     </div>
   );

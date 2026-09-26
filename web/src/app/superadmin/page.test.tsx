@@ -1,0 +1,48 @@
+// Prueba de pantalla (tarea 157): el listado de empresas del Super-Admin usa
+// Table de @bitacora/ui/web — la fila abre la ficha, la acción "Ver salud →"
+// también, y "Nueva empresa" abre el Dialog. API simulada.
+import type { ReactNode } from "react";
+import { beforeEach, describe, expect, test, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import SuperAdminEmpresasPage from "./page";
+
+const h = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn() }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: h.push, replace: h.replace }), usePathname: () => "/superadmin" }));
+vi.mock("@/components/SuperAdminShell", () => ({ SuperAdminShell: ({ children }: { children: ReactNode }) => <div>{children}</div> }));
+vi.mock("@/lib/superadminApi", () => ({
+  obtenerTokenSuperAdmin: () => "token",
+  superadminFetch: async () =>
+    new Response(
+      JSON.stringify([{ id: "e1", nombre: "Transportes Sur", plan: "pro", estado: "activa", creado_en: "2026-09-01T12:00:00Z", cantidad_usuarios: 4 }]),
+      { status: 200 }
+    ),
+}));
+
+describe("Super-Admin › Empresas (web)", () => {
+  beforeEach(() => {
+    h.push.mockReset();
+  });
+
+  test("clic en la fila abre la ficha de la empresa", async () => {
+    render(<SuperAdminEmpresasPage />);
+    const celda = await screen.findByText("Transportes Sur");
+    fireEvent.click(celda.closest("tr")!, { detail: 1 });
+    expect(h.push).toHaveBeenCalledWith("/superadmin/empresas/e1");
+  });
+
+  test("la acción 'Ver salud →' navega una sola vez (no dispara también la fila)", async () => {
+    render(<SuperAdminEmpresasPage />);
+    await screen.findByText("Transportes Sur");
+    fireEvent.click(screen.getByRole("button", { name: "Ver salud →" }));
+    expect(h.push).toHaveBeenCalledTimes(1);
+    expect(h.push).toHaveBeenCalledWith("/superadmin/empresas/e1");
+  });
+
+  test("'Nueva empresa' abre el diálogo con el formulario", async () => {
+    render(<SuperAdminEmpresasPage />);
+    await screen.findByText("Transportes Sur");
+    fireEvent.click(screen.getByRole("button", { name: "Nueva empresa" }));
+    expect(screen.getByRole("dialog", { name: "Nueva empresa" })).toBeTruthy();
+    expect(screen.getByLabelText("Nombre de la empresa")).toBeTruthy();
+  });
+});

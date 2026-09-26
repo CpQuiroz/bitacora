@@ -21,11 +21,10 @@ import { supabase } from "@/lib/supabase";
 import { apiFetch, exigirOk } from "@/lib/api";
 import { reponer } from "@/lib/reponer";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Modal } from "@/components/Modal";
 import { ComboboxCliente } from "@/components/ComboboxCliente";
 import { ComboboxResponsable } from "@/components/ComboboxResponsable";
 import { EstadoCitaRiel } from "@/components/EstadoCitaRiel";
-import { Button, Card, DatePicker, Input, Select, StatusBadge, Textarea, useConfirmar, useDeshacer, type TonoEstado } from "@bitacora/ui/web";
+import { Button, Card, DatePicker, Dialog, Input, Select, StatusBadge, Textarea, useConfirmar, useDeshacer, type TonoEstado } from "@bitacora/ui/web";
 
 type OrdenListado = Trabajo & {
   cliente_info: { nombre: string } | null;
@@ -991,11 +990,11 @@ function AgendaContenido() {
         </div>
       </div>
 
-      <Modal
-        open={formTareaAbierto}
-        onClose={() => setFormTareaAbierto(false)}
-        title={tareaEditandoId ? (formatearFolio("CIT", tareaEditandoFolio) ? `Editar tarea — ${formatearFolio("CIT", tareaEditandoFolio)}` : "Editar tarea") : "Nueva tarea"}
-        wide
+      <Dialog
+        abierto={formTareaAbierto}
+        onCerrar={() => setFormTareaAbierto(false)}
+        titulo={tareaEditandoId ? (formatearFolio("CIT", tareaEditandoFolio) ? `Editar tarea — ${formatearFolio("CIT", tareaEditandoFolio)}` : "Editar tarea") : "Nueva tarea"}
+        tamano="ancho"
       >
         <form onSubmit={onGuardarTarea} className="flex flex-col gap-ds-4">
             <div className="grid gap-ds-4 sm:grid-cols-2">
@@ -1119,7 +1118,7 @@ function AgendaContenido() {
               )}
             </div>
         </form>
-      </Modal>
+      </Dialog>
 
       <div className="mb-ds-6">
         <Card>

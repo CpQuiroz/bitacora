@@ -7,8 +7,7 @@ import type { Documento, EntidadDocumento, EstadoDocumento } from "@bitacora/sha
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { StatusBadge } from "@bitacora/ui/web";
-import { DataTable } from "@/components/DataTable";
+import { StatusBadge, Table } from "@bitacora/ui/web";
 
 type DocumentoPorVencer = Documento & { tipo: { nombre: string } | null; estado: EstadoDocumento | null; entidad_nombre: string };
 
@@ -111,29 +110,32 @@ export default function DocumentosPorVencerPage() {
         ))}
       </div>
 
-      <DataTable
-        rows={visibles}
-        rowKey={(d) => d.id}
-        loading={documentos === null && !error}
-        columns={[
-          { header: "Quién/Qué", cell: (d) => <span className="font-medium text-ds-text">{d.entidad_nombre}</span> },
-          { header: "Tipo", cell: (d) => <span className="text-ds-text-secondary">{d.tipo?.nombre ?? "—"}</span> },
+      <Table
+        filas={visibles}
+        claveFila={(d) => d.id}
+        // Convención (tarea 149): la fila abre la ficha (igual que "Ver ficha" del menú ⋯).
+        onFilaClick={(d) => router.push(RUTA_POR_ENTIDAD[d.entidad_tipo](d.entidad_id))}
+        accionesEnMenu
+        cargando={documentos === null && !error}
+        columnas={[
+          { encabezado: "Quién/Qué", celda: (d) => <span className="font-medium text-ds-text">{d.entidad_nombre}</span> },
+          { encabezado: "Tipo", celda: (d) => <span className="text-ds-text-secondary">{d.tipo?.nombre ?? "—"}</span> },
           {
-            header: "Vence",
-            cell: (d) => <span className={d.estado ? COLOR_ESTADO[d.estado] : "text-ds-text-secondary"}>{d.fecha_vencimiento ?? "Sin vencimiento"}</span>,
+            encabezado: "Vence",
+            celda: (d) => <span className={d.estado ? COLOR_ESTADO[d.estado] : "text-ds-text-secondary"}>{d.fecha_vencimiento ?? "Sin vencimiento"}</span>,
           },
-          { header: "Estado", cell: (d) => (d.estado ? <StatusBadge estado={d.estado} /> : "—") },
+          { encabezado: "Estado", celda: (d) => (d.estado ? <StatusBadge estado={d.estado} /> : "—") },
         ]}
-        actions={[
+        acciones={[
           {
-            label: "Ver ficha",
-            onClick: (d) => router.push(RUTA_POR_ENTIDAD[d.entidad_tipo](d.entidad_id)),
-            variant: "brand",
+            etiqueta: "Ver ficha",
+            onPress: (d) => router.push(RUTA_POR_ENTIDAD[d.entidad_tipo](d.entidad_id)),
+            tono: "brand",
           },
         ]}
-        emptyState={{
-          icon: Clock,
-          message:
+        vacio={{
+          icono: <Clock size={28} strokeWidth={2.75} />,
+          titulo:
             filtro === "por_vencer"
               ? "Nada por vencer en los próximos 30 días."
               : filtro === "vencidos"

@@ -4,8 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Paperclip, Plus } from "lucide-react";
 import type { AplicaDocumento, SugerenciaRubro, TipoDocumento } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
-import { Button, Card, Input, Select, StatusBadge } from "@bitacora/ui/web";
-import { DataTable } from "@/components/DataTable";
+import { Button, Card, Input, Select, StatusBadge, Table } from "@bitacora/ui/web";
 
 const APLICA: { valor: AplicaDocumento; etiqueta: string }[] = [
   { valor: "colaborador", etiqueta: "Solo colaboradores" },
@@ -178,21 +177,24 @@ export default function TiposDocumentoPage() {
       )}
 
       {error ? <p className="font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
-      <DataTable
-        rows={tipos ?? []}
-        rowKey={(t) => t.id}
-        loading={tipos === null && !error}
-        columns={[
-          { header: "Nombre", cell: (t) => <span className="font-medium text-ds-text">{t.nombre}</span> },
-          { header: "Aplica a", cell: (t) => <span className="text-ds-text-secondary">{APLICA.find((a) => a.valor === t.aplica_a)?.etiqueta}</span> },
-          { header: "Estado", cell: (t) => <StatusBadge estado={t.activo ? "activo" : "inactivo"} /> },
+      <Table
+        filas={tipos ?? []}
+        claveFila={(t) => t.id}
+        // Convención (tarea 149): la fila abre la edición; el resto en el menú ⋯.
+        onFilaClick={abrirEdicion}
+        accionesEnMenu
+        cargando={tipos === null && !error}
+        columnas={[
+          { encabezado: "Nombre", celda: (t) => <span className="font-medium text-ds-text">{t.nombre}</span> },
+          { encabezado: "Aplica a", celda: (t) => <span className="text-ds-text-secondary">{APLICA.find((a) => a.valor === t.aplica_a)?.etiqueta}</span> },
+          { encabezado: "Estado", celda: (t) => <StatusBadge estado={t.activo ? "activo" : "inactivo"} /> },
         ]}
-        actions={[
-          { label: "Editar", onClick: abrirEdicion, variant: "brand" },
-          { label: (t) => (t.activo ? "Desactivar" : "Activar"), onClick: onAlternarActivo, variant: "muted" },
-          { label: "Eliminar", onClick: onEliminar, variant: "danger" },
+        acciones={[
+          { etiqueta: "Editar", onPress: abrirEdicion, tono: "brand" },
+          { etiqueta: (t) => (t.activo ? "Desactivar" : "Activar"), onPress: onAlternarActivo, tono: "muted" },
+          { etiqueta: "Eliminar", onPress: onEliminar, tono: "peligro" },
         ]}
-        emptyState={{ icon: Paperclip, message: "Todavía no hay tipos de documento — usa los sugeridos de arriba o crea uno nuevo." }}
+        vacio={{ titulo: "Todavía no hay tipos de documento — usa los sugeridos de arriba o crea uno nuevo.", icono: <Paperclip size={28} strokeWidth={2.75} /> }}
       />
     </div>
   );

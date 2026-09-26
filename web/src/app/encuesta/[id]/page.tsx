@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { AuthLayout } from "@/components/AuthLayout";
-import { ErrorText } from "@/components/ui";
+import { Aviso } from "@bitacora/ui/web";
 import { IconStar } from "@/components/icons";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
@@ -59,7 +59,7 @@ function EncuestaContenido() {
             type="button"
             disabled={enviando}
             onClick={() => calificar(v)}
-            className="flex h-12 w-12 items-center justify-center rounded-full border border-border text-muted transition-colors hover:border-brand hover:bg-brand-soft hover:text-brand disabled:opacity-50"
+            className="flex h-12 w-12 items-center justify-center rounded-full border border-ds-divider text-ds-text-secondary transition-colors hover:border-ds-brand hover:bg-ds-brand/[0.08] hover:text-ds-brand disabled:opacity-50"
             aria-label={`Calificar ${v} de 5`}
           >
             <IconStar className="h-5 w-5" />
@@ -68,7 +68,7 @@ function EncuestaContenido() {
       </div>
       {error && (
         <div className="mt-4">
-          <ErrorText>{error}</ErrorText>
+          <Aviso tono="error">{error}</Aviso>
         </div>
       )}
     </AuthLayout>

@@ -8,8 +8,7 @@ import { MANTENCION_EXIGE_FOTO_EN_NO } from "@bitacora/shared";
 import { apiFetch, exigirOk } from "@/lib/api";
 import { comprimirImagen } from "@/lib/comprimirImagen";
 import { abrirPdfRegistroMantencion } from "@/lib/descargarPdf";
-import { Button, Cifra, DatePicker, EmptyState, ErrorState, LoadingState, Select, Textarea, useDeshacer } from "@bitacora/ui/web";
-import { Modal } from "@/components/Modal";
+import { Button, Cifra, DatePicker, Dialog, EmptyState, ErrorState, LoadingState, Select, Textarea, useDeshacer } from "@bitacora/ui/web";
 import { SelectCrear } from "@/components/SelectCrear";
 import { useOcultos } from "@/lib/useOcultos";
 
@@ -208,7 +207,7 @@ export function RegistrosMantencion({ equipo, puedeGestionar }: { equipo: Equipo
         )}
       </div>
 
-      <Modal open={modalAbierto} onClose={() => setModalAbierto(false)} title="Nuevo registro de mantención" xl>
+      <Dialog abierto={modalAbierto} onCerrar={() => setModalAbierto(false)} titulo="Nuevo registro de mantención" tamano="grande">
         <ModalNuevoRegistro
           equipo={equipo}
           onListo={() => {
@@ -216,11 +215,11 @@ export function RegistrosMantencion({ equipo, puedeGestionar }: { equipo: Equipo
             cargar();
           }}
         />
-      </Modal>
+      </Dialog>
 
-      <Modal open={detalleId != null} onClose={() => setDetalleId(null)} title="Detalle del registro" xl>
+      <Dialog abierto={detalleId != null} onCerrar={() => setDetalleId(null)} titulo="Detalle del registro" tamano="grande">
         {detalleId && <DetalleRegistro equipoId={equipo.id} registroId={detalleId} onCambio={cargar} />}
-      </Modal>
+      </Dialog>
     </div>
   );
 }

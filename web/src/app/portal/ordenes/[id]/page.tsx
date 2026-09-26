@@ -6,10 +6,11 @@ import { useParams, useRouter } from "next/navigation";
 import type { EstadoTrabajo } from "@bitacora/shared";
 import { estadoOsDeTrabajo } from "@bitacora/shared";
 import { PortalShell } from "@/components/PortalShell";
-import { Badge, Button, Card, ErrorText } from "@/components/ui";
+import { Aviso, Button, Card, StatusBadge } from "@bitacora/ui/web";
 import { IconChevronLeft } from "@/components/icons";
 import { EstadoCargando } from "@/components/estados";
 import { obtenerTokenPortal, portalFetch } from "@/lib/portalApi";
+import { tonoPortal } from "../../tonoEstado";
 
 type OrdenDetalle = {
   id: string;
@@ -56,40 +57,42 @@ export default function PortalOrdenDetallePage() {
     window.open(URL.createObjectURL(blob), "_blank");
   }
 
+  const estadoOs = orden ? (orden.orden?.estado_os ?? estadoOsDeTrabajo(orden.estado as EstadoTrabajo)) : "";
+
   return (
     <PortalShell>
-      <Link href="/portal/ordenes" className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-brand hover:underline">
+      <Link href="/portal/ordenes" className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-ds-brand hover:underline">
         <IconChevronLeft className="h-4 w-4" />
         Mis Órdenes de Servicio
       </Link>
 
-      {error && <ErrorText>{error}</ErrorText>}
+      {error && <Aviso tono="error">{error}</Aviso>}
       {!orden && !error && <EstadoCargando />}
 
       {orden && (
         <div className="flex flex-col gap-4">
           <Card>
             <div className="flex items-center justify-between">
-              <h1 className="text-lg font-semibold text-foreground">{orden.orden?.folio ? `OS N° ${orden.orden.folio}` : "Orden de servicio"}</h1>
-              <Badge value={orden.orden?.estado_os ?? estadoOsDeTrabajo(orden.estado as EstadoTrabajo)} />
+              <h1 className="text-lg font-semibold text-ds-text">{orden.orden?.folio ? `OS N° ${orden.orden.folio}` : "Orden de servicio"}</h1>
+              <StatusBadge estado={estadoOs} tonoForzado={tonoPortal(estadoOs)} />
             </div>
-            <p className="mt-2 text-sm text-muted">{new Date(orden.fecha).toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" })}</p>
+            <p className="mt-2 text-sm text-ds-text-secondary">{new Date(orden.fecha).toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" })}</p>
             {orden.descripcion && (
-              <div className="mt-4 border-t border-border pt-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted">Descripción del servicio</p>
-                <p className="mt-1 text-sm text-foreground">{orden.descripcion}</p>
+              <div className="mt-4 border-t border-ds-divider pt-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-ds-text-secondary">Descripción del servicio</p>
+                <p className="mt-1 text-sm text-ds-text">{orden.descripcion}</p>
               </div>
             )}
             {orden.orden?.observaciones_cierre && (
-              <div className="mt-4 border-t border-border pt-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted">Comentarios del técnico</p>
-                <p className="mt-1 text-sm text-foreground">{orden.orden.observaciones_cierre}</p>
+              <div className="mt-4 border-t border-ds-divider pt-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-ds-text-secondary">Comentarios del técnico</p>
+                <p className="mt-1 text-sm text-ds-text">{orden.orden.observaciones_cierre}</p>
               </div>
             )}
           </Card>
 
           {orden.orden?.finalizada_en && (
-            <Button type="button" onClick={descargarPdf} disabled={descargando}>
+            <Button bloque onPress={descargarPdf} deshabilitado={descargando}>
               {descargando ? "Generando…" : "Descargar PDF"}
             </Button>
           )}

@@ -6,9 +6,7 @@ import { Briefcase, Plus } from "lucide-react";
 import type { Rubro } from "@bitacora/shared";
 import { ETIQUETA_PLAN } from "@bitacora/shared";
 import { SuperAdminShell } from "@/components/SuperAdminShell";
-import { DataTable, type ColumnaTabla } from "@/components/DataTable";
-import { Modal } from "@/components/Modal";
-import { Button, Card, Input, Select, StatusBadge, Tag } from "@bitacora/ui/web";
+import { Aviso, Button, Card, Dialog, ErrorState, Input, LoadingState, Select, StatusBadge, Table, Tag, type ColumnaTabla } from "@bitacora/ui/web";
 import { obtenerTokenSuperAdmin, superadminFetch } from "@/lib/superadminApi";
 
 const RUBROS: { value: Rubro; label: string }[] = [
@@ -115,11 +113,11 @@ export default function SuperAdminEmpresasPage() {
   const filtradas = (empresas ?? []).filter((e) => e.nombre.toLowerCase().includes(busqueda.trim().toLowerCase()));
 
   const columnas: ColumnaTabla<EmpresaListado>[] = [
-    { header: "Nombre", cell: (e) => <span className="font-medium text-ds-text">{e.nombre}</span> },
-    { header: "Fecha de alta", cell: (e) => new Date(e.creado_en).toLocaleDateString("es-CL") },
-    { header: "Estado", cell: (e) => <StatusBadge estado={e.estado} /> },
-    { header: "Plan", cell: (e) => <Tag>{(ETIQUETA_PLAN as Record<string, string>)[e.plan] ?? e.plan}</Tag> },
-    { header: "Usuarios", cell: (e) => e.cantidad_usuarios },
+    { encabezado: "Nombre", celda: (e) => <span className="font-medium text-ds-text">{e.nombre}</span> },
+    { encabezado: "Fecha de alta", celda: (e) => new Date(e.creado_en).toLocaleDateString("es-CL") },
+    { encabezado: "Estado", celda: (e) => <StatusBadge estado={e.estado} /> },
+    { encabezado: "Plan", celda: (e) => <Tag>{(ETIQUETA_PLAN as Record<string, string>)[e.plan] ?? e.plan}</Tag> },
+    { encabezado: "Usuarios", celda: (e) => e.cantidad_usuarios },
   ];
 
   return (
@@ -134,7 +132,7 @@ export default function SuperAdminEmpresasPage() {
         </Button>
       </div>
 
-      <Modal open={modalAbierto} onClose={() => setModalAbierto(false)} title="Nueva empresa" wide>
+      <Dialog abierto={modalAbierto} onCerrar={() => setModalAbierto(false)} titulo="Nueva empresa" tamano="ancho">
         <form onSubmit={onCrear} className="flex flex-col gap-ds-4">
           <div className="grid gap-ds-4 sm:grid-cols-2">
             <Input etiqueta="Nombre de la empresa" requerido valor={nombre} onCambio={setNombre} />
@@ -160,7 +158,7 @@ export default function SuperAdminEmpresasPage() {
             <p className="mt-ds-2 font-ds-body text-ds-caption text-ds-text-secondary">Recibe una invitación por correo para activar su cuenta como admin de esta empresa.</p>
           </div>
 
-          {errorCrear ? <p className="font-ds-body text-ds-small text-ds-accent-700">{errorCrear}</p> : null}
+          {errorCrear ? <Aviso tono="error">{errorCrear}</Aviso> : null}
           <div className="flex gap-ds-2">
             <Button tipo="submit" cargando={creando}>
               Crear empresa
@@ -170,25 +168,33 @@ export default function SuperAdminEmpresasPage() {
             </Button>
           </div>
         </form>
-      </Modal>
+      </Dialog>
 
       <div className="my-ds-6">
         <Card>
           <div className="max-w-sm">
-            <Input placeholder="Buscar por nombre…" valor={busqueda} onCambio={setBusqueda} />
+            <Input placeholder="Buscar por nombre…" etiquetaAccesible="Buscar empresa por nombre" valor={busqueda} onCambio={setBusqueda} />
           </div>
         </Card>
       </div>
 
-      <DataTable
-        columns={columnas}
-        rows={filtradas}
-        rowKey={(e) => e.id}
-        loading={empresas === null && !error}
-        error={error}
-        actions={[{ label: "Ver salud →", onClick: (e) => router.push(`/superadmin/empresas/${e.id}`) }]}
-        emptyState={{ icon: Briefcase, message: busqueda ? "Ninguna empresa coincide con la búsqueda." : "Todavía no hay empresas registradas." }}
-      />
+      {empresas === null && !error ? (
+        <LoadingState />
+      ) : error ? (
+        <ErrorState mensaje={error} />
+      ) : (
+        <Table
+          columnas={columnas}
+          filas={filtradas}
+          claveFila={(e) => e.id}
+          onFilaClick={(e) => router.push(`/superadmin/empresas/${e.id}`)}
+          acciones={[{ etiqueta: "Ver salud →", onPress: (e) => router.push(`/superadmin/empresas/${e.id}`) }]}
+          vacio={{
+            titulo: busqueda ? "Ninguna empresa coincide con la búsqueda." : "Todavía no hay empresas registradas.",
+            icono: <Briefcase size={28} strokeWidth={2.75} />,
+          }}
+        />
+      )}
     </SuperAdminShell>
   );
 }

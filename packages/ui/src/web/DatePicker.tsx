@@ -20,7 +20,7 @@ function aFecha(texto: string): Date | null {
   return new Date(y, m - 1, d);
 }
 
-export function DatePicker({ etiqueta, error, ayuda, deshabilitado, valor, onCambio, placeholder, minimo, maximo, id: idPropio, etiquetaAccesible }: PropsDatePicker) {
+export function DatePicker({ etiqueta, error, ayuda, deshabilitado, valor, onCambio, placeholder, minimo, maximo, requerido, id: idPropio, etiquetaAccesible }: PropsDatePicker) {
   const idGenerado = useId();
   const id = idPropio ?? idGenerado;
   const idMensaje = `${id}-mensaje`;
@@ -40,6 +40,7 @@ export function DatePicker({ etiqueta, error, ayuda, deshabilitado, valor, onCam
         disabled={deshabilitado}
         min={minimo ? aTextoFecha(minimo) : undefined}
         max={maximo ? aTextoFecha(maximo) : undefined}
+        required={requerido}
         id={id}
         aria-label={etiqueta ? undefined : etiquetaAccesible}
         aria-invalid={Boolean(error) || undefined}

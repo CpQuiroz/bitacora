@@ -4,8 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Flag, Plus } from "lucide-react";
 import type { CotizacionEtapa } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
-import { Button, Card, Input } from "@bitacora/ui/web";
-import { DataTable } from "@/components/DataTable";
+import { Button, Card, Input, Table } from "@bitacora/ui/web";
 
 // Etapa de seguimiento interno a medida de la empresa (migración 107)
 // — capa cosmética en paralelo a `estado`, sin ninguna lógica propia
@@ -108,17 +107,20 @@ export default function CotizacionEtapasPage() {
 
       {formAbierto && formulario}
 
-      <DataTable
-        rows={etapas ?? []}
-        rowKey={(e) => e.id}
-        loading={etapas === null && !error}
+      <Table
+        filas={etapas ?? []}
+        claveFila={(e) => e.id}
+        // Convención (tarea 149): la fila abre la edición; el resto en el menú ⋯.
+        onFilaClick={abrirEdicion}
+        accionesEnMenu
+        cargando={etapas === null && !error}
         error={error}
-        columns={[{ header: "Nombre", cell: (e) => <span className="font-medium text-ds-text">{e.nombre}</span> }]}
-        actions={[
-          { label: "Editar", onClick: abrirEdicion, variant: "brand" },
-          { label: "Eliminar", onClick: (e) => onEliminar(e.id), variant: "danger" },
+        columnas={[{ encabezado: "Nombre", celda: (e) => <span className="font-medium text-ds-text">{e.nombre}</span> }]}
+        acciones={[
+          { etiqueta: "Editar", onPress: abrirEdicion, tono: "brand" },
+          { etiqueta: "Eliminar", onPress: (e) => onEliminar(e.id), tono: "peligro" },
         ]}
-        emptyState={{ icon: Flag, message: "Ninguna etapa creada todavía." }}
+        vacio={{ titulo: "Ninguna etapa creada todavía.", icono: <Flag size={28} strokeWidth={2.75} /> }}
       />
     </div>
   );

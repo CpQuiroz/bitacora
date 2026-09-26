@@ -6,20 +6,18 @@ import type { EquipoAsignadoConDocumentos, Empresa, Usuario } from "@bitacora/sh
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell } from "@/components/DashboardShell";
-import { Card, PageHeader } from "@/components/ui";
+import { PageHeader } from "@/components/PageHeader";
 import { DocumentoForm } from "@/components/DocumentoForm";
 import { IconTruck } from "@/components/icons";
-import { StatusBadge } from "@bitacora/ui/web";
+import { Card, StatusBadge } from "@bitacora/ui/web";
 
 type UsuarioConEmpresa = Usuario & { empresa: Empresa };
 
-// Esta página sigue con el sistema de tokens viejo (Card/PageHeader de
-// @/components/ui) — StatusBadge (@bitacora/ui/web) igual se puede
-// usar acá: sus clases ds- conviven con las del sistema viejo en el
-// mismo Tailwind. Antes tenía su propio texto text-danger/text-warning
-// a mano porque StatusBadge no distinguía vencido/por_vencer del resto
-// (gap cerrado el 23-sep-2026 — MAPA_ESTADO_TONO ya los mapea a
-// peligro/advertencia), así que ya no hace falta duplicarlo acá.
+// Migrada al sistema de diseño (tarea 157): Card de @bitacora/ui/web y
+// PageHeader de @/components/PageHeader. Antes tenía su propio texto
+// text-danger/text-warning a mano porque StatusBadge no distinguía
+// vencido/por_vencer del resto (gap cerrado el 23-sep-2026 —
+// MAPA_ESTADO_TONO ya los mapea a peligro/advertencia).
 
 export default function PerfilPage() {
   const router = useRouter();
@@ -58,40 +56,44 @@ export default function PerfilPage() {
       }}
     >
       <PageHeader title="Perfil" subtitle="Tus datos, tu vehículo asignado y tus documentos" />
-      <Card className="my-6">
-        <p className="text-sm text-muted">
-          Todavía no puedes editar tu perfil desde acá — por ahora tu nombre y rol los administra un admin desde Equipo.
-        </p>
-      </Card>
+      <div className="my-ds-6">
+        <Card>
+          <p className="font-ds-body text-ds-small text-ds-text-secondary">
+            Todavía no puedes editar tu perfil desde acá — por ahora tu nombre y rol los administra un admin desde Equipo.
+          </p>
+        </Card>
+      </div>
 
-      <Card className="my-6">
-        <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
-          <IconTruck className="h-4 w-4 text-brand" />
-          Vehículo asignado
-        </h2>
-        {vehiculo ? (
-          <>
-            <p className="text-sm text-foreground">
-              {vehiculo.patente} — {[vehiculo.marca, vehiculo.modelo].filter(Boolean).join(" ") || "sin marca/modelo registrados"}
-            </p>
-            {vehiculo.documentos.length > 0 ? (
-              <ul className="mt-3 flex flex-col gap-2 border-t border-border pt-3">
-                {vehiculo.documentos.map((d) => (
-                  <li key={d.id} className="flex items-center justify-between gap-2 text-sm">
-                    <span className="text-foreground">
-                      {d.tipo?.nombre ?? "Documento"}
-                      {d.fecha_vencimiento ? <span className="text-muted"> — vence {d.fecha_vencimiento}</span> : null}
-                    </span>
-                    {d.estado ? <StatusBadge estado={d.estado} /> : null}
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </>
-        ) : (
-          <p className="text-sm text-muted">No tienes un vehículo asignado por ahora.</p>
-        )}
-      </Card>
+      <div className="my-ds-6">
+        <Card>
+          <h2 className="mb-ds-3 flex items-center gap-ds-2 font-ds-body text-ds-small font-semibold text-ds-text">
+            <IconTruck className="h-4 w-4 text-ds-brand" />
+            Vehículo asignado
+          </h2>
+          {vehiculo ? (
+            <>
+              <p className="font-ds-body text-ds-small text-ds-text">
+                {vehiculo.patente} — {[vehiculo.marca, vehiculo.modelo].filter(Boolean).join(" ") || "sin marca/modelo registrados"}
+              </p>
+              {vehiculo.documentos.length > 0 ? (
+                <ul className="mt-ds-3 flex flex-col gap-ds-2 border-t border-ds-divider pt-ds-3">
+                  {vehiculo.documentos.map((d) => (
+                    <li key={d.id} className="flex items-center justify-between gap-ds-2 font-ds-body text-ds-small">
+                      <span className="text-ds-text">
+                        {d.tipo?.nombre ?? "Documento"}
+                        {d.fecha_vencimiento ? <span className="text-ds-text-secondary"> — vence {d.fecha_vencimiento}</span> : null}
+                      </span>
+                      {d.estado ? <StatusBadge estado={d.estado} /> : null}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </>
+          ) : (
+            <p className="font-ds-body text-ds-small text-ds-text-secondary">No tienes un vehículo asignado por ahora.</p>
+          )}
+        </Card>
+      </div>
 
       <DocumentoForm entidadTipo="colaborador" entidadId={usuario.id} />
     </DashboardShell>

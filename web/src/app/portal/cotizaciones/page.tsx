@@ -4,10 +4,11 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PortalShell } from "@/components/PortalShell";
-import { Badge, Card, ErrorText } from "@/components/ui";
+import { Aviso, Card, StatusBadge } from "@bitacora/ui/web";
 import { IconReceipt } from "@/components/icons";
 import { EstadoCargando, EstadoVacio } from "@/components/estados";
 import { obtenerTokenPortal, portalFetch } from "@/lib/portalApi";
+import { tonoPortal } from "../tonoEstado";
 
 type CotizacionListado = { id: string; numero: number | null; descripcion: string | null; monto: number; fecha: string; fecha_vencimiento: string | null; estado: string };
 
@@ -43,9 +44,9 @@ export default function PortalCotizacionesPage() {
 
   return (
     <PortalShell>
-      <h1 className="mb-4 text-xl font-semibold text-foreground">Mis Cotizaciones</h1>
+      <h1 className="mb-4 text-xl font-semibold text-ds-text">Mis Cotizaciones</h1>
 
-      {error && <ErrorText>{error}</ErrorText>}
+      {error && <Aviso tono="error">{error}</Aviso>}
       {cotizaciones === null && !error && <EstadoCargando />}
       {cotizaciones?.length === 0 && (
         <EstadoVacio icono={IconReceipt} titulo="Todavía no tienes cotizaciones" />
@@ -54,13 +55,13 @@ export default function PortalCotizacionesPage() {
       <div className="flex flex-col gap-3">
         {cotizaciones?.map((c) => (
           <Link key={c.id} href={`/portal/cotizaciones/${c.id}`}>
-            <Card className="p-4">
+            <Card>
               <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-foreground">Cotización N° {c.numero ?? "—"}</p>
-                <Badge value={c.estado} />
+                <p className="text-sm font-medium text-ds-text">Cotización N° {c.numero ?? "—"}</p>
+                <StatusBadge estado={c.estado} tonoForzado={tonoPortal(c.estado)} />
               </div>
-              <p className="mt-1 text-xs text-muted">{new Date(c.fecha).toLocaleDateString("es-CL")}</p>
-              <p className="mt-1 text-sm font-semibold text-foreground">${Math.round(c.monto).toLocaleString("es-CL")}</p>
+              <p className="mt-1 text-xs text-ds-text-secondary">{new Date(c.fecha).toLocaleDateString("es-CL")}</p>
+              <p className="mt-1 text-sm font-semibold text-ds-text">${Math.round(c.monto).toLocaleString("es-CL")}</p>
             </Card>
           </Link>
         ))}

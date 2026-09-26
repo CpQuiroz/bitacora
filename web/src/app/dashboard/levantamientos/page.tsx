@@ -10,8 +10,7 @@ import { supabase } from "@/lib/supabase";
 import { apiFetch, exigirOk } from "@/lib/api";
 import { reponer } from "@/lib/reponer";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Button, DatePicker, ErrorState, Input, LoadingState, StatusBadge, Table, useConfirmar, useDeshacer } from "@bitacora/ui/web";
-import { Modal } from "@/components/Modal";
+import { Button, DatePicker, Dialog, ErrorState, Input, LoadingState, StatusBadge, Table, useConfirmar, useDeshacer } from "@bitacora/ui/web";
 import { ComboboxCliente } from "@/components/ComboboxCliente";
 import { ComboboxResponsable } from "@/components/ComboboxResponsable";
 import { CatalogoSelectorModal, type ItemSeleccionadoCatalogo } from "@/components/CatalogoSelectorModal";
@@ -461,7 +460,7 @@ function LevantamientosContenido() {
         ) : null}
       </div>
 
-      <Modal open={formAbierto} onClose={() => setFormAbierto(false)} title="Nuevo levantamiento">
+      <Dialog abierto={formAbierto} onCerrar={() => setFormAbierto(false)} titulo="Nuevo levantamiento">
         <div className="flex flex-col gap-ds-3">
           <ComboboxCliente value={clienteId} onChange={setClienteId} clientes={clientes} onClienteCreado={(c) => setClientes((prev) => [...prev, c])} />
           <ComboboxResponsable
@@ -490,14 +489,14 @@ function LevantamientosContenido() {
               placeholder="Ej.: revisar instalación eléctrica del local, cotizar cableado nuevo…"
             />
           </div>
-          {formError ? <p className="text-ds-small text-red-600">{formError}</p> : null}
+          {formError ? <p className="text-ds-small text-ds-danger">{formError}</p> : null}
           <Button variante="primario" cargando={guardando} onPress={crear}>
             Crear levantamiento
           </Button>
         </div>
-      </Modal>
+      </Dialog>
 
-      <Modal open={detalleId != null} onClose={() => setDetalleId(null)} title={formatearFolio("LEV", detalle?.folio ?? null) ?? "Detalle del levantamiento"} wide>
+      <Dialog abierto={detalleId != null} onCerrar={() => setDetalleId(null)} titulo={formatearFolio("LEV", detalle?.folio ?? null) ?? "Detalle del levantamiento"} tamano="ancho">
         {!detalle ? (
           detalleError ? <ErrorState mensaje={detalleError} /> : <LoadingState />
         ) : (
@@ -690,10 +689,10 @@ function LevantamientosContenido() {
                           onBlur={() => guardarDescripcionFoto(f.id, f.descripcion)}
                           disabled={guardandoDescripcionFotoId === f.id}
                           placeholder="Descripción…"
-                          className="h-7 w-full rounded-ds-sm border border-ds-divider bg-ds-surface px-1 text-[11px] text-ds-text outline-none focus-visible:ring-2 focus-visible:ring-ds-accent"
+                          className="h-7 w-full rounded-ds-sm border border-ds-divider bg-ds-surface px-1 text-ds-micro text-ds-text outline-none focus-visible:ring-2 focus-visible:ring-ds-accent"
                         />
                       ) : f.descripcion ? (
-                        <p className="text-[11px] leading-tight text-ds-text/70">{f.descripcion}</p>
+                        <p className="text-ds-micro leading-tight text-ds-text/70">{f.descripcion}</p>
                       ) : null}
                     </div>
                   ))}
@@ -701,7 +700,7 @@ function LevantamientosContenido() {
               )}
             </div>
 
-            {detalleError ? <p className="text-ds-small text-red-600">{detalleError}</p> : null}
+            {detalleError ? <p className="text-ds-small text-ds-danger">{detalleError}</p> : null}
 
             {detalle.estado === "completado_tecnico" ? (
               <div className="flex flex-col gap-ds-2 border-t border-ds-divider pt-ds-3">
@@ -733,7 +732,7 @@ function LevantamientosContenido() {
             ) : null}
           </div>
         )}
-      </Modal>
+      </Dialog>
 
       <CatalogoSelectorModal
         open={catalogoAbierto}

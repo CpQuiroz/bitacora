@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AuthLayout } from "@/components/AuthLayout";
-import { ErrorText } from "@/components/ui";
+import { Aviso } from "@bitacora/ui/web";
 import { guardarTokenPortal, portalFetch } from "@/lib/portalApi";
 
 const RUTA_POR_ENTIDAD: Record<string, (id: string) => string> = {
@@ -41,8 +41,8 @@ function AccederPortalContenido() {
   if (error) {
     return (
       <AuthLayout title="Link no válido" subtitle="Puede haber vencido o ya haberse usado.">
-        <ErrorText>{error}</ErrorText>
-        <a href="/portal/login" className="mt-4 block text-center text-sm font-medium text-brand hover:underline">
+        <Aviso tono="error">{error}</Aviso>
+        <a href="/portal/login" className="mt-ds-4 block text-center text-ds-small font-medium text-ds-brand hover:underline">
           Entrar con mi RUT
         </a>
       </AuthLayout>

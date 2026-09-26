@@ -7,10 +7,10 @@ import { useParams, useRouter } from "next/navigation";
 import type { AnalisisFoto, Anexo, ItemChecklist, OrdenServicio, Trabajo, TipoOsTrabajo } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch, exigirOk } from "@/lib/api";
-import { useDeshacer } from "@bitacora/ui/web";
+import { Aviso, Button, Card, StatusBadge, useDeshacer } from "@bitacora/ui/web";
 import { comprimirImagen } from "@/lib/comprimirImagen";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Badge, Button, Card, ErrorText, PageHeader } from "@/components/ui";
+import { PageHeader } from "@/components/PageHeader";
 import { IconCamera, IconChevronLeft, IconClipboardCheck } from "@/components/icons";
 import { useOcultos } from "@/lib/useOcultos";
 
@@ -129,182 +129,176 @@ export default function TrabajoDetallePage() {
 
   return (
     <DashboardShell usuario={usuario}>
-      <Link href="/dashboard/trabajos" className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-brand hover:underline">
+      <Link href="/dashboard/trabajos" className="mb-ds-4 inline-flex items-center gap-ds-1 font-ds-body text-ds-small font-medium text-ds-brand hover:underline">
         <IconChevronLeft className="h-4 w-4" />
         Trabajos
       </Link>
 
-      {error && !trabajo && <ErrorText>{error}</ErrorText>}
+      {error && !trabajo && <Aviso tono="error">{error}</Aviso>}
 
       {trabajo && (
         <>
           <PageHeader
             title={trabajo.cliente}
             subtitle={`${trabajo.fecha} · $${trabajo.monto.toLocaleString("es-CL")}${trabajo.ubicacion ? ` · ${trabajo.ubicacion}` : ""}`}
-            action={<Badge value={trabajo.estado} />}
+            action={<StatusBadge estado={trabajo.estado} />}
           />
 
-          <Card className="my-6">
-            <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-foreground">
-              <IconClipboardCheck className="h-4 w-4 text-brand" />
-              Orden de servicio
-            </h2>
-            {(() => {
-              const checklist: ItemChecklist[] = orden?.checklist ?? [];
-              const checkIn = checklist.find((c) => c.item === "Check-in");
-              const checkOut = checklist.find((c) => c.item === "Check-out");
-              return (
-                <div className="grid gap-4 sm:grid-cols-3">
-                  <div>
-                    <p className="text-xs text-muted">Check-in</p>
-                    <p className="text-sm font-medium text-foreground">
-                      {checkIn?.hecho ? `✓ ${checkIn.hora?.slice(11, 16) ?? ""}` : "Pendiente"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted">Check-out</p>
-                    <p className="text-sm font-medium text-foreground">
-                      {checkOut?.hecho ? `✓ ${checkOut.hora?.slice(11, 16) ?? ""}` : "Pendiente"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted">Firma del cliente o encargado</p>
-                    {orden?.firma_url_firmada ? (
-                      // URL firmada (vence) — sin optimizer, con lazy-load igual.
-                      <Image
-                        src={orden.firma_url_firmada}
-                        alt="Firma del cliente o encargado"
-                        width={160}
-                        height={40}
-                        unoptimized
-                        className="mt-1 h-10 w-auto rounded border border-border bg-white"
-                      />
-                    ) : (
-                      <p className="text-sm font-medium text-muted">Pendiente</p>
-                    )}
-                  </div>
-                </div>
-              );
-            })()}
-          </Card>
-
-          <Card className="my-6">
-            <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-foreground">
-              <IconCamera className="h-4 w-4 text-brand" />
-              Fotos
-            </h2>
-            {osBloqueada ? (
-              <p className="text-sm text-muted">
-                La OS está firmada — estas son las fotos originales y no se pueden modificar.
-              </p>
-            ) : (
-              <>
-                <input
-                  ref={inputRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  onChange={onSubirFoto}
-                  className="hidden"
-                  id="input-foto"
-                />
-                <label htmlFor="input-foto">
-                  <Button type="button" disabled={subiendo} className="cursor-pointer" onClick={() => inputRef.current?.click()}>
-                    {subiendo ? "Subiendo foto…" : "Subir foto"}
-                  </Button>
-                </label>
-                <p className="mt-2 text-xs text-muted">Para reemplazar una foto, eliminá la actual y subí la nueva.</p>
-              </>
-            )}
-            {error && (
-              <div className="mt-3">
-                <ErrorText>{error}</ErrorText>
-              </div>
-            )}
-
-            {ocultos.filtrar(fotos).length === 0 ? (
-              <p className="mt-4 text-sm text-muted">Todavía no hay fotos de este trabajo.</p>
-            ) : (
-              <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                {ocultos.filtrar(fotos).map((f) => (
-                  <div key={f.id} className="overflow-hidden rounded-xl border border-border">
-                    <div className="relative h-48 w-full">
-                      {/* URL firmada (vence) — sin optimizer, con lazy-load igual. */}
-                      <Image src={f.url} alt={f.resumen ?? "Foto del trabajo"} fill unoptimized className="object-cover" />
-                    </div>
-                    <div className="p-3">
-                      {f.alerta && <p className="mb-1 text-sm font-medium text-danger">⚠ {f.detalle_alerta}</p>}
-                      <p className="text-sm text-muted">
-                        {f.estado === "procesando"
-                          ? "Analizando la foto…"
-                          : f.estado === "error"
-                            ? "No se pudo analizar automáticamente."
-                            : f.resumen}
+          <div className="my-ds-6">
+            <Card>
+              <h2 className="mb-ds-4 flex items-center gap-ds-2 font-ds-body text-ds-small font-semibold text-ds-text">
+                <IconClipboardCheck className="h-4 w-4 text-ds-brand" />
+                Orden de servicio
+              </h2>
+              {(() => {
+                const checklist: ItemChecklist[] = orden?.checklist ?? [];
+                const checkIn = checklist.find((c) => c.item === "Check-in");
+                const checkOut = checklist.find((c) => c.item === "Check-out");
+                return (
+                  <div className="grid gap-ds-4 sm:grid-cols-3">
+                    <div>
+                      <p className="font-ds-body text-ds-caption text-ds-text-secondary">Check-in</p>
+                      <p className="font-ds-body text-ds-small font-medium text-ds-text">
+                        {checkIn?.hecho ? `✓ ${checkIn.hora?.slice(11, 16) ?? ""}` : "Pendiente"}
                       </p>
-                      {!osBloqueada && (
-                        <button
-                          type="button"
-                          onClick={() => onEliminarFoto(f)}
-                          className="mt-2 text-xs font-medium text-danger hover:underline disabled:opacity-50"
-                        >
-                          Eliminar
-                        </button>
+                    </div>
+                    <div>
+                      <p className="font-ds-body text-ds-caption text-ds-text-secondary">Check-out</p>
+                      <p className="font-ds-body text-ds-small font-medium text-ds-text">
+                        {checkOut?.hecho ? `✓ ${checkOut.hora?.slice(11, 16) ?? ""}` : "Pendiente"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="font-ds-body text-ds-caption text-ds-text-secondary">Firma del cliente o encargado</p>
+                      {orden?.firma_url_firmada ? (
+                        // URL firmada (vence) — sin optimizer, con lazy-load igual.
+                        <Image
+                          src={orden.firma_url_firmada}
+                          alt="Firma del cliente o encargado"
+                          width={160}
+                          height={40}
+                          unoptimized
+                          className="mt-ds-1 h-10 w-auto rounded-ds-sm border border-ds-divider bg-white"
+                        />
+                      ) : (
+                        <p className="font-ds-body text-ds-small font-medium text-ds-text-secondary">Pendiente</p>
                       )}
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </Card>
+                );
+              })()}
+            </Card>
+          </div>
 
-          {(osBloqueada || anexos.length > 0) && (
-            <Card className="my-6">
-              <h2 className="mb-1 flex items-center gap-2 text-sm font-semibold text-foreground">
-                <IconCamera className="h-4 w-4 text-brand" />
-                Fotos agregadas después del cierre
+          <div className="my-ds-6">
+            <Card>
+              <h2 className="mb-ds-4 flex items-center gap-ds-2 font-ds-body text-ds-small font-semibold text-ds-text">
+                <IconCamera className="h-4 w-4 text-ds-brand" />
+                Fotos
               </h2>
-              <p className="mb-4 text-xs text-muted">
-                Evidencia agregada después de firmar la OS. No reemplazan las fotos originales ni el PDF ya emitido.
-              </p>
-              {osBloqueada && (
+              {osBloqueada ? (
+                <p className="font-ds-body text-ds-small text-ds-text-secondary">
+                  La OS está firmada — estas son las fotos originales y no se pueden modificar.
+                </p>
+              ) : (
                 <>
                   <input
-                    ref={anexoInputRef}
+                    ref={inputRef}
                     type="file"
-                    multiple
-                    accept="image/jpeg,image/png,image/webp,application/pdf"
-                    onChange={onSubirAnexo}
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={onSubirFoto}
                     className="hidden"
-                    id="input-anexo"
+                    id="input-foto"
                   />
-                  <label htmlFor="input-anexo">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      disabled={subiendoAnexo}
-                      className="cursor-pointer"
-                      onClick={() => anexoInputRef.current?.click()}
-                    >
-                      {subiendoAnexo ? "Subiendo…" : "Agregar archivo"}
-                    </Button>
-                  </label>
+                  <Button deshabilitado={subiendo} onPress={() => inputRef.current?.click()}>
+                    {subiendo ? "Subiendo foto…" : "Subir foto"}
+                  </Button>
+                  <p className="mt-ds-2 font-ds-body text-ds-caption text-ds-text-secondary">Para reemplazar una foto, eliminá la actual y subí la nueva.</p>
                 </>
               )}
+              {error && (
+                <div className="mt-ds-3">
+                  <Aviso tono="error">{error}</Aviso>
+                </div>
+              )}
 
-              {anexos.length === 0 ? (
-                <p className="mt-4 text-sm text-muted">Sin archivos agregados después del cierre.</p>
+              {ocultos.filtrar(fotos).length === 0 ? (
+                <p className="mt-ds-4 font-ds-body text-ds-small text-ds-text-secondary">Todavía no hay fotos de este trabajo.</p>
               ) : (
-                <ul className="mt-4 divide-y divide-border">
-                  {anexos.map((a) => (
-                    <li key={a.key} className="flex items-center justify-between gap-3 py-2.5 text-sm">
-                      <a href={a.url} target="_blank" rel="noopener noreferrer" className="truncate font-medium text-brand hover:underline">
-                        {a.nombre}
-                      </a>
-                      {a.creado_en && <span className="shrink-0 text-xs text-muted">{a.creado_en.slice(0, 10)}</span>}
-                    </li>
+                <div className="mt-ds-4 grid gap-ds-4 sm:grid-cols-2">
+                  {ocultos.filtrar(fotos).map((f) => (
+                    <div key={f.id} className="overflow-hidden rounded-ds-md border border-ds-divider">
+                      <div className="relative h-48 w-full">
+                        {/* URL firmada (vence) — sin optimizer, con lazy-load igual. */}
+                        <Image src={f.url} alt={f.resumen ?? "Foto del trabajo"} fill unoptimized className="object-cover" />
+                      </div>
+                      <div className="p-ds-3">
+                        {f.alerta && <p className="mb-ds-1 font-ds-body text-ds-small font-medium text-ds-danger">⚠ {f.detalle_alerta}</p>}
+                        <p className="font-ds-body text-ds-small text-ds-text-secondary">
+                          {f.estado === "procesando"
+                            ? "Analizando la foto…"
+                            : f.estado === "error"
+                              ? "No se pudo analizar automáticamente."
+                              : f.resumen}
+                        </p>
+                        {!osBloqueada && (
+                          <div className="mt-ds-2">
+                            <Button variante="peligro" tamano="sm" onPress={() => onEliminarFoto(f)}>
+                              Eliminar
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   ))}
-                </ul>
+                </div>
               )}
             </Card>
+          </div>
+
+          {(osBloqueada || anexos.length > 0) && (
+            <div className="my-ds-6">
+              <Card>
+                <h2 className="mb-ds-1 flex items-center gap-ds-2 font-ds-body text-ds-small font-semibold text-ds-text">
+                  <IconCamera className="h-4 w-4 text-ds-brand" />
+                  Fotos agregadas después del cierre
+                </h2>
+                <p className="mb-ds-4 font-ds-body text-ds-caption text-ds-text-secondary">
+                  Evidencia agregada después de firmar la OS. No reemplazan las fotos originales ni el PDF ya emitido.
+                </p>
+                {osBloqueada && (
+                  <>
+                    <input
+                      ref={anexoInputRef}
+                      type="file"
+                      multiple
+                      accept="image/jpeg,image/png,image/webp,application/pdf"
+                      onChange={onSubirAnexo}
+                      className="hidden"
+                      id="input-anexo"
+                    />
+                    <Button variante="secundario" deshabilitado={subiendoAnexo} onPress={() => anexoInputRef.current?.click()}>
+                      {subiendoAnexo ? "Subiendo…" : "Agregar archivo"}
+                    </Button>
+                  </>
+                )}
+
+                {anexos.length === 0 ? (
+                  <p className="mt-ds-4 font-ds-body text-ds-small text-ds-text-secondary">Sin archivos agregados después del cierre.</p>
+                ) : (
+                  <ul className="mt-ds-4 divide-y divide-ds-divider">
+                    {anexos.map((a) => (
+                      <li key={a.key} className="flex items-center justify-between gap-ds-3 py-ds-2 font-ds-body text-ds-small">
+                        <a href={a.url} target="_blank" rel="noopener noreferrer" className="truncate font-medium text-ds-brand hover:underline">
+                          {a.nombre}
+                        </a>
+                        {a.creado_en && <span className="shrink-0 text-ds-caption text-ds-text-secondary">{a.creado_en.slice(0, 10)}</span>}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Card>
+            </div>
           )}
         </>
       )}

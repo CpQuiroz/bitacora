@@ -7,9 +7,8 @@ import type { Cliente, Equipo, Usuario } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Modal } from "@/components/Modal";
 import { DocumentoForm } from "@/components/DocumentoForm";
-import { Button, Card, EmptyState, ErrorState, Input, LoadingState, Select, StatusBadge, Table, useToast } from "@bitacora/ui/web";
+import { Button, Card, Dialog, EmptyState, ErrorState, Input, LoadingState, Select, StatusBadge, Table, useToast } from "@bitacora/ui/web";
 import { ComboboxCliente } from "@/components/ComboboxCliente";
 import { ComboboxResponsable } from "@/components/ComboboxResponsable";
 import { descargarCSV } from "@/lib/exportCsv";
@@ -436,11 +435,11 @@ export default function EquiposPage() {
         />
       )}
 
-      <Modal open={equipoAsignando !== null} onClose={() => setEquipoAsignando(null)} title={`Asignación — ${equipoAsignando?.nombre ?? ""}`}>
+      <Dialog abierto={equipoAsignando !== null} onCerrar={() => setEquipoAsignando(null)} titulo={`Asignación — ${equipoAsignando?.nombre ?? ""}`}>
         {equipoAsignando && (
           <div className="flex flex-col gap-ds-4">
             <div>
-              <p className="mb-ds-1 font-ds-body text-[11px] font-semibold text-ds-text">Colaborador asignado</p>
+              <p className="mb-ds-1 font-ds-body text-ds-micro font-semibold text-ds-text">Colaborador asignado</p>
               {equipoAsignando.asignacion_vigente ? (
                 <div className="flex items-center justify-between">
                   <p className="font-ds-body text-ds-small text-ds-text">{equipoAsignando.asignacion_vigente.colaborador_nombre}</p>
@@ -461,7 +460,7 @@ export default function EquiposPage() {
               </Button>
             </div>
             <div className="border-t border-ds-divider pt-ds-4">
-              <p className="mb-ds-2 font-ds-body text-[11px] font-semibold text-ds-text">Historial</p>
+              <p className="mb-ds-2 font-ds-body text-ds-micro font-semibold text-ds-text">Historial</p>
               {asignaciones.length === 0 ? (
                 <p className="font-ds-body text-ds-small text-ds-text/70">Sin historial todavía.</p>
               ) : (
@@ -479,11 +478,11 @@ export default function EquiposPage() {
             </div>
           </div>
         )}
-      </Modal>
+      </Dialog>
 
-      <Modal open={equipoDocumentos !== null} onClose={() => setEquipoDocumentos(null)} title={`Documentos — ${equipoDocumentos?.nombre ?? ""}`} wide>
+      <Dialog abierto={equipoDocumentos !== null} onCerrar={() => setEquipoDocumentos(null)} titulo={`Documentos — ${equipoDocumentos?.nombre ?? ""}`} tamano="ancho">
         {equipoDocumentos && <DocumentoForm entidadTipo="vehiculo" entidadId={equipoDocumentos.id} />}
-      </Modal>
+      </Dialog>
 
       <ImportarCsvModal
         abierto={importAbierto}

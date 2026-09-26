@@ -197,6 +197,12 @@ else
   fail "diálogos nativos (confirm/alert/Alert.alert) — ver arriba"
   EXIT_CODE=1
 fi
+if node scripts/check-controles-web.mjs; then
+  :
+else
+  fail "controles web hechos a mano subieron — ver arriba"
+  EXIT_CODE=1
+fi
 
 echo ""
 echo "── 9. Migraciones ────────────────────────────────────"

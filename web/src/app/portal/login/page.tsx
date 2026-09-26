@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AuthLayout } from "@/components/AuthLayout";
-import { Button, ErrorText, Input, Label } from "@/components/ui";
+import { Aviso, Button, Input } from "@bitacora/ui/web";
 import { guardarTokenPortal, portalFetch } from "@/lib/portalApi";
 
 type Empresa = { id: string; nombre: string };
@@ -70,24 +70,24 @@ export default function LoginPortalPage() {
   if (codigoEnviado) {
     return (
       <AuthLayout title="Revisa tu correo" subtitle="Te mandamos un código de 6 dígitos, vence en 10 minutos.">
-        <div className="flex flex-col gap-4">
-          <div>
-            <Label>Código</Label>
-            <Input
-              type="text"
-              inputMode="numeric"
-              maxLength={6}
-              placeholder="123456"
-              value={codigo}
-              onChange={(e) => setCodigo(e.target.value.replace(/\D/g, ""))}
-              className="text-center text-lg tracking-[0.3em]"
-            />
-          </div>
-          {error && <ErrorText>{error}</ErrorText>}
-          <Button type="button" onClick={verificarCodigo} disabled={verificando}>
+        <div className="flex flex-col gap-ds-4">
+          <Input
+            etiqueta="Código"
+            tipo="codigo"
+            maxLongitud={6}
+            placeholder="123456"
+            valor={codigo}
+            onCambio={(v) => setCodigo(v.replace(/\D/g, ""))}
+          />
+          {error && <Aviso tono="error">{error}</Aviso>}
+          <Button bloque onPress={verificarCodigo} deshabilitado={verificando}>
             {verificando ? "Verificando…" : "Entrar"}
           </Button>
-          <button type="button" onClick={() => solicitarCodigo(empresaId ?? undefined)} className="text-center text-xs text-muted hover:text-brand">
+          <button
+            type="button"
+            onClick={() => solicitarCodigo(empresaId ?? undefined)}
+            className="text-center text-ds-caption text-ds-text-secondary hover:text-ds-brand"
+          >
             Reenviar código
           </button>
         </div>
@@ -104,7 +104,7 @@ export default function LoginPortalPage() {
               key={e.id}
               type="button"
               onClick={() => solicitarCodigo(e.id)}
-              className="rounded-lg border border-border px-4 py-3 text-left text-sm font-medium text-foreground hover:border-brand hover:bg-brand-soft"
+              className="rounded-ds-md border border-ds-divider px-ds-4 py-ds-3 text-left text-ds-small font-medium text-ds-text hover:border-ds-brand hover:bg-ds-brand/[0.08]"
             >
               {e.nombre}
             </button>
@@ -112,7 +112,7 @@ export default function LoginPortalPage() {
         </div>
         {error && (
           <div className="mt-4">
-            <ErrorText>{error}</ErrorText>
+            <Aviso tono="error">{error}</Aviso>
           </div>
         )}
       </AuthLayout>
@@ -121,13 +121,10 @@ export default function LoginPortalPage() {
 
   return (
     <AuthLayout title="Mi portal" subtitle="Ingresa tu RUT y te mandamos un código por correo">
-      <div className="flex flex-col gap-4">
-        <div>
-          <Label>RUT</Label>
-          <Input type="text" placeholder="12.345.678-9" value={rut} onChange={(e) => setRut(e.target.value)} />
-        </div>
-        {error && <ErrorText>{error}</ErrorText>}
-        <Button type="button" onClick={() => solicitarCodigo()} disabled={enviando}>
+      <div className="flex flex-col gap-ds-4">
+        <Input etiqueta="RUT" placeholder="12.345.678-9" valor={rut} onCambio={setRut} />
+        {error && <Aviso tono="error">{error}</Aviso>}
+        <Button bloque onPress={() => solicitarCodigo()} deshabilitado={enviando}>
           {enviando ? "Enviando…" : "Enviarme un código"}
         </Button>
       </div>

@@ -6,8 +6,7 @@ import type { CatalogoItem, TipoCatalogoItem } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { estadoStock, ETIQUETA_ESTADO_STOCK } from "@/lib/estadoStock";
-import { Button, Input, LoadingState, StatusBadge, type TonoEstado } from "@bitacora/ui/web";
-import { Modal } from "./Modal";
+import { Button, Dialog, Input, LoadingState, StatusBadge, type TonoEstado } from "@bitacora/ui/web";
 
 export type ItemSeleccionadoCatalogo = {
   catalogo_item_id: string | null;
@@ -169,7 +168,7 @@ export function CatalogoSelectorModal({
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Agregar del catálogo / inventario" wide>
+    <Dialog abierto={open} onCerrar={onClose} titulo="Agregar del catálogo / inventario" tamano="ancho">
       <div className="flex flex-col gap-ds-3">
         {avisaDescuentoStock && (
           <p className="rounded-ds-md bg-ds-brand/[0.06] px-ds-3 py-ds-2 font-ds-body text-ds-caption text-ds-text/70">
@@ -318,6 +317,6 @@ export function CatalogoSelectorModal({
           </Button>
         </div>
       </div>
-    </Modal>
+    </Dialog>
   );
 }

@@ -14,6 +14,25 @@ const eslintConfig = defineConfig([
       "bitacora/no-literal-color-or-px": "error",
     },
   },
+  // Componentes antiguos borrados en la ronda 5 (tarea 157): todo sale de
+  // @bitacora/ui/web (Button, Input, Card, Aviso, StatusBadge, Dialog,
+  // Table…) o de @/components/PageHeader.
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@/components/ui", "@/components/Modal", "@/components/DataTable", "**/components/ui", "**/components/Modal", "**/components/DataTable"],
+              message: "Usá @bitacora/ui/web (Dialog, Table, Aviso, StatusBadge…) o @/components/PageHeader.",
+            },
+          ],
+        },
+      ],
+    },
+  },
   // Accesibilidad base (tarea 155): cada control con su nombre accesible
   // (label asociado o aria-label) y nada clicable sin teclado.
   {

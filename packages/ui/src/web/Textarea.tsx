@@ -4,7 +4,7 @@ import { useId } from "react";
 import type { PropsTextarea } from "../tipos";
 import { CAMPO_BASE, LABEL, MENSAJE_AYUDA, MENSAJE_ERROR, bordeDe } from "./campo";
 
-export function Textarea({ etiqueta, error, ayuda, deshabilitado, valor, onCambio, placeholder, filas = 4, id: idPropio, etiquetaAccesible }: PropsTextarea) {
+export function Textarea({ etiqueta, error, ayuda, deshabilitado, valor, onCambio, placeholder, filas = 4, requerido, id: idPropio, etiquetaAccesible }: PropsTextarea) {
   const idGenerado = useId();
   const id = idPropio ?? idGenerado;
   const idMensaje = `${id}-mensaje`;
@@ -22,6 +22,7 @@ export function Textarea({ etiqueta, error, ayuda, deshabilitado, valor, onCambi
         placeholder={placeholder}
         disabled={deshabilitado}
         rows={filas}
+        required={requerido}
         id={id}
         aria-label={etiqueta ? undefined : etiquetaAccesible}
         aria-invalid={Boolean(error) || undefined}

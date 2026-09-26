@@ -26,6 +26,8 @@ export function Input({
   maxLongitud,
   minLongitud,
   requerido,
+  paso,
+  minimo,
   iconoIzq,
   autoFoco,
   autoCapitalizar = true,
@@ -62,13 +64,15 @@ export function Input({
           maxLength={maxLongitud}
           minLength={minLongitud}
           required={requerido}
+          step={tipo === "numero" ? paso : undefined}
+          min={tipo === "numero" ? minimo : undefined}
           autoCapitalize={autoCapitalizar ? undefined : "off"}
           onKeyDown={onSubmit ? (e) => e.key === "Enter" && onSubmit() : undefined}
           id={id}
           aria-label={etiqueta ? undefined : etiquetaAccesible}
           aria-invalid={Boolean(error) || undefined}
           aria-describedby={hayMensaje ? idMensaje : undefined}
-          className={`h-11 rounded-ds-pill border ${bordeDe(error)} px-ds-4 ${iconoIzq ? "pl-ds-8" : ""} ${CAMPO_BASE}`}
+          className={`h-11 rounded-ds-pill border ${bordeDe(error)} px-ds-4 ${iconoIzq ? "pl-ds-8" : ""} ${tipo === "codigo" ? "text-center tracking-widest" : ""} ${CAMPO_BASE}`}
         />
       </div>
       {error ? (

@@ -3,10 +3,9 @@
 import { useRef, useState } from "react";
 import Papa from "papaparse";
 import { AlertTriangle, CheckCircle2, Upload } from "lucide-react";
-import { Button } from "@bitacora/ui/web";
+import { Button, Dialog } from "@bitacora/ui/web";
 import { descargarCSV } from "@/lib/exportCsv";
 import { apiFetch } from "@/lib/api";
-import { Modal } from "./Modal";
 
 export type ColumnaImport = {
   /** Clave que espera el endpoint (ej. "rut"). */
@@ -110,7 +109,7 @@ export function ImportarCsvModal({
   }
 
   return (
-    <Modal open={abierto} onClose={cerrar} title={titulo} wide>
+    <Dialog abierto={abierto} onCerrar={cerrar} titulo={titulo} tamano="ancho">
       <div className="flex flex-col gap-ds-4">
         {!resultado ? (
           <>
@@ -203,6 +202,6 @@ export function ImportarCsvModal({
           </>
         )}
       </div>
-    </Modal>
+    </Dialog>
   );
 }

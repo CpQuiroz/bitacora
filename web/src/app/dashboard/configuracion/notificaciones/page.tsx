@@ -4,8 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Clock, Mail, MessageCircle } from "lucide-react";
 import type { MensajePersonalizado, NotificacionClienteLog, NotificacionesConfig, TipoMensajePersonalizado } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
-import { Button, Card, Input, LoadingState, Select, StatusBadge, Textarea, useToast } from "@bitacora/ui/web";
-import { DataTable } from "@/components/DataTable";
+import { Button, Card, Input, LoadingState, Select, StatusBadge, Table, Textarea, useToast } from "@bitacora/ui/web";
 
 type Tab = "correo" | "whatsapp" | "recordatorios" | "historial";
 
@@ -364,26 +363,26 @@ export default function NotificacionesPage() {
           </div>
           <div className="p-ds-4">
             {errorHistorial ? <p className="font-ds-body text-ds-small text-ds-accent-700">{errorHistorial}</p> : null}
-            <DataTable
-              rows={historial ?? []}
-              rowKey={(h) => h.id}
-              loading={historial === null && !errorHistorial}
-              columns={[
-                { header: "Evento", cell: (h) => ETIQUETA_TIPO_LOG[h.tipo] ?? h.tipo },
-                { header: "Canal", cell: (h) => <StatusBadge estado={h.canal} tonoForzado="cerrado" /> },
-                { header: "Destinatario", cell: (h) => <span className="text-ds-text-secondary">{h.destinatario}</span> },
-                { header: "Fecha", cell: (h) => <span className="text-ds-text-secondary">{new Date(h.creado_en).toLocaleString("es-CL")}</span> },
-                { header: "Estado", cell: (h) => <StatusBadge estado={h.exito ? "exito" : "fallido"} tonoForzado={h.exito ? "completado" : "cancelado"} /> },
+            <Table
+              filas={historial ?? []}
+              claveFila={(h) => h.id}
+              cargando={historial === null && !errorHistorial}
+              columnas={[
+                { encabezado: "Evento", celda: (h) => ETIQUETA_TIPO_LOG[h.tipo] ?? h.tipo },
+                { encabezado: "Canal", celda: (h) => <StatusBadge estado={h.canal} tonoForzado="cerrado" /> },
+                { encabezado: "Destinatario", celda: (h) => <span className="text-ds-text-secondary">{h.destinatario}</span> },
+                { encabezado: "Fecha", celda: (h) => <span className="text-ds-text-secondary">{new Date(h.creado_en).toLocaleString("es-CL")}</span> },
+                { encabezado: "Estado", celda: (h) => <StatusBadge estado={h.exito ? "exito" : "fallido"} tonoForzado={h.exito ? "completado" : "cancelado"} /> },
               ]}
-              actions={[
+              acciones={[
                 {
-                  label: (h) => (reenviandoId === h.id ? "Reenviando…" : "Reenviar"),
-                  onClick: (h) => onReenviar(h.id),
-                  variant: "brand",
-                  hidden: (h) => h.exito,
+                  etiqueta: (h) => (reenviandoId === h.id ? "Reenviando…" : "Reenviar"),
+                  onPress: (h) => onReenviar(h.id),
+                  tono: "brand",
+                  oculta: (h) => h.exito,
                 },
               ]}
-              emptyState={{ icon: Mail, message: "Todavía no se ha enviado ninguna notificación al cliente." }}
+              vacio={{ titulo: "Todavía no se ha enviado ninguna notificación al cliente.", icono: <Mail size={28} strokeWidth={2.75} /> }}
             />
           </div>
         </Card>

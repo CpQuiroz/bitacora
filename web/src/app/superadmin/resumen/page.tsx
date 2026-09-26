@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { MetricasSuperAdmin } from "@bitacora/shared";
 import { SuperAdminShell } from "@/components/SuperAdminShell";
-import { Card, ErrorText, PageHeader } from "@/components/ui";
+import { Aviso, Card } from "@bitacora/ui/web";
+import { PageHeader } from "@/components/PageHeader";
 import { GraficoDistribucion } from "@/components/charts/GraficoDistribucion";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { obtenerTokenSuperAdmin, superadminFetch } from "@/lib/superadminApi";
@@ -35,9 +36,9 @@ function formatearBytes(bytes: number): string {
 function Metrica({ label, valor, sub }: { label: string; valor: string; sub?: string }) {
   return (
     <Card>
-      <p className="text-xs text-muted">{label}</p>
-      <p className="mt-1 text-2xl font-semibold text-foreground">{valor}</p>
-      {sub && <p className="mt-1 text-[11px] text-muted">{sub}</p>}
+      <p className="text-xs text-ds-text-secondary">{label}</p>
+      <p className="mt-1 text-2xl font-semibold text-ds-text">{valor}</p>
+      {sub && <p className="mt-1 text-ds-micro text-ds-text-secondary">{sub}</p>}
     </Card>
   );
 }
@@ -90,7 +91,7 @@ export default function SuperAdminResumenPage() {
         }
       />
 
-      {error && <ErrorText>{error}</ErrorText>}
+      {error && <Aviso tono="error">{error}</Aviso>}
 
       {metricas && (
         <div className="my-6 flex flex-col gap-6">
@@ -121,20 +122,20 @@ export default function SuperAdminResumenPage() {
 
           <div className="grid gap-4 lg:grid-cols-2">
             <Card>
-              <h2 className="mb-3 text-sm font-semibold text-foreground">Empresas por estado de suscripción</h2>
+              <h2 className="mb-3 text-sm font-semibold text-ds-text">Empresas por estado de suscripción</h2>
               <GraficoDistribucion datos={distribucionSuscripcion} mensajeVacio="Sin empresas todavía." />
             </Card>
 
             <Card>
-              <h2 className="mb-3 text-sm font-semibold text-foreground">Empresas por rubro</h2>
+              <h2 className="mb-3 text-sm font-semibold text-ds-text">Empresas por rubro</h2>
               <div className="flex flex-col gap-2">
                 {Object.entries(metricas.empresas_por_rubro).map(([rubro, n]) => (
                   <div key={rubro} className="flex items-center justify-between text-sm">
-                    <span className="text-muted">{ETIQUETA_RUBRO[rubro] ?? rubro}</span>
-                    <span className="font-medium text-foreground">{n}</span>
+                    <span className="text-ds-text-secondary">{ETIQUETA_RUBRO[rubro] ?? rubro}</span>
+                    <span className="font-medium text-ds-text">{n}</span>
                   </div>
                 ))}
-                <div className="mt-2 border-t border-border pt-2 text-[11px] text-muted">
+                <div className="mt-2 border-t border-ds-divider pt-2 text-ds-micro text-ds-text-secondary">
                   Estado operativo:{" "}
                   {Object.entries(metricas.empresas_por_estado_operativo)
                     .map(([e, n]) => `${e.replaceAll("_", " ")} ${n}`)
@@ -146,16 +147,16 @@ export default function SuperAdminResumenPage() {
 
           <div className="grid gap-4 lg:grid-cols-2">
             <Card>
-              <h2 className="mb-1 text-sm font-semibold text-foreground">Top 5 — consumo de IA este mes</h2>
-              <p className="mb-3 text-[11px] text-muted">Para detectar outliers de costo.</p>
+              <h2 className="mb-1 text-sm font-semibold text-ds-text">Top 5 — consumo de IA este mes</h2>
+              <p className="mb-3 text-ds-micro text-ds-text-secondary">Para detectar outliers de costo.</p>
               {metricas.top_ia.length === 0 ? (
-                <p className="text-sm text-muted">Sin consumo de IA este mes.</p>
+                <p className="text-sm text-ds-text-secondary">Sin consumo de IA este mes.</p>
               ) : (
-                <div className="flex flex-col divide-y divide-border">
+                <div className="flex flex-col divide-y divide-ds-divider">
                   {metricas.top_ia.map((e) => (
                     <Link key={e.id} href={`/superadmin/empresas/${e.id}`} className="flex items-center justify-between py-2 text-sm hover:underline">
-                      <span className="text-foreground">{e.nombre}</span>
-                      <span className="text-muted">{e.tokens.toLocaleString("es-CL")} tokens</span>
+                      <span className="text-ds-text">{e.nombre}</span>
+                      <span className="text-ds-text-secondary">{e.tokens.toLocaleString("es-CL")} tokens</span>
                     </Link>
                   ))}
                 </div>
@@ -163,16 +164,16 @@ export default function SuperAdminResumenPage() {
             </Card>
 
             <Card>
-              <h2 className="mb-1 text-sm font-semibold text-foreground">Top 5 — storage usado</h2>
-              <p className="mb-3 text-[11px] text-muted">Para detectar outliers de costo.</p>
+              <h2 className="mb-1 text-sm font-semibold text-ds-text">Top 5 — storage usado</h2>
+              <p className="mb-3 text-ds-micro text-ds-text-secondary">Para detectar outliers de costo.</p>
               {metricas.top_storage.length === 0 ? (
-                <p className="text-sm text-muted">Ninguna empresa usa storage todavía.</p>
+                <p className="text-sm text-ds-text-secondary">Ninguna empresa usa storage todavía.</p>
               ) : (
-                <div className="flex flex-col divide-y divide-border">
+                <div className="flex flex-col divide-y divide-ds-divider">
                   {metricas.top_storage.map((e) => (
                     <Link key={e.id} href={`/superadmin/empresas/${e.id}`} className="flex items-center justify-between py-2 text-sm hover:underline">
-                      <span className="text-foreground">{e.nombre}</span>
-                      <span className="text-muted">{formatearBytes(e.bytes)}</span>
+                      <span className="text-ds-text">{e.nombre}</span>
+                      <span className="text-ds-text-secondary">{formatearBytes(e.bytes)}</span>
                     </Link>
                   ))}
                 </div>
@@ -180,14 +181,14 @@ export default function SuperAdminResumenPage() {
             </Card>
           </div>
 
-          <p className="text-[11px] text-muted">
+          <p className="text-ds-micro text-ds-text-secondary">
             El MRR es una aproximación operativa (suma de cobros de suscripción exitosos del mes), no revenue reconocido contable. El
             snapshot se recalcula como máximo cada 15 minutos.
           </p>
         </div>
       )}
 
-      {!metricas && !error && <p className="my-6 text-sm text-muted">Cargando…</p>}
+      {!metricas && !error && <p className="my-6 text-sm text-ds-text-secondary">Cargando…</p>}
     </SuperAdminShell>
   );
 }

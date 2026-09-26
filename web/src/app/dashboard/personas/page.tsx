@@ -10,8 +10,7 @@ import { EVENTOS } from "@bitacora/shared";
 import { registrarEvento } from "@/lib/analytics";
 import { useRolesDisponibles } from "@/lib/roles";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Modal } from "@/components/Modal";
-import { Button, Card, EmptyState, ErrorState, Input, LoadingState, Select, StatusBadge, Table, Tag, useToast } from "@bitacora/ui/web";
+import { Button, Card, Dialog, EmptyState, ErrorState, Input, LoadingState, Select, StatusBadge, Table, Tag, useToast } from "@bitacora/ui/web";
 
 // Ficha única de personas — reemplaza Flota → Colaboradores, Grupo y
 // usuario, y Remuneraciones → Datos del equipo. Esta pantalla lista al
@@ -181,7 +180,7 @@ export default function PersonasPage() {
       </div>
 
       {puedeGestionar && (
-        <Modal open={invitarAbierto} onClose={() => setInvitarAbierto(false)} title="Invitar a alguien nuevo">
+        <Dialog abierto={invitarAbierto} onCerrar={() => setInvitarAbierto(false)} titulo="Invitar a alguien nuevo">
           <form onSubmit={onInvitar} className="flex flex-col gap-ds-4">
             <div className="grid gap-ds-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
@@ -222,7 +221,7 @@ export default function PersonasPage() {
               </Button>
             </div>
           </form>
-        </Modal>
+        </Dialog>
       )}
 
       {error ? <ErrorState mensaje={error} /> : null}

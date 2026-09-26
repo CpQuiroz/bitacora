@@ -4,11 +4,11 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { PortalShell } from "@/components/PortalShell";
-import { Badge, Button, Card, ErrorText, SuccessText, WarningText } from "@/components/ui";
 import { IconChevronLeft } from "@/components/icons";
 import { EstadoCargando } from "@/components/estados";
 import { obtenerTokenPortal, portalFetch } from "@/lib/portalApi";
-import { useConfirmar } from "@bitacora/ui/web";
+import { Aviso, Button, Card, StatusBadge, useConfirmar } from "@bitacora/ui/web";
+import { tonoPortal } from "../../tonoEstado";
 
 type CitaDetalle = {
   id: string;
@@ -78,49 +78,53 @@ export default function PortalCitaDetallePage() {
 
   return (
     <PortalShell>
-      <Link href="/portal/citas" className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-brand hover:underline">
+      <Link href="/portal/citas" className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-ds-brand hover:underline">
         <IconChevronLeft className="h-4 w-4" />
         Mis Citas
       </Link>
 
-      {error && <ErrorText>{error}</ErrorText>}
+      {error && <Aviso tono="error">{error}</Aviso>}
       {!cita && !error && <EstadoCargando />}
 
       {cita && (
         <div className="flex flex-col gap-4">
           <Card>
             <div className="flex items-center justify-between">
-              <h1 className="text-lg font-semibold text-foreground">{cita.titulo}</h1>
-              <Badge value={cita.estado} />
+              <h1 className="text-lg font-semibold text-ds-text">{cita.titulo}</h1>
+              <StatusBadge estado={cita.estado} tonoForzado={tonoPortal(cita.estado)} />
             </div>
-            <p className="mt-2 text-sm text-foreground">
+            <p className="mt-2 text-sm text-ds-text">
               {new Date(`${cita.fecha}T00:00:00`).toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
               {cita.hora ? ` · ${cita.hora}` : ""}
             </p>
-            {cita.descripcion && <p className="mt-3 text-sm text-muted">{cita.descripcion}</p>}
+            {cita.descripcion && <p className="mt-3 text-sm text-ds-text-secondary">{cita.descripcion}</p>}
           </Card>
 
-          {aviso && <SuccessText>{aviso}</SuccessText>}
+          {aviso && <Aviso tono="exito">{aviso}</Aviso>}
 
           {cita.advertencia_cancelacion?.descuenta_si_cancela_ahora && (
-            <WarningText>
+            <Aviso tono="advertencia">
               Estás a menos de {cita.advertencia_cancelacion.ventana_horas} horas de la cita — si cancelas ahora, la sesión se
               descontará igual de tu paquete.
-            </WarningText>
+            </Aviso>
           )}
 
           {cita.estado === "pendiente" && (
             <div className="flex gap-3">
-              <Button type="button" onClick={() => decidir("confirmar")} disabled={decidiendo} className="flex-1">
-                Confirmar
-              </Button>
-              <Button type="button" variant="outline" onClick={() => decidir("cancelar")} disabled={decidiendo} className="flex-1">
-                Cancelar
-              </Button>
+              <div className="flex-1">
+                <Button bloque onPress={() => decidir("confirmar")} deshabilitado={decidiendo}>
+                  Confirmar
+                </Button>
+              </div>
+              <div className="flex-1">
+                <Button bloque variante="secundario" onPress={() => decidir("cancelar")} deshabilitado={decidiendo}>
+                  Cancelar
+                </Button>
+              </div>
             </div>
           )}
           {cita.estado === "confirmada" && (
-            <Button type="button" variant="outline" onClick={() => decidir("cancelar")} disabled={decidiendo}>
+            <Button bloque variante="secundario" onPress={() => decidir("cancelar")} deshabilitado={decidiendo}>
               Cancelar cita
             </Button>
           )}

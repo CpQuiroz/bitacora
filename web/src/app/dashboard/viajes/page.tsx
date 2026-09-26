@@ -12,9 +12,8 @@ import { EVENTOS } from "@bitacora/shared";
 import { registrarEvento } from "@/lib/analytics";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Button, Card, DatePicker, EmptyState, ErrorState, Input, LoadingState, Select, StatusBadge, useConfirmar, useDeshacer, useToast } from "@bitacora/ui/web";
+import { Button, Card, DatePicker, Dialog, EmptyState, ErrorState, Input, LoadingState, Select, StatusBadge, useConfirmar, useDeshacer, useToast } from "@bitacora/ui/web";
 import { InputMonto } from "@/components/InputMonto";
-import { Modal } from "@/components/Modal";
 import { ComboboxCliente } from "@/components/ComboboxCliente";
 import { ComboboxResponsable } from "@/components/ComboboxResponsable";
 import { Combobox } from "@/components/Combobox";
@@ -1026,7 +1025,7 @@ export default function ViajesPage() {
         </Card>
       )}
 
-      <Modal open={historialMonto != null} onClose={() => setHistorialMonto(null)} title={`Cambios de monto — guía ${historialMonto?.guia ?? ""}`}>
+      <Dialog abierto={historialMonto != null} onCerrar={() => setHistorialMonto(null)} titulo={`Cambios de monto — guía ${historialMonto?.guia ?? ""}`}>
         {historialMonto?.cargando ? (
           <LoadingState />
         ) : historialMonto?.error ? (
@@ -1047,9 +1046,9 @@ export default function ViajesPage() {
             ))}
           </ul>
         )}
-      </Modal>
+      </Dialog>
 
-      <Modal open={fotosViaje != null} onClose={() => setFotosViaje(null)} title="Fotos del viaje" wide>
+      <Dialog abierto={fotosViaje != null} onCerrar={() => setFotosViaje(null)} titulo="Fotos del viaje" tamano="ancho">
         {fotosViaje?.cargando ? (
           <LoadingState />
         ) : fotosViaje ? (
@@ -1076,7 +1075,7 @@ export default function ViajesPage() {
                       <button
                         type="button"
                         onClick={() => eliminarFotoViaje(f)}
-                        className="absolute right-1.5 top-1.5 rounded-ds-pill bg-ds-accent-700 px-2 py-0.5 font-ds-body text-[11px] font-medium text-white opacity-0 transition-opacity group-hover:opacity-100"
+                        className="absolute right-1.5 top-1.5 rounded-ds-pill bg-ds-accent-700 px-2 py-0.5 font-ds-body text-ds-micro font-medium text-white opacity-0 transition-opacity group-hover:opacity-100"
                       >
                         Eliminar
                       </button>
@@ -1109,7 +1108,7 @@ export default function ViajesPage() {
             </div>
           </div>
         ) : null}
-      </Modal>
+      </Dialog>
     </DashboardShell>
   );
 }

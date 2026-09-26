@@ -4,8 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Plus, Wallet } from "lucide-react";
 import type { CategoriaGasto, SugerenciaRubro } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
-import { Button, Card, Input } from "@bitacora/ui/web";
-import { DataTable } from "@/components/DataTable";
+import { Button, Card, Input, Table } from "@bitacora/ui/web";
 
 type CategoriaConCantidad = CategoriaGasto & { cantidad_gastos: number };
 
@@ -185,20 +184,23 @@ export default function CategoriasGastosPage() {
       )}
 
       {error ? <p className="font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
-      <DataTable
-        rows={categorias ?? []}
-        rowKey={(c) => c.id}
-        loading={categorias === null && !error}
-        columns={[
-          { header: "", className: "w-8", cell: (c) => <span className="inline-block h-3 w-3 rounded-ds-pill" style={{ background: c.color }} /> },
-          { header: "Nombre", cell: (c) => <span className="font-medium text-ds-text">{c.nombre}</span> },
-          { header: "Gastos asociados", cell: (c) => <span className="text-ds-text-secondary">{c.cantidad_gastos}</span> },
+      <Table
+        filas={categorias ?? []}
+        claveFila={(c) => c.id}
+        // Convención (tarea 149): la fila abre la edición; el resto en el menú ⋯.
+        onFilaClick={abrirEdicion}
+        accionesEnMenu
+        cargando={categorias === null && !error}
+        columnas={[
+          { encabezado: "", clase: "w-8", celda: (c) => <span className="inline-block h-3 w-3 rounded-ds-pill" style={{ background: c.color }} /> },
+          { encabezado: "Nombre", celda: (c) => <span className="font-medium text-ds-text">{c.nombre}</span> },
+          { encabezado: "Gastos asociados", celda: (c) => <span className="text-ds-text-secondary">{c.cantidad_gastos}</span> },
         ]}
-        actions={[
-          { label: "Editar", onClick: abrirEdicion, variant: "brand" },
-          { label: "Eliminar", onClick: (c) => onEliminar(c.id), variant: "danger" },
+        acciones={[
+          { etiqueta: "Editar", onPress: abrirEdicion, tono: "brand" },
+          { etiqueta: "Eliminar", onPress: (c) => onEliminar(c.id), tono: "peligro" },
         ]}
-        emptyState={{ icon: Wallet, message: "Todavía no hay categorías propias — usa las sugeridas de arriba o crea una nueva." }}
+        vacio={{ titulo: "Todavía no hay categorías propias — usa las sugeridas de arriba o crea una nueva.", icono: <Wallet size={28} strokeWidth={2.75} /> }}
       />
     </div>
   );

@@ -6,10 +6,11 @@ import { useRouter } from "next/navigation";
 import type { EstadoTrabajo } from "@bitacora/shared";
 import { estadoOsDeTrabajo } from "@bitacora/shared";
 import { PortalShell } from "@/components/PortalShell";
-import { Badge, Card, ErrorText } from "@/components/ui";
+import { Aviso, Card, StatusBadge } from "@bitacora/ui/web";
 import { IconClipboardCheck } from "@/components/icons";
 import { EstadoCargando, EstadoVacio } from "@/components/estados";
 import { obtenerTokenPortal, portalFetch } from "@/lib/portalApi";
+import { tonoPortal } from "../tonoEstado";
 
 type OrdenListado = {
   id: string;
@@ -18,6 +19,8 @@ type OrdenListado = {
   estado: string;
   orden: { folio: number | null; estado_os: string } | null;
 };
+
+const estadoDe = (o: OrdenListado) => o.orden?.estado_os ?? estadoOsDeTrabajo(o.estado as EstadoTrabajo);
 
 export default function PortalOrdenesPage() {
   const router = useRouter();
@@ -51,9 +54,9 @@ export default function PortalOrdenesPage() {
 
   return (
     <PortalShell>
-      <h1 className="mb-4 text-xl font-semibold text-foreground">Mis Órdenes de Servicio</h1>
+      <h1 className="mb-4 text-xl font-semibold text-ds-text">Mis Órdenes de Servicio</h1>
 
-      {error && <ErrorText>{error}</ErrorText>}
+      {error && <Aviso tono="error">{error}</Aviso>}
       {ordenes === null && !error && <EstadoCargando />}
       {ordenes?.length === 0 && (
         <EstadoVacio icono={IconClipboardCheck} titulo="Todavía no tienes órdenes de servicio" />
@@ -62,13 +65,13 @@ export default function PortalOrdenesPage() {
       <div className="flex flex-col gap-3">
         {ordenes?.map((o) => (
           <Link key={o.id} href={`/portal/ordenes/${o.id}`}>
-            <Card className="p-4">
+            <Card>
               <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-foreground">{o.orden?.folio ? `OS N° ${o.orden.folio}` : "Orden de servicio"}</p>
-                <Badge value={o.orden?.estado_os ?? estadoOsDeTrabajo(o.estado as EstadoTrabajo)} />
+                <p className="text-sm font-medium text-ds-text">{o.orden?.folio ? `OS N° ${o.orden.folio}` : "Orden de servicio"}</p>
+                <StatusBadge estado={estadoDe(o)} tonoForzado={tonoPortal(estadoDe(o))} />
               </div>
-              <p className="mt-1 text-xs text-muted">{new Date(o.fecha).toLocaleDateString("es-CL")}</p>
-              {o.descripcion && <p className="mt-1 text-xs text-muted line-clamp-2">{o.descripcion}</p>}
+              <p className="mt-1 text-xs text-ds-text-secondary">{new Date(o.fecha).toLocaleDateString("es-CL")}</p>
+              {o.descripcion && <p className="mt-1 text-xs text-ds-text-secondary line-clamp-2">{o.descripcion}</p>}
             </Card>
           </Link>
         ))}

@@ -6,12 +6,12 @@ import { useParams, useRouter } from "next/navigation";
 import type { Empresa, EstadoEmpresa, Plan, Rubro, Suscripcion, SuscripcionCobro } from "@bitacora/shared";
 import { DIAS_PRUEBA, ETIQUETA_PLAN, GRUPOS_MODULOS, LIMITES_POR_PLAN, MAX_DIAS_EXTENSION_PRUEBA, cuentaParaTope, planPermiteIACompleta, type Modulo } from "@bitacora/shared";
 import { SuperAdminShell } from "@/components/SuperAdminShell";
-import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, Select, SuccessText, Textarea } from "@/components/ui";
+import { PageHeader } from "@/components/PageHeader";
 import { IconChevronDown, IconChevronLeft, IconShield } from "@/components/icons";
 import { obtenerTokenSuperAdmin, superadminFetch } from "@/lib/superadminApi";
 import { guardarImpersonacion } from "@/lib/impersonacion";
 import { ETIQUETA_MODULO } from "@/lib/etiquetasModulo";
-import { useConfirmar } from "@bitacora/ui/web";
+import { Aviso, Button, Card, Input, Select, StatusBadge, Textarea, useConfirmar, type TonoEstado } from "@bitacora/ui/web";
 
 // Historial de la prueba (super_admin_auditoria, tarea 144).
 type HistorialPrueba = {
@@ -75,6 +75,23 @@ const ETIQUETA_FEATURE: Record<string, string> = {
   asistente: "Asistente",
 };
 
+// Estados que no están en el mapa compartido de StatusBadge (o que acá se
+// leen distinto): mismo tono que tenían con el Badge antiguo.
+const TONO_ESTADO: Record<string, TonoEstado> = {
+  suspendida: "advertencia",
+  dada_de_baja: "peligro",
+  trial: "en_progreso",
+  pago_pendiente: "advertencia",
+  suspendida_por_pago: "peligro",
+  pendiente: "advertencia",
+  correo: "en_progreso",
+  dominio: "en_progreso",
+};
+
+function Estado({ estado }: { estado: string }) {
+  return <StatusBadge estado={estado} tonoForzado={TONO_ESTADO[estado]} />;
+}
+
 function formatearBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 ** 2) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -104,10 +121,10 @@ function CabeceraColapsable({
   return (
     <button type="button" onClick={onToggle} className="flex w-full items-center justify-between gap-2 text-left">
       <span className="flex items-center gap-2">
-        <h2 className="text-sm font-semibold text-foreground">{titulo}</h2>
+        <h2 className="text-sm font-semibold text-ds-text">{titulo}</h2>
         {extra}
       </span>
-      <IconChevronDown className={`h-4 w-4 shrink-0 text-muted transition-transform ${abierto ? "rotate-180" : ""}`} />
+      <IconChevronDown className={`h-4 w-4 shrink-0 text-ds-text-secondary transition-transform ${abierto ? "rotate-180" : ""}`} />
     </button>
   );
 }
@@ -760,12 +777,12 @@ export default function SuperAdminSaludEmpresaPage() {
 
   return (
     <SuperAdminShell>
-      <Link href="/superadmin" className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-brand hover:underline">
+      <Link href="/superadmin" className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-ds-brand hover:underline">
         <IconChevronLeft className="h-4 w-4" />
         Empresas
       </Link>
 
-      {error && <ErrorText>{error}</ErrorText>}
+      {error && <Aviso tono="error">{error}</Aviso>}
 
       {salud && (
         <>
@@ -774,9 +791,9 @@ export default function SuperAdminSaludEmpresaPage() {
             subtitle="Salud y uso — sin datos operativos internos"
             action={
               <div className="flex items-center gap-2">
-                <Badge value={salud.empresa.estado} />
+                <Estado estado={salud.empresa.estado} />
                 {!editandoIdentidad && (
-                  <Button type="button" variant="outline" onClick={() => setEditandoIdentidad(true)}>
+                  <Button variante="secundario" onPress={() => setEditandoIdentidad(true)}>
                     Editar identidad
                   </Button>
                 )}
@@ -785,93 +802,85 @@ export default function SuperAdminSaludEmpresaPage() {
           />
 
           {editandoIdentidad && (
-            <Card className="my-6 border-brand/40">
-              <h2 className="mb-3 text-sm font-semibold text-foreground">Editar identidad</h2>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <Label>Nombre de la empresa</Label>
-                  <Input type="text" value={nombreEdit} onChange={(e) => setNombreEdit(e.target.value)} />
+            <div className="my-6">
+              <Card>
+                <h2 className="mb-3 text-sm font-semibold text-ds-text">Editar identidad</h2>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Input etiqueta="Nombre de la empresa" valor={nombreEdit} onCambio={setNombreEdit} />
+                  <Input etiqueta="RUT" placeholder="76.123.456-7" valor={rutEdit} onCambio={setRutEdit} />
+                  <div>
+                    <Select
+                      etiqueta="Rubro"
+                      valor={rubroEdit}
+                      onCambio={(v) => setRubroEdit(v as Rubro)}
+                      opciones={RUBROS.map((r) => ({ valor: r.value, etiqueta: r.label }))}
+                    />
+                    <p className="mt-1 text-xs text-ds-text-secondary">
+                      Cosmetología activa el tema visual &ldquo;Vino y eucalipto&rdquo; en la app móvil (pantallas de reserva).
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <Label>RUT</Label>
-                  <Input type="text" placeholder="76.123.456-7" value={rutEdit} onChange={(e) => setRutEdit(e.target.value)} />
+                {errorIdentidad && (
+                  <div className="mt-3">
+                    <Aviso tono="error">{errorIdentidad}</Aviso>
+                  </div>
+                )}
+                <div className="mt-4 flex gap-2">
+                  <Button deshabilitado={guardandoIdentidad || !nombreEdit.trim()} onPress={onGuardarIdentidad}>
+                    {guardandoIdentidad ? "Guardando…" : "Guardar"}
+                  </Button>
+                  <Button variante="ghost" onPress={() => setEditandoIdentidad(false)}>
+                    Cancelar
+                  </Button>
                 </div>
-                <div>
-                  <Label>Rubro</Label>
-                  <Select value={rubroEdit} onChange={(e) => setRubroEdit(e.target.value as Rubro)}>
-                    {RUBROS.map((r) => (
-                      <option key={r.value} value={r.value}>
-                        {r.label}
-                      </option>
-                    ))}
-                  </Select>
-                  <p className="mt-1 text-xs text-muted">
-                    Cosmetología activa el tema visual &ldquo;Vino y eucalipto&rdquo; en la app móvil (pantallas de reserva).
-                  </p>
-                </div>
-              </div>
-              {errorIdentidad && (
-                <div className="mt-3">
-                  <ErrorText>{errorIdentidad}</ErrorText>
-                </div>
-              )}
-              <div className="mt-4 flex gap-2">
-                <Button type="button" disabled={guardandoIdentidad || !nombreEdit.trim()} onClick={onGuardarIdentidad}>
-                  {guardandoIdentidad ? "Guardando…" : "Guardar"}
-                </Button>
-                <Button type="button" variant="ghost" onClick={() => setEditandoIdentidad(false)}>
-                  Cancelar
-                </Button>
-              </div>
-            </Card>
+              </Card>
+            </div>
           )}
 
-          <Card className="my-6">
-            <h2 className="mb-1 text-sm font-semibold text-foreground">Tema visual</h2>
-            <p className="mb-3 text-xs text-muted">
-              Estilo con que todos los usuarios de la empresa ven la app, en web y mobile. Es el mismo valor que su admin puede cambiar en
-              Configuración &gt; Empresa.
-            </p>
-            <div className="max-w-xs">
-              <Select
-                value={salud.empresa.tema}
-                disabled={guardandoTema}
-                onChange={(e) => onCambiarTema(e.target.value as Empresa["tema"])}
-              >
-                {TEMAS.map((t) => (
-                  <option key={t.value} value={t.value}>
-                    {t.label}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            {errorTema && (
-              <div className="mt-3">
-                <ErrorText>{errorTema}</ErrorText>
+          <div className="my-6">
+            <Card>
+              <h2 className="mb-1 text-sm font-semibold text-ds-text">Tema visual</h2>
+              <p className="mb-3 text-xs text-ds-text-secondary">
+                Estilo con que todos los usuarios de la empresa ven la app, en web y mobile. Es el mismo valor que su admin puede cambiar en
+                Configuración &gt; Empresa.
+              </p>
+              <div className="max-w-xs">
+                <Select
+                  etiquetaAccesible="Tema visual"
+                  valor={salud.empresa.tema}
+                  deshabilitado={guardandoTema}
+                  onCambio={(v) => onCambiarTema(v as Empresa["tema"])}
+                  opciones={TEMAS.map((t) => ({ valor: t.value, etiqueta: t.label }))}
+                />
               </div>
-            )}
-          </Card>
+              {errorTema && (
+                <div className="mt-3">
+                  <Aviso tono="error">{errorTema}</Aviso>
+                </div>
+              )}
+            </Card>
+          </div>
 
           <div className="my-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Card>
-              <p className="text-xs text-muted">Última actividad</p>
-              <p className="mt-1 text-lg font-semibold text-foreground">
+              <p className="text-xs text-ds-text-secondary">Última actividad</p>
+              <p className="mt-1 text-lg font-semibold text-ds-text">
                 {salud.ultima_actividad ? new Date(salud.ultima_actividad).toLocaleString("es-CL") : "Sin registro"}
               </p>
             </Card>
             <Card>
-              <p className="text-xs text-muted">Usuarios activos este mes</p>
-              <p className="mt-1 text-lg font-semibold text-foreground">{salud.usuarios_activos_mes}</p>
+              <p className="text-xs text-ds-text-secondary">Usuarios activos este mes</p>
+              <p className="mt-1 text-lg font-semibold text-ds-text">{salud.usuarios_activos_mes}</p>
             </Card>
             <Card>
-              <p className="text-xs text-muted">OS creadas este mes</p>
-              <p className="mt-1 text-lg font-semibold text-foreground">{salud.os_creadas_mes}</p>
+              <p className="text-xs text-ds-text-secondary">OS creadas este mes</p>
+              <p className="mt-1 text-lg font-semibold text-ds-text">{salud.os_creadas_mes}</p>
             </Card>
             <Card>
-              <p className="text-xs text-muted">Almacenamiento usado</p>
-              <p className="mt-1 text-lg font-semibold text-foreground">{formatearBytes(salud.almacenamiento_bytes)}</p>
+              <p className="text-xs text-ds-text-secondary">Almacenamiento usado</p>
+              <p className="mt-1 text-lg font-semibold text-ds-text">{formatearBytes(salud.almacenamiento_bytes)}</p>
               {!salud.almacenamiento_incluye_avatares && (
-                <p className="mt-1 text-[11px] text-muted">No incluye fotos de perfil (volumen marginal)</p>
+                <p className="mt-1 text-ds-micro text-ds-text-secondary">No incluye fotos de perfil (volumen marginal)</p>
               )}
             </Card>
           </div>
@@ -883,27 +892,27 @@ export default function SuperAdminSaludEmpresaPage() {
                 <>
               <div className="mt-3 flex gap-6">
                 <div>
-                  <p className="text-xs text-muted">Tokens de entrada</p>
-                  <p className="text-lg font-semibold text-foreground">{salud.consumo_ia_mes.tokens_entrada.toLocaleString("es-CL")}</p>
+                  <p className="text-xs text-ds-text-secondary">Tokens de entrada</p>
+                  <p className="text-lg font-semibold text-ds-text">{salud.consumo_ia_mes.tokens_entrada.toLocaleString("es-CL")}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted">Tokens de salida</p>
-                  <p className="text-lg font-semibold text-foreground">{salud.consumo_ia_mes.tokens_salida.toLocaleString("es-CL")}</p>
+                  <p className="text-xs text-ds-text-secondary">Tokens de salida</p>
+                  <p className="text-lg font-semibold text-ds-text">{salud.consumo_ia_mes.tokens_salida.toLocaleString("es-CL")}</p>
                 </div>
               </div>
               {Object.keys(salud.consumo_ia_mes.por_feature).length > 0 && (
-                <div className="mt-4 flex flex-col gap-1.5 border-t border-border pt-3">
+                <div className="mt-4 flex flex-col gap-1.5 border-t border-ds-divider pt-3">
                   {Object.entries(salud.consumo_ia_mes.por_feature).map(([feature, tokens]) => (
                     <div key={feature} className="flex items-center justify-between text-xs">
-                      <span className="text-muted">{ETIQUETA_FEATURE[feature] ?? feature}</span>
-                      <span className="text-foreground">
+                      <span className="text-ds-text-secondary">{ETIQUETA_FEATURE[feature] ?? feature}</span>
+                      <span className="text-ds-text">
                         {(tokens.tokens_entrada + tokens.tokens_salida).toLocaleString("es-CL")} tokens
                       </span>
                     </div>
                   ))}
                 </div>
               )}
-              <p className="mt-3 text-[11px] text-muted">
+              <p className="mt-3 text-ds-micro text-ds-text-secondary">
                 El costo exacto depende del precio vigente por token — revisa console.anthropic.com para calcularlo.
               </p>
                 </>
@@ -914,16 +923,16 @@ export default function SuperAdminSaludEmpresaPage() {
               <CabeceraColapsable titulo="Errores recientes" abierto={erroresAbierto} onToggle={() => setErroresAbierto((v) => !v)} />
               {erroresAbierto && (
               salud.errores_recientes.length === 0 ? (
-                <p className="mt-3 text-sm text-muted">Sin errores recientes.</p>
+                <p className="mt-3 text-sm text-ds-text-secondary">Sin errores recientes.</p>
               ) : (
-                <div className="mt-3 flex flex-col divide-y divide-border">
+                <div className="mt-3 flex flex-col divide-y divide-ds-divider">
                   {salud.errores_recientes.map((e, i) => (
                     <div key={i} className="py-2 text-xs">
                       <div className="flex items-center justify-between">
-                        <span className="font-medium text-foreground">{e.ruta}</span>
-                        <span className="text-muted">{new Date(e.creado_en).toLocaleString("es-CL")}</span>
+                        <span className="font-medium text-ds-text">{e.ruta}</span>
+                        <span className="text-ds-text-secondary">{new Date(e.creado_en).toLocaleString("es-CL")}</span>
                       </div>
-                      <p className="mt-0.5 text-muted">{e.mensaje}</p>
+                      <p className="mt-0.5 text-ds-text-secondary">{e.mensaje}</p>
                     </div>
                   ))}
                 </div>
@@ -938,12 +947,12 @@ export default function SuperAdminSaludEmpresaPage() {
                 titulo="Estado"
                 abierto={estadoAbierto}
                 onToggle={() => setEstadoAbierto((v) => !v)}
-                extra={<Badge value={salud.empresa.estado} />}
+                extra={<Estado estado={salud.empresa.estado} />}
               />
               {estadoAbierto && (
                 <>
               {salud.empresa.estado === "dada_de_baja" && salud.empresa.dada_de_baja_en && ahora != null && (
-                <p className="mb-3 mt-3 rounded-lg bg-amber-50 p-2 text-xs text-amber-900">
+                <p className="mb-3 mt-3 rounded-lg bg-ds-warning-soft p-2 text-xs text-ds-warning">
                   Dada de baja el {new Date(salud.empresa.dada_de_baja_en).toLocaleDateString("es-CL")} (
                   {Math.floor((ahora - new Date(salud.empresa.dada_de_baja_en).getTime()) / 86400000)} días).
                   Ley 21.719 — evaluar eliminar sus datos personales pasado el plazo de conservación.
@@ -951,17 +960,17 @@ export default function SuperAdminSaludEmpresaPage() {
               )}
               <div className="mt-3 flex flex-wrap gap-2">
                 {ESTADOS.filter((e) => e !== salud.empresa.estado).map((e) => (
-                  <Button key={e} type="button" variant="outline" disabled={guardandoEstado} onClick={() => onCambiarEstado(e)}>
+                  <Button key={e} variante="secundario" deshabilitado={guardandoEstado} onPress={() => onCambiarEstado(e)}>
                     {e === "activa" ? "Activar" : e === "suspendida" ? "Suspender" : "Dar de baja"}
                   </Button>
                 ))}
               </div>
               {errorEstado && (
                 <div className="mt-3">
-                  <ErrorText>{errorEstado}</ErrorText>
+                  <Aviso tono="error">{errorEstado}</Aviso>
                 </div>
               )}
-              <p className="mt-3 text-[11px] text-muted">
+              <p className="mt-3 text-ds-micro text-ds-text-secondary">
                 Suspendida o dada de baja bloquea el acceso a la app completa para todos los usuarios de esta empresa de inmediato.
               </p>
                 </>
@@ -974,32 +983,30 @@ export default function SuperAdminSaludEmpresaPage() {
                 abierto={planAbierto}
                 onToggle={() => setPlanAbierto((v) => !v)}
                 extra={
-                  <span className="text-xs text-muted">{ETIQUETA_PLAN[salud.empresa.plan] ?? salud.empresa.plan}</span>
+                  <span className="text-xs text-ds-text-secondary">{ETIQUETA_PLAN[salud.empresa.plan] ?? salud.empresa.plan}</span>
                 }
               />
               {planAbierto && (
                 <>
               <div className="mt-3 flex items-end gap-2">
                 <div className="flex-1">
-                  <Label>Plan actual</Label>
-                  <Select value={planSeleccionado} onChange={(e) => setPlanSeleccionado(e.target.value as Plan)}>
-                    {PLANES.map((p) => (
-                      <option key={p} value={p}>
-                        {ETIQUETA_PLAN[p]}
-                      </option>
-                    ))}
-                  </Select>
+                  <Select
+                    etiqueta="Plan actual"
+                    valor={planSeleccionado}
+                    onCambio={(v) => setPlanSeleccionado(v as Plan)}
+                    opciones={PLANES.map((p) => ({ valor: p, etiqueta: ETIQUETA_PLAN[p] }))}
+                  />
                 </div>
-                <Button type="button" disabled={guardandoPlan || planSeleccionado === salud.empresa.plan} onClick={onGuardarPlan}>
+                <Button deshabilitado={guardandoPlan || planSeleccionado === salud.empresa.plan} onPress={onGuardarPlan}>
                   {guardandoPlan ? "Guardando…" : "Guardar"}
                 </Button>
               </div>
               {errorPlan && (
                 <div className="mt-3">
-                  <ErrorText>{errorPlan}</ErrorText>
+                  <Aviso tono="error">{errorPlan}</Aviso>
                 </div>
               )}
-              <p className="mt-3 text-[11px] text-muted">
+              <p className="mt-3 text-ds-micro text-ds-text-secondary">
                 El plan no prende ni apaga módulos: fija los topes (usuarios, módulos activos, informes con IA). Esencial permite
                 hasta {LIMITES_POR_PLAN.basico.modulosMax} módulos y Operación hasta {LIMITES_POR_PLAN.operacion.modulosMax}; si la empresa
                 tiene más activos, primero apágalos en Módulos. Empresa está oculto para los clientes, pero se puede asignar desde acá.
@@ -1009,760 +1016,740 @@ export default function SuperAdminSaludEmpresaPage() {
             </Card>
           </div>
 
-          <Card className="mt-4">
-            {/* Tarea 144: con la prueba vencida la empresa queda bloqueada
-                (solo Plan/pago, Mi cuenta y cerrar sesión). */}
-            <h2 className="text-sm font-semibold text-foreground">Período de prueba</h2>
-            {salud.empresa.plan !== "trial" ? (
-              <p className="mt-2 text-sm text-muted">La empresa tiene un plan pago: la prueba no aplica.</p>
-            ) : (
-              <div className="mt-3 flex flex-col gap-3">
-                <p className="text-sm text-foreground">
-                  {suscripcion?.prueba_termina_en
-                    ? `Último día de prueba: ${new Date(`${suscripcion.prueba_termina_en}T00:00:00`).toLocaleDateString("es-CL")}`
-                    : "Sin fecha de fin de prueba"}
-                  {suscripcion?.prueba_termina_en && suscripcion.prueba_termina_en < hoyChileWeb() ? (
-                    <span className="ml-2 font-semibold text-danger">Vencida — la empresa está bloqueada</span>
-                  ) : null}
-                </p>
-                <div className="flex flex-wrap items-end gap-2">
-                  <div>
-                    <Label>Días a extender</Label>
-                    <Input type="number" min={1} max={MAX_DIAS_EXTENSION_PRUEBA} value={diasExtension} onChange={(e) => setDiasExtension(e.target.value)} className="w-28" />
-                  </div>
-                  <Button type="button" variant="outline" disabled={guardandoPrueba} onClick={() => onCambiarPrueba("extender")}>
-                    {guardandoPrueba ? "Guardando…" : "Extender"}
-                  </Button>
-                  <Button type="button" variant="outline" disabled={guardandoPrueba} onClick={() => onCambiarPrueba("reactivar")}>
-                    Reactivar ({DIAS_PRUEBA} días desde hoy)
-                  </Button>
-                </div>
-                {errorPrueba && <ErrorText>{errorPrueba}</ErrorText>}
-                <p className="text-[11px] text-muted">
-                  Extender suma días desde el último día de prueba (o desde hoy si ya venció). Al confirmarse el pago de un plan, la empresa
-                  sale de la prueba sola. Nunca se borran datos.
-                </p>
-              </div>
-            )}
-            {historialPrueba.length > 0 && (
-              <div className="mt-3 overflow-x-auto border-t border-border pt-3">
-                <p className="mb-1 text-xs font-medium text-muted">Historial</p>
-                <table className="w-full text-left text-xs">
-                  <tbody>
-                    {historialPrueba.map((h) => (
-                      <tr key={h.id} className="border-t border-border first:border-t-0">
-                        <td className="py-1.5 pr-4 text-muted">{new Date(h.creado_en).toLocaleString("es-CL")}</td>
-                        <td className="py-1.5 pr-4 text-foreground">{h.accion === "reactivar_prueba_empresa" ? "Reactivó" : "Extendió"}</td>
-                        <td className="py-1.5 pr-4 text-foreground">{h.super_admin?.nombre ?? h.super_admin?.correo ?? "—"}</td>
-                        <td className="py-1.5 text-muted">{h.detalle ?? ""}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </Card>
-
-          <Card className="mt-4">
-            <h2 className="text-sm font-semibold text-foreground">Viático del chofer — montos por defecto</h2>
-            <p className="mt-1 text-[11px] text-muted">
-              Valor interno: se precarga al asignar el viático en un viaje (el Admin puede ajustarlo por viaje) y se registra como gasto
-              “Viáticos”. No aparece en el cobro ni cambia viajes ya creados.
-            </p>
-            <div className="mt-3 flex flex-wrap items-end gap-2">
-              <div>
-                <Label>Local (dentro de la RM)</Label>
-                <Input type="number" min={0} value={viaticoLocal} onChange={(e) => setViaticoLocal(e.target.value)} className="w-40" />
-              </div>
-              <div>
-                <Label>Interregional</Label>
-                <Input type="number" min={0} value={viaticoInterregional} onChange={(e) => setViaticoInterregional(e.target.value)} className="w-40" />
-              </div>
-              <Button type="button" variant="outline" disabled={guardandoViaticos} onClick={onGuardarViaticos}>
-                {guardandoViaticos ? "Guardando…" : "Guardar"}
-              </Button>
-            </div>
-            {msgViaticos && (
-              <div className="mt-2">{msgViaticos.tipo === "ok" ? <SuccessText>{msgViaticos.texto}</SuccessText> : <ErrorText>{msgViaticos.texto}</ErrorText>}</div>
-            )}
-          </Card>
-
-          <Card className="mt-4">
-            <CabeceraColapsable
-              titulo="Suscripción"
-              abierto={suscripcionAbierta}
-              onToggle={() => setSuscripcionAbierta((v) => !v)}
-              extra={suscripcion?.suscripcion && <Badge value={suscripcion.suscripcion.estado} />}
-            />
-            {suscripcionAbierta && (
-              <div className="mt-3">
-            {!suscripcion ? (
-              <p className="text-sm text-muted">Cargando…</p>
-            ) : !suscripcion.suscripcion ? (
-              <p className="text-sm text-muted">Esta empresa todavía no tiene una suscripción registrada.</p>
-            ) : (
-              <div className="flex flex-col gap-3">
-                <div className="grid gap-3 sm:grid-cols-3">
-                  <div>
-                    <p className="text-xs text-muted">Estado</p>
-                    <p className="text-sm font-medium text-foreground">{ETIQUETA_ESTADO_SUSCRIPCION[suscripcion.suscripcion.estado]}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted">Tarjeta</p>
-                    <p className="text-sm font-medium text-foreground">
-                      {suscripcion.suscripcion.tarjeta_ultimos4
-                        ? `${suscripcion.suscripcion.tarjeta_marca ?? "Tarjeta"} •••• ${suscripcion.suscripcion.tarjeta_ultimos4}`
-                        : "Sin registrar"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted">Próximo cobro</p>
-                    <p className="text-sm font-medium text-foreground">
-                      {suscripcion.suscripcion.proxima_fecha_cobro
-                        ? new Date(`${suscripcion.suscripcion.proxima_fecha_cobro}T00:00:00`).toLocaleDateString("es-CL")
-                        : "—"}
-                    </p>
-                  </div>
-                </div>
-
-                {suscripcion.cobros.length > 0 && (
-                  <div className="overflow-x-auto border-t border-border pt-3">
-                    <table className="w-full text-left text-xs">
-                      <thead>
-                        <tr className="text-muted">
-                          <th className="py-1.5 pr-4 font-medium">Fecha</th>
-                          <th className="py-1.5 pr-4 font-medium">Monto</th>
-                          <th className="py-1.5 pr-4 font-medium">Intento</th>
-                          <th className="py-1.5 font-medium">Estado</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {suscripcion.cobros.map((c) => (
-                          <tr key={c.id} className="border-t border-border">
-                            <td className="py-1.5 pr-4 text-muted">{new Date(c.creado_en).toLocaleString("es-CL")}</td>
-                            <td className="py-1.5 pr-4 text-foreground">${Math.round(c.monto).toLocaleString("es-CL")}</td>
-                            <td className="py-1.5 pr-4 text-muted">{c.intento_numero}</td>
-                            <td className="py-1.5">
-                              <Badge value={c.estado} />
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            )}
-              </div>
-            )}
-          </Card>
-
-          <Card className="mt-4">
-            {/* Tarea 124, etapa 2: el plan fija cuántos módulos puede tener
-                activos la empresa; acá se eligen cuáles. Mismo orden que el
-                menú (GRUPOS_MODULOS). El backend valida el tope igual
-                (403 LIMITE_PLAN); esto solo evita ofrecer lo que no cabe. */}
-            {(() => {
-              const tope = LIMITES_POR_PLAN[salud.empresa.plan]?.modulosMax ?? null;
-              const activos = (modulos ?? []).filter((m) => m.activado && cuentaParaTope(m.modulo as Modulo)).length;
-              const lleno = tope != null && activos >= tope;
-              const estado = new Map((modulos ?? []).map((m) => [m.modulo, m.activado]));
-              return (
-                <>
-                  <CabeceraColapsable
-                    titulo="Módulos"
-                    abierto={modulosAbierto}
-                    onToggle={() => setModulosAbierto((v) => !v)}
-                    extra={
-                      modulos ? (
-                        <span className={`text-xs tabular-nums ${lleno ? "font-semibold text-foreground" : "text-muted"}`}>
-                          {tope != null ? `${activos} de ${tope} módulos` : `${activos} módulos · sin tope`}
-                        </span>
-                      ) : null
-                    }
-                  />
-                  {modulosAbierto && (
-                    <>
-                      <p className="mb-3 mt-2 text-sm text-muted">
-                        Desactivar un módulo lo oculta del menú y bloquea sus rutas para todos los usuarios de esta empresa, sin importar su
-                        rol. El plan {ETIQUETA_PLAN[salud.empresa.plan]}{" "}
-                        {tope != null ? `permite hasta ${tope} módulos activos.` : "no tiene tope de módulos."}
-                      </p>
-                      {lleno ? (
-                        <p className="mb-3 text-sm text-foreground">
-                          Llegó al tope: para activar otro, apaga uno o cambia el plan a uno superior.
-                        </p>
-                      ) : null}
-                      {!modulos ? (
-                        <p className="text-sm text-muted">Cargando…</p>
-                      ) : (
-                        <div className="flex flex-col gap-4">
-                          {GRUPOS_MODULOS.map((g) => (
-                            <div key={g.titulo}>
-                              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">{g.titulo}</p>
-                              <div className="grid gap-2 sm:grid-cols-2">
-                                {g.modulos.map((modulo) => {
-                                  const activado = estado.get(modulo) ?? false;
-                                  const bloqueadoPorTope = !activado && g.cuenta && lleno;
-                                  const sinIAEnPlan = modulo === "asistente" && !planPermiteIACompleta(salud.empresa.plan);
-                                  return (
-                                    <label
-                                      key={modulo}
-                                      className={`flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm ${bloqueadoPorTope ? "opacity-60" : ""}`}
-                                      title={bloqueadoPorTope ? "La empresa llegó al tope de módulos de su plan" : undefined}
-                                    >
-                                      <input
-                                        type="checkbox"
-                                        checked={activado}
-                                        disabled={guardandoModulo === modulo || bloqueadoPorTope}
-                                        onChange={(e) => onTogglearModulo(modulo, e.target.checked)}
-                                      />
-                                      <span className="text-foreground">{ETIQUETA_MODULO[modulo] ?? modulo}</span>
-                                      {sinIAEnPlan ? <span className="text-xs text-muted">(no incluido en este plan)</span> : null}
-                                    </label>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      {errorModulos && (
-                        <div className="mt-3">
-                          <ErrorText>{errorModulos}</ErrorText>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </>
-              );
-            })()}
-          </Card>
-
-          <Card className="mt-4">
-            <CabeceraColapsable titulo="Perfiles y permisos (por rol)" abierto={perfilesAbierto} onToggle={() => setPerfilesAbierto((v) => !v)} />
-            {perfilesAbierto && (
-              <>
-            <p className="mb-3 mt-2 text-sm text-muted">
-              Qué módulos ve cada rol de esta empresa en la app y la web. Es lo mismo que el Admin de la empresa ajusta en
-              Configuración → Perfiles, pero desde acá. El rol <span className="font-medium text-foreground">Admin</span> siempre
-              tiene acceso total; <span className="font-medium text-foreground">Configuración</span> y{" "}
-              <span className="font-medium text-foreground">Grupo y usuario</span> se controlan desde la plantilla global del rol
-              (<Link href="/superadmin/roles" className="text-brand hover:underline">Roles</Link>). Un módulo atenuado no está en el
-              plan de la empresa.
-            </p>
-            {!perfiles ? (
-              <p className="text-sm text-muted">Cargando…</p>
-            ) : (
-              <div className="flex flex-col gap-4">
-                {perfiles.roles.map((rol) => (
-                  <div key={rol.slug} className="rounded-lg border border-border p-3">
-                    <div className="mb-3 flex items-center justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold text-foreground">{rol.nombre}</p>
-                        <p className="text-xs text-muted">
-                          {rol.es_sistema ? "Perfil de sistema" : "Perfil personalizado"} · {rol.slug}
-                        </p>
-                      </div>
-                      {perfilSucio(rol.slug) && (
-                        <Button type="button" onClick={() => guardarPerfil(rol.slug)} disabled={guardandoPerfil === rol.slug}>
-                          {guardandoPerfil === rol.slug ? "Guardando…" : "Guardar"}
-                        </Button>
-                      )}
+          <div className="mt-4">
+            <Card>
+              {/* Tarea 144: con la prueba vencida la empresa queda bloqueada
+                  (solo Plan/pago, Mi cuenta y cerrar sesión). */}
+              <h2 className="text-sm font-semibold text-ds-text">Período de prueba</h2>
+              {salud.empresa.plan !== "trial" ? (
+                <p className="mt-2 text-sm text-ds-text-secondary">La empresa tiene un plan pago: la prueba no aplica.</p>
+              ) : (
+                <div className="mt-3 flex flex-col gap-3">
+                  <p className="text-sm text-ds-text">
+                    {suscripcion?.prueba_termina_en
+                      ? `Último día de prueba: ${new Date(`${suscripcion.prueba_termina_en}T00:00:00`).toLocaleDateString("es-CL")}`
+                      : "Sin fecha de fin de prueba"}
+                    {suscripcion?.prueba_termina_en && suscripcion.prueba_termina_en < hoyChileWeb() ? (
+                      <span className="ml-2 font-semibold text-ds-danger">Vencida — la empresa está bloqueada</span>
+                    ) : null}
+                  </p>
+                  <div className="flex flex-wrap items-end gap-2">
+                    <div className="w-28">
+                      <Input etiqueta="Días a extender" tipo="numero" valor={diasExtension} onCambio={setDiasExtension} />
                     </div>
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      {perfiles.catalogo.map((c) => {
-                        const marcado = (edicionPerfiles[rol.slug] ?? new Set()).has(c.modulo);
-                        return (
-                          <label
-                            key={c.modulo}
-                            className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm ${
-                              c.contratado ? "border-border text-foreground" : "border-dashed border-border text-muted"
-                            }`}
-                          >
-                            <input
-                              type="checkbox"
-                              className="accent-brand"
-                              checked={marcado}
-                              disabled={!c.contratado}
-                              onChange={() => togglePerfil(rol.slug, c.modulo)}
-                            />
-                            <span>
-                              {ETIQUETA_MODULO[c.modulo] ?? c.modulo}
-                              {!c.contratado && <span className="ml-1 text-xs">(no está en el plan)</span>}
-                            </span>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            {okPerfiles && (
-              <div className="mt-3">
-                <SuccessText>{okPerfiles}</SuccessText>
-              </div>
-            )}
-            {errorPerfiles && (
-              <div className="mt-3">
-                <ErrorText>{errorPerfiles}</ErrorText>
-              </div>
-            )}
-              </>
-            )}
-          </Card>
-
-          <Card className="mt-4">
-            <CabeceraColapsable titulo="Correos y dominios autorizados" abierto={correosAbierto} onToggle={() => setCorreosAbierto((v) => !v)} />
-            {correosAbierto && (
-              <>
-            <p className="mb-3 mt-2 text-sm text-muted">
-              Un correo exacto (<code>persona@empresa.cl</code>) o un dominio entero (<code>empresa.cl</code>) de esta lista puede
-              entrar a la empresa sin ser invitado — la primera vez que inicia sesión se le crea el usuario con el rol indicado.
-              Un correo que no está acá ni fue invitado no puede entrar.
-            </p>
-
-            {accesos === null ? (
-              <p className="text-sm text-muted">Cargando…</p>
-            ) : accesos.length === 0 ? (
-              <p className="text-sm text-muted">Sin correos ni dominios autorizados.</p>
-            ) : (
-              <div className="flex flex-col gap-2">
-                {accesos.map((a) => (
-                  <div key={a.id} className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2 text-sm">
-                    <span className="flex flex-wrap items-center gap-2">
-                      <Badge value={a.tipo} />
-                      <span className="font-mono text-foreground">{a.valor}</span>
-                      <span className="text-muted">→ {rolesDisponibles.find((r) => r.slug === a.rol)?.nombre ?? a.rol}</span>
-                    </span>
-                    <Button type="button" variant="ghost" onClick={() => onQuitarAcceso(a.id)}>
-                      Quitar
+                    <Button variante="secundario" deshabilitado={guardandoPrueba} onPress={() => onCambiarPrueba("extender")}>
+                      {guardandoPrueba ? "Guardando…" : "Extender"}
+                    </Button>
+                    <Button variante="secundario" deshabilitado={guardandoPrueba} onPress={() => onCambiarPrueba("reactivar")}>
+                      Reactivar ({DIAS_PRUEBA} días desde hoy)
                     </Button>
                   </div>
-                ))}
-              </div>
-            )}
-
-            <form onSubmit={onAgregarAcceso} className="mt-4 grid gap-2 sm:grid-cols-[auto_1fr_auto_auto] sm:items-end">
-              <div>
-                <Label>Tipo</Label>
-                <Select value={accesoTipo} onChange={(e) => setAccesoTipo(e.target.value as "correo" | "dominio")}>
-                  <option value="correo">Correo</option>
-                  <option value="dominio">Dominio</option>
-                </Select>
-              </div>
-              <div>
-                <Label>{accesoTipo === "correo" ? "Correo" : "Dominio"}</Label>
-                <Input
-                  type="text"
-                  value={accesoValor}
-                  onChange={(e) => setAccesoValor(e.target.value)}
-                  placeholder={accesoTipo === "correo" ? "persona@empresa.cl" : "empresa.cl"}
-                />
-              </div>
-              <div>
-                <Label>Rol</Label>
-                <Select value={accesoRol} onChange={(e) => setAccesoRol(e.target.value)}>
-                  {rolesDisponibles.map((r) => (
-                    <option key={r.slug} value={r.slug}>
-                      {r.nombre}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-              <Button type="submit" disabled={guardandoAcceso || accesoValor.trim().length < 3}>
-                {guardandoAcceso ? "Agregando…" : "Agregar"}
-              </Button>
-            </form>
-            {errorAcceso && (
-              <div className="mt-3">
-                <ErrorText>{errorAcceso}</ErrorText>
-              </div>
-            )}
-              </>
-            )}
-          </Card>
-
-          <Card className="mt-4">
-            <CabeceraColapsable titulo="Equipo" abierto={equipoAbierto} onToggle={() => setEquipoAbierto((v) => !v)} />
-            {equipoAbierto && (
-              <>
-            <p className="mb-3 mt-2 text-sm text-muted">
-              Restablece la contraseña de un usuario si quedó bloqueado — se genera una clave temporal que reemplaza la actual de
-              inmediato. Se muestra una sola vez acá, no se guarda en ningún lado; pásasela por el canal de soporte que uses.
-            </p>
-
-            <form onSubmit={onInvitarUsuario} className="mb-4 rounded-lg border border-border p-3">
-              <h3 className="mb-2 text-sm font-semibold text-foreground">Invitar un usuario a esta empresa</h3>
-              <p className="mb-3 text-[11px] text-muted">
-                Se le manda un correo con el enlace para definir su contraseña. No cuenta contra el límite de usuarios del plan.
-              </p>
-              <div className="grid gap-3 sm:grid-cols-3">
-                <div>
-                  <Label>Nombre</Label>
-                  <Input type="text" value={nuevoNombre} onChange={(e) => setNuevoNombre(e.target.value)} />
-                </div>
-                <div>
-                  <Label>Correo</Label>
-                  <Input type="email" value={nuevoCorreo} onChange={(e) => setNuevoCorreo(e.target.value)} />
-                </div>
-                <div>
-                  <Label>Rol</Label>
-                  <Select value={nuevoRol} onChange={(e) => setNuevoRol(e.target.value)}>
-                    {rolesDisponibles.map((r) => (
-                      <option key={r.slug} value={r.slug}>
-                        {r.nombre}
-                      </option>
-                    ))}
-                  </Select>
-                </div>
-              </div>
-              {errorInvitar && (
-                <div className="mt-3">
-                  <ErrorText>{errorInvitar}</ErrorText>
+                  {errorPrueba && <Aviso tono="error">{errorPrueba}</Aviso>}
+                  <p className="text-ds-micro text-ds-text-secondary">
+                    Extender suma días desde el último día de prueba (o desde hoy si ya venció). Al confirmarse el pago de un plan, la empresa
+                    sale de la prueba sola. Nunca se borran datos.
+                  </p>
                 </div>
               )}
-              {avisoInvitar && <p className="mt-3 text-sm text-brand">{avisoInvitar}</p>}
-              <Button type="submit" disabled={invitando || !nuevoNombre.trim() || !nuevoCorreo.trim()} className="mt-3">
-                {invitando ? "Invitando…" : "Enviar invitación"}
-              </Button>
-            </form>
+              {historialPrueba.length > 0 && (
+                <div className="mt-3 overflow-x-auto border-t border-ds-divider pt-3">
+                  <p className="mb-1 text-xs font-medium text-ds-text-secondary">Historial</p>
+                  <table className="w-full text-left text-xs">
+                    <tbody>
+                      {historialPrueba.map((h) => (
+                        <tr key={h.id} className="border-t border-ds-divider first:border-t-0">
+                          <td className="py-1.5 pr-4 text-ds-text-secondary">{new Date(h.creado_en).toLocaleString("es-CL")}</td>
+                          <td className="py-1.5 pr-4 text-ds-text">{h.accion === "reactivar_prueba_empresa" ? "Reactivó" : "Extendió"}</td>
+                          <td className="py-1.5 pr-4 text-ds-text">{h.super_admin?.nombre ?? h.super_admin?.correo ?? "—"}</td>
+                          <td className="py-1.5 text-ds-text-secondary">{h.detalle ?? ""}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Card>
+          </div>
 
-            {impersonarUsuario && (
-              <div className="mb-4 rounded-lg border border-danger/40 bg-danger-soft p-3">
-                <p className="text-sm font-semibold text-foreground">Impersonar a {impersonarUsuario.nombre}</p>
-                <p className="mt-1 text-xs text-muted">
-                  Vas a entrar a Bitácora viendo lo que ve {impersonarUsuario.nombre}, sin conocer ni cambiar su contraseña. La sesión
-                  dura 30 minutos, las acciones destructivas quedan bloqueadas, y todo (inicio y fin) queda registrado con esta
-                  justificación en la auditoría.
-                </p>
+          <div className="mt-4">
+            <Card>
+              <h2 className="text-sm font-semibold text-ds-text">Viático del chofer — montos por defecto</h2>
+              <p className="mt-1 text-ds-micro text-ds-text-secondary">
+                Valor interno: se precarga al asignar el viático en un viaje (el Admin puede ajustarlo por viaje) y se registra como gasto
+                “Viáticos”. No aparece en el cobro ni cambia viajes ya creados.
+              </p>
+              <div className="mt-3 flex flex-wrap items-end gap-2">
+                <div className="w-40">
+                  <Input etiqueta="Local (dentro de la RM)" tipo="numero" valor={viaticoLocal} onCambio={setViaticoLocal} />
+                </div>
+                <div className="w-40">
+                  <Input etiqueta="Interregional" tipo="numero" valor={viaticoInterregional} onCambio={setViaticoInterregional} />
+                </div>
+                <Button variante="secundario" deshabilitado={guardandoViaticos} onPress={onGuardarViaticos}>
+                  {guardandoViaticos ? "Guardando…" : "Guardar"}
+                </Button>
+              </div>
+              {msgViaticos && (
+                <div className="mt-2">
+                  <Aviso tono={msgViaticos.tipo === "ok" ? "exito" : "error"}>{msgViaticos.texto}</Aviso>
+                </div>
+              )}
+            </Card>
+          </div>
+
+          <div className="mt-4">
+            <Card>
+              <CabeceraColapsable
+                titulo="Suscripción"
+                abierto={suscripcionAbierta}
+                onToggle={() => setSuscripcionAbierta((v) => !v)}
+                extra={suscripcion?.suscripcion && <Estado estado={suscripcion.suscripcion.estado} />}
+              />
+              {suscripcionAbierta && (
                 <div className="mt-3">
-                  <Label>Justificación (obligatoria, mín. 20 caracteres)</Label>
-                  <Textarea
-                    rows={2}
-                    value={justificacionImp}
-                    onChange={(e) => setJustificacionImp(e.target.value)}
-                    placeholder="Ej: el usuario reporta que no puede firmar la OS #142 desde el celular, replicando para ver el error"
-                  />
-                </div>
-                {errorImp && (
-                  <div className="mt-2">
-                    <ErrorText>{errorImp}</ErrorText>
+              {!suscripcion ? (
+                <p className="text-sm text-ds-text-secondary">Cargando…</p>
+              ) : !suscripcion.suscripcion ? (
+                <p className="text-sm text-ds-text-secondary">Esta empresa todavía no tiene una suscripción registrada.</p>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div>
+                      <p className="text-xs text-ds-text-secondary">Estado</p>
+                      <p className="text-sm font-medium text-ds-text">{ETIQUETA_ESTADO_SUSCRIPCION[suscripcion.suscripcion.estado]}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-ds-text-secondary">Tarjeta</p>
+                      <p className="text-sm font-medium text-ds-text">
+                        {suscripcion.suscripcion.tarjeta_ultimos4
+                          ? `${suscripcion.suscripcion.tarjeta_marca ?? "Tarjeta"} •••• ${suscripcion.suscripcion.tarjeta_ultimos4}`
+                          : "Sin registrar"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-ds-text-secondary">Próximo cobro</p>
+                      <p className="text-sm font-medium text-ds-text">
+                        {suscripcion.suscripcion.proxima_fecha_cobro
+                          ? new Date(`${suscripcion.suscripcion.proxima_fecha_cobro}T00:00:00`).toLocaleDateString("es-CL")
+                          : "—"}
+                      </p>
+                    </div>
                   </div>
-                )}
-                <div className="mt-3 flex gap-2">
-                  <Button
-                    type="button"
-                    variant="danger"
-                    disabled={iniciandoImp || justificacionImp.trim().length < 20}
-                    onClick={onIniciarImpersonacion}
-                  >
-                    {iniciandoImp ? "Entrando…" : `Entrar como ${impersonarUsuario.nombre}`}
-                  </Button>
-                  <Button type="button" variant="ghost" onClick={() => setImpersonarUsuario(null)}>
-                    Cancelar
-                  </Button>
-                </div>
-              </div>
-            )}
 
-            {restablecerUsuario && (
-              <div className="mb-4 flex flex-wrap items-end gap-2">
-                <div className="min-w-[220px] flex-1">
-                  <Label>Contraseña para {restablecerUsuario.nombre} — vacío genera una automática</Label>
-                  <Input
-                    type="text"
-                    value={passwordPersonalizada}
-                    onChange={(e) => setPasswordPersonalizada(e.target.value)}
-                    placeholder="Mínimo 8 caracteres"
-                    className="max-w-xs font-mono"
-                  />
+                  {suscripcion.cobros.length > 0 && (
+                    <div className="overflow-x-auto border-t border-ds-divider pt-3">
+                      <table className="w-full text-left text-xs">
+                        <thead>
+                          <tr className="text-ds-text-secondary">
+                            <th className="py-1.5 pr-4 font-medium">Fecha</th>
+                            <th className="py-1.5 pr-4 font-medium">Monto</th>
+                            <th className="py-1.5 pr-4 font-medium">Intento</th>
+                            <th className="py-1.5 font-medium">Estado</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {suscripcion.cobros.map((c) => (
+                            <tr key={c.id} className="border-t border-ds-divider">
+                              <td className="py-1.5 pr-4 text-ds-text-secondary">{new Date(c.creado_en).toLocaleString("es-CL")}</td>
+                              <td className="py-1.5 pr-4 text-ds-text">${Math.round(c.monto).toLocaleString("es-CL")}</td>
+                              <td className="py-1.5 pr-4 text-ds-text-secondary">{c.intento_numero}</td>
+                              <td className="py-1.5">
+                                <Estado estado={c.estado} />
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </div>
-                <Button
-                  type="button"
-                  disabled={restableciendoId === restablecerUsuario.id}
-                  onClick={() => onRestablecerPassword(restablecerUsuario.id, restablecerUsuario.nombre)}
-                >
-                  {restableciendoId === restablecerUsuario.id ? "Restableciendo…" : "Restablecer"}
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => {
-                    setRestablecerUsuario(null);
-                    setErrorUsuarios(null);
-                  }}
-                >
-                  Cancelar
-                </Button>
-                {errorUsuarios && <ErrorText>{errorUsuarios}</ErrorText>}
-              </div>
-            )}
+              )}
+                </div>
+              )}
+            </Card>
+          </div>
 
-            {passwordGenerada && (
-              <div className="mb-3 rounded-lg border border-brand/40 bg-brand-soft p-3 text-sm">
-                <p className="font-medium text-foreground">
-                  Nueva contraseña de {passwordGenerada.nombre}: <span className="font-mono">{passwordGenerada.password}</span>
-                </p>
-                <p className="mt-1 text-xs text-muted">Copiala ahora — no se vuelve a mostrar.</p>
-              </div>
-            )}
-            {secretoTotpGenerado && (
-              <div className="mb-3 rounded-lg border border-brand/40 bg-brand-soft p-3 text-sm">
-                <p className="font-medium text-foreground">
-                  Clave TOTP de {secretoTotpGenerado.nombre}: <span className="font-mono">{secretoTotpGenerado.secreto}</span>
-                </p>
-                <p className="mt-1 text-xs text-muted">
-                  Cárgala a mano en Google Authenticator/Authy/1Password — no se vuelve a mostrar.
-                </p>
-              </div>
-            )}
-            {!usuarios ? (
-              <p className="text-sm text-muted">Cargando…</p>
-            ) : usuarios.length === 0 ? (
-              <p className="text-sm text-muted">Esta empresa todavía no tiene usuarios.</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead>
-                    <tr className="text-xs text-muted">
-                      <th className="py-1.5 pr-4 font-medium">Nombre</th>
-                      <th className="py-1.5 pr-4 font-medium">Correo</th>
-                      <th className="py-1.5 pr-4 font-medium">Rol</th>
-                      <th className="py-1.5 pr-4 font-medium">Estado</th>
-                      <th className="py-1.5 pr-4 font-medium">2FA</th>
-                      <th className="py-1.5 font-medium"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {usuarios.map((u) => (
-                      <tr key={u.id} className="border-t border-border">
-                        <td className="py-2 pr-4 text-foreground">{u.nombre}</td>
-                        <td className="py-2 pr-4 text-muted">{u.correo ?? "—"}</td>
-                        <td className="py-2 pr-4 text-muted">{u.rol}</td>
-                        <td className="py-2 pr-4">
-                          <Badge value={u.activo ? "activo" : "inactivo"} />
-                        </td>
-                        <td className="py-2 pr-4 text-muted">{u.mfa_activado ? `Activo (${u.mfa_metodo})` : "Inactivo"}</td>
-                        <td className="py-2">
-                          <div className="flex flex-wrap justify-end gap-2">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              disabled={!u.activo}
-                              onClick={() => {
-                                setImpersonarUsuario({ id: u.id, nombre: u.nombre });
-                                setJustificacionImp("");
-                                setErrorImp(null);
-                              }}
-                            >
-                              Impersonar
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              onClick={() => {
-                                setRestablecerUsuario({ id: u.id, nombre: u.nombre });
-                                setPasswordPersonalizada("");
-                                setPasswordGenerada(null);
-                                setErrorUsuarios(null);
-                              }}
-                            >
-                              Restablecer contraseña
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              disabled={cambiandoMfaId === u.id}
-                              onClick={() => onActivarMfa(u.id, u.nombre)}
-                            >
-                              {cambiandoMfaId === u.id
-                                ? "Generando…"
-                                : u.mfa_activado
-                                  ? "Regenerar código TOTP"
-                                  : "Activar 2FA (TOTP)"}
-                            </Button>
-                            {u.mfa_activado && (
-                              <Button
-                                type="button"
-                                variant="outline"
-                                disabled={cambiandoMfaId === u.id}
-                                onClick={() => onDesactivarMfa(u.id, u.nombre, u.rol)}
-                              >
-                                {cambiandoMfaId === u.id ? "Desactivando…" : "Desactivar 2FA"}
-                              </Button>
-                            )}
-                            <Button
-                              type="button"
-                              variant="outline"
-                              disabled={cambiandoEstadoId === u.id}
-                              onClick={() => onCambiarEstadoUsuario(u.id, u.nombre, !u.activo)}
-                            >
-                              {cambiandoEstadoId === u.id ? "Guardando…" : u.activo ? "Desactivar" : "Reactivar"}
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              className="text-danger"
-                              onClick={() => {
-                                setEliminarUsuario({ id: u.id, nombre: u.nombre });
-                                setConfirmacionEliminarUsuario("");
-                                setErrorEliminarUsuario(null);
-                              }}
-                            >
-                              Eliminar
-                            </Button>
+          <div className="mt-4">
+            <Card>
+              {/* Tarea 124, etapa 2: el plan fija cuántos módulos puede tener
+                  activos la empresa; acá se eligen cuáles. Mismo orden que el
+                  menú (GRUPOS_MODULOS). El backend valida el tope igual
+                  (403 LIMITE_PLAN); esto solo evita ofrecer lo que no cabe. */}
+              {(() => {
+                const tope = LIMITES_POR_PLAN[salud.empresa.plan]?.modulosMax ?? null;
+                const activos = (modulos ?? []).filter((m) => m.activado && cuentaParaTope(m.modulo as Modulo)).length;
+                const lleno = tope != null && activos >= tope;
+                const estado = new Map((modulos ?? []).map((m) => [m.modulo, m.activado]));
+                return (
+                  <>
+                    <CabeceraColapsable
+                      titulo="Módulos"
+                      abierto={modulosAbierto}
+                      onToggle={() => setModulosAbierto((v) => !v)}
+                      extra={
+                        modulos ? (
+                          <span className={`text-xs tabular-nums ${lleno ? "font-semibold text-ds-text" : "text-ds-text-secondary"}`}>
+                            {tope != null ? `${activos} de ${tope} módulos` : `${activos} módulos · sin tope`}
+                          </span>
+                        ) : null
+                      }
+                    />
+                    {modulosAbierto && (
+                      <>
+                        <p className="mb-3 mt-2 text-sm text-ds-text-secondary">
+                          Desactivar un módulo lo oculta del menú y bloquea sus rutas para todos los usuarios de esta empresa, sin importar su
+                          rol. El plan {ETIQUETA_PLAN[salud.empresa.plan]}{" "}
+                          {tope != null ? `permite hasta ${tope} módulos activos.` : "no tiene tope de módulos."}
+                        </p>
+                        {lleno ? (
+                          <p className="mb-3 text-sm text-ds-text">
+                            Llegó al tope: para activar otro, apaga uno o cambia el plan a uno superior.
+                          </p>
+                        ) : null}
+                        {!modulos ? (
+                          <p className="text-sm text-ds-text-secondary">Cargando…</p>
+                        ) : (
+                          <div className="flex flex-col gap-4">
+                            {GRUPOS_MODULOS.map((g) => (
+                              <div key={g.titulo}>
+                                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ds-text-secondary">{g.titulo}</p>
+                                <div className="grid gap-2 sm:grid-cols-2">
+                                  {g.modulos.map((modulo) => {
+                                    const activado = estado.get(modulo) ?? false;
+                                    const bloqueadoPorTope = !activado && g.cuenta && lleno;
+                                    const sinIAEnPlan = modulo === "asistente" && !planPermiteIACompleta(salud.empresa.plan);
+                                    return (
+                                      <label
+                                        key={modulo}
+                                        className={`flex items-center gap-2 rounded-lg border border-ds-divider px-3 py-2 text-sm ${bloqueadoPorTope ? "opacity-60" : ""}`}
+                                        title={bloqueadoPorTope ? "La empresa llegó al tope de módulos de su plan" : undefined}
+                                      >
+                                        <input
+                                          type="checkbox"
+                                          checked={activado}
+                                          disabled={guardandoModulo === modulo || bloqueadoPorTope}
+                                          onChange={(e) => onTogglearModulo(modulo, e.target.checked)}
+                                        />
+                                        <span className="text-ds-text">{ETIQUETA_MODULO[modulo] ?? modulo}</span>
+                                        {sinIAEnPlan ? <span className="text-xs text-ds-text-secondary">(no incluido en este plan)</span> : null}
+                                      </label>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            ))}
                           </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-            {errorUsuarios && (
-              <div className="mt-3">
-                <ErrorText>{errorUsuarios}</ErrorText>
-              </div>
-            )}
+                        )}
+                        {errorModulos && (
+                          <div className="mt-3">
+                            <Aviso tono="error">{errorModulos}</Aviso>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </>
+                );
+              })()}
+            </Card>
+          </div>
 
-            {eliminarUsuario && (
-              <div className="mt-4 rounded-lg border border-danger/40 bg-danger/5 p-4">
-                <p className="text-sm font-semibold text-foreground">Eliminar o anonimizar a {eliminarUsuario.nombre}</p>
-                <p className="mt-1 text-sm text-muted">
-                  <span className="font-medium">Eliminar</span> borra la cuenta y libera el correo — solo si no tiene
-                  trabajos/OS, rutas, fotos ni informes. <span className="font-medium">Anonimizar</span> (Ley 21.719)
-                  reemplaza nombre/RUT/contacto por un placeholder y borra contrato, accesos y consentimientos, dejando
-                  los registros operativos sin nombre de persona. Ambas son irreversibles.
-                </p>
-                <Label className="mt-3">
-                  Escribe <span className="font-mono text-foreground">{eliminarUsuario.nombre}</span> para confirmar
-                </Label>
-                <Input
-                  value={confirmacionEliminarUsuario}
-                  onChange={(e) => setConfirmacionEliminarUsuario(e.target.value)}
-                  className="mt-1 max-w-sm"
+          <div className="mt-4">
+            <Card>
+              <CabeceraColapsable titulo="Perfiles y permisos (por rol)" abierto={perfilesAbierto} onToggle={() => setPerfilesAbierto((v) => !v)} />
+              {perfilesAbierto && (
+                <>
+              <p className="mb-3 mt-2 text-sm text-ds-text-secondary">
+                Qué módulos ve cada rol de esta empresa en la app y la web. Es lo mismo que el Admin de la empresa ajusta en
+                Configuración → Perfiles, pero desde acá. El rol <span className="font-medium text-ds-text">Admin</span> siempre
+                tiene acceso total; <span className="font-medium text-ds-text">Configuración</span> y{" "}
+                <span className="font-medium text-ds-text">Grupo y usuario</span> se controlan desde la plantilla global del rol
+                (<Link href="/superadmin/roles" className="text-ds-brand hover:underline">Roles</Link>). Un módulo atenuado no está en el
+                plan de la empresa.
+              </p>
+              {!perfiles ? (
+                <p className="text-sm text-ds-text-secondary">Cargando…</p>
+              ) : (
+                <div className="flex flex-col gap-4">
+                  {perfiles.roles.map((rol) => (
+                    <div key={rol.slug} className="rounded-lg border border-ds-divider p-3">
+                      <div className="mb-3 flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-ds-text">{rol.nombre}</p>
+                          <p className="text-xs text-ds-text-secondary">
+                            {rol.es_sistema ? "Perfil de sistema" : "Perfil personalizado"} · {rol.slug}
+                          </p>
+                        </div>
+                        {perfilSucio(rol.slug) && (
+                          <Button onPress={() => guardarPerfil(rol.slug)} deshabilitado={guardandoPerfil === rol.slug}>
+                            {guardandoPerfil === rol.slug ? "Guardando…" : "Guardar"}
+                          </Button>
+                        )}
+                      </div>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        {perfiles.catalogo.map((c) => {
+                          const marcado = (edicionPerfiles[rol.slug] ?? new Set()).has(c.modulo);
+                          return (
+                            <label
+                              key={c.modulo}
+                              className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm ${
+                                c.contratado ? "border-ds-divider text-ds-text" : "border-dashed border-ds-divider text-ds-text-secondary"
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                className="accent-ds-brand"
+                                checked={marcado}
+                                disabled={!c.contratado}
+                                onChange={() => togglePerfil(rol.slug, c.modulo)}
+                              />
+                              <span>
+                                {ETIQUETA_MODULO[c.modulo] ?? c.modulo}
+                                {!c.contratado && <span className="ml-1 text-xs">(no está en el plan)</span>}
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {okPerfiles && (
+                <div className="mt-3">
+                  <Aviso tono="exito">{okPerfiles}</Aviso>
+                </div>
+              )}
+              {errorPerfiles && (
+                <div className="mt-3">
+                  <Aviso tono="error">{errorPerfiles}</Aviso>
+                </div>
+              )}
+                </>
+              )}
+            </Card>
+          </div>
+
+          <div className="mt-4">
+            <Card>
+              <CabeceraColapsable titulo="Correos y dominios autorizados" abierto={correosAbierto} onToggle={() => setCorreosAbierto((v) => !v)} />
+              {correosAbierto && (
+                <>
+              <p className="mb-3 mt-2 text-sm text-ds-text-secondary">
+                Un correo exacto (<code>persona@empresa.cl</code>) o un dominio entero (<code>empresa.cl</code>) de esta lista puede
+                entrar a la empresa sin ser invitado — la primera vez que inicia sesión se le crea el usuario con el rol indicado.
+                Un correo que no está acá ni fue invitado no puede entrar.
+              </p>
+
+              {accesos === null ? (
+                <p className="text-sm text-ds-text-secondary">Cargando…</p>
+              ) : accesos.length === 0 ? (
+                <p className="text-sm text-ds-text-secondary">Sin correos ni dominios autorizados.</p>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {accesos.map((a) => (
+                    <div key={a.id} className="flex items-center justify-between gap-3 rounded-lg border border-ds-divider px-3 py-2 text-sm">
+                      <span className="flex flex-wrap items-center gap-2">
+                        <Estado estado={a.tipo} />
+                        <span className="font-mono text-ds-text">{a.valor}</span>
+                        <span className="text-ds-text-secondary">→ {rolesDisponibles.find((r) => r.slug === a.rol)?.nombre ?? a.rol}</span>
+                      </span>
+                      <Button variante="ghost" onPress={() => onQuitarAcceso(a.id)}>
+                        Quitar
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <form onSubmit={onAgregarAcceso} className="mt-4 grid gap-2 sm:grid-cols-[auto_1fr_auto_auto] sm:items-end">
+                <Select
+                  etiqueta="Tipo"
+                  valor={accesoTipo}
+                  onCambio={(v) => setAccesoTipo(v as "correo" | "dominio")}
+                  opciones={[
+                    { valor: "correo", etiqueta: "Correo" },
+                    { valor: "dominio", etiqueta: "Dominio" },
+                  ]}
                 />
-                {errorEliminarUsuario && (
-                  <div className="mt-2">
-                    <ErrorText>{errorEliminarUsuario}</ErrorText>
+                <Input
+                  etiqueta={accesoTipo === "correo" ? "Correo" : "Dominio"}
+                  valor={accesoValor}
+                  onCambio={setAccesoValor}
+                  autoCapitalizar={false}
+                  placeholder={accesoTipo === "correo" ? "persona@empresa.cl" : "empresa.cl"}
+                />
+                <Select etiqueta="Rol" valor={accesoRol} onCambio={setAccesoRol} opciones={rolesDisponibles.map((r) => ({ valor: r.slug, etiqueta: r.nombre }))} />
+                <Button tipo="submit" deshabilitado={guardandoAcceso || accesoValor.trim().length < 3}>
+                  {guardandoAcceso ? "Agregando…" : "Agregar"}
+                </Button>
+              </form>
+              {errorAcceso && (
+                <div className="mt-3">
+                  <Aviso tono="error">{errorAcceso}</Aviso>
+                </div>
+              )}
+                </>
+              )}
+            </Card>
+          </div>
+
+          <div className="mt-4">
+            <Card>
+              <CabeceraColapsable titulo="Equipo" abierto={equipoAbierto} onToggle={() => setEquipoAbierto((v) => !v)} />
+              {equipoAbierto && (
+                <>
+              <p className="mb-3 mt-2 text-sm text-ds-text-secondary">
+                Restablece la contraseña de un usuario si quedó bloqueado — se genera una clave temporal que reemplaza la actual de
+                inmediato. Se muestra una sola vez acá, no se guarda en ningún lado; pásasela por el canal de soporte que uses.
+              </p>
+
+              <form onSubmit={onInvitarUsuario} className="mb-4 rounded-lg border border-ds-divider p-3">
+                <h3 className="mb-2 text-sm font-semibold text-ds-text">Invitar un usuario a esta empresa</h3>
+                <p className="mb-3 text-ds-micro text-ds-text-secondary">
+                  Se le manda un correo con el enlace para definir su contraseña. No cuenta contra el límite de usuarios del plan.
+                </p>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <Input etiqueta="Nombre" valor={nuevoNombre} onCambio={setNuevoNombre} />
+                  <Input etiqueta="Correo" tipo="email" autoCapitalizar={false} valor={nuevoCorreo} onCambio={setNuevoCorreo} />
+                  <Select etiqueta="Rol" valor={nuevoRol} onCambio={setNuevoRol} opciones={rolesDisponibles.map((r) => ({ valor: r.slug, etiqueta: r.nombre }))} />
+                </div>
+                {errorInvitar && (
+                  <div className="mt-3">
+                    <Aviso tono="error">{errorInvitar}</Aviso>
                   </div>
                 )}
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    variant="danger"
-                    disabled={eliminandoUsuario || confirmacionEliminarUsuario.trim() !== eliminarUsuario.nombre}
-                    onClick={onEliminarUsuario}
-                  >
-                    {eliminandoUsuario ? "Eliminando…" : "Eliminar definitivamente"}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="danger"
-                    disabled={anonimizandoUsuario || confirmacionEliminarUsuario.trim() !== eliminarUsuario.nombre}
-                    onClick={onAnonimizarUsuario}
-                  >
-                    {anonimizandoUsuario ? "Anonimizando…" : "Anonimizar (Ley 21.719)"}
-                  </Button>
-                  <Button type="button" variant="ghost" onClick={() => setEliminarUsuario(null)}>
-                    Cancelar
+                {avisoInvitar && (
+                  <div className="mt-3">
+                    <Aviso tono="exito">{avisoInvitar}</Aviso>
+                  </div>
+                )}
+                <div className="mt-3">
+                  <Button tipo="submit" deshabilitado={invitando || !nuevoNombre.trim() || !nuevoCorreo.trim()}>
+                    {invitando ? "Invitando…" : "Enviar invitación"}
                   </Button>
                 </div>
-              </div>
-            )}
-              </>
-            )}
-          </Card>
+              </form>
 
-          <Card className="mt-4">
-            <CabeceraColapsable titulo="Anonimizar un cliente (Ley 21.719)" abierto={anonClienteAbierto} onToggle={() => setAnonClienteAbierto((v) => !v)} />
-            {anonClienteAbierto && (
-              <>
-            <p className="mb-3 mt-2 text-sm text-muted">
-              Reemplaza nombre/RUT/contacto del cliente por un placeholder y borra sus accesos al Portal y consentimientos.
-              Los trabajos/cobros quedan sin nombre de persona. Irreversible. El ID sale del export de la empresa o de la base.
-            </p>
-            <div className="flex flex-wrap items-end gap-2">
-              <div>
-                <Label>ID del cliente</Label>
-                <Input value={clienteAnonId} onChange={(e) => setClienteAnonId(e.target.value)} className="w-72 font-mono text-xs" />
+              {impersonarUsuario && (
+                <div className="mb-4 rounded-lg border border-ds-danger/40 bg-ds-danger-soft p-3">
+                  <p className="text-sm font-semibold text-ds-text">Impersonar a {impersonarUsuario.nombre}</p>
+                  <p className="mt-1 text-xs text-ds-text-secondary">
+                    Vas a entrar a Bitácora viendo lo que ve {impersonarUsuario.nombre}, sin conocer ni cambiar su contraseña. La sesión
+                    dura 30 minutos, las acciones destructivas quedan bloqueadas, y todo (inicio y fin) queda registrado con esta
+                    justificación en la auditoría.
+                  </p>
+                  <div className="mt-3">
+                    <Textarea
+                      etiqueta="Justificación (obligatoria, mín. 20 caracteres)"
+                      filas={2}
+                      valor={justificacionImp}
+                      onCambio={setJustificacionImp}
+                      placeholder="Ej: el usuario reporta que no puede firmar la OS #142 desde el celular, replicando para ver el error"
+                    />
+                  </div>
+                  {errorImp && (
+                    <div className="mt-2">
+                      <Aviso tono="error">{errorImp}</Aviso>
+                    </div>
+                  )}
+                  <div className="mt-3 flex gap-2">
+                    <Button
+                      variante="peligro"
+                      deshabilitado={iniciandoImp || justificacionImp.trim().length < 20}
+                      onPress={onIniciarImpersonacion}
+                    >
+                      {iniciandoImp ? "Entrando…" : `Entrar como ${impersonarUsuario.nombre}`}
+                    </Button>
+                    <Button variante="ghost" onPress={() => setImpersonarUsuario(null)}>
+                      Cancelar
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {restablecerUsuario && (
+                <div className="mb-4 flex flex-wrap items-end gap-2">
+                  <div className="min-w-[220px] max-w-xs flex-1">
+                    <Input
+                      etiqueta={`Contraseña para ${restablecerUsuario.nombre} — vacío genera una automática`}
+                      valor={passwordPersonalizada}
+                      onCambio={setPasswordPersonalizada}
+                      placeholder="Mínimo 8 caracteres"
+                    />
+                  </div>
+                  <Button
+                    deshabilitado={restableciendoId === restablecerUsuario.id}
+                    onPress={() => onRestablecerPassword(restablecerUsuario.id, restablecerUsuario.nombre)}
+                  >
+                    {restableciendoId === restablecerUsuario.id ? "Restableciendo…" : "Restablecer"}
+                  </Button>
+                  <Button
+                    variante="ghost"
+                    onPress={() => {
+                      setRestablecerUsuario(null);
+                      setErrorUsuarios(null);
+                    }}
+                  >
+                    Cancelar
+                  </Button>
+                  {errorUsuarios && <Aviso tono="error">{errorUsuarios}</Aviso>}
+                </div>
+              )}
+
+              {passwordGenerada && (
+                <div className="mb-3 rounded-lg border border-ds-brand/40 bg-ds-brand/[0.08] p-3 text-sm">
+                  <p className="font-medium text-ds-text">
+                    Nueva contraseña de {passwordGenerada.nombre}: <span className="font-mono">{passwordGenerada.password}</span>
+                  </p>
+                  <p className="mt-1 text-xs text-ds-text-secondary">Copiala ahora — no se vuelve a mostrar.</p>
+                </div>
+              )}
+              {secretoTotpGenerado && (
+                <div className="mb-3 rounded-lg border border-ds-brand/40 bg-ds-brand/[0.08] p-3 text-sm">
+                  <p className="font-medium text-ds-text">
+                    Clave TOTP de {secretoTotpGenerado.nombre}: <span className="font-mono">{secretoTotpGenerado.secreto}</span>
+                  </p>
+                  <p className="mt-1 text-xs text-ds-text-secondary">
+                    Cárgala a mano en Google Authenticator/Authy/1Password — no se vuelve a mostrar.
+                  </p>
+                </div>
+              )}
+              {!usuarios ? (
+                <p className="text-sm text-ds-text-secondary">Cargando…</p>
+              ) : usuarios.length === 0 ? (
+                <p className="text-sm text-ds-text-secondary">Esta empresa todavía no tiene usuarios.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm">
+                    <thead>
+                      <tr className="text-xs text-ds-text-secondary">
+                        <th className="py-1.5 pr-4 font-medium">Nombre</th>
+                        <th className="py-1.5 pr-4 font-medium">Correo</th>
+                        <th className="py-1.5 pr-4 font-medium">Rol</th>
+                        <th className="py-1.5 pr-4 font-medium">Estado</th>
+                        <th className="py-1.5 pr-4 font-medium">2FA</th>
+                        <th className="py-1.5 font-medium"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {usuarios.map((u) => (
+                        <tr key={u.id} className="border-t border-ds-divider">
+                          <td className="py-2 pr-4 text-ds-text">{u.nombre}</td>
+                          <td className="py-2 pr-4 text-ds-text-secondary">{u.correo ?? "—"}</td>
+                          <td className="py-2 pr-4 text-ds-text-secondary">{u.rol}</td>
+                          <td className="py-2 pr-4">
+                            <Estado estado={u.activo ? "activo" : "inactivo"} />
+                          </td>
+                          <td className="py-2 pr-4 text-ds-text-secondary">{u.mfa_activado ? `Activo (${u.mfa_metodo})` : "Inactivo"}</td>
+                          <td className="py-2">
+                            <div className="flex flex-wrap justify-end gap-2">
+                              <Button
+                                variante="secundario"
+                                deshabilitado={!u.activo}
+                                onPress={() => {
+                                  setImpersonarUsuario({ id: u.id, nombre: u.nombre });
+                                  setJustificacionImp("");
+                                  setErrorImp(null);
+                                }}
+                              >
+                                Impersonar
+                              </Button>
+                              <Button
+                                variante="secundario"
+                                onPress={() => {
+                                  setRestablecerUsuario({ id: u.id, nombre: u.nombre });
+                                  setPasswordPersonalizada("");
+                                  setPasswordGenerada(null);
+                                  setErrorUsuarios(null);
+                                }}
+                              >
+                                Restablecer contraseña
+                              </Button>
+                              <Button
+                                variante="secundario"
+                                deshabilitado={cambiandoMfaId === u.id}
+                                onPress={() => onActivarMfa(u.id, u.nombre)}
+                              >
+                                {cambiandoMfaId === u.id
+                                  ? "Generando…"
+                                  : u.mfa_activado
+                                    ? "Regenerar código TOTP"
+                                    : "Activar 2FA (TOTP)"}
+                              </Button>
+                              {u.mfa_activado && (
+                                <Button
+                                  variante="secundario"
+                                  deshabilitado={cambiandoMfaId === u.id}
+                                  onPress={() => onDesactivarMfa(u.id, u.nombre, u.rol)}
+                                >
+                                  {cambiandoMfaId === u.id ? "Desactivando…" : "Desactivar 2FA"}
+                                </Button>
+                              )}
+                              <Button
+                                variante="secundario"
+                                deshabilitado={cambiandoEstadoId === u.id}
+                                onPress={() => onCambiarEstadoUsuario(u.id, u.nombre, !u.activo)}
+                              >
+                                {cambiandoEstadoId === u.id ? "Guardando…" : u.activo ? "Desactivar" : "Reactivar"}
+                              </Button>
+                              <Button
+                                variante="peligro"
+                                onPress={() => {
+                                  setEliminarUsuario({ id: u.id, nombre: u.nombre });
+                                  setConfirmacionEliminarUsuario("");
+                                  setErrorEliminarUsuario(null);
+                                }}
+                              >
+                                Eliminar
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              {errorUsuarios && (
+                <div className="mt-3">
+                  <Aviso tono="error">{errorUsuarios}</Aviso>
+                </div>
+              )}
+
+              {eliminarUsuario && (
+                <div className="mt-4 rounded-lg border border-ds-danger/40 bg-ds-danger/5 p-4">
+                  <p className="text-sm font-semibold text-ds-text">Eliminar o anonimizar a {eliminarUsuario.nombre}</p>
+                  <p className="mt-1 text-sm text-ds-text-secondary">
+                    <span className="font-medium">Eliminar</span> borra la cuenta y libera el correo — solo si no tiene
+                    trabajos/OS, rutas, fotos ni informes. <span className="font-medium">Anonimizar</span> (Ley 21.719)
+                    reemplaza nombre/RUT/contacto por un placeholder y borra contrato, accesos y consentimientos, dejando
+                    los registros operativos sin nombre de persona. Ambas son irreversibles.
+                  </p>
+                  <label htmlFor="confirmar-eliminar-usuario" className="mt-ds-3 block text-ds-caption font-ds-body font-medium text-ds-text/70">
+                    Escribe <span className="font-mono text-ds-text">{eliminarUsuario.nombre}</span> para confirmar
+                  </label>
+                  <div className="mt-ds-1 max-w-sm">
+                    <Input id="confirmar-eliminar-usuario" valor={confirmacionEliminarUsuario} onCambio={setConfirmacionEliminarUsuario} />
+                  </div>
+                  {errorEliminarUsuario && (
+                    <div className="mt-2">
+                      <Aviso tono="error">{errorEliminarUsuario}</Aviso>
+                    </div>
+                  )}
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Button
+                      variante="peligro"
+                      deshabilitado={eliminandoUsuario || confirmacionEliminarUsuario.trim() !== eliminarUsuario.nombre}
+                      onPress={onEliminarUsuario}
+                    >
+                      {eliminandoUsuario ? "Eliminando…" : "Eliminar definitivamente"}
+                    </Button>
+                    <Button
+                      variante="peligro"
+                      deshabilitado={anonimizandoUsuario || confirmacionEliminarUsuario.trim() !== eliminarUsuario.nombre}
+                      onPress={onAnonimizarUsuario}
+                    >
+                      {anonimizandoUsuario ? "Anonimizando…" : "Anonimizar (Ley 21.719)"}
+                    </Button>
+                    <Button variante="ghost" onPress={() => setEliminarUsuario(null)}>
+                      Cancelar
+                    </Button>
+                  </div>
+                </div>
+              )}
+                </>
+              )}
+            </Card>
+          </div>
+
+          <div className="mt-4">
+            <Card>
+              <CabeceraColapsable titulo="Anonimizar un cliente (Ley 21.719)" abierto={anonClienteAbierto} onToggle={() => setAnonClienteAbierto((v) => !v)} />
+              {anonClienteAbierto && (
+                <>
+              <p className="mb-3 mt-2 text-sm text-ds-text-secondary">
+                Reemplaza nombre/RUT/contacto del cliente por un placeholder y borra sus accesos al Portal y consentimientos.
+                Los trabajos/cobros quedan sin nombre de persona. Irreversible. El ID sale del export de la empresa o de la base.
+              </p>
+              <div className="flex flex-wrap items-end gap-2">
+                <div className="w-72">
+                  <Input etiqueta="ID del cliente" autoCapitalizar={false} valor={clienteAnonId} onCambio={setClienteAnonId} />
+                </div>
+                <div className="w-56">
+                  <Input etiqueta="Nombre exacto (confirmación)" valor={clienteAnonNombre} onCambio={setClienteAnonNombre} />
+                </div>
+                <Button variante="peligro" deshabilitado={anonimizandoCliente} onPress={onAnonimizarCliente}>
+                  {anonimizandoCliente ? "Anonimizando…" : "Anonimizar"}
+                </Button>
               </div>
-              <div>
-                <Label>Nombre exacto (confirmación)</Label>
-                <Input value={clienteAnonNombre} onChange={(e) => setClienteAnonNombre(e.target.value)} className="w-56" />
-              </div>
-              <Button type="button" variant="danger" disabled={anonimizandoCliente} onClick={onAnonimizarCliente}>
-                {anonimizandoCliente ? "Anonimizando…" : "Anonimizar"}
+              {msgAnonCliente && (
+                <div className="mt-2">
+                  <Aviso tono={msgAnonCliente.tipo === "ok" ? "exito" : "error"}>{msgAnonCliente.texto}</Aviso>
+                </div>
+              )}
+                </>
+              )}
+            </Card>
+          </div>
+
+          <div className="mt-4">
+            <Card>
+              <CabeceraColapsable titulo="Exportar datos" abierto={exportarAbierto} onToggle={() => setExportarAbierto((v) => !v)} />
+              {exportarAbierto && (
+                <>
+              <p className="mb-3 mt-2 text-sm text-ds-text-secondary">
+                Genera un archivo con todos los datos de esta empresa (para portabilidad si se da de baja). No incluye el contenido de
+                fotos/PDFs, solo las referencias ya guardadas.
+              </p>
+              <Button variante="secundario" deshabilitado={exportando} onPress={onExportar}>
+                {exportando ? "Generando…" : "Exportar datos"}
               </Button>
-            </div>
-            {msgAnonCliente && (
-              <div className="mt-2">
-                {msgAnonCliente.tipo === "ok" ? <SuccessText>{msgAnonCliente.texto}</SuccessText> : <ErrorText>{msgAnonCliente.texto}</ErrorText>}
-              </div>
-            )}
-              </>
-            )}
-          </Card>
+              {errorExportar && (
+                <div className="mt-3">
+                  <Aviso tono="error">{errorExportar}</Aviso>
+                </div>
+              )}
+                </>
+              )}
+            </Card>
+          </div>
 
-          <Card className="mt-4">
-            <CabeceraColapsable titulo="Exportar datos" abierto={exportarAbierto} onToggle={() => setExportarAbierto((v) => !v)} />
-            {exportarAbierto && (
-              <>
-            <p className="mb-3 mt-2 text-sm text-muted">
-              Genera un archivo con todos los datos de esta empresa (para portabilidad si se da de baja). No incluye el contenido de
-              fotos/PDFs, solo las referencias ya guardadas.
-            </p>
-            <Button type="button" variant="outline" disabled={exportando} onClick={onExportar}>
-              {exportando ? "Generando…" : "Exportar datos"}
-            </Button>
-            {errorExportar && (
-              <div className="mt-3">
-                <ErrorText>{errorExportar}</ErrorText>
+          <div className="mt-4">
+            <Card>
+              <button
+                type="button"
+                onClick={() => setZonaPeligroAbierta((v) => !v)}
+                className="flex w-full items-center justify-between gap-2 text-left"
+              >
+                <h2 className="flex items-center gap-2 text-sm font-semibold text-ds-danger">
+                  <IconShield className="h-4 w-4" />
+                  Zona de peligro
+                </h2>
+                <IconChevronDown className={`h-4 w-4 shrink-0 text-ds-text-secondary transition-transform ${zonaPeligroAbierta ? "rotate-180" : ""}`} />
+              </button>
+              {zonaPeligroAbierta && (
+                <>
+              <p className="mb-4 mt-3 text-sm text-ds-text-secondary">
+                Eliminar la empresa borra <strong>permanentemente</strong> a {salud.empresa.nombre} — clientes, cotizaciones, órdenes de
+                servicio, cobranzas y todo lo demás. Esta acción no se puede deshacer.
+              </p>
+              <div className="max-w-sm">
+                <Input etiqueta={`Escribe “${salud.empresa.nombre}” para confirmar`} valor={confirmacionEliminar} onCambio={setConfirmacionEliminar} />
               </div>
-            )}
-              </>
-            )}
-          </Card>
-
-          <Card className="mt-4 border-danger/40">
-            <button
-              type="button"
-              onClick={() => setZonaPeligroAbierta((v) => !v)}
-              className="flex w-full items-center justify-between gap-2 text-left"
-            >
-              <h2 className="flex items-center gap-2 text-sm font-semibold text-danger">
-                <IconShield className="h-4 w-4" />
-                Zona de peligro
-              </h2>
-              <IconChevronDown className={`h-4 w-4 shrink-0 text-muted transition-transform ${zonaPeligroAbierta ? "rotate-180" : ""}`} />
-            </button>
-            {zonaPeligroAbierta && (
-              <>
-            <p className="mb-4 mt-3 text-sm text-muted">
-              Eliminar la empresa borra <strong>permanentemente</strong> a {salud.empresa.nombre} — clientes, cotizaciones, órdenes de
-              servicio, cobranzas y todo lo demás. Esta acción no se puede deshacer.
-            </p>
-            <Label>Escribe &ldquo;{salud.empresa.nombre}&rdquo; para confirmar</Label>
-            <Input type="text" value={confirmacionEliminar} onChange={(e) => setConfirmacionEliminar(e.target.value)} className="max-w-sm" />
-            {errorEliminar && (
-              <div className="mt-3">
-                <ErrorText>{errorEliminar}</ErrorText>
+              {errorEliminar && (
+                <div className="mt-3">
+                  <Aviso tono="error">{errorEliminar}</Aviso>
+                </div>
+              )}
+              <div className="mt-4">
+                <Button variante="peligro" onPress={onEliminar} deshabilitado={eliminando || confirmacionEliminar !== salud.empresa.nombre}>
+                  {eliminando ? "Eliminando…" : "Eliminar empresa"}
+                </Button>
               </div>
-            )}
-            <Button
-              type="button"
-              variant="danger"
-              onClick={onEliminar}
-              disabled={eliminando || confirmacionEliminar !== salud.empresa.nombre}
-              className="mt-4"
-            >
-              {eliminando ? "Eliminando…" : "Eliminar empresa"}
-            </Button>
-              </>
-            )}
-          </Card>
+                </>
+              )}
+            </Card>
+          </div>
         </>
       )}
     </SuperAdminShell>

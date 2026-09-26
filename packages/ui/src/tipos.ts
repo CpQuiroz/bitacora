@@ -73,6 +73,9 @@ export type PropsInput = PropsCampoBase & {
   minLongitud?: number;
   /** Validación nativa del navegador: bloquea el submit si está vacío. */
   requerido?: boolean;
+  /** Solo tipo "numero" (web): step y min del navegador; "any" o 0.01 para decimales. Native lo ignora. */
+  paso?: number | "any";
+  minimo?: number;
   iconoIzq?: ReactNode;
   autoFoco?: boolean;
   /**
@@ -91,6 +94,8 @@ export type PropsTextarea = PropsCampoBase & {
   placeholder?: string;
   /** Alto sugerido en líneas visibles (web: rows; native: minHeight ≈ filas·20). */
   filas?: number;
+  /** Validación nativa del navegador (web). */
+  requerido?: boolean;
 };
 
 export type OpcionSelect = { valor: string; etiqueta: string };
@@ -108,6 +113,8 @@ export type PropsDatePicker = PropsCampoBase & {
   placeholder?: string;
   minimo?: Date;
   maximo?: Date;
+  /** Validación nativa del navegador (web). */
+  requerido?: boolean;
 };
 
 // ── Card ────────────────────────────────────────────────────────────

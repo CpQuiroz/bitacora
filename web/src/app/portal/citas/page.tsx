@@ -4,10 +4,11 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PortalShell } from "@/components/PortalShell";
-import { Badge, Card, ErrorText } from "@/components/ui";
+import { Aviso, Card, StatusBadge } from "@bitacora/ui/web";
 import { IconCalendar } from "@/components/icons";
 import { EstadoCargando, EstadoVacio } from "@/components/estados";
 import { obtenerTokenPortal, portalFetch } from "@/lib/portalApi";
+import { tonoPortal } from "../tonoEstado";
 
 type CitaListado = { id: string; titulo: string; fecha: string; hora: string | null; estado: string };
 
@@ -43,9 +44,9 @@ export default function PortalCitasPage() {
 
   return (
     <PortalShell>
-      <h1 className="mb-4 text-xl font-semibold text-foreground">Mis Citas</h1>
+      <h1 className="mb-4 text-xl font-semibold text-ds-text">Mis Citas</h1>
 
-      {error && <ErrorText>{error}</ErrorText>}
+      {error && <Aviso tono="error">{error}</Aviso>}
       {citas === null && !error && <EstadoCargando />}
       {citas?.length === 0 && (
         <EstadoVacio icono={IconCalendar} titulo="Todavía no tienes citas agendadas" />
@@ -54,12 +55,12 @@ export default function PortalCitasPage() {
       <div className="flex flex-col gap-3">
         {citas?.map((c) => (
           <Link key={c.id} href={`/portal/citas/${c.id}`}>
-            <Card className="p-4">
+            <Card>
               <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-foreground">{c.titulo}</p>
-                <Badge value={c.estado} />
+                <p className="text-sm font-medium text-ds-text">{c.titulo}</p>
+                <StatusBadge estado={c.estado} tonoForzado={tonoPortal(c.estado)} />
               </div>
-              <p className="mt-1 text-xs text-muted">
+              <p className="mt-1 text-xs text-ds-text-secondary">
                 {new Date(`${c.fecha}T00:00:00`).toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" })}
                 {c.hora ? ` · ${c.hora}` : ""}
               </p>

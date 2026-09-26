@@ -6,8 +6,7 @@ import { TIPOS_OS_VISIBLES } from "@bitacora/shared";
 import { Plus, Wrench } from "lucide-react";
 import type { CampoTipoTrabajo, ChecklistTemplate, SugerenciaRubro, TipoOsTrabajo } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
-import { Button, Card, Input, Select, StatusBadge } from "@bitacora/ui/web";
-import { DataTable } from "@/components/DataTable";
+import { Button, Card, Input, Select, StatusBadge, Table } from "@bitacora/ui/web";
 
 type TipoConChecklist = TipoOsTrabajo & { checklist: { nombre: string } | null };
 
@@ -365,20 +364,23 @@ function TiposOsTrabajoContenido() {
       </div>
 
       {error ? <p className="font-ds-body text-ds-small text-ds-accent-700">{error}</p> : null}
-      <DataTable
-        rows={filtrados}
-        rowKey={(t) => t.id}
-        loading={tipos === null && !error}
-        columns={[
-          { header: "", className: "w-8", cell: (t) => <span className="inline-block h-3 w-3 rounded-ds-pill" style={{ background: t.color }} /> },
-          { header: "Nombre", cell: (t) => <span className="font-medium text-ds-text">{t.nombre}</span> },
+      <Table
+        filas={filtrados}
+        claveFila={(t) => t.id}
+        // Convención (tarea 149): la fila abre la edición; el resto en el menú ⋯.
+        onFilaClick={abrirEdicion}
+        accionesEnMenu
+        cargando={tipos === null && !error}
+        columnas={[
+          { encabezado: "", clase: "w-8", celda: (t) => <span className="inline-block h-3 w-3 rounded-ds-pill" style={{ background: t.color }} /> },
+          { encabezado: "Nombre", celda: (t) => <span className="font-medium text-ds-text">{t.nombre}</span> },
           {
-            header: "Campos personalizados",
-            cell: (t) =>
+            encabezado: "Campos personalizados",
+            celda: (t) =>
               t.campos.length > 0 ? (
                 <div className="flex flex-wrap gap-1">
                   {t.campos.map((c) => (
-                    <span key={c.clave} className="rounded-ds-pill bg-ds-brand/[0.08] px-2 py-0.5 text-[11px] text-ds-brand">
+                    <span key={c.clave} className="rounded-ds-pill bg-ds-brand/[0.08] px-2 py-0.5 text-ds-micro text-ds-brand">
                       {c.etiqueta}
                     </span>
                   ))}
@@ -387,16 +389,16 @@ function TiposOsTrabajoContenido() {
                 <span className="text-ds-text-secondary">—</span>
               ),
           },
-          { header: "Checklist", cell: (t) => <span className="text-ds-text-secondary">{t.checklist?.nombre ?? "—"}</span> },
-          { header: "Tiempo estimado", cell: (t) => <span className="text-ds-text-secondary">{t.tiempo_estimado_minutos != null ? `${t.tiempo_estimado_minutos} min` : "—"}</span> },
-          { header: "Estado", cell: (t) => <StatusBadge estado={t.activo ? "activo" : "inactivo"} /> },
+          { encabezado: "Checklist", celda: (t) => <span className="text-ds-text-secondary">{t.checklist?.nombre ?? "—"}</span> },
+          { encabezado: "Tiempo estimado", celda: (t) => <span className="text-ds-text-secondary">{t.tiempo_estimado_minutos != null ? `${t.tiempo_estimado_minutos} min` : "—"}</span> },
+          { encabezado: "Estado", celda: (t) => <StatusBadge estado={t.activo ? "activo" : "inactivo"} /> },
         ]}
-        actions={[
-          { label: "Editar", onClick: abrirEdicion, variant: "brand" },
-          { label: (t) => (t.activo ? "Desactivar" : "Activar"), onClick: onAlternarActivo, variant: "muted" },
-          { label: "Eliminar", onClick: onEliminar, variant: "danger" },
+        acciones={[
+          { etiqueta: "Editar", onPress: abrirEdicion, tono: "brand" },
+          { etiqueta: (t) => (t.activo ? "Desactivar" : "Activar"), onPress: onAlternarActivo, tono: "muted" },
+          { etiqueta: "Eliminar", onPress: onEliminar, tono: "peligro" },
         ]}
-        emptyState={{ icon: Wrench, message: "Todavía no hay tipos — usa los sugeridos de arriba o crea uno nuevo." }}
+        vacio={{ titulo: "Todavía no hay tipos — usa los sugeridos de arriba o crea uno nuevo.", icono: <Wrench size={28} strokeWidth={2.75} /> }}
       />
     </div>
   );

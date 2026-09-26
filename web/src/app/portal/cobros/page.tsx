@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PortalShell } from "@/components/PortalShell";
-import { Badge, Card, ErrorText } from "@/components/ui";
+import { Aviso, Card, StatusBadge } from "@bitacora/ui/web";
 import { IconWallet } from "@/components/icons";
 import { EstadoCargando, EstadoVacio } from "@/components/estados";
 import { obtenerTokenPortal, portalFetch } from "@/lib/portalApi";
+import { tonoPortal } from "../tonoEstado";
 
 type Cobro = { id: string; monto: number; fecha_emision: string; fecha_vencimiento: string; fecha_pago: string | null; estado: string };
 
@@ -42,9 +43,9 @@ export default function PortalCobrosPage() {
 
   return (
     <PortalShell>
-      <h1 className="mb-4 text-xl font-semibold text-foreground">Mis Cobros</h1>
+      <h1 className="mb-4 text-xl font-semibold text-ds-text">Mis Cobros</h1>
 
-      {error && <ErrorText>{error}</ErrorText>}
+      {error && <Aviso tono="error">{error}</Aviso>}
       {cobros === null && !error && <EstadoCargando />}
       {cobros?.length === 0 && (
         <EstadoVacio icono={IconWallet} titulo="No tienes cobros registrados" />
@@ -52,13 +53,13 @@ export default function PortalCobrosPage() {
 
       <div className="flex flex-col gap-3">
         {cobros?.map((c) => (
-          <Card key={c.id} className="p-4">
+          <Card key={c.id}>
             <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold text-foreground">${Math.round(c.monto).toLocaleString("es-CL")}</p>
-              <Badge value={c.estado} />
+              <p className="text-sm font-semibold text-ds-text">${Math.round(c.monto).toLocaleString("es-CL")}</p>
+              <StatusBadge estado={c.estado} tonoForzado={tonoPortal(c.estado)} />
             </div>
-            <p className="mt-1 text-xs text-muted">Vence {new Date(c.fecha_vencimiento).toLocaleDateString("es-CL")}</p>
-            {c.fecha_pago && <p className="mt-1 text-xs text-muted">Pagado el {new Date(c.fecha_pago).toLocaleDateString("es-CL")}</p>}
+            <p className="mt-1 text-xs text-ds-text-secondary">Vence {new Date(c.fecha_vencimiento).toLocaleDateString("es-CL")}</p>
+            {c.fecha_pago && <p className="mt-1 text-xs text-ds-text-secondary">Pagado el {new Date(c.fecha_pago).toLocaleDateString("es-CL")}</p>}
           </Card>
         ))}
       </div>

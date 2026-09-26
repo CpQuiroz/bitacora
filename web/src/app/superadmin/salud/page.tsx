@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { TendenciaMensual } from "@bitacora/shared";
 import { SuperAdminShell } from "@/components/SuperAdminShell";
-import { Badge, Card, ErrorText, PageHeader } from "@/components/ui";
+import { Aviso, Button, Card, StatusBadge, type TonoEstado } from "@bitacora/ui/web";
+import { PageHeader } from "@/components/PageHeader";
 import { GraficoEvolucionSimple } from "@/components/charts/GraficoEvolucionSimple";
 import { GraficoEvolucionDoble } from "@/components/charts/GraficoEvolucionDoble";
 import { obtenerTokenSuperAdmin, superadminFetch } from "@/lib/superadminApi";
@@ -70,6 +71,19 @@ type SaludPlataforma = {
   generado_en: string;
 };
 
+// Estado de un proveedor / deploy → tono del StatusBadge (no son estados
+// de ciclo de vida del mapa compartido, por eso el tono va forzado).
+const TONO_SALUD: Record<Proveedor["estado"], TonoEstado> = {
+  operational: "completado",
+  degraded: "advertencia",
+  outage: "peligro",
+  desconocido: "cerrado",
+};
+
+function BadgeSalud({ estado, etiqueta }: { estado: Proveedor["estado"]; etiqueta: string }) {
+  return <StatusBadge estado={estado} etiqueta={etiqueta} tonoForzado={TONO_SALUD[estado]} />;
+}
+
 const ETIQUETA_ESTADO: Record<Proveedor["estado"], string> = {
   operational: "Operativo",
   degraded: "Degradado",
@@ -123,27 +137,22 @@ export default function SuperAdminSaludPage() {
             : "Estado de la infraestructura y errores de toda la plataforma"
         }
         action={
-          <button
-            type="button"
-            onClick={onRefrescar}
-            disabled={refrescando}
-            className="rounded-md border border-border px-3 py-1.5 text-sm font-medium text-foreground hover:bg-surface disabled:opacity-50"
-          >
+          <Button variante="secundario" tamano="sm" onPress={onRefrescar} deshabilitado={refrescando}>
             {refrescando ? "Actualizando…" : "Actualizar"}
-          </button>
+          </Button>
         }
       />
 
-      {error && <ErrorText>{error}</ErrorText>}
+      {error && <Aviso tono="error">{error}</Aviso>}
 
-      {!salud && !error && <p className="my-6 text-sm text-muted">Cargando…</p>}
+      {!salud && !error && <p className="my-6 text-sm text-ds-text-secondary">Cargando…</p>}
 
       {salud && (
         <div className="my-6 flex flex-col gap-6">
           {!salud.sentry_configurado && (
-            <Card className="border-warning/40">
-              <p className="text-sm font-semibold text-foreground">Sentry no está configurado</p>
-              <p className="mt-1 text-sm text-muted">
+            <Card>
+              <p className="text-sm font-semibold text-ds-warning">Sentry no está configurado</p>
+              <p className="mt-1 text-sm text-ds-text-secondary">
                 El código ya captura excepciones (<code>backend/src/instrument.ts</code>) pero sin{" "}
                 <code>SENTRY_DSN</code> cargado en las variables de entorno de Render no manda nada — es un no-op. Es la mejora de
                 mayor retorno de esta pantalla: creá un proyecto gratis en sentry.io y cargá el DSN en Render para enterarte por mail
@@ -154,19 +163,19 @@ export default function SuperAdminSaludPage() {
 
           <div className="grid gap-4 sm:grid-cols-2">
             <Card>
-              <p className="text-xs text-muted">Errores del backend (últimas 24 h)</p>
-              <p className="mt-1 text-2xl font-semibold text-foreground">{salud.errores_ultimas_24h}</p>
-              <p className="mt-1 text-[11px] text-muted">5xx inesperados de cualquier empresa — ver detalle abajo.</p>
+              <p className="text-xs text-ds-text-secondary">Errores del backend (últimas 24 h)</p>
+              <p className="mt-1 text-2xl font-semibold text-ds-text">{salud.errores_ultimas_24h}</p>
+              <p className="mt-1 text-ds-micro text-ds-text-secondary">5xx inesperados de cualquier empresa — ver detalle abajo.</p>
             </Card>
             <Card>
-              <p className="text-xs text-muted">Requests lentos (últimas 24 h)</p>
-              <p className="mt-1 text-2xl font-semibold text-foreground">{salud.requests_lentos_ultimas_24h}</p>
-              <p className="mt-1 text-[11px] text-muted">Por encima del umbral de latencia — ver detalle abajo.</p>
+              <p className="text-xs text-ds-text-secondary">Requests lentos (últimas 24 h)</p>
+              <p className="mt-1 text-2xl font-semibold text-ds-text">{salud.requests_lentos_ultimas_24h}</p>
+              <p className="mt-1 text-ds-micro text-ds-text-secondary">Por encima del umbral de latencia — ver detalle abajo.</p>
             </Card>
           </div>
 
           <Card>
-            <h2 className="mb-3 text-sm font-semibold text-foreground">Proveedores externos</h2>
+            <h2 className="mb-3 text-sm font-semibold text-ds-text">Proveedores externos</h2>
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {salud.proveedores.map((p) => (
                 <a
@@ -174,27 +183,27 @@ export default function SuperAdminSaludPage() {
                   href={p.pagina}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex flex-col gap-1 rounded-lg border border-border px-3 py-2 hover:bg-surface"
+                  className="flex flex-col gap-1 rounded-lg border border-ds-divider px-3 py-2 hover:bg-ds-surface"
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-medium text-foreground">{p.nombre}</span>
-                    <Badge value={p.estado} label={ETIQUETA_ESTADO[p.estado]} />
+                    <span className="text-sm font-medium text-ds-text">{p.nombre}</span>
+                    <BadgeSalud estado={p.estado} etiqueta={ETIQUETA_ESTADO[p.estado]} />
                   </div>
-                  {p.descripcion && <span className="text-[11px] text-muted">{p.descripcion}</span>}
+                  {p.descripcion && <span className="text-ds-micro text-ds-text-secondary">{p.descripcion}</span>}
                 </a>
               ))}
             </div>
             {salud.proveedores_sin_monitoreo.length > 0 && (
-              <div className="mt-3 border-t border-border pt-3">
-                <p className="mb-2 text-[11px] text-muted">Sin status page automática consultable — revisar manualmente si se sospecha de ellos:</p>
+              <div className="mt-3 border-t border-ds-divider pt-3">
+                <p className="mb-2 text-ds-micro text-ds-text-secondary">Sin status page automática consultable — revisar manualmente si se sospecha de ellos:</p>
                 <div className="flex flex-wrap gap-3 text-sm">
                   {salud.proveedores_sin_monitoreo.map((p) =>
                     p.pagina ? (
-                      <a key={p.nombre} href={p.pagina} target="_blank" rel="noreferrer" className="text-brand hover:underline">
+                      <a key={p.nombre} href={p.pagina} target="_blank" rel="noreferrer" className="text-ds-brand hover:underline">
                         {p.nombre}
                       </a>
                     ) : (
-                      <span key={p.nombre} className="text-muted">
+                      <span key={p.nombre} className="text-ds-text-secondary">
                         {p.nombre}
                       </span>
                     )
@@ -205,54 +214,54 @@ export default function SuperAdminSaludPage() {
           </Card>
 
           <Card>
-            <h2 className="mb-1 text-sm font-semibold text-foreground">Uso de recursos</h2>
-            <p className="mb-3 text-[11px] text-muted">Datos reales de tu cuenta en cada servicio — distinto de &ldquo;¿está caído?&rdquo; de arriba.</p>
+            <h2 className="mb-1 text-sm font-semibold text-ds-text">Uso de recursos</h2>
+            <p className="mb-3 text-ds-micro text-ds-text-secondary">Datos reales de tu cuenta en cada servicio — distinto de &ldquo;¿está caído?&rdquo; de arriba.</p>
             <div className="grid gap-4 sm:grid-cols-3">
               <div>
-                <p className="mb-2 text-xs font-medium text-foreground">Supabase</p>
+                <p className="mb-2 text-xs font-medium text-ds-text">Supabase</p>
                 {salud.uso_recursos.supabase.disponible ? (
                   <div className="flex flex-col gap-2">
                     {salud.uso_recursos.supabase.proyectos.map((p) => (
-                      <div key={p.ref} className="rounded-md border border-border px-2.5 py-2">
+                      <div key={p.ref} className="rounded-md border border-ds-divider px-2.5 py-2">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-xs font-medium text-foreground">{p.nombre}</span>
-                          <Badge value={p.estado === "ACTIVE_HEALTHY" ? "operational" : "desconocido"} label={p.estado} />
+                          <span className="text-xs font-medium text-ds-text">{p.nombre}</span>
+                          <BadgeSalud estado={p.estado === "ACTIVE_HEALTHY" ? "operational" : "desconocido"} etiqueta={p.estado} />
                         </div>
-                        <p className="mt-1 text-[11px] text-muted">
+                        <p className="mt-1 text-ds-micro text-ds-text-secondary">
                           {p.region} · DB {p.dbTexto ?? "—"}
                         </p>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-[11px] text-muted">{salud.uso_recursos.supabase.motivo}</p>
+                  <p className="text-ds-micro text-ds-text-secondary">{salud.uso_recursos.supabase.motivo}</p>
                 )}
               </div>
               <div>
-                <p className="mb-2 text-xs font-medium text-foreground">Resend</p>
+                <p className="mb-2 text-xs font-medium text-ds-text">Resend</p>
                 {salud.uso_recursos.resend.disponible ? (
                   salud.uso_recursos.resend.dominios.length > 0 ? (
                     <div className="flex flex-col gap-1.5">
                       {salud.uso_recursos.resend.dominios.map((d) => (
-                        <div key={d.nombre} className="flex items-center justify-between gap-2 rounded-md border border-border px-2.5 py-2">
-                          <span className="text-xs text-foreground">{d.nombre}</span>
-                          <Badge value={d.estado === "verified" ? "operational" : "desconocido"} label={d.estado} />
+                        <div key={d.nombre} className="flex items-center justify-between gap-2 rounded-md border border-ds-divider px-2.5 py-2">
+                          <span className="text-xs text-ds-text">{d.nombre}</span>
+                          <BadgeSalud estado={d.estado === "verified" ? "operational" : "desconocido"} etiqueta={d.estado} />
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-[11px] text-muted">Sin dominios configurados.</p>
+                    <p className="text-ds-micro text-ds-text-secondary">Sin dominios configurados.</p>
                   )
                 ) : (
-                  <p className="text-[11px] text-muted">{salud.uso_recursos.resend.motivo}</p>
+                  <p className="text-ds-micro text-ds-text-secondary">{salud.uso_recursos.resend.motivo}</p>
                 )}
               </div>
               <div>
-                <p className="mb-2 text-xs font-medium text-foreground">Anthropic (Claude)</p>
+                <p className="mb-2 text-xs font-medium text-ds-text">Anthropic (Claude)</p>
                 {salud.uso_recursos.anthropic.disponible ? (
-                  <p className="text-[11px] text-muted">{salud.uso_recursos.anthropic.dias} días de datos disponibles.</p>
+                  <p className="text-ds-micro text-ds-text-secondary">{salud.uso_recursos.anthropic.dias} días de datos disponibles.</p>
                 ) : (
-                  <p className="text-[11px] text-muted">{salud.uso_recursos.anthropic.motivo}</p>
+                  <p className="text-ds-micro text-ds-text-secondary">{salud.uso_recursos.anthropic.motivo}</p>
                 )}
               </div>
               <BloqueVercel uso={salud.uso_recursos.vercel} />
@@ -263,8 +272,8 @@ export default function SuperAdminSaludPage() {
 
           <div className="grid gap-4 lg:grid-cols-2">
             <Card>
-              <h2 className="mb-1 text-sm font-semibold text-foreground">Tokens de IA por mes</h2>
-              <p className="mb-3 text-[11px] text-muted">Últimos 12 meses · todas las empresas.</p>
+              <h2 className="mb-1 text-sm font-semibold text-ds-text">Tokens de IA por mes</h2>
+              <p className="mb-3 text-ds-micro text-ds-text-secondary">Últimos 12 meses · todas las empresas.</p>
               <GraficoEvolucionSimple
                 datos={salud.tendencia_mensual.map((t) => ({ mes: t.mes, monto: t.tokens_ia }))}
                 mensajeVacio="Sin consumo de IA registrado."
@@ -272,8 +281,8 @@ export default function SuperAdminSaludPage() {
               />
             </Card>
             <Card>
-              <h2 className="mb-1 text-sm font-semibold text-foreground">Órdenes de servicio creadas por mes</h2>
-              <p className="mb-3 text-[11px] text-muted">Últimos 12 meses · todas las empresas.</p>
+              <h2 className="mb-1 text-sm font-semibold text-ds-text">Órdenes de servicio creadas por mes</h2>
+              <p className="mb-3 text-ds-micro text-ds-text-secondary">Últimos 12 meses · todas las empresas.</p>
               <GraficoEvolucionSimple
                 datos={salud.tendencia_mensual.map((t) => ({ mes: t.mes, monto: t.os_creadas }))}
                 mensajeVacio="Sin OS creadas todavía."
@@ -281,8 +290,8 @@ export default function SuperAdminSaludPage() {
               />
             </Card>
             <Card>
-              <h2 className="mb-1 text-sm font-semibold text-foreground">Errores y requests lentos por mes</h2>
-              <p className="mb-3 text-[11px] text-muted">Tendencia de salud técnica · todas las empresas.</p>
+              <h2 className="mb-1 text-sm font-semibold text-ds-text">Errores y requests lentos por mes</h2>
+              <p className="mb-3 text-ds-micro text-ds-text-secondary">Tendencia de salud técnica · todas las empresas.</p>
               <GraficoEvolucionDoble
                 datos={salud.tendencia_mensual.map((t) => ({ mes: t.mes, a: t.errores, b: t.requests_lentos }))}
                 etiquetaA="Errores"
@@ -292,8 +301,8 @@ export default function SuperAdminSaludPage() {
               />
             </Card>
             <Card>
-              <h2 className="mb-1 text-sm font-semibold text-foreground">Storage usado por mes</h2>
-              <p className="mb-3 text-[11px] text-muted">
+              <h2 className="mb-1 text-sm font-semibold text-ds-text">Storage usado por mes</h2>
+              <p className="mb-3 text-ds-micro text-ds-text-secondary">
                 Foto tomada al abrir esta pantalla cada mes — puede tener huecos si un mes entero pasa sin abrirla.
               </p>
               <GraficoEvolucionSimple
@@ -305,15 +314,15 @@ export default function SuperAdminSaludPage() {
           </div>
 
           <Card>
-            <h2 className="mb-1 text-sm font-semibold text-foreground">Errores recientes (todas las empresas)</h2>
-            <p className="mb-3 text-[11px] text-muted">Últimos 50 · para el detalle de una sola empresa, ver su ficha en Empresas.</p>
+            <h2 className="mb-1 text-sm font-semibold text-ds-text">Errores recientes (todas las empresas)</h2>
+            <p className="mb-3 text-ds-micro text-ds-text-secondary">Últimos 50 · para el detalle de una sola empresa, ver su ficha en Empresas.</p>
             {salud.errores_recientes.length === 0 ? (
-              <p className="text-sm text-muted">Sin errores registrados.</p>
+              <p className="text-sm text-ds-text-secondary">Sin errores registrados.</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead>
-                    <tr className="text-muted">
+                    <tr className="text-ds-text-secondary">
                       <th className="py-1.5 pr-4 font-medium">Fecha</th>
                       <th className="py-1.5 pr-4 font-medium">Empresa</th>
                       <th className="py-1.5 pr-4 font-medium">Ruta</th>
@@ -322,13 +331,13 @@ export default function SuperAdminSaludPage() {
                   </thead>
                   <tbody>
                     {salud.errores_recientes.map((e) => (
-                      <tr key={e.id} className="border-t border-border align-top">
-                        <td className="whitespace-nowrap py-1.5 pr-4 text-muted">{new Date(e.creado_en).toLocaleString("es-CL")}</td>
-                        <td className="py-1.5 pr-4 text-muted">{e.empresa?.nombre ?? "—"}</td>
-                        <td className="py-1.5 pr-4 font-mono text-foreground">
+                      <tr key={e.id} className="border-t border-ds-divider align-top">
+                        <td className="whitespace-nowrap py-1.5 pr-4 text-ds-text-secondary">{new Date(e.creado_en).toLocaleString("es-CL")}</td>
+                        <td className="py-1.5 pr-4 text-ds-text-secondary">{e.empresa?.nombre ?? "—"}</td>
+                        <td className="py-1.5 pr-4 font-mono text-ds-text">
                           {e.metodo} {e.ruta}
                         </td>
-                        <td className="py-1.5 text-foreground">{e.mensaje}</td>
+                        <td className="py-1.5 text-ds-text">{e.mensaje}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -338,17 +347,17 @@ export default function SuperAdminSaludPage() {
           </Card>
 
           <Card>
-            <h2 className="mb-1 text-sm font-semibold text-foreground">Requests lentos (todas las empresas)</h2>
-            <p className="mb-3 text-[11px] text-muted">
+            <h2 className="mb-1 text-sm font-semibold text-ds-text">Requests lentos (todas las empresas)</h2>
+            <p className="mb-3 text-ds-micro text-ds-text-secondary">
               Últimos 50 · por encima del umbral de latencia (<code>LATENCIA_UMBRAL_MS</code>, 2000 ms por defecto).
             </p>
             {salud.requests_lentos.length === 0 ? (
-              <p className="text-sm text-muted">Sin requests lentos registrados.</p>
+              <p className="text-sm text-ds-text-secondary">Sin requests lentos registrados.</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead>
-                    <tr className="text-muted">
+                    <tr className="text-ds-text-secondary">
                       <th className="py-1.5 pr-4 font-medium">Fecha</th>
                       <th className="py-1.5 pr-4 font-medium">Empresa</th>
                       <th className="py-1.5 pr-4 font-medium">Ruta</th>
@@ -358,16 +367,16 @@ export default function SuperAdminSaludPage() {
                   </thead>
                   <tbody>
                     {salud.requests_lentos.map((r) => (
-                      <tr key={r.id} className="border-t border-border">
-                        <td className="whitespace-nowrap py-1.5 pr-4 text-muted">{new Date(r.creado_en).toLocaleString("es-CL")}</td>
-                        <td className="py-1.5 pr-4 text-muted">{r.empresa?.nombre ?? "—"}</td>
-                        <td className="py-1.5 pr-4 font-mono text-foreground">
+                      <tr key={r.id} className="border-t border-ds-divider">
+                        <td className="whitespace-nowrap py-1.5 pr-4 text-ds-text-secondary">{new Date(r.creado_en).toLocaleString("es-CL")}</td>
+                        <td className="py-1.5 pr-4 text-ds-text-secondary">{r.empresa?.nombre ?? "—"}</td>
+                        <td className="py-1.5 pr-4 font-mono text-ds-text">
                           {r.metodo} {r.ruta}
                         </td>
-                        <td className="py-1.5 pr-4 text-foreground">
+                        <td className="py-1.5 pr-4 text-ds-text">
                           {(r.ms / 1000).toFixed(1)} s{r.filas_devueltas != null ? ` · ${r.filas_devueltas} filas` : ""}
                         </td>
-                        <td className="py-1.5 text-muted">{r.status_code ?? "—"}</td>
+                        <td className="py-1.5 text-ds-text-secondary">{r.status_code ?? "—"}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -376,9 +385,9 @@ export default function SuperAdminSaludPage() {
             )}
           </Card>
 
-          <p className="text-[11px] text-muted">
+          <p className="text-ds-micro text-ds-text-secondary">
             Chequeo manual más a fondo (curl por capa, contactos de cada proveedor, severidad de incidentes):{" "}
-            <a href="https://github.com/CpQuiroz/bitacora/blob/main/docs/RUNBOOK_INCIDENTES.md" target="_blank" rel="noreferrer" className="text-brand hover:underline">
+            <a href="https://github.com/CpQuiroz/bitacora/blob/main/docs/RUNBOOK_INCIDENTES.md" target="_blank" rel="noreferrer" className="text-ds-brand hover:underline">
               RUNBOOK_INCIDENTES.md
             </a>
             .
@@ -406,22 +415,22 @@ function fechaCorta(iso: string): string {
 }
 
 function SinDatos({ uso, variable }: { uso: NoDisponible | undefined; variable: string }) {
-  return <p className="text-[11px] text-muted">{uso?.motivo ?? `Falta ${variable} (o el backend todavía no tiene este deploy)`}</p>;
+  return <p className="text-ds-micro text-ds-text-secondary">{uso?.motivo ?? `Falta ${variable} (o el backend todavía no tiene este deploy)`}</p>;
 }
 
 function BloqueVercel({ uso }: { uso: UsoVercel | undefined }) {
   return (
     <div>
-      <p className="mb-2 text-xs font-medium text-foreground">Vercel (web)</p>
+      <p className="mb-2 text-xs font-medium text-ds-text">Vercel (web)</p>
       {uso?.disponible ? (
         <div className="flex flex-col gap-2">
           {uso.proyectos.map((p) => (
-            <div key={p.nombre} className="rounded-md border border-border px-2.5 py-2">
+            <div key={p.nombre} className="rounded-md border border-ds-divider px-2.5 py-2">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-medium text-foreground">{p.nombre}</span>
-                {p.ultimoDeploy ? <Badge value={badgeDeploy(p.ultimoDeploy.estado)} label={p.ultimoDeploy.estado} /> : null}
+                <span className="text-xs font-medium text-ds-text">{p.nombre}</span>
+                {p.ultimoDeploy ? <BadgeSalud estado={badgeDeploy(p.ultimoDeploy.estado)} etiqueta={p.ultimoDeploy.estado} /> : null}
               </div>
-              <p className="mt-1 text-[11px] text-muted">
+              <p className="mt-1 text-ds-micro text-ds-text-secondary">
                 {p.framework ?? "—"} · {p.ultimoDeploy ? `último deploy ${fechaCorta(p.ultimoDeploy.fecha)}` : "sin deploys de producción"}
               </p>
             </div>
@@ -437,20 +446,20 @@ function BloqueVercel({ uso }: { uso: UsoVercel | undefined }) {
 function BloqueRender({ uso }: { uso: UsoRender | undefined }) {
   return (
     <div>
-      <p className="mb-2 text-xs font-medium text-foreground">Render (backend)</p>
+      <p className="mb-2 text-xs font-medium text-ds-text">Render (backend)</p>
       {uso?.disponible ? (
         <div className="flex flex-col gap-2">
           {uso.servicios.map((sv) => (
-            <div key={sv.nombre} className="rounded-md border border-border px-2.5 py-2">
+            <div key={sv.nombre} className="rounded-md border border-ds-divider px-2.5 py-2">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-medium text-foreground">{sv.nombre}</span>
+                <span className="text-xs font-medium text-ds-text">{sv.nombre}</span>
                 {sv.suspendido ? (
-                  <Badge value="outage" label="Suspendido" />
+                  <BadgeSalud estado="outage" etiqueta="Suspendido" />
                 ) : sv.ultimoDeploy ? (
-                  <Badge value={badgeDeploy(sv.ultimoDeploy.estado)} label={sv.ultimoDeploy.estado} />
+                  <BadgeSalud estado={badgeDeploy(sv.ultimoDeploy.estado)} etiqueta={sv.ultimoDeploy.estado} />
                 ) : null}
               </div>
-              <p className="mt-1 text-[11px] text-muted">
+              <p className="mt-1 text-ds-micro text-ds-text-secondary">
                 {sv.tipo}
                 {sv.plan ? ` · plan ${sv.plan}` : ""}
                 {sv.ultimoDeploy ? ` · último deploy ${fechaCorta(sv.ultimoDeploy.fecha)}` : ""}
@@ -468,17 +477,17 @@ function BloqueRender({ uso }: { uso: UsoRender | undefined }) {
 function BloqueCloudflare({ uso }: { uso: UsoCloudflare | undefined }) {
   return (
     <div>
-      <p className="mb-2 text-xs font-medium text-foreground">Cloudflare (DNS / proxy)</p>
+      <p className="mb-2 text-xs font-medium text-ds-text">Cloudflare (DNS / proxy)</p>
       {uso?.disponible ? (
         uso.zonas.length > 0 ? (
           <div className="flex flex-col gap-2">
             {uso.zonas.map((z) => (
-              <div key={z.nombre} className="rounded-md border border-border px-2.5 py-2">
+              <div key={z.nombre} className="rounded-md border border-ds-divider px-2.5 py-2">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-medium text-foreground">{z.nombre}</span>
-                  <Badge value={z.estado === "active" ? "operational" : "degraded"} label={z.estado} />
+                  <span className="text-xs font-medium text-ds-text">{z.nombre}</span>
+                  <BadgeSalud estado={z.estado === "active" ? "operational" : "degraded"} etiqueta={z.estado} />
                 </div>
-                <p className="mt-1 text-[11px] text-muted">
+                <p className="mt-1 text-ds-micro text-ds-text-secondary">
                   {z.plan ?? "—"}
                   {z.requests7d != null ? ` · ${formatearEntero(z.requests7d)} requests (7 días)` : " · sin permiso de Analytics"}
                   {z.bytes7d != null ? ` · ${formatearBytes(z.bytes7d)}` : ""}
@@ -487,7 +496,7 @@ function BloqueCloudflare({ uso }: { uso: UsoCloudflare | undefined }) {
             ))}
           </div>
         ) : (
-          <p className="text-[11px] text-muted">Sin zonas en la cuenta.</p>
+          <p className="text-ds-micro text-ds-text-secondary">Sin zonas en la cuenta.</p>
         )
       ) : (
         <SinDatos uso={uso as NoDisponible | undefined} variable="CLOUDFLARE_API_TOKEN" />

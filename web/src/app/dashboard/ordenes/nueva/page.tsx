@@ -8,17 +8,8 @@ import { apiFetch } from "@/lib/api";
 import { EVENTOS } from "@bitacora/shared";
 import { registrarEvento } from "@/lib/analytics";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import {
-  Button,
-  Card,
-  ErrorText,
-  Input,
-  Label,
-  PageHeader,
-  Select,
-  SuccessText,
-  Textarea,
-} from "@/components/ui";
+import { Aviso, Button, Card, DatePicker, Input, Select, Textarea } from "@bitacora/ui/web";
+import { PageHeader } from "@/components/PageHeader";
 import { InputMonto } from "@/components/InputMonto";
 import { IconClipboardCheck, IconPlus } from "@/components/icons";
 import { CatalogoSelectorModal, type ItemSeleccionadoCatalogo } from "@/components/CatalogoSelectorModal";
@@ -39,6 +30,24 @@ type ItemOS = {
 const ITEM_VACIO: ItemOS = { catalogo_item_id: null, descripcion: "", cantidad: "1", precio_unitario: "0", costo: "", precio_mayorista: "", precio_minorista: "" };
 
 const PRIORIDADES: Prioridad[] = ["alta", "media", "baja"];
+
+// Rótulo de campo con el mismo look que `etiqueta` de @bitacora/ui, para
+// los controles que no la tienen (Combobox*, InputMonto, cantidad).
+const LABEL = "font-ds-body text-ds-caption font-medium text-ds-text/70";
+
+// yyyy-mm-dd ↔ Date en hora local (mismo helper que ordenes/page.tsx).
+function aFecha(texto: string): Date | null {
+  if (!texto) return null;
+  const [y, m, d] = texto.split("-").map(Number);
+  return new Date(y, (m || 1) - 1, d || 1);
+}
+function aTexto(fecha: Date | null): string {
+  if (!fecha) return "";
+  const y = fecha.getFullYear();
+  const m = String(fecha.getMonth() + 1).padStart(2, "0");
+  const d = String(fecha.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
 
 function NuevaOrdenServicioContenido() {
   const router = useRouter();
@@ -221,41 +230,41 @@ function NuevaOrdenServicioContenido() {
       />
 
       {creada ? (
-        <Card className="my-6">
-          <div className="flex flex-col items-center gap-3 py-8 text-center">
-            <IconClipboardCheck className="h-10 w-10 text-brand" />
-            <SuccessText>
-              {creada.folio != null
-                ? `OS N° ${creada.folio} creada y enviada al celular del colaborador.`
-                : "Orden de servicio creada."}
-            </SuccessText>
-            <div className="flex gap-2">
-              <Button type="button" onClick={() => router.push("/dashboard/ordenes")}>
-                Ver todas las OS
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setCreada(null);
-                  setDescripcion("");
-                  setItems([{ ...ITEM_VACIO }]);
-                  setEquipoIdOS("");
-                }}
-              >
-                Crear otra
-              </Button>
-            </div>
-          </div>
-        </Card>
-      ) : (
-        <form onSubmit={onSubmit} className="my-6 flex flex-col gap-6">
+        <div className="my-ds-6">
           <Card>
-            <h2 className="mb-4 text-sm font-semibold text-foreground">Cliente y colaborador</h2>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="sm:col-span-2">
-                <Label>Cliente</Label>
+            <div className="flex flex-col items-center gap-ds-3 py-ds-8 text-center">
+              <IconClipboardCheck className="h-10 w-10 text-ds-brand" />
+              <Aviso tono="exito">
+                {creada.folio != null
+                  ? `OS N° ${creada.folio} creada y enviada al celular del colaborador.`
+                  : "Orden de servicio creada."}
+              </Aviso>
+              <div className="flex gap-ds-2">
+                <Button onPress={() => router.push("/dashboard/ordenes")}>Ver todas las OS</Button>
+                <Button
+                  variante="secundario"
+                  onPress={() => {
+                    setCreada(null);
+                    setDescripcion("");
+                    setItems([{ ...ITEM_VACIO }]);
+                    setEquipoIdOS("");
+                  }}
+                >
+                  Crear otra
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+      ) : (
+        <form onSubmit={onSubmit} className="my-ds-6 flex flex-col gap-ds-6">
+          <Card>
+            <h2 className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Cliente y colaborador</h2>
+            <div className="grid gap-ds-4 sm:grid-cols-2">
+              <div className="flex flex-col gap-ds-1 sm:col-span-2">
+                <label htmlFor="os-nueva-cliente" className={LABEL}>Cliente</label>
                 <ComboboxCliente
+                  id="os-nueva-cliente"
                   value={clienteId}
                   onChange={(id) => {
                     setClienteId(id);
@@ -266,12 +275,13 @@ function NuevaOrdenServicioContenido() {
                   placeholder="Selecciona un cliente"
                 />
                 {clienteSeleccionado && (
-                  <p className="mt-1.5 text-xs text-muted">{clienteSeleccionado.direccion}</p>
+                  <p className="font-ds-body text-ds-caption text-ds-text-secondary">{clienteSeleccionado.direccion}</p>
                 )}
               </div>
-              <div>
-                <Label>Colaborador</Label>
+              <div className="flex flex-col gap-ds-1">
+                <label htmlFor="os-nueva-colaborador" className={LABEL}>Colaborador</label>
                 <ComboboxResponsable
+                  id="os-nueva-colaborador"
                   value={responsableId}
                   onChange={setResponsableId}
                   equipo={equipo}
@@ -279,9 +289,10 @@ function NuevaOrdenServicioContenido() {
                 />
               </div>
               {clienteId && (
-                <div>
-                  <Label>Equipo del cliente (opcional)</Label>
+                <div className="flex flex-col gap-ds-1">
+                  <label htmlFor="os-nueva-equipo" className={LABEL}>Equipo del cliente (opcional)</label>
                   <ComboboxEquipo
+                    id="os-nueva-equipo"
                     value={equipoIdOS}
                     onChange={setEquipoIdOS}
                     equipos={equiposDelCliente}
@@ -295,105 +306,115 @@ function NuevaOrdenServicioContenido() {
           </Card>
 
           <Card>
-            <h2 className="mb-4 text-sm font-semibold text-foreground">Detalle del servicio</h2>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <h2 className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Detalle del servicio</h2>
+            <div className="grid gap-ds-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
-                <Label>Descripción</Label>
-                <Textarea rows={3} required value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />
+                <Textarea etiqueta="Descripción" filas={3} requerido valor={descripcion} onCambio={setDescripcion} />
               </div>
-              <div>
-                <Label>Fecha</Label>
-                <Input type="date" required value={fecha} onChange={(e) => setFecha(e.target.value)} />
-              </div>
-              <div>
-                <Label>Hora programada (opcional)</Label>
-                <Input type="time" value={horaProgramada} onChange={(e) => setHoraProgramada(e.target.value)} />
-              </div>
-              <div>
-                <Label>Prioridad</Label>
-                <Select value={prioridad} onChange={(e) => setPrioridad(e.target.value as Prioridad)}>
-                  {PRIORIDADES.map((p) => (
-                    <option key={p} value={p}>
-                      {p.charAt(0).toUpperCase() + p.slice(1)}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-              <div>
-                <Label>Orden de compra del cliente (opcional)</Label>
-                <Input value={ordenCompraCliente} onChange={(e) => setOrdenCompraCliente(e.target.value)} placeholder="N° de OC del cliente" />
-              </div>
+              <DatePicker etiqueta="Fecha" requerido valor={aFecha(fecha)} onCambio={(f) => setFecha(aTexto(f))} />
+              <Input etiqueta="Hora programada (opcional)" tipo="hora" valor={horaProgramada} onCambio={setHoraProgramada} />
+              <Select
+                etiqueta="Prioridad"
+                valor={prioridad}
+                onCambio={(v) => setPrioridad(v as Prioridad)}
+                opciones={PRIORIDADES.map((p) => ({ valor: p, etiqueta: p.charAt(0).toUpperCase() + p.slice(1) }))}
+              />
+              <Input
+                etiqueta="Orden de compra del cliente (opcional)"
+                valor={ordenCompraCliente}
+                onCambio={setOrdenCompraCliente}
+                placeholder="N° de OC del cliente"
+              />
             </div>
           </Card>
 
           <Card>
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-foreground">Ítems / materiales</h2>
-              <Button type="button" variant="outline" onClick={() => setSelectorAbierto(true)}>
-                <IconPlus className="h-4 w-4" />
+            <div className="mb-ds-4 flex items-center justify-between">
+              <h2 className="font-ds-body text-ds-small font-semibold text-ds-text">Ítems / materiales</h2>
+              <Button variante="secundario" iconoIzq={<IconPlus className="h-4 w-4" />} onPress={() => setSelectorAbierto(true)}>
                 Agregar del catálogo
               </Button>
             </div>
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-ds-3">
               {items.map((it, i) => {
                 const stock = stockDe(it.catalogo_item_id);
                 const excede = stock != null && Number(it.cantidad || 0) > stock;
                 return (
-                <div key={i} className="flex flex-col gap-2 border-b border-border pb-2 last:border-0 last:pb-0">
-                <div className="grid grid-cols-[1fr_5rem_7rem_auto] items-start gap-2">
-                  <div>
-                    {i === 0 && <Label>Descripción</Label>}
+                <div key={i} className="flex flex-col gap-ds-2 border-b border-ds-divider pb-ds-2 last:border-0 last:pb-0">
+                <div className="grid grid-cols-[1fr_5rem_7rem_auto] items-start gap-ds-2">
+                  <div className="flex flex-col gap-ds-1">
                     <Input
-                      type="text"
+                      etiqueta={i === 0 ? "Descripción" : undefined}
+                      etiquetaAccesible={`Descripción del ítem ${i + 1}`}
                       placeholder="Ej: Mano de obra, repuesto…"
-                      value={it.descripcion}
-                      onChange={(e) => actualizarItem(i, "descripcion", e.target.value)}
+                      valor={it.descripcion}
+                      onCambio={(v) => actualizarItem(i, "descripcion", v)}
                     />
                     {stock != null && (
-                      <p className={`mt-1 text-xs ${excede ? "text-danger" : "text-muted"}`}>
+                      <p className={`font-ds-body text-ds-caption ${excede ? "text-ds-danger" : "text-ds-text-secondary"}`}>
                         {excede
                           ? `Stock: ${stock} — vas a descontar ${it.cantidad}, quedaría en ${stock - Number(it.cantidad || 0)}`
                           : `Stock: ${stock} — se descontará al llegar la OS al estado disparador`}
                       </p>
                     )}
                   </div>
-                  <div>
-                    {i === 0 && <Label>Cant.</Label>}
-                    <Input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={it.cantidad}
-                      onChange={(e) => actualizarItem(i, "cantidad", e.target.value)}
+                  <Input
+                    id={`os-item-${i}-cantidad`}
+                    tipo="numero"
+                    paso={0.01}
+                    minimo={0}
+                    etiqueta={i === 0 ? "Cant." : undefined}
+                    etiquetaAccesible={`Cantidad del ítem ${i + 1}`}
+                    valor={it.cantidad}
+                    onCambio={(v) => actualizarItem(i, "cantidad", v)}
+                  />
+                  <div className="flex flex-col gap-ds-1">
+                    {i === 0 && <label htmlFor={`os-item-${i}-precio`} className={LABEL}>P. unitario</label>}
+                    <InputMonto
+                      id={`os-item-${i}-precio`}
+                      aria-label={i === 0 ? undefined : `Precio unitario del ítem ${i + 1}`}
+                      value={it.precio_unitario}
+                      onChange={(v) => actualizarItem(i, "precio_unitario", v)}
+                      moneda={usuario.moneda}
                     />
                   </div>
-                  <div>
-                    {i === 0 && <Label>P. unitario</Label>}
-                    <InputMonto value={it.precio_unitario} onChange={(v) => actualizarItem(i, "precio_unitario", v)} moneda={usuario.moneda} />
+                  <div className={i === 0 ? "mt-6" : ""}>
+                    <Button variante="ghost" onPress={() => quitarItem(i)} deshabilitado={items.length === 1}>
+                      Quitar
+                    </Button>
                   </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => quitarItem(i)}
-                    disabled={items.length === 1}
-                    className={i === 0 ? "mt-6" : ""}
-                  >
-                    Quitar
-                  </Button>
                 </div>
                 {preciosAvanzados && (
-                  <div className="grid grid-cols-3 gap-2 pl-0 sm:pl-1">
-                    <div>
-                      {i === 0 && <Label>Costo (opcional)</Label>}
-                      <InputMonto value={it.costo} onChange={(v) => actualizarItem(i, "costo", v)} moneda={usuario.moneda} />
+                  <div className="grid grid-cols-3 gap-ds-2 pl-0 sm:pl-1">
+                    <div className="flex flex-col gap-ds-1">
+                      {i === 0 && <label htmlFor={`os-item-${i}-costo`} className={LABEL}>Costo (opcional)</label>}
+                      <InputMonto
+                        id={`os-item-${i}-costo`}
+                        aria-label={i === 0 ? undefined : `Costo del ítem ${i + 1}`}
+                        value={it.costo}
+                        onChange={(v) => actualizarItem(i, "costo", v)}
+                        moneda={usuario.moneda}
+                      />
                     </div>
-                    <div>
-                      {i === 0 && <Label>P. mayorista (opcional)</Label>}
-                      <InputMonto value={it.precio_mayorista} onChange={(v) => actualizarItem(i, "precio_mayorista", v)} moneda={usuario.moneda} />
+                    <div className="flex flex-col gap-ds-1">
+                      {i === 0 && <label htmlFor={`os-item-${i}-precio_mayorista`} className={LABEL}>P. mayorista (opcional)</label>}
+                      <InputMonto
+                        id={`os-item-${i}-precio_mayorista`}
+                        aria-label={i === 0 ? undefined : `Precio mayorista del ítem ${i + 1}`}
+                        value={it.precio_mayorista}
+                        onChange={(v) => actualizarItem(i, "precio_mayorista", v)}
+                        moneda={usuario.moneda}
+                      />
                     </div>
-                    <div>
-                      {i === 0 && <Label>P. minorista (opcional)</Label>}
-                      <InputMonto value={it.precio_minorista} onChange={(v) => actualizarItem(i, "precio_minorista", v)} moneda={usuario.moneda} />
+                    <div className="flex flex-col gap-ds-1">
+                      {i === 0 && <label htmlFor={`os-item-${i}-precio_minorista`} className={LABEL}>P. minorista (opcional)</label>}
+                      <InputMonto
+                        id={`os-item-${i}-precio_minorista`}
+                        aria-label={i === 0 ? undefined : `Precio minorista del ítem ${i + 1}`}
+                        value={it.precio_minorista}
+                        onChange={(v) => actualizarItem(i, "precio_minorista", v)}
+                        moneda={usuario.moneda}
+                      />
                     </div>
                   </div>
                 )}
@@ -401,7 +422,7 @@ function NuevaOrdenServicioContenido() {
                 );
               })}
             </div>
-            <p className="mt-4 text-right text-sm font-semibold text-foreground">
+            <p className="mt-ds-4 text-right font-ds-body text-ds-small font-semibold text-ds-text">
               Total: ${totalItems.toLocaleString("es-CL")}
             </p>
           </Card>
@@ -415,10 +436,12 @@ function NuevaOrdenServicioContenido() {
             avisaDescuentoStock
           />
 
-          {error && <ErrorText>{error}</ErrorText>}
-          <Button type="submit" disabled={guardando} className="self-start">
-            {guardando ? "Creando…" : "Crear y enviar OS"}
-          </Button>
+          {error && <Aviso tono="error">{error}</Aviso>}
+          <div>
+            <Button tipo="submit" deshabilitado={guardando}>
+              {guardando ? "Creando…" : "Crear y enviar OS"}
+            </Button>
+          </div>
         </form>
       )}
     </DashboardShell>

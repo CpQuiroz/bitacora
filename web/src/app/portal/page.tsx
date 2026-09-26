@@ -4,10 +4,11 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PortalShell } from "@/components/PortalShell";
-import { Badge, Button, Card, ErrorText, SuccessText, Textarea } from "@/components/ui";
+import { Aviso, Button, Card, StatusBadge, Textarea } from "@bitacora/ui/web";
 import { IconCalendar, IconClipboardCheck, IconReceipt, IconWallet } from "@/components/icons";
 import { EstadoCargando } from "@/components/estados";
 import { obtenerConfigPortal, obtenerTokenPortal, portalFetch, type ConfigPortal } from "@/lib/portalApi";
+import { tonoPortal } from "./tonoEstado";
 
 type Visita = { id: string; cliente: string; fecha: string; hora_programada: string | null; descripcion: string | null; estado: string };
 
@@ -75,8 +76,8 @@ export default function PortalHomePage() {
 
   return (
     <PortalShell>
-      <h1 className="text-xl font-semibold text-foreground">Hola 👋</h1>
-      <p className="mt-1 text-sm text-muted">Acá puedes ver tu información con esta empresa.</p>
+      <h1 className="text-xl font-semibold text-ds-text">Hola 👋</h1>
+      <p className="mt-1 text-ds-small text-ds-text-secondary">Acá puedes ver tu información con esta empresa.</p>
 
       {(() => {
         const cards = [
@@ -92,10 +93,10 @@ export default function PortalHomePage() {
               <Link
                 key={c.href}
                 href={c.href}
-                className="flex flex-col items-center gap-1.5 rounded-xl border border-border bg-surface p-3 text-center"
+                className="flex flex-col items-center gap-1.5 rounded-xl border border-ds-divider bg-ds-surface p-3 text-center"
               >
-                <c.icon className="h-5 w-5 text-brand" />
-                <span className="text-xs font-medium text-foreground">{c.label}</span>
+                <c.icon className="h-5 w-5 text-ds-brand" />
+                <span className="text-xs font-medium text-ds-text">{c.label}</span>
               </Link>
             ))}
           </div>
@@ -104,58 +105,57 @@ export default function PortalHomePage() {
 
       {config?.ordenes !== false && (
         <>
-          <h2 className="mb-3 mt-8 flex items-center gap-2 text-sm font-semibold text-foreground">
-            <IconCalendar className="h-4 w-4 text-brand" />
+          <h2 className="mb-3 mt-8 flex items-center gap-2 text-sm font-semibold text-ds-text">
+            <IconCalendar className="h-4 w-4 text-ds-brand" />
             Próximas visitas
           </h2>
 
-          {error && <ErrorText>{error}</ErrorText>}
+          {error && <Aviso tono="error">{error}</Aviso>}
           {visitas === null && !error && <EstadoCargando />}
-          {visitas?.length === 0 && <p className="text-sm text-muted">No tienes visitas programadas por ahora.</p>}
+          {visitas?.length === 0 && <p className="text-sm text-ds-text-secondary">No tienes visitas programadas por ahora.</p>}
 
           <div className="flex flex-col gap-3">
             {visitas?.map((v) => (
-              <Card key={v.id} className="p-4">
+              <Card key={v.id}>
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium text-foreground">
+                  <p className="text-ds-small font-medium text-ds-text">
                     {new Date(v.fecha).toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" })}
                   </p>
-                  <Badge value={v.estado} />
+                  <StatusBadge estado={v.estado} tonoForzado={tonoPortal(v.estado)} />
                 </div>
-                {v.hora_programada && <p className="mt-1 text-xs text-muted">Hora estimada: {v.hora_programada}</p>}
-                {v.descripcion && <p className="mt-1 text-xs text-muted">{v.descripcion}</p>}
+                {v.hora_programada && <p className="mt-1 text-ds-caption text-ds-text-secondary">Hora estimada: {v.hora_programada}</p>}
+                {v.descripcion && <p className="mt-1 text-ds-caption text-ds-text-secondary">{v.descripcion}</p>}
               </Card>
             ))}
           </div>
         </>
       )}
 
-      <div className="mt-10 border-t border-border pt-6">
-        <h2 className="mb-2 text-sm font-semibold text-foreground">Mis datos personales</h2>
-        <button type="button" onClick={descargarMisDatos} className="text-xs text-brand underline">
+      <div className="mt-10 border-t border-ds-divider pt-6">
+        <h2 className="mb-2 text-sm font-semibold text-ds-text">Mis datos personales</h2>
+        <button type="button" onClick={descargarMisDatos} className="text-xs text-ds-brand underline">
           Descargar todos mis datos (Ley 21.719)
         </button>
 
-        <p className="mt-4 mb-2 text-xs text-muted">¿Hay un dato tuyo mal (nombre, dirección, teléfono)? Pide la corrección:</p>
+        <label htmlFor="portal-correccion" className="mt-4 mb-2 block text-ds-caption text-ds-text-secondary">
+          ¿Hay un dato tuyo mal (nombre, dirección, teléfono)? Pide la corrección:
+        </label>
         {corrOk ? (
-          <SuccessText>Listo, le avisamos a la empresa.</SuccessText>
+          <Aviso tono="exito">Listo, le avisamos a la empresa.</Aviso>
         ) : (
           <div className="flex flex-col gap-2">
             <Textarea
-              value={correccion}
-              onChange={(e) => setCorreccion(e.target.value)}
-              rows={2}
+              id="portal-correccion"
+              valor={correccion}
+              onCambio={setCorreccion}
+              filas={2}
               placeholder="Ej.: mi dirección correcta es…"
             />
-            <Button
-              type="button"
-              size="sm"
-              onClick={pedirCorreccion}
-              disabled={enviandoCorr || correccion.trim().length < 5}
-              className="self-start"
-            >
-              {enviandoCorr ? "Enviando…" : "Pedir corrección"}
-            </Button>
+            <div className="self-start">
+              <Button tamano="sm" onPress={pedirCorreccion} deshabilitado={enviandoCorr || correccion.trim().length < 5}>
+                {enviandoCorr ? "Enviando…" : "Pedir corrección"}
+              </Button>
+            </div>
           </div>
         )}
       </div>

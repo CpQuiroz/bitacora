@@ -10,9 +10,8 @@ import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Button, Card, DatePicker, Input, Select, StatusBadge, Textarea, useConfirmar, useToast, type TonoEstado } from "@bitacora/ui/web";
+import { Button, Card, DatePicker, Dialog, Input, Select, StatusBadge, Textarea, useConfirmar, useToast, type TonoEstado } from "@bitacora/ui/web";
 import { InputMonto } from "@/components/InputMonto";
-import { Modal } from "@/components/Modal";
 import { PanelAcciones } from "@/components/PanelAcciones";
 
 type ClienteInfo = { id: string; nombre: string; correo: string | null; telefono: string | null };
@@ -374,7 +373,7 @@ export default function CobroDetallePage() {
         }
       />
 
-      <Modal open={pagoAbierto} onClose={() => setPagoAbierto(false)} title="Registrar Pago">
+      <Dialog abierto={pagoAbierto} onCerrar={() => setPagoAbierto(false)} titulo="Registrar Pago">
         <form onSubmit={onRegistrarPago} className="flex flex-col gap-ds-4">
           <div>
             <p className="font-ds-body text-ds-caption font-medium text-ds-text/70">Valor original del cobro</p>
@@ -397,7 +396,7 @@ export default function CobroDetallePage() {
             </Button>
           </div>
         </form>
-      </Modal>
+      </Dialog>
     </DashboardShell>
   );
 }

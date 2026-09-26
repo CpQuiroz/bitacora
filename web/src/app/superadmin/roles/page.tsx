@@ -3,12 +3,11 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { SuperAdminShell } from "@/components/SuperAdminShell";
-import { Modal } from "@/components/Modal";
-import { Badge, Button, Card, ErrorText, Input, Label, PageHeader, SuccessText } from "@/components/ui";
+import { PageHeader } from "@/components/PageHeader";
 import { IconPlus } from "@/components/icons";
 import { obtenerTokenSuperAdmin, superadminFetch } from "@/lib/superadminApi";
 import { ETIQUETA_ACCION, ETIQUETA_MODULO } from "@/lib/etiquetasModulo";
-import { useConfirmar } from "@bitacora/ui/web";
+import { Aviso, Button, Card, Dialog, Input, StatusBadge, useConfirmar } from "@bitacora/ui/web";
 
 type Rol = {
   slug: string;
@@ -66,8 +65,7 @@ export default function SuperAdminRolesPage() {
         title="Roles"
         subtitle="Qué módulos y acciones tiene cada rol. Los roles son globales; puedes restringir uno a empresas puntuales."
         action={
-          <Button type="button" onClick={() => setModalNuevo(true)}>
-            <IconPlus className="h-4 w-4" />
+          <Button iconoIzq={<IconPlus className="h-4 w-4" />} onPress={() => setModalNuevo(true)}>
             Nuevo rol
           </Button>
         }
@@ -75,7 +73,7 @@ export default function SuperAdminRolesPage() {
 
       {error && (
         <div className="my-4">
-          <ErrorText>{error}</ErrorText>
+          <Aviso tono="error">{error}</Aviso>
         </div>
       )}
 
@@ -90,7 +88,7 @@ export default function SuperAdminRolesPage() {
             onCambio={cargar}
           />
         ))}
-        {datos === null && !error && <p className="text-sm text-muted">Cargando…</p>}
+        {datos === null && !error && <p className="text-sm text-ds-text-secondary">Cargando…</p>}
       </div>
 
       {datos && (
@@ -196,74 +194,73 @@ function RolCard({
     <Card>
       <button type="button" onClick={onToggle} className="flex w-full items-center justify-between gap-3 text-left">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="font-semibold text-foreground">{rol.nombre}</span>
-          <span className="font-mono text-xs text-muted">{rol.slug}</span>
-          <Badge value={rol.es_sistema ? "sistema" : "personalizado"} />
-          {rol.empresas.length > 0 && <Badge value={`${rol.empresas.length} empresa(s)`} />}
+          <span className="font-semibold text-ds-text">{rol.nombre}</span>
+          <span className="font-mono text-xs text-ds-text-secondary">{rol.slug}</span>
+          <StatusBadge estado={rol.es_sistema ? "sistema" : "personalizado"} tonoForzado="en_progreso" />
+          {rol.empresas.length > 0 && <StatusBadge estado={`${rol.empresas.length} empresa(s)`} tonoForzado="en_progreso" />}
         </div>
-        <span className="shrink-0 text-xs text-muted">
+        <span className="shrink-0 text-xs text-ds-text-secondary">
           {esAdmin ? "acceso total" : `${rol.modulos.length} módulos · ${rol.acciones.length} acciones`} · {rol.usuarios} usuario(s)
         </span>
       </button>
 
       {abierto && (
-        <div className="mt-4 flex flex-col gap-4 border-t border-border pt-4">
+        <div className="mt-4 flex flex-col gap-4 border-t border-ds-divider pt-4">
           {esAdmin ? (
-            <p className="text-sm text-muted">
+            <p className="text-sm text-ds-text-secondary">
               El rol <strong>Admin</strong> siempre tiene acceso total a todos los módulos y acciones. No es editable — es la
               garantía de que cada empresa tiene al menos un rol que lo puede todo.
             </p>
           ) : (
             <>
-              <div>
-                <Label>Nombre visible</Label>
-                <Input value={nombre} onChange={(e) => setNombre(e.target.value)} className="max-w-sm" />
+              <div className="max-w-sm">
+                <Input etiqueta="Nombre visible" valor={nombre} onCambio={setNombre} />
               </div>
 
-              <div>
-                <Label>Módulos que ve este rol</Label>
+              <fieldset>
+                <legend className="mb-ds-1 text-ds-caption font-ds-body font-medium text-ds-text/70">Módulos que ve este rol</legend>
                 <div className="mt-1 grid gap-2 sm:grid-cols-2">
                   {datos.catalogo.modulos.map((m) => (
-                    <label key={m} className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm">
+                    <label key={m} className="flex items-center gap-2 rounded-lg border border-ds-divider px-3 py-2 text-sm">
                       <input type="checkbox" checked={modulos.includes(m)} onChange={() => toggle(modulos, setModulos, m)} />
-                      <span className="text-foreground">{ETIQUETA_MODULO[m] ?? m}</span>
+                      <span className="text-ds-text">{ETIQUETA_MODULO[m] ?? m}</span>
                     </label>
                   ))}
                 </div>
-              </div>
+              </fieldset>
 
-              <div>
-                <Label>Acciones sensibles delegadas</Label>
+              <fieldset>
+                <legend className="mb-ds-1 text-ds-caption font-ds-body font-medium text-ds-text/70">Acciones sensibles delegadas</legend>
                 <div className="mt-1 flex flex-col gap-2">
                   {datos.catalogo.acciones.map((a) => (
-                    <label key={a} className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm">
+                    <label key={a} className="flex items-center gap-2 rounded-lg border border-ds-divider px-3 py-2 text-sm">
                       <input type="checkbox" checked={acciones.includes(a)} onChange={() => toggle(acciones, setAcciones, a)} />
-                      <span className="text-foreground">{ETIQUETA_ACCION[a] ?? a}</span>
+                      <span className="text-ds-text">{ETIQUETA_ACCION[a] ?? a}</span>
                     </label>
                   ))}
                 </div>
-              </div>
+              </fieldset>
 
               <label className="flex items-center gap-2 text-sm">
                 <input type="checkbox" checked={requiere2fa} onChange={(e) => setRequiere2fa(e.target.checked)} />
-                <span className="text-foreground">Exigir verificación en dos pasos (2FA) a los usuarios con este rol</span>
+                <span className="text-ds-text">Exigir verificación en dos pasos (2FA) a los usuarios con este rol</span>
               </label>
             </>
           )}
 
-          <div>
-            <Label>Disponibilidad</Label>
+          <fieldset>
+            <legend className="mb-ds-1 text-ds-caption font-ds-body font-medium text-ds-text/70">Disponibilidad</legend>
             <div className="mt-1 flex flex-col gap-2">
               <label className="flex items-center gap-2 text-sm">
                 <input type="radio" checked={!restringido} onChange={() => setRestringido(false)} />
-                <span className="text-foreground">Todas las empresas</span>
+                <span className="text-ds-text">Todas las empresas</span>
               </label>
               <label className="flex items-center gap-2 text-sm">
                 <input type="radio" checked={restringido} onChange={() => setRestringido(true)} />
-                <span className="text-foreground">Solo empresas puntuales</span>
+                <span className="text-ds-text">Solo empresas puntuales</span>
               </label>
               {restringido && (
-                <div className="ml-6 grid max-h-56 gap-1 overflow-y-auto rounded-lg border border-border p-2 sm:grid-cols-2">
+                <div className="ml-6 grid max-h-56 gap-1 overflow-y-auto rounded-lg border border-ds-divider p-2 sm:grid-cols-2">
                   {datos.empresas.map((e) => (
                     <label key={e.id} className="flex items-center gap-2 text-sm">
                       <input
@@ -271,22 +268,22 @@ function RolCard({
                         checked={empresasSel.includes(e.id)}
                         onChange={() => toggle(empresasSel, setEmpresasSel, e.id)}
                       />
-                      <span className="text-foreground">{e.nombre}</span>
+                      <span className="text-ds-text">{e.nombre}</span>
                     </label>
                   ))}
                 </div>
               )}
             </div>
-          </div>
+          </fieldset>
 
-          {msg && (msg.tipo === "ok" ? <SuccessText>{msg.texto}</SuccessText> : <ErrorText>{msg.texto}</ErrorText>)}
+          {msg && <Aviso tono={msg.tipo === "ok" ? "exito" : "error"}>{msg.texto}</Aviso>}
 
           <div className="flex flex-wrap gap-2">
-            <Button type="button" onClick={guardar} disabled={guardando}>
+            <Button onPress={guardar} deshabilitado={guardando}>
               {guardando ? "Guardando…" : "Guardar cambios"}
             </Button>
             {!rol.es_sistema && (
-              <Button type="button" variant="ghost" onClick={borrar} disabled={guardando || rol.usuarios > 0}>
+              <Button variante="ghost" onPress={borrar} deshabilitado={guardando || rol.usuarios > 0}>
                 {rol.usuarios > 0 ? `No se puede borrar (${rol.usuarios} usuario/s)` : "Borrar rol"}
               </Button>
             )}
@@ -362,67 +359,58 @@ function ModalNuevoRol({
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Nuevo rol" wide>
+    <Dialog abierto={open} onCerrar={onClose} titulo="Nuevo rol" tamano="ancho">
       <form onSubmit={onSubmit} className="flex flex-col gap-4">
         <div className="grid gap-4 sm:grid-cols-2">
+          <Input etiqueta="Nombre visible" valor={nombre} onCambio={setNombre} requerido placeholder="Jefe de taller" />
           <div>
-            <Label>Nombre visible</Label>
-            <Input value={nombre} onChange={(e) => setNombre(e.target.value)} required placeholder="Jefe de taller" />
-          </div>
-          <div>
-            <Label>Identificador</Label>
-            <Input
-              value={slug}
-              onChange={(e) => setSlug(e.target.value)}
-              placeholder={slugAuto || "jefe_taller"}
-              className="font-mono"
-            />
-            <p className="mt-1 text-[11px] text-muted">
+            <Input etiqueta="Identificador" valor={slug} onCambio={setSlug} autoCapitalizar={false} placeholder={slugAuto || "jefe_taller"} />
+            <p className="mt-1 text-ds-micro text-ds-text-secondary">
               Minúsculas, números y <code>_</code>. Se usa como <code>{slugFinal || "…"}</code> y no se puede cambiar después.
             </p>
           </div>
         </div>
 
-        <div>
-          <Label>Módulos</Label>
+        <fieldset>
+          <legend className="mb-ds-1 text-ds-caption font-ds-body font-medium text-ds-text/70">Módulos</legend>
           <div className="mt-1 grid gap-2 sm:grid-cols-2">
             {catalogo.modulos.map((m) => (
-              <label key={m} className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm">
+              <label key={m} className="flex items-center gap-2 rounded-lg border border-ds-divider px-3 py-2 text-sm">
                 <input type="checkbox" checked={modulos.includes(m)} onChange={() => toggle(modulos, setModulos, m)} />
-                <span className="text-foreground">{ETIQUETA_MODULO[m] ?? m}</span>
+                <span className="text-ds-text">{ETIQUETA_MODULO[m] ?? m}</span>
               </label>
             ))}
           </div>
-        </div>
+        </fieldset>
 
-        <div>
-          <Label>Acciones sensibles</Label>
+        <fieldset>
+          <legend className="mb-ds-1 text-ds-caption font-ds-body font-medium text-ds-text/70">Acciones sensibles</legend>
           <div className="mt-1 flex flex-col gap-2">
             {catalogo.acciones.map((a) => (
-              <label key={a} className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm">
+              <label key={a} className="flex items-center gap-2 rounded-lg border border-ds-divider px-3 py-2 text-sm">
                 <input type="checkbox" checked={acciones.includes(a)} onChange={() => toggle(acciones, setAcciones, a)} />
-                <span className="text-foreground">{ETIQUETA_ACCION[a] ?? a}</span>
+                <span className="text-ds-text">{ETIQUETA_ACCION[a] ?? a}</span>
               </label>
             ))}
           </div>
-        </div>
+        </fieldset>
 
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={requiere2fa} onChange={(e) => setRequiere2fa(e.target.checked)} />
-          <span className="text-foreground">Exigir 2FA a los usuarios con este rol</span>
+          <span className="text-ds-text">Exigir 2FA a los usuarios con este rol</span>
         </label>
 
-        {error && <ErrorText>{error}</ErrorText>}
+        {error && <Aviso tono="error">{error}</Aviso>}
 
         <div className="flex gap-2">
-          <Button type="submit" disabled={creando || !nombre.trim() || !slugFinal}>
+          <Button tipo="submit" deshabilitado={creando || !nombre.trim() || !slugFinal}>
             {creando ? "Creando…" : "Crear rol"}
           </Button>
-          <Button type="button" variant="ghost" onClick={onClose}>
+          <Button variante="ghost" onPress={onClose}>
             Cancelar
           </Button>
         </div>
       </form>
-    </Modal>
+    </Dialog>
   );
 }
