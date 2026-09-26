@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import type { CatalogoItem, Cliente, Equipo, Prioridad, Usuario } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
+import { EVENTOS } from "@bitacora/shared";
+import { registrarEvento } from "@/lib/analytics";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import {
   Button,
@@ -194,6 +196,7 @@ function NuevaOrdenServicioContenido() {
       return;
     }
     const nueva = await res.json();
+    registrarEvento(EVENTOS.osCreada, { con_items: itemsValidos.length > 0, origen: "web" });
 
     // Vino del flujo "Nueva tarea → Crear OS" en Agenda (Parte 2): en vez
     // de mostrar la pantalla de éxito, volver a Agenda para reabrir el

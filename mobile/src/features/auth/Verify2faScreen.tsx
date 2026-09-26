@@ -6,6 +6,8 @@ import { supabase } from "../../lib/supabase";
 import { apiJson } from "../../services/api";
 import { PantallaAuth } from "./PantallaAuth";
 import type { RootStackParamList } from "../../shell/navigation/types";
+import { registrarEvento } from "../../lib/analytics";
+import { EVENTOS } from "@bitacora/shared";
 
 // PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export function Verify2faScreen({ route, navigation }: NativeStackScreenProps<RootStackParamList, "Verify2fa">) {
@@ -27,6 +29,7 @@ export function Verify2faScreen({ route, navigation }: NativeStackScreenProps<Ro
       return;
     }
     await supabase.auth.setSession({ access_token: res.data.access_token, refresh_token: res.data.refresh_token });
+    registrarEvento(EVENTOS.login, { metodo: "clave_2fa" });
   }
 
   return (

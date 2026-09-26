@@ -10,6 +10,8 @@ import { LogoMark } from "../../components/ui";
 import { PantallaAuth } from "./PantallaAuth";
 import { useActivarModoSuperAdmin } from "../superadmin/SuperAdminModeContext";
 import type { RootStackParamList } from "../../shell/navigation/types";
+import { registrarEvento } from "../../lib/analytics";
+import { EVENTOS } from "@bitacora/shared";
 
 // El botón de Google aparece solo cuando está configurado del lado
 // servidor (Google Cloud + Supabase). Se prende en eas.json.
@@ -78,6 +80,7 @@ export function LoginScreen({ navigation }: NativeStackScreenProps<RootStackPara
       return;
     }
     await supabase.auth.setSession({ access_token: res.data.access_token, refresh_token: res.data.refresh_token });
+    registrarEvento(EVENTOS.login, { metodo: "clave" });
   }
 
   async function entrarGoogle() {
@@ -86,6 +89,7 @@ export function LoginScreen({ navigation }: NativeStackScreenProps<RootStackPara
     const r = await entrarConGoogle();
     setConGoogle(false);
     if (!r.ok && r.error !== "cancelado") setError(r.error);
+    if (r.ok) registrarEvento(EVENTOS.login, { metodo: "google" });
     // Si r.ok, el AuthContext toma la sesión nueva y navega solo.
   }
 

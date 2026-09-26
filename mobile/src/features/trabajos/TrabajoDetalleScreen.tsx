@@ -30,6 +30,8 @@ import { FotosSection } from "./components/FotosSection";
 import { CierreFirma, type ConfirmarCierrePayload } from "./components/CierreFirma";
 import { IndicadorPasos } from "./components/IndicadorPasos";
 import type { TrabajosStackParamList } from "../../shell/navigation/types";
+import { registrarEvento } from "../../lib/analytics";
+import { EVENTOS } from "@bitacora/shared";
 
 const ETIQUETA_OS: Record<string, string> = {
   pendiente: "Sin empezar",
@@ -320,6 +322,7 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
       }
       // 3) Cierre real.
       await encolarFinalizar(trabajoId);
+      registrarEvento(EVENTOS.osCerradaFirmada, { con_firma: payload.tipo === "firma", sin_conexion: !enLinea });
       Alert.alert(
         "Orden de servicio cerrada",
         enLinea ? "Quedó cerrada." : "Quedó cerrada. Se enviará a la oficina apenas vuelvas a tener señal.",

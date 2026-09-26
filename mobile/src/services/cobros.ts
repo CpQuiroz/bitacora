@@ -2,6 +2,8 @@ import * as Crypto from "expo-crypto";
 import type { Cliente, Factura, MedioPago } from "@bitacora/shared";
 import { apiFetch, apiJson } from "./api";
 import { guardarCache, leerCache } from "./sync/cache";
+import { registrarEvento } from "../lib/analytics";
+import { EVENTOS } from "@bitacora/shared";
 
 export type CobroConCliente = Factura & { cliente_info?: Pick<Cliente, "id" | "nombre" | "correo" | "telefono"> | null };
 
@@ -57,6 +59,7 @@ export async function crearCobro(b: BorradorCobro): Promise<{ ok: true; cobro: C
     30000
   );
   const data = (await res.json().catch(() => ({}))) as CobroConCliente & { error?: string };
+  if (res.ok) registrarEvento(EVENTOS.cobroCreado, { origen: "mobile" });
   return res.ok ? { ok: true, cobro: data } : { ok: false, error: data.error ?? `Error ${res.status}` };
 }
 

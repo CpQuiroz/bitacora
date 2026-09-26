@@ -1,4 +1,6 @@
 import { apiJson } from "./api";
+import { registrarEvento } from "../lib/analytics";
+import { EVENTOS } from "@bitacora/shared";
 
 export type RolDisponible = { slug: string; nombre: string };
 
@@ -24,5 +26,6 @@ export async function invitarUsuario(b: BorradorInvitacion): Promise<Resultado> 
     method: "POST",
     body: JSON.stringify({ email: b.correo.trim(), nombre: b.nombre.trim(), rol: b.rol }),
   });
+  if (res.ok) registrarEvento(EVENTOS.usuarioInvitado, { rol: b.rol });
   return res.ok ? { ok: true } : { ok: false, error: res.error };
 }

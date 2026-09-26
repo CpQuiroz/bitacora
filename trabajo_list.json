@@ -1970,6 +1970,22 @@
       "status": "done",
       "description": "Aprobado 26-sep-2026. Diagnóstico: Órdenes de servicio, Viajes (usa deshabilitados), Mantención, Levantamientos (solo función), pestaña Clientes, botón Registrar venta. Agenda/Hoy congeladas: no se tocan. Solo capa de presentación mobile.",
       "resolution": "26-sep: mobile/src/lib/modulos.ts (accesoModulos, con tests) con dos niveles sobre los datos de /api/me: gestión → modulos_visibles (misma regla que requiereModulo); trabajo propio de colaboradores (rol sin esos módulos en prod) → módulo activo en la empresa + función. Aplicado en Más (OS, Viajes, Mantención, Mi vehículo, Levantamientos), pestaña Clientes (registros) y Registrar venta (acción + catálogo/agenda_pro). Agenda/Hoy sin tocar. Tests MasScreen 3 + modulos 6; verificar verde."
+    },
+    {
+      "id": 153,
+      "name": "instrumentacion_basica",
+      "title": "Instrumentación básica: Sentry (backend listo con DSN, web) + PostHog (web y mobile) con embudo de activación",
+      "status": "done",
+      "description": "Aprobado 26-sep-2026 (auditoría UX ronda 1). Claves solo como variables de entorno (Render/Vercel/EAS), nunca en el repo. Sentry mobile bloqueado (Expo SDK 57 fija @sentry/react-native ~7.11.0, que rompía Gradle). Sin builds.",
+      "resolution": "26-sep: backend Sentry listo (se activa con SENTRY_DSN en Render; clasificarError con test). Web: @sentry/nextjs 11 (instrumentation.ts + instrumentation-client.ts, dataCollection sin datos personales, solo errores) + posthog-js detrás de lib/analytics.ts (sin autocaptura ni grabación, identify por id + grupo empresa). Mobile: posthog-react-native (+expo-device/localization/application; requiere build) en lib/analytics.ts; Sentry mobile bloqueado (Expo fija ~7.11.0). Eventos en packages/shared/src/eventos.ts: empresa_registrada, login, os_creada, cobro_creado, usuario_invitado, os_cerrada_firmada, viaje_iniciado, viaje_cerrado. Variables solo en .env.example (sin valores). next build OK; verificar verde. Nota: web/src/lib/api.test.ts no corre (vitest solo incluye *.test.tsx)."
+    },
+    {
+      "id": 154,
+      "name": "contraste_tokens",
+      "title": "Contraste AA: token sólido de texto secundario + codemod, texto sobre marca por WCAG (Taller oscurece fondo), test de contraste",
+      "status": "in_progress",
+      "description": "Aprobado 26-sep-2026 (auditoría UX ronda 1). ~612 usos de texto con opacidad bajo AA (352 web, 260 mobile); blanco sobre #c67139 = 3,61.",
+      "resolution": ""
     }
   ]
 }

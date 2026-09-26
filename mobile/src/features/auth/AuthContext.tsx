@@ -4,6 +4,7 @@ import type { Accion, Empresa, Modulo, Usuario } from "@bitacora/shared";
 import { supabase } from "../../lib/supabase";
 import { alPruebaVencida, apiJson } from "../../services/api";
 import { guardarCache, leerCache, limpiarCacheLecturas } from "../../services/sync/cache";
+import { identificarUsuario, olvidarUsuario } from "../../lib/analytics";
 
 type UsuarioConEmpresa = Usuario & { empresa: Empresa };
 
@@ -114,6 +115,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setEstado({ fase: "prueba-vencida", usuario });
       return;
     }
+    // Tarea 153: PostHog por id técnico (sin nombre ni correo).
+    identificarUsuario(usuario.id, usuario.empresa_id, usuario.rol, usuario.funcion ?? null);
     setEstado({
       fase: "listo",
       usuario,
@@ -147,6 +150,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => alPruebaVencida(() => void resolverUsuario()), [resolverUsuario]);
 
   const cerrarSesion = useCallback(async () => {
+    olvidarUsuario();
     await supabase.auth.signOut();
     // Deja la caché de lecturas limpia para el próximo login — si no,
     // datos viejos (equipo, clientes, catálogos) pueden quedar pegados.

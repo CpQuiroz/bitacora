@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { EVENTOS } from "@bitacora/shared";
+import { registrarEvento } from "@/lib/analytics";
 import { resolverDestinoPostLogin } from "@/lib/accesoPostLogin";
 import { AuthLayout } from "@/components/AuthLayout";
 import { ErrorText } from "@/components/ui";
@@ -33,6 +35,7 @@ export default function AuthCallbackPage() {
         setError(r.error);
         return;
       }
+      registrarEvento(EVENTOS.login, { metodo: "google" });
       router.replace(r.destino);
     }
 

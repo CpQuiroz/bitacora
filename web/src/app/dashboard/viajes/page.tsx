@@ -7,6 +7,8 @@ import { Plus, Truck } from "lucide-react";
 import { CIUDADES_CHILE, ROLES_SUPERVISION, formatearFolio, type Cliente, type ConfigViaticos, type EstadoViaje, type ModoPrecioViaje, type TipoViatico, type Usuario, type Viaje } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
+import { EVENTOS } from "@bitacora/shared";
+import { registrarEvento } from "@/lib/analytics";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Button, Card, DatePicker, EmptyState, ErrorState, Input, LoadingState, Select, StatusBadge } from "@bitacora/ui/web";
@@ -493,6 +495,7 @@ export default function ViajesPage() {
     // Tarea 134: al generar, se abre el cobro con el detalle por viaje y
     // el PDF.
     const cobro = await res.json().catch(() => null);
+    registrarEvento(EVENTOS.cobroCreado, { origen: "viajes", viajes: seleccionados.size });
     setSeleccionados(new Set());
     if (cobro?.id) {
       router.push(`/dashboard/financiero/cobros/${cobro.id}`);

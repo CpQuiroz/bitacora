@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { API_URL } from "@/lib/api";
+import { EVENTOS } from "@bitacora/shared";
+import { registrarEvento } from "@/lib/analytics";
 import { resolverDestinoPostLogin } from "@/lib/accesoPostLogin";
 import { AuthLayout } from "@/components/AuthLayout";
 import { Button, Input } from "@bitacora/ui/web";
@@ -30,6 +32,7 @@ export default function LoginPage() {
       setError(r.error);
       return;
     }
+    registrarEvento(EVENTOS.login, { metodo: "clave" });
     router.push(r.destino);
   }
 

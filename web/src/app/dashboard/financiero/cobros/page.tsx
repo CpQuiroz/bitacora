@@ -8,6 +8,8 @@ import type { Cliente, EstadoFactura, Factura, MedioPago, Trabajo } from "@bitac
 import { formatearFolio } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
+import { EVENTOS } from "@bitacora/shared";
+import { registrarEvento } from "@/lib/analytics";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Button, Card, Cifra, DatePicker, EmptyState, ErrorState, Input, LoadingState, Select, StatusBadge, type TonoEstado } from "@bitacora/ui/web";
@@ -192,6 +194,7 @@ function CobrosContenido() {
       return;
     }
     claveIdempotencia.current = ""; // cobro creado — el próximo usa clave nueva
+    registrarEvento(EVENTOS.cobroCreado, { origen: modo === "manual" ? "manual" : "trabajos" });
     setAviso("Cobro creado.");
     setFormAbierto(false);
     cargar();

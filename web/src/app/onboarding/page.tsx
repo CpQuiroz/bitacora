@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import type { Rubro } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
+import { EVENTOS } from "@bitacora/shared";
+import { registrarEvento } from "@/lib/analytics";
 import { AuthLayout } from "@/components/AuthLayout";
 import { Button, Input, Select } from "@bitacora/ui/web";
 
@@ -79,6 +81,7 @@ export default function OnboardingPage() {
       setError(body.error ?? "No se pudo crear la empresa");
       return;
     }
+    registrarEvento(EVENTOS.empresaRegistrada, { rubro });
     router.push("/dashboard");
   }
 

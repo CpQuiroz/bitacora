@@ -6,6 +6,8 @@ import { Mail, Users } from "lucide-react";
 import type { Modulo, Usuario } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
+import { EVENTOS } from "@bitacora/shared";
+import { registrarEvento } from "@/lib/analytics";
 import { useRolesDisponibles } from "@/lib/roles";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Modal } from "@/components/Modal";
@@ -124,6 +126,7 @@ export default function PersonasPage() {
     // No se cierra el modal solo: se muestra "Invitación enviada" y el
     // formulario queda listo para invitar a otra persona más — cerrarlo
     // solo de encima haría desaparecer esa confirmación antes de verla.
+    registrarEvento(EVENTOS.usuarioInvitado, { rol });
     setExito(`Invitación enviada a ${email}`);
     setEmail("");
     setNombre("");

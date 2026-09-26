@@ -2,6 +2,8 @@ import type { Cliente, Equipo, Usuario, Viaje } from "@bitacora/shared";
 import { apiFetch, apiJson } from "./api";
 import { encolar } from "./sync/queue";
 import { guardarCache, leerCache } from "./sync/cache";
+import { registrarEvento } from "../lib/analytics";
+import { EVENTOS } from "@bitacora/shared";
 
 export type ViajeConDatos = Viaje & {
   cliente_info?: Pick<Cliente, "id" | "nombre"> | null;
@@ -60,6 +62,7 @@ export async function listarViajesRango(desde: string, hasta: string): Promise<V
 /** Aprueba un viaje en borrador (gestión). */
 export async function aprobarViaje(id: string): Promise<{ ok: boolean; error?: string }> {
   const res = await apiJson<Viaje>(`/api/mis-viajes/${id}`, { method: "PATCH", body: JSON.stringify({ estado: "confirmado" }) });
+  if (res.ok) registrarEvento(EVENTOS.viajeCerrado);
   return res.ok ? { ok: true } : { ok: false, error: res.error };
 }
 
@@ -192,6 +195,7 @@ export async function crearViaje(b: BorradorViaje, foto?: Foto): Promise<Resulta
     return { ok: false, error: res.error, reintentable };
   }
 
+  registrarEvento(EVENTOS.viajeIniciado, { asignado_a_chofer: asignado, con_foto: Boolean(foto), sin_conexion: false });
   let fotoPendiente = false;
   if (foto) {
     await encolarFotoGuia(res.data.id, foto);
@@ -240,6 +244,7 @@ export async function eliminarFotoViaje(viajeId: string, fotoId: string): Promis
 
 /** Respaldo: encola la creación completa del viaje (JSON, + foto si hay). */
 export function encolarViaje(borrador: BorradorViaje, foto?: Foto) {
+  registrarEvento(EVENTOS.viajeIniciado, { asignado_a_chofer: false, con_foto: Boolean(foto), sin_conexion: true });
   return encolar({
     etiqueta: "Registrar viaje",
     recurso: "viajes",

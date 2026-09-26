@@ -11,6 +11,7 @@ import { Logo } from "./Logo";
 import { NotificacionesBell } from "./NotificacionesBell";
 import { supabase } from "@/lib/supabase";
 import { apiFetch, API_URL } from "@/lib/api";
+import { identificarUsuario, olvidarUsuario } from "@/lib/analytics";
 import { EVENTO_MODULOS_CAMBIADOS } from "@/lib/eventosModulos";
 import { limpiarImpersonacion, obtenerImpersonacion } from "@/lib/impersonacion";
 import { asegurarFuenteCargada, fuenteDe } from "@/lib/fuentes";
@@ -251,6 +252,9 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
         else if (obtenerImpersonacion()) limpiarImpersonacion();
         setConsentimientoPendiente(Boolean(body.consentimiento_pendiente));
         setPruebaVencida(Boolean(body.prueba_vencida));
+        // Tarea 153: PostHog identifica por id técnico (sin nombre ni correo).
+        // No durante una impersonación del Super-Admin.
+        if (body.usuario && !body.impersonacion) identificarUsuario(body.usuario.id, body.usuario.empresa_id, body.usuario.rol);
         setPuedeGestionarPlan(Array.isArray(body.acciones) && body.acciones.includes("gestionar_plan"));
       }
     }
@@ -388,6 +392,7 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
   } as CSSProperties;
 
   async function cerrarSesion() {
+    olvidarUsuario();
     await supabase.auth.signOut();
     router.push("/login");
   }

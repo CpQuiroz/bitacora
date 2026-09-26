@@ -4,6 +4,8 @@ import { apiFetch, apiJson } from "./api";
 import { encolar } from "./sync/queue";
 import { guardarCache, leerCache } from "./sync/cache";
 import type { Ubicacion } from "../lib/geo";
+import { registrarEvento } from "../lib/analytics";
+import { EVENTOS } from "@bitacora/shared";
 
 export type ClienteContacto = Pick<Cliente, "id" | "nombre" | "telefono" | "direccion" | "lat" | "lng" | "rut">;
 export type TrabajoConTipo = Trabajo & { tipo: TipoOsTrabajo | null; cliente_info: ClienteContacto | null };
@@ -103,7 +105,10 @@ export async function crearTrabajo(
   b: BorradorTrabajo
 ): Promise<{ ok: true; trabajo: Trabajo } | { ok: false; error: string; reintentable: boolean }> {
   const res = await apiJson<Trabajo>("/api/trabajos", { method: "POST", body: JSON.stringify(cuerpoTrabajo(b)) });
-  if (res.ok) return { ok: true, trabajo: res.data };
+  if (res.ok) {
+    registrarEvento(EVENTOS.osCreada, { origen: "mobile", sin_conexion: false });
+    return { ok: true, trabajo: res.data };
+  }
   if (res.status === 401) {
     return { ok: false, error: "Tu sesión venció. Sal y vuelve a entrar para crear el trabajo.", reintentable: false };
   }
@@ -113,6 +118,7 @@ export async function crearTrabajo(
 
 /** Respaldo: encola la creación del trabajo (se reintenta al reconectar). */
 export function encolarTrabajo(b: BorradorTrabajo) {
+  registrarEvento(EVENTOS.osCreada, { origen: "mobile", sin_conexion: true });
   return encolar({
     etiqueta: "Crear trabajo",
     recurso: "trabajos",

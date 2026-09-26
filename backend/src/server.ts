@@ -82,6 +82,7 @@ import { limpiarDatosVencidosSiCorresponde } from "./retencion";
 import { verificarTokenBajaAvisos } from "./bajaAvisos";
 import { medirLatencia } from "./instrumentacion";
 import { ah } from "./asyncHandler";
+import { clasificarError } from "./errores";
 import { empresaConPruebaVencida } from "./empresaOperativa";
 
 const RUBROS: Rubro[] = ["transporte", "servicio_tecnico", "cosmetologia", "otro"];
@@ -459,19 +460,12 @@ app.use("/api/superadmin", superadminRouter);
 // punto por el que pasan TODAS las rutas — se aprovecha para loguear
 // en errores_backend (Panel de Super-Admin), sin tocar cada ruta.
 app.use((err: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  const mensaje = err instanceof Error ? err.message : "Error interno";
-  // Errores "esperados" (ej. LimiteAlcanzadoError, ver limites.ts)
-  // traen su propio status 4xx — son un freno del negocio, no un bug,
-  // así que no ensucian errores_backend (Panel de Super-Admin) ni se
-  // loguean como si algo hubiera fallado de verdad.
-  const posibleStatus = err instanceof Error ? (err as unknown as { status?: unknown }).status : undefined;
-  const status = typeof posibleStatus === "number" ? posibleStatus : 500;
-  // Un error que trae su propio `.status` fue lanzado a propósito (freno
-  // de negocio, backpressure de la cola de IA…) — no es un bug, no se
-  // loguea aunque el status sea 5xx (ej. 503 de EsperaEnColaExcedida).
-  const esperado = typeof posibleStatus === "number";
+  // Errores "esperados" (LimiteAlcanzadoError, EsperaEnColaExcedida…) traen
+  // su propio status: son frenos del negocio, no bugs — no van a Sentry ni a
+  // errores_backend. Ver errores.ts (con test).
+  const { status, mensaje, reportar, esperado } = clasificarError(err);
 
-  if (status >= 500 && !esperado) {
+  if (reportar) {
     console.error(err);
     Sentry.captureException(err, { extra: { ruta: req.path, metodo: req.method } });
     const empresaId = (req as express.Request & { empresaId?: string }).empresaId ?? null;
