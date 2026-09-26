@@ -8,8 +8,8 @@
  *   web:    text-ds-text/40|50|60           → text-ds-text-secondary
  *   mobile: `${tokens.color.text}66|80|99`  → tokens.color.textSecondary
  *           tokens.color.text + "66|80|99"  → tokens.color.textSecondary
- * 70 % o más ya pasa AA y no se toca. Las pestañas Agenda y Hoy de mobile
- * están congeladas y se saltan. Que no vuelvan lo vigila
+ * 70 % o más ya pasa AA y no se toca. La pestaña Hoy de mobile está
+ * congelada y se salta (Agenda se descongeló el 26-sep y se migró). Que no vuelvan lo vigila
  * scripts/check-contraste.mjs (en verificar.sh).
  *
  * Uso: node scripts/codemod-contraste.mjs [--aplicar]   (sin flag: simula)
@@ -21,7 +21,7 @@ import { fileURLToPath } from "node:url";
 const RAIZ = join(fileURLToPath(import.meta.url), "..", "..");
 const APLICAR = process.argv.includes("--aplicar");
 const RAICES = ["web/src", "packages/ui/src", "mobile/src"];
-const CONGELADOS = [/^mobile\/src\/features\/(hoy|agenda)\//];
+const CONGELADOS = [/^mobile\/src\/features\/hoy\//];
 
 const REEMPLAZOS = [
   [/(?<![\w-])text-ds-text\/(?:40|50|60)(?![\w/])/g, "text-ds-text-secondary"],

@@ -80,8 +80,8 @@ hacer. Lo que más se repite:
   (error `23503` → "desactivar" en vez de eliminar); índice nuevo con
   `EXPLAIN ANALYZE` validado antes de cerrar la tarea; IA de Informes =
   RAG, nunca fine-tuning.
-- **No tocar sin pedido explícito**: tabs Agenda/Hoy de mobile
-  (congeladas); que Mantención de flota toque `trabajos`/
+- **No tocar sin pedido explícito**: tab Hoy de mobile (congelada;
+  Agenda se descongeló el 26-sep-2026); que Mantención de flota toque `trabajos`/
   `ordenes_servicio` (deliberado).
 
 ## Memoria

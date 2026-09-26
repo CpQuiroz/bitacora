@@ -226,7 +226,7 @@ export function TareaDetalleScreen({ route, navigation }: NativeStackScreenProps
               ) : null}
               {direccion ? (
                 <View style={{ flexDirection: "row", gap: tokens.space["2"], alignItems: "flex-start" }}>
-                  <MapPin size={18} strokeWidth={2.25} color={`${tokens.color.text}99`} style={{ marginTop: 1 }} />
+                  <MapPin size={18} strokeWidth={2.25} color={tokens.color.textSecondary} style={{ marginTop: 1 }} />
                   <Texto tamano={tokens.size.small} color={tokens.color.text} style={{ flex: 1 }}>
                     {direccion}
                   </Texto>
@@ -275,7 +275,7 @@ export function TareaDetalleScreen({ route, navigation }: NativeStackScreenProps
 
         {tarea.trabajo_id ? (
           <Card>
-            <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
+            <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
               Tiene una orden de trabajo asociada — revísala en la pestaña Trabajos.
             </Texto>
           </Card>
@@ -307,7 +307,7 @@ export function TareaDetalleScreen({ route, navigation }: NativeStackScreenProps
 
         {!activa && accionesAqui.length > 0 && (
           <View style={{ backgroundColor: tokens.color.neutral["200"], borderRadius: tokens.radius.md, padding: tokens.space["4"] }}>
-            <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
+            <Texto tamano={tokens.size.small} color={tokens.color.textSecondary}>
               Esperando a que se sincronice el último cambio.
             </Texto>
           </View>
@@ -315,7 +315,7 @@ export function TareaDetalleScreen({ route, navigation }: NativeStackScreenProps
 
         {esGestion ? (
           <View style={{ gap: tokens.space["2"] * 1.25, marginTop: tokens.space["2"], borderTopWidth: 1, borderTopColor: tokens.color.divider, paddingTop: tokens.space["4"] }}>
-            <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} peso="semibold" style={{ textTransform: "uppercase" }}>
+            <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary} peso="semibold" style={{ textTransform: "uppercase" }}>
               Gestión
             </Texto>
             <Button

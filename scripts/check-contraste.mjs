@@ -8,8 +8,8 @@
  * El contraste de los tokens en sí lo prueba
  * packages/design-tokens/src/contraste.test.ts.
  *
- * Exentas: las pestañas Agenda y Hoy de mobile (congeladas; migrarlas
- * cuando se descongelen y sacarlas de acá).
+ * Exenta: la pestaña Hoy de mobile (congelada; migrarla cuando se
+ * descongele y sacarla de acá).
  */
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
@@ -17,7 +17,7 @@ import { fileURLToPath } from "node:url";
 
 const RAIZ = join(fileURLToPath(import.meta.url), "..", "..");
 const RAICES = ["web/src", "packages/ui/src", "mobile/src"];
-const EXENTOS = [/^mobile\/src\/features\/(hoy|agenda)\//];
+const EXENTOS = [/^mobile\/src\/features\/hoy\//];
 const PROHIBIDOS = [
   [/(?<![\w-])text-ds-text\/(?:40|50|60)(?![\w/])/g, "text-ds-text-secondary"],
   [/\$\{tokens\.color\.text\}(?:66|80|99)\b/g, "tokens.color.textSecondary"],

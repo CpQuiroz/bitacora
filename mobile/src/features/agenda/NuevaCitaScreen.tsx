@@ -182,7 +182,7 @@ function NuevaCitaGenerica({ navigation, route }: NativeStackScreenProps<AgendaS
         <Input etiqueta="Título" placeholder="Ej. Manicure + esmaltado" valor={b.titulo} onCambio={(v) => set("titulo", v)} />
 
         <View style={{ gap: tokens.space["1"] }}>
-          <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
+          <Texto tamano={tokens.size.small} color={tokens.color.textSecondary}>
             Fecha
           </Texto>
           <SelectorDias valor={b.fecha} onElegir={(k) => set("fecha", k)} diasAtras={0} />
@@ -310,7 +310,7 @@ function NuevaCitaGenerica({ navigation, route }: NativeStackScreenProps<AgendaS
         ) : null}
 
         <View style={{ gap: tokens.space["1"] }}>
-          <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
+          <Texto tamano={tokens.size.small} color={tokens.color.textSecondary}>
             Prioridad
           </Texto>
           <View style={{ flexDirection: "row", gap: tokens.space["2"] }}>
@@ -331,7 +331,7 @@ function NuevaCitaGenerica({ navigation, route }: NativeStackScreenProps<AgendaS
                     borderColor: activo ? marca.base : tokens.color.divider,
                   }}
                 >
-                  <Texto tamano={tokens.size.small} peso="semibold" color={activo ? marca.fuerte : `${tokens.color.text}99`}>
+                  <Texto tamano={tokens.size.small} peso="semibold" color={activo ? marca.fuerte : tokens.color.textSecondary}>
                     {p.label}
                   </Texto>
                 </Pressable>

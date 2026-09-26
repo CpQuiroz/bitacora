@@ -422,8 +422,8 @@ export function AgendaScreen({ navigation }: NativeStackScreenProps<AgendaStackP
                   paddingVertical: 4,
                 }}
               >
-                <Icono size={12} strokeWidth={2.5} color={activo ? marca.base : `${tokens.color.text}99`} />
-                <Texto tamano={tokens.size.caption} peso="semibold" color={activo ? marca.base : `${tokens.color.text}99`}>
+                <Icono size={12} strokeWidth={2.5} color={activo ? marca.base : tokens.color.textSecondary} />
+                <Texto tamano={tokens.size.caption} peso="semibold" color={activo ? marca.base : tokens.color.textSecondary}>
                   {ETIQUETA_TIPO_AGENDA[t]}
                 </Texto>
               </Pressable>
@@ -431,7 +431,7 @@ export function AgendaScreen({ navigation }: NativeStackScreenProps<AgendaStackP
           })}
         </ScrollView>
         <Pressable onPress={() => setLeyendaAbierta(true)} hitSlop={8}>
-          <Info size={18} strokeWidth={2.25} color={`${tokens.color.text}80`} />
+          <Info size={18} strokeWidth={2.25} color={tokens.color.textSecondary} />
         </Pressable>
       </View>
 
@@ -522,7 +522,7 @@ export function AgendaScreen({ navigation }: NativeStackScreenProps<AgendaStackP
       <Dialog abierto={leyendaAbierta} onCerrar={() => setLeyendaAbierta(false)} titulo="Leyenda">
         <View style={{ gap: tokens.space["4"] }}>
           <View style={{ gap: tokens.space["2"] }}>
-            <Texto tamano={tokens.size.caption} peso="semibold" color={`${tokens.color.text}80`} style={{ textTransform: "uppercase", letterSpacing: 1 }}>
+            <Texto tamano={tokens.size.caption} peso="semibold" color={tokens.color.textSecondary} style={{ textTransform: "uppercase", letterSpacing: 1 }}>
               Color = estado
             </Texto>
             {(["agendado", "en_progreso", "completado", "cancelado"] as const).map((estado) => (
@@ -535,7 +535,7 @@ export function AgendaScreen({ navigation }: NativeStackScreenProps<AgendaStackP
             ))}
           </View>
           <View style={{ gap: tokens.space["2"] }}>
-            <Texto tamano={tokens.size.caption} peso="semibold" color={`${tokens.color.text}80`} style={{ textTransform: "uppercase", letterSpacing: 1 }}>
+            <Texto tamano={tokens.size.caption} peso="semibold" color={tokens.color.textSecondary} style={{ textTransform: "uppercase", letterSpacing: 1 }}>
               Ícono = tipo
             </Texto>
             {tiposVisibles.map((t) => {
@@ -615,12 +615,12 @@ function FilaOS({ item, onPress, marca }: { item: OSAgenda; onPress: () => void;
       </Texto>
       <View style={{ flex: 1 }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-          <IconoTipo size={13} strokeWidth={2.5} color={`${tokens.color.text}80`} />
+          <IconoTipo size={13} strokeWidth={2.5} color={tokens.color.textSecondary} />
           <Texto tamano={tokens.size.h5} peso="semibold" color={tokens.color.text} numberOfLines={1}>
             {item.cliente_info?.nombre ?? item.cliente}
           </Texto>
         </View>
-        <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`} numberOfLines={1}>
+        <Texto tamano={tokens.size.small} color={tokens.color.textSecondary} numberOfLines={1}>
           {folio ? `${folio} · ` : ""}
           {ETIQUETA_ESTADO_AGENDA[estado]}
           {item.responsable?.nombre ? ` · ${item.responsable.nombre}` : ""}
@@ -655,12 +655,12 @@ function FilaViaje({ item, onPress, marca }: { item: ViajeConDatos; onPress: () 
       </Texto>
       <View style={{ flex: 1 }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-          <IconoTipo size={13} strokeWidth={2.5} color={`${tokens.color.text}80`} />
+          <IconoTipo size={13} strokeWidth={2.5} color={tokens.color.textSecondary} />
           <Texto tamano={tokens.size.h5} peso="semibold" color={tokens.color.text} numberOfLines={1}>
             {item.origen} → {item.destino}
           </Texto>
         </View>
-        <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`} numberOfLines={1}>
+        <Texto tamano={tokens.size.small} color={tokens.color.textSecondary} numberOfLines={1}>
           {folio ? `${folio} · ` : ""}
           {item.cliente_info?.nombre ?? item.cliente}
           {item.chofer?.nombre ? ` · ${item.chofer.nombre}` : ""}
@@ -691,17 +691,17 @@ function FilaLevantamiento({ item, onPress, marca }: { item: LevantamientoResume
         opacity: terminado ? 0.55 : 1,
       }}
     >
-      <Texto tamano={tokens.size.small} peso="semibold" color={`${tokens.color.text}66`} style={{ width: 46 }}>
+      <Texto tamano={tokens.size.small} peso="semibold" color={tokens.color.textSecondary} style={{ width: 46 }}>
         {item.hora_visita ? item.hora_visita.slice(0, 5) : "--:--"}
       </Texto>
       <View style={{ flex: 1 }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-          <IconoTipo size={13} strokeWidth={2.5} color={`${tokens.color.text}80`} />
+          <IconoTipo size={13} strokeWidth={2.5} color={tokens.color.textSecondary} />
           <Texto tamano={tokens.size.h5} peso="semibold" color={tokens.color.text} numberOfLines={1}>
             {item.cliente?.nombre ?? "Levantamiento"}
           </Texto>
         </View>
-        <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`} numberOfLines={1}>
+        <Texto tamano={tokens.size.small} color={tokens.color.textSecondary} numberOfLines={1}>
           {formatearFolio("LEV", item.folio) ? `${formatearFolio("LEV", item.folio)} · ` : ""}
           {terminado ? "Completado" : item.descripcion_requerimiento ?? "Evaluar en terreno"}
         </Texto>
@@ -776,7 +776,7 @@ function VistaMes({
         <View style={{ flexDirection: "row", marginBottom: 4 }}>
           {DIAS_SEMANA_LUNES.map((dl, i) => (
             <View key={i} style={{ flex: 1, alignItems: "center" }}>
-              <Texto tamano={tokens.size.caption} peso="semibold" color={tokens.color.text + "66"} style={{ fontVariant: ["tabular-nums"] }}>
+              <Texto tamano={tokens.size.caption} peso="semibold" color={tokens.color.textSecondary} style={{ fontVariant: ["tabular-nums"] }}>
                 {dl}
               </Texto>
             </View>
@@ -834,11 +834,11 @@ function VistaMes({
         <Texto tamano={tokens.size.h5} peso="semibold" color={tokens.color.text} style={{ textTransform: "capitalize" }}>
           {anclaKey === hoyKey ? "Hoy" : `${DIAS_LARGO[d.getDay()]} ${d.getDate()} de ${MESES[d.getMonth()]}`}
         </Texto>
-        <Texto tamano={tokens.size.caption} color={tokens.color.text + "66"}>
+        <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
           Doble toque en un día del calendario para agendar una cita nueva.
         </Texto>
         {delDia.length === 0 && levDelDia.length === 0 && osDelDia.length === 0 && viajesDelDia.length === 0 ? (
-          <Texto tamano={tokens.size.small} color={tokens.color.text + "99"}>
+          <Texto tamano={tokens.size.small} color={tokens.color.textSecondary}>
             Sin eventos este día.
           </Texto>
         ) : (
@@ -932,7 +932,7 @@ function VistaSemana({
                 borderColor: marca.base,
               }}
             >
-              <Texto tamano={tokens.size.caption} color={tokens.color.text + "99"}>
+              <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
                 {DIAS[d.getDay()]}
               </Texto>
               <Texto tamano={tokens.size.h5} color={tokens.color.text} style={{ fontVariant: ["tabular-nums"] }}>
@@ -1050,7 +1050,7 @@ function VistaDia({
                 backgroundColor: sel ? marca.suave : "transparent",
               }}
             >
-              <Texto tamano={tokens.size.caption} color={sel ? marca.fuerte : tokens.color.text + "99"}>
+              <Texto tamano={tokens.size.caption} color={sel ? marca.fuerte : tokens.color.textSecondary}>
                 {DIAS[d.getDay()]}
               </Texto>
               <Texto tamano={16} peso="semibold" color={sel ? marca.fuerte : tokens.color.text} style={{ fontVariant: ["tabular-nums"] }}>
@@ -1140,7 +1140,7 @@ function VistaDia({
                       {c.titulo}
                     </Texto>
                     {c.cliente?.nombre ? (
-                      <Texto tamano={tokens.size.caption} color={tokens.color.text + "99"} numberOfLines={1}>
+                      <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary} numberOfLines={1}>
                         {c.cliente.nombre}
                       </Texto>
                     ) : null}
@@ -1188,12 +1188,12 @@ function FilaCita({ item, esGestion, onPress, marca }: { item: TareaConDatos; es
       </Texto>
       <View style={{ flex: 1 }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-          <ICONO_TIPO.cita size={13} strokeWidth={2.5} color={`${tokens.color.text}80`} />
+          <ICONO_TIPO.cita size={13} strokeWidth={2.5} color={tokens.color.textSecondary} />
           <Texto tamano={tokens.size.h5} peso="semibold" color={tokens.color.text} numberOfLines={1}>
             {item.titulo}
           </Texto>
         </View>
-        <Texto tamano={tokens.size.small} color={tokens.color.text + "99"} numberOfLines={1}>
+        <Texto tamano={tokens.size.small} color={tokens.color.textSecondary} numberOfLines={1}>
           {formatearFolio("CIT", item.folio) ? `${formatearFolio("CIT", item.folio)} · ` : ""}
           {item.cliente?.nombre ?? "Sin cliente"}
           {esGestion && item.responsable?.nombre ? ` · ${item.responsable.nombre}` : ""}

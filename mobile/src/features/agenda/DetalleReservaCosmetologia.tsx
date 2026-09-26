@@ -166,7 +166,7 @@ export function DetalleReservaCosmetologia({
         {/* Adicionales */}
         {tarea.adicionales && tarea.adicionales.length > 0 ? (
           <View style={{ gap: tokens.space["1"] * 1.5, borderTopWidth: 1, borderTopColor: tokens.color.divider, paddingTop: tokens.space["3"] }}>
-            <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
+            <Texto tamano={tokens.size.small} color={tokens.color.textSecondary}>
               Adicionales
             </Texto>
             {tarea.adicionales.map((a, i) => (
@@ -184,7 +184,7 @@ export function DetalleReservaCosmetologia({
 
         {/* Atiende */}
         <View style={{ gap: tokens.space["1"] }}>
-          <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
+          <Texto tamano={tokens.size.small} color={tokens.color.textSecondary}>
             Atiende
           </Texto>
           <Texto tamano={tokens.size.h5} peso="semibold" color={tokens.color.text}>
@@ -199,7 +199,7 @@ export function DetalleReservaCosmetologia({
               <Texto tamano={tokens.size.h5} peso="semibold" color={tokens.color.text} style={{ flex: 1 }}>
                 {cli.nombre}
               </Texto>
-              <ChevronRight size={18} strokeWidth={2.25} color={`${tokens.color.text}66`} />
+              <ChevronRight size={18} strokeWidth={2.25} color={tokens.color.textSecondary} />
             </Pressable>
             <View style={{ flexDirection: "row", gap: tokens.space["2"] * 1.25, flexWrap: "wrap" }}>
               {cli.telefono ? (
@@ -228,7 +228,7 @@ export function DetalleReservaCosmetologia({
         {/* Pack */}
         {paquete ? (
           <View style={{ gap: tokens.space["2"], borderTopWidth: 1, borderTopColor: tokens.color.divider, paddingTop: tokens.space["3"] }}>
-            <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
+            <Texto tamano={tokens.size.small} color={tokens.color.textSecondary}>
               Pack
             </Texto>
             <Texto tamano={tokens.size.h5} peso="semibold" color={tokens.color.text}>
@@ -248,7 +248,7 @@ export function DetalleReservaCosmetologia({
                 );
               })}
             </View>
-            <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
+            <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
               Pagado el {formatearFechaCorta(paquete.fecha_compra)}
               {paquete.vence_el ? ` · vence el ${formatearFechaCompleta(paquete.vence_el)}` : ""}
             </Texto>
@@ -269,7 +269,7 @@ export function DetalleReservaCosmetologia({
 
         {esGestion ? (
           <View style={{ gap: tokens.space["2"] * 1.25, marginTop: tokens.space["2"], borderTopWidth: 1, borderTopColor: tokens.color.divider, paddingTop: tokens.space["4"] }}>
-            <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} peso="semibold" style={{ textTransform: "uppercase" }}>
+            <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary} peso="semibold" style={{ textTransform: "uppercase" }}>
               Gestión
             </Texto>
             <Button variante="secundario" onPress={onEditar}>

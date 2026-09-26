@@ -1986,6 +1986,14 @@
       "status": "done",
       "description": "Aprobado 26-sep-2026 (auditoría UX ronda 1). ~612 usos de texto con opacidad bajo AA (352 web, 260 mobile); blanco sobre #c67139 = 3,61.",
       "resolution": "Token textSecondary por tema (Faena #645f59, oscuro #8f897e, Taller #62605c, Confianza #596c7b; todos ≥4,6:1 sobre fondo y superficie). Codemod de una vez (scripts/codemod-contraste.mjs): 576 reemplazos (text-ds-text/40|50|60 → text-ds-text-secondary; ${tokens.color.text}66|80|99 → tokens.color.textSecondary); Agenda/Hoy mobile congeladas quedan fuera (51 usos). scripts/check-contraste.mjs en verificar.sh impide que vuelvan. Texto sobre marca: marcaLegible() (WCAG) en design-tokens, usado en DashboardShell, PortalShell, vista previa de Configuración > Empresa, marca.tsx y ThemeProvider mobile; si ni blanco ni #1a1a1a llegan a AA oscurece el fondo (Taller). Terracota por defecto → texto #1a1a1a (4,83). Backend guarda color_primario_foreground con textoSobreMarca() de shared (copia WCAG; test de paridad en design-tokens). contraste.test.ts (16 tests) en verificar. web/vercel.json compila también design-tokens (build:packages). Requiere build mobile para verse en la app."
+    },
+    {
+      "id": 155,
+      "name": "accesibilidad_base",
+      "title": "Accesibilidad funcional base (auditoría UX ronda 3): labels asociados y lint jsx-a11y en web; roles/labels, teclado, tope de fuente y zonas táctiles en mobile",
+      "status": "in_progress",
+      "description": "Aprobado 26-sep-2026. Medido: 110 hallazgos jsx-a11y en 35 archivos web (95 labels sin control asociado). Primitivas @bitacora/ui sin id/htmlFor. Hoy (mobile) sigue congelada; Agenda se descongeló.",
+      "resolution": ""
     }
   ]
 }

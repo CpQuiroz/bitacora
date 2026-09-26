@@ -71,7 +71,7 @@ export function CatalogoScreen({ navigation }: NativeStackScreenProps<MasStackPa
             </Pressable>
           </View>
           {servicios.length === 0 ? (
-            <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
+            <Texto tamano={tokens.size.small} color={tokens.color.textSecondary}>
               Todavía no hay servicios. Creá el primero para poder elegirlo en una reserva.
             </Texto>
           ) : (
@@ -82,7 +82,7 @@ export function CatalogoScreen({ navigation }: NativeStackScreenProps<MasStackPa
                   icono={<Tags size={22} strokeWidth={2.25} color={tokens.color.accentRamp["700"]} />}
                   titulo={s.nombre}
                   subtitulo={`${formatearMoneda(s.precio, moneda)} · ${s.duracion_sugerida_min} min`}
-                  trailing={!s.activo ? <Tag tono="neutral">Inactivo</Tag> : <ChevronRight size={18} strokeWidth={2.25} color={`${tokens.color.text}66`} />}
+                  trailing={!s.activo ? <Tag tono="neutral">Inactivo</Tag> : <ChevronRight size={18} strokeWidth={2.25} color={tokens.color.textSecondary} />}
                   onPress={() => setServicioModal({ abierto: true, servicio: s })}
                 />
               ))}
@@ -103,7 +103,7 @@ export function CatalogoScreen({ navigation }: NativeStackScreenProps<MasStackPa
             </Pressable>
           </View>
           {packs.length === 0 ? (
-            <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
+            <Texto tamano={tokens.size.small} color={tokens.color.textSecondary}>
               Sin packs. Un pack es una plantilla (X sesiones a un precio) que después le vendés a un cliente.
             </Texto>
           ) : (
@@ -116,7 +116,7 @@ export function CatalogoScreen({ navigation }: NativeStackScreenProps<MasStackPa
                     icono={<Layers size={22} strokeWidth={2.25} color={tokens.color.accentRamp["700"]} />}
                     titulo={p.nombre}
                     subtitulo={`${p.cantidad_sesiones} sesiones · ${p.precio != null ? formatearMoneda(p.precio, moneda) : "sin precio"}${servicio ? ` · ${servicio.nombre}` : ""}${p.vigencia_dias != null ? ` · vence a los ${p.vigencia_dias} días` : " · no vence"}`}
-                    trailing={!p.activo ? <Tag tono="neutral">Inactivo</Tag> : <ChevronRight size={18} strokeWidth={2.25} color={`${tokens.color.text}66`} />}
+                    trailing={!p.activo ? <Tag tono="neutral">Inactivo</Tag> : <ChevronRight size={18} strokeWidth={2.25} color={tokens.color.textSecondary} />}
                     onPress={() => setPackModal({ abierto: true, pack: p })}
                   />
                 );

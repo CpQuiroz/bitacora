@@ -140,9 +140,9 @@ No reinventar lo que ya existe:
   otros PDFs.
 - Crear migraciones que no sean aditivas sin avisar (prod ya tiene datos).
 - Correr writes/DDL contra la DB de prod (lo hace el humano).
-- Reestructurar las tabs **Agenda** y **Hoy** de mobile sin que se pida
-  explícitamente — quedaron congeladas tras el refresco de navegación
-  de 2026-08/09.
+- Reestructurar la tab **Hoy** de mobile sin que se pida explícitamente —
+  quedó congelada tras el refresco de navegación de 2026-08/09. (La tab
+  **Agenda** se descongeló el 26-sep-2026, a pedido del humano.)
 - Hacer que el módulo de **Mantención de flota** toque `trabajos` /
   `ordenes_servicio` — es deliberado, evita los efectos secundarios de
   facturación automática y requisitos de cliente que ese flujo dispara.

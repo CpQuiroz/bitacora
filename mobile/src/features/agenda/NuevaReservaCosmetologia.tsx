@@ -236,11 +236,11 @@ export function NuevaReservaCosmetologia({ navigation, route }: NativeStackScree
 
         {/* Servicio */}
         <View style={{ gap: tokens.space["2"] }}>
-          <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
+          <Texto tamano={tokens.size.small} color={tokens.color.textSecondary}>
             Servicio
           </Texto>
           {servicios === null ? (
-            <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
+            <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
               Cargando servicios…
             </Texto>
           ) : servicios.length === 0 ? (
@@ -248,7 +248,7 @@ export function NuevaReservaCosmetologia({ navigation, route }: NativeStackScree
               <Texto tamano={tokens.size.small} peso="semibold" color={tokens.color.text}>
                 Todavía no hay servicios en el catálogo
               </Texto>
-              <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
+              <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
                 Créalos acá o desde la web (Configuración → Agenda Pro → Servicios).
               </Texto>
               <Button variante="secundario" onPress={() => setNuevoServicioAbierto(true)}>
@@ -280,7 +280,7 @@ export function NuevaReservaCosmetologia({ navigation, route }: NativeStackScree
 
         {/* Atiende */}
         <View style={{ gap: tokens.space["2"] }}>
-          <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
+          <Texto tamano={tokens.size.small} color={tokens.color.textSecondary}>
             Atiende
           </Texto>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: tokens.space["2"] }}>
@@ -309,7 +309,7 @@ export function NuevaReservaCosmetologia({ navigation, route }: NativeStackScree
 
         {/* Duración */}
         <View style={{ gap: tokens.space["2"] }}>
-          <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
+          <Texto tamano={tokens.size.small} color={tokens.color.textSecondary}>
             Duración
           </Texto>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: tokens.space["2"] }}>
@@ -344,7 +344,7 @@ export function NuevaReservaCosmetologia({ navigation, route }: NativeStackScree
         {/* Adicionales — "valor agregado" */}
         <View style={{ gap: tokens.space["2"] }}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-            <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
+            <Texto tamano={tokens.size.small} color={tokens.color.textSecondary}>
               Adicionales
             </Texto>
             <Pressable onPress={() => setAdicionales((prev) => [...prev, { concepto: "", monto: "" }])} hitSlop={8}>
@@ -354,7 +354,7 @@ export function NuevaReservaCosmetologia({ navigation, route }: NativeStackScree
             </Pressable>
           </View>
           {adicionales.length === 0 ? (
-            <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
+            <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
               Productos o extras que se cobran encima del servicio.
             </Texto>
           ) : (
@@ -382,13 +382,13 @@ export function NuevaReservaCosmetologia({ navigation, route }: NativeStackScree
                   hitSlop={8}
                   style={{ marginBottom: tokens.space["2"] * 1.25 }}
                 >
-                  <X size={22} color={`${tokens.color.text}99`} />
+                  <X size={22} color={tokens.color.textSecondary} />
                 </Pressable>
               </View>
             ))
           )}
           {totalAdicionales > 0 ? (
-            <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
+            <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
               Total reserva: {formatearMoneda(totalReserva)} (servicio {formatearMoneda(Number(precio.replace(/\D/g, "")) || 0)} + adicionales {formatearMoneda(totalAdicionales)})
             </Texto>
           ) : null}
@@ -397,7 +397,7 @@ export function NuevaReservaCosmetologia({ navigation, route }: NativeStackScree
 
         {/* Estado inicial */}
         <View style={{ gap: tokens.space["2"] }}>
-          <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
+          <Texto tamano={tokens.size.small} color={tokens.color.textSecondary}>
             Estado inicial
           </Texto>
           <View style={{ flexDirection: "row", gap: tokens.space["2"] }}>
@@ -444,7 +444,7 @@ export function NuevaReservaCosmetologia({ navigation, route }: NativeStackScree
             valor={notaInterna}
             onCambio={setNotaInterna}
           />
-          <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} style={{ marginTop: tokens.space["1"] }}>
+          <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary} style={{ marginTop: tokens.space["1"] }}>
             No la ve el cliente.
           </Texto>
         </View>
@@ -466,7 +466,7 @@ export function NuevaReservaCosmetologia({ navigation, route }: NativeStackScree
         <Button tamano="lg" bloque onPress={guardar} cargando={guardando}>
           Agendar
         </Button>
-        <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} style={{ textAlign: "center" }}>
+        <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary} style={{ textAlign: "center" }}>
           {resumen}
         </Texto>
       </View>
