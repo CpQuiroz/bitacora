@@ -311,3 +311,10 @@ Formato:
 - **Cambios:** packages/ui (web y native), 35 pantallas web, web/eslint.config.mjs (jsx-a11y), mobile (labels, KeyboardAvoidingView, tope de letra), scripts/check-accesibilidad-mobile.mjs, verificar.sh. Agenda mobile descongelada (CLAUDE.md, arquitectura.md) y migrada a contraste AA.
 - **Verificación:** ./verificar.sh verde (web 30, mobile 45, tokens 21, shared 51, backend 36; eslint con jsx-a11y).
 - **Cierre:** commit local, sin push ni build. Próximo: ronda 4 (toasts y diálogos) cuando el humano lo apruebe.
+
+## 2026-09-26 — Tarea 156: feedback unificado (auditoría UX ronda 4)
+- **Agente:** Claude + 2 implementadores (web, mobile) + revisor (`progress/impl_feedback_{web,mobile}.md`, `progress/review_feedback.md`)
+- **Plan:** Toast con tonos y acción, useConfirmar en vez de confirm()/Alert.alert, Deshacer con espera de 5 s, esqueletos de carga.
+- **Cambios:** packages/ui (Toast, Confirmar, Dialog, compartido/deshacer.ts + tests), web (layout raíz, ~40 pantallas, useOcultos, exigirOk), mobile (App, ~35 pantallas), scripts/check-dialogos-nativos.mjs, verificar.sh.
+- **Verificación:** ./verificar.sh verde (ui 3, web 39, mobile 51, resto igual). Revisión con cambios requeridos → corregidos. Viáticos "Marcar pagado": opción A del humano (confirmación e inmediato).
+- **Cierre:** commits locales, sin push ni build. iOS (toasts sobre modales, visor de fotos) sin probar en dispositivo. Próximo: ronda 5 (consolidar componentes web).

@@ -1999,9 +1999,9 @@
       "id": 156,
       "name": "feedback_unificado",
       "title": "Feedback unificado (auditoría UX ronda 4): Toast con tonos y acción, useConfirmar en vez de confirm()/Alert.alert, Deshacer con espera de 5 s, esqueletos de carga",
-      "status": "in_progress",
+      "status": "done",
       "description": "Aprobado 26-sep-2026. Medido: web 32 confirm() + 2 alert() + 1 prompt(); mobile 183 Alert.alert (47 confirmaciones, ~54 errores, ~82 avisos). Decisiones: errores de red/guardado en mobile → toast rojo (alerta solo si requiere decisión); Deshacer = ocultar + ejecutar la API tras 5 s (borrados simples y marcar pagado viáticos). OS, cobros, cotizaciones, rendiciones y superadmin siguen con confirmación. Hoy congelada.",
-      "resolution": ""
+      "resolution": "Primitivas @bitacora/ui: Toast con tonos/acción/duración (iOS en FullWindowOverlay, sube sobre el teclado), ConfirmarProvider+useConfirmar (web: pila de diálogos, Escape solo el de arriba, foco; se cancela al navegar; mobile: con marca), useDeshacer (compartido/deshacer.ts, 5 s). Montados en web/src/app/layout.tsx y mobile App. Web: 34 confirm/alert/prompt → 0 (21 confirmaciones, 9 Deshacer, toasts); ~53 éxitos a toast; useOcultos para borrados pendientes. Mobile: Alert.alert 183 → 24 marcadas `// alerta-nativa:`. Viáticos 'Marcar pagado' con confirmación e inmediato (decisión humano, opción A). scripts/check-dialogos-nativos.mjs y tests de packages/ui en verificar. Revisión: progress/review_feedback.md (A1, A2, M1, M2, B1-B3 corregidos). iOS sin probar en dispositivo; requiere build mobile."
     }
   ]
 }

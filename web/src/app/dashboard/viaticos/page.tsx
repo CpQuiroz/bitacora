@@ -5,11 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { AgruparViaticos, FilaResumenViaticos } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
-import { apiFetch, exigirOk } from "@/lib/api";
+import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { GastosSubnav } from "@/components/GastosSubnav";
-import { Button, Card, DatePicker, ErrorState, LoadingState, Select, Table, useDeshacer } from "@bitacora/ui/web";
+import { Button, Card, DatePicker, ErrorState, LoadingState, Select, Table, useConfirmar, useToast } from "@bitacora/ui/web";
 
 // Gastos › Viáticos (tarea 137): cuánto hay que pagarle a cada chofer
 // por semana o por mes. Cada viático es un gasto "Viáticos" ligado a un
@@ -51,7 +51,9 @@ export default function ViaticosPage() {
   const [agrupar, setAgrupar] = useState<AgruparViaticos>("semana");
   const [filas, setFilas] = useState<FilaResumenViaticos[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const conDeshacer = useDeshacer();
+  const confirmar = useConfirmar();
+  const toast = useToast();
+  const [pagando, setPagando] = useState<string | null>(null);
 
   async function cargarResumen() {
     setError(null);
@@ -102,23 +104,31 @@ export default function ViaticosPage() {
     [filas]
   );
 
-  function marcarPagado(f: FilaResumenViaticos) {
+  // Un pago no usa "Deshacer" (decisión 26-sep): se confirma y se registra
+  // de inmediato, para que nunca se vea "pagado" sin estar registrado.
+  async function marcarPagado(f: FilaResumenViaticos) {
     if (!f.chofer_id) return;
     // El período se recorta al rango filtrado: solo se paga lo que se ve.
     const d = f.periodo > desde ? f.periodo : desde;
     const fin = finDelPeriodo(f.periodo, agrupar);
     const h = fin < hasta ? fin : hasta;
-    const clave = (x: FilaResumenViaticos) => `${x.periodo}|${x.chofer_id}`;
-    conDeshacer({
-      mensaje: `${formatMoneda(f.pendiente, usuario?.moneda)} de viáticos a ${f.chofer} marcados como pagados`,
-      ocultar: () => setFilas((l) => l?.map((x) => (clave(x) === clave(f) ? { ...x, pendiente: 0, pagado: x.pagado + x.pendiente } : x)) ?? l),
-      restaurar: () => setFilas((l) => l?.map((x) => (clave(x) === clave(f) ? f : x)) ?? l),
-      ejecutar: async () =>
-        exigirOk(
-          await apiFetch("/api/gastos/viaticos/pagar", { method: "POST", body: JSON.stringify({ chofer_id: f.chofer_id, desde: d, hasta: h }) }),
-          "No se pudo marcar como pagado"
-        ),
+    const ok = await confirmar({
+      titulo: `¿Marcar como pagados ${formatMoneda(f.pendiente, usuario?.moneda)} a ${f.chofer}?`,
+      mensaje: "Los viáticos pendientes de este período quedan como pagados.",
+      accion: "Marcar pagado",
     });
+    if (!ok) return;
+    setPagando(`${f.periodo}|${f.chofer_id}`);
+    const res = await apiFetch("/api/gastos/viaticos/pagar", { method: "POST", body: JSON.stringify({ chofer_id: f.chofer_id, desde: d, hasta: h }) });
+    setPagando(null);
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      toast(body.error ?? "No se pudo marcar como pagado", { tono: "error" });
+      void cargarResumen();
+      return;
+    }
+    toast(`${body.pagados} viático(s) de ${f.chofer} marcados como pagados (${formatMoneda(body.total, usuario?.moneda)}).`, { tono: "exito" });
+    void cargarResumen();
   }
 
   if (!usuario) return null;
@@ -186,7 +196,7 @@ export default function ViaticosPage() {
                 encabezado: "",
                 celda: (f) =>
                   f.pendiente > 0 && f.chofer_id ? (
-                    <Button variante="secundario" onPress={() => marcarPagado(f)}>
+                    <Button variante="secundario" cargando={pagando === `${f.periodo}|${f.chofer_id}`} onPress={() => void marcarPagado(f)}>
                       Marcar pagado
                     </Button>
                   ) : null,
