@@ -116,4 +116,16 @@ export async function equiposDocumentos(ctx: Ctx): Promise<void> {
     serv.s === 200 && typeof serv.j?.kpis?.total_os === "number" && Array.isArray(serv.j?.top_clientes) && serv.j?.ranking_tipos?.length === 0 && serv.j?.distribucion_tipo?.length === 0,
     JSON.stringify(serv.j)?.slice(0, 200)
   );
+
+  // Tarea 151: "Mi plan" — precio en UF y CLP (UF del día), consumo y módulos activos.
+  const miPlan = await api(admin, "GET", "/api/plan");
+  check(
+    "151-1 /api/plan trae precio (UF y CLP), consumo y módulos activos",
+    miPlan.s === 200 &&
+      miPlan.j?.precio?.uf === 6 &&
+      (miPlan.j.precio.clp === null || miPlan.j.precio.clp === Math.round(6 * miPlan.j.precio.valorUf)) &&
+      miPlan.j?.consumo?.usuarios?.usados >= 5 &&
+      Array.isArray(miPlan.j?.modulosActivosLista),
+    JSON.stringify({ precio: miPlan.j?.precio, consumo: miPlan.j?.consumo })
+  );
 }

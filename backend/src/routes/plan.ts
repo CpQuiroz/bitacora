@@ -5,7 +5,7 @@
 // ============================================================
 import { Router } from "express";
 import type { PlanPago } from "@bitacora/shared";
-import { ETIQUETA_PLAN, LIMITES_POR_PLAN, PLANES_CONTRATABLES, PLAN_EMPRESA_DISPONIBLE, esPlanPago } from "@bitacora/shared";
+import { ETIQUETA_PLAN, LIMITES_POR_PLAN, PLANES_CONTRATABLES, PLAN_EMPRESA_DISPONIBLE, PRECIO_PLAN_UF, esPlanPago } from "@bitacora/shared";
 import { supabase } from "../supabase";
 import type { RequestConEmpresa } from "../empresa";
 import { ah } from "../asyncHandler";
@@ -14,7 +14,8 @@ import { cambiarPlanEmpresa } from "../planes";
 import { suscribirAPlan, cancelarSuscripcionFlow, flowPlanIdDe } from "../flow";
 import { avisarSuperAdmins, escaparHtml } from "../avisosSuperAdmin";
 import { limitarSolicitudesSuperAdmin } from "../rateLimiters";
-import { modulosActivosContables, verificarModulosCabenEnPlan } from "../limites";
+import { consumoDelPlan, modulosActivosContables, verificarModulosCabenEnPlan } from "../limites";
+import { ufAClp, valorUfDelDia } from "../ufDiaria";
 import { empresaConPruebaVencida } from "../empresaOperativa";
 
 export const planRouter = Router();
@@ -36,6 +37,10 @@ planRouter.get(
 
     const planActual = empresa?.plan ?? "trial";
     const trialVencido = empresaConPruebaVencida(empresa);
+    // Tarea 151 ("Mi plan" en mobile): módulos activos, consumo y precio en
+    // UF con su equivalente en CLP al valor de la UF del día (cache diaria).
+    const precioUf = esPlanPago(planActual) ? PRECIO_PLAN_UF[planActual] : null;
+    const [activos, consumo, uf] = await Promise.all([modulosActivosContables(req.empresaId!), consumoDelPlan(req.empresaId!, planActual), precioUf != null ? valorUfDelDia() : Promise.resolve(null)]);
 
     // Planes que la empresa puede contratar hoy con tarjeta (tienen Plan
     // de Flow). El plan Empresa no aparece mientras esté apagado.
@@ -48,8 +53,14 @@ planRouter.get(
       pruebaTerminaEn: empresa?.prueba_termina_en ?? null,
       trialVencido,
       contratables,
-      modulosActivos: (await modulosActivosContables(req.empresaId!)).length,
+      modulosActivos: activos.length,
+      modulosActivosLista: activos,
       modulosMax: LIMITES_POR_PLAN[planActual].modulosMax,
+      consumo,
+      precio:
+        precioUf != null
+          ? { uf: precioUf, clp: uf ? ufAClp(precioUf, uf.valor) : null, valorUf: uf?.valor ?? null, fechaUf: uf?.fecha ?? null, ufDelDia: uf?.delDia ?? false }
+          : null,
       historial: historial ?? [],
     });
   })

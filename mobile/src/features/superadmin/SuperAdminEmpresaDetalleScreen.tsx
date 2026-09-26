@@ -4,7 +4,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { ArrowLeft } from "lucide-react-native";
 import type { Empresa, EstadoEmpresa, Modulo, Plan } from "@bitacora/shared";
-import { ETIQUETA_PLAN } from "@bitacora/shared";
+import { ETIQUETA_PLAN, NOMBRE_MODULO } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
 import { LoadingState, ScreenHeader, Texto, useMarca } from "@bitacora/ui/native";
 import {
@@ -23,31 +23,8 @@ import type { SuperAdminStackParamList } from "./types";
 // web/src/lib/etiquetasModulo.ts (no compartido entre apps a
 // propósito, igual criterio que el resto de las etiquetas de estado/
 // período que cada plataforma repite las suyas).
-const ETIQUETA_MODULO: Record<string, string> = {
-  agenda: "Agenda",
-  ordenes_servicio: "Órdenes de servicio",
-  viajes: "Viajes",
-  registros: "Clientes",
-  equipos: "Equipos",
-  inventario: "Inventario",
-  catalogo: "Catálogo",
-  proveedores: "Proveedores",
-  rutas: "Rutas",
-  // Dinero, separado en 3 desde el 23-sep-2026 (antes un solo
-  // "financiero" bundleaba las 3 cosas) — ver packages/shared/src/permisos.ts.
-  financiero: "Gastos y rendiciones",
-  cotizaciones: "Cotizaciones",
-  cobros: "Cobros",
-  informes: "Informes",
-  informe_ia: "Informe con IA",
-  asistente: "Asistente",
-  configuracion: "Configuración",
-  gestion_control: "Grupo y usuario",
-  flota: "Flota",
-  agenda_pro: "Agenda Pro",
-  remuneraciones: "Remuneraciones",
-  levantamientos: "Levantamientos",
-};
+// Nombres de módulos: packages/shared (NOMBRE_MODULO).
+const ETIQUETA_MODULO: Record<string, string> = NOMBRE_MODULO;
 
 const ESTADOS: { valor: EstadoEmpresa; label: string }[] = [
   { valor: "activa", label: "Activa" },

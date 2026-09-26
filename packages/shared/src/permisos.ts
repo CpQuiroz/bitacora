@@ -58,6 +58,33 @@ export const MODULOS = [
   "levantamientos",
 ] as const;
 
+// Nombre corto de cada módulo para mostrar en la app (mobile: Mi plan y
+// Super-Admin). Record<Modulo, …> obliga a nombrar todo módulo nuevo. La
+// web tiene además descripciones largas (web/src/lib/etiquetasModulo.ts).
+export const NOMBRE_MODULO: Record<(typeof MODULOS)[number], string> = {
+  agenda: "Agenda",
+  ordenes_servicio: "Órdenes de servicio",
+  viajes: "Viajes",
+  registros: "Clientes",
+  equipos: "Equipos",
+  inventario: "Inventario",
+  catalogo: "Catálogo",
+  proveedores: "Proveedores",
+  rutas: "Rutas",
+  financiero: "Gastos y rendiciones",
+  cotizaciones: "Cotizaciones",
+  cobros: "Cobros",
+  informes: "Informes",
+  informe_ia: "Informe con IA",
+  asistente: "Asistente",
+  configuracion: "Configuración",
+  gestion_control: "Grupo y usuario",
+  flota: "Flota",
+  agenda_pro: "Agenda Pro",
+  remuneraciones: "Remuneraciones",
+  levantamientos: "Levantamientos",
+};
+
 export type Modulo = (typeof MODULOS)[number];
 
 // ⚠️ SEMILLA — desde la migración 71 los roles son filas editables desde

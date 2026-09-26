@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { EstadoSuscripcion } from "@bitacora/shared";
-import { ETIQUETA_PLAN } from "@bitacora/shared";
+import { ETIQUETA_PLAN, NOMBRE_MODULO } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
 import { Card, ErrorState, LoadingState, ScreenHeader, StatusBadge, Texto, useMarca, type TonoEstado } from "@bitacora/ui/native";
 import { obtenerMiPlan, type InfoMiPlan } from "../../services/plan";
@@ -28,6 +28,7 @@ const ETIQUETA_COBRO: Record<string, string> = { exitoso: "Pagado", fallido: "Re
 const TONO_COBRO: Record<string, TonoEstado> = { exitoso: "completado", fallido: "peligro", pendiente: "en_progreso" };
 
 const clp = (n: number) => `$${n.toLocaleString("es-CL")}`;
+const uf = (n: number) => `${n.toLocaleString("es-CL")} UF`;
 const fecha = (iso: string) => new Date(iso.length === 10 ? `${iso}T00:00:00` : iso).toLocaleDateString("es-CL", { day: "numeric", month: "short", year: "numeric" });
 
 function diasRestantes(fin: string | null): number | null {
@@ -38,7 +39,8 @@ function diasRestantes(fin: string | null): number | null {
 }
 
 // "Mi plan" (23-sep-2026) — solo Admin (acción gestionar_plan), SOLO
-// LECTURA: plan, estado del pago, próxima fecha de cobro y últimos cobros.
+// LECTURA: plan, precio (UF y CLP al valor del día, tarea 151), módulos
+// activos, límites y consumo, estado del pago y últimos cobros.
 // Sin botones de pagar/cambiar plan ni links a Flow, a propósito (reglas
 // de Google Play) — eso se hace en la web, Configuración > Plan.
 export function MiPlanScreen({ navigation }: NativeStackScreenProps<MasStackParamList, "MiPlan">) {
@@ -112,6 +114,22 @@ export function MiPlanScreen({ navigation }: NativeStackScreenProps<MasStackPara
               {dias > 0 ? `Quedan ${dias} día${dias === 1 ? "" : "s"} de prueba` : "La prueba terminó"}
             </Texto>
           ) : null}
+          {info.precio ? (
+            <View style={{ gap: 2, marginTop: tokens.space["1"] }}>
+              <Texto tamano={tokens.size.body} peso="semibold" color={marca.fuerte} style={{ fontVariant: ["tabular-nums"] }}>
+                {uf(info.precio.uf)} + IVA al mes{info.precio.clp != null ? ` · ${clp(info.precio.clp)} + IVA` : ""}
+              </Texto>
+              {info.precio.valorUf != null && info.precio.fechaUf ? (
+                <Texto tamano={tokens.size.caption} color={`${marca.fuerte}b3`}>
+                  {info.precio.ufDelDia ? "UF de hoy" : `UF del ${fecha(info.precio.fechaUf)} (último valor disponible)`}: {clp(Math.round(info.precio.valorUf * 100) / 100)}
+                </Texto>
+              ) : (
+                <Texto tamano={tokens.size.caption} color={`${marca.fuerte}b3`}>
+                  Valor en pesos no disponible por ahora.
+                </Texto>
+              )}
+            </View>
+          ) : null}
         </View>
 
         {alerta ? (
@@ -120,6 +138,39 @@ export function MiPlanScreen({ navigation }: NativeStackScreenProps<MasStackPara
               {alerta}
             </Texto>
           </View>
+        ) : null}
+
+        <Card>
+          <View style={{ gap: tokens.space["2"] }}>
+            <Texto tamano={tokens.size.body} peso="semibold" color={tokens.color.text}>
+              Módulos activos
+            </Texto>
+            <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
+              {info.modulosMax != null ? `${info.modulosActivos.length} de ${info.modulosMax} que permite tu plan` : `${info.modulosActivos.length} activos (tu plan no tiene tope)`}
+            </Texto>
+            {info.modulosActivos.length > 0 ? (
+              <Texto tamano={tokens.size.small} color={tokens.color.text}>
+                {info.modulosActivos.map((m) => NOMBRE_MODULO[m] ?? m).join(" · ")}
+              </Texto>
+            ) : null}
+          </View>
+        </Card>
+
+        {info.consumo ? (
+          <Card>
+            <View style={{ gap: tokens.space["2"] }}>
+              <Texto tamano={tokens.size.body} peso="semibold" color={tokens.color.text}>
+                Límites y consumo
+              </Texto>
+              <Fila etiqueta="Usuarios activos" valor={`${info.consumo.usuarios.usados} de ${info.consumo.usuarios.tope}`} />
+              <Fila etiqueta="OS este mes" valor={info.consumo.osMes.tope != null ? `${info.consumo.osMes.usados} de ${info.consumo.osMes.tope}` : `${info.consumo.osMes.usados} (sin límite)`} />
+              <Fila etiqueta="Almacenamiento" valor={`${info.consumo.almacenamiento.usadoGB.toLocaleString("es-CL")} de ${info.consumo.almacenamiento.topeGB} GB`} />
+              <Fila
+                etiqueta={info.consumo.informesIA.periodo === "prueba" ? "Informes con IA (prueba)" : "Informes con IA este mes"}
+                valor={info.consumo.informesIA.tope != null ? `${info.consumo.informesIA.usados} de ${info.consumo.informesIA.tope}` : `${info.consumo.informesIA.usados} (sin límite)`}
+              />
+            </View>
+          </Card>
         ) : null}
 
         <Card>
@@ -164,7 +215,7 @@ export function MiPlanScreen({ navigation }: NativeStackScreenProps<MasStackPara
         </Card>
 
         <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`} style={{ textAlign: "center" }}>
-          Para cambiar de plan o actualizar el medio de pago, entra a Bitácora desde el computador: Configuración → Plan.
+          El cambio de plan y el medio de pago se gestionan en Bitácora web: Configuración → Plan.
         </Texto>
       </ScrollView>
     </View>

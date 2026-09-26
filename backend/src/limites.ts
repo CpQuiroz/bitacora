@@ -36,14 +36,29 @@ export async function obtenerPlan(empresaId: string): Promise<Plan> {
   return (data?.plan as Plan | undefined) ?? "trial";
 }
 
+// Contadores del consumo del plan: los usan los topes de acá abajo y "Mi
+// plan" (GET /api/plan, tarea 151), así lo que se muestra es lo mismo que
+// se valida.
+async function contarUsuariosActivos(empresaId: string): Promise<number> {
+  const { count } = await supabase.from("usuarios").select("id", { count: "exact", head: true }).eq("empresa_id", empresaId).eq("activo", true);
+  return count ?? 0;
+}
+
+function inicioDelMes(): string {
+  const d = new Date();
+  d.setDate(1);
+  return d.toISOString().slice(0, 10);
+}
+
+async function contarOSDelMes(empresaId: string): Promise<number> {
+  const { count } = await supabase.from("trabajos").select("id", { count: "exact", head: true }).eq("empresa_id", empresaId).gte("creado_en", inicioDelMes());
+  return count ?? 0;
+}
+
 export async function verificarLimiteUsuarios(empresaId: string): Promise<void> {
   const limite = LIMITES_POR_PLAN[await obtenerPlan(empresaId)].usuarios;
-  const { count } = await supabase
-    .from("usuarios")
-    .select("id", { count: "exact", head: true })
-    .eq("empresa_id", empresaId)
-    .eq("activo", true);
-  if ((count ?? 0) >= limite) {
+  const count = await contarUsuariosActivos(empresaId);
+  if (count >= limite) {
     throw new LimiteAlcanzadoError(
       `Llegaste al límite de usuarios de tu plan (${limite}) — pasa a un plan superior para invitar a más gente.`
     );
@@ -53,14 +68,8 @@ export async function verificarLimiteUsuarios(empresaId: string): Promise<void> 
 export async function verificarLimiteOS(empresaId: string): Promise<void> {
   const limite = LIMITES_POR_PLAN[await obtenerPlan(empresaId)].osPorMes;
   if (limite == null) return; // Pro: ilimitado
-  const inicioMes = new Date();
-  inicioMes.setDate(1);
-  const { count } = await supabase
-    .from("trabajos")
-    .select("id", { count: "exact", head: true })
-    .eq("empresa_id", empresaId)
-    .gte("creado_en", inicioMes.toISOString().slice(0, 10));
-  if ((count ?? 0) >= limite) {
+  const count = await contarOSDelMes(empresaId);
+  if (count >= limite) {
     throw new LimiteAlcanzadoError(
       `Llegaste al límite de órdenes de servicio de este mes en tu plan (${limite}) — pasa a un plan superior para seguir.`
     );
@@ -144,23 +153,20 @@ export async function verificarPlanIACompleta(empresaId: string): Promise<void> 
 // propósito: la prueba es una sola).
 export const FEATURES_INFORME_IA = ["informe_os", "informe_libre", "informe_estructurado", "informe_personalizado"] as const;
 
+async function contarInformesIA(empresaId: string, periodo: "mes" | "prueba"): Promise<number> {
+  let query = supabase.from("ia_uso").select("id", { count: "exact", head: true }).eq("empresa_id", empresaId).in("feature", [...FEATURES_INFORME_IA]);
+  if (periodo === "mes") query = query.gte("creado_en", inicioDelMes());
+  const { count, error } = await query;
+  if (error) throw new Error(`No se pudo revisar el tope de informes con IA: ${error.message}`);
+  return count ?? 0;
+}
+
 export async function verificarLimiteInformesIA(empresaId: string): Promise<void> {
   const plan = await obtenerPlan(empresaId);
   const tope = LIMITES_POR_PLAN[plan].informesIA;
   if (tope == null) return;
-  let query = supabase
-    .from("ia_uso")
-    .select("id", { count: "exact", head: true })
-    .eq("empresa_id", empresaId)
-    .in("feature", [...FEATURES_INFORME_IA]);
-  if (tope.periodo === "mes") {
-    const inicioMes = new Date();
-    inicioMes.setDate(1);
-    query = query.gte("creado_en", inicioMes.toISOString().slice(0, 10));
-  }
-  const { count, error } = await query;
-  if (error) throw new Error(`No se pudo revisar el tope de informes con IA: ${error.message}`);
-  if ((count ?? 0) >= tope.tope) {
+  const count = await contarInformesIA(empresaId, tope.periodo);
+  if (count >= tope.tope) {
     throw new LimiteAlcanzadoError(
       tope.periodo === "prueba"
         ? `Usaste los ${tope.tope} informes con IA de la prueba gratis — elige un plan para seguir generándolos.`
@@ -225,3 +231,27 @@ export async function cambiarModuloEmpresa(empresaId: string, modulo: Modulo, ac
   return data as number;
 }
 
+// Consumo del plan para "Mi plan" (tarea 151). null en el tope = sin límite.
+export type ConsumoPlan = {
+  usuarios: { usados: number; tope: number };
+  osMes: { usados: number; tope: number | null };
+  almacenamiento: { usadoGB: number; topeGB: number };
+  informesIA: { usados: number; tope: number | null; periodo: "mes" | "prueba" | null };
+};
+
+export async function consumoDelPlan(empresaId: string, plan: Plan): Promise<ConsumoPlan> {
+  const limites = LIMITES_POR_PLAN[plan];
+  const periodoIA = limites.informesIA?.periodo ?? "mes";
+  const [usuarios, osMes, informes, { data: empresa }] = await Promise.all([
+    contarUsuariosActivos(empresaId),
+    contarOSDelMes(empresaId),
+    contarInformesIA(empresaId, periodoIA).catch(() => 0),
+    supabase.from("empresas").select("storage_bytes_usado").eq("id", empresaId).maybeSingle(),
+  ]);
+  return {
+    usuarios: { usados: usuarios, tope: limites.usuarios },
+    osMes: { usados: osMes, tope: limites.osPorMes },
+    almacenamiento: { usadoGB: Math.round(((empresa?.storage_bytes_usado ?? 0) / 1024 ** 3) * 100) / 100, topeGB: limites.storageGB },
+    informesIA: { usados: informes, tope: limites.informesIA?.tope ?? null, periodo: limites.informesIA?.periodo ?? null },
+  };
+}

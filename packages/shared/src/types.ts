@@ -1641,6 +1641,9 @@ export type TarifaKm = {
 };
 export type DistanciaCache = { par_a: string; par_b: string; km: number; proveedor: string; calculado_en: string };
 
+// Valor diario de la UF (migración 145, tarea 151) — solo backend.
+export type UfDiaria = { fecha: string; valor: number; fuente: string; obtenido_en: string };
+
 export type TipoViatico = "local" | "interregional";
 
 // Montos por defecto de la empresa (Configuración › Viajes).
@@ -2164,6 +2167,7 @@ export type Database = {
       tarifas_tramo: Tabla<TarifaTramo>;
       tarifas_km: Tabla<TarifaKm>;
       distancias_cache: Tabla<DistanciaCache>;
+      uf_diaria: Tabla<UfDiaria>;
       accesos_usuario: Tabla<AccesoUsuario>;
       unidades_medida: Tabla<UnidadMedida>;
       notificaciones_cliente_log: Tabla<NotificacionClienteLog>;

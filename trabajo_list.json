@@ -1954,6 +1954,22 @@
       "status": "done",
       "description": "Aprobado por la usuaria 26-sep-2026. Reemplaza las pestañas OS y Viajes por 'Actividad' (no 'Trabajos', que en Bitácora ya es sinónimo de OS). Lista por fecha, ícono y etiqueta de tipo, filtros Todo/OS/Viajes, tocar abre; monto de viajes solo Admin/Supervisor; en equipos no vehículo solo OS. Web y mobile. Pestañas: Resumen · Actividad · Mantención · Documentos · Eventos.",
       "resolution": "26-sep: web (ActividadDelEquipo.tsx con filtros Todo/OS/Viajes, reemplaza ViajesDelEquipo) y mobile (EquipoDetalleScreen, filtros secundarios del encabezado). Tests web 4 y mobile 27 verdes; verificar verde. Pendiente publicar y build mobile."
+    },
+    {
+      "id": 151,
+      "name": "mi_plan_mobile_uf",
+      "title": "Mobile 'Mi plan': módulos, límites y consumo, precio en UF y en CLP con UF del día (cache diaria en backend)",
+      "status": "done",
+      "description": "Pedido y aprobado 26-sep-2026. Solo lectura (sin pagos, Google Play). UF diaria desde mindicador.cl cacheada en backend (tabla uf_diaria, una consulta por día, fallback al último valor). Aviso de cambio de plan en la web como texto, sin enlace (decisión: política de pagos de Play).",
+      "resolution": "26-sep: migración 145 uf_diaria (pendiente de correr en DEV y prod); backend/src/ufDiaria.ts (memoria → tabla → mindicador, una vez por día, fallback al último valor, sin llamadas simultáneas); limites.ts consumoDelPlan con los mismos contadores que los topes; /api/plan agrega precio {uf, clp, valorUf, fechaUf, ufDelDia}, consumo y modulosActivosLista; NOMBRE_MODULO en shared. Mobile MiPlanScreen: precio UF + CLP, módulos activos vs tope, límites y consumo, aviso de la web en texto. Tests: MiPlanScreen 3, ufDiaria 1, E2E 151-1; verificar verde."
+    },
+    {
+      "id": 152,
+      "name": "menu_mobile_modulos",
+      "title": "Mobile: ocultar entradas de módulos que la empresa/rol no tiene (misma fuente que requiereModulo: modulos_visibles de /api/me)",
+      "status": "in_progress",
+      "description": "Aprobado 26-sep-2026. Diagnóstico: Órdenes de servicio, Viajes (usa deshabilitados), Mantención, Levantamientos (solo función), pestaña Clientes, botón Registrar venta. Agenda/Hoy congeladas: no se tocan. Solo capa de presentación mobile.",
+      "resolution": ""
     }
   ]
 }
