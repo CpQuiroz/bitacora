@@ -12,6 +12,7 @@ export { EmptyState } from "./EmptyState";
 export { ErrorState } from "./ErrorState";
 export { Table, type ColumnaTabla, type AccionFila, type PropsTable } from "./Table";
 export { Dialog } from "./Dialog";
+export { Aviso } from "./Aviso";
 export { ToastProvider, useToast, useDeshacer } from "./Toast";
 export { ConfirmarProvider, useConfirmar, useCancelarConfirmacion } from "./Confirmar";
 export { Cifra } from "./Cifra";
@@ -38,6 +39,8 @@ export type {
   PropsDialog,
   MostrarToast,
   OpcionesToast,
+  PropsAviso,
+  TonoAviso,
   TonoToast,
   Confirmar,
   OpcionesConfirmar,

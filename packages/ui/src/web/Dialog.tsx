@@ -6,7 +6,9 @@ import type { PropsDialog } from "../tipos";
 
 const PILA: symbol[] = [];
 
-export function Dialog({ abierto, onCerrar, titulo, children }: PropsDialog) {
+const ANCHO = { normal: "max-w-lg", ancho: "max-w-2xl", grande: "max-w-3xl" } as const;
+
+export function Dialog({ abierto, onCerrar, titulo, children, tamano = "normal" }: PropsDialog) {
   const cajaRef = useRef<HTMLDivElement>(null);
   const onCerrarRef = useRef(onCerrar);
   useEffect(() => {
@@ -52,7 +54,7 @@ export function Dialog({ abierto, onCerrar, titulo, children }: PropsDialog) {
         role="dialog"
         aria-modal="true"
         aria-label={titulo}
-        className="relative flex max-h-[85vh] outline-none w-full max-w-lg flex-col overflow-hidden rounded-[32px] bg-ds-surface shadow-ds-lg"
+        className={`relative flex max-h-[85vh] w-full flex-col outline-none ${ANCHO[tamano]} overflow-hidden rounded-[32px] bg-ds-surface shadow-ds-lg`}
       >
         <div className="flex shrink-0 items-center justify-between border-b border-ds-divider px-ds-6 py-ds-4">
           <p className="ds-heading text-ds-h5 text-ds-text">{titulo}</p>

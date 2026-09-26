@@ -11,6 +11,7 @@ export { LoadingState } from "./LoadingState";
 export { EmptyState } from "./EmptyState";
 export { ErrorState } from "./ErrorState";
 export { Dialog } from "./Dialog";
+export { Aviso } from "./Aviso";
 export { ToastProvider, useToast, useDeshacer } from "./Toast";
 export { ConfirmarProvider, useConfirmar } from "./Confirmar";
 export { Cifra } from "./Cifra";
@@ -49,6 +50,8 @@ export type {
   PropsDialog,
   MostrarToast,
   OpcionesToast,
+  PropsAviso,
+  TonoAviso,
   TonoToast,
   Confirmar,
   OpcionesConfirmar,

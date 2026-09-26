@@ -176,6 +176,17 @@ export type PropsDialog = {
   onCerrar: () => void;
   titulo: string;
   children: ReactNode;
+  /** Web: ancho máximo. "ancho" y "grande" para formularios largos. Native lo ignora (siempre hoja inferior). */
+  tamano?: "normal" | "ancho" | "grande";
+};
+
+// ── Aviso (mensaje fijo en la pantalla, no un toast) ───────────────
+// Para errores o avisos que deben quedar a la vista junto a lo que
+// afectan (un formulario, una sección). Lo pasajero va en un toast.
+export type TonoAviso = "error" | "exito" | "advertencia" | "info";
+export type PropsAviso = {
+  tono?: TonoAviso;
+  children: ReactNode;
 };
 
 // ── Toast ───────────────────────────────────────────────────────────
