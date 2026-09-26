@@ -200,13 +200,13 @@ export default function SuperAdminCuentaPage() {
             </p>
             <form onSubmit={onCambiarPassword} className="grid gap-3 sm:grid-cols-2">
               <div className="sm:col-span-2">
-                <Input etiqueta="Contraseña actual" tipo="password" valor={passActual} onCambio={setPassActual} requerido />
+                <Input etiqueta="Contraseña actual" tipo="password" autoCompletar="current-password" valor={passActual} onCambio={setPassActual} requerido />
               </div>
               <div>
-                <Input etiqueta="Contraseña nueva (mín. 12)" tipo="password" valor={passNueva} onCambio={setPassNueva} requerido />
+                <Input etiqueta="Contraseña nueva (mín. 12)" tipo="password" autoCompletar="new-password" valor={passNueva} onCambio={setPassNueva} requerido />
               </div>
               <div>
-                <Input etiqueta="Repetir contraseña nueva" tipo="password" valor={passConfirma} onCambio={setPassConfirma} requerido />
+                <Input etiqueta="Repetir contraseña nueva" tipo="password" autoCompletar="new-password" valor={passConfirma} onCambio={setPassConfirma} requerido />
               </div>
               <div>
                 <Input etiqueta="Código (6 dígitos)" tipo="codigo" maxLongitud={6} valor={codigoPass} onCambio={setCodigoPass} requerido />
@@ -246,7 +246,7 @@ export default function SuperAdminCuentaPage() {
             ) : (
               <form onSubmit={onRegenerarTotp} className="grid gap-3 sm:grid-cols-2">
                 <div>
-                  <Input etiqueta="Contraseña actual" tipo="password" valor={passTotp} onCambio={setPassTotp} requerido />
+                  <Input etiqueta="Contraseña actual" tipo="password" autoCompletar="current-password" valor={passTotp} onCambio={setPassTotp} requerido />
                 </div>
                 <div>
                   <Input etiqueta="Código actual (6 dígitos)" tipo="codigo" maxLongitud={6} valor={codigoTotp} onCambio={setCodigoTotp} requerido />

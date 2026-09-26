@@ -6,8 +6,9 @@ import { Briefcase, Plus } from "lucide-react";
 import type { Rubro } from "@bitacora/shared";
 import { ETIQUETA_PLAN } from "@bitacora/shared";
 import { SuperAdminShell } from "@/components/SuperAdminShell";
-import { Aviso, Button, Card, Dialog, ErrorState, Input, LoadingState, Select, StatusBadge, Table, Tag, type ColumnaTabla } from "@bitacora/ui/web";
+import { Aviso, Button, Card, Dialog, ErrorState, Input, LoadingState, Select, Table, Tag, type ColumnaTabla } from "@bitacora/ui/web";
 import { obtenerTokenSuperAdmin, superadminFetch } from "@/lib/superadminApi";
+import { EstadoSuperAdmin } from "./tonoEstado";
 
 const RUBROS: { value: Rubro; label: string }[] = [
   { value: "transporte", label: "Transporte" },
@@ -115,7 +116,7 @@ export default function SuperAdminEmpresasPage() {
   const columnas: ColumnaTabla<EmpresaListado>[] = [
     { encabezado: "Nombre", celda: (e) => <span className="font-medium text-ds-text">{e.nombre}</span> },
     { encabezado: "Fecha de alta", celda: (e) => new Date(e.creado_en).toLocaleDateString("es-CL") },
-    { encabezado: "Estado", celda: (e) => <StatusBadge estado={e.estado} /> },
+    { encabezado: "Estado", celda: (e) => <EstadoSuperAdmin estado={e.estado} /> },
     { encabezado: "Plan", celda: (e) => <Tag>{(ETIQUETA_PLAN as Record<string, string>)[e.plan] ?? e.plan}</Tag> },
     { encabezado: "Usuarios", celda: (e) => e.cantidad_usuarios },
   ];
@@ -188,7 +189,6 @@ export default function SuperAdminEmpresasPage() {
           filas={filtradas}
           claveFila={(e) => e.id}
           onFilaClick={(e) => router.push(`/superadmin/empresas/${e.id}`)}
-          acciones={[{ etiqueta: "Ver salud →", onPress: (e) => router.push(`/superadmin/empresas/${e.id}`) }]}
           vacio={{
             titulo: busqueda ? "Ninguna empresa coincide con la búsqueda." : "Todavía no hay empresas registradas.",
             icono: <Briefcase size={28} strokeWidth={2.75} />,

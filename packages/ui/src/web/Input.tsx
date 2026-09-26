@@ -31,6 +31,7 @@ export function Input({
   iconoIzq,
   autoFoco,
   autoCapitalizar = true,
+  autoCompletar,
   onSubmit,
   id: idPropio,
   etiquetaAccesible,
@@ -67,6 +68,7 @@ export function Input({
           step={tipo === "numero" ? paso : undefined}
           min={tipo === "numero" ? minimo : undefined}
           autoCapitalize={autoCapitalizar ? undefined : "off"}
+          autoComplete={autoCompletar ?? (tipo === "codigo" ? "one-time-code" : undefined)}
           onKeyDown={onSubmit ? (e) => e.key === "Enter" && onSubmit() : undefined}
           id={id}
           aria-label={etiqueta ? undefined : etiquetaAccesible}

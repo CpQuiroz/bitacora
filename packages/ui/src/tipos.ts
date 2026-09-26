@@ -83,6 +83,8 @@ export type PropsInput = PropsCampoBase & {
    * primera letra (RN: autoCapitalize; web: no aplica, autoCapitalize del
    * navegador no interfiere igual). Default true.
    */
+  /** Web: atributo autocomplete (ej. "current-password", "new-password", "one-time-code"). */
+  autoCompletar?: string;
   autoCapitalizar?: boolean;
   /** Se llama al presionar "siguiente/ir" en el teclado (RN) o Enter (web). */
   onSubmit?: () => void;

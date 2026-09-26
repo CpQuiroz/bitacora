@@ -318,3 +318,10 @@ Formato:
 - **Cambios:** packages/ui (Toast, Confirmar, Dialog, compartido/deshacer.ts + tests), web (layout raíz, ~40 pantallas, useOcultos, exigirOk), mobile (App, ~35 pantallas), scripts/check-dialogos-nativos.mjs, verificar.sh.
 - **Verificación:** ./verificar.sh verde (ui 3, web 39, mobile 51, resto igual). Revisión con cambios requeridos → corregidos. Viáticos "Marcar pagado": opción A del humano (confirmación e inmediato).
 - **Cierre:** commits locales, sin push ni build. iOS (toasts sobre modales, visor de fotos) sin probar en dispositivo. Próximo: ronda 5 (consolidar componentes web).
+
+## 2026-09-26 — Tarea 157: unificar componentes web (auditoría UX ronda 5)
+- **Agente:** Claude + 4 implementadores (portal, superadmin, panel, Modal/Tabla) + revisor (`progress/impl_ronda5_*.md`, `progress/review_ronda5.md`)
+- **Plan:** migrar el legacy a @bitacora/ui, Modal→Dialog, DataTable→Table, borrar los componentes viejos y poner tope a los controles crudos.
+- **Cambios:** packages/ui (Aviso, Dialog.tamano, props de Input/Textarea/DatePicker), ~60 archivos web, PageHeader, tonoEstado (portal, superadmin), eslint no-restricted-imports, check-controles-web + baseline, verificar.sh.
+- **Verificación:** ./verificar.sh verde (web 55); next build local OK. Revisión APROBADO; recomendaciones aplicadas.
+- **Cierre:** commits locales, sin push ni build. Pendiente a ojo: alineación del botón "Quitar" en OS nueva. Próximo candidato: barrido de las ~505 clases Faena.

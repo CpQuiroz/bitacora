@@ -2007,9 +2007,9 @@
       "id": 157,
       "name": "consolidar_componentes_web",
       "title": "Unificar componentes web (auditoría UX ronda 5): 25 archivos legacy → @bitacora/ui (incluye portal y páginas públicas), Modal → Dialog, DataTable → Table, lint y tope para controles crudos",
-      "status": "in_progress",
+      "status": "done",
       "description": "Aprobado 26-sep-2026 con portal. Medido: 25 archivos importan components/ui.tsx, Modal 15 usos/11 archivos, DataTable 10, <button> crudos 168, <input> 90, text-[Npx] 121. Fuentes Plex/Archivo se quedan (las usa el tema Taller). Fuera: ~505 clases Faena, tablas de informes/PDF, mobile, Flow.",
-      "resolution": ""
+      "resolution": "25 archivos legacy (portal, páginas públicas, Super-Admin, panel) → @bitacora/ui; Modal→Dialog (9 archivos, 13 instancias; Dialog.tamano), DataTable→Table (9 pantallas); borrados components/{ui,Modal,DataTable}.tsx + regla no-restricted-imports. Nuevos: Aviso (web/native), PageHeader con tokens, props paso/minimo/autoCompletar en Input y requerido en Textarea/DatePicker, tonoEstado de portal y de Super-Admin. check-controles-web.mjs con tope (button 165→159, input 90→83, select/textarea 8→5, text-[Npx] 121→63). Revisión APROBADO (progress/review_ronda5.md); M1, B1-B3, B5, B6 aplicados; B4 (alineación 'Quitar' en OS nueva) y B7 a revisar a ojo. Tests web 39→55. Fuentes Plex/Archivo se quedan (tema Taller)."
     }
   ]
 }

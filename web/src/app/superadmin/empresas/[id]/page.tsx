@@ -11,7 +11,8 @@ import { IconChevronDown, IconChevronLeft, IconShield } from "@/components/icons
 import { obtenerTokenSuperAdmin, superadminFetch } from "@/lib/superadminApi";
 import { guardarImpersonacion } from "@/lib/impersonacion";
 import { ETIQUETA_MODULO } from "@/lib/etiquetasModulo";
-import { Aviso, Button, Card, Input, Select, StatusBadge, Textarea, useConfirmar, type TonoEstado } from "@bitacora/ui/web";
+import { EstadoSuperAdmin } from "../../tonoEstado";
+import { Aviso, Button, Card, Input, Select, Textarea, useConfirmar } from "@bitacora/ui/web";
 
 // Historial de la prueba (super_admin_auditoria, tarea 144).
 type HistorialPrueba = {
@@ -75,22 +76,7 @@ const ETIQUETA_FEATURE: Record<string, string> = {
   asistente: "Asistente",
 };
 
-// Estados que no están en el mapa compartido de StatusBadge (o que acá se
-// leen distinto): mismo tono que tenían con el Badge antiguo.
-const TONO_ESTADO: Record<string, TonoEstado> = {
-  suspendida: "advertencia",
-  dada_de_baja: "peligro",
-  trial: "en_progreso",
-  pago_pendiente: "advertencia",
-  suspendida_por_pago: "peligro",
-  pendiente: "advertencia",
-  correo: "en_progreso",
-  dominio: "en_progreso",
-};
-
-function Estado({ estado }: { estado: string }) {
-  return <StatusBadge estado={estado} tonoForzado={TONO_ESTADO[estado]} />;
-}
+const Estado = EstadoSuperAdmin;
 
 function formatearBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -1035,7 +1021,7 @@ export default function SuperAdminSaludEmpresaPage() {
                   </p>
                   <div className="flex flex-wrap items-end gap-2">
                     <div className="w-28">
-                      <Input etiqueta="Días a extender" tipo="numero" valor={diasExtension} onCambio={setDiasExtension} />
+                      <Input etiqueta="Días a extender" tipo="numero" minimo={1} valor={diasExtension} onCambio={setDiasExtension} />
                     </div>
                     <Button variante="secundario" deshabilitado={guardandoPrueba} onPress={() => onCambiarPrueba("extender")}>
                       {guardandoPrueba ? "Guardando…" : "Extender"}
@@ -1080,10 +1066,10 @@ export default function SuperAdminSaludEmpresaPage() {
               </p>
               <div className="mt-3 flex flex-wrap items-end gap-2">
                 <div className="w-40">
-                  <Input etiqueta="Local (dentro de la RM)" tipo="numero" valor={viaticoLocal} onCambio={setViaticoLocal} />
+                  <Input etiqueta="Local (dentro de la RM)" tipo="numero" minimo={0} valor={viaticoLocal} onCambio={setViaticoLocal} />
                 </div>
                 <div className="w-40">
-                  <Input etiqueta="Interregional" tipo="numero" valor={viaticoInterregional} onCambio={setViaticoInterregional} />
+                  <Input etiqueta="Interregional" tipo="numero" minimo={0} valor={viaticoInterregional} onCambio={setViaticoInterregional} />
                 </div>
                 <Button variante="secundario" deshabilitado={guardandoViaticos} onPress={onGuardarViaticos}>
                   {guardandoViaticos ? "Guardando…" : "Guardar"}

@@ -45,4 +45,14 @@ describe("crear OS (web)", () => {
     expect(await screen.findByText("Selecciona un cliente")).toBeTruthy();
     expect(h.llamadas.some((l) => l.startsWith("POST /api/trabajos"))).toBe(false);
   });
+
+  test("cantidad acepta decimales y descripción y fecha son obligatorias (tarea 157)", async () => {
+    render(<NuevaOrdenServicioPage />);
+    const cantidad = (await screen.findByLabelText("Cant.")) as HTMLInputElement;
+    expect(cantidad.step).toBe("0.01");
+    expect(cantidad.min).toBe("0");
+    const descripcion = screen.getAllByLabelText("Descripción").find((e) => e.tagName === "TEXTAREA") as HTMLTextAreaElement;
+    expect(descripcion.required).toBe(true);
+    expect((screen.getByLabelText("Fecha") as HTMLInputElement).required).toBe(true);
+  });
 });

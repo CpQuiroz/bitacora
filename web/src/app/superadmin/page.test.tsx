@@ -1,6 +1,6 @@
 // Prueba de pantalla (tarea 157): el listado de empresas del Super-Admin usa
-// Table de @bitacora/ui/web — la fila abre la ficha, la acción "Ver salud →"
-// también, y "Nueva empresa" abre el Dialog. API simulada.
+// Table de @bitacora/ui/web — la fila abre la ficha (sin acción suelta que
+// la repita) y "Nueva empresa" abre el Dialog. API simulada.
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
@@ -30,12 +30,10 @@ describe("Super-Admin › Empresas (web)", () => {
     expect(h.push).toHaveBeenCalledWith("/superadmin/empresas/e1");
   });
 
-  test("la acción 'Ver salud →' navega una sola vez (no dispara también la fila)", async () => {
+  test("la fila no repite su clic con una acción suelta (convención de listas)", async () => {
     render(<SuperAdminEmpresasPage />);
     await screen.findByText("Transportes Sur");
-    fireEvent.click(screen.getByRole("button", { name: "Ver salud →" }));
-    expect(h.push).toHaveBeenCalledTimes(1);
-    expect(h.push).toHaveBeenCalledWith("/superadmin/empresas/e1");
+    expect(screen.queryByRole("button", { name: "Ver salud →" })).toBeNull();
   });
 
   test("'Nueva empresa' abre el diálogo con el formulario", async () => {
