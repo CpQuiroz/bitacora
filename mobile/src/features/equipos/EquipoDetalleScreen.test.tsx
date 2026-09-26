@@ -30,7 +30,7 @@ jest.mock("../../services/equipos", () => ({
     anio: 2020,
     activo: true,
     asignacion_vigente: { colaborador_id: mockAsignadoA, colaborador_nombre: "Chofer QA" },
-    historico_mantenciones: [],
+    historico_mantenciones: [{ id: "t1", fecha: "2026-09-10", descripcion: "Cambio de aceite", estado: "completado", orden: { folio: 77, estado_os: "firmada" } }],
   })),
   listarDocumentosVehiculo: jest.fn(async () => [
     { id: "d1", tipo_documento_id: "t1", numero: "123", fecha_vencimiento: "2020-01-01", archivo_key: "k", tipo: { nombre: "SOAP" }, estado: "vencido" },
@@ -98,22 +98,28 @@ describe("ficha del equipo (EquipoDetalleScreen)", () => {
     expect(screen.getByText("Eventos")).toBeTruthy();
   });
 
-  test("Viajes: el admin ve la ruta y el monto; el chofer no ve el monto", async () => {
+  test("Actividad: OS y viajes juntos; el admin ve el monto; filtrar por OS oculta los viajes", async () => {
     mockModulos = ["flota", "viajes"];
     mockAsignadoA = "u9";
     mockRol = "admin";
     await abrir();
-    await fireEvent.press(await screen.findByText("Viajes"));
-    expect(await screen.findByText("Santiago → Rancagua")).toBeTruthy();
+    await fireEvent.press(await screen.findByText("Actividad"));
+    expect(await screen.findByText("Viaje · Guía G-1")).toBeTruthy();
+    expect(screen.getByText("OS N° 77")).toBeTruthy();
     expect(screen.getByText("$150.000")).toBeTruthy();
+    await fireEvent.press(screen.getByText("OS"));
+    expect(screen.queryByText("Viaje · Guía G-1")).toBeNull();
+    expect(screen.getByText("OS N° 77")).toBeTruthy();
+    mockRol = "colaborador";
+  });
 
+  test("Actividad del chofer: ve sus viajes sin monto", async () => {
     mockModulos = ["viajes"];
     mockAsignadoA = "u1";
     mockRol = "colaborador";
     await abrir();
-    await fireEvent.press((await screen.findAllByText("Viajes"))[0]!);
-    expect(await screen.findByText("Santiago → Rancagua")).toBeTruthy();
+    await fireEvent.press(await screen.findByText("Actividad"));
+    expect(await screen.findByText("Viaje · Guía G-1")).toBeTruthy();
     expect(screen.queryByText("$150.000")).toBeNull();
-    mockRol = "colaborador";
   });
 });

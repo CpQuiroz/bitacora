@@ -3,29 +3,28 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { ChevronLeft, ClipboardCheck, Plus, Wrench } from "lucide-react";
-import type { Equipo, EstadoDocumento, Modulo, OrdenServicio, PlanMantencion, Trabajo } from "@bitacora/shared";
-import { ROLES_SUPERVISION, estadoOsDeTrabajo } from "@bitacora/shared";
+import { ChevronLeft, Plus } from "lucide-react";
+import type { Equipo, EstadoDocumento, Modulo, PlanMantencion } from "@bitacora/shared";
+import { ROLES_SUPERVISION } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Button, Card, EmptyState, Input, StatusBadge, Textarea } from "@bitacora/ui/web";
+import { Button, Card, Input, StatusBadge, Textarea } from "@bitacora/ui/web";
 import { RegistrosMantencion } from "./RegistrosMantencion";
 import { EventosFlota } from "./EventosFlota";
-import { ViajesDelEquipo } from "./ViajesDelEquipo";
+import { ActividadDelEquipo, type TrabajoConOrden } from "./ActividadDelEquipo";
 import { DocumentoForm } from "@/components/DocumentoForm";
 
-type TrabajoConOrden = Trabajo & { orden: Pick<OrdenServicio, "folio" | "estado_os"> | null };
 type EquipoDetalle = Equipo & {
   cliente: { id: string; nombre: string } | null;
   asignacion_vigente: { colaborador_id: string; colaborador_nombre: string } | null;
   historico_mantenciones: TrabajoConOrden[];
 };
 
-// Tarea 148 (aprobado por la usuaria, referencia Fleetio): Resumen ·
-// Mantención (plan + registros en una sola pestaña) · OS · Viajes ·
-// Documentos · Eventos.
-type Tab = "resumen" | "mantencion" | "os" | "viajes" | "documentos" | "eventos";
+// Tareas 148 y 150 (aprobado por la usuaria, referencia Fleetio): Resumen ·
+// Actividad (OS + viajes) · Mantención (plan + registros) · Documentos ·
+// Eventos.
+type Tab = "resumen" | "actividad" | "mantencion" | "documentos" | "eventos";
 
 // PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 export default function EquipoDetallePage() {
@@ -110,13 +109,13 @@ export default function EquipoDetallePage() {
   const tabs = useMemo<{ id: Tab; label: string }[]>(
     () => [
       { id: "resumen", label: "Resumen" },
+      // Tarea 150: OS y viajes juntos en "Actividad".
+      { id: "actividad", label: "Actividad" },
       { id: "mantencion", label: "Mantención" },
-      { id: "os", label: "OS" },
-      ...(esVehiculo && veViajes ? [{ id: "viajes" as Tab, label: "Viajes" }] : []),
       ...(esVehiculo && veDocumentos ? [{ id: "documentos" as Tab, label: "Documentos" }] : []),
       ...(esVehiculo ? [{ id: "eventos" as Tab, label: "Eventos" }] : []),
     ],
-    [esVehiculo, veViajes, veDocumentos]
+    [esVehiculo, veDocumentos]
   );
   // Si la pestaña activa deja de existir (cambian módulos o categoría), volver al resumen.
   useEffect(() => {
@@ -334,40 +333,15 @@ export default function EquipoDetallePage() {
         </div>
       )}
 
-      {tab === "os" && (
+      {tab === "actividad" && (
         <div className="mt-ds-6">
-          <Card>
-            <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Histórico de OS</p>
-            {equipo.historico_mantenciones.length === 0 ? (
-              <EmptyState icono={<Wrench size={28} strokeWidth={2.75} />} titulo="Sin órdenes de servicio asociadas a este equipo todavía" />
-            ) : (
-              <div className="flex flex-col divide-y divide-ds-divider">
-                {equipo.historico_mantenciones.map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => router.push(`/dashboard/ordenes/${t.id}`)}
-                    className="flex items-center justify-between py-2.5 text-left font-ds-body text-ds-small hover:text-ds-brand"
-                  >
-                    <div className="flex items-center gap-ds-2">
-                      <ClipboardCheck size={14} strokeWidth={2.75} className="shrink-0 text-ds-text/60" />
-                      <div>
-                        <p className="font-medium text-ds-text">{t.orden?.folio != null ? `OS N° ${t.orden.folio}` : t.descripcion || "Sin folio"}</p>
-                        <p className="font-mono text-ds-caption text-ds-text/60">{t.fecha}</p>
-                      </div>
-                    </div>
-                    <StatusBadge estado={t.orden?.estado_os ?? estadoOsDeTrabajo(t.estado)} />
-                  </button>
-                ))}
-              </div>
-            )}
-          </Card>
-        </div>
-      )}
-
-      {tab === "viajes" && esVehiculo && veViajes && (
-        <div className="mt-ds-6">
-          <ViajesDelEquipo equipoId={equipo.id} verMontos={puedeGestionar} moneda={usuario.moneda} />
+          <ActividadDelEquipo
+            equipoId={equipo.id}
+            os={equipo.historico_mantenciones}
+            incluirViajes={Boolean(esVehiculo && veViajes)}
+            verMontos={puedeGestionar}
+            moneda={usuario.moneda}
+          />
         </div>
       )}
 

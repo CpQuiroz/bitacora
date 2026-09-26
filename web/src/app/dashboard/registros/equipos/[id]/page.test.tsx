@@ -1,6 +1,7 @@
-// Tarea 148: ficha del equipo en pestañas. Admin con Viajes y Flota ve
-// Resumen · Mantención · OS · Viajes · Documentos · Eventos y el total de los
-// viajes; un colaborador no ve montos; sin el módulo Viajes no hay pestaña.
+// Tareas 148 y 150: ficha del equipo en pestañas. Admin con Viajes y Flota ve
+// Resumen · Actividad (OS + viajes) · Mantención · Documentos · Eventos y el
+// total de los viajes; un colaborador no ve montos; sin el módulo Viajes la
+// Actividad muestra solo OS (sin filtros).
 import type { ReactNode } from "react";
 import { describe, expect, test, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
@@ -29,7 +30,9 @@ const equipo = {
   activo: true,
   cliente: null,
   asignacion_vigente: { colaborador_id: "u2", colaborador_nombre: "Chofer QA" },
-  historico_mantenciones: [],
+  historico_mantenciones: [
+    { id: "t1", fecha: "2026-09-22", cliente: "Cliente OS", descripcion: "Cambio de aceite", estado: "completado", orden: { folio: 77, estado_os: "firmada" } },
+  ],
 };
 const viajes = [
   { id: "v1", fecha: "2026-09-20", numero_guia: "G-1", origen: "Santiago", destino: "Rancagua", estado: "confirmado", total: 150000, cliente_info: { id: "c1", nombre: "Cliente QA" }, chofer: { id: "u2", nombre: "Chofer QA" } },
@@ -50,14 +53,20 @@ describe("ficha del equipo en pestañas", () => {
     simular({ ...ME_ADMIN, modulos_visibles: [...ME_ADMIN.modulos_visibles, "flota"] });
     render(<EquipoDetallePage />);
     expect(await screen.findByText("Camión 1")).toBeTruthy();
-    for (const t of ["Resumen", "Mantención", "OS", "Viajes", "Eventos"]) expect(screen.getByRole("button", { name: t })).toBeTruthy();
+    for (const t of ["Resumen", "Actividad", "Mantención", "Eventos"]) expect(screen.getByRole("button", { name: t })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "OS" })).toBeNull();
     // Pestaña Documentos y el dato del encabezado que lleva a ella.
     expect(screen.getAllByRole("button", { name: /Documentos/ }).length).toBe(2);
     expect(await screen.findByText("2026-12-01")).toBeTruthy();
     expect(screen.getByText("1 vencido")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Viajes" }));
-    expect(await screen.findByText("Santiago → Rancagua")).toBeTruthy();
-    expect(screen.getByText("Total")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Actividad" }));
+    // OS y viaje en la misma lista, el viaje (más reciente) primero.
+    expect(await screen.findByText("Viaje · Guía G-1")).toBeTruthy();
+    expect(screen.getByText("OS N° 77")).toBeTruthy();
+    expect(screen.getByText("Total viaje")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "OS" }));
+    expect(screen.queryByText("Viaje · Guía G-1")).toBeNull();
+    expect(screen.getByText("OS N° 77")).toBeTruthy();
   });
 
   test("Mantención junta el plan y los registros", async () => {
@@ -68,18 +77,20 @@ describe("ficha del equipo en pestañas", () => {
     expect(screen.getByText("Registros de mantención")).toBeTruthy();
   });
 
-  test("colaborador con Viajes: ve los viajes sin montos", async () => {
+  test("colaborador con Viajes: ve la actividad sin montos", async () => {
     simular({ ...ME_ADMIN, usuario: { ...ME_ADMIN.usuario, rol: "colaborador" } });
     render(<EquipoDetallePage />);
-    fireEvent.click(await screen.findByRole("button", { name: "Viajes" }));
-    expect(await screen.findByText("Santiago → Rancagua")).toBeTruthy();
-    expect(screen.queryByText("Total")).toBeNull();
+    fireEvent.click(await screen.findByRole("button", { name: "Actividad" }));
+    expect(await screen.findByText("Viaje · Guía G-1")).toBeTruthy();
+    expect(screen.queryByText("Total viaje")).toBeNull();
   });
 
-  test("sin el módulo Viajes no hay pestaña Viajes", async () => {
+  test("sin el módulo Viajes la Actividad muestra solo OS y sin filtros", async () => {
     simular({ ...ME_ADMIN, modulos_visibles: ["configuracion", "flota"] });
     render(<EquipoDetallePage />);
-    expect(await screen.findByText("Camión 1")).toBeTruthy();
+    fireEvent.click(await screen.findByRole("button", { name: "Actividad" }));
+    expect(await screen.findByText("OS N° 77")).toBeTruthy();
+    expect(screen.queryByText("Viaje · Guía G-1")).toBeNull();
     expect(screen.queryByRole("button", { name: "Viajes" })).toBeNull();
   });
 });

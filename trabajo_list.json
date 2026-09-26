@@ -1945,7 +1945,15 @@
       "title": "Aplicar la regla 'toda fila abre su objeto' a las tablas web que no la cumplen",
       "status": "done",
       "description": "Seguimiento de la tarea 148 (aprobado 25-sep-2026). Tablas sin onFilaClick: catálogo, proveedores, viajes/tarifas, ordenes/[id], viajes/rutas, configuracion/plan, viajes, configuracion/seguridad, configuracion/agenda-pro, rendiciones, rendiciones/[id], agenda/paquetes, viáticos, gastos. Usar onFilaClick + accionesEnMenu del Table de @bitacora/ui/web.",
-      "resolution": "26-sep: aplicado en Catálogo, Proveedores, Tarifas, Rutas, Rendiciones (lista y gastos del detalle), Paquetes (abre la ficha del cliente), Agenda Pro (servicios y tipos de pack), Gastos y Viajes (tabla propia: clic/Enter edita, facturados no). Excepciones documentadas en convenciones.md: historial del plan, accesos de Seguridad, resumen de Viáticos, ítems de una OS. Test proveedores/page.test.tsx; verificar verde."
+      "resolution": "26-sep: aplicado en Catálogo, Proveedores, Tarifas, Rutas, Rendiciones (lista y gastos del detalle), Paquetes (abre la ficha del cliente), Agenda Pro (servicios y tipos de pack), Gastos y Viajes (tabla propia: clic/Enter edita, facturados no). Excepciones documentadas en convenciones.md: historial del plan, accesos de Seguridad, resumen de Viáticos, ítems de una OS. Test proveedores/page.test.tsx; verificar verde. Publicado en main 9a8ea7b."
+    },
+    {
+      "id": 150,
+      "name": "ficha_equipo_actividad",
+      "title": "Ficha del equipo: pestaña Actividad (OS + viajes juntos, filtros Todo/OS/Viajes)",
+      "status": "done",
+      "description": "Aprobado por la usuaria 26-sep-2026. Reemplaza las pestañas OS y Viajes por 'Actividad' (no 'Trabajos', que en Bitácora ya es sinónimo de OS). Lista por fecha, ícono y etiqueta de tipo, filtros Todo/OS/Viajes, tocar abre; monto de viajes solo Admin/Supervisor; en equipos no vehículo solo OS. Web y mobile. Pestañas: Resumen · Actividad · Mantención · Documentos · Eventos.",
+      "resolution": "26-sep: web (ActividadDelEquipo.tsx con filtros Todo/OS/Viajes, reemplaza ViajesDelEquipo) y mobile (EquipoDetalleScreen, filtros secundarios del encabezado). Tests web 4 y mobile 27 verdes; verificar verde. Pendiente publicar y build mobile."
     }
   ]
 }

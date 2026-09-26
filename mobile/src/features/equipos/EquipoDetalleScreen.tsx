@@ -3,7 +3,7 @@ import { Alert, Pressable, RefreshControl, ScrollView, View } from "react-native
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import * as WebBrowser from "expo-web-browser";
-import { ArrowLeft, FileText, Plus } from "lucide-react-native";
+import { ArrowLeft, ClipboardCheck, FileText, Plus, Route } from "lucide-react-native";
 import type { PlanMantencion, Usuario } from "@bitacora/shared";
 import { ROLES_SUPERVISION } from "@bitacora/shared";
 import { tokens } from "@bitacora/design-tokens";
@@ -32,7 +32,8 @@ import { obtenerHistorialEquipo, obtenerMantencionInicio, type MantencionResumen
 import { permisosEquipos } from "./permisos";
 import { fechaLegible } from "./fechas";
 
-type Tab = "resumen" | "mantencion" | "os" | "viajes" | "documentos" | "eventos";
+type Tab = "resumen" | "actividad" | "mantencion" | "documentos" | "eventos";
+type FiltroActividad = "todo" | "os" | "viajes";
 
 const ETIQUETA_ESTADO_DOC = { vigente: "Vigente", por_vencer: "Por vencer", vencido: "Vencido" } as const;
 const TONO_ESTADO_DOC = { vigente: "completado", por_vencer: "advertencia", vencido: "peligro" } as const;
@@ -58,6 +59,7 @@ export function EquipoDetalleScreen({ navigation, route }: NativeStackScreenProp
   // Tarea 148: pestañas (mismas que la web): Resumen · Mantención · OS ·
   // Viajes · Documentos · Eventos.
   const [tab, setTab] = useState<Tab>("resumen");
+  const [filtroActividad, setFiltroActividad] = useState<FiltroActividad>("todo");
   const [viajes, setViajes] = useState<ViajeDeEquipo[] | null>(null);
   const [errorViajes, setErrorViajes] = useState<string | null>(null);
   const esSupervision = auth.fase === "listo" && ROLES_SUPERVISION.includes(auth.usuario.rol);
@@ -211,14 +213,42 @@ export function EquipoDetalleScreen({ navigation, route }: NativeStackScreenProp
   const historial = equipo.historico_mantenciones ?? [];
   const pestanas: { valor: Tab; etiqueta: string }[] = [
     { valor: "resumen", etiqueta: "Resumen" },
+    // Tarea 150: OS y viajes juntos en "Actividad".
+    { valor: "actividad", etiqueta: "Actividad" },
     { valor: "mantencion", etiqueta: "Mantención" },
-    { valor: "os", etiqueta: "OS" },
-    ...(vehiculo && veViajes ? [{ valor: "viajes" as Tab, etiqueta: "Viajes" }] : []),
     ...(vehiculo && puedeDocs ? [{ valor: "documentos" as Tab, etiqueta: "Documentos" }] : []),
     ...(vehiculo ? [{ valor: "eventos" as Tab, etiqueta: "Eventos" }] : []),
   ];
   // Si la pestaña activa deja de existir (cambian módulos o categoría), volver al resumen.
   if (!pestanas.some((p) => p.valor === tab)) setTab("resumen");
+  // Actividad: OS y viajes del equipo en una sola lista por fecha.
+  const incluirViajes = vehiculo && veViajes;
+  const actividad = [
+    ...(filtroActividad !== "viajes"
+      ? historial.map((t) => ({
+          clave: `os-${t.id}`,
+          tipo: "os" as const,
+          id: t.id,
+          fecha: t.fecha,
+          titulo: t.orden?.folio != null ? `OS N° ${t.orden.folio}` : "OS sin folio",
+          detalle: t.descripcion || null,
+          estado: t.orden?.estado_os ?? t.estado,
+          total: null as number | null,
+        }))
+      : []),
+    ...(incluirViajes && filtroActividad !== "os"
+      ? (viajes ?? []).map((v) => ({
+          clave: `viaje-${v.id}`,
+          tipo: "viaje" as const,
+          id: v.id,
+          fecha: v.fecha,
+          titulo: v.numero_guia ? `Viaje · Guía ${v.numero_guia}` : "Viaje",
+          detalle: [`${v.origen} → ${v.destino}`, v.chofer?.nombre].filter(Boolean).join(" · "),
+          estado: v.estado,
+          total: v.total,
+        }))
+      : []),
+  ].sort((a, b) => (a.fecha < b.fecha ? 1 : a.fecha > b.fecha ? -1 : 0));
   const proximaMantencion = planes.filter((p) => p.activo).map((p) => p.proxima_fecha).sort()[0] ?? null;
   const vencidos = documentos.filter((d) => d.estado === "vencido").length;
   const porVencer = documentos.filter((d) => d.estado === "por_vencer").length;
@@ -230,6 +260,19 @@ export function EquipoDetalleScreen({ navigation, route }: NativeStackScreenProp
         titulo={equipo.nombre}
         accion={volver}
         filtros={{ opciones: pestanas, valor: tab, onCambio: (v) => setTab(v as Tab) }}
+        filtrosSecundarios={
+          tab === "actividad" && incluirViajes
+            ? {
+                opciones: [
+                  { valor: "todo", etiqueta: "Todo" },
+                  { valor: "os", etiqueta: "OS" },
+                  { valor: "viajes", etiqueta: "Viajes" },
+                ],
+                valor: filtroActividad,
+                onCambio: (v) => setFiltroActividad(v as FiltroActividad),
+              }
+            : undefined
+        }
       />
       <ScrollView
         contentContainerStyle={{ padding: tokens.space["4"], gap: tokens.space["3"], paddingBottom: tokens.space["8"] }}
@@ -363,74 +406,64 @@ export function EquipoDetalleScreen({ navigation, route }: NativeStackScreenProp
           </>
         ) : null}
 
-        {tab === "os" ? (
-          <>
+        {tab === "actividad" ? (
           <Card>
-            <Encabezado titulo="Historial de OS" />
-            {historial.length === 0 ? (
-              <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`}>
-                Sin órdenes de servicio asociadas a este equipo.
-              </Texto>
-            ) : (
-              historial.slice(0, 15).map((t) => (
-                <Pressable key={t.id} onPress={() => navigation.navigate("Trabajos", { screen: "TrabajoDetalle", params: { trabajoId: t.id } })} style={filaTocable}>
-                  <View style={{ flex: 1, gap: 2 }}>
-                    <Texto tamano={tokens.size.small} color={tokens.color.text} numberOfLines={1}>
-                      {t.orden?.folio != null ? `OS N° ${t.orden.folio}` : t.descripcion || "Sin folio"}
-                    </Texto>
-                    <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`}>
-                      {fechaLegible(t.fecha)}
-                    </Texto>
-                  </View>
-                  <StatusBadge estado={t.orden?.estado_os ?? t.estado} />
-                </Pressable>
-              ))
-            )}
-            {historial.length > 15 ? (
-              <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`} style={{ marginTop: tokens.space["2"] }}>
-                y {historial.length - 15} más — el historial completo está en la web.
-              </Texto>
-            ) : null}
-          </Card>
-          </>
-        ) : null}
-
-        {tab === "viajes" && vehiculo && veViajes ? (
-          <Card>
-            <Encabezado titulo="Viajes de este vehículo" />
-            {viajes === null ? (
+            <Encabezado titulo="Actividad" />
+            {incluirViajes && viajes === null ? (
               <LoadingState />
-            ) : errorViajes ? (
-              <Texto tamano={tokens.size.caption} color={tokens.color.accentRamp["700"]}>
-                {errorViajes}
-              </Texto>
-            ) : viajes.length === 0 ? (
-              <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`}>
-                Este vehículo todavía no tiene viajes.
-              </Texto>
             ) : (
-              viajes.slice(0, 30).map((v) => (
-                <Pressable key={v.id} onPress={() => navigation.navigate("Viajes", { screen: "ViajeDetalle", params: { viajeId: v.id } })} style={filaTocable}>
-                  <View style={{ flex: 1, gap: 2 }}>
-                    <Texto tamano={tokens.size.small} color={tokens.color.text} numberOfLines={1}>
-                      {v.origen} → {v.destino}
-                    </Texto>
-                    <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`} numberOfLines={1}>
-                      {fechaLegible(v.fecha)}
-                      {v.numero_guia ? ` · Guía ${v.numero_guia}` : ""}
-                      {v.chofer ? ` · ${v.chofer.nombre}` : ""}
-                    </Texto>
-                  </View>
-                  <View style={{ alignItems: "flex-end", gap: 2 }}>
-                    <StatusBadge estado={v.estado} />
-                    {esSupervision && v.total != null ? (
-                      <Texto tamano={tokens.size.caption} color={tokens.color.text} style={{ fontVariant: ["tabular-nums"] }}>
-                        ${Math.round(Number(v.total)).toLocaleString("es-CL")}
-                      </Texto>
-                    ) : null}
-                  </View>
-                </Pressable>
-              ))
+              <>
+                {errorViajes ? (
+                  <Texto tamano={tokens.size.caption} color={tokens.color.accentRamp["700"]} style={{ marginBottom: tokens.space["2"] }}>
+                    {errorViajes}
+                  </Texto>
+                ) : null}
+                {actividad.length === 0 ? (
+                  <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`}>
+                    Todavía no hay actividad para este equipo.
+                  </Texto>
+                ) : (
+                  actividad.slice(0, 40).map((f) => (
+                    <Pressable
+                      key={f.clave}
+                      onPress={() =>
+                        f.tipo === "os"
+                          ? navigation.navigate("Trabajos", { screen: "TrabajoDetalle", params: { trabajoId: f.id } })
+                          : navigation.navigate("Viajes", { screen: "ViajeDetalle", params: { viajeId: f.id } })
+                      }
+                      style={filaTocable}
+                    >
+                      {f.tipo === "os" ? (
+                        <ClipboardCheck size={18} strokeWidth={2.5} color={`${tokens.color.text}99`} />
+                      ) : (
+                        <Route size={18} strokeWidth={2.5} color={`${tokens.color.text}99`} />
+                      )}
+                      <View style={{ flex: 1, gap: 2 }}>
+                        <Texto tamano={tokens.size.small} color={tokens.color.text} numberOfLines={1}>
+                          {f.titulo}
+                        </Texto>
+                        <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`} numberOfLines={1}>
+                          {fechaLegible(f.fecha)}
+                          {f.detalle ? ` · ${f.detalle}` : ""}
+                        </Texto>
+                      </View>
+                      <View style={{ alignItems: "flex-end", gap: 2 }}>
+                        <StatusBadge estado={f.estado} />
+                        {esSupervision && f.tipo === "viaje" && f.total != null ? (
+                          <Texto tamano={tokens.size.caption} color={tokens.color.text} style={{ fontVariant: ["tabular-nums"] }}>
+                            ${Math.round(Number(f.total)).toLocaleString("es-CL")}
+                          </Texto>
+                        ) : null}
+                      </View>
+                    </Pressable>
+                  ))
+                )}
+                {actividad.length > 40 ? (
+                  <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`} style={{ marginTop: tokens.space["2"] }}>
+                    y {actividad.length - 40} más — el historial completo está en la web.
+                  </Texto>
+                ) : null}
+              </>
             )}
           </Card>
         ) : null}
