@@ -1967,9 +1967,9 @@
       "id": 152,
       "name": "menu_mobile_modulos",
       "title": "Mobile: ocultar entradas de módulos que la empresa/rol no tiene (misma fuente que requiereModulo: modulos_visibles de /api/me)",
-      "status": "in_progress",
+      "status": "done",
       "description": "Aprobado 26-sep-2026. Diagnóstico: Órdenes de servicio, Viajes (usa deshabilitados), Mantención, Levantamientos (solo función), pestaña Clientes, botón Registrar venta. Agenda/Hoy congeladas: no se tocan. Solo capa de presentación mobile.",
-      "resolution": ""
+      "resolution": "26-sep: mobile/src/lib/modulos.ts (accesoModulos, con tests) con dos niveles sobre los datos de /api/me: gestión → modulos_visibles (misma regla que requiereModulo); trabajo propio de colaboradores (rol sin esos módulos en prod) → módulo activo en la empresa + función. Aplicado en Más (OS, Viajes, Mantención, Mi vehículo, Levantamientos), pestaña Clientes (registros) y Registrar venta (acción + catálogo/agenda_pro). Agenda/Hoy sin tocar. Tests MasScreen 3 + modulos 6; verificar verde."
     }
   ]
 }

@@ -10,6 +10,7 @@ import { Button, ErrorState, LoadingState, ScreenHeader, Skeleton, StatusBadge, 
 import { OfflineBanner } from "../../components/OfflineBanner";
 import { useRed } from "../../services/sync/NetworkProvider";
 import { useAuth } from "../auth/AuthContext";
+import { accesoDesdeAuth } from "../../lib/modulos";
 import { ubicacionActual } from "../../lib/geo";
 import {
   eliminarFoto,
@@ -537,7 +538,7 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
         {/* Registrar venta — independiente de en qué paso esté el
             cierre, se puede hacer en cualquier momento antes de
             finalizar (igual que en el flujo anterior). */}
-        {!finalizada && trabajo.cliente_id && auth.fase === "listo" && auth.acciones.includes("registrar_venta") ? (
+        {!finalizada && trabajo.cliente_id && accesoDesdeAuth(auth).registrarVenta ? (
           <Button
             variante="secundario"
             bloque

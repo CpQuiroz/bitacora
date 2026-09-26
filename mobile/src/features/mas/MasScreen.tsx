@@ -20,9 +20,9 @@ import {
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { tokens } from "@bitacora/design-tokens";
-import { FUNCIONES_LEVANTAMIENTOS } from "@bitacora/shared";
 import { ScreenHeader, ListRow, ListRowGrupo, AsistenteButton, ESPACIO_ASISTENTE_FLOTANTE, QuickAccessCard, Texto, Tag } from "@bitacora/ui/native";
 import { useAuth } from "../auth/AuthContext";
+import { accesoDesdeAuth } from "../../lib/modulos";
 import { useRed } from "../../services/sync/NetworkProvider";
 import { estaVencido, listarCobros } from "../../services/cobros";
 import type { MasStackParamList } from "../../shell/navigation/types";
@@ -84,19 +84,14 @@ export function MasScreen({ navigation }: NativeStackScreenProps<MasStackParamLi
   const listo = auth.fase === "listo";
   const visibles = listo ? auth.modulosVisibles : [];
   const acciones = listo ? auth.acciones : [];
-  const deshabilitados = listo ? auth.modulosDeshabilitados : [];
-  // Levantamientos no se gatea por rol/módulo para el TÉCNICO (el
-  // técnico es rol=colaborador, igual que cualquier otro terreno) — el
-  // eje real ahí es usuarios.funcion. Sumar un perfil nuevo a futuro
-  // (ej. "asistente") es un cambio acá, en FUNCIONES_LEVANTAMIENTOS
-  // (shared), no de lógica dispersa por pantallas. El Admin es la
-  // excepción: ve la sección igual sin necesitar función técnica —
-  // mismo criterio que la web (backend no filtra por técnico_id si
-  // esAdmin(req), pedido 21-sep-2026, "el admin debiera poder ver
-  // todos los levantamientos de todos los equipos" — antes esta
-  // sección ni le aparecía en el celular).
-  const funcion = listo ? auth.usuario.funcion : null;
-  const veLevantamientos = (funcion != null && FUNCIONES_LEVANTAMIENTOS.includes(funcion)) || (listo && auth.usuario.rol === "admin");
+  // Levantamientos: para el TÉCNICO no se mira el módulo del rol (el
+  // técnico es rol=colaborador) sino usuarios.funcion (FUNCIONES_
+  // LEVANTAMIENTOS, shared) — más el módulo activo en la empresa (tarea
+  // 152). El Admin lo ve sin función técnica (pedido 21-sep-2026).
+  // Tarea 152: qué entradas se ven según módulos de la empresa y del rol
+  // (misma fuente que el backend) — ver lib/modulos.ts.
+  const acceso = accesoDesdeAuth(auth);
+  const veLevantamientos = acceso.levantamientos;
   // Asistente IA: exclusivo de Admin (Fase 2.2, 23-sep-2026) — el rol
   // se chequea ADEMÁS del módulo, mismo criterio y mismo motivo que
   // DashboardShell.tsx (web): el backend (requiereRol("admin")) es la
@@ -124,15 +119,20 @@ export function MasScreen({ navigation }: NativeStackScreenProps<MasStackParamLi
   const iconoTint = { color: tokens.color.accentRamp["700"] };
 
   // --- Accesos rápidos (grilla) ---
-  const accesos: AccesoItem[] = [{ titulo: "Órdenes de servicio", Icono: HardHat, ir: () => navigation.navigate("Trabajos") }];
-  if (!deshabilitados.includes("viajes")) {
+  const accesos: AccesoItem[] = [];
+  if (acceso.ordenesServicio) {
+    accesos.push({ titulo: "Órdenes de servicio", Icono: HardHat, ir: () => navigation.navigate("Trabajos") });
+  }
+  if (acceso.viajes) {
     accesos.push({ titulo: "Viajes", Icono: Route, ir: () => navigation.navigate("Viajes") });
   }
-  accesos.push({ titulo: "Mantención", Icono: Wrench, ir: () => navigation.navigate("MantencionVehiculo") });
+  if (acceso.mantencion) {
+    accesos.push({ titulo: "Mantención", Icono: Wrench, ir: () => navigation.navigate("MantencionVehiculo") });
+  }
   // Tarea 146: Equipos (con Flota/Equipos, la lista; el chofer, su vehículo).
   if (visibles.includes("flota") || visibles.includes("equipos")) {
     accesos.push({ titulo: "Equipos", Icono: Truck, ir: () => navigation.navigate("Equipos") });
-  } else if (listo && auth.usuario.funcion === "chofer") {
+  } else if (acceso.miVehiculo) {
     accesos.push({ titulo: "Mi vehículo", Icono: Truck, ir: () => navigation.navigate("Equipos") });
   }
   // Dinero, separado en 3 módulos activables independientemente desde

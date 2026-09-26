@@ -6,6 +6,7 @@ import { CalendarClock, Ellipsis, LayoutDashboard, User, type LucideIcon } from 
 import { tokens } from "@bitacora/design-tokens";
 import { useMarca } from "@bitacora/ui/native";
 import { useAuth } from "../../features/auth/AuthContext";
+import { accesoDesdeAuth } from "../../lib/modulos";
 import { useRed } from "../../services/sync/NetworkProvider";
 import { preferencias } from "../../lib/preferencias";
 import { cargarHoy, hoyISO } from "../../services/hoy";
@@ -65,6 +66,9 @@ export function AppTabs() {
   }, [esGestion]);
 
   if (auth.fase !== "listo") return null;
+  // Tarea 152: la pestaña Clientes solo si el usuario ve el módulo
+  // (registros). Pizarra, Agenda y Más no cambian (Agenda/Hoy congeladas).
+  const acceso = accesoDesdeAuth(auth);
 
   return (
     <Tab.Navigator
@@ -107,7 +111,7 @@ export function AppTabs() {
         tabBarPressColor: "transparent",
       }}
     >
-      {TABS.map((tab) => (
+      {TABS.filter((tab) => tab.key !== "Clientes" || acceso.clientes).map((tab) => (
         <Tab.Screen
           key={tab.key}
           name={tab.key}

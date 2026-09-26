@@ -9,6 +9,7 @@ import { tokens } from "@bitacora/design-tokens";
 import { Button, Card, ErrorState, ListRow, ListRowGrupo, LoadingState, ScreenHeader, Skeleton, StatusBadge, Texto, useMarca } from "@bitacora/ui/native";
 import { useRed } from "../../services/sync/NetworkProvider";
 import { useAuth } from "../auth/AuthContext";
+import { accesoDesdeAuth } from "../../lib/modulos";
 import { editarCliente, eliminarCliente, obtenerClienteDetalle, saldoDeFacturas, usoDelCliente, type ClienteDetalle } from "../../services/clientes";
 import { listarPaquetesCliente } from "../../services/paquetes";
 import { ventasDeCliente } from "../../services/ventas";
@@ -162,7 +163,8 @@ export function ClienteDetalleScreen({ route, navigation }: NativeStackScreenPro
   const ultimoTrabajo = cliente.trabajos[0];
   // Registrar venta: solo con la acción "registrar_venta" (hoy solo
   // Admin) — el backend es la protección real.
-  const puedeVender = auth.fase === "listo" && auth.acciones.includes("registrar_venta");
+  // Tarea 152: la acción más un módulo con qué vender (Catálogo o Agenda Pro).
+  const puedeVender = accesoDesdeAuth(auth).registrarVenta;
 
   function registrarVenta() {
     if (!ultimoTrabajo) return Alert.alert("Sin OS", "Una venta nace de una cita o de una OS. Este cliente todavía no tiene ninguna.");
