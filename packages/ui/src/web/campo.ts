@@ -2,7 +2,7 @@
 // mensaje de error/ayuda, mismo look en los 4.
 export const LABEL = "text-ds-caption font-ds-body font-medium text-ds-text/70";
 export const MENSAJE_ERROR = "text-ds-caption font-ds-body text-ds-accent-700";
-export const MENSAJE_AYUDA = "text-ds-caption font-ds-body text-ds-text/60";
+export const MENSAJE_AYUDA = "text-ds-caption font-ds-body text-ds-text-secondary";
 // OJO: nada de `outline-none` acá — esa utilidad fija --tw-outline-style
 // en "none" de forma incondicional, y como focus-visible:outline-2 SOLO
 // pone el ancho (lee la misma variable), el foco terminaba sin outline
@@ -11,7 +11,7 @@ export const MENSAJE_AYUDA = "text-ds-caption font-ds-body text-ds-text/60";
 export const FOCO =
   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ds-brand)] [caret-color:var(--ds-brand)]";
 export const CAMPO_BASE =
-  `w-full bg-ds-surface text-ds-body font-ds-body text-ds-text placeholder:text-ds-text/40 ` +
+  `w-full bg-ds-surface text-ds-body font-ds-body text-ds-text placeholder:text-ds-text-secondary ` +
   `transition-colors disabled:opacity-50 disabled:pointer-events-none ${FOCO}`;
 
 export function bordeDe(error?: string | null): string {

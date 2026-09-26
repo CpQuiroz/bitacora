@@ -225,7 +225,7 @@ export default function ProveedoresPage() {
                 <div className="flex flex-col gap-ds-1">
                   <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Teléfono</label>
                   <div className="flex items-center gap-ds-2">
-                    <span className="shrink-0 rounded-ds-pill border border-ds-divider bg-ds-surface px-ds-3 py-2.5 font-ds-body text-ds-small text-ds-text/60">+56 9</span>
+                    <span className="shrink-0 rounded-ds-pill border border-ds-divider bg-ds-surface px-ds-3 py-2.5 font-ds-body text-ds-small text-ds-text-secondary">+56 9</span>
                     <Input tipo="tel" placeholder="1234 5678" maxLongitud={8} valor={telefono} onCambio={(v) => setTelefono(v.replace(/\D/g, "").slice(0, 8))} />
                   </div>
                 </div>
@@ -299,7 +299,7 @@ export default function ProveedoresPage() {
                     {p.categoria.nombre}
                   </span>
                 ) : (
-                  <span className="text-ds-text/60">—</span>
+                  <span className="text-ds-text-secondary">—</span>
                 ),
             },
             { encabezado: "Estado", celda: (p) => <StatusBadge estado={p.activo ? "activo" : "inactivo"} /> },

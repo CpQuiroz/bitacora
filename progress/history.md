@@ -297,3 +297,10 @@ Formato:
   - Backlog: 147 (push de asignaciones, textos aprobados en maqueta), 149 (fila clicable en el resto de tablas).
 - **Verificación:** verificar.sh verde; E2E DEV 180/180; review_148.md corregida.
 - **Cierre:** publicado en main. Build mobile con las pestañas pendiente (a pedido).
+
+## 2026-09-26 — Tarea 154: contraste AA (auditoría UX, paquete 1 paso 2)
+- **Agente:** Claude (sin subagentes)
+- **Plan:** token sólido de texto secundario + codemod único + check; texto sobre marca por WCAG; test de contraste en verificar.
+- **Cambios:** packages/design-tokens (tokens.json textSecondary, contraste.ts + test, build.ts), packages/shared/contraste.ts, backend miEmpresa.ts, web DashboardShell/PortalShell/configuracion/empresa, packages/ui marca.tsx, mobile ThemeProvider/color.ts, 576 reemplazos por codemod, scripts/check-contraste.mjs, verificar.sh, web/vercel.json (build:packages).
+- **Verificación:** ./verificar.sh verde (tokens 21, shared 51, backend 36, mobile 42, web 22); next build local OK.
+- **Cierre:** commit local, sin push ni build. Pendiente: build mobile a pedido; Agenda/Hoy mobile migrarán al descongelarse.

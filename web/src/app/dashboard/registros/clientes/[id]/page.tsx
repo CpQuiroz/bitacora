@@ -268,7 +268,7 @@ export default function ClienteDetallePage() {
           <div className="mb-ds-4 flex flex-wrap items-center justify-between gap-ds-3">
             <div>
               {formatearFolio("CLI", cliente.folio) ? (
-                <p className="font-ds-body text-ds-caption font-semibold uppercase tracking-[0.08em] text-ds-text/60">
+                <p className="font-ds-body text-ds-caption font-semibold uppercase tracking-[0.08em] text-ds-text-secondary">
                   {formatearFolio("CLI", cliente.folio)}
                 </p>
               ) : null}
@@ -392,22 +392,22 @@ export default function ClienteDetallePage() {
               <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Contacto</p>
               <div className="grid gap-ds-4 sm:grid-cols-3">
                 <div>
-                  <p className="font-ds-body text-ds-caption text-ds-text/60">RUT</p>
+                  <p className="font-ds-body text-ds-caption text-ds-text-secondary">RUT</p>
                   <p className="font-ds-body text-ds-small text-ds-text">{cliente.rut ?? "—"}</p>
                 </div>
                 <div>
-                  <p className="font-ds-body text-ds-caption text-ds-text/60">Teléfono</p>
+                  <p className="font-ds-body text-ds-caption text-ds-text-secondary">Teléfono</p>
                   <div className="flex items-center gap-ds-2">
                     <p className="font-ds-body text-ds-small text-ds-text">{cliente.telefono ?? "—"}</p>
                     {cliente.telefono && (
-                      <a href={linkWhatsapp(cliente.telefono)} target="_blank" rel="noopener noreferrer" title="Contactar por WhatsApp" className="text-ds-text/60 hover:text-ds-brand">
+                      <a href={linkWhatsapp(cliente.telefono)} target="_blank" rel="noopener noreferrer" title="Contactar por WhatsApp" className="text-ds-text-secondary hover:text-ds-brand">
                         <MessageCircle size={16} strokeWidth={2.75} />
                       </a>
                     )}
                   </div>
                 </div>
                 <div>
-                  <p className="font-ds-body text-ds-caption text-ds-text/60">Cumpleaños</p>
+                  <p className="font-ds-body text-ds-caption text-ds-text-secondary">Cumpleaños</p>
                   <p className="font-ds-body text-ds-small text-ds-text">
                     {cliente.fecha_nacimiento
                       ? new Date(`${cliente.fecha_nacimiento}T00:00:00`).toLocaleDateString("es-CL", { day: "2-digit", month: "long" })
@@ -415,7 +415,7 @@ export default function ClienteDetallePage() {
                   </p>
                 </div>
                 <div>
-                  <p className="font-ds-body text-ds-caption text-ds-text/60">Correo</p>
+                  <p className="font-ds-body text-ds-caption text-ds-text-secondary">Correo</p>
                   <p className="font-ds-body text-ds-small text-ds-text">{cliente.correo ?? "—"}</p>
                 </div>
                 {usuario && ROLES_SUPERVISION.includes(usuario.rol) ? (
@@ -436,18 +436,18 @@ export default function ClienteDetallePage() {
                 ) : null}
                 {cliente.contacto_nombre ? (
                   <div>
-                    <p className="font-ds-body text-ds-caption text-ds-text/60">Contacto</p>
+                    <p className="font-ds-body text-ds-caption text-ds-text-secondary">Contacto</p>
                     <p className="font-ds-body text-ds-small text-ds-text">{cliente.contacto_nombre}</p>
                   </div>
                 ) : null}
                 <div>
-                  <p className="font-ds-body text-ds-caption text-ds-text/60">Ubicación</p>
+                  <p className="font-ds-body text-ds-caption text-ds-text-secondary">Ubicación</p>
                   {cliente.lat != null ? (
                     <span className="inline-flex items-center gap-ds-1 font-ds-body text-ds-small text-ds-accent2-800">
                       <MapPin size={14} strokeWidth={2.75} /> Ubicado
                     </span>
                   ) : (
-                    <span className="font-ds-body text-ds-small text-ds-text/60">Sin ubicar</span>
+                    <span className="font-ds-body text-ds-small text-ds-text-secondary">Sin ubicar</span>
                   )}
                 </div>
               </div>
@@ -461,7 +461,7 @@ export default function ClienteDetallePage() {
                 type="button"
                 onClick={() => setTab(t.valor)}
                 className={`px-ds-4 py-2.5 font-ds-body text-ds-small font-medium transition-colors ${
-                  tab === t.valor ? "border-b-2 border-ds-brand text-ds-brand" : "text-ds-text/60 hover:text-ds-text"
+                  tab === t.valor ? "border-b-2 border-ds-brand text-ds-brand" : "text-ds-text-secondary hover:text-ds-text"
                 }`}
               >
                 {t.etiqueta}
@@ -486,10 +486,10 @@ export default function ClienteDetallePage() {
                         className="flex items-center justify-between gap-ds-2 py-2.5 text-left font-ds-body text-ds-small hover:text-ds-brand"
                       >
                         <div className="flex min-w-0 items-center gap-ds-2">
-                          <Icono size={14} strokeWidth={2.75} className="shrink-0 text-ds-text/60" />
+                          <Icono size={14} strokeWidth={2.75} className="shrink-0 text-ds-text-secondary" />
                           <div className="min-w-0">
                             <p className="truncate font-medium text-ds-text">{ev.titulo}</p>
-                            <p className="font-ds-body text-ds-caption text-ds-text/60">{ev.fecha}</p>
+                            <p className="font-ds-body text-ds-caption text-ds-text-secondary">{ev.fecha}</p>
                           </div>
                         </div>
                         <StatusBadge estado={ev.badgeValue} />
@@ -524,7 +524,7 @@ export default function ClienteDetallePage() {
                     >
                       <div>
                         <p className="font-medium text-ds-text">{e.nombre}</p>
-                        <p className="font-ds-body text-ds-caption text-ds-text/60">{[e.categoria, e.marca, e.modelo].filter(Boolean).join(" · ") || "—"}</p>
+                        <p className="font-ds-body text-ds-caption text-ds-text-secondary">{[e.categoria, e.marca, e.modelo].filter(Boolean).join(" · ") || "—"}</p>
                       </div>
                       <StatusBadge estado={e.activo ? "activo" : "inactivo"} />
                     </button>
@@ -541,13 +541,13 @@ export default function ClienteDetallePage() {
                 {cliente.facturas.length > 0 && (
                   <div className="mb-ds-4 grid grid-cols-2 gap-ds-3">
                     <div className="rounded-ds-md border border-ds-divider p-ds-3">
-                      <p className="font-ds-body text-ds-caption text-ds-text/60">Por cobrar</p>
+                      <p className="font-ds-body text-ds-caption text-ds-text-secondary">Por cobrar</p>
                       <p className="mt-ds-1 font-ds-body text-ds-h5 font-semibold tabular-nums text-ds-text">
                         {formatMoneda(totalPorCobrar, usuario.moneda)}
                       </p>
                     </div>
                     <div className="rounded-ds-md border border-ds-divider p-ds-3">
-                      <p className="font-ds-body text-ds-caption text-ds-text/60">Vencido</p>
+                      <p className="font-ds-body text-ds-caption text-ds-text-secondary">Vencido</p>
                       <p className={`mt-ds-1 font-ds-body text-ds-h5 font-semibold tabular-nums ${totalVencido > 0 ? "text-ds-accent-700" : "text-ds-text"}`}>
                         {formatMoneda(totalVencido, usuario.moneda)}
                       </p>
@@ -562,7 +562,7 @@ export default function ClienteDetallePage() {
                       <div key={f.id} className="flex items-center justify-between py-2.5 font-ds-body text-ds-small">
                         <div>
                           <p className="font-medium text-ds-text">Factura</p>
-                          <p className="font-ds-body text-ds-caption text-ds-text/60">
+                          <p className="font-ds-body text-ds-caption text-ds-text-secondary">
                             Emitida {f.fecha_emision} · Vence {f.fecha_vencimiento}
                           </p>
                         </div>
@@ -609,7 +609,7 @@ export default function ClienteDetallePage() {
 
                   {renovandoPack && (
                     <div className="mb-ds-4 rounded-ds-md border border-ds-divider p-ds-3">
-                      <p className="mb-ds-3 font-ds-body text-ds-caption text-ds-text/60">
+                      <p className="mb-ds-3 font-ds-body text-ds-caption text-ds-text-secondary">
                         Renovando <span className="font-medium text-ds-text">{renovandoPack.nombre}</span> — mismo servicio y
                         cantidad. Ajusta el precio si corresponde.
                       </p>
@@ -644,7 +644,7 @@ export default function ClienteDetallePage() {
                         <div key={p.id} className="flex items-center justify-between gap-ds-3 py-2.5 font-ds-body text-ds-small">
                           <div>
                             <p className="font-medium text-ds-text">{p.nombre}</p>
-                            <p className="font-ds-body text-ds-caption text-ds-text/60">
+                            <p className="font-ds-body text-ds-caption text-ds-text-secondary">
                               {p.saldo} / {p.cantidad_total} sesiones ·{" "}
                               {p.precio_pagado != null
                                 ? `cobrado ${formatMoneda(p.precio_pagado, usuario.moneda)}`

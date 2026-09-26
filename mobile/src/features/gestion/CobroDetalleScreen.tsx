@@ -160,7 +160,7 @@ export function CobroDetalleScreen({ route, navigation }: NativeStackScreenProps
                           backgroundColor: activo ? marca.suave : tokens.color.surface,
                         }}
                       >
-                        <Texto tamano={tokens.size.caption} peso="semibold" color={activo ? marca.fuerte : `${tokens.color.text}99`}>
+                        <Texto tamano={tokens.size.caption} peso="semibold" color={activo ? marca.fuerte : tokens.color.textSecondary}>
                           {m.label}
                         </Texto>
                       </Pressable>
@@ -197,7 +197,7 @@ export function CobroDetalleScreen({ route, navigation }: NativeStackScreenProps
 function Fila({ etiqueta, valor }: { etiqueta: string; valor: string }) {
   return (
     <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: tokens.space["3"] }}>
-      <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
+      <Texto tamano={tokens.size.small} color={tokens.color.textSecondary}>
         {etiqueta}
       </Texto>
       <Texto tamano={tokens.size.small} peso="medium" color={tokens.color.text} style={{ flexShrink: 1, textAlign: "right", textTransform: "capitalize" }}>

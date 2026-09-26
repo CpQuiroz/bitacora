@@ -111,7 +111,7 @@ export function RegistrosMantencion({ equipo, puedeGestionar }: { equipo: Equipo
         </div>
         <DatePicker etiqueta="Desde" valor={aFecha(desde)} onCambio={(f) => setDesde(aTexto(f))} />
         <DatePicker etiqueta="Hasta" valor={aFecha(hasta)} onCambio={(f) => setHasta(aTexto(f))} />
-        <span className="ml-auto self-center font-ds-body text-[11px] uppercase tracking-[0.1em] text-ds-text/60">
+        <span className="ml-auto self-center font-ds-body text-[11px] uppercase tracking-[0.1em] text-ds-text-secondary">
           {registros ? `${registros.length} registro${registros.length === 1 ? "" : "s"}` : "…"}
         </span>
         <Button iconoIzq={<Plus size={16} strokeWidth={2.75} />} onPress={() => setModalAbierto(true)}>
@@ -140,7 +140,7 @@ export function RegistrosMantencion({ equipo, puedeGestionar }: { equipo: Equipo
           <div className="overflow-x-auto rounded-ds-md border border-ds-divider">
             <table className="w-full text-left text-ds-body">
               <thead>
-                <tr className="border-b border-ds-divider text-[11px] font-medium uppercase tracking-[0.08em] text-ds-text/60">
+                <tr className="border-b border-ds-divider text-[11px] font-medium uppercase tracking-[0.08em] text-ds-text-secondary">
                   <th className="px-ds-4 py-ds-3">Fecha</th>
                   <th className="px-ds-4 py-ds-3">Tipo</th>
                   <th className="px-ds-4 py-ds-3">Origen</th>
@@ -161,7 +161,7 @@ export function RegistrosMantencion({ equipo, puedeGestionar }: { equipo: Equipo
                         <Cifra>{fechaCL(r.fecha)}</Cifra>
                       </td>
                       <td className="px-ds-4 py-ds-3">
-                        <span className={`inline-block rounded-ds-sm px-2 py-0.5 text-[11px] font-semibold ${r.tipo === "programa" ? "bg-ds-brand/[0.08] text-ds-brand" : "bg-ds-text/[0.05] text-ds-text/60"}`}>
+                        <span className={`inline-block rounded-ds-sm px-2 py-0.5 text-[11px] font-semibold ${r.tipo === "programa" ? "bg-ds-brand/[0.08] text-ds-brand" : "bg-ds-text/[0.05] text-ds-text-secondary"}`}>
                           {r.tipo === "programa" ? "Mantención Flota" : "Checklist diario"}
                         </span>
                       </td>
@@ -184,7 +184,7 @@ export function RegistrosMantencion({ equipo, puedeGestionar }: { equipo: Equipo
                             type="button"
                             onClick={() => setDetalleId(r.id)}
                             aria-label="Ver detalle y fotos"
-                            className="flex h-7 w-7 items-center justify-center rounded-ds-sm border border-ds-divider text-ds-text/60 transition-colors hover:border-ds-brand hover:text-ds-brand"
+                            className="flex h-7 w-7 items-center justify-center rounded-ds-sm border border-ds-divider text-ds-text-secondary transition-colors hover:border-ds-brand hover:text-ds-brand"
                           >
                             <Eye size={16} strokeWidth={2.75} />
                           </button>
@@ -192,7 +192,7 @@ export function RegistrosMantencion({ equipo, puedeGestionar }: { equipo: Equipo
                             type="button"
                             onClick={() => abrirPdfRegistroMantencion(equipo.id, r.id)}
                             aria-label="Ver PDF del registro"
-                            className="flex h-7 w-7 items-center justify-center rounded-ds-sm border border-ds-divider text-ds-text/60 transition-colors hover:border-ds-brand hover:text-ds-brand"
+                            className="flex h-7 w-7 items-center justify-center rounded-ds-sm border border-ds-divider text-ds-text-secondary transition-colors hover:border-ds-brand hover:text-ds-brand"
                           >
                             <Receipt size={16} strokeWidth={2.75} />
                           </button>
@@ -329,14 +329,14 @@ function DetalleRegistro({ equipoId, registroId, onCambio }: { equipoId: string;
         <div className="flex flex-col gap-ds-3">
           {ordenSecciones.map((seccion) => (
             <div key={seccion}>
-              <p className="mb-ds-1 font-ds-body text-ds-caption font-semibold uppercase tracking-wide text-ds-text/60">{seccion}</p>
+              <p className="mb-ds-1 font-ds-body text-ds-caption font-semibold uppercase tracking-wide text-ds-text-secondary">{seccion}</p>
               <div className="flex flex-col gap-1">
                 {porSeccion.get(seccion)!.map((it, i) => (
                   <div key={i} className="flex items-center justify-between gap-ds-3 font-ds-body text-ds-small">
                     <span className="text-ds-text">{it.item}</span>
                     <span
                       className={`rounded-ds-sm px-2 py-0.5 text-[11px] font-semibold ${
-                        it.respuesta === "no" ? "bg-ds-accent-100 text-ds-accent-800" : it.respuesta === "si" ? "bg-ds-accent2-100 text-ds-accent2-800" : "bg-ds-text/[0.06] text-ds-text/60"
+                        it.respuesta === "no" ? "bg-ds-accent-100 text-ds-accent-800" : it.respuesta === "si" ? "bg-ds-accent2-100 text-ds-accent2-800" : "bg-ds-text/[0.06] text-ds-text-secondary"
                       }`}
                     >
                       {respuestaTexto[it.respuesta]}
@@ -566,7 +566,7 @@ function ModalNuevoRegistro({ equipo, onListo }: { equipo: Equipo; onListo: () =
           ["Tipo de vehículo", equipo.tipo_vehiculo ?? equipo.categoria ?? "—"],
         ].map(([k, v]) => (
           <div key={k}>
-            <p className="font-ds-body text-[10px] uppercase tracking-[0.12em] text-ds-text/60">{k}</p>
+            <p className="font-ds-body text-[10px] uppercase tracking-[0.12em] text-ds-text-secondary">{k}</p>
             <p className="mt-0.5 font-ds-body text-ds-small font-semibold text-ds-text">{v}</p>
           </div>
         ))}
@@ -593,7 +593,7 @@ function ModalNuevoRegistro({ equipo, onListo }: { equipo: Equipo; onListo: () =
             </button>
           ))}
         </div>
-        <p className="mt-ds-1 font-ds-body text-[13px] text-ds-text/60">
+        <p className="mt-ds-1 font-ds-body text-[13px] text-ds-text-secondary">
           {tipo === "diario"
             ? "Lo hace el chofer antes de salir a ruta. Queda como interno."
             : "Cada 250 h o 6 meses, en un taller o lubricentro autorizado."}
@@ -696,12 +696,12 @@ function ModalNuevoRegistro({ equipo, onListo }: { equipo: Equipo; onListo: () =
                   <span className="flex-1">{sec.nombre}</span>
                   <span
                     className={`rounded-ds-pill px-2 py-0.5 text-[11px] font-semibold tabular-nums ${
-                      completa ? "bg-ds-accent2-100 text-ds-accent2-800" : "bg-ds-surface text-ds-text/60"
+                      completa ? "bg-ds-accent2-100 text-ds-accent2-800" : "bg-ds-surface text-ds-text-secondary"
                     }`}
                   >
                     {enSeccion}/{sec.preguntas.length}
                   </span>
-                  <ChevronDown size={16} strokeWidth={2.75} className={`text-ds-text/60 transition-transform ${abierta ? "rotate-180" : ""}`} />
+                  <ChevronDown size={16} strokeWidth={2.75} className={`text-ds-text-secondary transition-transform ${abierta ? "rotate-180" : ""}`} />
                 </button>
                 {abierta && (
                   <div className="flex flex-col divide-y divide-ds-divider px-ds-3">
@@ -746,8 +746,8 @@ function ModalNuevoRegistro({ equipo, onListo }: { equipo: Equipo; onListo: () =
                                         ? "bg-ds-accent2-100 text-ds-accent2-800"
                                         : op.valor === "no"
                                           ? "bg-ds-accent-100 text-ds-accent-800"
-                                          : "bg-ds-surface text-ds-text/60"
-                                      : "text-ds-text/60 hover:text-ds-text"
+                                          : "bg-ds-surface text-ds-text-secondary"
+                                      : "text-ds-text-secondary hover:text-ds-text"
                                   }`}
                                 >
                                   {op.texto}
@@ -770,7 +770,7 @@ function ModalNuevoRegistro({ equipo, onListo }: { equipo: Equipo; onListo: () =
       <div>
         <p className="mb-ds-1 font-ds-body text-ds-caption font-medium text-ds-text/70">Fotos de respaldo</p>
         <div className="rounded-ds-md border border-dashed border-ds-divider bg-ds-text/[0.03] p-ds-4 text-center">
-          <p className="font-ds-body text-[13px] text-ds-text/60">Arrastra fotos aquí o</p>
+          <p className="font-ds-body text-[13px] text-ds-text-secondary">Arrastra fotos aquí o</p>
           <div className="mt-ds-2">
             <Button variante="secundario" tamano="sm" iconoIzq={<Camera size={16} strokeWidth={2.75} />} onPress={() => fileGeneral.current?.click()}>
               Seleccionar
@@ -813,7 +813,7 @@ function ModalNuevoRegistro({ equipo, onListo }: { equipo: Equipo; onListo: () =
 
       {/* 8. Pie */}
       <div className="flex flex-wrap items-center justify-between gap-ds-3 border-t border-ds-divider pt-ds-4">
-        <p className="font-ds-body text-[13px] text-ds-text/60">{ayudaBloqueo}</p>
+        <p className="font-ds-body text-[13px] text-ds-text-secondary">{ayudaBloqueo}</p>
         <div className="flex gap-ds-2">
           <Button variante="secundario" onPress={onListo}>
             Cancelar

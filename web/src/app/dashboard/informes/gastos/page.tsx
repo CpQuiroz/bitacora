@@ -31,7 +31,7 @@ type Datos = {
 function KpiCard({ etiqueta, valor }: { etiqueta: string; valor: string }) {
   return (
     <Card>
-      <p className="font-ds-body text-ds-caption font-medium text-ds-text/60">{etiqueta}</p>
+      <p className="font-ds-body text-ds-caption font-medium text-ds-text-secondary">{etiqueta}</p>
       <p className="mt-ds-1 font-ds-body text-ds-h5 font-semibold tabular-nums text-ds-text">{valor}</p>
     </Card>
   );

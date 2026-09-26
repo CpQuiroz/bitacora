@@ -33,7 +33,7 @@ export function GraficoRankingHorizontal({
         <div key={d.nombre}>
           <div className="mb-ds-1 flex items-center justify-between font-ds-body text-ds-small">
             <span className="font-medium text-ds-text">{d.nombre}</span>
-            <span className="text-ds-text/60">{fmt(d.valor)}</span>
+            <span className="text-ds-text-secondary">{fmt(d.valor)}</span>
           </div>
           <div className="h-2 w-full overflow-hidden rounded-ds-pill bg-ds-brand/[0.08]">
             <div className="h-full rounded-ds-pill bg-ds-brand" style={{ width: `${(d.valor / maximo) * 100}%` }} />

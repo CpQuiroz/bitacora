@@ -228,10 +228,10 @@ export function ChecklistMantencionScreen({ route, navigation }: NativeStackScre
         }}
       >
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-          <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} numberOfLines={1} style={{ flex: 1 }}>
+          <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary} numberOfLines={1} style={{ flex: 1 }}>
             {patente ?? "Vehículo asignado"}
           </Texto>
-          <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} style={{ fontVariant: ["tabular-nums"] }}>
+          <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary} style={{ fontVariant: ["tabular-nums"] }}>
             {respondidos}/{totalItems}
           </Texto>
         </View>
@@ -257,7 +257,7 @@ export function ChecklistMantencionScreen({ route, navigation }: NativeStackScre
                   paddingHorizontal: tokens.space["1"],
                 }}
               >
-                <Texto tamano={tokens.size.caption} color={sel ? marca.base : `${tokens.color.text}99`} peso={sel ? "semibold" : "medium"} numberOfLines={1}>
+                <Texto tamano={tokens.size.caption} color={sel ? marca.base : tokens.color.textSecondary} peso={sel ? "semibold" : "medium"} numberOfLines={1}>
                   {c.label}
                 </Texto>
               </Pressable>
@@ -305,14 +305,14 @@ export function ChecklistMantencionScreen({ route, navigation }: NativeStackScre
                   {sec.nombre}
                 </Texto>
                 <View style={{ paddingHorizontal: tokens.space["2"], paddingVertical: 2, borderRadius: 999, backgroundColor: completa ? tokens.color.accent2Ramp["200"] : tokens.color.neutral["200"] }}>
-                  <Texto tamano={tokens.size.caption} peso="semibold" color={completa ? tokens.color.accent2Ramp["800"] : `${tokens.color.text}99`} style={{ fontVariant: ["tabular-nums"] }}>
+                  <Texto tamano={tokens.size.caption} peso="semibold" color={completa ? tokens.color.accent2Ramp["800"] : tokens.color.textSecondary} style={{ fontVariant: ["tabular-nums"] }}>
                     {enSeccion}/{sec.preguntas.length}
                   </Texto>
                 </View>
                 {open ? (
-                  <ChevronUp size={18} strokeWidth={2.5} color={`${tokens.color.text}66`} />
+                  <ChevronUp size={18} strokeWidth={2.5} color={tokens.color.textSecondary} />
                 ) : (
-                  <ChevronDown size={18} strokeWidth={2.5} color={`${tokens.color.text}66`} />
+                  <ChevronDown size={18} strokeWidth={2.5} color={tokens.color.textSecondary} />
                 )}
               </Pressable>
 
@@ -358,7 +358,7 @@ export function ChecklistMantencionScreen({ route, navigation }: NativeStackScre
                                   ? tokens.color.accentRamp["700"]
                                   : marca.base
                               : tokens.color.surface;
-                            const fg = sel ? (op.valor === "na" ? marca.foreground : tokens.color.neutral["100"]) : `${tokens.color.text}99`;
+                            const fg = sel ? (op.valor === "na" ? marca.foreground : tokens.color.neutral["100"]) : tokens.color.textSecondary;
                             return (
                               <Pressable
                                 key={op.valor}
@@ -394,7 +394,7 @@ export function ChecklistMantencionScreen({ route, navigation }: NativeStackScre
 
         {tipo === "programa" && (
           <View style={{ gap: tokens.space["1"] }}>
-            <Texto tamano={tokens.size.micro} color={`${tokens.color.text}99`} peso="semibold" style={{ textTransform: "uppercase" }}>
+            <Texto tamano={tokens.size.micro} color={tokens.color.textSecondary} peso="semibold" style={{ textTransform: "uppercase" }}>
               Firma del responsable
             </Texto>
             <LienzoFirma ref={lienzo} />
@@ -447,7 +447,7 @@ export function ChecklistMantencionScreen({ route, navigation }: NativeStackScre
       </ScrollView>
 
       <View style={{ paddingHorizontal: tokens.space["4"], paddingTop: tokens.space["2"], paddingBottom: tokens.space["6"], borderTopWidth: 1, borderTopColor: tokens.color.divider, backgroundColor: tokens.color.surface, gap: tokens.space["2"] }}>
-        <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
+        <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
           {ayuda}
         </Texto>
         <Button tamano="lg" bloque onPress={guardar} cargando={guardando} deshabilitado={bloqueado}>

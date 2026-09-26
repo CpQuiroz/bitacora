@@ -333,7 +333,7 @@ export default function PersonaFichaPage() {
             type="button"
             onClick={() => setPestana(p.id)}
             className={`-mb-px border-b-2 px-ds-3 py-2 font-ds-body text-ds-small font-medium transition-colors ${
-              pestanaActiva === p.id ? "border-ds-brand text-ds-brand" : "border-transparent text-ds-text/60 hover:text-ds-text"
+              pestanaActiva === p.id ? "border-ds-brand text-ds-brand" : "border-transparent text-ds-text-secondary hover:text-ds-text"
             }`}
           >
             {p.label}
@@ -350,7 +350,7 @@ export default function PersonaFichaPage() {
               <Input etiqueta="Nombre" valor={nombre} deshabilitado={!puedeEditarIdentidad} onCambio={setNombre} />
               <div className="flex flex-col gap-ds-1">
                 <Input etiqueta="Teléfono" tipo="tel" placeholder="+56 9 1234 5678" valor={telefono} deshabilitado={!puedeEditarIdentidad} onCambio={setTelefono} />
-                <p className="font-ds-body text-ds-caption text-ds-text/60">Con código de país. Necesario para que use el bot de WhatsApp.</p>
+                <p className="font-ds-body text-ds-caption text-ds-text-secondary">Con código de país. Necesario para que use el bot de WhatsApp.</p>
               </div>
               {/* Solo tiene efecto real si Levantamientos está activo
                   (decide quién ve esa sección en el móvil) — sin ese
@@ -387,7 +387,7 @@ export default function PersonaFichaPage() {
                 ]}
               />
             </div>
-            {!puedeEditarIdentidad && <p className="mt-ds-3 font-ds-body text-ds-caption text-ds-text/60">Solo lectura — editar identidad requiere el módulo de Flota.</p>}
+            {!puedeEditarIdentidad && <p className="mt-ds-3 font-ds-body text-ds-caption text-ds-text-secondary">Solo lectura — editar identidad requiere el módulo de Flota.</p>}
             {errorId ? <p className="mt-ds-3 font-ds-body text-ds-small text-ds-accent-700">{errorId}</p> : null}
             {avisoId ? <p className="mt-ds-3 font-ds-body text-ds-small font-medium text-ds-accent2-800">{avisoId}</p> : null}
             {puedeEditarIdentidad && (
@@ -419,7 +419,7 @@ export default function PersonaFichaPage() {
                 {rutas.map((r) => (
                   <div key={r.id} className="border-b border-ds-divider pb-ds-3 last:border-0">
                     <p className="font-ds-body text-ds-small font-medium text-ds-text">{r.nombre ?? "Ruta sin nombre"}</p>
-                    <p className="font-ds-body text-ds-caption text-ds-text/60">
+                    <p className="font-ds-body text-ds-caption text-ds-text-secondary">
                       {r.dias_semana.map((d) => DIAS[d] ?? d).join(", ")} · {r.hora_inicio}–{r.hora_fin}
                     </p>
                   </div>
@@ -464,7 +464,7 @@ export default function PersonaFichaPage() {
             {passwordGenerada && (
               <div className="mt-ds-4 rounded-ds-md border border-ds-brand/40 bg-ds-brand/[0.06] p-ds-4">
                 <p className="font-ds-body text-ds-small font-semibold text-ds-text">Contraseña nueva de {persona.nombre}</p>
-                <p className="mt-ds-1 font-ds-body text-ds-caption text-ds-text/60">
+                <p className="mt-ds-1 font-ds-body text-ds-caption text-ds-text-secondary">
                   Pásasela a mano — no se guarda ni se envía por correo, y no vas a poder volver a verla. La contraseña anterior ya
                   no funciona.
                 </p>
@@ -487,7 +487,7 @@ export default function PersonaFichaPage() {
               <div className="mt-ds-3 overflow-x-auto">
                 <table className="w-full text-left text-ds-body">
                   <thead>
-                    <tr className="border-b border-ds-divider text-[11px] font-medium uppercase tracking-[0.08em] text-ds-text/60">
+                    <tr className="border-b border-ds-divider text-[11px] font-medium uppercase tracking-[0.08em] text-ds-text-secondary">
                       <th className="px-ds-4 py-ds-3">Campo</th>
                       <th className="px-ds-4 py-ds-3">Cambio</th>
                       <th className="px-ds-4 py-ds-3">Realizado por</th>

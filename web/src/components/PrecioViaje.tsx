@@ -128,7 +128,7 @@ export function PrecioViaje({ modo, onModo, origen, destino, paradas, onParadas,
 
       {modo !== "fijo" ? (
         <div className="flex flex-col gap-ds-2">
-          <p className="font-ds-body text-ds-caption text-ds-text/60">
+          <p className="font-ds-body text-ds-caption text-ds-text-secondary">
             Recorrido: {recorrido.length ? recorrido.join(" → ") : "elige origen y destino arriba"}
           </p>
           {paradas.map((p, i) => (

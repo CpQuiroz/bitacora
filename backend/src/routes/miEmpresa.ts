@@ -1,7 +1,7 @@
 import { Router } from "express";
 import multer from "multer";
 import type { Empresa, EstadoOS, TipoCuenta } from "@bitacora/shared";
-import { comunasDeRegion, formatearRut, REGIONES, validarRut } from "@bitacora/shared";
+import { comunasDeRegion, formatearRut, REGIONES, textoSobreMarca, validarRut } from "@bitacora/shared";
 import { supabase } from "../supabase";
 import { subirLogo } from "../storage";
 import type { RequestConEmpresa } from "../empresa";
@@ -16,18 +16,6 @@ const FUENTES = ["sistema", "inter", "roboto", "poppins", "montserrat", "nunito"
 const TIPOS_CUENTA: TipoCuenta[] = ["corriente", "vista", "ahorro"];
 const TEMAS: Empresa["tema"][] = ["faena", "taller", "confianza"];
 const ESTADOS_OS_DISPARADOR: EstadoOS[] = ["pendiente", "enviada", "en_proceso", "completada", "firmada"];
-
-// Brillo percibido (fórmula YIQ) para decidir si el texto sobre el
-// color de marca debe ser blanco o casi negro — evita que un admin
-// elija un color claro y el texto de los botones quede ilegible.
-function contrasteTexto(hex: string): string {
-  const limpio = hex.replace("#", "");
-  const r = parseInt(limpio.slice(0, 2), 16);
-  const g = parseInt(limpio.slice(2, 4), 16);
-  const b = parseInt(limpio.slice(4, 6), 16);
-  const brillo = (r * 299 + g * 587 + b * 114) / 1000;
-  return brillo > 150 ? "#16161f" : "#ffffff";
-}
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -203,7 +191,7 @@ miEmpresaRouter.patch(
         return;
       }
       cambios.color_primario = color_primario;
-      cambios.color_primario_foreground = color_primario ? contrasteTexto(color_primario) : null;
+      cambios.color_primario_foreground = color_primario ? textoSobreMarca(color_primario) : null;
     }
     if (color_secundario !== undefined) {
       if (color_secundario !== null && !/^#[0-9a-fA-F]{6}$/.test(color_secundario)) {

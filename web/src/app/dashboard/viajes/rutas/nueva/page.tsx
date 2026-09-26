@@ -320,7 +320,7 @@ export default function NuevaRutaPage() {
                   equipo={equipo}
                   placeholder="Selecciona un colaborador"
                 />
-                <p className="font-ds-body text-ds-caption text-ds-text/60">
+                <p className="font-ds-body text-ds-caption text-ds-text-secondary">
                   {vehiculoDelResponsable
                     ? `Vehículo asignado: ${vehiculoDelResponsable.patente ?? vehiculoDelResponsable.nombre}`
                     : "Sin vehículo asignado"}
@@ -364,7 +364,7 @@ export default function NuevaRutaPage() {
                 <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Horario de trabajo</label>
                 <div className="flex items-center gap-ds-2">
                   <Input tipo="hora" requerido valor={horaInicio} onCambio={setHoraInicio} />
-                  <span className="text-ds-text/60">a</span>
+                  <span className="text-ds-text-secondary">a</span>
                   <Input tipo="hora" requerido valor={horaFin} onCambio={setHoraFin} />
                 </div>
               </div>
@@ -372,7 +372,7 @@ export default function NuevaRutaPage() {
                 <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Intervalo de almuerzo</label>
                 <div className="flex items-center gap-ds-2">
                   <Input tipo="hora" valor={almuerzoInicio} onCambio={setAlmuerzoInicio} />
-                  <span className="text-ds-text/60">a</span>
+                  <span className="text-ds-text-secondary">a</span>
                   <Input tipo="hora" valor={almuerzoFin} onCambio={setAlmuerzoFin} />
                 </div>
               </div>
@@ -409,7 +409,7 @@ export default function NuevaRutaPage() {
                     {equipo.find((u) => u.id === ruta.responsable_id)?.nombre ?? "—"} · {ruta.fecha_inicio} ·{" "}
                     {ruta.hora_inicio}–{ruta.hora_fin}
                   </p>
-                  <p className="font-ds-body text-ds-caption text-ds-text/60">Desde: {ruta.punto_base_direccion}</p>
+                  <p className="font-ds-body text-ds-caption text-ds-text-secondary">Desde: {ruta.punto_base_direccion}</p>
                 </div>
                 <StatusBadge estado={ruta.estado} tonoForzado={ruta.estado === "finalizada" ? "completado" : "en_progreso"} />
               </div>
@@ -537,8 +537,8 @@ export default function NuevaRutaPage() {
                           <p className="font-ds-body font-medium text-ds-text">{t.cliente}</p>
                           <Tag tono={TONO_PRIORIDAD[t.prioridad]}>{t.prioridad}</Tag>
                         </div>
-                        <p className="font-ds-body text-ds-caption text-ds-text/60">{t.descripcion}</p>
-                        <p className="font-ds-body text-ds-caption text-ds-text/60">
+                        <p className="font-ds-body text-ds-caption text-ds-text-secondary">{t.descripcion}</p>
+                        <p className="font-ds-body text-ds-caption text-ds-text-secondary">
                           {t.duracion_estimada_min} min
                           {t.hora_estimada_llegada && ` · llega ~${t.hora_estimada_llegada}`}
                           {t.etiquetas.length > 0 && ` · ${t.etiquetas.join(", ")}`}
@@ -578,7 +578,7 @@ export default function NuevaRutaPage() {
                 mostrarLinea={ruta.estado === "finalizada"}
               />
               {ruta.estado === "finalizada" && (
-                <p className="mt-ds-3 font-ds-body text-ds-caption text-ds-text/60">
+                <p className="mt-ds-3 font-ds-body text-ds-caption text-ds-text-secondary">
                   Distancia total estimada: {ruta.distancia_total_km ?? "—"} km · Duración total estimada:{" "}
                   {ruta.duracion_total_min ?? "—"} min
                 </p>

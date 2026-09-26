@@ -17,3 +17,4 @@ export * from "./regionMetropolitana";
 export * from "./tarifasViajes";
 export * from "./funcionalidades";
 export * from "./eventos";
+export * from "./contraste";

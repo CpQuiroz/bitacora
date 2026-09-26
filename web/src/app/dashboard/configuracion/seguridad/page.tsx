@@ -225,12 +225,12 @@ export default function SeguridadPage() {
               <p className="font-medium text-ds-text">
                 {sesion.navegador} · {sesion.so}
               </p>
-              <p className="font-ds-body text-ds-caption text-ds-text/60">Ahora</p>
+              <p className="font-ds-body text-ds-caption text-ds-text-secondary">Ahora</p>
             </div>
             <span className="rounded-ds-pill bg-ds-brand/[0.08] px-2.5 py-0.5 text-ds-caption font-medium text-ds-brand">Sesión actual</span>
           </div>
         )}
-        <p className="mt-ds-3 font-ds-body text-ds-caption text-ds-text/60">
+        <p className="mt-ds-3 font-ds-body text-ds-caption text-ds-text-secondary">
           Esta es la única sesión que podemos identificar individualmente — Supabase no expone un listado de
           dispositivos activos, pero puedes cerrar cualquier otra sesión abierta con tu cuenta (otro navegador, otro
           celular) sin necesidad de saber cuál es.
@@ -261,7 +261,7 @@ export default function SeguridadPage() {
 
       <Card>
         <p className="font-ds-body text-ds-small font-semibold text-ds-text">Autenticación de dos factores</p>
-        <p className="mb-ds-4 mt-ds-1 font-ds-body text-ds-caption text-ds-text/60">
+        <p className="mb-ds-4 mt-ds-1 font-ds-body text-ds-caption text-ds-text-secondary">
           Un paso extra al iniciar sesión — con una app de autenticación (Google Authenticator, Authy...) o con un
           código que te mandamos por correo.
         </p>

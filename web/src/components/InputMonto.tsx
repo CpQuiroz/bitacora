@@ -22,7 +22,7 @@ type Props = Omit<InputHTMLAttributes<HTMLInputElement>, "value" | "onChange" | 
 export function InputMonto({ value, onChange, moneda = "CLP", className = "", ...rest }: Props) {
   return (
     <div className="relative">
-      <span className="pointer-events-none absolute left-ds-3 top-1/2 -translate-y-1/2 select-none font-ds-body text-ds-small text-ds-text/50">
+      <span className="pointer-events-none absolute left-ds-3 top-1/2 -translate-y-1/2 select-none font-ds-body text-ds-small text-ds-text-secondary">
         {simboloMoneda(moneda)}
       </span>
       <input

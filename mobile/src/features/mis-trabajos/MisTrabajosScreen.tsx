@@ -110,7 +110,7 @@ export function MisTrabajosScreen({ navigation }: NativeStackScreenProps<MasStac
                     <View style={{ alignItems: "flex-end", gap: 4 }}>
                       <StatusBadge estado={item.estado} etiqueta={ETIQUETA_ESTADO[item.estado] ?? item.estado} tonoForzado={TONO_ESTADO[item.estado]} />
                       {item.tipo === "os" ? (
-                        <Texto tamano={tokens.size.caption} color={`${tokens.color.text}66`}>
+                        <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
                           {abriendoPdfId === item.id ? "Abriendo…" : "Ver PDF"}
                         </Texto>
                       ) : null}

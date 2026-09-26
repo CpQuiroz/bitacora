@@ -267,8 +267,8 @@ function NuevaCotizacionContenido() {
               </div>
             </div>
             <div className="mt-ds-6 flex flex-col items-end gap-ds-1 border-t border-ds-divider pt-ds-4 font-ds-body text-ds-small">
-              <div className="flex w-56 justify-between"><span className="text-ds-text/60">Subtotal</span><span className="text-ds-text">{formatMoneda(subtotal, usuario.moneda)}</span></div>
-              <div className="flex w-56 justify-between"><span className="text-ds-text/60">IVA (19%)</span><span className="text-ds-text">{formatMoneda(iva, usuario.moneda)}</span></div>
+              <div className="flex w-56 justify-between"><span className="text-ds-text-secondary">Subtotal</span><span className="text-ds-text">{formatMoneda(subtotal, usuario.moneda)}</span></div>
+              <div className="flex w-56 justify-between"><span className="text-ds-text-secondary">IVA (19%)</span><span className="text-ds-text">{formatMoneda(iva, usuario.moneda)}</span></div>
               <div className="flex w-56 justify-between text-ds-body font-semibold"><span className="text-ds-text">Total</span><span className="text-ds-text">{formatMoneda(total, usuario.moneda)}</span></div>
             </div>
           </Card>
@@ -322,11 +322,11 @@ function NuevaCotizacionContenido() {
 
           <div className="mt-ds-6 flex flex-col items-end gap-ds-1 border-t border-ds-divider pt-ds-4 font-ds-body text-ds-small">
             <div className="flex w-56 justify-between">
-              <span className="text-ds-text/60">Subtotal</span>
+              <span className="text-ds-text-secondary">Subtotal</span>
               <span className="text-ds-text">{formatMoneda(subtotal, usuario.moneda)}</span>
             </div>
             <div className="flex w-56 justify-between">
-              <span className="text-ds-text/60">IVA (19%)</span>
+              <span className="text-ds-text-secondary">IVA (19%)</span>
               <span className="text-ds-text">{formatMoneda(iva, usuario.moneda)}</span>
             </div>
             <div className="flex w-56 justify-between text-ds-body font-semibold">

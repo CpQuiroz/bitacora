@@ -343,7 +343,7 @@ export default function CatalogoPage() {
                   <label className="flex items-center gap-1.5 font-ds-body text-ds-caption font-medium text-ds-text/70">
                     SKU
                     <span title="Código interno para identificar y buscar este ítem rápido — no tiene que ser el mismo del proveedor, es solo tuyo.">
-                      <HelpCircle size={14} strokeWidth={2.75} className="text-ds-text/40" />
+                      <HelpCircle size={14} strokeWidth={2.75} className="text-ds-text-secondary" />
                     </span>
                   </label>
                   <Input valor={sku} onCambio={setSku} />
@@ -406,7 +406,7 @@ export default function CatalogoPage() {
                     <label className="flex items-center gap-1.5 font-ds-body text-ds-caption font-medium text-ds-text/70">
                       Stock inicial (opcional)
                       <span title="Cantidad con la que arranca este producto. Después, ajustá el stock desde Inventario para mantener el historial de movimientos.">
-                        <HelpCircle size={14} strokeWidth={2.75} className="text-ds-text/40" />
+                        <HelpCircle size={14} strokeWidth={2.75} className="text-ds-text-secondary" />
                       </span>
                     </label>
                     <Input tipo="numero" valor={stockInicial} onCambio={setStockInicial} />
@@ -417,7 +417,7 @@ export default function CatalogoPage() {
                     <label className="flex items-center gap-1.5 font-ds-body text-ds-caption font-medium text-ds-text/70">
                       Stock mínimo (opcional)
                       <span title="Cuando el stock baja de este número, el producto se marca como 'Stock bajo'. Vacío = usa el mínimo por defecto de la empresa (Configuración → Inventario).">
-                        <HelpCircle size={14} strokeWidth={2.75} className="text-ds-text/40" />
+                        <HelpCircle size={14} strokeWidth={2.75} className="text-ds-text-secondary" />
                       </span>
                     </label>
                     <Input tipo="numero" placeholder={`Por defecto: ${stockMinimoDefault}`} valor={stockMinimo} onCambio={setStockMinimo} />
@@ -463,7 +463,7 @@ export default function CatalogoPage() {
                 <label className="flex items-center gap-1.5 font-ds-body text-ds-caption font-medium text-ds-text/70">
                   Aplica a tipo(s) de equipo (opcional)
                   <span title="Al armar una OS/Cotización con un equipo asociado, estos ítems se destacan primero — no oculta el resto del catálogo.">
-                    <HelpCircle size={14} strokeWidth={2.75} className="text-ds-text/40" />
+                    <HelpCircle size={14} strokeWidth={2.75} className="text-ds-text-secondary" />
                   </span>
                 </label>
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
@@ -508,7 +508,7 @@ export default function CatalogoPage() {
               type="button"
               onClick={() => setTab(t.valor)}
               className={`px-ds-4 py-2.5 font-ds-body text-ds-small font-medium transition-colors ${
-                tab === t.valor ? "border-b-2 border-ds-brand text-ds-brand" : "text-ds-text/60 hover:text-ds-text"
+                tab === t.valor ? "border-b-2 border-ds-brand text-ds-brand" : "text-ds-text-secondary hover:text-ds-text"
               }`}
             >
               {t.etiqueta} ({contadores[t.valor]})
@@ -574,7 +574,7 @@ export default function CatalogoPage() {
                 const Icono = ICONO_TIPO[i.tipo];
                 return (
                   <span className="flex items-center gap-1.5">
-                    <Icono size={16} strokeWidth={2.75} className="text-ds-text/60" />
+                    <Icono size={16} strokeWidth={2.75} className="text-ds-text-secondary" />
                     <Tag>{TIPO_ETIQUETA[i.tipo]}</Tag>
                   </span>
                 );
@@ -586,7 +586,7 @@ export default function CatalogoPage() {
                 <>
                   {i.nombre}
                   {i.tipo === "kit" && i.items && i.items.length > 0 && (
-                    <p className="mt-0.5 font-ds-body text-ds-caption font-normal text-ds-text/60">
+                    <p className="mt-0.5 font-ds-body text-ds-caption font-normal text-ds-text-secondary">
                       {i.items.map((k) => `${k.cantidad}× ${k.nombre}`).join(", ")}
                     </p>
                   )}
@@ -600,12 +600,12 @@ export default function CatalogoPage() {
             {
               encabezado: "Stock",
               celda: (i) => {
-                if (i.tipo !== "producto" || i.stock_actual == null) return <span className="text-ds-text/60">—</span>;
+                if (i.tipo !== "producto" || i.stock_actual == null) return <span className="text-ds-text-secondary">—</span>;
                 const estado = estadoStock(i, stockMinimoDefault);
                 return (
                   <span className="flex items-center gap-1.5">
                     <StatusBadge estado={estado} etiqueta={ETIQUETA_ESTADO_STOCK[estado]} tonoForzado={TONO_STOCK[estado]} />
-                    <span className="font-ds-body text-ds-caption text-ds-text/60">{i.stock_actual}</span>
+                    <span className="font-ds-body text-ds-caption text-ds-text-secondary">{i.stock_actual}</span>
                   </span>
                 );
               },

@@ -83,7 +83,7 @@ export function CierreFirma({
             Cliente no disponible
           </Texto>
           {orden.cliente_no_disponible_motivo ? (
-            <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`} style={{ marginTop: 4 }}>
+            <Texto tamano={tokens.size.small} color={tokens.color.textSecondary} style={{ marginTop: 4 }}>
               {orden.cliente_no_disponible_motivo}
             </Texto>
           ) : null}
@@ -101,7 +101,7 @@ export function CierreFirma({
       );
     }
     return (
-      <Texto tamano={tokens.size.body} color={`${tokens.color.text}99`}>
+      <Texto tamano={tokens.size.body} color={tokens.color.textSecondary}>
         Sin firma registrada.
       </Texto>
     );
@@ -109,7 +109,7 @@ export function CierreFirma({
 
   return (
     <View style={{ gap: tokens.space["3"] }}>
-      <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`} peso="semibold" style={{ textTransform: "uppercase" }}>
+      <Texto tamano={tokens.size.small} color={tokens.color.textSecondary} peso="semibold" style={{ textTransform: "uppercase" }}>
         Resumen
       </Texto>
       <View style={{ flexDirection: "row", gap: tokens.space["2"] }}>
@@ -126,7 +126,7 @@ export function CierreFirma({
               gap: 2,
             }}
           >
-            <Texto tamano={11} color={`${tokens.color.text}66`} style={{ textTransform: "uppercase", letterSpacing: 0.6 }}>
+            <Texto tamano={11} color={tokens.color.textSecondary} style={{ textTransform: "uppercase", letterSpacing: 0.6 }}>
               {c.k}
             </Texto>
             <Texto tamano={15} color={tokens.color.text} peso="semibold" style={{ fontVariant: ["tabular-nums"] }}>
@@ -161,7 +161,7 @@ export function CierreFirma({
           <Texto tamano={tokens.size.body} color={tokens.color.text} peso="semibold">
             Firma de conformidad del cliente o encargado
           </Texto>
-          <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
+          <Texto tamano={tokens.size.small} color={tokens.color.textSecondary}>
             Pásale el teléfono al cliente para que firme. Tú no firmas: quedas registrado por tu cuenta.
           </Texto>
           <Input etiqueta="Nombre del cliente o encargado" valor={nombre} onCambio={setNombre} />

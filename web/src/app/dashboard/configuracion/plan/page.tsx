@@ -294,7 +294,7 @@ function PlanContenido() {
               </span>
             ) : null}
           </p>
-          <p className="mt-ds-1 font-ds-body text-ds-caption text-ds-text/60">Precios mensuales en UF, más IVA. Se cobran en pesos al valor de la UF del día.</p>
+          <p className="mt-ds-1 font-ds-body text-ds-caption text-ds-text-secondary">Precios mensuales en UF, más IVA. Se cobran en pesos al valor de la UF del día.</p>
         </div>
 
         {errorPlan ? <p className="mb-ds-4 font-ds-body text-ds-small text-ds-accent-700">{errorPlan}</p> : null}
@@ -331,7 +331,7 @@ function PlanContenido() {
                 </ul>
                 <div className="mt-auto flex flex-col gap-ds-2 pt-ds-2">
                   {esActual ? (
-                    <p className="font-ds-body text-ds-caption font-medium text-ds-text/60">Tu plan actual</p>
+                    <p className="font-ds-body text-ds-caption font-medium text-ds-text-secondary">Tu plan actual</p>
                   ) : sobran > 0 ? (
                     <p className="font-ds-body text-ds-caption text-ds-text/70">
                       Tienes {info?.modulosActivos} módulos activos y este plan permite {limites.modulosMax}.{" "}
@@ -351,7 +351,7 @@ function PlanContenido() {
                       Cambiar a {ETIQUETA_PLAN[plan]}
                     </Button>
                   ) : (
-                    <p className="font-ds-body text-ds-caption text-ds-text/60">Disponible pronto — escríbenos si te interesa.</p>
+                    <p className="font-ds-body text-ds-caption text-ds-text-secondary">Disponible pronto — escríbenos si te interesa.</p>
                   )}
                 </div>
               </div>
@@ -379,7 +379,7 @@ function PlanContenido() {
             </Button>
           )}
         </div>
-        <p className="mt-ds-3 font-ds-body text-ds-caption text-ds-text/60">
+        <p className="mt-ds-3 font-ds-body text-ds-caption text-ds-text-secondary">
           Vas a ser redirigido a Flow para ingresar tu tarjeta — nunca pasa por nuestros servidores.
         </p>
       </Card>
@@ -406,7 +406,7 @@ function PlanContenido() {
             filas={info.historial}
             claveFila={(h) => h.id}
             columnas={[
-              { encabezado: "Fecha", celda: (h) => <span className="text-ds-text/60">{new Date(h.creado_en).toLocaleString("es-CL")}</span> },
+              { encabezado: "Fecha", celda: (h) => <span className="text-ds-text-secondary">{new Date(h.creado_en).toLocaleString("es-CL")}</span> },
               {
                 encabezado: "Cambio",
                 celda: (h) => (
@@ -416,7 +416,7 @@ function PlanContenido() {
                   </span>
                 ),
               },
-              { encabezado: "Quién", celda: (h) => <span className="text-ds-text/60">{h.origen === "super_admin" ? "Super-Admin" : "Tu empresa"}</span> },
+              { encabezado: "Quién", celda: (h) => <span className="text-ds-text-secondary">{h.origen === "super_admin" ? "Super-Admin" : "Tu empresa"}</span> },
             ]}
             vacio={{ titulo: "Sin cambios de plan registrados." }}
           />
@@ -430,9 +430,9 @@ function PlanContenido() {
             filas={cobros}
             claveFila={(c) => c.id}
             columnas={[
-              { encabezado: "Fecha", celda: (c) => <span className="text-ds-text/60">{new Date(c.creado_en).toLocaleString("es-CL")}</span> },
+              { encabezado: "Fecha", celda: (c) => <span className="text-ds-text-secondary">{new Date(c.creado_en).toLocaleString("es-CL")}</span> },
               { encabezado: "Monto", celda: (c) => <span className="text-ds-text">{clp(c.monto)}</span> },
-              { encabezado: "Intento", celda: (c) => <span className="text-ds-text/60">{c.intento_numero}</span> },
+              { encabezado: "Intento", celda: (c) => <span className="text-ds-text-secondary">{c.intento_numero}</span> },
               { encabezado: "Estado", celda: (c) => <StatusBadge estado={c.estado} tonoForzado={TONO_SUSCRIPCION[c.estado]} /> },
             ]}
             vacio={{ titulo: "Sin cobros registrados." }}

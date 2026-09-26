@@ -303,7 +303,7 @@ export default function OrdenesServicioPage() {
                   Ver PDF
                 </button>
               ) : (
-                <span className="text-ds-text/50">—</span>
+                <span className="text-ds-text-secondary">—</span>
               ),
           },
         ]}

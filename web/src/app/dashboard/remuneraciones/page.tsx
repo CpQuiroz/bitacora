@@ -137,7 +137,7 @@ export default function RemuneracionesPage() {
                 Libro de Remuneraciones (DT)
               </Button>
             </div>
-            <p className="mt-ds-2 font-ds-body text-ds-caption text-ds-text/60">
+            <p className="mt-ds-2 font-ds-body text-ds-caption text-ds-text-secondary">
               Solo las liquidaciones <strong>emitidas</strong>. Descargá → subí a previred.cl / la DT → revisá el total → pagá ahí. Los
               archivos Previred y DT son un <strong>borrador</strong>: validalos con tu contador contra el validador oficial antes del primer
               envío real.
@@ -168,7 +168,7 @@ export default function RemuneracionesPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-ds-body">
               <thead>
-                <tr className="border-b border-ds-divider text-[11px] font-medium uppercase tracking-[0.08em] text-ds-text/60">
+                <tr className="border-b border-ds-divider text-[11px] font-medium uppercase tracking-[0.08em] text-ds-text-secondary">
                   <th className="px-ds-4 py-ds-3">Colaborador</th>
                   <th className="px-ds-4 py-ds-3 text-right">Días</th>
                   <th className="px-ds-4 py-ds-3 text-right">Imponible</th>
@@ -204,7 +204,7 @@ export default function RemuneracionesPage() {
                             {emitiendo === l.id ? "Emitiendo…" : "Emitir"}
                           </button>
                         ) : (
-                          <button type="button" onClick={() => remuneraciones.abrirPdf(l.id)} className="font-ds-body text-ds-caption font-medium text-ds-text/60 hover:text-ds-brand">
+                          <button type="button" onClick={() => remuneraciones.abrirPdf(l.id)} className="font-ds-body text-ds-caption font-medium text-ds-text-secondary hover:text-ds-brand">
                             PDF
                           </button>
                         )}

@@ -154,7 +154,7 @@ export default function LoginPage() {
 
       <div className="my-ds-6 flex items-center gap-ds-3">
         <div className="h-px flex-1 bg-ds-divider" />
-        <span className="text-ds-caption text-ds-text/60">o</span>
+        <span className="text-ds-caption text-ds-text-secondary">o</span>
         <div className="h-px flex-1 bg-ds-divider" />
       </div>
 

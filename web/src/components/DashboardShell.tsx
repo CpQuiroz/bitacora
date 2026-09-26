@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import type { Modulo, Rol } from "@bitacora/shared";
 import { puedeVerModulo } from "@bitacora/shared";
+import { marcaLegible } from "@bitacora/design-tokens";
 import { AsistenteChat } from "./AsistenteChat";
 import { Logo } from "./Logo";
 import { NotificacionesBell } from "./NotificacionesBell";
@@ -363,6 +364,7 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
   }
 
   const fuenteInfo = fuenteDe(usuario.fuente);
+  const marca = usuario.colorPrimario ? marcaLegible(usuario.colorPrimario) : null;
   const temaStyle: CSSProperties = {
     // font-family (no solo la custom property) para que el valor local
     // de --font-sans efectivamente se aplique acá y herede hacia abajo —
@@ -374,13 +376,13 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
     // · --ds-brand → sistema nuevo. Pisa el fallback de tokens.css; los
     //   derivados --ds-brand-hover/pressed se recalculan solos en OKLCH
     //   dentro de este scope porque referencian var(--ds-brand).
-    ...(usuario.colorPrimario
+    // · Tarea 154: fondo y texto salen de marcaLegible (contraste AA);
+    //   empresas.color_primario_foreground ya no se usa acá.
+    ...(marca
       ? {
-          "--accent": usuario.colorPrimario,
-          "--ds-brand": usuario.colorPrimario,
-          ...(usuario.colorPrimarioForeground
-            ? { "--ds-brand-foreground": usuario.colorPrimarioForeground }
-            : {}),
+          "--accent": marca.fondo,
+          "--ds-brand": marca.fondo,
+          "--ds-brand-foreground": marca.texto,
         }
       : {}),
     // Segundo color de la empresa (14-sep-2026) — hoy solo pinta
@@ -449,7 +451,7 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
           ) : (
             <div key={grupo.titulo}>
               <p
-                className={`px-3 pb-1 font-ds-body text-[11px] font-semibold uppercase tracking-[0.12em] text-ds-text/60 ${
+                className={`px-3 pb-1 font-ds-body text-[11px] font-semibold uppercase tracking-[0.12em] text-ds-text-secondary ${
                   i > 0 ? "pt-4" : "pt-1"
                 }`}
               >
@@ -602,7 +604,7 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
         <button
           type="button"
           onClick={alternarColapsado}
-          className="flex items-center justify-center gap-2 border-t border-ds-divider py-2.5 font-ds-body text-xs font-medium text-ds-text/60 transition-colors hover:bg-ds-brand/[0.08] hover:text-ds-brand"
+          className="flex items-center justify-center gap-2 border-t border-ds-divider py-2.5 font-ds-body text-xs font-medium text-ds-text-secondary transition-colors hover:bg-ds-brand/[0.08] hover:text-ds-brand"
         >
           <ChevronRight size={14} strokeWidth={2.75} className={`transition-transform ${colapsado ? "" : "rotate-180"}`} />
           {!colapsado && "Contraer"}
@@ -632,7 +634,7 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
           <button
             type="button"
             onClick={() => setMenuMovilAbierto(true)}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-ds-text/60 hover:bg-ds-brand/[0.08] hover:text-ds-brand sm:hidden"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-ds-text-secondary hover:bg-ds-brand/[0.08] hover:text-ds-brand sm:hidden"
           >
             <Menu size={20} strokeWidth={2.75} />
           </button>
@@ -647,7 +649,7 @@ export function DashboardShell({ usuario, children }: { usuario: UsuarioShell; c
             >
               <span className="hidden text-right font-ds-body text-sm sm:block">
                 <span className="block font-medium text-ds-text">{usuario.nombre}</span>
-                <span className="block text-[10px] uppercase tracking-[0.08em] text-ds-text/60">{usuario.rol}</span>
+                <span className="block text-[10px] uppercase tracking-[0.08em] text-ds-text-secondary">{usuario.rol}</span>
               </span>
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-ds-brand font-ds-body text-xs font-semibold text-ds-brand-foreground">
                 {iniciales(usuario.nombre)}

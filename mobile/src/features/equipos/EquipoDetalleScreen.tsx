@@ -344,7 +344,7 @@ export function EquipoDetalleScreen({ navigation, route }: NativeStackScreenProp
               {puedeEditar ? <Accion texto="Agregar" color={marca.base} onPress={() => navigation.navigate("PlanMantencionForm", { equipoId: equipo.id })} /> : null}
             </Encabezado>
             {planes.length === 0 ? (
-              <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`}>
+              <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
                 Sin plan de mantención.
               </Texto>
             ) : (
@@ -355,7 +355,7 @@ export function EquipoDetalleScreen({ navigation, route }: NativeStackScreenProp
                       Cada {p.frecuencia_dias} días · próxima {fechaLegible(p.proxima_fecha)}
                     </Texto>
                     {p.notas ? (
-                      <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`} numberOfLines={2}>
+                      <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary} numberOfLines={2}>
                         {p.notas}
                       </Texto>
                     ) : null}
@@ -370,7 +370,7 @@ export function EquipoDetalleScreen({ navigation, route }: NativeStackScreenProp
             <Card>
               <Encabezado titulo="Registros de mantención" />
               {registros.length === 0 ? (
-                <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`}>
+                <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
                   Todavía no hay mantenciones registradas.
                 </Texto>
               ) : (
@@ -381,7 +381,7 @@ export function EquipoDetalleScreen({ navigation, route }: NativeStackScreenProp
                         {r.tipo === "programa" ? "Programa (service)" : "Checklist diario"}
                         {r.realizado_por_nombre ? ` · ${r.realizado_por_nombre}` : ""}
                       </Texto>
-                      <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`}>
+                      <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
                         {fechaLegible(r.fecha)}
                       </Texto>
                     </View>
@@ -419,7 +419,7 @@ export function EquipoDetalleScreen({ navigation, route }: NativeStackScreenProp
                   </Texto>
                 ) : null}
                 {actividad.length === 0 ? (
-                  <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`}>
+                  <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
                     Todavía no hay actividad para este equipo.
                   </Texto>
                 ) : (
@@ -434,15 +434,15 @@ export function EquipoDetalleScreen({ navigation, route }: NativeStackScreenProp
                       style={filaTocable}
                     >
                       {f.tipo === "os" ? (
-                        <ClipboardCheck size={18} strokeWidth={2.5} color={`${tokens.color.text}99`} />
+                        <ClipboardCheck size={18} strokeWidth={2.5} color={tokens.color.textSecondary} />
                       ) : (
-                        <Route size={18} strokeWidth={2.5} color={`${tokens.color.text}99`} />
+                        <Route size={18} strokeWidth={2.5} color={tokens.color.textSecondary} />
                       )}
                       <View style={{ flex: 1, gap: 2 }}>
                         <Texto tamano={tokens.size.small} color={tokens.color.text} numberOfLines={1}>
                           {f.titulo}
                         </Texto>
-                        <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`} numberOfLines={1}>
+                        <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary} numberOfLines={1}>
                           {fechaLegible(f.fecha)}
                           {f.detalle ? ` · ${f.detalle}` : ""}
                         </Texto>
@@ -459,7 +459,7 @@ export function EquipoDetalleScreen({ navigation, route }: NativeStackScreenProp
                   ))
                 )}
                 {actividad.length > 40 ? (
-                  <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`} style={{ marginTop: tokens.space["2"] }}>
+                  <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary} style={{ marginTop: tokens.space["2"] }}>
                     y {actividad.length - 40} más — el historial completo está en la web.
                   </Texto>
                 ) : null}
@@ -480,19 +480,19 @@ export function EquipoDetalleScreen({ navigation, route }: NativeStackScreenProp
                   {errorDocs}
                 </Texto>
               ) : documentos.length === 0 ? (
-                <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`}>
+                <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
                   Este vehículo todavía no tiene documentos.
                 </Texto>
               ) : (
                 documentos.map((d) => (
                   <Pressable key={d.id} onPress={() => opcionesDocumento(d)} style={filaTocable}>
-                    <FileText size={18} strokeWidth={2.5} color={`${tokens.color.text}99`} />
+                    <FileText size={18} strokeWidth={2.5} color={tokens.color.textSecondary} />
                     <View style={{ flex: 1, gap: 2 }}>
                       <Texto tamano={tokens.size.small} color={tokens.color.text} numberOfLines={1}>
                         {d.tipo?.nombre ?? "Documento"}
                         {d.numero ? ` · N° ${d.numero}` : ""}
                       </Texto>
-                      <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`}>
+                      <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
                         {d.fecha_vencimiento ? `Vence ${fechaLegible(d.fecha_vencimiento)}` : "Sin vencimiento"}
                         {d.archivo_key ? " · con archivo" : " · sin archivo"}
                       </Texto>
@@ -509,7 +509,7 @@ export function EquipoDetalleScreen({ navigation, route }: NativeStackScreenProp
         {tab === "eventos" && vehiculo ? (
           <Card>
             <Encabezado titulo="Eventos de flota" />
-            <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`} style={{ marginBottom: tokens.space["3"] }}>
+            <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary} style={{ marginBottom: tokens.space["3"] }}>
               Multas, choques, panas y otros eventos del vehículo, semana a semana.
             </Texto>
             <Button variante="secundario" bloque onPress={() => navigation.navigate("EventosFlota", { equipoId: equipo.id, patente: equipo.patente ?? null })}>
@@ -555,7 +555,7 @@ function Accion({ texto, color, onPress }: { texto: string; color: string; onPre
 function Fila({ etiqueta, valor }: { etiqueta: string; valor: string }) {
   return (
     <View style={{ flexDirection: "row", justifyContent: "space-between", gap: tokens.space["3"], paddingVertical: tokens.space["1"] }}>
-      <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
+      <Texto tamano={tokens.size.small} color={tokens.color.textSecondary}>
         {etiqueta}
       </Texto>
       <Texto tamano={tokens.size.small} color={tokens.color.text} style={{ flexShrink: 1, textAlign: "right" }}>

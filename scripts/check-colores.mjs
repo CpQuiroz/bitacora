@@ -31,6 +31,7 @@ const SALTAR_ARCHIVO = [
   /\/generated\.ts$/,
   /mobile\/src\/theme\/tokens\.ts$/, // paleta Faena — se borra con la migración
   /mobile\/src\/theme\/color\.ts$/, // #ffffff/#111111 de las utilidades de contraste
+  /packages\/shared\/src\/contraste\.ts$/, // blanco/casi negro de la regla WCAG (tarea 154)
 ];
 
 // 6/8 dígitos: siempre color. 3/4 dígitos: solo si vienen pegados a una

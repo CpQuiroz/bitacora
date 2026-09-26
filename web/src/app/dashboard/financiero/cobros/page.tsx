@@ -237,14 +237,14 @@ function CobrosContenido() {
               <button
                 type="button"
                 onClick={() => setModo("manual")}
-                className={`px-ds-4 py-2 font-ds-body text-ds-small font-medium transition-colors ${modo === "manual" ? "border-b-2 border-ds-brand text-ds-brand" : "text-ds-text/60"}`}
+                className={`px-ds-4 py-2 font-ds-body text-ds-small font-medium transition-colors ${modo === "manual" ? "border-b-2 border-ds-brand text-ds-brand" : "text-ds-text-secondary"}`}
               >
                 Cobro manual
               </button>
               <button
                 type="button"
                 onClick={() => setModo("trabajos")}
-                className={`px-ds-4 py-2 font-ds-body text-ds-small font-medium transition-colors ${modo === "trabajos" ? "border-b-2 border-ds-brand text-ds-brand" : "text-ds-text/60"}`}
+                className={`px-ds-4 py-2 font-ds-body text-ds-small font-medium transition-colors ${modo === "trabajos" ? "border-b-2 border-ds-brand text-ds-brand" : "text-ds-text-secondary"}`}
               >
                 Desde Órdenes de Trabajo/Servicio
               </button>
@@ -291,7 +291,7 @@ function CobrosContenido() {
                           <span className="text-ds-text">
                             {t.fecha} — {t.cliente}
                           </span>
-                          <span className="text-ds-text/60">{formatMoneda(t.monto, usuario.moneda)}</span>
+                          <span className="text-ds-text-secondary">{formatMoneda(t.monto, usuario.moneda)}</span>
                         </label>
                       ))}
                     </div>
@@ -378,7 +378,7 @@ function CobrosContenido() {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-ds-body">
               <thead>
-                <tr className="border-b border-ds-divider text-[11px] font-medium uppercase tracking-[0.08em] text-ds-text/60">
+                <tr className="border-b border-ds-divider text-[11px] font-medium uppercase tracking-[0.08em] text-ds-text-secondary">
                   <th className="px-ds-4 py-ds-3">Folio</th>
                   <th className="px-ds-4 py-ds-3">Cliente</th>
                   <th className="px-ds-4 py-ds-3 text-right">Monto</th>

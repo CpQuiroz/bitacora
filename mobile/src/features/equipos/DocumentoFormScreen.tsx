@@ -140,7 +140,7 @@ export function DocumentoFormScreen({ navigation, route }: NativeStackScreenProp
 
           <Card>
             <View style={{ flexDirection: "row", alignItems: "center", gap: tokens.space["3"] }}>
-              <FileText size={20} strokeWidth={2.5} color={`${tokens.color.text}99`} />
+              <FileText size={20} strokeWidth={2.5} color={tokens.color.textSecondary} />
               <Texto tamano={tokens.size.small} color={tokens.color.text} style={{ flex: 1 }} numberOfLines={2}>
                 {archivo ? archivo.name : tieneArchivo ? "Tiene un archivo adjunto" : "Sin archivo adjunto"}
               </Texto>
@@ -152,7 +152,7 @@ export function DocumentoFormScreen({ navigation, route }: NativeStackScreenProp
             </View>
           </Card>
 
-          <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`}>
+          <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
             Necesitas conexión para guardar: el archivo se sube al momento.
           </Texto>
           <Button bloque cargando={guardando} onPress={() => void guardar()}>

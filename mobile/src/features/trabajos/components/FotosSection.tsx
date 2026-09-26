@@ -117,10 +117,10 @@ export function FotosSection({
   return (
     <View style={{ gap: tokens.space["3"] }}>
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-        <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`} peso="semibold" style={{ textTransform: "uppercase" }}>
+        <Texto tamano={tokens.size.small} color={tokens.color.textSecondary} peso="semibold" style={{ textTransform: "uppercase" }}>
           Fotos
         </Texto>
-        <Texto tamano={tokens.size.caption} color={`${tokens.color.text}66`} style={{ fontVariant: ["tabular-nums"] }}>
+        <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary} style={{ fontVariant: ["tabular-nums"] }}>
           {total} de {MAX}
         </Texto>
       </View>
@@ -144,7 +144,7 @@ export function FotosSection({
                   justifyContent: "center",
                 }}
               >
-                <Texto tamano={tokens.size.caption} color={sel ? marca.base : `${tokens.color.text}99`} peso={sel ? "semibold" : "medium"}>
+                <Texto tamano={tokens.size.caption} color={sel ? marca.base : tokens.color.textSecondary} peso={sel ? "semibold" : "medium"}>
                   {o.texto}
                 </Texto>
               </Pressable>
@@ -207,10 +207,10 @@ export function FotosSection({
         return (
           <View key={o.texto} style={{ gap: tokens.space["2"], borderTopWidth: 2, borderTopColor: tokens.color.divider, paddingTop: tokens.space["2"] }}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-              <Texto tamano={tokens.size.caption} peso="semibold" color={esActiva ? marca.base : `${tokens.color.text}99`} style={{ textTransform: "uppercase", letterSpacing: 0.6 }}>
+              <Texto tamano={tokens.size.caption} peso="semibold" color={esActiva ? marca.base : tokens.color.textSecondary} style={{ textTransform: "uppercase", letterSpacing: 0.6 }}>
                 {o.texto}
               </Texto>
-              <Texto tamano={tokens.size.caption} color={`${tokens.color.text}66`} style={{ fontVariant: ["tabular-nums"] }}>
+              <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary} style={{ fontVariant: ["tabular-nums"] }}>
                 {delGrupo.length}
               </Texto>
             </View>
@@ -233,7 +233,7 @@ export function FotosSection({
                             backgroundColor: "rgba(255,255,255,0.4)",
                           }}
                         >
-                          <ActivityIndicator size="small" color={`${tokens.color.text}99`} />
+                          <ActivityIndicator size="small" color={tokens.color.textSecondary} />
                         </View>
                       ) : null}
                       {f.alerta ? (
@@ -244,7 +244,7 @@ export function FotosSection({
                     </View>
                   </Pressable>
                   {f.descripcion ? (
-                    <Texto tamano={10} color={`${tokens.color.text}99`} numberOfLines={2}>
+                    <Texto tamano={10} color={tokens.color.textSecondary} numberOfLines={2}>
                       {f.descripcion}
                     </Texto>
                   ) : null}
@@ -266,9 +266,9 @@ export function FotosSection({
                     ]}
                   >
                     {ocupado ? (
-                      <ActivityIndicator size="small" color={`${tokens.color.text}99`} />
+                      <ActivityIndicator size="small" color={tokens.color.textSecondary} />
                     ) : (
-                      <Camera size={22} strokeWidth={2.75} color={`${tokens.color.text}99`} />
+                      <Camera size={22} strokeWidth={2.75} color={tokens.color.textSecondary} />
                     )}
                   </View>
                 </Pressable>
@@ -279,7 +279,7 @@ export function FotosSection({
       })}
 
       {total === 0 ? (
-        <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
+        <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
           Sin fotos todavía.
         </Texto>
       ) : null}

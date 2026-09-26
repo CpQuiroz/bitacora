@@ -57,7 +57,7 @@ export function Modal({
             type="button"
             onClick={onClose}
             aria-label="Cerrar"
-            className="rounded-ds-pill p-ds-1 text-ds-text/60 transition-colors hover:bg-ds-text/[0.07] hover:text-ds-text"
+            className="rounded-ds-pill p-ds-1 text-ds-text-secondary transition-colors hover:bg-ds-text/[0.07] hover:text-ds-text"
           >
             <X size={18} strokeWidth={2.75} />
           </button>

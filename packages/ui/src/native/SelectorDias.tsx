@@ -97,7 +97,7 @@ export function SelectorDias({ valor, onElegir, cantidadDias = 45, diasAtras = 7
                 borderColor: activo ? marca.base : esHoy ? tokens.color.accent2 : tokens.color.divider,
               }}
             >
-              <Texto tamano={tokens.size.caption} color={activo ? marca.fuerte : `${tokens.color.text}99`}>
+              <Texto tamano={tokens.size.caption} color={activo ? marca.fuerte : tokens.color.textSecondary}>
                 {DIAS_SEMANA[d.getDay()]}
               </Texto>
               <Texto
@@ -108,7 +108,7 @@ export function SelectorDias({ valor, onElegir, cantidadDias = 45, diasAtras = 7
               >
                 {d.getDate()}
               </Texto>
-              <Texto tamano={tokens.size.caption} color={activo ? marca.fuerte : `${tokens.color.text}66`}>
+              <Texto tamano={tokens.size.caption} color={activo ? marca.fuerte : tokens.color.textSecondary}>
                 {MESES[d.getMonth()]}
               </Texto>
             </Pressable>

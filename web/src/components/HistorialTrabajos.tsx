@@ -152,7 +152,7 @@ export function HistorialTrabajos({ colaboradorId }: { colaboradorId?: string })
 
       {items && items.length > 0 && total > limite ? (
         <div className="flex items-center justify-between">
-          <span className="font-ds-body text-ds-small text-ds-text/60">
+          <span className="font-ds-body text-ds-small text-ds-text-secondary">
             {(pagina - 1) * limite + 1}–{Math.min(pagina * limite, total)} de {total}
           </span>
           <div className="flex gap-ds-2">

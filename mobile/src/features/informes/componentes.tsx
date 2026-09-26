@@ -14,14 +14,14 @@ import { Card, Texto } from "@bitacora/ui/native";
 export function Metrica({ etiqueta, valor, nota }: { etiqueta: string; valor: string; nota?: string }) {
   return (
     <View style={{ width: "48%", borderWidth: 1, borderColor: tokens.color.divider, borderRadius: tokens.radius.md, padding: tokens.space["3"], gap: 2 }}>
-      <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} numberOfLines={1}>
+      <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary} numberOfLines={1}>
         {etiqueta}
       </Texto>
       <Texto tamano={tokens.size.h5} peso="semibold" color={tokens.color.text} style={{ fontVariant: ["tabular-nums"] }} numberOfLines={1}>
         {valor}
       </Texto>
       {nota ? (
-        <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} numberOfLines={1}>
+        <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary} numberOfLines={1}>
           {nota}
         </Texto>
       ) : null}
@@ -67,7 +67,7 @@ export function FilaTabla({ label, sub, valor, valorSecundario }: { label: strin
           {label}
         </Texto>
         {sub ? (
-          <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} numberOfLines={1}>
+          <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary} numberOfLines={1}>
             {sub}
           </Texto>
         ) : null}
@@ -77,7 +77,7 @@ export function FilaTabla({ label, sub, valor, valorSecundario }: { label: strin
           {valor}
         </Texto>
         {valorSecundario ? (
-          <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} style={{ fontVariant: ["tabular-nums"] }}>
+          <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary} style={{ fontVariant: ["tabular-nums"] }}>
             {valorSecundario}
           </Texto>
         ) : null}
@@ -116,7 +116,7 @@ export function useInformeFetch<T>(fetcher: () => Promise<T>, deps: unknown[]): 
 
 export function SinDatos({ mensaje }: { mensaje: string }) {
   return (
-    <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
+    <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
       {mensaje}
     </Texto>
   );

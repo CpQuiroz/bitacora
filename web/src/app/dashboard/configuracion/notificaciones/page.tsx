@@ -222,7 +222,7 @@ export default function NotificacionesPage() {
             type="button"
             onClick={() => setTab(t.valor)}
             className={`flex items-center gap-1.5 px-ds-3 py-2 font-ds-body text-ds-small font-medium transition-colors ${
-              tab === t.valor ? "border-b-2 border-ds-brand text-ds-brand" : "text-ds-text/60 hover:text-ds-brand"
+              tab === t.valor ? "border-b-2 border-ds-brand text-ds-brand" : "text-ds-text-secondary hover:text-ds-brand"
             }`}
           >
             <t.icon size={16} strokeWidth={2.75} />
@@ -252,7 +252,7 @@ export default function NotificacionesPage() {
           <div className="flex flex-col gap-ds-5">
             {TOGGLES.map((grupo) => (
               <div key={grupo.grupo}>
-                <p className="mb-ds-2 font-ds-body text-ds-caption font-semibold uppercase tracking-wide text-ds-text/60">{grupo.grupo}</p>
+                <p className="mb-ds-2 font-ds-body text-ds-caption font-semibold uppercase tracking-wide text-ds-text-secondary">{grupo.grupo}</p>
                 <div className="flex flex-col gap-ds-2">
                   {grupo.items.map((item) => (
                     <label key={item.campo} className="flex items-center gap-2 font-ds-body text-ds-small text-ds-text">
@@ -279,7 +279,7 @@ export default function NotificacionesPage() {
                         { valor: "20", etiqueta: "20%" },
                       ]}
                     />
-                    <p className="mt-ds-1.5 font-ds-body text-ds-caption text-ds-text/60">
+                    <p className="mt-ds-1.5 font-ds-body text-ds-caption text-ds-text-secondary">
                       Solo informativo — se menciona en el texto del correo, nunca se calcula ni se aplica nada en la app. La
                       empresa lo honra a mano cuando el cliente vuelve.
                     </p>
@@ -373,8 +373,8 @@ export default function NotificacionesPage() {
               columns={[
                 { header: "Evento", cell: (h) => ETIQUETA_TIPO_LOG[h.tipo] ?? h.tipo },
                 { header: "Canal", cell: (h) => <StatusBadge estado={h.canal} tonoForzado="cerrado" /> },
-                { header: "Destinatario", cell: (h) => <span className="text-ds-text/60">{h.destinatario}</span> },
-                { header: "Fecha", cell: (h) => <span className="text-ds-text/60">{new Date(h.creado_en).toLocaleString("es-CL")}</span> },
+                { header: "Destinatario", cell: (h) => <span className="text-ds-text-secondary">{h.destinatario}</span> },
+                { header: "Fecha", cell: (h) => <span className="text-ds-text-secondary">{new Date(h.creado_en).toLocaleString("es-CL")}</span> },
                 { header: "Estado", cell: (h) => <StatusBadge estado={h.exito ? "exito" : "fallido"} tonoForzado={h.exito ? "completado" : "cancelado"} /> },
               ]}
               actions={[
@@ -394,11 +394,11 @@ export default function NotificacionesPage() {
       <Card>
         <div className="mb-ds-1 flex items-center justify-between">
           <p className="font-ds-body text-ds-small font-semibold text-ds-text">Mensajes personalizados</p>
-          <span className="font-ds-body text-ds-caption font-medium text-ds-text/60">
+          <span className="font-ds-body text-ds-caption font-medium text-ds-text-secondary">
             {TIPOS_MENSAJE.filter((t) => camposCompletados(mensajes[t.valor]) === CAMPOS_POR_MENSAJE).length} de {TIPOS_MENSAJE.length} completados
           </span>
         </div>
-        <p className="mb-ds-4 font-ds-body text-ds-caption text-ds-text/60">
+        <p className="mb-ds-4 font-ds-body text-ds-caption text-ds-text-secondary">
           Si dejas asunto/cuerpo vacíos, se usa un mensaje por defecto. El cuerpo del correo es texto simple, sin editor
           enriquecido.
         </p>
@@ -453,7 +453,7 @@ function AcordeonMensaje({
     <div className="py-ds-3">
       <button type="button" onClick={onToggle} className="flex w-full items-center justify-between text-left font-ds-body text-ds-small font-medium text-ds-text">
         {etiqueta}
-        <span className="flex items-center gap-2 font-ds-body text-ds-caption text-ds-text/60">
+        <span className="flex items-center gap-2 font-ds-body text-ds-caption text-ds-text-secondary">
           <span className={completados === CAMPOS_POR_MENSAJE ? "font-medium text-ds-accent2-800" : ""}>
             {completados} de {CAMPOS_POR_MENSAJE} completados
           </span>
@@ -466,7 +466,7 @@ function AcordeonMensaje({
           <Input etiqueta="Asunto del correo" valor={asunto} onCambio={setAsunto} />
           <div>
             <Textarea etiqueta="Cuerpo del correo" filas={4} valor={cuerpo} onCambio={setCuerpo} />
-            <p className="mt-ds-1.5 font-mono text-[11px] text-ds-text/60">Variables disponibles: {variables}</p>
+            <p className="mt-ds-1.5 font-mono text-[11px] text-ds-text-secondary">Variables disponibles: {variables}</p>
           </div>
           <div className="self-start">
             <Button onPress={guardar} cargando={guardando}>

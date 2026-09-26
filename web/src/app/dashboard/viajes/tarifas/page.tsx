@@ -180,7 +180,7 @@ export default function TarifasViajesPage() {
 
           <Card>
             <p className="mb-ds-1 font-ds-body text-ds-body font-semibold text-ds-text">Precio por tramo</p>
-            <p className="mb-ds-4 font-ds-body text-ds-caption text-ds-text/60">
+            <p className="mb-ds-4 font-ds-body text-ds-caption text-ds-text-secondary">
               Un tramo vale lo mismo en ambos sentidos (Santiago → Temuco = Temuco → Santiago). La tarifa de un cliente gana sobre la general.
             </p>
             <form onSubmit={agregarTramo} className="grid gap-ds-3 sm:grid-cols-2 lg:grid-cols-5 lg:items-end">
@@ -230,7 +230,7 @@ export default function TarifasViajesPage() {
 
           <Card>
             <p className="mb-ds-1 font-ds-body text-ds-body font-semibold text-ds-text">Precio por km</p>
-            <p className="mb-ds-4 font-ds-body text-ds-caption text-ds-text/60">
+            <p className="mb-ds-4 font-ds-body text-ds-caption text-ds-text-secondary">
               Los km del viaje se calculan con el mapa entre origen y destino (o se ingresan a mano). Un precio por cliente gana sobre el general.
             </p>
             <div className="flex flex-wrap items-end gap-ds-3">

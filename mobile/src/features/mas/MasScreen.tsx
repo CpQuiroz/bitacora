@@ -226,7 +226,7 @@ export function MasScreen({ navigation }: NativeStackScreenProps<MasStackParamLi
                     it.badge ? (
                       <Tag tono="accent">{it.badge}</Tag>
                     ) : (
-                      <ChevronRight size={18} strokeWidth={2.25} color={`${tokens.color.text}66`} />
+                      <ChevronRight size={18} strokeWidth={2.25} color={tokens.color.textSecondary} />
                     )
                   }
                 />

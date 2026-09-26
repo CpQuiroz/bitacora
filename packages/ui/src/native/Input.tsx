@@ -58,7 +58,7 @@ export function Input({
           value={valor}
           onChangeText={onCambio}
           placeholder={placeholder}
-          placeholderTextColor={`${tokens.color.text}66`}
+          placeholderTextColor={tokens.color.textSecondary}
           editable={!deshabilitado}
           autoFocus={autoFoco}
           secureTextEntry={tipo === "password"}

@@ -119,7 +119,7 @@ export default function PaquetesSesionesPage() {
         <div className="mb-ds-6">
           <Card>
             <p className="mb-ds-1 font-ds-body text-ds-small font-semibold text-ds-text">Renovar paquete</p>
-            <p className="mb-ds-4 font-ds-body text-ds-caption text-ds-text/60">
+            <p className="mb-ds-4 font-ds-body text-ds-caption text-ds-text-secondary">
               {renovando.cliente?.nombre ?? "Cliente"} · <span className="font-medium text-ds-text">{renovando.nombre}</span> —
               mismo servicio y cantidad. Ajusta el precio si corresponde.
             </p>
@@ -210,7 +210,7 @@ export default function PaquetesSesionesPage() {
         />
       )}
 
-      <p className="mt-ds-4 font-ds-body text-ds-caption text-ds-text/60">
+      <p className="mt-ds-4 font-ds-body text-ds-caption text-ds-text-secondary">
         El saldo se calcula a partir de las citas activas de cada paquete — no es un contador editable a mano. Para consumir sesiones
         de un paquete, asígnalo desde el formulario de una tarea en{" "}
         <Link href="/dashboard/agenda" className="font-medium text-ds-brand hover:underline">

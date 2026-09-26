@@ -35,7 +35,7 @@ export function GastosInformeSeccion({ desde, hasta, moneda }: { desde: string; 
                 backgroundColor: activo ? marca.suave : tokens.color.surface,
               }}
             >
-              <Texto tamano={tokens.size.caption} peso="semibold" color={activo ? marca.fuerte : `${tokens.color.text}99`}>
+              <Texto tamano={tokens.size.caption} peso="semibold" color={activo ? marca.fuerte : tokens.color.textSecondary}>
                 {a.etiqueta}
               </Texto>
             </Pressable>

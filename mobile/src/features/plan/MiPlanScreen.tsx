@@ -145,7 +145,7 @@ export function MiPlanScreen({ navigation }: NativeStackScreenProps<MasStackPara
             <Texto tamano={tokens.size.body} peso="semibold" color={tokens.color.text}>
               Módulos activos
             </Texto>
-            <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
+            <Texto tamano={tokens.size.small} color={tokens.color.textSecondary}>
               {info.modulosMax != null ? `${info.modulosActivos.length} de ${info.modulosMax} que permite tu plan` : `${info.modulosActivos.length} activos (tu plan no tiene tope)`}
             </Texto>
             {info.modulosActivos.length > 0 ? (
@@ -193,7 +193,7 @@ export function MiPlanScreen({ navigation }: NativeStackScreenProps<MasStackPara
               Últimos cobros
             </Texto>
             {info.cobros.length === 0 ? (
-              <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
+              <Texto tamano={tokens.size.small} color={tokens.color.textSecondary}>
                 Todavía no hay cobros.
               </Texto>
             ) : (
@@ -203,7 +203,7 @@ export function MiPlanScreen({ navigation }: NativeStackScreenProps<MasStackPara
                     <Texto tamano={tokens.size.small} peso="semibold" color={tokens.color.text}>
                       {clp(c.monto)}
                     </Texto>
-                    <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`}>
+                    <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
                       {fecha(c.creado_en)}
                     </Texto>
                   </View>
@@ -214,7 +214,7 @@ export function MiPlanScreen({ navigation }: NativeStackScreenProps<MasStackPara
           </View>
         </Card>
 
-        <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`} style={{ textAlign: "center" }}>
+        <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary} style={{ textAlign: "center" }}>
           El cambio de plan y el medio de pago se gestionan en Bitácora web: Configuración → Plan.
         </Texto>
       </ScrollView>
@@ -225,7 +225,7 @@ export function MiPlanScreen({ navigation }: NativeStackScreenProps<MasStackPara
 function Fila({ etiqueta, valor }: { etiqueta: string; valor: string }) {
   return (
     <View style={{ flexDirection: "row", justifyContent: "space-between", gap: tokens.space["3"] }}>
-      <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
+      <Texto tamano={tokens.size.small} color={tokens.color.textSecondary}>
         {etiqueta}
       </Texto>
       <Texto tamano={tokens.size.small} color={tokens.color.text} style={{ flexShrink: 1, textAlign: "right" }}>

@@ -191,7 +191,7 @@ export default function CategoriasGastosPage() {
         columns={[
           { header: "", className: "w-8", cell: (c) => <span className="inline-block h-3 w-3 rounded-ds-pill" style={{ background: c.color }} /> },
           { header: "Nombre", cell: (c) => <span className="font-medium text-ds-text">{c.nombre}</span> },
-          { header: "Gastos asociados", cell: (c) => <span className="text-ds-text/60">{c.cantidad_gastos}</span> },
+          { header: "Gastos asociados", cell: (c) => <span className="text-ds-text-secondary">{c.cantidad_gastos}</span> },
         ]}
         actions={[
           { label: "Editar", onClick: abrirEdicion, variant: "brand" },

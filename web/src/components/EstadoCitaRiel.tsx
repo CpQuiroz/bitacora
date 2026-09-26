@@ -32,7 +32,7 @@ export function EstadoCitaRiel({
   if (grupo === "salida") {
     return (
       <div>
-        <p className="mb-ds-1 font-ds-body text-ds-caption font-medium uppercase tracking-wide text-ds-text/60">Estado</p>
+        <p className="mb-ds-1 font-ds-body text-ds-caption font-medium uppercase tracking-wide text-ds-text-secondary">Estado</p>
         <StatusBadge estado={estado} etiqueta={ETIQUETA_ESTADO_TAREA[estado]} />
       </div>
     );
@@ -43,7 +43,7 @@ export function EstadoCitaRiel({
   return (
     <div className="flex flex-col gap-ds-3">
       <div>
-        <p className="mb-ds-2 font-ds-body text-ds-caption font-medium uppercase tracking-wide text-ds-text/60">Estado</p>
+        <p className="mb-ds-2 font-ds-body text-ds-caption font-medium uppercase tracking-wide text-ds-text-secondary">Estado</p>
         <div className="flex items-center">
           {CAMINO_ESTADOS_TAREA.map((e, i) => {
             const recorrido = i < paso;
@@ -62,7 +62,7 @@ export function EstadoCitaRiel({
             );
           })}
         </div>
-        <div className="mt-1.5 flex justify-between font-ds-body text-[11px] text-ds-text/60">
+        <div className="mt-1.5 flex justify-between font-ds-body text-[11px] text-ds-text-secondary">
           {CAMINO_ESTADOS_TAREA.map((e, i) => (
             <span key={e} className={i === paso ? "font-semibold text-ds-brand" : ""}>
               {ETIQUETA_ESTADO_TAREA[e]}
@@ -82,7 +82,7 @@ export function EstadoCitaRiel({
         </button>
       )}
 
-      <div className="flex items-center gap-ds-2 font-ds-body text-ds-caption text-ds-text/60">
+      <div className="flex items-center gap-ds-2 font-ds-body text-ds-caption text-ds-text-secondary">
         <div className="h-px flex-1 bg-ds-divider" />
         <span>o cerrar como</span>
         <div className="h-px flex-1 bg-ds-divider" />
@@ -105,7 +105,7 @@ export function EstadoCitaRiel({
           Cancelado
         </button>
       </div>
-      <p className="text-center font-ds-body text-[11px] text-ds-text/60">Asistió y No asistió descuentan 1 sesión del pack. Cancelado no.</p>
+      <p className="text-center font-ds-body text-[11px] text-ds-text-secondary">Asistió y No asistió descuentan 1 sesión del pack. Cancelado no.</p>
     </div>
   );
 }

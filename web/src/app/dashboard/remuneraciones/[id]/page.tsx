@@ -165,7 +165,7 @@ export default function LiquidacionDetallePage() {
                 <span className="font-ds-body text-ds-small font-semibold text-ds-brand">Líquido a pagar</span>
                 <span className="font-ds-body text-ds-h5 font-bold tabular-nums text-ds-brand">{formatMoneda(liq.liquido_pagar, m)}</span>
               </div>
-              <p className="mt-ds-3 font-ds-body text-ds-caption text-ds-text/60">
+              <p className="mt-ds-3 font-ds-body text-ds-caption text-ds-text-secondary">
                 Base imponible {formatMoneda(liq.base_imponible, m)} · Base tributable {formatMoneda(liq.base_tributable, m)} · Costo empresa
                 (AFC {formatMoneda(liq.aporte_afc_empleador, m)} + SIS {formatMoneda(liq.aporte_sis, m)} + Mutual{" "}
                 {formatMoneda(liq.aporte_mutual, m)})
@@ -210,7 +210,7 @@ export default function LiquidacionDetallePage() {
 function Seccion({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
     <div>
-      <p className="mb-ds-2 font-ds-body text-ds-caption font-semibold uppercase text-ds-text/60">{titulo}</p>
+      <p className="mb-ds-2 font-ds-body text-ds-caption font-semibold uppercase text-ds-text-secondary">{titulo}</p>
       <div className="flex flex-col gap-1.5 font-ds-body text-ds-small">{children}</div>
     </div>
   );

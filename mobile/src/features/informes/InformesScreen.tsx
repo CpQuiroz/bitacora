@@ -94,7 +94,7 @@ export function InformesScreen({ navigation }: NativeStackScreenProps<MasStackPa
       </View>
 
       <ScrollView contentContainerStyle={{ padding: tokens.space["4"], gap: tokens.space["4"], paddingBottom: tokens.space["8"] * 2 }}>
-        <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
+        <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
           {periodoActual?.etiqueta} · {desde} a {hasta}
         </Texto>
 

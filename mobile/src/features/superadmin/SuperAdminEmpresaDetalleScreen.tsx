@@ -153,7 +153,7 @@ export function SuperAdminEmpresaDetalleScreen({ route, navigation }: NativeStac
         ) : null}
 
         <View style={{ gap: tokens.space["2"] }}>
-          <Texto tamano={tokens.size.small} peso="semibold" color={`${tokens.color.text}99`}>
+          <Texto tamano={tokens.size.small} peso="semibold" color={tokens.color.textSecondary}>
             Estado
           </Texto>
           <View style={{ flexDirection: "row", gap: tokens.space["2"], flexWrap: "wrap" }}>
@@ -164,7 +164,7 @@ export function SuperAdminEmpresaDetalleScreen({ route, navigation }: NativeStac
         </View>
 
         <View style={{ gap: tokens.space["2"] }}>
-          <Texto tamano={tokens.size.small} peso="semibold" color={`${tokens.color.text}99`}>
+          <Texto tamano={tokens.size.small} peso="semibold" color={tokens.color.textSecondary}>
             Plan
           </Texto>
           <View style={{ flexDirection: "row", gap: tokens.space["2"], flexWrap: "wrap" }}>
@@ -172,13 +172,13 @@ export function SuperAdminEmpresaDetalleScreen({ route, navigation }: NativeStac
               <Chip key={p.valor} marca={marca} activo={p.valor === empresa.plan} label={p.label} onPress={() => onCambiarPlan(p.valor)} cargando={guardandoPlan} />
             ))}
           </View>
-          <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`}>
+          <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
             {empresa.cantidad_usuarios} usuario{empresa.cantidad_usuarios === 1 ? "" : "s"} · creada {empresa.creado_en.slice(0, 10)}
           </Texto>
         </View>
 
         <View style={{ gap: tokens.space["2"] }}>
-          <Texto tamano={tokens.size.small} peso="semibold" color={`${tokens.color.text}99`}>
+          <Texto tamano={tokens.size.small} peso="semibold" color={tokens.color.textSecondary}>
             Tema visual
           </Texto>
           <View style={{ flexDirection: "row", gap: tokens.space["2"], flexWrap: "wrap" }}>
@@ -186,13 +186,13 @@ export function SuperAdminEmpresaDetalleScreen({ route, navigation }: NativeStac
               <Chip key={t.valor} marca={marca} activo={t.valor === empresa.tema} label={t.label} onPress={() => onCambiarTema(t.valor)} cargando={guardandoTema} />
             ))}
           </View>
-          <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`}>
+          <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
             Estilo con que los usuarios de la empresa ven la app, en web y mobile.
           </Texto>
         </View>
 
         <View style={{ gap: tokens.space["1"] }}>
-          <Texto tamano={tokens.size.small} peso="semibold" color={`${tokens.color.text}99`} style={{ marginBottom: tokens.space["1"] }}>
+          <Texto tamano={tokens.size.small} peso="semibold" color={tokens.color.textSecondary} style={{ marginBottom: tokens.space["1"] }}>
             Módulos
           </Texto>
           {modulos.map((m) => (
@@ -253,7 +253,7 @@ export function Chip({
         opacity: cargando ? 0.6 : 1,
       }}
     >
-      <Texto tamano={tokens.size.caption} peso="semibold" color={activo ? marca.fuerte : `${tokens.color.text}99`}>
+      <Texto tamano={tokens.size.caption} peso="semibold" color={activo ? marca.fuerte : tokens.color.textSecondary}>
         {label}
       </Texto>
     </Pressable>

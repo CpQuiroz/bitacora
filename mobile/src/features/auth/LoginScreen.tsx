@@ -131,7 +131,7 @@ export function LoginScreen({ navigation }: NativeStackScreenProps<RootStackPara
         <>
           <View style={{ flexDirection: "row", alignItems: "center", gap: tokens.space["2"] }}>
             <View style={{ flex: 1, height: 1, backgroundColor: tokens.color.divider }} />
-            <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
+            <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
               o
             </Texto>
             <View style={{ flex: 1, height: 1, backgroundColor: tokens.color.divider }} />

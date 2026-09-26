@@ -31,7 +31,7 @@ export function Select({ etiqueta, error, ayuda, deshabilitado, valor, onCambio,
           size={16}
           strokeWidth={2.75}
           aria-hidden="true"
-          className="pointer-events-none absolute right-ds-3 top-1/2 -translate-y-1/2 text-ds-text/50"
+          className="pointer-events-none absolute right-ds-3 top-1/2 -translate-y-1/2 text-ds-text-secondary"
         />
       </div>
       {error ? <p className={MENSAJE_ERROR}>{error}</p> : ayuda ? <p className={MENSAJE_AYUDA}>{ayuda}</p> : null}

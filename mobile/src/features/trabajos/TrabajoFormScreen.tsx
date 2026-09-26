@@ -187,7 +187,7 @@ export function TrabajoFormScreen({ navigation, route }: NativeStackScreenProps<
         ) : null}
 
         <View style={{ gap: tokens.space["2"] }}>
-          <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
+          <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
             Fecha
           </Texto>
           <SelectorDias valor={b.fecha} onElegir={(k) => set("fecha", k)} cantidadDias={60} />
@@ -198,7 +198,7 @@ export function TrabajoFormScreen({ navigation, route }: NativeStackScreenProps<
         <Input etiqueta="Ubicación" valor={b.ubicacion} onCambio={(v) => set("ubicacion", v)} />
 
         <View style={{ gap: tokens.space["2"] }}>
-          <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
+          <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
             Estado
           </Texto>
           <View style={{ flexDirection: "row", gap: tokens.space["2"] }}>
@@ -219,7 +219,7 @@ export function TrabajoFormScreen({ navigation, route }: NativeStackScreenProps<
                     borderColor: activo ? marca.base : tokens.color.divider,
                   }}
                 >
-                  <Texto tamano={tokens.size.caption} peso="semibold" color={activo ? marca.fuerte : `${tokens.color.text}99`}>
+                  <Texto tamano={tokens.size.caption} peso="semibold" color={activo ? marca.fuerte : tokens.color.textSecondary}>
                     {e.label}
                   </Texto>
                 </Pressable>

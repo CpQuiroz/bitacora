@@ -93,7 +93,7 @@ export default function InformeServiciosPage() {
         ) : (
           <table className="w-full text-left text-ds-body">
             <thead>
-              <tr className="border-b border-ds-divider text-[11px] font-medium uppercase tracking-[0.08em] text-ds-text/60">
+              <tr className="border-b border-ds-divider text-[11px] font-medium uppercase tracking-[0.08em] text-ds-text-secondary">
                 <th className="py-ds-2">Cliente</th>
                 <th className="py-ds-2 text-right">OS</th>
               </tr>

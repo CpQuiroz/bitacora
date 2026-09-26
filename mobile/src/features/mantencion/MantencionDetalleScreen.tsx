@@ -134,14 +134,14 @@ export function MantencionDetalleScreen({ route, navigation }: NativeStackScreen
       <ScreenHeader titulo="Detalle de mantención" accion={volver} />
       <ScrollView contentContainerStyle={{ padding: tokens.space["4"], gap: tokens.space["4"], paddingBottom: tokens.space["8"] }}>
         <View style={{ gap: 4 }}>
-          <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} style={{ fontVariant: ["tabular-nums"] }}>
+          <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary} style={{ fontVariant: ["tabular-nums"] }}>
             {fechaCorta(detalle.fecha)}
             {detalle.folio != null ? ` · N° ${String(detalle.folio).padStart(4, "0")}` : ""}
           </Texto>
           <Texto tamano={tokens.size.body} color={tokens.color.text} peso="semibold">
             {detalle.tipo === "programa" ? "Mantención Flota" : "Checklist diario"}
           </Texto>
-          <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
+          <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
             {detalle.origen === "externo" ? "Taller externo" : "Interno"} · {quien}
             {detalle.kilometraje != null ? ` · ${detalle.kilometraje.toLocaleString("es-CL")} km` : ""}
             {detalle.horas_motor != null ? ` · ${detalle.horas_motor.toLocaleString("es-CL")} h` : ""}
@@ -159,7 +159,7 @@ export function MantencionDetalleScreen({ route, navigation }: NativeStackScreen
           </Texto>
           {secciones.map(({ seccion, items }) => (
             <View key={seccion} style={{ gap: 4 }}>
-              <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} peso="semibold" style={{ textTransform: "uppercase", letterSpacing: 0.4 }}>
+              <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary} peso="semibold" style={{ textTransform: "uppercase", letterSpacing: 0.4 }}>
                 {seccion}
               </Texto>
               {items.map((it, i) => (
@@ -210,7 +210,7 @@ export function MantencionDetalleScreen({ route, navigation }: NativeStackScreen
               ))}
             </View>
           ) : (
-            <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
+            <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
               Todavía no hay fotos de respaldo.
             </Texto>
           )}

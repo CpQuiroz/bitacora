@@ -548,15 +548,15 @@ function LevantamientosContenido() {
               <>
                 <div className="grid grid-cols-2 gap-ds-3 text-ds-small sm:grid-cols-4">
                   <div>
-                    <span className="text-ds-text/60">Cliente</span>
+                    <span className="text-ds-text-secondary">Cliente</span>
                     <p className="text-ds-text">{detalle.cliente?.nombre ?? "—"}</p>
                   </div>
                   <div>
-                    <span className="text-ds-text/60">Técnico asignado</span>
+                    <span className="text-ds-text-secondary">Técnico asignado</span>
                     <p className="text-ds-text">{detalle.tecnico?.nombre ?? "Sin asignar"}</p>
                   </div>
                   <div>
-                    <span className="text-ds-text/60">Fecha de visita</span>
+                    <span className="text-ds-text-secondary">Fecha de visita</span>
                     <p className="text-ds-text">
                       {detalle.fecha_visita
                         ? fechaDesdeString(detalle.fecha_visita).toLocaleDateString("es-CL") + (detalle.hora_visita ? ` · ${detalle.hora_visita}` : "")
@@ -564,7 +564,7 @@ function LevantamientosContenido() {
                     </p>
                   </div>
                   <div>
-                    <span className="text-ds-text/60">Dirección</span>
+                    <span className="text-ds-text-secondary">Dirección</span>
                     {detalle.cliente?.direccion ? (
                       <p className="text-ds-text">
                         <a
@@ -589,14 +589,14 @@ function LevantamientosContenido() {
                         </Button>
                       </div>
                     ) : (
-                      <p className="text-ds-text/60">Sin dirección</p>
+                      <p className="text-ds-text-secondary">Sin dirección</p>
                     )}
                   </div>
                 </div>
 
                 {detalle.descripcion_requerimiento ? (
                   <div>
-                    <span className="text-ds-small text-ds-text/60">Qué se pidió evaluar</span>
+                    <span className="text-ds-small text-ds-text-secondary">Qué se pidió evaluar</span>
                     <p className="text-ds-body text-ds-text">{detalle.descripcion_requerimiento}</p>
                   </div>
                 ) : null}
@@ -605,7 +605,7 @@ function LevantamientosContenido() {
 
             {detalle.descripcion_tecnico ? (
               <div>
-                <span className="text-ds-small text-ds-text/60">Lo que observó el técnico</span>
+                <span className="text-ds-small text-ds-text-secondary">Lo que observó el técnico</span>
                 <p className="text-ds-body text-ds-text">{detalle.descripcion_tecnico}</p>
               </div>
             ) : null}
@@ -620,7 +620,7 @@ function LevantamientosContenido() {
                 ) : null}
               </div>
               {detalle.materiales.length === 0 ? (
-                <p className="text-ds-small text-ds-text/60">Todavía no hay materiales cargados.</p>
+                <p className="text-ds-small text-ds-text-secondary">Todavía no hay materiales cargados.</p>
               ) : (
                 <ul className="mt-1 flex flex-col gap-1">
                   {detalle.materiales.map((m) => (
@@ -661,7 +661,7 @@ function LevantamientosContenido() {
                 ) : null}
               </div>
               {detalle.fotos.length === 0 ? (
-                <p className="mt-1 text-ds-small text-ds-text/60">Sin fotos todavía.</p>
+                <p className="mt-1 text-ds-small text-ds-text-secondary">Sin fotos todavía.</p>
               ) : (
                 <div className="mt-1 flex flex-wrap gap-ds-2">
                   {detalle.fotos.map((f) => (

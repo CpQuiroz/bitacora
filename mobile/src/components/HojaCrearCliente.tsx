@@ -109,7 +109,7 @@ export function HojaCrearCliente({
             <Input etiqueta="Teléfono" tipo="tel" valor={telefono} onCambio={setTelefono} />
             <Input etiqueta="RUT" valor={rut} onCambio={setRut} autoCapitalizar={false} />
             <Input etiqueta="Correo (opcional)" tipo="email" autoCapitalizar={false} valor={correo} onCambio={setCorreo} />
-            <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
+            <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
               Queda creado y seleccionado. El resto de la ficha se completa después desde la web.
             </Texto>
             <Button tamano="lg" bloque onPress={crear} cargando={guardando}>

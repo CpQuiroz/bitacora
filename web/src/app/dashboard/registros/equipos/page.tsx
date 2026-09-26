@@ -471,7 +471,7 @@ export default function EquiposPage() {
                   {asignaciones.map((a) => (
                     <div key={a.id} className="flex items-center justify-between border-b border-ds-divider pb-ds-2 last:border-0">
                       <span className="text-ds-text">{a.colaborador?.nombre ?? "—"}</span>
-                      <span className="font-ds-body text-ds-caption text-ds-text/60">
+                      <span className="font-ds-body text-ds-caption text-ds-text-secondary">
                         {a.desde} → {a.hasta ?? "hoy"}
                       </span>
                     </div>

@@ -451,15 +451,15 @@ export default function DetalleRendicionPage() {
 
           <div className="mb-ds-6 grid gap-ds-4 sm:grid-cols-3">
             <Card>
-              <p className="font-ds-body text-ds-caption text-ds-text/60">Entregado</p>
+              <p className="font-ds-body text-ds-caption text-ds-text-secondary">Entregado</p>
               <p className="mt-ds-1 font-ds-body text-ds-h5 font-semibold text-ds-text">{formatMoneda(detalle.monto_entregado, usuario.moneda)}</p>
             </Card>
             <Card>
-              <p className="font-ds-body text-ds-caption text-ds-text/60">Gastado</p>
+              <p className="font-ds-body text-ds-caption text-ds-text-secondary">Gastado</p>
               <p className="mt-ds-1 font-ds-body text-ds-h5 font-semibold text-ds-text">{formatMoneda(detalle.total_gastado, usuario.moneda)}</p>
             </Card>
             <Card>
-              <p className="font-ds-body text-ds-caption text-ds-text/60">Saldo</p>
+              <p className="font-ds-body text-ds-caption text-ds-text-secondary">Saldo</p>
               <p className="mt-ds-1 font-ds-body text-ds-h5 font-semibold text-ds-text">{formatMoneda(detalle.saldo, usuario.moneda)}</p>
               {detalle.saldo !== 0 && (detalle.estado === "aprobada" || detalle.estado === "enviada") && rol !== "colaborador" && (
                 <label className="mt-ds-2 flex items-center gap-ds-2 font-ds-body text-ds-caption text-ds-text/70">
@@ -557,7 +557,7 @@ export default function DetalleRendicionPage() {
 
             {detalle.gastos.length === 0 ? (
               <Card>
-                <p className="font-ds-body text-ds-small text-ds-text/60">
+                <p className="font-ds-body text-ds-small text-ds-text-secondary">
                   {permisoEditar ? "Todavía no se agregó ningún gasto." : "Todavía no se agregó ningún gasto (se hace desde el celular)."}
                 </p>
               </Card>
@@ -586,7 +586,7 @@ export default function DetalleRendicionPage() {
                           {g.categoria_info.nombre}
                         </span>
                       ) : (
-                        <span className="text-ds-text/60">{g.categoria}</span>
+                        <span className="text-ds-text-secondary">{g.categoria}</span>
                       ),
                   },
                   { encabezado: "Descripción", celda: (g) => g.descripcion || "—" },
@@ -608,7 +608,7 @@ export default function DetalleRendicionPage() {
                           Ver
                         </button>
                       ) : (
-                        <span className="text-ds-text/60">—</span>
+                        <span className="text-ds-text-secondary">—</span>
                       ),
                   },
                 ]}

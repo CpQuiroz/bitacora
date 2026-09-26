@@ -162,8 +162,8 @@ function ServiciosCard({ servicios, onCambio }: { servicios: Servicio[] | null; 
           claveFila={(s) => s.id}
           columnas={[
             { encabezado: "Nombre", celda: (s) => <span className="font-medium text-ds-text">{s.nombre}</span> },
-            { encabezado: "Precio", celda: (s) => <span className="text-ds-text/60">{formatoPrecio(s.precio)}</span> },
-            { encabezado: "Duración sugerida", celda: (s) => <span className="text-ds-text/60">{s.duracion_sugerida_min} min</span> },
+            { encabezado: "Precio", celda: (s) => <span className="text-ds-text-secondary">{formatoPrecio(s.precio)}</span> },
+            { encabezado: "Duración sugerida", celda: (s) => <span className="text-ds-text-secondary">{s.duracion_sugerida_min} min</span> },
             { encabezado: "Estado", celda: (s) => <StatusBadge estado={s.activo ? "activo" : "inactivo"} /> },
           ]}
           // Convención (tarea 149): la fila abre la edición; el resto en el menú ⋯.
@@ -366,9 +366,9 @@ function TiposPackCard({ servicios }: { servicios: Servicio[] | null }) {
           columnas={[
             { encabezado: "Nombre", celda: (t) => <span className="font-medium text-ds-text">{t.nombre}</span> },
             { encabezado: "Sesiones", celda: (t) => <span className="text-ds-text">{t.cantidad_sesiones}</span> },
-            { encabezado: "Precio", celda: (t) => <span className="text-ds-text/60">{formatoPrecio(t.precio)}</span> },
-            { encabezado: "Servicio", celda: (t) => <span className="text-ds-text/60">{nombreServicio(t.servicio_id)}</span> },
-            { encabezado: "Vigencia", celda: (t) => <span className="text-ds-text/60">{t.vigencia_dias !== null ? `${t.vigencia_dias} días` : "No vence"}</span> },
+            { encabezado: "Precio", celda: (t) => <span className="text-ds-text-secondary">{formatoPrecio(t.precio)}</span> },
+            { encabezado: "Servicio", celda: (t) => <span className="text-ds-text-secondary">{nombreServicio(t.servicio_id)}</span> },
+            { encabezado: "Vigencia", celda: (t) => <span className="text-ds-text-secondary">{t.vigencia_dias !== null ? `${t.vigencia_dias} días` : "No vence"}</span> },
             { encabezado: "Estado", celda: (t) => <StatusBadge estado={t.activo ? "activo" : "inactivo"} /> },
           ]}
           // Convención (tarea 149): la fila abre la edición; el resto en el menú ⋯.

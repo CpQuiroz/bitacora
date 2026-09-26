@@ -224,7 +224,7 @@ export default function EquipoDetallePage() {
             onClick={() => setTab(t.id)}
             aria-current={tab === t.id ? "page" : undefined}
             className={`-mb-px whitespace-nowrap border-b-2 px-ds-3 py-2.5 font-ds-body text-ds-small font-semibold transition-colors ${
-              tab === t.id ? "border-ds-brand text-ds-brand" : "border-transparent text-ds-text/60 hover:text-ds-text"
+              tab === t.id ? "border-ds-brand text-ds-brand" : "border-transparent text-ds-text-secondary hover:text-ds-text"
             }`}
           >
             {t.label}
@@ -238,35 +238,35 @@ export default function EquipoDetallePage() {
             <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Datos del equipo</p>
             <div className="grid gap-ds-4 font-ds-body text-ds-small sm:grid-cols-3">
               <div>
-                <p className="text-ds-caption text-ds-text/60">Cliente</p>
+                <p className="text-ds-caption text-ds-text-secondary">Cliente</p>
                 <p className="text-ds-text">{equipo.cliente?.nombre ?? "Propio de la empresa"}</p>
               </div>
               <div>
-                <p className="text-ds-caption text-ds-text/60">Categoría</p>
+                <p className="text-ds-caption text-ds-text-secondary">Categoría</p>
                 <p className="text-ds-text">{equipo.categoria ?? "—"}</p>
               </div>
               <div>
-                <p className="text-ds-caption text-ds-text/60">N° de serie</p>
+                <p className="text-ds-caption text-ds-text-secondary">N° de serie</p>
                 <p className="text-ds-text">{equipo.numero_serie ?? "—"}</p>
               </div>
               {esVehiculo && (
                 <>
                   <div>
-                    <p className="text-ds-caption text-ds-text/60">Patente</p>
+                    <p className="text-ds-caption text-ds-text-secondary">Patente</p>
                     <p className="font-mono text-ds-text">{equipo.patente ?? "—"}</p>
                   </div>
                   <div>
-                    <p className="text-ds-caption text-ds-text/60">Asignado a</p>
+                    <p className="text-ds-caption text-ds-text-secondary">Asignado a</p>
                     <p className="text-ds-text">{equipo.asignacion_vigente?.colaborador_nombre ?? "Sin asignar"}</p>
                   </div>
                 </>
               )}
               <div>
-                <p className="text-ds-caption text-ds-text/60">Vencimiento de garantía</p>
+                <p className="text-ds-caption text-ds-text-secondary">Vencimiento de garantía</p>
                 <p className="font-mono text-ds-text">{equipo.garantia_vencimiento ?? "—"}</p>
               </div>
             </div>
-            <p className="mt-ds-4 font-ds-body text-ds-caption text-ds-text/60">
+            <p className="mt-ds-4 font-ds-body text-ds-caption text-ds-text-secondary">
               Para editar estos datos, hacelo desde el{" "}
               <Link href="/dashboard/registros/equipos" className="font-medium text-ds-brand hover:underline">
                 listado de Equipos
@@ -313,7 +313,7 @@ export default function EquipoDetallePage() {
                       <p className="font-medium text-ds-text">
                         Cada {p.frecuencia_dias} días — próxima: <span className="font-mono">{p.proxima_fecha}</span>
                       </p>
-                      {p.notas && <p className="font-ds-body text-ds-caption text-ds-text/60">{p.notas}</p>}
+                      {p.notas && <p className="font-ds-body text-ds-caption text-ds-text-secondary">{p.notas}</p>}
                     </div>
                     <div className="flex items-center gap-ds-2">
                       <StatusBadge estado={p.activo ? "activo" : "inactivo"} />
@@ -365,7 +365,7 @@ function Dato({ etiqueta, valor, mono, alerta, onPress }: { etiqueta: string; va
   const color = alerta === "peligro" ? "text-ds-accent-700" : alerta === "aviso" ? "text-ds-accent-800" : "text-ds-text";
   const contenido = (
     <>
-      <span className="text-ds-text/60">{etiqueta}</span>
+      <span className="text-ds-text-secondary">{etiqueta}</span>
       <span className={`font-semibold ${color} ${mono ? "font-mono" : ""}`}>{valor}</span>
     </>
   );

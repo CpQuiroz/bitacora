@@ -232,19 +232,19 @@ export default function GastosPage() {
 
       <div className="mb-ds-6 grid gap-ds-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
-          <p className="font-ds-body text-ds-caption text-ds-text/60">Total</p>
+          <p className="font-ds-body text-ds-caption text-ds-text-secondary">Total</p>
           <p className="mt-ds-1 font-ds-body text-ds-h5 font-semibold text-ds-text">{formatMoneda(totales.total, usuario.moneda)}</p>
         </Card>
         <Card>
-          <p className="font-ds-body text-ds-caption text-ds-text/60">Pendiente</p>
+          <p className="font-ds-body text-ds-caption text-ds-text-secondary">Pendiente</p>
           <p className="mt-ds-1 font-ds-body text-ds-h5 font-semibold text-ds-accent-700">{formatMoneda(totales.pendiente, usuario.moneda)}</p>
         </Card>
         <Card>
-          <p className="font-ds-body text-ds-caption text-ds-text/60">Pagado</p>
+          <p className="font-ds-body text-ds-caption text-ds-text-secondary">Pagado</p>
           <p className="mt-ds-1 font-ds-body text-ds-h5 font-semibold text-ds-accent2-800">{formatMoneda(totales.pagado, usuario.moneda)}</p>
         </Card>
         <Card>
-          <p className="font-ds-body text-ds-caption text-ds-text/60">Atrasado</p>
+          <p className="font-ds-body text-ds-caption text-ds-text-secondary">Atrasado</p>
           <p className="mt-ds-1 font-ds-body text-ds-h5 font-semibold text-ds-accent-800">{formatMoneda(totales.vencido, usuario.moneda)}</p>
         </Card>
       </div>
@@ -412,7 +412,7 @@ export default function GastosPage() {
                     {g.categoria_info.nombre}
                   </span>
                 ) : (
-                  <span className="text-ds-text/60">{g.categoria}</span>
+                  <span className="text-ds-text-secondary">{g.categoria}</span>
                 ),
             },
             { encabezado: "Centro de costo", celda: (g) => g.centro_costo_info?.nombre ?? "—" },
@@ -424,7 +424,7 @@ export default function GastosPage() {
                 <div className="flex items-center gap-1.5">
                   <StatusBadge estado={estadoMostrado(g)} tonoForzado={TONO_ESTADO[estadoMostrado(g)]} />
                   {g.editado_en && (
-                    <span className="text-[11px] text-ds-text/60" title={`Editado el ${new Date(g.editado_en).toLocaleString("es-CL")} después de estar pagado`}>
+                    <span className="text-[11px] text-ds-text-secondary" title={`Editado el ${new Date(g.editado_en).toLocaleString("es-CL")} después de estar pagado`}>
                       (editado)
                     </span>
                   )}

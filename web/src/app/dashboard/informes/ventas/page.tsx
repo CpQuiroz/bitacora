@@ -125,7 +125,7 @@ export default function InformeVentasPage() {
         ) : (
           <table className="w-full text-left text-ds-body">
             <thead>
-              <tr className="border-b border-ds-divider text-[11px] font-medium uppercase tracking-[0.08em] text-ds-text/60">
+              <tr className="border-b border-ds-divider text-[11px] font-medium uppercase tracking-[0.08em] text-ds-text-secondary">
                 <th className="py-ds-2">Servicio</th>
                 <th className="py-ds-2">Cantidad</th>
                 <th className="py-ds-2 text-right">Valor</th>

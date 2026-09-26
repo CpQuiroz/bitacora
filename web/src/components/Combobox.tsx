@@ -138,14 +138,14 @@ export function Combobox({
           if (!abierto) setAbierto(true);
         }}
         onKeyDown={onKeyDown}
-        className={`h-11 w-full rounded-ds-pill border border-ds-divider bg-ds-surface px-ds-4 pr-9 font-ds-body text-ds-body text-ds-text placeholder:text-ds-text/40 outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ds-brand)] [caret-color:var(--ds-brand)] ${
+        className={`h-11 w-full rounded-ds-pill border border-ds-divider bg-ds-surface px-ds-4 pr-9 font-ds-body text-ds-body text-ds-text placeholder:text-ds-text-secondary outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ds-brand)] [caret-color:var(--ds-brand)] ${
           abierto ? "" : "cursor-pointer"
         } ${disabled ? "cursor-not-allowed opacity-60" : ""}`}
       />
       <ChevronDown
         size={16}
         strokeWidth={2.75}
-        className={`pointer-events-none absolute right-ds-3 top-1/2 -translate-y-1/2 text-ds-text/50 transition-transform ${
+        className={`pointer-events-none absolute right-ds-3 top-1/2 -translate-y-1/2 text-ds-text-secondary transition-transform ${
           abierto ? "rotate-180" : ""
         }`}
       />
@@ -154,7 +154,7 @@ export function Combobox({
           role="listbox"
           className="absolute z-20 mt-ds-1 max-h-60 w-full overflow-auto rounded-ds-md border border-ds-divider bg-ds-surface py-ds-1 shadow-ds-md"
         >
-          {filas.length === 0 ? <p className="px-ds-4 py-ds-2 font-ds-body text-ds-small text-ds-text/60">Sin resultados.</p> : null}
+          {filas.length === 0 ? <p className="px-ds-4 py-ds-2 font-ds-body text-ds-small text-ds-text-secondary">Sin resultados.</p> : null}
           {filas.map((fila, i) => (
             <button
               key={fila.tipo === "opcion" ? fila.opcion.id : "__crear__"}
@@ -183,7 +183,7 @@ export function Combobox({
           href={gestionHref}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-ds-1 inline-block font-ds-body text-ds-caption font-medium text-ds-text/60 transition-colors hover:text-ds-brand"
+          className="mt-ds-1 inline-block font-ds-body text-ds-caption font-medium text-ds-text-secondary transition-colors hover:text-ds-brand"
         >
           {gestionLabel ?? "Gestionar →"}
         </a>

@@ -33,15 +33,10 @@ export function aclarar(color: string, cantidad: number): string {
 }
 
 /**
- * Devuelve "#ffffff" o "#111111" según cuál contraste mejor sobre `fondo`.
- * Mismo criterio de luminancia que usa el web al calcular
- * empresas.color_primario_foreground.
+ * Devuelve "#ffffff" o "#1a1a1a" según cuál contraste mejor sobre `fondo`
+ * (WCAG, tarea 154). Para la marca usar marcaLegible de design-tokens.
  */
-export function contraste(fondo: string): string {
-  const { r, g, b } = parseHex(fondo);
-  const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return lum > 0.6 ? "#111111" : "#ffffff";
-}
+export { textoSobreFondo as contraste } from "@bitacora/design-tokens";
 
 /** true si `valor` parece un hex válido de 3 o 6 dígitos. */
 export function esHexValido(valor: string | null | undefined): valor is string {

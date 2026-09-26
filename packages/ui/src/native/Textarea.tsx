@@ -16,7 +16,7 @@ export function Textarea({ etiqueta, error, ayuda, deshabilitado, valor, onCambi
         value={valor}
         onChangeText={onCambio}
         placeholder={placeholder}
-        placeholderTextColor={`${tokens.color.text}66`}
+        placeholderTextColor={tokens.color.textSecondary}
         editable={!deshabilitado}
         multiline
         textAlignVertical="top"

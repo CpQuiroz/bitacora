@@ -1,9 +1,9 @@
 import { createContext, useContext, useMemo, type ReactNode } from "react";
 import type { Empresa } from "@bitacora/shared";
-import { tokens as dsTokens } from "@bitacora/design-tokens";
+import { marcaLegible, tokens as dsTokens } from "@bitacora/design-tokens";
 import { duracion, espacio, estado, paletaBase, radio, sombra, tipografia, type Paleta } from "./tokens";
 import { FUENTE_DS, NOMBRE_FUENTE } from "./fuentes";
-import { contraste, esHexValido, oscurecerOklch } from "./color";
+import { esHexValido, oscurecerOklch } from "./color";
 
 /** Marca del tenant, ya resuelta (base + estados derivados en OKLCH). */
 export type Marca = {
@@ -49,10 +49,10 @@ export type MarcaEmpresa = Pick<Empresa, "color_primario" | "color_primario_fore
 const FALLBACK_MARCA = dsTokens.color.accent; // #c67139
 
 function resolverMarca(marca: MarcaEmpresa): Marca {
-  const base = esHexValido(marca?.color_primario) ? (marca!.color_primario as string) : FALLBACK_MARCA;
-  const foreground = esHexValido(marca?.color_primario_foreground)
-    ? (marca!.color_primario_foreground as string)
-    : contraste(base);
+  // Tarea 154: fondo y texto con contraste AA (marcaLegible); el
+  // color_primario_foreground guardado ya no se usa.
+  const original = esHexValido(marca?.color_primario) ? (marca!.color_primario as string) : FALLBACK_MARCA;
+  const { fondo: base, texto: foreground } = marcaLegible(original);
   return {
     base,
     hover: oscurecerOklch(base, 0.05),
@@ -103,7 +103,7 @@ const TemaContext = createContext<Tema>(construirTema(null));
 export function ThemeProvider({ marca, children }: { marca: MarcaEmpresa; children: ReactNode }) {
   const tema = useMemo(
     () => construirTema(marca),
-    [marca?.color_primario, marca?.color_primario_foreground]
+    [marca?.color_primario]
   );
   return <TemaContext.Provider value={tema}>{children}</TemaContext.Provider>;
 }

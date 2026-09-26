@@ -85,11 +85,11 @@ const ACCESOS: { href: string; label: string; icon: typeof Briefcase; modulo: Mo
 function Kpi({ etiqueta, valor, sub }: { etiqueta: string; valor: string; sub?: string }) {
   return (
     <Card>
-      <p className="font-ds-body text-[11px] font-semibold uppercase tracking-[0.1em] text-ds-text/60">{etiqueta}</p>
+      <p className="font-ds-body text-[11px] font-semibold uppercase tracking-[0.1em] text-ds-text-secondary">{etiqueta}</p>
       <p className="mt-ds-2 font-ds-body text-ds-h3 font-semibold tracking-tight text-ds-text">
         <Cifra>{valor}</Cifra>
       </p>
-      {sub ? <p className="mt-ds-1 font-ds-body text-ds-caption font-semibold text-ds-text/60">{sub}</p> : null}
+      {sub ? <p className="mt-ds-1 font-ds-body text-ds-caption font-semibold text-ds-text-secondary">{sub}</p> : null}
     </Card>
   );
 }
@@ -346,19 +346,19 @@ export default function DashboardPage() {
             <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Ingresos vs Gastos</p>
             <div className="grid gap-ds-4 sm:grid-cols-3">
               <div>
-                <p className="font-ds-body text-ds-caption text-ds-text/60">Ingresos recibidos</p>
+                <p className="font-ds-body text-ds-caption text-ds-text-secondary">Ingresos recibidos</p>
                 <p className="mt-ds-1 font-ds-body text-ds-h5 font-semibold text-ds-accent2-800">
                   <Cifra>{money(datos.ingresos_vs_gastos.ingresos_recibidos)}</Cifra>
                 </p>
               </div>
               <div>
-                <p className="font-ds-body text-ds-caption text-ds-text/60">Gastos pagados</p>
+                <p className="font-ds-body text-ds-caption text-ds-text-secondary">Gastos pagados</p>
                 <p className="mt-ds-1 font-ds-body text-ds-h5 font-semibold text-ds-accent-700">
                   <Cifra>{money(datos.ingresos_vs_gastos.gastos_pagados)}</Cifra>
                 </p>
               </div>
               <div>
-                <p className="font-ds-body text-ds-caption text-ds-text/60">Resultado neto</p>
+                <p className="font-ds-body text-ds-caption text-ds-text-secondary">Resultado neto</p>
                 <p
                   className={`mt-ds-1 font-ds-body text-ds-h3 font-semibold ${
                     datos.ingresos_vs_gastos.resultado_neto >= 0 ? "text-ds-accent2-800" : "text-ds-accent-700"

@@ -533,7 +533,7 @@ export default function ViajesPage() {
                 type="button"
                 onClick={() => setAgrupacion("semana")}
                 className={`rounded-ds-pill px-ds-3 py-1 font-ds-body text-ds-caption font-medium transition-colors ${
-                  agrupacion === "semana" ? "bg-ds-brand/[0.08] text-ds-brand" : "text-ds-text/60"
+                  agrupacion === "semana" ? "bg-ds-brand/[0.08] text-ds-brand" : "text-ds-text-secondary"
                 }`}
               >
                 Semanal
@@ -542,7 +542,7 @@ export default function ViajesPage() {
                 type="button"
                 onClick={() => setAgrupacion("mes")}
                 className={`rounded-ds-pill px-ds-3 py-1 font-ds-body text-ds-caption font-medium transition-colors ${
-                  agrupacion === "mes" ? "bg-ds-brand/[0.08] text-ds-brand" : "text-ds-text/60"
+                  agrupacion === "mes" ? "bg-ds-brand/[0.08] text-ds-brand" : "text-ds-text-secondary"
                 }`}
               >
                 Mensual
@@ -553,7 +553,7 @@ export default function ViajesPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-left text-ds-body">
                 <thead>
-                  <tr className="border-b border-ds-divider text-[11px] font-medium uppercase tracking-[0.08em] text-ds-text/60">
+                  <tr className="border-b border-ds-divider text-[11px] font-medium uppercase tracking-[0.08em] text-ds-text-secondary">
                     <th className="px-ds-4 py-ds-3">{agrupacion === "semana" ? "Semana de" : "Mes"}</th>
                     <th className="px-ds-4 py-ds-3">Guías</th>
                     <th className="px-ds-4 py-ds-3">Km recorridos</th>
@@ -609,7 +609,7 @@ export default function ViajesPage() {
                   <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Chofer (opcional)</label>
                   <ComboboxResponsable value={choferId} onChange={setChoferId} equipo={choferes} opcionVacia="Sin asignar" placeholder="Sin asignar" />
                   {choferes.length === 0 ? (
-                    <p className="font-ds-body text-ds-caption text-ds-text/60">Para asignar, marca a la persona con la función Chofer en Personas.</p>
+                    <p className="font-ds-body text-ds-caption text-ds-text-secondary">Para asignar, marca a la persona con la función Chofer en Personas.</p>
                   ) : null}
                 </div>
                 <Input etiqueta="Hora de salida (opcional)" tipo="hora" valor={hora} onCambio={setHora} />
@@ -733,7 +733,7 @@ export default function ViajesPage() {
         )}
       </div>
       {seleccionados.size > 0 && !puedeFacturar && (
-        <p className="-mt-ds-2 mb-ds-4 font-ds-body text-ds-caption text-ds-text/60">
+        <p className="-mt-ds-2 mb-ds-4 font-ds-body text-ds-caption text-ds-text-secondary">
           Para facturar, todos los viajes seleccionados deben ser del mismo cliente y estar en estado &quot;confirmado&quot;.
         </p>
       )}
@@ -759,7 +759,7 @@ export default function ViajesPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-ds-body">
               <thead>
-                <tr className="border-b border-ds-divider text-[11px] font-medium uppercase tracking-[0.08em] text-ds-text/60">
+                <tr className="border-b border-ds-divider text-[11px] font-medium uppercase tracking-[0.08em] text-ds-text-secondary">
                   <th className="px-ds-4 py-ds-3"></th>
                   <th className="px-ds-4 py-ds-3">Fecha</th>
                   <th className="px-ds-4 py-ds-3">Guía</th>
@@ -800,7 +800,7 @@ export default function ViajesPage() {
                         </td>
                         <td className="px-ds-4 py-ds-3 text-ds-text/70">{v.fecha}</td>
                         <td className="px-ds-4 py-ds-3 font-medium text-ds-text">
-                          {formatearFolio("VIA", v.folio) ? <p className="font-ds-body text-ds-caption text-ds-text/60">{formatearFolio("VIA", v.folio)}</p> : null}
+                          {formatearFolio("VIA", v.folio) ? <p className="font-ds-body text-ds-caption text-ds-text-secondary">{formatearFolio("VIA", v.folio)}</p> : null}
                           {v.numero_guia}
                         </td>
                         <td className="px-ds-4 py-ds-3 text-ds-text">{v.cliente_info?.nombre ?? v.cliente}</td>
@@ -823,9 +823,9 @@ export default function ViajesPage() {
                         <td className="px-ds-4 py-ds-3 tabular-nums text-ds-text/70">{kilometros != null ? `${kilometros.toLocaleString("es-CL")} km` : "—"}</td>
                         <td className="px-ds-4 py-ds-3 text-ds-text">
                           {formatMoneda(v.total, usuario.moneda)}
-                          {v.aplica_iva && <span className="ml-ds-1 font-ds-body text-ds-caption text-ds-text/60">+IVA</span>}
+                          {v.aplica_iva && <span className="ml-ds-1 font-ds-body text-ds-caption text-ds-text-secondary">+IVA</span>}
                           {puedeViatico && v.modo_precio && v.modo_precio !== "fijo" ? (
-                            <p className="font-ds-body text-ds-caption text-ds-text/60">
+                            <p className="font-ds-body text-ds-caption text-ds-text-secondary">
                               {v.modo_precio === "tramos" ? `Por tramos (${v.tramos_detalle?.length ?? 0})` : `Por km · ${v.distancia_km ?? 0} km`}
                             </p>
                           ) : null}
@@ -833,7 +833,7 @@ export default function ViajesPage() {
                         <td className="px-ds-4 py-ds-3">
                           <StatusBadge estado={v.estado} tonoForzado={v.estado === "confirmado" || v.estado === "facturado" ? "completado" : "en_progreso"} />
                           {v.origen_captura === "whatsapp" && (
-                            <span className="ml-1.5 font-ds-body text-ds-caption text-ds-text/60" title="Capturado por WhatsApp">
+                            <span className="ml-1.5 font-ds-body text-ds-caption text-ds-text-secondary" title="Capturado por WhatsApp">
                               📱
                             </span>
                           )}
@@ -845,10 +845,10 @@ export default function ViajesPage() {
                                 {esBorrador ? "Revisar y confirmar" : "Editar"}
                               </button>
                             )}
-                            <button type="button" onClick={() => verFotos(v.id)} className="font-ds-body text-ds-caption font-medium text-ds-text/60 hover:text-ds-brand">
+                            <button type="button" onClick={() => verFotos(v.id)} className="font-ds-body text-ds-caption font-medium text-ds-text-secondary hover:text-ds-brand">
                               Fotos
                             </button>
-                            <button type="button" onClick={() => void verHistorialMonto(v)} className="font-ds-body text-ds-caption font-medium text-ds-text/60 hover:text-ds-brand">
+                            <button type="button" onClick={() => void verHistorialMonto(v)} className="font-ds-body text-ds-caption font-medium text-ds-text-secondary hover:text-ds-brand">
                               Historial
                             </button>
                             {v.estado !== "facturado" && (
@@ -999,7 +999,7 @@ export default function ViajesPage() {
                                   Guardar cambios
                                 </Button>
                               )}
-                              <button type="button" onClick={() => verFotos(v.id)} className="font-ds-body text-ds-caption font-medium text-ds-text/60 hover:text-ds-brand">
+                              <button type="button" onClick={() => verFotos(v.id)} className="font-ds-body text-ds-caption font-medium text-ds-text-secondary hover:text-ds-brand">
                                 Ver / subir fotos
                               </button>
                               <Button variante="ghost" onPress={() => setEditId(null)}>
@@ -1033,7 +1033,7 @@ export default function ViajesPage() {
                 <span>
                   {formatMoneda(f.detalle.anterior?.total ?? 0, usuario?.moneda)} → <strong>{formatMoneda(f.detalle.nuevo?.total ?? 0, usuario?.moneda)}</strong>
                 </span>
-                <span className="text-ds-text/60">
+                <span className="text-ds-text-secondary">
                   {f.usuario?.nombre ?? "—"} · {new Date(f.creado_en).toLocaleString("es-CL")}
                 </span>
               </li>

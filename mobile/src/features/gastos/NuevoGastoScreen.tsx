@@ -256,7 +256,7 @@ export function NuevoGastoScreen({ navigation, route }: NativeStackScreenProps<M
           {b.descripcion ? <CampoLectura etiqueta="Descripción" valor={b.descripcion} /> : null}
           <CampoLectura etiqueta="Fecha" valor={b.fecha} />
           <View style={{ gap: tokens.space["1"] * 1.5 }}>
-            <Texto tamano={tokens.size.small} peso="medium" color={`${tokens.color.text}99`}>
+            <Texto tamano={tokens.size.small} peso="medium" color={tokens.color.textSecondary}>
               Foto del comprobante
             </Texto>
             {fotoExistenteUrl ? (
@@ -268,7 +268,7 @@ export function NuevoGastoScreen({ navigation, route }: NativeStackScreenProps<M
                 />
               </Pressable>
             ) : (
-              <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
+              <Texto tamano={tokens.size.small} color={tokens.color.textSecondary}>
                 Todavía se está subiendo — volvé a entrar en un rato.
               </Texto>
             )}
@@ -311,7 +311,7 @@ export function NuevoGastoScreen({ navigation, route }: NativeStackScreenProps<M
         {/* Tarea 144: una empresa nueva parte sin categorías (se crean desde las
             sugerencias de su rubro). Sin permiso para crearlas, se avisa. */}
         {categorias.length === 0 && !(auth.fase === "listo" && auth.modulosVisibles.includes("configuracion")) ? (
-          <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
+          <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
             Tu empresa todavía no tiene categorías de gasto. Pídele a la oficina que las cree en Configuración → Categorías de gastos.
           </Texto>
         ) : null}
@@ -358,14 +358,14 @@ export function NuevoGastoScreen({ navigation, route }: NativeStackScreenProps<M
         ) : null}
 
         <View style={{ gap: tokens.space["1"] * 1.5 }}>
-          <Texto tamano={tokens.size.small} peso="medium" color={`${tokens.color.text}99`}>
+          <Texto tamano={tokens.size.small} peso="medium" color={tokens.color.textSecondary}>
             Fecha
           </Texto>
           <SelectorDias valor={b.fecha} onElegir={(k) => set("fecha", k)} />
         </View>
 
         <View style={{ gap: tokens.space["1"] * 1.5 }}>
-          <Texto tamano={tokens.size.small} peso="medium" color={`${tokens.color.text}99`}>
+          <Texto tamano={tokens.size.small} peso="medium" color={tokens.color.textSecondary}>
             Estado
           </Texto>
           <View style={{ flexDirection: "row", gap: tokens.space["2"] }}>
@@ -380,7 +380,7 @@ export function NuevoGastoScreen({ navigation, route }: NativeStackScreenProps<M
 
         {b.estado === "pagado" ? (
           <View style={{ gap: tokens.space["1"] * 1.5 }}>
-            <Texto tamano={tokens.size.small} peso="medium" color={`${tokens.color.text}99`}>
+            <Texto tamano={tokens.size.small} peso="medium" color={tokens.color.textSecondary}>
               Fecha de pago
             </Texto>
             <SelectorDias valor={b.fecha_pago} onElegir={(k) => set("fecha_pago", k)} />
@@ -427,7 +427,7 @@ export function NuevoGastoScreen({ navigation, route }: NativeStackScreenProps<M
             </Button>
           </View>
         ) : gastoId ? (
-          <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
+          <Texto tamano={tokens.size.small} color={tokens.color.textSecondary}>
             La foto todavía se está subiendo — volvé a entrar en un rato para verla o cambiarla.
           </Texto>
         ) : (
@@ -444,8 +444,8 @@ export function NuevoGastoScreen({ navigation, route }: NativeStackScreenProps<M
               gap: tokens.space["2"],
             }}
           >
-            <Camera size={28} strokeWidth={2} color={`${tokens.color.text}99`} />
-            <Texto tamano={tokens.size.small} peso="semibold" color={`${tokens.color.text}99`}>
+            <Camera size={28} strokeWidth={2} color={tokens.color.textSecondary} />
+            <Texto tamano={tokens.size.small} peso="semibold" color={tokens.color.textSecondary}>
               {rendicionId ? "Foto de la boleta (obligatoria)" : "Foto de la boleta"}
             </Texto>
           </Pressable>
@@ -477,7 +477,7 @@ export function NuevoGastoScreen({ navigation, route }: NativeStackScreenProps<M
 function CampoLectura({ etiqueta, valor }: { etiqueta: string; valor: string }) {
   return (
     <View style={{ gap: tokens.space["1"] * 1.5 }}>
-      <Texto tamano={tokens.size.small} peso="medium" color={`${tokens.color.text}99`}>
+      <Texto tamano={tokens.size.small} peso="medium" color={tokens.color.textSecondary}>
         {etiqueta}
       </Texto>
       <Texto tamano={tokens.size.body} color={tokens.color.text}>
@@ -518,7 +518,7 @@ function EstadoChip({ activo, label, onPress }: { activo: boolean; label: string
         borderColor: activo ? marca.base : tokens.color.divider,
       }}
     >
-      <Texto tamano={tokens.size.caption} peso="semibold" color={activo ? marca.fuerte : `${tokens.color.text}99`}>
+      <Texto tamano={tokens.size.caption} peso="semibold" color={activo ? marca.fuerte : tokens.color.textSecondary}>
         {label}
       </Texto>
     </Pressable>

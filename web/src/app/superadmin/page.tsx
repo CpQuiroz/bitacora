@@ -157,7 +157,7 @@ export default function SuperAdminEmpresasPage() {
               <Input etiqueta="Nombre" requerido valor={adminNombre} onCambio={setAdminNombre} />
               <Input etiqueta="Correo" tipo="email" requerido valor={adminCorreo} onCambio={setAdminCorreo} />
             </div>
-            <p className="mt-ds-2 font-ds-body text-ds-caption text-ds-text/60">Recibe una invitación por correo para activar su cuenta como admin de esta empresa.</p>
+            <p className="mt-ds-2 font-ds-body text-ds-caption text-ds-text-secondary">Recibe una invitación por correo para activar su cuenta como admin de esta empresa.</p>
           </div>
 
           {errorCrear ? <p className="font-ds-body text-ds-small text-ds-accent-700">{errorCrear}</p> : null}

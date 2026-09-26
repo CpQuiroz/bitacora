@@ -106,13 +106,13 @@ function CampoFoto({
         {editable ? (
           <Pressable onPress={agregar} disabled={ocupado}>
             <View style={[cuadro, { borderWidth: 1.5, borderStyle: "dashed", borderColor: tokens.color.divider, alignItems: "center", justifyContent: "center" }]}>
-              {ocupado ? <ActivityIndicator size="small" color={`${tokens.color.text}99`} /> : <Camera size={20} strokeWidth={2.75} color={`${tokens.color.text}99`} />}
+              {ocupado ? <ActivityIndicator size="small" color={tokens.color.textSecondary} /> : <Camera size={20} strokeWidth={2.75} color={tokens.color.textSecondary} />}
             </View>
           </Pressable>
         ) : null}
       </ScrollView>
       {total === 0 && !editable ? (
-        <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
+        <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
           Sin foto.
         </Texto>
       ) : null}
@@ -155,7 +155,7 @@ export function CamposDinamicos({
 
   return (
     <View style={{ gap: tokens.space["3"] }}>
-      <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`} peso="semibold" style={{ textTransform: "uppercase" }}>
+      <Texto tamano={tokens.size.small} color={tokens.color.textSecondary} peso="semibold" style={{ textTransform: "uppercase" }}>
         {nombre}
       </Texto>
       {campos.map((campo) =>

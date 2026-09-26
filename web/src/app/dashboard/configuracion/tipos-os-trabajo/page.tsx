@@ -301,7 +301,7 @@ function TiposOsTrabajoContenido() {
                 Agregar campo
               </Button>
             </div>
-            <p className="mb-ds-3 font-ds-body text-ds-caption text-ds-text/60">
+            <p className="mb-ds-3 font-ds-body text-ds-caption text-ds-text-secondary">
               Estos campos aparecen en la app móvil y en el detalle de la OS al cerrar un trabajo de este tipo.
             </p>
             <div className="flex flex-col gap-ds-3">
@@ -383,11 +383,11 @@ function TiposOsTrabajoContenido() {
                   ))}
                 </div>
               ) : (
-                <span className="text-ds-text/60">—</span>
+                <span className="text-ds-text-secondary">—</span>
               ),
           },
-          { header: "Checklist", cell: (t) => <span className="text-ds-text/60">{t.checklist?.nombre ?? "—"}</span> },
-          { header: "Tiempo estimado", cell: (t) => <span className="text-ds-text/60">{t.tiempo_estimado_minutos != null ? `${t.tiempo_estimado_minutos} min` : "—"}</span> },
+          { header: "Checklist", cell: (t) => <span className="text-ds-text-secondary">{t.checklist?.nombre ?? "—"}</span> },
+          { header: "Tiempo estimado", cell: (t) => <span className="text-ds-text-secondary">{t.tiempo_estimado_minutos != null ? `${t.tiempo_estimado_minutos} min` : "—"}</span> },
           { header: "Estado", cell: (t) => <StatusBadge estado={t.activo ? "activo" : "inactivo"} /> },
         ]}
         actions={[

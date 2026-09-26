@@ -66,7 +66,7 @@ export default function ConfigViajesPage() {
       </div>
       <Card>
         <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Montos por defecto del viático</p>
-        {!cargado && !error ? <p className="font-ds-body text-ds-small text-ds-text/60">Cargando…</p> : null}
+        {!cargado && !error ? <p className="font-ds-body text-ds-small text-ds-text-secondary">Cargando…</p> : null}
         {cargado ? (
           <div className="grid gap-ds-4 sm:grid-cols-2">
             <div className="flex flex-col gap-ds-1">
@@ -88,7 +88,7 @@ export default function ConfigViajesPage() {
             </Button>
           </div>
         ) : null}
-        {cargado && !esAdmin ? <p className="mt-ds-3 font-ds-body text-ds-caption text-ds-text/60">Solo el administrador puede cambiar estos montos.</p> : null}
+        {cargado && !esAdmin ? <p className="mt-ds-3 font-ds-body text-ds-caption text-ds-text-secondary">Solo el administrador puede cambiar estos montos.</p> : null}
       </Card>
     </div>
   );

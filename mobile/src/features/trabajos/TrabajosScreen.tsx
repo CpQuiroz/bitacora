@@ -226,7 +226,7 @@ export function TrabajosScreen({ navigation }: NativeStackScreenProps<TrabajosSt
                     borderColor: activo ? marca.base : tokens.color.divider,
                   }}
                 >
-                  <Texto tamano={tokens.size.caption} color={activo ? marca.fuerte : `${tokens.color.text}99`} peso="semibold">
+                  <Texto tamano={tokens.size.caption} color={activo ? marca.fuerte : tokens.color.textSecondary} peso="semibold">
                     {op}
                   </Texto>
                 </Pressable>
@@ -254,7 +254,7 @@ export function TrabajosScreen({ navigation }: NativeStackScreenProps<TrabajosSt
         renderSectionHeader={({ section }) => (
           <Texto
             tamano={10}
-            color={`${tokens.color.text}66`}
+            color={tokens.color.textSecondary}
             peso="semibold"
             style={{
               letterSpacing: 1.5,
@@ -282,12 +282,12 @@ export function TrabajosScreen({ navigation }: NativeStackScreenProps<TrabajosSt
                       {item.cliente}
                     </Texto>
                     {item.ubicacion ? (
-                      <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} numberOfLines={1}>
+                      <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary} numberOfLines={1}>
                         {item.ubicacion}
                       </Texto>
                     ) : null}
                     {item.orden?.folio != null ? (
-                      <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} style={{ fontVariant: ["tabular-nums"] }}>
+                      <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary} style={{ fontVariant: ["tabular-nums"] }}>
                         {formatearFolio("OS", item.orden.folio)}
                       </Texto>
                     ) : null}

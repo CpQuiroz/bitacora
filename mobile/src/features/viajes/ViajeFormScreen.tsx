@@ -217,7 +217,7 @@ export function ViajeFormScreen({ navigation, route }: NativeStackScreenProps<Vi
         {puedeAsignar ? (
           <Card>
             <View style={{ gap: tokens.space["2"] }}>
-              <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} style={{ letterSpacing: 1 }}>
+              <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary} style={{ letterSpacing: 1 }}>
                 ASIGNAR A UN CHOFER (OPCIONAL)
               </Texto>
               <PickerBuscable
@@ -240,7 +240,7 @@ export function ViajeFormScreen({ navigation, route }: NativeStackScreenProps<Vi
         {!editandoId ? (
           <Card>
             <View style={{ gap: tokens.space["2"] }}>
-              <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} style={{ letterSpacing: 1 }}>
+              <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary} style={{ letterSpacing: 1 }}>
                 FOTO DE LA GUÍA
               </Texto>
               {foto ? (
@@ -322,7 +322,7 @@ export function ViajeFormScreen({ navigation, route }: NativeStackScreenProps<Vi
                   <Check size={16} strokeWidth={3} color={marca.foreground} />
                 </View>
               ) : (
-                <Square size={24} strokeWidth={2} color={`${tokens.color.text}66`} />
+                <Square size={24} strokeWidth={2} color={tokens.color.textSecondary} />
               )}
               <Texto tamano={tokens.size.body} color={tokens.color.text}>
                 Aplicar IVA (19%)
@@ -331,14 +331,14 @@ export function ViajeFormScreen({ navigation, route }: NativeStackScreenProps<Vi
           </>
         ) : (
           <View style={{ gap: tokens.space["1"] }}>
-            <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
+            <Texto tamano={tokens.size.small} color={tokens.color.textSecondary}>
               Monto del viaje
             </Texto>
             <Texto tamano={tokens.size.body} color={tokens.color.text} peso="semibold" style={{ fontVariant: ["tabular-nums"] }}>
               ${Number(b.subtotal || 0).toLocaleString("es-CL")}
               {b.aplica_iva ? " + IVA" : " (sin IVA)"}
             </Texto>
-            <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`}>
+            <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
               El monto lo cambia la oficina.
             </Texto>
           </View>

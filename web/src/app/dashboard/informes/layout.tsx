@@ -95,7 +95,7 @@ export default function InformesLayout({ children }: { children: ReactNode }) {
               key={t.valor}
               href={href}
               className={`flex shrink-0 items-center gap-ds-2 whitespace-nowrap border-b-2 px-ds-3 py-2.5 font-ds-body text-ds-small font-medium transition-colors ${
-                activo ? "border-ds-brand text-ds-brand" : "border-transparent text-ds-text/60 hover:text-ds-text"
+                activo ? "border-ds-brand text-ds-brand" : "border-transparent text-ds-text-secondary hover:text-ds-text"
               }`}
             >
               <t.icon size={16} strokeWidth={2.75} className="shrink-0" />

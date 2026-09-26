@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Briefcase, ClipboardCheck, Home, MapPin, Sparkle, Wallet } from "lucide-react";
 import type { TipoCuenta } from "@bitacora/shared";
 import { comunasDeRegion, formatearRut, REGIONES, validarRut } from "@bitacora/shared";
+import { marcaLegible } from "@bitacora/design-tokens";
 import { apiFetch } from "@/lib/api";
 import { FUENTES, fuenteDe } from "@/lib/fuentes";
 import { Button, Card, Input, Select } from "@bitacora/ui/web";
@@ -34,15 +35,6 @@ const TIPOS_CUENTA: { valor: TipoCuenta; etiqueta: string }[] = [
 
 const COLOR_PRIMARIO_DEFAULT = "#4338ca";
 const COLOR_SECUNDARIO_DEFAULT = "#0d9488";
-
-function contrasteTexto(hex: string): string {
-  const limpio = hex.replace("#", "");
-  const r = parseInt(limpio.slice(0, 2), 16);
-  const g = parseInt(limpio.slice(2, 4), 16);
-  const b = parseInt(limpio.slice(4, 6), 16);
-  const brillo = (r * 299 + g * 587 + b * 114) / 1000;
-  return brillo > 150 ? "#16161f" : "#ffffff";
-}
 
 // PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
 // La "vista previa en vivo" de marca es una maqueta autocontenida que
@@ -253,10 +245,13 @@ export default function EmpresaPage() {
   }
 
   const fuenteInfo = fuenteDe(fuente);
+  // Igual que DashboardShell: texto con contraste AA y, si ni blanco ni
+  // negro alcanzan, el color de marca oscurecido (tarea 154).
+  const marcaPreview = marcaLegible(color);
   const previewStyle: CSSProperties = {
     fontFamily: "var(--font-sans)",
-    "--brand": color,
-    "--brand-foreground": contrasteTexto(color),
+    "--brand": marcaPreview.fondo,
+    "--brand-foreground": marcaPreview.texto,
     "--brand-soft": `color-mix(in srgb, ${color} 14%, var(--surface))`,
     "--accent": colorSecundario,
     ...(fuente !== "sistema" ? { "--font-sans": fuenteInfo.pila } : {}),
@@ -340,7 +335,7 @@ export default function EmpresaPage() {
             />
           </button>
         </div>
-        <p className="mb-ds-4 font-ds-body text-ds-caption text-ds-text/60">
+        <p className="mb-ds-4 font-ds-body text-ds-caption text-ds-text-secondary">
           Datos de la cuenta bancaria donde tu empresa recibe pagos por transferencia — se muestran
           en las cotizaciones/cobranzas cuando está activado.
         </p>
@@ -371,7 +366,7 @@ export default function EmpresaPage() {
             />
           </button>
         </div>
-        <p className="mt-ds-4 font-ds-body text-ds-caption text-ds-text/60">
+        <p className="mt-ds-4 font-ds-body text-ds-caption text-ds-text-secondary">
           Al activarlo, cada ítem de Catálogo, Orden de servicio y Cotización gana 3 campos opcionales
           (costo, precio mayorista, precio minorista) — solo para uso interno, nunca se imprimen en el
           PDF que ve el cliente.
@@ -403,7 +398,7 @@ export default function EmpresaPage() {
                   className="h-16 w-16 rounded-ds-lg border border-ds-divider object-cover"
                 />
               ) : (
-                <div className="flex h-16 w-16 items-center justify-center rounded-ds-lg border border-dashed border-ds-divider font-ds-body text-ds-caption text-ds-text/60">
+                <div className="flex h-16 w-16 items-center justify-center rounded-ds-lg border border-dashed border-ds-divider font-ds-body text-ds-caption text-ds-text-secondary">
                   Sin logo
                 </div>
               )}
@@ -430,7 +425,7 @@ export default function EmpresaPage() {
                 <p className="font-ds-body text-ds-small font-medium text-ds-text">
                   {subiendoLogo ? "Subiendo…" : "Arrastra una imagen o haz clic para elegir"}
                 </p>
-                <p className="mt-ds-1 font-ds-body text-ds-caption text-ds-text/60">Cuadrado, mín. 200×200px · PNG, JPG o WEBP · máx. 2MB</p>
+                <p className="mt-ds-1 font-ds-body text-ds-caption text-ds-text-secondary">Cuadrado, mín. 200×200px · PNG, JPG o WEBP · máx. 2MB</p>
               </div>
             </div>
             {errorLogo ? <p className="mt-ds-2 font-ds-body text-ds-small text-ds-accent-700">{errorLogo}</p> : null}
@@ -438,7 +433,7 @@ export default function EmpresaPage() {
 
           <Card>
             <p className="mb-ds-1 font-ds-body text-ds-small font-semibold text-ds-text">Color de acento</p>
-            <p className="mb-ds-4 font-ds-body text-ds-caption text-ds-text/60">
+            <p className="mb-ds-4 font-ds-body text-ds-caption text-ds-text-secondary">
               Se usa para resaltar acciones y estados en la app. El resto de la interfaz mantiene la identidad de Bitácora. Tu logo se muestra igual.
             </p>
             <div className="grid gap-ds-4 sm:grid-cols-2">
@@ -467,7 +462,7 @@ export default function EmpresaPage() {
 
           <Card>
             <p className="mb-ds-1 font-ds-body text-ds-small font-semibold text-ds-text">Tema visual</p>
-            <p className="mb-ds-4 font-ds-body text-ds-caption text-ds-text/60">
+            <p className="mb-ds-4 font-ds-body text-ds-caption text-ds-text-secondary">
               Cambia los colores de fondo de toda la app (Taller también cambia la tipografía). Tu color de acento y tu logo se mantienen igual en todos.
             </p>
             <Select
@@ -495,7 +490,7 @@ export default function EmpresaPage() {
 
           <Card>
             <p className="mb-ds-1 font-ds-body text-ds-small font-semibold text-ds-text">Agenda</p>
-            <p className="mb-ds-4 font-ds-body text-ds-caption text-ds-text/60">
+            <p className="mb-ds-4 font-ds-body text-ds-caption text-ds-text-secondary">
               Duración que se asigna sola a cada cita nueva. Ya no se pide al crearla — mobile y web usan este valor.
             </p>
             <div className="max-w-[12rem]">
@@ -512,7 +507,7 @@ export default function EmpresaPage() {
         </div>
 
         <div>
-          <p className="mb-ds-2 font-ds-body text-ds-caption font-medium uppercase tracking-wide text-ds-text/60">Vista previa en vivo</p>
+          <p className="mb-ds-2 font-ds-body text-ds-caption font-medium uppercase tracking-wide text-ds-text-secondary">Vista previa en vivo</p>
           <div className="overflow-hidden rounded-2xl border border-ds-divider" style={previewStyle}>
             <div className="flex">
               <div className="flex w-36 flex-col gap-1 border-r border-border bg-surface p-2">
@@ -552,7 +547,7 @@ export default function EmpresaPage() {
               </div>
             </div>
           </div>
-          <p className="mt-ds-2 font-ds-body text-ds-caption text-ds-text/60">Así se ve con los cambios sin guardar todavía.</p>
+          <p className="mt-ds-2 font-ds-body text-ds-caption text-ds-text-secondary">Así se ve con los cambios sin guardar todavía.</p>
         </div>
       </div>
     </div>

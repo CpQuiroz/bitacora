@@ -10,3 +10,4 @@
 export { tokens, fontStackCss, type Tokens } from "./generated";
 export { oscurecerOklch } from "./oklch";
 export { mezclarHex, tinteSuave, tonoFuerte } from "./mezcla";
+export { AA_TEXTO_NORMAL, contraste, luminanciaRelativa, marcaLegible, textoSobreFondo } from "./contraste";

@@ -143,7 +143,7 @@ export default function CentrosCostoPage() {
       {centros !== null && centros.length === 0 && !formAbierto && (
         <Card>
           <div className="flex flex-col items-center gap-ds-3 py-16 text-center">
-            <Layers size={28} strokeWidth={2.75} className="text-ds-text/60" />
+            <Layers size={28} strokeWidth={2.75} className="text-ds-text-secondary" />
             <p className="font-ds-body text-ds-small text-ds-text/70">Ningún centro de costo registrado.</p>
             <Button iconoIzq={<Plus size={16} strokeWidth={2.75} />} onPress={() => setFormAbierto(true)}>
               Nuevo Centro de Costo
@@ -157,7 +157,7 @@ export default function CentrosCostoPage() {
           rowKey={(c) => c.id}
           columns={[
             { header: "Nombre", cell: (c) => <span className="font-medium text-ds-text">{c.nombre}</span> },
-            { header: "Categorías", cell: (c) => <span className="text-ds-text/60">{c.categorias.length > 0 ? c.categorias.join(", ") : "—"}</span> },
+            { header: "Categorías", cell: (c) => <span className="text-ds-text-secondary">{c.categorias.length > 0 ? c.categorias.join(", ") : "—"}</span> },
           ]}
           actions={[
             { label: "Editar", onClick: abrirEdicion, variant: "brand" },

@@ -191,7 +191,7 @@ export function ClienteDetalleScreen({ route, navigation }: NativeStackScreenPro
         {/* Persona de contacto — solo si tiene valor, mismo criterio que
             el resto del sistema (estado real, no texto decorativo). */}
         {cliente.contacto_nombre ? (
-          <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
+          <Texto tamano={tokens.size.small} color={tokens.color.textSecondary}>
             Contacto: {cliente.contacto_nombre}
           </Texto>
         ) : null}
@@ -335,7 +335,7 @@ export function ClienteDetalleScreen({ route, navigation }: NativeStackScreenPro
 
         {cliente.notas ? (
           <View style={{ backgroundColor: tokens.color.neutral["200"], borderRadius: tokens.radius.md, padding: tokens.space["4"], gap: tokens.space["1"] }}>
-            <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} peso="semibold" style={{ textTransform: "uppercase" }}>
+            <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary} peso="semibold" style={{ textTransform: "uppercase" }}>
               Notas
             </Texto>
             <Texto tamano={tokens.size.body} color={tokens.color.text}>

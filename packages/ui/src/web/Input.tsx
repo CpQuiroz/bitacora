@@ -35,7 +35,7 @@ export function Input({
       {etiqueta ? <label className={LABEL}>{etiqueta}</label> : null}
       <div className="relative">
         {iconoIzq ? (
-          <span className="pointer-events-none absolute left-ds-3 top-1/2 -translate-y-1/2 text-ds-text/50">
+          <span className="pointer-events-none absolute left-ds-3 top-1/2 -translate-y-1/2 text-ds-text-secondary">
             {iconoIzq}
           </span>
         ) : null}

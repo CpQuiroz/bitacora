@@ -148,7 +148,7 @@ export function AsignarPackForm({
         <div className="flex flex-col gap-ds-1">
           <label className="font-ds-body text-ds-caption font-medium text-ds-text/70">Precio pagado (opcional)</label>
           <InputMonto placeholder={tipoElegido?.precio != null ? String(tipoElegido.precio) : "0"} value={precioPagado} onChange={setPrecioPagado} moneda={moneda} />
-          <p className="font-ds-body text-ds-caption text-ds-text/60">Lo realmente cobrado. Vacío = el precio de lista.</p>
+          <p className="font-ds-body text-ds-caption text-ds-text-secondary">Lo realmente cobrado. Vacío = el precio de lista.</p>
         </div>
         <div className="sm:col-span-2">
           <Textarea etiqueta="Notas (opcional)" filas={2} valor={notas} onCambio={setNotas} />

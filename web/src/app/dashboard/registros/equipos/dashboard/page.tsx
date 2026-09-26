@@ -115,7 +115,7 @@ export default function EquiposDashboardPage() {
                     .map((c) => (
                       <div key={c.categoria} className="flex items-center justify-between font-ds-body text-ds-small">
                         <span className="text-ds-text">{c.categoria}</span>
-                        <span className="text-ds-text/60">{c.cantidad}</span>
+                        <span className="text-ds-text-secondary">{c.cantidad}</span>
                       </div>
                     ))}
                 </div>
@@ -136,7 +136,7 @@ export default function EquiposDashboardPage() {
                       className="flex items-center justify-between py-2 text-left font-ds-body text-ds-small hover:text-ds-brand"
                     >
                       <span className="text-ds-text">{e.nombre}</span>
-                      <span className="text-ds-text/60">{e.cantidad_os} OS</span>
+                      <span className="text-ds-text-secondary">{e.cantidad_os} OS</span>
                     </button>
                   ))}
                 </div>
@@ -148,7 +148,7 @@ export default function EquiposDashboardPage() {
             <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Próximas mantenciones (30 días)</p>
             {datos.proximas_mantenciones.length === 0 ? (
               <div className="flex flex-col items-center gap-ds-2 py-ds-6 text-center">
-                <ClipboardCheck size={22} strokeWidth={2.75} className="text-ds-text/60" />
+                <ClipboardCheck size={22} strokeWidth={2.75} className="text-ds-text-secondary" />
                 <p className="font-ds-body text-ds-small text-ds-text/70">Nada programado en los próximos 30 días.</p>
               </div>
             ) : (
@@ -156,7 +156,7 @@ export default function EquiposDashboardPage() {
                 {datos.proximas_mantenciones.map((p) => (
                   <div key={p.id} className="flex items-center justify-between py-2 font-ds-body text-ds-small">
                     <span className="text-ds-text">{p.equipo_nombre}</span>
-                    <span className="text-ds-text/60">{p.proxima_fecha}</span>
+                    <span className="text-ds-text-secondary">{p.proxima_fecha}</span>
                   </div>
                 ))}
               </div>
@@ -167,7 +167,7 @@ export default function EquiposDashboardPage() {
             <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Documentos de equipos por vencer</p>
             {datos.documentos_por_vencer.length === 0 ? (
               <div className="flex flex-col items-center gap-ds-2 py-ds-6 text-center">
-                <Clock size={22} strokeWidth={2.75} className="text-ds-text/60" />
+                <Clock size={22} strokeWidth={2.75} className="text-ds-text-secondary" />
                 <p className="font-ds-body text-ds-small text-ds-text/70">Nada por vencer en los próximos 30 días.</p>
               </div>
             ) : (
@@ -179,11 +179,11 @@ export default function EquiposDashboardPage() {
                     <div key={d.id} className="flex items-center justify-between gap-ds-3 py-2 font-ds-body text-ds-small">
                       <div className="min-w-0">
                         <span className="text-ds-text">{d.equipo_nombre}</span>
-                        <span className="text-ds-text/60"> · {d.tipo_nombre}</span>
+                        <span className="text-ds-text-secondary"> · {d.tipo_nombre}</span>
                       </div>
                       <div className="flex shrink-0 items-center gap-ds-3">
-                        <span className="text-ds-text/60">{d.fecha_vencimiento}</span>
-                        <span className={`font-medium ${vencido ? "text-ds-accent-800" : dias <= 7 ? "text-ds-accent-700" : "text-ds-text/60"}`}>
+                        <span className="text-ds-text-secondary">{d.fecha_vencimiento}</span>
+                        <span className={`font-medium ${vencido ? "text-ds-accent-800" : dias <= 7 ? "text-ds-accent-700" : "text-ds-text-secondary"}`}>
                           {vencido ? "Vencido" : dias === 0 ? "Vence hoy" : `${dias} día${dias === 1 ? "" : "s"}`}
                         </span>
                       </div>

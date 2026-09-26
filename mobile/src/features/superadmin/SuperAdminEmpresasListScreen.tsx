@@ -92,7 +92,7 @@ export function SuperAdminEmpresasListScreen({ navigation }: NativeStackScreenPr
 
         {auth.fase === "listo" ? (
           <View style={{ gap: tokens.space["2"] }}>
-            <Texto tamano={tokens.size.small} peso="semibold" color={`${tokens.color.text}99`}>
+            <Texto tamano={tokens.size.small} peso="semibold" color={tokens.color.textSecondary}>
               Mi estilo
             </Texto>
             <View style={{ flexDirection: "row", gap: tokens.space["2"], flexWrap: "wrap" }}>
@@ -108,7 +108,7 @@ export function SuperAdminEmpresasListScreen({ navigation }: NativeStackScreenPr
           </View>
         ) : null}
 
-        <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`} style={{ textAlign: "center" }}>
+        <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary} style={{ textAlign: "center" }}>
           {auth.fase === "listo" ? `Conectado como ${auth.yo.nombre}` : ""}
         </Texto>
       </ScrollView>

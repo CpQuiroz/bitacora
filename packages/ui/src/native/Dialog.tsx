@@ -52,7 +52,7 @@ export function Dialog({ abierto, onCerrar, titulo, children }: PropsDialog) {
               {titulo}
             </Texto>
             <Pressable onPress={onCerrar} hitSlop={8}>
-              <X size={18} strokeWidth={2.75} color={`${tokens.color.text}99`} />
+              <X size={18} strokeWidth={2.75} color={tokens.color.textSecondary} />
             </Pressable>
           </View>
           <View style={{ paddingHorizontal: tokens.space["6"], paddingTop: tokens.space["4"], paddingBottom: tokens.space["4"] + insets.bottom }}>

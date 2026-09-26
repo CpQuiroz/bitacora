@@ -46,12 +46,12 @@ export function IndicadorPasos({ pasoActual }: { pasoActual: 1 | 2 | 3 }) {
                 {hecho ? (
                   <Check size={14} strokeWidth={3} color={marca.foreground} />
                 ) : (
-                  <Texto tamano={tokens.size.caption} peso="semibold" color={activo ? marca.fuerte : `${tokens.color.text}66`}>
+                  <Texto tamano={tokens.size.caption} peso="semibold" color={activo ? marca.fuerte : tokens.color.textSecondary}>
                     {numero}
                   </Texto>
                 )}
               </View>
-              <Texto tamano={9} peso={activo ? "semibold" : "regular"} color={activo ? marca.fuerte : `${tokens.color.text}66`}>
+              <Texto tamano={9} peso={activo ? "semibold" : "regular"} color={activo ? marca.fuerte : tokens.color.textSecondary}>
                 {etiqueta}
               </Texto>
             </View>

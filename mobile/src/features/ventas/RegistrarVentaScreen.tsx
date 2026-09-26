@@ -142,7 +142,7 @@ export function RegistrarVentaScreen({ route, navigation }: NativeStackScreenPro
       <ScreenHeader titulo="Registrar venta" accion={volver} />
       <ScrollView contentContainerStyle={{ padding: tokens.space["6"], gap: tokens.space["4"], paddingBottom: 220 }}>
         <View style={{ gap: tokens.space["2"] }}>
-          <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
+          <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
             {origenTipo === "os" ? `Desde OS N° ${folio ?? "—"}` : "Desde una cita"}
           </Texto>
           <View style={{ flexDirection: "row", alignItems: "center", gap: tokens.space["3"] }}>
@@ -156,7 +156,7 @@ export function RegistrarVentaScreen({ route, navigation }: NativeStackScreenPro
                 {clienteNombre}
               </Texto>
               {clienteRut ? (
-                <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
+                <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
                   {clienteRut}
                 </Texto>
               ) : null}
@@ -176,7 +176,7 @@ export function RegistrarVentaScreen({ route, navigation }: NativeStackScreenPro
                     {l.nombre}
                   </Texto>
                   <Pressable onPress={() => quitar(i)} hitSlop={8}>
-                    <X size={18} color={`${tokens.color.text}66`} />
+                    <X size={18} color={tokens.color.textSecondary} />
                   </Pressable>
                 </View>
 
@@ -194,7 +194,7 @@ export function RegistrarVentaScreen({ route, navigation }: NativeStackScreenPro
                       </Pressable>
                     </View>
                   ) : null}
-                  <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} style={{ flex: 1, fontVariant: ["tabular-nums"] }}>
+                  <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary} style={{ flex: 1, fontVariant: ["tabular-nums"] }}>
                     × {pesos(l.precio_unitario)}
                   </Texto>
                   <Texto tamano={tokens.size.body} color={tokens.color.text} peso="semibold" style={{ fontVariant: ["tabular-nums"] }}>
@@ -203,7 +203,7 @@ export function RegistrarVentaScreen({ route, navigation }: NativeStackScreenPro
                 </View>
 
                 {l.detalle ? (
-                  <Texto tamano={tokens.size.caption} color={`${tokens.color.text}66`}>
+                  <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
                     {l.detalle}
                   </Texto>
                 ) : null}
@@ -231,8 +231,8 @@ export function RegistrarVentaScreen({ route, navigation }: NativeStackScreenPro
                 gap: 4,
               }}
             >
-              <Plus size={14} color={`${tokens.color.text}99`} />
-              <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} peso="semibold">
+              <Plus size={14} color={tokens.color.textSecondary} />
+              <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary} peso="semibold">
                 {ETIQUETA_TIPO[tp].texto[0] + ETIQUETA_TIPO[tp].texto.slice(1).toLowerCase()}
               </Texto>
             </Pressable>
@@ -240,14 +240,14 @@ export function RegistrarVentaScreen({ route, navigation }: NativeStackScreenPro
         </View>
 
         {!puedeEditarPrecio ? (
-          <Texto tamano={tokens.size.caption} color={`${tokens.color.text}66`}>
+          <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
             Los precios vienen del catálogo. Solo un perfil de administración puede editarlos.
           </Texto>
         ) : null}
 
         {/* Medio de pago */}
         <View style={{ gap: tokens.space["2"] }}>
-          <Texto tamano={tokens.size.micro} color={`${tokens.color.text}99`} peso="semibold" style={{ textTransform: "uppercase", letterSpacing: 1 }}>
+          <Texto tamano={tokens.size.micro} color={tokens.color.textSecondary} peso="semibold" style={{ textTransform: "uppercase", letterSpacing: 1 }}>
             Medio de pago
           </Texto>
           <View style={{ flexDirection: "row", gap: tokens.space["2"] }}>
@@ -268,7 +268,7 @@ export function RegistrarVentaScreen({ route, navigation }: NativeStackScreenPro
                     borderColor: activo ? marca.base : tokens.color.divider,
                   }}
                 >
-                  <Texto tamano={tokens.size.caption} color={activo ? marca.fuerte : `${tokens.color.text}99`} peso="semibold">
+                  <Texto tamano={tokens.size.caption} color={activo ? marca.fuerte : tokens.color.textSecondary} peso="semibold">
                     {m.t}
                   </Texto>
                 </Pressable>
@@ -293,7 +293,7 @@ export function RegistrarVentaScreen({ route, navigation }: NativeStackScreenPro
         }}
       >
         <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-          <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
+          <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
             Neto
           </Texto>
           <Texto tamano={tokens.size.caption} color={tokens.color.text} style={{ fontVariant: ["tabular-nums"] }}>
@@ -301,7 +301,7 @@ export function RegistrarVentaScreen({ route, navigation }: NativeStackScreenPro
           </Texto>
         </View>
         <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-          <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
+          <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
             IVA 19%
           </Texto>
           <Texto tamano={tokens.size.caption} color={tokens.color.text} style={{ fontVariant: ["tabular-nums"] }}>
@@ -333,7 +333,7 @@ export function RegistrarVentaScreen({ route, navigation }: NativeStackScreenPro
               keyExtractor={(it) => it.id}
               ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: tokens.color.divider }} />}
               ListEmptyComponent={
-                <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
+                <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
                   Nada en el catálogo para agregar.
                 </Texto>
               }
@@ -347,12 +347,12 @@ export function RegistrarVentaScreen({ route, navigation }: NativeStackScreenPro
                         {item.nombre}
                       </Texto>
                       {sub ? (
-                        <Texto tamano={tokens.size.caption} color={`${tokens.color.text}66`}>
+                        <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
                           {sub}
                         </Texto>
                       ) : null}
                     </View>
-                    <Texto tamano={tokens.size.body} color={`${tokens.color.text}99`} style={{ fontVariant: ["tabular-nums"] }}>
+                    <Texto tamano={tokens.size.body} color={tokens.color.textSecondary} style={{ fontVariant: ["tabular-nums"] }}>
                       {pesos(precio)}
                     </Texto>
                   </Pressable>

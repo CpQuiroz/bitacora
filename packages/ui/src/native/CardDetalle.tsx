@@ -49,7 +49,7 @@ export function CardDetalle({ folio, badge, titulo, subtitulo, metadatos, accion
   const marca = useMarca();
   const colorAccion: Record<NonNullable<AccionCardDetalle["tono"]>, string> = {
     brand: marca.base,
-    muted: `${tokens.color.text}99`,
+    muted: tokens.color.textSecondary,
     peligro: tokens.color.accentRamp["700"],
   };
 
@@ -58,7 +58,7 @@ export function CardDetalle({ folio, badge, titulo, subtitulo, metadatos, accion
       {folio || badge ? (
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
           {folio ? (
-            <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`} peso="medium">
+            <Texto tamano={tokens.size.small} color={tokens.color.textSecondary} peso="medium">
               {folio}
             </Texto>
           ) : (
@@ -73,7 +73,7 @@ export function CardDetalle({ folio, badge, titulo, subtitulo, metadatos, accion
           {titulo}
         </Texto>
         {subtitulo ? (
-          <Texto tamano={TAMANO_SUBTITULO} color={`${tokens.color.text}99`}>
+          <Texto tamano={TAMANO_SUBTITULO} color={tokens.color.textSecondary}>
             {subtitulo}
           </Texto>
         ) : null}
@@ -84,7 +84,7 @@ export function CardDetalle({ folio, badge, titulo, subtitulo, metadatos, accion
           {metadatos.map((m, i) => (
             <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: tokens.space["1"] }}>
               {m.icono}
-              <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
+              <Texto tamano={tokens.size.small} color={tokens.color.textSecondary}>
                 {m.texto}
               </Texto>
             </View>

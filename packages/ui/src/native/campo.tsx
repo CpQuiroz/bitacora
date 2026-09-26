@@ -28,7 +28,7 @@ export function Campo({
           {error}
         </Texto>
       ) : ayuda ? (
-        <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
+        <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
           {ayuda}
         </Texto>
       ) : null}

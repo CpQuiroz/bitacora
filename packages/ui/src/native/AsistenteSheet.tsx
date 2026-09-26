@@ -85,7 +85,7 @@ export function AsistenteSheet({ abierto, onCerrar, atajos, mensaje, onCambiarMe
               value={mensaje}
               onChangeText={onCambiarMensaje}
               placeholder="Preguntale algo al Asistente…"
-              placeholderTextColor={`${tokens.color.text}66`}
+              placeholderTextColor={tokens.color.textSecondary}
               onSubmitEditing={onEnviar}
               style={{
                 flex: 1,

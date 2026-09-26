@@ -47,7 +47,7 @@ export function DatePicker({ etiqueta, error, ayuda, deshabilitado, valor, onCam
           opacity: deshabilitado ? 0.5 : 1,
         }}
       >
-        <Texto tamano={tokens.size.body} color={valor ? tokens.color.text : `${tokens.color.text}66`}>
+        <Texto tamano={tokens.size.body} color={valor ? tokens.color.text : tokens.color.textSecondary}>
           {valor ? formatear(valor) : placeholder ?? "Elegir fecha"}
         </Texto>
       </Pressable>

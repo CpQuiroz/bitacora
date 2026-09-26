@@ -14,6 +14,7 @@
  * font-ds-heading. Cuando Faena se retire, un sweep quita el prefijo.
  */
 import { readFileSync, writeFileSync } from "node:fs";
+import { marcaLegible } from "./contraste";
 import { join } from "node:path";
 
 const RAIZ = join(__dirname, "..");
@@ -21,7 +22,9 @@ const tokens = JSON.parse(readFileSync(join(RAIZ, "tokens.json"), "utf8")) as To
 
 type Ramp = Record<"100" | "200" | "300" | "400" | "500" | "600" | "700" | "800" | "900", string>;
 type Paleta = {
-  bg: string; surface: string; text: string; accent: string; accent2: string; divider: string;
+  // textSecondary (tarea 154): texto secundario SÓLIDO con ≥4,5:1 sobre bg y
+  // surface — reemplaza las opacidades sueltas (text/60, text + "99").
+  bg: string; surface: string; text: string; textSecondary: string; accent: string; accent2: string; divider: string;
   neutral: Ramp; accentRamp: Ramp; accent2Ramp: Ramp;
 };
 export type Tokens = {
@@ -84,6 +87,7 @@ const css = `${AVISO}
   --color-ds-bg: ${tokens.color.bg};
   --color-ds-surface: ${tokens.color.surface};
   --color-ds-text: ${tokens.color.text};
+  --color-ds-text-secondary: ${tokens.color.textSecondary};
   --color-ds-accent: ${tokens.color.accent};
   --color-ds-accent2: ${tokens.color.accent2};
   --color-ds-divider: ${tokens.color.divider};
@@ -159,7 +163,9 @@ ${rampCss("accent2", tokens.color.accent2Ramp)}
   --ds-brand: ${tokens.color.accent};
   --ds-brand-hover: oklch(from var(--ds-brand) calc(l - 0.05) c h);
   --ds-brand-pressed: oklch(from var(--ds-brand) calc(l - 0.11) c h);
-  --ds-brand-foreground: #ffffff;
+  /* Texto sobre la marca por contraste WCAG (tarea 154): el terracota por
+     defecto con blanco daba 3,6:1; con casi negro, 4,8:1. */
+  --ds-brand-foreground: ${marcaLegible(tokens.color.accent).texto};
 
   /* Igual patrón que --ds-brand pero para empresas.color_secundario.
      soft/strong con color-mix (no oklch: a diferencia de oscurecer una
@@ -187,6 +193,7 @@ ${rampCss("accent2", tokens.color.accent2Ramp)}
     --color-ds-bg: ${tokens.colorDark.bg};
     --color-ds-surface: ${tokens.colorDark.surface};
     --color-ds-text: ${tokens.colorDark.text};
+    --color-ds-text-secondary: ${tokens.colorDark.textSecondary};
     --color-ds-accent: ${tokens.colorDark.accent};
     --color-ds-accent2: ${tokens.colorDark.accent2};
     --color-ds-divider: ${tokens.colorDark.divider};
@@ -208,6 +215,7 @@ ${rampCss("accent2", tokens.colorDark.accent2Ramp)}
   --color-ds-bg: ${tokens.colorDark.bg};
   --color-ds-surface: ${tokens.colorDark.surface};
   --color-ds-text: ${tokens.colorDark.text};
+  --color-ds-text-secondary: ${tokens.colorDark.textSecondary};
   --color-ds-accent: ${tokens.colorDark.accent};
   --color-ds-accent2: ${tokens.colorDark.accent2};
   --color-ds-divider: ${tokens.colorDark.divider};
@@ -238,6 +246,7 @@ ${rampCss("accent2", tokens.colorDark.accent2Ramp)}
   --color-ds-bg: ${tokens.colorTaller.bg};
   --color-ds-surface: ${tokens.colorTaller.surface};
   --color-ds-text: ${tokens.colorTaller.text};
+  --color-ds-text-secondary: ${tokens.colorTaller.textSecondary};
   --color-ds-accent: ${tokens.colorTaller.accent};
   --color-ds-accent2: ${tokens.colorTaller.accent2};
   --color-ds-divider: ${tokens.colorTaller.divider};
@@ -263,6 +272,7 @@ ${rampCss("accent2", tokens.colorTaller.accent2Ramp)}
   --color-ds-bg: ${tokens.colorConfianza.bg};
   --color-ds-surface: ${tokens.colorConfianza.surface};
   --color-ds-text: ${tokens.colorConfianza.text};
+  --color-ds-text-secondary: ${tokens.colorConfianza.textSecondary};
   --color-ds-accent: ${tokens.colorConfianza.accent};
   --color-ds-accent2: ${tokens.colorConfianza.accent2};
   --color-ds-divider: ${tokens.colorConfianza.divider};

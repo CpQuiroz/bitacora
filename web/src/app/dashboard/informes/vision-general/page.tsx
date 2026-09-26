@@ -46,9 +46,9 @@ function KpiCard({ etiqueta, valor, sub }: { etiqueta: string; valor: string; su
 function MiniCard({ etiqueta, valor, cantidad, color }: { etiqueta: string; valor: string; cantidad: number; color: string }) {
   return (
     <div className="rounded-ds-md border border-ds-divider p-ds-3">
-      <p className="font-ds-body text-ds-caption text-ds-text/60">{etiqueta}</p>
+      <p className="font-ds-body text-ds-caption text-ds-text-secondary">{etiqueta}</p>
       <p className={`mt-ds-1 font-ds-body text-ds-body font-semibold tabular-nums ${color}`}>{valor}</p>
-      <p className="font-ds-body text-ds-caption text-ds-text/60">{cantidad} {cantidad === 1 ? "ítem" : "ítems"}</p>
+      <p className="font-ds-body text-ds-caption text-ds-text-secondary">{cantidad} {cantidad === 1 ? "ítem" : "ítems"}</p>
     </div>
   );
 }
@@ -153,9 +153,9 @@ export default function VisionGeneralPage() {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="font-ds-body text-ds-small font-medium text-ds-text">{a.titulo}</p>
-                <p className="font-ds-body text-ds-caption text-ds-text/60">{a.desc}</p>
+                <p className="font-ds-body text-ds-caption text-ds-text-secondary">{a.desc}</p>
               </div>
-              <ArrowRight size={16} strokeWidth={2.75} className="shrink-0 text-ds-text/60" />
+              <ArrowRight size={16} strokeWidth={2.75} className="shrink-0 text-ds-text-secondary" />
             </Link>
           ))}
         </div>

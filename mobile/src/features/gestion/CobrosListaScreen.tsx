@@ -111,7 +111,7 @@ export function CobrosListaScreen({ navigation }: NativeStackScreenProps<MasStac
           Nuevo cobro
         </Button>
         {visibles.length > 0 ? (
-          <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
+          <Texto tamano={tokens.size.small} color={tokens.color.textSecondary}>
             {visibles.length} {visibles.length === 1 ? "cobro" : "cobros"} · {pesos(totalVisible)}
           </Texto>
         ) : null}

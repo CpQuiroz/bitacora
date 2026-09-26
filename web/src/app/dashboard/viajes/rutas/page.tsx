@@ -172,7 +172,7 @@ export default function RutasPage() {
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-ds-body font-medium text-ds-text">{p.cliente_nombre}</p>
-                    <p className="truncate font-ds-body text-ds-caption text-ds-text/60">{p.direccion}</p>
+                    <p className="truncate font-ds-body text-ds-caption text-ds-text-secondary">{p.direccion}</p>
                     <a
                       href={wazeUrl(p.lat!, p.lng!)}
                       target="_blank"
@@ -187,7 +187,7 @@ export default function RutasPage() {
               {sinCoords.map((p) => (
                 <div key={p.trabajo_id} className="p-ds-4">
                   <p className="font-ds-body font-medium text-ds-text">{p.cliente_nombre}</p>
-                  <p className="font-ds-body text-ds-caption text-ds-text/60">
+                  <p className="font-ds-body text-ds-caption text-ds-text-secondary">
                     {p.direccion || "Sin dirección"} — sin coordenadas, no aparece en el mapa
                   </p>
                 </div>

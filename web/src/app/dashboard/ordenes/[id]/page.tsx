@@ -430,7 +430,7 @@ export default function DetalleOrdenServicioPage() {
 
                 {detalle.tipo && detalle.tipo.campos.some((c) => c.tipo !== "foto") ? (
                   <div className="mb-ds-5 grid gap-ds-3 rounded-ds-md bg-ds-neutral-200 p-ds-3 sm:grid-cols-2">
-                    <p className="font-ds-body text-ds-caption font-medium text-ds-text/60 sm:col-span-2">
+                    <p className="font-ds-body text-ds-caption font-medium text-ds-text-secondary sm:col-span-2">
                       Datos medidos — {detalle.tipo.nombre}
                     </p>
                     {/* Campos tipo "foto" (migración 105) no se editan acá — no
@@ -489,7 +489,7 @@ export default function DetalleOrdenServicioPage() {
                               onCambio={(v) => actualizarItemEdit(i, "descripcion", v)}
                             />
                             {stock != null ? (
-                              <p className={`mt-ds-1 font-ds-body text-ds-caption ${Number(it.cantidad || 0) > stock ? "text-ds-accent-700" : "text-ds-text/60"}`}>
+                              <p className={`mt-ds-1 font-ds-body text-ds-caption ${Number(it.cantidad || 0) > stock ? "text-ds-accent-700" : "text-ds-text-secondary"}`}>
                                 Stock: {stock}
                               </p>
                             ) : null}
@@ -517,7 +517,7 @@ export default function DetalleOrdenServicioPage() {
                         </div>
                       );
                     })}
-                    {itemsEdit.length === 0 ? <p className="font-ds-body text-ds-small text-ds-text/60">Sin ítems.</p> : null}
+                    {itemsEdit.length === 0 ? <p className="font-ds-body text-ds-small text-ds-text-secondary">Sin ítems.</p> : null}
                   </div>
                 </div>
 
@@ -554,15 +554,15 @@ export default function DetalleOrdenServicioPage() {
               </p>
               <div className="grid gap-ds-4 font-ds-body text-ds-small sm:grid-cols-2">
                 <div>
-                  <p className="text-ds-caption text-ds-text/60">Cliente</p>
+                  <p className="text-ds-caption text-ds-text-secondary">Cliente</p>
                   <p className="font-medium text-ds-text">{detalle.cliente_info?.nombre ?? detalle.cliente}</p>
                 </div>
                 <div>
-                  <p className="text-ds-caption text-ds-text/60">Colaborador asignado</p>
+                  <p className="text-ds-caption text-ds-text-secondary">Colaborador asignado</p>
                   <p className="font-medium text-ds-text">{detalle.responsable?.nombre ?? "—"}</p>
                 </div>
                 <div>
-                  <p className="text-ds-caption text-ds-text/60">Dirección</p>
+                  <p className="text-ds-caption text-ds-text-secondary">Dirección</p>
                   <p className="font-medium text-ds-text">{detalle.ubicacion ?? detalle.cliente_info?.direccion ?? "—"}</p>
                 </div>
                 {/* Llegada/salida del colaborador (Fase 3.4d, 23-sep-2026,
@@ -573,11 +573,11 @@ export default function DetalleOrdenServicioPage() {
                     migración 64. */}
                 {detalle.orden?.check_in_at ? (
                   <div>
-                    <p className="text-ds-caption text-ds-text/60">Llegada</p>
+                    <p className="text-ds-caption text-ds-text-secondary">Llegada</p>
                     <p className="font-medium text-ds-text">
                       {new Date(detalle.orden.check_in_at).toLocaleString("es-CL", { dateStyle: "short", timeStyle: "short" })}
                     </p>
-                    <p className="text-ds-caption text-ds-text/60">
+                    <p className="text-ds-caption text-ds-text-secondary">
                       {detalle.orden.check_in_lat != null && detalle.orden.check_in_lng != null ? (
                         <a
                           href={`https://www.google.com/maps?q=${detalle.orden.check_in_lat},${detalle.orden.check_in_lng}`}
@@ -595,11 +595,11 @@ export default function DetalleOrdenServicioPage() {
                 ) : null}
                 {detalle.orden?.check_out_at ? (
                   <div>
-                    <p className="text-ds-caption text-ds-text/60">Salida</p>
+                    <p className="text-ds-caption text-ds-text-secondary">Salida</p>
                     <p className="font-medium text-ds-text">
                       {new Date(detalle.orden.check_out_at).toLocaleString("es-CL", { dateStyle: "short", timeStyle: "short" })}
                     </p>
-                    <p className="text-ds-caption text-ds-text/60">
+                    <p className="text-ds-caption text-ds-text-secondary">
                       {detalle.orden.check_out_lat != null && detalle.orden.check_out_lng != null ? (
                         <a
                           href={`https://www.google.com/maps?q=${detalle.orden.check_out_lat},${detalle.orden.check_out_lng}`}
@@ -617,31 +617,31 @@ export default function DetalleOrdenServicioPage() {
                 ) : null}
                 {detalle.orden?.cliente_no_disponible ? (
                   <div className="sm:col-span-2">
-                    <p className="text-ds-caption text-ds-text/60">Cliente no disponible al cierre</p>
+                    <p className="text-ds-caption text-ds-text-secondary">Cliente no disponible al cierre</p>
                     <p className="text-ds-text">{detalle.orden.cliente_no_disponible_motivo ?? "—"}</p>
                   </div>
                 ) : null}
                 {detalle.descripcion ? (
                   <div className="sm:col-span-2">
-                    <p className="text-ds-caption text-ds-text/60">Descripción</p>
+                    <p className="text-ds-caption text-ds-text-secondary">Descripción</p>
                     <p className="text-ds-text">{detalle.descripcion}</p>
                   </div>
                 ) : null}
                 {detalle.orden?.orden_compra_cliente ? (
                   <div>
-                    <p className="text-ds-caption text-ds-text/60">Orden de compra del cliente</p>
+                    <p className="text-ds-caption text-ds-text-secondary">Orden de compra del cliente</p>
                     <p className="font-medium text-ds-text">{detalle.orden.orden_compra_cliente}</p>
                   </div>
                 ) : null}
                 {detalle.orden?.observaciones_cierre ? (
                   <div className="sm:col-span-2">
-                    <p className="text-ds-caption text-ds-text/60">Comentarios del técnico</p>
+                    <p className="text-ds-caption text-ds-text-secondary">Comentarios del técnico</p>
                     <p className="text-ds-text">{detalle.orden.observaciones_cierre}</p>
                   </div>
                 ) : null}
                 {detalle.notas_internas ? (
                   <div className="sm:col-span-2">
-                    <p className="text-ds-caption text-ds-text/60">Notas internas (no visibles para el cliente)</p>
+                    <p className="text-ds-caption text-ds-text-secondary">Notas internas (no visibles para el cliente)</p>
                     <p className="text-ds-text">{detalle.notas_internas}</p>
                   </div>
                 ) : null}
@@ -649,7 +649,7 @@ export default function DetalleOrdenServicioPage() {
 
               {detalle.tipo && detalle.tipo.campos.some((c) => c.tipo !== "foto") ? (
                 <div className="mt-ds-5 border-t border-ds-divider pt-ds-5">
-                  <p className="mb-ds-3 font-ds-body text-ds-caption font-medium text-ds-text/60">
+                  <p className="mb-ds-3 font-ds-body text-ds-caption font-medium text-ds-text-secondary">
                     Datos medidos — {detalle.tipo.nombre}
                   </p>
                   {/* Campos tipo "foto" (migración 105) se ven en el PDF/
@@ -657,7 +657,7 @@ export default function DetalleOrdenServicioPage() {
                   <div className="grid gap-ds-3 sm:grid-cols-3">
                     {detalle.tipo.campos.filter((c) => c.tipo !== "foto").map((c) => (
                       <div key={c.clave} className="rounded-ds-md border border-ds-divider p-ds-3">
-                        <p className="font-ds-body text-ds-caption text-ds-text/60">{c.etiqueta}</p>
+                        <p className="font-ds-body text-ds-caption text-ds-text-secondary">{c.etiqueta}</p>
                         <p className="mt-ds-1 font-ds-body text-ds-small font-semibold text-ds-text">
                           {String((detalle.datos as Record<string, unknown>)?.[c.clave] ?? "—")}
                         </p>
@@ -690,7 +690,7 @@ export default function DetalleOrdenServicioPage() {
                 ]}
               />
               <p className="mt-ds-2 flex justify-end gap-ds-2 font-ds-body text-ds-small">
-                <span className="text-ds-text/60">Total</span>
+                <span className="text-ds-text-secondary">Total</span>
                 <span className="font-semibold text-ds-text">
                   <Cifra>{formatearCLP(detalle.items.reduce((acc, it) => acc + it.cantidad * it.precio_unitario, 0))}</Cifra>
                 </span>
@@ -718,7 +718,7 @@ export default function DetalleOrdenServicioPage() {
                       <section key={g.texto} className="border-t-2 border-ds-divider pt-ds-3">
                         <p className="mb-ds-3 flex items-center justify-between font-ds-body text-ds-caption font-semibold uppercase tracking-wide text-ds-text/70">
                           {g.texto}
-                          <span className="font-normal text-ds-text/50">{delGrupo.length}</span>
+                          <span className="font-normal text-ds-text-secondary">{delGrupo.length}</span>
                         </p>
                         <div className="grid gap-ds-4 sm:grid-cols-2 lg:grid-cols-3">
                           {delGrupo.map((f) => (
@@ -791,11 +791,11 @@ export default function DetalleOrdenServicioPage() {
                       )}
                     </div>
                     {informeEditado !== (detalle.orden.informe_ia ?? "") ? (
-                      <p className="font-ds-body text-ds-caption text-ds-text/60">Guardá los cambios antes de generar la versión.</p>
+                      <p className="font-ds-body text-ds-caption text-ds-text-secondary">Guardá los cambios antes de generar la versión.</p>
                     ) : null}
                   </div>
                 ) : !errorInforme ? (
-                  <p className="font-ds-body text-ds-small text-ds-text/60">
+                  <p className="font-ds-body text-ds-small text-ds-text-secondary">
                     Redacta un informe técnico a partir de los datos medidos, el checklist, las observaciones y las
                     fotos de esta OS. Si escribís qué revisar, la IA analiza las fotos con ese foco.
                   </p>
@@ -805,7 +805,7 @@ export default function DetalleOrdenServicioPage() {
                     original firmada, inmutable; nunca se pisa. */}
                 {versiones && versiones.length > 0 ? (
                   <div className="mt-ds-4 border-t border-ds-divider pt-ds-3">
-                    <p className="mb-ds-2 font-ds-body text-ds-caption font-semibold uppercase tracking-[0.06em] text-ds-text/60">
+                    <p className="mb-ds-2 font-ds-body text-ds-caption font-semibold uppercase tracking-[0.06em] text-ds-text-secondary">
                       Versiones del PDF
                     </p>
                     {errorVersion ? <p className="mb-ds-2 font-ds-body text-ds-small text-ds-accent-700">{errorVersion}</p> : null}
@@ -819,7 +819,7 @@ export default function DetalleOrdenServicioPage() {
                           className="flex items-center justify-between gap-ds-2 rounded-ds-sm px-ds-2 py-ds-1 font-ds-body text-ds-small text-ds-text hover:bg-ds-neutral-100"
                         >
                           <span className="font-medium">v{v.version}{v.version === 1 ? " (original)" : ""}</span>
-                          <span className="text-ds-caption text-ds-text/60">
+                          <span className="text-ds-caption text-ds-text-secondary">
                             {v.creadoEn ? new Date(v.creadoEn).toLocaleString("es-CL", { dateStyle: "short", timeStyle: "short" }) : "—"}
                           </span>
                         </a>
@@ -848,18 +848,18 @@ export default function DetalleOrdenServicioPage() {
                   <div className="font-ds-body text-ds-small">
                     {detalle.orden.firmante_nombre ? (
                       <p className="text-ds-text">
-                        <span className="text-ds-text/60">Nombre:</span> {detalle.orden.firmante_nombre}
+                        <span className="text-ds-text-secondary">Nombre:</span> {detalle.orden.firmante_nombre}
                       </p>
                     ) : null}
                     {detalle.orden.firmante_documento ? (
                       <p className="text-ds-text">
-                        <span className="text-ds-text/60">RUT/Documento:</span> {detalle.orden.firmante_documento}
+                        <span className="text-ds-text-secondary">RUT/Documento:</span> {detalle.orden.firmante_documento}
                       </p>
                     ) : null}
                   </div>
                 </div>
               ) : (
-                <p className="font-ds-body text-ds-small text-ds-text/60">Todavía no se ha registrado la firma.</p>
+                <p className="font-ds-body text-ds-small text-ds-text-secondary">Todavía no se ha registrado la firma.</p>
               )}
             </Card>
           </div>
@@ -994,10 +994,10 @@ function FotoOS({
         ) : foto.descripcion ? (
           <p className="font-ds-body text-ds-caption text-ds-text">{foto.descripcion}</p>
         ) : null}
-        {estado === "guardando" ? <p className="font-ds-body text-ds-caption text-ds-text/50">Guardando…</p> : null}
-        {estado === "ok" ? <p className="font-ds-body text-ds-caption text-ds-text/50">Guardado</p> : null}
+        {estado === "guardando" ? <p className="font-ds-body text-ds-caption text-ds-text-secondary">Guardando…</p> : null}
+        {estado === "ok" ? <p className="font-ds-body text-ds-caption text-ds-text-secondary">Guardado</p> : null}
         {estado === "error" ? <p className="font-ds-body text-ds-caption text-ds-danger">No se pudo guardar</p> : null}
-        {analisis.resumen ? <p className="font-ds-body text-ds-caption text-ds-text/60">{analisis.resumen}</p> : null}
+        {analisis.resumen ? <p className="font-ds-body text-ds-caption text-ds-text-secondary">{analisis.resumen}</p> : null}
         {analisis.alerta && analisis.detalleAlerta ? (
           <p className="font-ds-body text-ds-caption text-ds-danger">⚠ {analisis.detalleAlerta}</p>
         ) : null}

@@ -206,12 +206,12 @@ export function MantencionVehiculoScreen({ navigation }: NativeStackScreenProps<
               ) : null}
             </View>
             {desdeCache ? (
-              <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`} style={{ marginBottom: tokens.space["2"] }}>
+              <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary} style={{ marginBottom: tokens.space["2"] }}>
                 Sin conexión — mostrando lo último guardado.
               </Texto>
             ) : null}
             {registros.length === 0 ? (
-              <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`} style={{ paddingVertical: tokens.space["2"] }}>
+              <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary} style={{ paddingVertical: tokens.space["2"] }}>
                 Este camión todavía no tiene mantenciones registradas.
               </Texto>
             ) : (
@@ -262,7 +262,7 @@ function FilaRegistro({ r }: { r: MantencionResumen }) {
     <View
       style={{ flexDirection: "row", alignItems: "center", gap: tokens.space["3"], paddingVertical: tokens.space["3"], borderBottomWidth: 1, borderBottomColor: tokens.color.divider }}
     >
-      <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`} style={{ width: 46, fontVariant: ["tabular-nums"] }}>
+      <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary} style={{ width: 46, fontVariant: ["tabular-nums"] }}>
         {fechaCorta(r.fecha)}
       </Texto>
       <Texto tamano={tokens.size.small} color={tokens.color.text} style={{ flex: 1 }} numberOfLines={1}>
@@ -288,7 +288,7 @@ function FilaDocumento({ d }: { d: DocumentoVehiculoAsignado }) {
           {d.tipo?.nombre ?? "Documento"}
         </Texto>
         {d.fecha_vencimiento ? (
-          <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`}>
+          <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
             Vence {fechaCorta(d.fecha_vencimiento)}
           </Texto>
         ) : null}
@@ -334,7 +334,7 @@ function BotonGrande({
       <Texto tamano={tokens.size.h5} peso="semibold" color={tokens.color.text}>
         {titulo}
       </Texto>
-      <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
+      <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
         {sub}
       </Texto>
     </Pressable>

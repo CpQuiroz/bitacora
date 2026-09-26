@@ -33,7 +33,7 @@ const RUTA_POR_ENTIDAD: Record<EntidadDocumento, (id: string) => string> = {
 const COLOR_ESTADO: Record<EstadoDocumento, string> = {
   vencido: "text-ds-danger font-medium",
   por_vencer: "text-ds-warning font-medium",
-  vigente: "text-ds-text/60",
+  vigente: "text-ds-text-secondary",
 };
 
 // PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
@@ -117,10 +117,10 @@ export default function DocumentosPorVencerPage() {
         loading={documentos === null && !error}
         columns={[
           { header: "Quién/Qué", cell: (d) => <span className="font-medium text-ds-text">{d.entidad_nombre}</span> },
-          { header: "Tipo", cell: (d) => <span className="text-ds-text/60">{d.tipo?.nombre ?? "—"}</span> },
+          { header: "Tipo", cell: (d) => <span className="text-ds-text-secondary">{d.tipo?.nombre ?? "—"}</span> },
           {
             header: "Vence",
-            cell: (d) => <span className={d.estado ? COLOR_ESTADO[d.estado] : "text-ds-text/60"}>{d.fecha_vencimiento ?? "Sin vencimiento"}</span>,
+            cell: (d) => <span className={d.estado ? COLOR_ESTADO[d.estado] : "text-ds-text-secondary"}>{d.fecha_vencimiento ?? "Sin vencimiento"}</span>,
           },
           { header: "Estado", cell: (d) => (d.estado ? <StatusBadge estado={d.estado} /> : "—") },
         ]}

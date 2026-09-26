@@ -252,7 +252,7 @@ export default function ChecklistsPage() {
             cell: (t) => (
               <>
                 <p className="font-medium text-ds-text">{t.nombre}</p>
-                {t.descripcion && <p className="font-ds-body text-ds-caption text-ds-text/60">{t.descripcion}</p>}
+                {t.descripcion && <p className="font-ds-body text-ds-caption text-ds-text-secondary">{t.descripcion}</p>}
               </>
             ),
           },

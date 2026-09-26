@@ -137,16 +137,16 @@ export default function VerRutaPage() {
                         <p className="truncate font-ds-body font-medium text-ds-text">{t.cliente}</p>
                         <Tag tono={TONO_PRIORIDAD[t.prioridad]}>{t.prioridad}</Tag>
                       </div>
-                      <p className="truncate font-ds-body text-ds-caption text-ds-text/60">{t.ubicacion}</p>
+                      <p className="truncate font-ds-body text-ds-caption text-ds-text-secondary">{t.ubicacion}</p>
                       {t.hora_estimada_llegada && (
-                        <p className="font-ds-body text-ds-caption text-ds-text/60">Llegada estimada: {t.hora_estimada_llegada}</p>
+                        <p className="font-ds-body text-ds-caption text-ds-text-secondary">Llegada estimada: {t.hora_estimada_llegada}</p>
                       )}
                     </div>
                   </div>
                 ))}
               </div>
               {ruta.estado === "finalizada" && (
-                <div className="border-t border-ds-divider p-ds-4 font-ds-body text-ds-caption text-ds-text/60">
+                <div className="border-t border-ds-divider p-ds-4 font-ds-body text-ds-caption text-ds-text-secondary">
                   Distancia total: {ruta.distancia_total_km ?? "—"} km · Duración total:{" "}
                   {ruta.duracion_total_min ?? "—"} min
                 </div>

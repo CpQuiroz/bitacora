@@ -367,11 +367,11 @@ export default function CotizacionDetallePage() {
 
               <div className="mt-ds-6 flex flex-col items-end gap-ds-1 border-t border-ds-divider pt-ds-4 font-ds-body text-ds-small">
                 <div className="flex w-56 justify-between">
-                  <span className="text-ds-text/60">Subtotal</span>
+                  <span className="text-ds-text-secondary">Subtotal</span>
                   <span className="text-ds-text">{formatMoneda(totalesEdit.subtotal, usuario.moneda)}</span>
                 </div>
                 <div className="flex w-56 justify-between">
-                  <span className="text-ds-text/60">IVA (19%)</span>
+                  <span className="text-ds-text-secondary">IVA (19%)</span>
                   <span className="text-ds-text">{formatMoneda(totalesEdit.iva, usuario.moneda)}</span>
                 </div>
                 <div className="flex w-56 justify-between text-ds-body font-semibold">
@@ -399,7 +399,7 @@ export default function CotizacionDetallePage() {
                 ) : (
                   <table className="w-full text-left text-ds-body">
                     <thead>
-                      <tr className="border-b border-ds-divider text-[11px] font-medium uppercase tracking-[0.08em] text-ds-text/60">
+                      <tr className="border-b border-ds-divider text-[11px] font-medium uppercase tracking-[0.08em] text-ds-text-secondary">
                         <th className="py-ds-2">Descripción</th>
                         <th className="py-ds-2">Cantidad</th>
                         <th className="py-ds-2">Precio unitario</th>
@@ -420,11 +420,11 @@ export default function CotizacionDetallePage() {
                 )}
                 <div className="mt-ds-6 flex flex-col items-end gap-ds-1 border-t border-ds-divider pt-ds-4 font-ds-body text-ds-small">
                   <div className="flex w-56 justify-between">
-                    <span className="text-ds-text/60">Subtotal</span>
+                    <span className="text-ds-text-secondary">Subtotal</span>
                     <span className="text-ds-text">{formatMoneda(cotizacion.subtotal ?? 0, usuario.moneda)}</span>
                   </div>
                   <div className="flex w-56 justify-between">
-                    <span className="text-ds-text/60">IVA (19%)</span>
+                    <span className="text-ds-text-secondary">IVA (19%)</span>
                     <span className="text-ds-text">{formatMoneda(cotizacion.iva ?? 0, usuario.moneda)}</span>
                   </div>
                   <div className="flex w-56 justify-between text-ds-body font-semibold">
@@ -459,11 +459,11 @@ export default function CotizacionDetallePage() {
             <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Estado</p>
             <div className="grid gap-ds-2 font-ds-body text-ds-small">
               <div>
-                <p className="text-ds-caption text-ds-text/60">Fecha de creación</p>
+                <p className="text-ds-caption text-ds-text-secondary">Fecha de creación</p>
                 <p className="text-ds-text">{cotizacion.fecha}</p>
               </div>
               <div>
-                <p className="text-ds-caption text-ds-text/60">Fecha de vencimiento</p>
+                <p className="text-ds-caption text-ds-text-secondary">Fecha de vencimiento</p>
                 <p className="text-ds-text">{cotizacion.fecha_vencimiento ?? "—"}</p>
               </div>
             </div>
@@ -475,7 +475,7 @@ export default function CotizacionDetallePage() {
             <p className="font-ds-body text-ds-small text-ds-text">
               {[cotizacion.viaje_datos.origen, ...cotizacion.viaje_datos.paradas, cotizacion.viaje_datos.destino].join(" → ")}
             </p>
-            <p className="mt-ds-1 font-ds-body text-ds-caption text-ds-text/60">
+            <p className="mt-ds-1 font-ds-body text-ds-caption text-ds-text-secondary">
               {cotizacion.viaje_datos.modo_precio === "tramos"
                 ? "Por tramos"
                 : cotizacion.viaje_datos.modo_precio === "km"

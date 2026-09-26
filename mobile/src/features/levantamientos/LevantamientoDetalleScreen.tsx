@@ -278,7 +278,7 @@ export function LevantamientoDetalleScreen({ route, navigation }: NativeStackScr
               </Button>
             </View>
           ) : (
-            <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
+            <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
               El cliente no tiene dirección cargada.
             </Texto>
           )}
@@ -319,7 +319,7 @@ export function LevantamientoDetalleScreen({ route, navigation }: NativeStackScr
             ) : null}
           </View>
           {materiales.length === 0 ? (
-            <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
+            <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
               Sin materiales indicados todavía.
             </Texto>
           ) : (
@@ -350,7 +350,7 @@ export function LevantamientoDetalleScreen({ route, navigation }: NativeStackScr
                     {m.agregado_por_admin ? <StatusBadge estado="agregado_admin" etiqueta="Agregado por Admin" tonoForzado="en_progreso" /> : null}
                   </View>
                   {soloLecturaFila ? (
-                    <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} style={{ fontVariant: ["tabular-nums"] }}>
+                    <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary} style={{ fontVariant: ["tabular-nums"] }}>
                       {m.cantidad} {m.unidad}
                     </Texto>
                   ) : (
@@ -368,7 +368,7 @@ export function LevantamientoDetalleScreen({ route, navigation }: NativeStackScr
                   )}
                   {!soloLecturaFila ? (
                     <Pressable onPress={() => quitarMaterial(m.catalogo_item_id)} hitSlop={8}>
-                      <X size={18} strokeWidth={2.5} color={`${tokens.color.text}66`} />
+                      <X size={18} strokeWidth={2.5} color={tokens.color.textSecondary} />
                     </Pressable>
                   ) : null}
                 </View>
@@ -395,7 +395,7 @@ export function LevantamientoDetalleScreen({ route, navigation }: NativeStackScr
             ) : null}
           </View>
           {detalle.fotos.length === 0 && fotosEnCola.length === 0 ? (
-            <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
+            <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
               Sin fotos todavía.
             </Texto>
           ) : (
@@ -404,7 +404,7 @@ export function LevantamientoDetalleScreen({ route, navigation }: NativeStackScr
                 <View key={f.id} style={{ width: 88, gap: 3 }}>
                   <Image source={{ uri: f.url }} style={{ width: 88, height: 88, borderRadius: tokens.radius.md, backgroundColor: tokens.color.neutral["200"] }} />
                   {f.descripcion ? (
-                    <Texto tamano={tokens.size.micro} color={`${tokens.color.text}99`} numberOfLines={2}>
+                    <Texto tamano={tokens.size.micro} color={tokens.color.textSecondary} numberOfLines={2}>
                       {f.descripcion}
                     </Texto>
                   ) : null}
@@ -474,7 +474,7 @@ export function LevantamientoDetalleScreen({ route, navigation }: NativeStackScr
               keyExtractor={(it) => it.id}
               ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: tokens.color.divider }} />}
               ListEmptyComponent={
-                <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
+                <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
                   Sin ítems en el catálogo.
                 </Texto>
               }
@@ -483,7 +483,7 @@ export function LevantamientoDetalleScreen({ route, navigation }: NativeStackScr
                   <Texto tamano={tokens.size.body} color={tokens.color.text}>
                     {item.nombre}
                   </Texto>
-                  <Texto tamano={tokens.size.caption} color={`${tokens.color.text}66`}>
+                  <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
                     {item.unidad}
                   </Texto>
                 </Pressable>

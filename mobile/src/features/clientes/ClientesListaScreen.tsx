@@ -157,7 +157,7 @@ export function ClientesListaScreen({ navigation }: NativeStackScreenProps<Clien
                       <Texto
                         peso="semibold"
                         tamano={tokens.size.small}
-                        color={saldo === 0 ? `${tokens.color.text}99` : vencido ? tokens.color.accentRamp["700"] : tokens.color.text}
+                        color={saldo === 0 ? tokens.color.textSecondary : vencido ? tokens.color.accentRamp["700"] : tokens.color.text}
                         style={{ fontVariant: ["tabular-nums"] }}
                       >
                         {pesos(saldo)}

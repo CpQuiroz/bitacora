@@ -154,7 +154,7 @@ export default function PortalClientePage() {
               href={linkPortal}
               target="_blank"
               rel="noreferrer"
-              className="shrink-0 rounded-ds-md border border-ds-divider px-ds-3 py-2 font-ds-body text-ds-small font-medium text-ds-text/60 hover:text-ds-text"
+              className="shrink-0 rounded-ds-md border border-ds-divider px-ds-3 py-2 font-ds-body text-ds-small font-medium text-ds-text-secondary hover:text-ds-text"
             >
               Abrir
             </a>
@@ -176,7 +176,7 @@ export default function PortalClientePage() {
                 <div key={s.key} className="flex items-start justify-between gap-ds-4 py-ds-4 first:pt-0 last:pb-0">
                   <div>
                     <p className="font-ds-body text-ds-small font-medium text-ds-text">{s.titulo}</p>
-                    <p className="mt-0.5 font-ds-body text-ds-caption text-ds-text/60">{s.desc}</p>
+                    <p className="mt-0.5 font-ds-body text-ds-caption text-ds-text-secondary">{s.desc}</p>
                   </div>
                   <button
                     type="button"

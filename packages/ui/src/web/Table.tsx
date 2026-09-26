@@ -43,7 +43,7 @@ export type PropsTable<T> = {
 
 const TONO_ACCION: Record<NonNullable<AccionFila<unknown>["tono"]>, string> = {
   brand: "text-ds-brand",
-  muted: "text-ds-text/60",
+  muted: "text-ds-text-secondary",
   peligro: "text-ds-accent-700",
 };
 
@@ -57,7 +57,7 @@ export function Table<T>({ columnas, filas, claveFila, acciones, onFilaClick, ac
       <div className="overflow-x-auto">
         <table className="w-full text-left text-ds-body">
           <thead>
-            <tr className="border-b border-ds-divider text-[11px] font-medium uppercase tracking-[0.08em] text-ds-text/60">
+            <tr className="border-b border-ds-divider text-[11px] font-medium uppercase tracking-[0.08em] text-ds-text-secondary">
               {columnas.map((col, i) => (
                 <th key={i} className={`px-ds-4 py-ds-3 ${col.clase ?? ""}`}>
                   {col.encabezado}
@@ -180,7 +180,7 @@ function MenuAccionesFila<T>({ fila, acciones }: { fila: T; acciones: AccionFila
         aria-label="Más acciones"
         aria-expanded={Boolean(pos)}
         onClick={alternar}
-        className="inline-flex h-8 w-8 items-center justify-center rounded-ds-pill text-ds-text/60 hover:bg-ds-brand/[0.08] hover:text-ds-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ds-brand)]"
+        className="inline-flex h-8 w-8 items-center justify-center rounded-ds-pill text-ds-text-secondary hover:bg-ds-brand/[0.08] hover:text-ds-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ds-brand)]"
       >
         <MoreHorizontal size={18} strokeWidth={2.5} />
       </button>

@@ -1,5 +1,5 @@
 import { createContext, useContext, useMemo, type ReactNode } from "react";
-import { oscurecerOklch, tinteSuave, tokens, tonoFuerte } from "@bitacora/design-tokens";
+import { marcaLegible, oscurecerOklch, tinteSuave, tokens, tonoFuerte } from "@bitacora/design-tokens";
 
 /** Marca del tenant, resuelta: base + estados derivados en OKLab. */
 export type Marca = {
@@ -27,25 +27,16 @@ export type Marca = {
 
 const RE_HEX = /^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
 
-function luminancia(hex: string): number {
-  const h = hex.replace("#", "");
-  const f = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
-  const n = parseInt(f, 16);
-  return (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
-}
-
+// Tarea 154: el texto sobre la marca sale de marcaLegible (contraste WCAG
+// AA); si ni blanco ni casi negro llegan, se oscurece el fondo. El
+// color_primario_foreground guardado (fórmula vieja) ya no se usa.
 export function resolverMarca(
   colorPrimario?: string | null,
-  colorForeground?: string | null,
+  _colorForeground?: string | null,
   colorSecundario?: string | null
 ): Marca {
-  const base = colorPrimario && RE_HEX.test(colorPrimario.trim()) ? colorPrimario.trim() : tokens.color.accent;
-  const foreground =
-    colorForeground && RE_HEX.test(colorForeground.trim())
-      ? colorForeground.trim()
-      : luminancia(base) > 0.6
-        ? "#111111"
-        : "#ffffff";
+  const original = colorPrimario && RE_HEX.test(colorPrimario.trim()) ? colorPrimario.trim() : tokens.color.accent;
+  const { fondo: base, texto: foreground } = marcaLegible(original);
   const baseSecundario = colorSecundario && RE_HEX.test(colorSecundario.trim()) ? colorSecundario.trim() : tokens.color.accent2;
   return {
     base,

@@ -23,10 +23,10 @@ export function Stat({
   // (mismo criterio que Button variante peligro).
   const notaClase = destacada
     ? "text-ds-brand-foreground/80"
-    : { neutro: "text-ds-text/60", exito: "text-ds-accent2-700", alerta: "text-ds-accent-700", riesgo: "text-ds-accent-800" }[tono];
+    : { neutro: "text-ds-text-secondary", exito: "text-ds-accent2-700", alerta: "text-ds-accent-700", riesgo: "text-ds-accent-800" }[tono];
   return (
     <div className={`rounded-ds-md border p-ds-4 ${destacada ? "border-ds-brand bg-ds-brand text-ds-brand-foreground" : "border-ds-divider bg-ds-surface"}`}>
-      <p className={`font-ds-body text-[10px] font-semibold uppercase tracking-[0.1em] ${destacada ? "text-ds-brand-foreground/70" : "text-ds-text/60"}`}>
+      <p className={`font-ds-body text-[10px] font-semibold uppercase tracking-[0.1em] ${destacada ? "text-ds-brand-foreground/70" : "text-ds-text-secondary"}`}>
         {etiqueta}
       </p>
       <p className={`mt-ds-2 font-ds-body text-[28px] font-semibold tracking-tight ${destacada ? "" : "text-ds-text"}`}>{valor}</p>

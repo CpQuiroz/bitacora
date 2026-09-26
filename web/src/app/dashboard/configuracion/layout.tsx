@@ -120,7 +120,7 @@ export default function ConfiguracionLayout({ children }: { children: ReactNode 
                 key={s.valor}
                 href={href}
                 className={`flex shrink-0 items-center gap-2.5 rounded-ds-md px-ds-3 py-2 font-ds-body text-ds-small font-medium transition-colors ${
-                  activo ? "bg-ds-brand/[0.08] text-ds-brand" : "text-ds-text/60 hover:bg-ds-brand/[0.08] hover:text-ds-brand"
+                  activo ? "bg-ds-brand/[0.08] text-ds-brand" : "text-ds-text-secondary hover:bg-ds-brand/[0.08] hover:text-ds-brand"
                 }`}
               >
                 <s.icon size={16} strokeWidth={2.75} className="shrink-0" />

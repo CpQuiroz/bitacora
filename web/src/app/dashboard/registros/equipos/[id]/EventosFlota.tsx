@@ -180,7 +180,7 @@ export function EventosFlota({ equipo, puedeGestionar }: { equipo: Equipo; puede
               const d = new Date(dia + "T00:00:00");
               return (
                 <div key={dia} className="py-ds-3 first:pt-0 last:pb-0">
-                  <p className="mb-ds-2 font-ds-body text-ds-caption font-semibold uppercase tracking-wide text-ds-text/60">
+                  <p className="mb-ds-2 font-ds-body text-ds-caption font-semibold uppercase tracking-wide text-ds-text-secondary">
                     {DIAS[d.getDay()]} {d.getDate()} {MESES[d.getMonth()]}
                   </p>
                   <ul className="flex flex-col gap-ds-2">
@@ -189,13 +189,13 @@ export function EventosFlota({ equipo, puedeGestionar }: { equipo: Equipo; puede
                         <div className="min-w-0">
                           <p className="font-ds-body text-ds-small font-semibold text-ds-text">{ETIQUETA_TIPO_EVENTO_FLOTA[e.tipo] ?? e.tipo}</p>
                           {e.descripcion ? <p className="font-ds-body text-ds-small text-ds-text/80">{e.descripcion}</p> : null}
-                          <p className="font-ds-body text-ds-caption text-ds-text/50">
+                          <p className="font-ds-body text-ds-caption text-ds-text-secondary">
                             {e.autor?.nombre ?? "—"}
                             {e.kilometraje != null ? ` · ${Number(e.kilometraje).toLocaleString("es-CL")} km` : ""}
                           </p>
                         </div>
                         {puedeGestionar ? (
-                          <button type="button" onClick={() => void eliminar(e.id)} className="shrink-0 rounded-ds-sm p-1 text-ds-text/40 hover:text-ds-danger" aria-label="Eliminar evento">
+                          <button type="button" onClick={() => void eliminar(e.id)} className="shrink-0 rounded-ds-sm p-1 text-ds-text-secondary hover:text-ds-danger" aria-label="Eliminar evento">
                             <Trash2 size={16} />
                           </button>
                         ) : null}

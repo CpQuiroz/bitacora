@@ -167,7 +167,7 @@ function IntegracionesContenido() {
                       <StatusBadge estado={i.conectado ? "conectado" : "no_conectado"} etiqueta={i.conectado ? "Conectado" : "No conectado"} />
                     </div>
                     <p className="mt-ds-1 font-ds-body text-ds-small text-ds-text/70">{i.descripcion}</p>
-                    {i.preview && <p className="mt-ds-1 font-ds-body text-ds-caption text-ds-text/60">Guardado: {i.preview}</p>}
+                    {i.preview && <p className="mt-ds-1 font-ds-body text-ds-caption text-ds-text-secondary">Guardado: {i.preview}</p>}
                     <button type="button" onClick={() => abrir(i)} className="mt-ds-2 font-ds-body text-ds-caption font-medium text-ds-brand hover:underline">
                       {estaAbierta ? "Cerrar" : "Clic para configurar"}
                     </button>

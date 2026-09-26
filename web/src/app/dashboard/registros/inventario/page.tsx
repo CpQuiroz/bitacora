@@ -166,7 +166,7 @@ export default function InventarioRegistroPage() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-ds-body">
                     <thead>
-                      <tr className="border-b border-ds-divider text-[11px] font-medium uppercase tracking-[0.08em] text-ds-text/60">
+                      <tr className="border-b border-ds-divider text-[11px] font-medium uppercase tracking-[0.08em] text-ds-text-secondary">
                         <th className="px-ds-4 py-ds-3">Ítem</th>
                         <th className="px-ds-4 py-ds-3">SKU</th>
                         <th className="px-ds-4 py-ds-3">Categoría</th>
@@ -255,7 +255,7 @@ export default function InventarioRegistroPage() {
                             <span className="rounded-ds-pill bg-ds-brand/[0.08] px-1.5 py-0.5 text-[10px] font-medium text-ds-brand">automático</span>
                           )}
                         </p>
-                        <p className="font-ds-body text-ds-caption text-ds-text/60">
+                        <p className="font-ds-body text-ds-caption text-ds-text-secondary">
                           {m.motivo || "Sin motivo indicado"} · {new Date(m.creado_en).toLocaleString("es-CL")}
                         </p>
                       </div>

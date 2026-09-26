@@ -310,7 +310,7 @@ export default function ClientesPage() {
                     rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}
                     title="Contactar por WhatsApp"
-                    className="inline-flex items-center justify-center rounded-ds-pill border border-ds-divider p-ds-2 text-ds-text/60 hover:border-ds-brand hover:text-ds-brand"
+                    className="inline-flex items-center justify-center rounded-ds-pill border border-ds-divider p-ds-2 text-ds-text-secondary hover:border-ds-brand hover:text-ds-brand"
                   >
                     <MessageCircle size={16} strokeWidth={2.75} />
                   </a>

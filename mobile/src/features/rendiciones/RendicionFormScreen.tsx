@@ -63,7 +63,7 @@ export function RendicionFormScreen({ navigation }: NativeStackScreenProps<MasSt
         keyboardShouldPersistTaps="handled"
       >
         <View style={{ gap: tokens.space["1"] * 1.5 }}>
-          <Texto tamano={tokens.size.small} peso="medium" color={`${tokens.color.text}99`}>
+          <Texto tamano={tokens.size.small} peso="medium" color={tokens.color.textSecondary}>
             Período
           </Texto>
           <View style={{ flexDirection: "row", gap: tokens.space["2"] }}>
@@ -74,7 +74,7 @@ export function RendicionFormScreen({ navigation }: NativeStackScreenProps<MasSt
         </View>
 
         <View style={{ gap: tokens.space["1"] * 1.5 }}>
-          <Texto tamano={tokens.size.small} peso="medium" color={`${tokens.color.text}99`}>
+          <Texto tamano={tokens.size.small} peso="medium" color={tokens.color.textSecondary}>
             Método de entrega
           </Texto>
           <View style={{ flexDirection: "row", gap: tokens.space["2"] }}>
@@ -85,21 +85,21 @@ export function RendicionFormScreen({ navigation }: NativeStackScreenProps<MasSt
         </View>
 
         <View style={{ gap: tokens.space["1"] * 1.5 }}>
-          <Texto tamano={tokens.size.small} peso="medium" color={`${tokens.color.text}99`}>
+          <Texto tamano={tokens.size.small} peso="medium" color={tokens.color.textSecondary}>
             Desde
           </Texto>
           <SelectorDias valor={b.fecha_inicio} onElegir={(k) => set("fecha_inicio", k)} />
         </View>
 
         <View style={{ gap: tokens.space["1"] * 1.5 }}>
-          <Texto tamano={tokens.size.small} peso="medium" color={`${tokens.color.text}99`}>
+          <Texto tamano={tokens.size.small} peso="medium" color={tokens.color.textSecondary}>
             Hasta
           </Texto>
           <SelectorDias valor={b.fecha_termino} onElegir={(k) => set("fecha_termino", k)} />
         </View>
 
         <View style={{ gap: tokens.space["1"] * 1.5 }}>
-          <Texto tamano={tokens.size.small} peso="medium" color={`${tokens.color.text}99`}>
+          <Texto tamano={tokens.size.small} peso="medium" color={tokens.color.textSecondary}>
             Monto entregado
           </Texto>
           <InputMonto valor={b.monto_entregado} onChangeText={(v) => set("monto_entregado", v)} />
@@ -131,7 +131,7 @@ function Chip({ activo, label, onPress }: { activo: boolean; label: string; onPr
         borderColor: activo ? marca.base : tokens.color.divider,
       }}
     >
-      <Texto tamano={tokens.size.caption} peso="semibold" color={activo ? marca.fuerte : `${tokens.color.text}99`}>
+      <Texto tamano={tokens.size.caption} peso="semibold" color={activo ? marca.fuerte : tokens.color.textSecondary}>
         {label}
       </Texto>
     </Pressable>

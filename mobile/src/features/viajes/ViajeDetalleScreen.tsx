@@ -167,7 +167,7 @@ export function ViajeDetalleScreen({ route, navigation }: NativeStackScreenProps
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: tokens.space["3"] }}>
           <StatusBadge estado={viaje.estado} etiqueta={viaje.estado} tonoForzado={TONO_VIAJE[viaje.estado]} />
         </View>
-        <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
+        <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
           {esGestion && viaje.chofer?.nombre ? `Chofer: ${viaje.chofer.nombre} · ` : ""}
           {NOTA_ESTADO[viaje.estado]}
         </Texto>
@@ -215,7 +215,7 @@ export function ViajeDetalleScreen({ route, navigation }: NativeStackScreenProps
         {viaje.comentarios ? (
           <Card>
             <View style={{ gap: tokens.space["2"] }}>
-              <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} peso="semibold" style={{ textTransform: "uppercase", letterSpacing: 1 }}>
+              <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary} peso="semibold" style={{ textTransform: "uppercase", letterSpacing: 1 }}>
                 Comentarios de la oficina
               </Texto>
               <Texto tamano={tokens.size.body} color={tokens.color.text}>
@@ -236,11 +236,11 @@ export function ViajeDetalleScreen({ route, navigation }: NativeStackScreenProps
             <Card>
               <View style={{ gap: tokens.space["3"] }}>
                 <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                  <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} peso="semibold" style={{ textTransform: "uppercase", letterSpacing: 1 }}>
+                  <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary} peso="semibold" style={{ textTransform: "uppercase", letterSpacing: 1 }}>
                     Fotos del viaje
                   </Texto>
                   {total > 0 ? (
-                    <Texto tamano={tokens.size.caption} color={`${tokens.color.text}66`} style={{ fontVariant: ["tabular-nums"] }}>
+                    <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary} style={{ fontVariant: ["tabular-nums"] }}>
                       {subidas.length} subida{subidas.length === 1 ? "" : "s"}
                       {fotosEnCola.length ? ` · ${fotosEnCola.length} en cola` : ""}
                     </Texto>
@@ -283,12 +283,12 @@ export function ViajeDetalleScreen({ route, navigation }: NativeStackScreenProps
                       onPress={agregarFoto}
                       style={{ width: 78, height: 78, borderRadius: tokens.radius.sm, borderWidth: 1.5, borderStyle: "dashed", borderColor: `${tokens.color.text}33`, alignItems: "center", justifyContent: "center" }}
                     >
-                      <Camera size={22} strokeWidth={2} color={`${tokens.color.text}66`} />
+                      <Camera size={22} strokeWidth={2} color={tokens.color.textSecondary} />
                     </Pressable>
                   ) : null}
                 </ScrollView>
                 {total === 0 ? (
-                  <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
+                  <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
                     Sin fotos todavía.
                   </Texto>
                 ) : null}
@@ -300,7 +300,7 @@ export function ViajeDetalleScreen({ route, navigation }: NativeStackScreenProps
         {viaje.estado !== "facturado" ? (
           <View style={{ gap: tokens.space["3"], marginTop: tokens.space["1"], borderTopWidth: 1, borderTopColor: tokens.color.divider, paddingTop: tokens.space["4"] }}>
             {esGestion ? (
-              <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} peso="semibold" style={{ textTransform: "uppercase", letterSpacing: 1 }}>
+              <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary} peso="semibold" style={{ textTransform: "uppercase", letterSpacing: 1 }}>
                 Gestión
               </Texto>
             ) : null}
@@ -332,7 +332,7 @@ export function ViajeDetalleScreen({ route, navigation }: NativeStackScreenProps
 function Fila({ etiqueta, valor, destacado }: { etiqueta: string; valor: string; destacado?: boolean }) {
   return (
     <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: tokens.space["3"] }}>
-      <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
+      <Texto tamano={tokens.size.small} color={tokens.color.textSecondary}>
         {etiqueta}
       </Texto>
       <Texto

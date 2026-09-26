@@ -231,7 +231,7 @@ export default function CuentaPage() {
                 </Button>
               </div>
             </label>
-            <p className="mt-ds-2 font-ds-body text-ds-caption text-ds-text/60">JPG, PNG o WEBP · máx. 5MB</p>
+            <p className="mt-ds-2 font-ds-body text-ds-caption text-ds-text-secondary">JPG, PNG o WEBP · máx. 5MB</p>
             {errorFoto ? <p className="mt-ds-2 font-ds-body text-ds-small text-ds-accent-700">{errorFoto}</p> : null}
           </div>
         </div>
@@ -242,7 +242,7 @@ export default function CuentaPage() {
         <div className="max-w-xs">
           <ThemeToggle />
         </div>
-        <p className="mt-ds-2 font-ds-body text-ds-caption text-ds-text/60">
+        <p className="mt-ds-2 font-ds-body text-ds-caption text-ds-text-secondary">
           &ldquo;Automático&rdquo; sigue el modo del sistema/navegador. Solo afecta a este dispositivo.
         </p>
       </Card>
@@ -256,7 +256,7 @@ export default function CuentaPage() {
           <Select etiqueta="Idioma" valor={idioma} onCambio={setIdioma} opciones={IDIOMAS} />
         </div>
 
-        <p className="mb-ds-3 mt-ds-6 font-ds-body text-ds-caption font-semibold uppercase tracking-wide text-ds-text/60">Configuración regional</p>
+        <p className="mb-ds-3 mt-ds-6 font-ds-body text-ds-caption font-semibold uppercase tracking-wide text-ds-text-secondary">Configuración regional</p>
         <div className="grid gap-ds-4 sm:grid-cols-2">
           <Select etiqueta="País" valor={pais} onCambio={setPais} opciones={PAISES} />
           <Select etiqueta="Huso horario" valor={husoHorario} onCambio={setHusoHorario} opciones={HUSOS} />
@@ -276,7 +276,7 @@ export default function CuentaPage() {
           <Bell size={16} strokeWidth={2.75} className="text-ds-brand" />
           Notificaciones
         </p>
-        <p className="mb-ds-4 font-ds-body text-ds-caption text-ds-text/60">
+        <p className="mb-ds-4 font-ds-body text-ds-caption text-ds-text-secondary">
           Elige qué alertas quieres recibir dentro de la app. El envío por correo se activará más adelante.
         </p>
         {preferencias === null ? (

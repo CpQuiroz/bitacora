@@ -34,10 +34,10 @@ export function Select({ etiqueta, error, ayuda, deshabilitado, valor, onCambio,
           opacity: deshabilitado ? 0.5 : 1,
         }}
       >
-        <Texto tamano={tokens.size.body} color={seleccionada ? tokens.color.text : `${tokens.color.text}66`}>
+        <Texto tamano={tokens.size.body} color={seleccionada ? tokens.color.text : tokens.color.textSecondary}>
           {seleccionada?.etiqueta ?? placeholder ?? ""}
         </Texto>
-        <ChevronDown size={16} strokeWidth={2.75} color={`${tokens.color.text}80`} />
+        <ChevronDown size={16} strokeWidth={2.75} color={tokens.color.textSecondary} />
       </Pressable>
 
       <Modal visible={abierto} transparent animationType="fade" onRequestClose={() => setAbierto(false)}>

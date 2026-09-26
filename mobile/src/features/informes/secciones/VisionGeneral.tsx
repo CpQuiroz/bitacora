@@ -56,7 +56,7 @@ export function VisionGeneral({ desde, hasta, moneda }: { desde: string; hasta: 
         )}
       </Bloque>
 
-      <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
+      <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
         Para el detalle por área, entrá a Financiero, Ventas, Operaciones, Servicios, Clientes o Gastos arriba.
       </Texto>
     </View>

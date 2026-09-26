@@ -79,7 +79,7 @@ export function AppTabs() {
         // headerShown no existe en material-top-tabs (nunca dibuja
         // header) — cada Stack sigue con el suyo propio, sin cambios.
         tabBarActiveTintColor: marca.base,
-        tabBarInactiveTintColor: `${tokens.color.text}99`,
+        tabBarInactiveTintColor: tokens.color.textSecondary,
         // Expo SDK 57 (RN 0.81) fuerza edge-to-edge en Android — igual
         // que el status bar arriba (ver ScreenHeader.tsx, 19-sep-2026),
         // `material-top-tabs` no reserva sola el espacio de la barra de

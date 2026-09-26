@@ -71,7 +71,7 @@ export function SuperAdminNuevaEmpresaScreen({ navigation }: NativeStackScreenPr
 
       <View style={{ height: 1, backgroundColor: tokens.color.divider, marginVertical: tokens.space["1"] }} />
 
-      <Texto tamano={tokens.size.small} peso="semibold" color={`${tokens.color.text}99`}>
+      <Texto tamano={tokens.size.small} peso="semibold" color={tokens.color.textSecondary}>
         Administrador inicial — recibe la invitación por correo
       </Texto>
       <Input etiqueta="Nombre" valor={b.admin_nombre} onCambio={(v) => set("admin_nombre", v)} />

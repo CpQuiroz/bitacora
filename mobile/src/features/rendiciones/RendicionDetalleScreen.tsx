@@ -108,7 +108,7 @@ export function RendicionDetalleScreen({ navigation, route }: NativeStackScreenP
       <ScreenHeader titulo={formatearFolio("REND", detalle.folio) ?? "Rendición"} accion={volver} />
       <ScrollView contentContainerStyle={{ padding: tokens.space["4"], gap: tokens.space["4"], paddingBottom: tokens.space["8"] }}>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-          <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
+          <Texto tamano={tokens.size.small} color={tokens.color.textSecondary}>
             {ETIQUETA_PERIODO[detalle.periodo] ?? detalle.periodo} · {detalle.fecha_inicio} a {detalle.fecha_termino} ·{" "}
             {ETIQUETA_METODO_ENTREGA[detalle.metodo_entrega] ?? detalle.metodo_entrega}
             {detalle.colaborador ? ` · ${detalle.colaborador.nombre}` : ""}
@@ -157,7 +157,7 @@ export function RendicionDetalleScreen({ navigation, route }: NativeStackScreenP
                       <Texto tamano={tokens.size.body} peso="semibold" color={tokens.color.text} style={{ fontVariant: ["tabular-nums"] }}>
                         ${Number(g.monto).toLocaleString("es-CL")}
                       </Texto>
-                      <ChevronRight size={18} strokeWidth={2.25} color={`${tokens.color.text}66`} />
+                      <ChevronRight size={18} strokeWidth={2.25} color={tokens.color.textSecondary} />
                     </View>
                   }
                 />
@@ -189,7 +189,7 @@ export function RendicionDetalleScreen({ navigation, route }: NativeStackScreenP
 function ResumenCard({ etiqueta, valor }: { etiqueta: string; valor: number }) {
   return (
     <View style={{ flex: 1, borderRadius: tokens.radius.md, borderWidth: 1, borderColor: tokens.color.divider, padding: tokens.space["3"], gap: 4 }}>
-      <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
+      <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
         {etiqueta}
       </Texto>
       <Texto tamano={tokens.size.body} peso="semibold" color={tokens.color.text} style={{ fontVariant: ["tabular-nums"] }}>

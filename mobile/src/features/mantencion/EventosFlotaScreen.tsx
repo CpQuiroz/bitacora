@@ -136,7 +136,7 @@ export function EventosFlotaScreen({ route, navigation }: NativeStackScreenProps
               Registrar un evento
             </Texto>
 
-            <Texto tamano={tokens.size.small} peso="semibold" color={`${tokens.color.text}99`}>
+            <Texto tamano={tokens.size.small} peso="semibold" color={tokens.color.textSecondary}>
               Día
             </Texto>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: tokens.space["2"] }}>
@@ -145,7 +145,7 @@ export function EventosFlotaScreen({ route, navigation }: NativeStackScreenProps
                 const activo = fecha === k;
                 return (
                   <Pressable key={k} onPress={() => setFecha(k)} style={chip(activo)}>
-                    <Texto tamano={tokens.size.caption} peso={activo ? "semibold" : "medium"} color={activo ? marca.base : `${tokens.color.text}99`}>
+                    <Texto tamano={tokens.size.caption} peso={activo ? "semibold" : "medium"} color={activo ? marca.base : tokens.color.textSecondary}>
                       {k === iso(hoy) ? "Hoy" : `${DIAS[d.getDay()]} ${d.getDate()}`}
                     </Texto>
                   </Pressable>
@@ -153,7 +153,7 @@ export function EventosFlotaScreen({ route, navigation }: NativeStackScreenProps
               })}
             </ScrollView>
 
-            <Texto tamano={tokens.size.small} peso="semibold" color={`${tokens.color.text}99`}>
+            <Texto tamano={tokens.size.small} peso="semibold" color={tokens.color.textSecondary}>
               Tipo de evento
             </Texto>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: tokens.space["2"] }}>
@@ -161,7 +161,7 @@ export function EventosFlotaScreen({ route, navigation }: NativeStackScreenProps
                 const activo = tipo === t;
                 return (
                   <Pressable key={t} onPress={() => setTipo(t)} style={chip(activo)}>
-                    <Texto tamano={tokens.size.caption} peso={activo ? "semibold" : "medium"} color={activo ? marca.base : `${tokens.color.text}99`}>
+                    <Texto tamano={tokens.size.caption} peso={activo ? "semibold" : "medium"} color={activo ? marca.base : tokens.color.textSecondary}>
                       {ETIQUETA_TIPO_EVENTO_FLOTA[t]}
                     </Texto>
                   </Pressable>
@@ -184,7 +184,7 @@ export function EventosFlotaScreen({ route, navigation }: NativeStackScreenProps
         </Card>
 
         {desdeCache ? (
-          <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`}>
+          <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
             Sin conexión — mostrando lo último guardado.
           </Texto>
         ) : null}
@@ -194,7 +194,7 @@ export function EventosFlotaScreen({ route, navigation }: NativeStackScreenProps
         ) : eventos === null ? (
           <LoadingState />
         ) : eventos.length === 0 ? (
-          <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
+          <Texto tamano={tokens.size.small} color={tokens.color.textSecondary}>
             Sin eventos registrados esta semana.
           </Texto>
         ) : (
@@ -202,7 +202,7 @@ export function EventosFlotaScreen({ route, navigation }: NativeStackScreenProps
             const d = new Date(dia + "T00:00:00");
             return (
               <View key={dia} style={{ gap: tokens.space["2"] }}>
-                <Texto tamano={tokens.size.caption} peso="semibold" color={`${tokens.color.text}80`} style={{ textTransform: "uppercase", letterSpacing: 0.6 }}>
+                <Texto tamano={tokens.size.caption} peso="semibold" color={tokens.color.textSecondary} style={{ textTransform: "uppercase", letterSpacing: 0.6 }}>
                   {dia === iso(hoy) ? "Hoy" : `${DIAS[d.getDay()]} ${d.getDate()} ${MESES[d.getMonth()]}`}
                 </Texto>
                 {lista.map((e) => (
@@ -215,7 +215,7 @@ export function EventosFlotaScreen({ route, navigation }: NativeStackScreenProps
                         {e.descripcion}
                       </Texto>
                     ) : null}
-                    <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`}>
+                    <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
                       {e.autor?.nombre ?? "—"}
                       {e.kilometraje != null ? ` · ${Number(e.kilometraje).toLocaleString("es-CL")} km` : ""}
                     </Texto>

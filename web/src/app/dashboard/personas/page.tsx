@@ -214,7 +214,7 @@ export default function PersonasPage() {
               )}
               <div className="sm:col-span-2">
                 <Input etiqueta="Teléfono (opcional)" tipo="tel" placeholder="+56 9 1234 5678" valor={telefono} onCambio={setTelefono} />
-                <p className="mt-ds-1 font-ds-body text-ds-caption text-ds-text/60">Con código de país. Sirve para que un chofer use el bot de WhatsApp.</p>
+                <p className="mt-ds-1 font-ds-body text-ds-caption text-ds-text-secondary">Con código de país. Sirve para que un chofer use el bot de WhatsApp.</p>
               </div>
             </div>
             {formError ? <p className="font-ds-body text-ds-small text-ds-accent-700">{formError}</p> : null}
@@ -271,7 +271,7 @@ export default function PersonasPage() {
                     <span className="flex flex-wrap items-center gap-ds-2">
                       <Tag tono="outline">{a.tipo}</Tag>
                       <span className="font-mono text-ds-text">{a.valor}</span>
-                      <span className="text-ds-text/60">→ {etiquetaRol(a.rol)}</span>
+                      <span className="text-ds-text-secondary">→ {etiquetaRol(a.rol)}</span>
                     </span>
                     <Button variante="ghost" onPress={() => onQuitarAcceso(a.id)}>
                       Quitar

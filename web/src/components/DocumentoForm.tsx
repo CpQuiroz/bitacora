@@ -223,7 +223,7 @@ export function DocumentoForm({ entidadTipo, entidadId }: { entidadTipo: Entidad
                 onChange={(e) => setArchivo(e.target.files?.[0] ?? null)}
                 className="block w-full font-ds-body text-ds-small text-ds-text/70 file:mr-ds-3 file:rounded-ds-pill file:border-0 file:bg-ds-brand/[0.08] file:px-ds-3 file:py-2 file:font-ds-body file:text-ds-small file:font-medium file:text-ds-brand"
               />
-              {editando && <p className="mt-ds-1 font-ds-body text-ds-caption text-ds-text/60">Si no subís uno nuevo, se mantiene el archivo actual.</p>}
+              {editando && <p className="mt-ds-1 font-ds-body text-ds-caption text-ds-text-secondary">Si no subís uno nuevo, se mantiene el archivo actual.</p>}
             </div>
           </div>
           {errorForm ? <p className="mt-ds-3 font-ds-body text-ds-small text-ds-accent-700">{errorForm}</p> : null}
@@ -242,7 +242,7 @@ export function DocumentoForm({ entidadTipo, entidadId }: { entidadTipo: Entidad
       {documentos && documentos.length > 0 && (
         <table className="w-full text-left text-ds-body">
           <thead>
-            <tr className="border-b border-ds-divider text-ds-caption text-ds-text/60">
+            <tr className="border-b border-ds-divider text-ds-caption text-ds-text-secondary">
               <th className="py-ds-2 font-medium">Tipo</th>
               <th className="py-ds-2 font-medium">Número</th>
               <th className="py-ds-2 font-medium">Vence</th>

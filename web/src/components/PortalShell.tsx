@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import { marcaLegible } from "@bitacora/design-tokens";
 import { Logo } from "./Logo";
 import { cerrarSesionPortal, obtenerConfigPortal, type MarcaPortal, type SeccionPortal } from "@/lib/portalApi";
 import { IconCalendar, IconClipboardCheck, IconHome, IconLogOut, IconReceipt, IconWallet } from "./icons";
@@ -42,12 +43,14 @@ export function PortalShell({ children }: { children: ReactNode }) {
   // Mismo mecanismo que DashboardShell/SuperAdminShell (empresas.
   // color_primario) — antes PortalShell no recibía ningún dato de marca
   // y el cliente nunca veía el color de SU empresa en su propio portal.
-  const marcaStyle: CSSProperties = marca?.color_primario
+  // Fondo y texto con contraste AA (tarea 154), como en DashboardShell.
+  const legible = marca?.color_primario ? marcaLegible(marca.color_primario) : null;
+  const marcaStyle: CSSProperties = legible
     ? ({
-        "--accent": marca.color_primario,
-        "--ds-brand": marca.color_primario,
-        ...(marca.color_primario_foreground ? { "--ds-brand-foreground": marca.color_primario_foreground } : {}),
-        ...(marca.color_secundario ? { "--ds-accent2": marca.color_secundario } : {}),
+        "--accent": legible.fondo,
+        "--ds-brand": legible.fondo,
+        "--ds-brand-foreground": legible.texto,
+        ...(marca?.color_secundario ? { "--ds-accent2": marca.color_secundario } : {}),
       } as CSSProperties)
     : {};
 

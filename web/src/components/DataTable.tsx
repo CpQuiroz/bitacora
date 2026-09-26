@@ -26,7 +26,7 @@ type DataTableProps<T> = {
 
 const VARIANT_CLASS: Record<NonNullable<AccionFila<unknown>["variant"]>, string> = {
   brand: "text-ds-brand",
-  muted: "text-ds-text/60",
+  muted: "text-ds-text-secondary",
   danger: "text-ds-accent-700",
 };
 
@@ -54,7 +54,7 @@ export function DataTable<T>({ columns, rows, rowKey, actions, loading, error, e
       <div className="overflow-x-auto">
         <table className="w-full text-left text-ds-body">
           <thead>
-            <tr className="border-b border-ds-divider text-[11px] font-medium uppercase tracking-[0.08em] text-ds-text/60">
+            <tr className="border-b border-ds-divider text-[11px] font-medium uppercase tracking-[0.08em] text-ds-text-secondary">
               {columns.map((col) => (
                 <th key={col.header} className={`px-ds-4 py-ds-3 ${col.className ?? ""}`}>
                   {col.header}

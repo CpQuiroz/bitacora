@@ -156,7 +156,7 @@ export function ViajesScreen({ navigation }: NativeStackScreenProps<ViajesStackP
                     backgroundColor: activo ? marca.suave : tokens.color.surface,
                   }}
                 >
-                  <Texto tamano={tokens.size.small} peso="semibold" color={activo ? marca.fuerte : tokens.color.text + "99"}>
+                  <Texto tamano={tokens.size.small} peso="semibold" color={activo ? marca.fuerte : tokens.color.textSecondary}>
                     {o.label}
                   </Texto>
                 </Pressable>
@@ -169,20 +169,20 @@ export function ViajesScreen({ navigation }: NativeStackScreenProps<ViajesStackP
           return (
             <View key={a.id} style={{ backgroundColor: tokens.color.surface, borderRadius: tokens.radius.md, padding: tokens.space["3"], gap: tokens.space["1"] }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: tokens.space["2"] }}>
-                <CloudUpload size={16} color={tokens.color.text + "99"} />
+                <CloudUpload size={16} color={tokens.color.textSecondary} />
                 <Texto tamano={tokens.size.small} peso="semibold" color={tokens.color.text} style={{ flex: 1 }}>
                   Guía {guia}
                 </Texto>
-                <Texto tamano={tokens.size.caption} color={tokens.color.text + "99"}>
+                <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
                   Enviando…
                 </Texto>
               </View>
               {ruta ? (
-                <Texto tamano={tokens.size.caption} color={tokens.color.text + "99"}>
+                <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
                   {ruta}
                 </Texto>
               ) : null}
-              <Texto tamano={tokens.size.caption} color={tokens.color.text + "99"}>
+              <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
                 Sin enviar todavía — se reintenta solo. No lo registres de nuevo.
               </Texto>
             </View>
@@ -196,7 +196,7 @@ export function ViajesScreen({ navigation }: NativeStackScreenProps<ViajesStackP
                 Guía {guia} — no se pudo enviar
               </Texto>
               {ruta ? (
-                <Texto tamano={tokens.size.caption} color={tokens.color.text + "99"}>
+                <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
                   {ruta}
                 </Texto>
               ) : null}
@@ -217,7 +217,7 @@ export function ViajesScreen({ navigation }: NativeStackScreenProps<ViajesStackP
           );
         })}
         {fotosPendientes > 0 ? (
-          <Texto tamano={tokens.size.caption} color={tokens.color.text + "99"}>
+          <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
             {fotosPendientes} foto{fotosPendientes === 1 ? "" : "s"} de guía subiéndose — el viaje ya quedó guardado
           </Texto>
         ) : null}

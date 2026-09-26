@@ -64,13 +64,13 @@ function Fila({ etiqueta, valor, onPress, Icono }: { etiqueta: string; valor: st
         borderBottomColor: tokens.color.divider,
       }}
     >
-      <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`} style={{ width: 92 }}>
+      <Texto tamano={tokens.size.small} color={tokens.color.textSecondary} style={{ width: 92 }}>
         {etiqueta}
       </Texto>
       <Texto tamano={tokens.size.body} color={tokens.color.text} style={{ flex: 1 }}>
         {valor}
       </Texto>
-      {onPress ? (Icono ? <Icono size={18} strokeWidth={2.75} color={`${tokens.color.text}66`} /> : <ChevronRight size={18} strokeWidth={2.75} color={`${tokens.color.text}66`} />) : null}
+      {onPress ? (Icono ? <Icono size={18} strokeWidth={2.75} color={tokens.color.textSecondary} /> : <ChevronRight size={18} strokeWidth={2.75} color={tokens.color.textSecondary} />) : null}
     </Pressable>
   );
 }
@@ -347,7 +347,7 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
             para badge ni segunda línea), quedan como su propio bloque. */}
         <View style={{ gap: tokens.space["1"] }}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: tokens.space["2"] }}>
-            <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} style={{ fontVariant: ["tabular-nums"] }}>
+            <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary} style={{ fontVariant: ["tabular-nums"] }}>
               {trabajo.fecha}
               {trabajo.hora_programada ? ` · ${trabajo.hora_programada.slice(0, 5)}` : ""}
             </Texto>
@@ -382,7 +382,7 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
         {/* Nota interna */}
         {trabajo.notas_internas ? (
           <View style={{ backgroundColor: tokens.color.neutral["200"], borderRadius: tokens.radius.md, padding: tokens.space["4"], gap: tokens.space["1"] }}>
-            <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} peso="semibold" style={{ textTransform: "uppercase" }}>
+            <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary} peso="semibold" style={{ textTransform: "uppercase" }}>
               Nota interna
             </Texto>
             <Texto tamano={tokens.size.body} color={tokens.color.text}>
@@ -509,7 +509,7 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
           />
         ) : finalizada && orden?.observaciones_cierre ? (
           <View style={{ gap: tokens.space["1"] }}>
-            <Texto tamano={tokens.size.small} peso="semibold" color={`${tokens.color.text}99`}>
+            <Texto tamano={tokens.size.small} peso="semibold" color={tokens.color.textSecondary}>
               Comentarios del técnico
             </Texto>
             <Texto tamano={tokens.size.body} color={tokens.color.text}>
@@ -529,7 +529,7 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
           <>
             {!finalizada ? (
               <Pressable onPress={() => setPasoOverride(2)} style={{ alignSelf: "flex-start" }}>
-                <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`} style={{ textDecorationLine: "underline" }}>
+                <Texto tamano={tokens.size.small} color={tokens.color.textSecondary} style={{ textDecorationLine: "underline" }}>
                   ← Volver a Ejecutar
                 </Texto>
               </Pressable>

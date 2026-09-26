@@ -99,24 +99,24 @@ export default function GastoDetallePage() {
           <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Información del Gasto</p>
           <div className="grid grid-cols-2 gap-ds-3 font-ds-body text-ds-small">
             <div>
-              <p className="text-ds-caption text-ds-text/60">Monto</p>
+              <p className="text-ds-caption text-ds-text-secondary">Monto</p>
               <p className="text-ds-text">{formatMoneda(gasto.monto, usuario.moneda)}</p>
             </div>
             <div>
-              <p className="text-ds-caption text-ds-text/60">Fecha</p>
+              <p className="text-ds-caption text-ds-text-secondary">Fecha</p>
               <p className="text-ds-text">{gasto.fecha}</p>
             </div>
             <div>
-              <p className="text-ds-caption text-ds-text/60">Estado</p>
+              <p className="text-ds-caption text-ds-text-secondary">Estado</p>
               <StatusBadge estado={gasto.estado} tonoForzado={TONO_ESTADO[gasto.estado]} />
             </div>
             <div>
-              <p className="text-ds-caption text-ds-text/60">Fecha de pago</p>
+              <p className="text-ds-caption text-ds-text-secondary">Fecha de pago</p>
               <p className="text-ds-text">{gasto.fecha_pago ?? "—"}</p>
             </div>
             {gasto.trabajo_info && (
               <div className="col-span-2">
-                <p className="text-ds-caption text-ds-text/60">Orden de Servicio</p>
+                <p className="text-ds-caption text-ds-text-secondary">Orden de Servicio</p>
                 <Link href={`/dashboard/trabajos/${gasto.trabajo_info.id}`} className="text-ds-brand hover:underline">
                   {gasto.trabajo_info.fecha} — {gasto.trabajo_info.cliente}
                 </Link>
@@ -124,7 +124,7 @@ export default function GastoDetallePage() {
             )}
             {gasto.comprobante_url && (
               <div className="col-span-2">
-                <p className="text-ds-caption text-ds-text/60">Comprobante</p>
+                <p className="text-ds-caption text-ds-text-secondary">Comprobante</p>
                 <button type="button" onClick={verComprobante} className="inline-flex items-center gap-1 text-ds-brand hover:underline">
                   <Paperclip size={14} strokeWidth={2.75} />
                   {gasto.comprobante_nombre ?? "Ver comprobante"}
@@ -147,7 +147,7 @@ export default function GastoDetallePage() {
             )}
             {gasto.centro_costo_info && (
               <div className="mt-ds-3">
-                <p className="text-ds-caption text-ds-text/60">Centro de costo</p>
+                <p className="text-ds-caption text-ds-text-secondary">Centro de costo</p>
                 <p className="text-ds-text">{gasto.centro_costo_info.nombre}</p>
               </div>
             )}
@@ -169,12 +169,12 @@ export default function GastoDetallePage() {
           <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Información Adicional</p>
           <div className="grid grid-cols-2 gap-ds-3 font-ds-body text-ds-small">
             <div>
-              <p className="text-ds-caption text-ds-text/60">Creado</p>
+              <p className="text-ds-caption text-ds-text-secondary">Creado</p>
               <p className="text-ds-text">{new Date(gasto.creado_en).toLocaleString("es-CL")}</p>
             </div>
             {gasto.editado_en && (
               <div>
-                <p className="text-ds-caption text-ds-text/60">Editado (post-pago)</p>
+                <p className="text-ds-caption text-ds-text-secondary">Editado (post-pago)</p>
                 <p className="text-ds-text">{new Date(gasto.editado_en).toLocaleString("es-CL")}</p>
               </div>
             )}

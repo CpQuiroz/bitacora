@@ -109,7 +109,7 @@ export function EquiposListaScreen({ navigation }: NativeStackScreenProps<MasSta
         >
           <Input valor={busqueda} onCambio={setBusqueda} placeholder="Buscar por nombre, patente o chofer" />
           {desdeCache ? (
-            <Texto tamano={tokens.size.caption} color={`${tokens.color.text}80`}>
+            <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
               Sin conexión — mostrando lo último guardado.
             </Texto>
           ) : null}
@@ -134,7 +134,7 @@ export function EquiposListaScreen({ navigation }: NativeStackScreenProps<MasSta
                         {alerta ? (
                           <StatusBadge estado={alerta} etiqueta={alerta === "vencido" ? "Doc. vencido" : "Doc. por vencer"} tonoForzado={alerta === "vencido" ? "peligro" : "advertencia"} />
                         ) : null}
-                        <ChevronRight size={18} strokeWidth={2.5} color={`${tokens.color.text}66`} />
+                        <ChevronRight size={18} strokeWidth={2.5} color={tokens.color.textSecondary} />
                       </View>
                     }
                     onPress={() => navigation.navigate("EquipoDetalle", { equipoId: e.id })}

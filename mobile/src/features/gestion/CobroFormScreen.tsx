@@ -113,7 +113,7 @@ export function CobroFormScreen({ navigation }: NativeStackScreenProps<MasStackP
         <InputMonto valor={b.monto} onChangeText={(v) => set("monto", v)} />
 
         <View style={{ gap: tokens.space["1"] }}>
-          <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
+          <Texto tamano={tokens.size.small} color={tokens.color.textSecondary}>
             Vence en
           </Texto>
           <View style={{ flexDirection: "row", gap: tokens.space["2"] }}>
@@ -134,20 +134,20 @@ export function CobroFormScreen({ navigation }: NativeStackScreenProps<MasStackP
                     borderColor: activo ? marca.base : tokens.color.divider,
                   }}
                 >
-                  <Texto tamano={tokens.size.caption} peso="semibold" color={activo ? marca.fuerte : `${tokens.color.text}99`}>
+                  <Texto tamano={tokens.size.caption} peso="semibold" color={activo ? marca.fuerte : tokens.color.textSecondary}>
                     {o.label}
                   </Texto>
                 </Pressable>
               );
             })}
           </View>
-          <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
+          <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
             Vence el {fechaLarga(b.fecha_vencimiento)}
           </Texto>
         </View>
 
         <View style={{ gap: tokens.space["1"] }}>
-          <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
+          <Texto tamano={tokens.size.small} color={tokens.color.textSecondary}>
             Medio de pago previsto (opcional)
           </Texto>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: tokens.space["2"] }}>
@@ -165,7 +165,7 @@ export function CobroFormScreen({ navigation }: NativeStackScreenProps<MasStackP
                     backgroundColor: activo ? marca.suave : tokens.color.surface,
                   }}
                 >
-                  <Texto tamano={tokens.size.caption} peso="semibold" color={activo ? marca.fuerte : `${tokens.color.text}99`}>
+                  <Texto tamano={tokens.size.caption} peso="semibold" color={activo ? marca.fuerte : tokens.color.textSecondary}>
                     {m.label}
                   </Texto>
                 </Pressable>

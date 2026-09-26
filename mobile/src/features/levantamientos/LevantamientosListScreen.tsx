@@ -102,7 +102,7 @@ export function LevantamientosListScreen({ navigation }: NativeStackScreenProps<
                 trailing={
                   <View style={{ alignItems: "flex-end", gap: 4 }}>
                     <StatusBadge estado={item.estado} etiqueta={ETIQUETA_ESTADO[item.estado]} tonoForzado={tonoDe(item.estado)} />
-                    <Texto tamano={tokens.size.caption} color={`${tokens.color.text}66`} style={{ fontVariant: ["tabular-nums"] }}>
+                    <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary} style={{ fontVariant: ["tabular-nums"] }}>
                       {new Date(item.creado_en).toLocaleDateString("es-CL")}
                     </Texto>
                   </View>

@@ -61,11 +61,11 @@ export function SuperAdminShell({ children }: { children: ReactNode }) {
             <span className="font-ds-body text-ds-small font-semibold text-ds-text">Panel de Super-Admin</span>
           </Link>
           <div className="flex items-center gap-ds-4">
-            <Link href="/superadmin/cuenta" className="flex items-center gap-1.5 font-ds-body text-ds-caption font-medium text-ds-text/60 hover:text-ds-text">
+            <Link href="/superadmin/cuenta" className="flex items-center gap-1.5 font-ds-body text-ds-caption font-medium text-ds-text-secondary hover:text-ds-text">
               <User size={16} strokeWidth={2.75} />
               Mi cuenta
             </Link>
-            <button type="button" onClick={salir} className="flex items-center gap-1.5 font-ds-body text-ds-caption font-medium text-ds-text/60 hover:text-ds-accent-700">
+            <button type="button" onClick={salir} className="flex items-center gap-1.5 font-ds-body text-ds-caption font-medium text-ds-text-secondary hover:text-ds-accent-700">
               <LogOut size={16} strokeWidth={2.75} />
               Salir
             </button>
@@ -77,7 +77,7 @@ export function SuperAdminShell({ children }: { children: ReactNode }) {
               key={item.href}
               href={item.href}
               className={`border-b-2 px-ds-3 py-2 font-ds-body text-ds-small font-medium transition-colors ${
-                activo(item.href) ? "border-ds-brand text-ds-text" : "border-transparent text-ds-text/60 hover:text-ds-text"
+                activo(item.href) ? "border-ds-brand text-ds-text" : "border-transparent text-ds-text-secondary hover:text-ds-text"
               }`}
             >
               {item.label}

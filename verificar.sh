@@ -178,6 +178,12 @@ else
   fail "colores literales nuevos — ver arriba"
   EXIT_CODE=1
 fi
+if node scripts/check-contraste.mjs; then
+  :
+else
+  fail "texto secundario con opacidad — ver arriba"
+  EXIT_CODE=1
+fi
 
 echo ""
 echo "── 9. Migraciones ────────────────────────────────────"

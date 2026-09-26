@@ -838,7 +838,7 @@ function AgendaContenido() {
             <p className="font-ds-body text-ds-small font-semibold text-ds-text">
               Nueva tarea — {fechaDesdeString(tareaRapidaFecha).toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" })}
             </p>
-            <button type="button" onClick={cerrarTareaRapida} className="font-ds-body text-ds-caption font-medium text-ds-text/60 hover:text-ds-text">
+            <button type="button" onClick={cerrarTareaRapida} className="font-ds-body text-ds-caption font-medium text-ds-text-secondary hover:text-ds-text">
               Cerrar
             </button>
           </div>
@@ -921,7 +921,7 @@ function AgendaContenido() {
                 type="button"
                 onClick={() => setVista(v)}
                 className={`rounded-ds-pill px-ds-3 py-1.5 font-ds-body text-ds-small font-medium transition-colors ${
-                  vista === v ? "bg-ds-brand/[0.08] text-ds-brand" : "text-ds-text/60 hover:text-ds-text"
+                  vista === v ? "bg-ds-brand/[0.08] text-ds-brand" : "text-ds-text-secondary hover:text-ds-text"
                 }`}
               >
                 {v === "mes" ? "Mes" : v === "semana" ? "Semana" : "Día"}
@@ -1122,7 +1122,7 @@ function AgendaContenido() {
               </button>
             ))}
             {filtros.size > 0 && (
-              <button type="button" onClick={() => setFiltros(new Set())} className="font-ds-body text-ds-caption font-medium text-ds-text/60 hover:text-ds-brand">
+              <button type="button" onClick={() => setFiltros(new Set())} className="font-ds-body text-ds-caption font-medium text-ds-text-secondary hover:text-ds-brand">
                 Limpiar
               </button>
             )}
@@ -1150,7 +1150,7 @@ function AgendaContenido() {
                   >
                     <Icono size={13} strokeWidth={2.5} />
                     {ETIQUETA_TIPO_AGENDA[t]}
-                    <span className="tabular-nums text-ds-text/50">{conteoPorTipo.get(t) ?? 0}</span>
+                    <span className="tabular-nums text-ds-text-secondary">{conteoPorTipo.get(t) ?? 0}</span>
                   </button>
                 );
               })}
@@ -1161,7 +1161,7 @@ function AgendaContenido() {
                   setTipoFiltros(new Set());
                   window.localStorage.removeItem(CLAVE_FILTRO_TIPO);
                 }}
-                className="font-ds-body text-ds-caption font-medium text-ds-text/60 hover:text-ds-brand"
+                className="font-ds-body text-ds-caption font-medium text-ds-text-secondary hover:text-ds-brand"
               >
                 Limpiar
               </button>
@@ -1169,7 +1169,7 @@ function AgendaContenido() {
             <button
               type="button"
               onClick={() => setLeyendaAbierta((v) => !v)}
-              className="ml-auto flex items-center gap-1 font-ds-body text-ds-caption font-medium text-ds-text/60 hover:text-ds-brand"
+              className="ml-auto flex items-center gap-1 font-ds-body text-ds-caption font-medium text-ds-text-secondary hover:text-ds-brand"
             >
               <Info size={13} strokeWidth={2.5} />
               Leyenda
@@ -1205,7 +1205,7 @@ function AgendaContenido() {
             <button
               type="button"
               onClick={() => (vista === "mes" ? irMes(-1) : vista === "semana" ? irSemana(-1) : irDia(-1))}
-              className="rounded-ds-pill p-ds-2 text-ds-text/60 transition-colors hover:bg-ds-text/[0.07] hover:text-ds-brand"
+              className="rounded-ds-pill p-ds-2 text-ds-text-secondary transition-colors hover:bg-ds-text/[0.07] hover:text-ds-brand"
             >
               <ChevronLeft size={16} strokeWidth={2.75} />
             </button>
@@ -1215,7 +1215,7 @@ function AgendaContenido() {
             <button
               type="button"
               onClick={() => (vista === "mes" ? irMes(1) : vista === "semana" ? irSemana(1) : irDia(1))}
-              className="rounded-ds-pill p-ds-2 text-ds-text/60 transition-colors hover:bg-ds-text/[0.07] hover:text-ds-brand"
+              className="rounded-ds-pill p-ds-2 text-ds-text-secondary transition-colors hover:bg-ds-text/[0.07] hover:text-ds-brand"
             >
               <ChevronRight size={16} strokeWidth={2.75} />
             </button>
@@ -1232,7 +1232,7 @@ function AgendaContenido() {
       {vista === "mes" ? (
         <div className="grid gap-ds-6 lg:grid-cols-[1fr_20rem]">
           <Card sinRelleno>
-            <div className="grid grid-cols-7 border-b border-ds-divider text-center font-ds-body text-ds-caption font-medium text-ds-text/60">
+            <div className="grid grid-cols-7 border-b border-ds-divider text-center font-ds-body text-ds-caption font-medium text-ds-text-secondary">
               {NOMBRES_DIA_CORTOS.map((d) => (
                 <div key={d} className="py-ds-2">
                   {d}
@@ -1288,7 +1288,7 @@ function AgendaContenido() {
                         );
                       })}
                       {eventosDia.length > 2 && (
-                        <span className="font-ds-body text-[11px] font-medium text-ds-text/60">+{eventosDia.length - 2} más</span>
+                        <span className="font-ds-body text-[11px] font-medium text-ds-text-secondary">+{eventosDia.length - 2} más</span>
                       )}
                     </div>
                   </button>
@@ -1326,14 +1326,14 @@ function AgendaContenido() {
                         setDiaSeleccionado(null);
                         cerrarTareaRapida();
                       }}
-                      className="font-ds-body text-ds-caption font-medium text-ds-text/60 hover:text-ds-text"
+                      className="font-ds-body text-ds-caption font-medium text-ds-text-secondary hover:text-ds-text"
                     >
                       Cerrar
                     </button>
                   </div>
                 </div>
                 {eventosDiaSeleccionado.length === 0 ? (
-                  <p className="font-ds-body text-ds-small text-ds-text/60">Sin eventos agendados este día.</p>
+                  <p className="font-ds-body text-ds-small text-ds-text-secondary">Sin eventos agendados este día.</p>
                 ) : (
                   <div className="flex flex-col divide-y divide-ds-divider">
                     {eventosDiaSeleccionado.map((e) => (
@@ -1349,11 +1349,11 @@ function AgendaContenido() {
                                 ClipboardCheck/Wrench al revés de ICONO_TIPO. */}
                             {(() => {
                               const Icono = ICONO_TIPO[e.tipo];
-                              return <Icono size={14} strokeWidth={2.75} className="shrink-0 text-ds-text/60" />;
+                              return <Icono size={14} strokeWidth={2.75} className="shrink-0 text-ds-text-secondary" />;
                             })()}
                             {e.titulo}
                           </p>
-                          <p className="font-ds-body text-ds-caption text-ds-text/60">
+                          <p className="font-ds-body text-ds-caption text-ds-text-secondary">
                             {e.hora ?? "Sin hora"} · {e.subtitulo}
                           </p>
                         </div>
@@ -1364,7 +1364,7 @@ function AgendaContenido() {
                 )}
               </>
             ) : (
-              <p className="font-ds-body text-ds-small text-ds-text/60">
+              <p className="font-ds-body text-ds-small text-ds-text-secondary">
                 Haz clic en un día para ver sus citas. Doble clic para agendar una cita nueva.
               </p>
             )}
@@ -1389,7 +1389,7 @@ function AgendaContenido() {
                     title={puedeGestionarAgenda ? "Nueva tarea este día" : undefined}
                     className={`flex items-center justify-center gap-2 border-b px-ds-3 py-ds-2 font-ds-body text-ds-caption font-medium transition-colors sm:flex-col sm:gap-1 ${
                       tareaRapidaFecha === clave ? "border-ds-brand bg-ds-brand/[0.08]" : "border-ds-divider"
-                    } ${esHoy ? "text-ds-brand" : "text-ds-text/60"} ${puedeGestionarAgenda ? "hover:bg-ds-neutral-100" : ""}`}
+                    } ${esHoy ? "text-ds-brand" : "text-ds-text-secondary"} ${puedeGestionarAgenda ? "hover:bg-ds-neutral-100" : ""}`}
                   >
                     <span className="capitalize">{NOMBRES_DIA_CORTOS[dia.getDay()]}</span>
                     <span
@@ -1402,7 +1402,7 @@ function AgendaContenido() {
                   </button>
                   <div className="flex min-h-[4rem] flex-1 flex-col gap-1.5 p-ds-2">
                     {eventosDia.length === 0 ? (
-                      <p className="py-ds-1 text-center font-ds-body text-ds-caption text-ds-text/60 sm:hidden">Sin eventos</p>
+                      <p className="py-ds-1 text-center font-ds-body text-ds-caption text-ds-text-secondary sm:hidden">Sin eventos</p>
                     ) : (
                       eventosDia.map((e) => {
                         const est = estadoInfo(e.estadoAgenda);
@@ -1445,8 +1445,8 @@ function AgendaContenido() {
           )}
           {eventosDelDiaVista.length === 0 ? (
             <div className="flex flex-col items-center gap-ds-3 py-16 text-center">
-              <Calendar size={32} strokeWidth={2.75} className="text-ds-text/60" />
-              <p className="font-ds-body text-ds-small text-ds-text/60">Sin eventos agendados este día.</p>
+              <Calendar size={32} strokeWidth={2.75} className="text-ds-text-secondary" />
+              <p className="font-ds-body text-ds-small text-ds-text-secondary">Sin eventos agendados este día.</p>
             </div>
           ) : (
             <div className="flex flex-col divide-y divide-ds-divider">
@@ -1461,11 +1461,11 @@ function AgendaContenido() {
                     <p className="flex items-center gap-1.5 truncate font-ds-body text-ds-body font-medium text-ds-text">
                       {(() => {
                         const Icono = ICONO_TIPO[e.tipo];
-                        return <Icono size={14} strokeWidth={2.75} className="shrink-0 text-ds-text/60" />;
+                        return <Icono size={14} strokeWidth={2.75} className="shrink-0 text-ds-text-secondary" />;
                       })()}
                       {e.titulo}
                     </p>
-                    <p className="font-ds-body text-ds-caption text-ds-text/60">
+                    <p className="font-ds-body text-ds-caption text-ds-text-secondary">
                       {e.hora ?? "Sin hora"} · {e.subtitulo}
                     </p>
                   </div>

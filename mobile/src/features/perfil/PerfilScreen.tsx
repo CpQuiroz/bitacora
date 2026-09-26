@@ -144,7 +144,7 @@ export function PerfilScreen({ navigation }: NativeStackScreenProps<MasStackPara
             <Texto tamano={tokens.size.h4} color={tokens.color.text}>
               {u.nombre}
             </Texto>
-            <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
+            <Texto tamano={tokens.size.small} color={tokens.color.textSecondary}>
               {ETIQUETA_ROL[u.rol] ?? u.rol} · {u.empresa.nombre}
             </Texto>
           </View>
@@ -167,7 +167,7 @@ export function PerfilScreen({ navigation }: NativeStackScreenProps<MasStackPara
               <Texto tamano={tokens.size.small} peso="semibold" color={tokens.color.text}>
                 Tema de {u.empresa.nombre}
               </Texto>
-              <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
+              <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
                 Cambia los colores de toda la app para tu equipo (se guarda para toda la empresa).
               </Texto>
               <Select
@@ -177,7 +177,7 @@ export function PerfilScreen({ navigation }: NativeStackScreenProps<MasStackPara
                 deshabilitado={temaGuardando}
               />
               {temaGuardando ? (
-                <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
+                <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
                   Guardando…
                 </Texto>
               ) : null}
@@ -208,13 +208,13 @@ export function PerfilScreen({ navigation }: NativeStackScreenProps<MasStackPara
 
         {/* Cola de sincronización detallada */}
         {pendientes.length > 0 && auth.fase === "prueba-vencida" ? (
-          <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
+          <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
             Lo que quedó sin enviar está guardado en este teléfono y se envía solo cuando tu empresa vuelva a estar activa.
           </Texto>
         ) : null}
         {pendientes.length > 0 && (
           <View style={{ backgroundColor: tokens.color.surface, borderRadius: tokens.radius.md, padding: tokens.space["4"], gap: tokens.space["2"] }}>
-            <Texto tamano={tokens.size.caption} peso="semibold" color={`${tokens.color.text}99`} style={{ textTransform: "uppercase", letterSpacing: 1 }}>
+            <Texto tamano={tokens.size.caption} peso="semibold" color={tokens.color.textSecondary} style={{ textTransform: "uppercase", letterSpacing: 1 }}>
               {pendientes.length} sin enviar
             </Texto>
             {pendientes.map((a) => (
@@ -222,7 +222,7 @@ export function PerfilScreen({ navigation }: NativeStackScreenProps<MasStackPara
                 <Texto tamano={tokens.size.small} peso="medium" color={tokens.color.text}>
                   {a.etiqueta}
                 </Texto>
-                <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`} style={{ fontVariant: ["tabular-nums"] }}>
+                <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary} style={{ fontVariant: ["tabular-nums"] }}>
                   {a.creadoEn ? new Date(a.creadoEn).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : ""}
                   {a.archivo || a.archivos?.length ? " · con foto adjunta" : ""}
                 </Texto>
@@ -321,7 +321,7 @@ export function PerfilScreen({ navigation }: NativeStackScreenProps<MasStackPara
                 <Texto tamano={tokens.size.small} peso="medium" color={tokens.color.text}>
                   {tituloBio}
                 </Texto>
-                <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
+                <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
                   Pide tu {bioNombre} al abrir la app.
                 </Texto>
               </View>
@@ -355,12 +355,12 @@ export function PerfilScreen({ navigation }: NativeStackScreenProps<MasStackPara
             hitSlop={8}
             style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: tokens.space["3"], minHeight: 44, opacity: pressed ? 0.7 : 1 })}
           >
-            <Download size={22} strokeWidth={2} color={`${tokens.color.text}66`} />
+            <Download size={22} strokeWidth={2} color={tokens.color.textSecondary} />
             <View style={{ flex: 1 }}>
               <Texto tamano={tokens.size.small} peso="medium" color={tokens.color.text}>
                 Mis datos personales
               </Texto>
-              <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
+              <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
                 Descargá todo lo que Bitácora guarda sobre vos.
               </Texto>
             </View>
@@ -384,7 +384,7 @@ export function PerfilScreen({ navigation }: NativeStackScreenProps<MasStackPara
           </View>
         </Card>
 
-        <Texto tamano={tokens.size.caption} color={`${tokens.color.text}66`} style={{ textAlign: "center", fontVariant: ["tabular-nums"] }}>
+        <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary} style={{ textAlign: "center", fontVariant: ["tabular-nums"] }}>
           Bitácora {Constants.expoConfig?.version ?? ""}
         </Texto>
 
@@ -408,7 +408,7 @@ function Interruptor({ titulo, sub, valor, onCambiar }: { titulo: string; sub: s
         <Texto tamano={tokens.size.small} peso="medium" color={tokens.color.text}>
           {titulo}
         </Texto>
-        <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
+        <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
           {sub}
         </Texto>
       </View>
@@ -420,7 +420,7 @@ function Interruptor({ titulo, sub, valor, onCambiar }: { titulo: string; sub: s
 function Fila({ etiqueta, valor }: { etiqueta: string; valor: string }) {
   return (
     <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 6 }}>
-      <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
+      <Texto tamano={tokens.size.small} color={tokens.color.textSecondary}>
         {etiqueta}
       </Texto>
       <Texto tamano={tokens.size.small} peso="medium" color={tokens.color.text}>

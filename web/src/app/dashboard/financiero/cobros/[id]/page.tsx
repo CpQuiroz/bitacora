@@ -210,19 +210,19 @@ export default function CobroDetallePage() {
           <p className="mb-ds-4 font-ds-body text-ds-small font-semibold text-ds-text">Fechas y medio de pago</p>
           <div className="grid grid-cols-2 gap-ds-3 font-ds-body text-ds-small">
             <div>
-              <p className="text-ds-caption text-ds-text/60">Emisión</p>
+              <p className="text-ds-caption text-ds-text-secondary">Emisión</p>
               <p className="text-ds-text">{cobro.fecha_emision}</p>
             </div>
             <div>
-              <p className="text-ds-caption text-ds-text/60">Vencimiento</p>
+              <p className="text-ds-caption text-ds-text-secondary">Vencimiento</p>
               <p className="text-ds-text">{cobro.fecha_vencimiento}</p>
             </div>
             <div>
-              <p className="text-ds-caption text-ds-text/60">Medio de pago</p>
+              <p className="text-ds-caption text-ds-text-secondary">Medio de pago</p>
               <p className="text-ds-text">{cobro.medio_pago ? MEDIOS_ETIQUETA[cobro.medio_pago] : "—"}</p>
             </div>
             <div>
-              <p className="text-ds-caption text-ds-text/60">Fecha de pago</p>
+              <p className="text-ds-caption text-ds-text-secondary">Fecha de pago</p>
               <p className="text-ds-text">{cobro.fecha_pago ?? "—"}</p>
             </div>
           </div>
@@ -264,7 +264,7 @@ export default function CobroDetallePage() {
               <div className="overflow-x-auto">
                 <table className="w-full font-ds-body text-ds-small">
                   <thead>
-                    <tr className="border-b border-ds-divider text-left text-ds-caption uppercase tracking-wide text-ds-text/60">
+                    <tr className="border-b border-ds-divider text-left text-ds-caption uppercase tracking-wide text-ds-text-secondary">
                       <th className="px-ds-2 py-ds-2">N° guía</th>
                       <th className="px-ds-2 py-ds-2">Fecha</th>
                       <th className="px-ds-2 py-ds-2">Chofer</th>
@@ -286,8 +286,8 @@ export default function CobroDetallePage() {
                         <td className="px-ds-2 py-ds-2">{f.origen}</td>
                         <td className="px-ds-2 py-ds-2">
                           {f.destino}
-                          {f.via?.length ? <span className="block font-ds-body text-ds-caption text-ds-text/60">vía {f.via.join(", ")}</span> : null}
-                          {f.km != null ? <span className="block font-ds-body text-ds-caption text-ds-text/60 tabular-nums">{f.km.toLocaleString("es-CL")} km</span> : null}
+                          {f.via?.length ? <span className="block font-ds-body text-ds-caption text-ds-text-secondary">vía {f.via.join(", ")}</span> : null}
+                          {f.km != null ? <span className="block font-ds-body text-ds-caption text-ds-text-secondary tabular-nums">{f.km.toLocaleString("es-CL")} km</span> : null}
                         </td>
                         <td className="px-ds-2 py-ds-2 text-right tabular-nums">{formatMoneda(f.neto, usuario.moneda)}</td>
                         <td className="px-ds-2 py-ds-2 text-right tabular-nums">{formatMoneda(f.iva, usuario.moneda)}</td>
@@ -318,13 +318,13 @@ export default function CobroDetallePage() {
               <div className="grid gap-ds-3 font-ds-body text-ds-small sm:grid-cols-2">
                 {cobro.valor_recibido != null && (
                   <div>
-                    <p className="text-ds-caption text-ds-text/60">Valor recibido</p>
+                    <p className="text-ds-caption text-ds-text-secondary">Valor recibido</p>
                     <p className="text-ds-text">{formatMoneda(cobro.valor_recibido, usuario.moneda)}</p>
                   </div>
                 )}
                 {cobro.observaciones_pago && (
                   <div className="sm:col-span-2">
-                    <p className="text-ds-caption text-ds-text/60">Observaciones</p>
+                    <p className="text-ds-caption text-ds-text-secondary">Observaciones</p>
                     <p className="text-ds-text">{cobro.observaciones_pago}</p>
                   </div>
                 )}

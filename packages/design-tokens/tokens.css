@@ -4,6 +4,7 @@
   --color-ds-bg: #f5ead8;
   --color-ds-surface: #ebddc5;
   --color-ds-text: #201e1d;
+  --color-ds-text-secondary: #645f59;
   --color-ds-accent: #c67139;
   --color-ds-accent2: #7a8a5e;
   --color-ds-divider: rgba(32, 30, 29, 0.16);
@@ -103,7 +104,9 @@
   --ds-brand: #c67139;
   --ds-brand-hover: oklch(from var(--ds-brand) calc(l - 0.05) c h);
   --ds-brand-pressed: oklch(from var(--ds-brand) calc(l - 0.11) c h);
-  --ds-brand-foreground: #ffffff;
+  /* Texto sobre la marca por contraste WCAG (tarea 154): el terracota por
+     defecto con blanco daba 3,6:1; con casi negro, 4,8:1. */
+  --ds-brand-foreground: #1a1a1a;
 
   /* Igual patrón que --ds-brand pero para empresas.color_secundario.
      soft/strong con color-mix (no oklch: a diferencia de oscurecer una
@@ -131,6 +134,7 @@
     --color-ds-bg: #17140f;
     --color-ds-surface: #201b13;
     --color-ds-text: #f2e9d8;
+    --color-ds-text-secondary: #8f897e;
     --color-ds-accent: #e08a52;
     --color-ds-accent2: #9db27a;
     --color-ds-divider: rgba(242, 233, 216, 0.14);
@@ -176,6 +180,7 @@
   --color-ds-bg: #17140f;
   --color-ds-surface: #201b13;
   --color-ds-text: #f2e9d8;
+  --color-ds-text-secondary: #8f897e;
   --color-ds-accent: #e08a52;
   --color-ds-accent2: #9db27a;
   --color-ds-divider: rgba(242, 233, 216, 0.14);
@@ -230,6 +235,7 @@
   --color-ds-bg: #eceae4;
   --color-ds-surface: #e0ddd3;
   --color-ds-text: #211f1c;
+  --color-ds-text-secondary: #62605c;
   --color-ds-accent: #d1580f;
   --color-ds-accent2: #3d5a5c;
   --color-ds-divider: rgba(33, 31, 28, 0.18);
@@ -279,6 +285,7 @@
   --color-ds-bg: #eef3f7;
   --color-ds-surface: #ffffff;
   --color-ds-text: #132c40;
+  --color-ds-text-secondary: #596c7b;
   --color-ds-accent: #2563a6;
   --color-ds-accent2: #f2a541;
   --color-ds-divider: rgba(19, 44, 64, 0.16);

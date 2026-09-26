@@ -253,7 +253,7 @@ export function CatalogoSelectorModal({
                         </span>
                       )}
                     </p>
-                    <p className="flex flex-wrap items-center gap-x-ds-2 font-ds-body text-ds-caption text-ds-text/60">
+                    <p className="flex flex-wrap items-center gap-x-ds-2 font-ds-body text-ds-caption text-ds-text-secondary">
                       {item.categoria && <span>{item.categoria}</span>}
                       <span>{formatMoneda(item.precio_base, moneda)}</span>
                       <span>/ {item.unidad}</span>
@@ -270,7 +270,7 @@ export function CatalogoSelectorModal({
                       type="button"
                       onClick={() => cambiarCantidad(item.id, -1)}
                       aria-label="Restar"
-                      className="flex h-8 w-8 items-center justify-center rounded-ds-md border border-ds-divider text-ds-text/60 hover:bg-ds-brand/[0.08] hover:text-ds-brand"
+                      className="flex h-8 w-8 items-center justify-center rounded-ds-md border border-ds-divider text-ds-text-secondary hover:bg-ds-brand/[0.08] hover:text-ds-brand"
                     >
                       <Minus size={14} strokeWidth={2.75} />
                     </button>
@@ -286,7 +286,7 @@ export function CatalogoSelectorModal({
                       type="button"
                       onClick={() => cambiarCantidad(item.id, 1)}
                       aria-label="Sumar"
-                      className="flex h-8 w-8 items-center justify-center rounded-ds-md border border-ds-divider text-ds-text/60 hover:bg-ds-brand/[0.08] hover:text-ds-brand"
+                      className="flex h-8 w-8 items-center justify-center rounded-ds-md border border-ds-divider text-ds-text-secondary hover:bg-ds-brand/[0.08] hover:text-ds-brand"
                     >
                       <Plus size={14} strokeWidth={2.75} />
                     </button>

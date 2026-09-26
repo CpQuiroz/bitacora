@@ -202,7 +202,7 @@ export default function ModulosPage() {
                         className="accent-ds-brand"
                       />
                       <span>{ETIQUETA_MODULO[modulo] ?? modulo}</span>
-                      {guardando === modulo ? <span className="text-ds-caption text-ds-text/50">Guardando…</span> : null}
+                      {guardando === modulo ? <span className="text-ds-caption text-ds-text-secondary">Guardando…</span> : null}
                     </label>
                   );
                 })}
@@ -210,7 +210,7 @@ export default function ModulosPage() {
             </section>
           ))}
         </div>
-        <p className="mt-ds-5 font-ds-body text-ds-caption text-ds-text/60">
+        <p className="mt-ds-5 font-ds-body text-ds-caption text-ds-text-secondary">
           El informe con IA, el asistente y la configuración de la cuenta no cuentan para el tope: dependen de tu plan.
         </p>
       </Card>

@@ -184,7 +184,7 @@ export default function TiposDocumentoPage() {
         loading={tipos === null && !error}
         columns={[
           { header: "Nombre", cell: (t) => <span className="font-medium text-ds-text">{t.nombre}</span> },
-          { header: "Aplica a", cell: (t) => <span className="text-ds-text/60">{APLICA.find((a) => a.valor === t.aplica_a)?.etiqueta}</span> },
+          { header: "Aplica a", cell: (t) => <span className="text-ds-text-secondary">{APLICA.find((a) => a.valor === t.aplica_a)?.etiqueta}</span> },
           { header: "Estado", cell: (t) => <StatusBadge estado={t.activo ? "activo" : "inactivo"} /> },
         ]}
         actions={[

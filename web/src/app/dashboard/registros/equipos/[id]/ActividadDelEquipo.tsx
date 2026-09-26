@@ -136,7 +136,7 @@ export function ActividadDelEquipo({
             encabezado: "Tipo",
             celda: (f) => (
               <span className="flex items-center gap-1.5">
-                {f.tipo === "os" ? <ClipboardCheck size={16} strokeWidth={2.75} className="text-ds-text/60" /> : <Route size={16} strokeWidth={2.75} className="text-ds-text/60" />}
+                {f.tipo === "os" ? <ClipboardCheck size={16} strokeWidth={2.75} className="text-ds-text-secondary" /> : <Route size={16} strokeWidth={2.75} className="text-ds-text-secondary" />}
                 <Tag>{f.tipo === "os" ? "OS" : "Viaje"}</Tag>
               </span>
             ),
@@ -147,7 +147,7 @@ export function ActividadDelEquipo({
             celda: (f) => (
               <>
                 <p className="font-medium text-ds-text">{f.titulo}</p>
-                {f.detalle ? <p className="font-ds-body text-ds-caption text-ds-text/60">{f.detalle}</p> : null}
+                {f.detalle ? <p className="font-ds-body text-ds-caption text-ds-text-secondary">{f.detalle}</p> : null}
               </>
             ),
           },

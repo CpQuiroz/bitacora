@@ -173,15 +173,15 @@ export default function RendicionesPage() {
 
       <div className="mb-ds-6 grid gap-ds-4 sm:grid-cols-3">
         <Card>
-          <p className="font-ds-body text-ds-caption text-ds-text/60">Total entregado</p>
+          <p className="font-ds-body text-ds-caption text-ds-text-secondary">Total entregado</p>
           <p className="mt-ds-1 font-ds-body text-ds-h5 font-semibold text-ds-text">{formatMoneda(totales.entregado, usuario.moneda)}</p>
         </Card>
         <Card>
-          <p className="font-ds-body text-ds-caption text-ds-text/60">Total gastado</p>
+          <p className="font-ds-body text-ds-caption text-ds-text-secondary">Total gastado</p>
           <p className="mt-ds-1 font-ds-body text-ds-h5 font-semibold text-ds-text">{formatMoneda(totales.gastado, usuario.moneda)}</p>
         </Card>
         <Card>
-          <p className="font-ds-body text-ds-caption text-ds-text/60">Saldo pendiente</p>
+          <p className="font-ds-body text-ds-caption text-ds-text-secondary">Saldo pendiente</p>
           <p className="mt-ds-1 font-ds-body text-ds-h5 font-semibold text-ds-text">{formatMoneda(totales.saldo, usuario.moneda)}</p>
         </Card>
       </div>

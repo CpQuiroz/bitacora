@@ -106,7 +106,7 @@ export default function PerfilesPage() {
 
       <Card>
         <div className="flex items-start gap-ds-3">
-          <Shield size={20} strokeWidth={2.75} className="mt-0.5 shrink-0 text-ds-text/60" />
+          <Shield size={20} strokeWidth={2.75} className="mt-0.5 shrink-0 text-ds-text-secondary" />
           <div className="font-ds-body text-ds-small text-ds-text/70">
             <p>
               El perfil <span className="font-medium text-ds-text">Admin</span> siempre tiene acceso total y no se
@@ -135,16 +135,16 @@ export default function PerfilesPage() {
                 className="flex flex-1 items-center gap-ds-2 text-left"
               >
                 {expandido ? (
-                  <ChevronDown size={16} strokeWidth={2.75} className="shrink-0 text-ds-text/50" />
+                  <ChevronDown size={16} strokeWidth={2.75} className="shrink-0 text-ds-text-secondary" />
                 ) : (
-                  <ChevronRight size={16} strokeWidth={2.75} className="shrink-0 text-ds-text/50" />
+                  <ChevronRight size={16} strokeWidth={2.75} className="shrink-0 text-ds-text-secondary" />
                 )}
                 <div>
                   <p className="flex items-center gap-ds-2 font-ds-body text-ds-small font-semibold text-ds-text">
                     {rol.nombre}
                     {sucio(rol.slug) && <span className="h-1.5 w-1.5 rounded-ds-pill bg-ds-brand" title="Cambios sin guardar" />}
                   </p>
-                  <p className="font-ds-body text-ds-caption text-ds-text/60">
+                  <p className="font-ds-body text-ds-caption text-ds-text-secondary">
                     {rol.es_sistema ? "Perfil de sistema" : "Perfil personalizado"} · {rol.slug}
                   </p>
                 </div>
@@ -163,7 +163,7 @@ export default function PerfilesPage() {
                     <label
                       key={c.modulo}
                       className={`flex items-center gap-ds-2 rounded-ds-md border px-ds-3 py-2 font-ds-body text-ds-small ${
-                        c.contratado ? "border-ds-divider text-ds-text" : "border-dashed border-ds-divider text-ds-text/60"
+                        c.contratado ? "border-ds-divider text-ds-text" : "border-dashed border-ds-divider text-ds-text-secondary"
                       }`}
                     >
                       <input type="checkbox" className="accent-[var(--ds-brand)]" checked={marcado} disabled={!c.contratado} onChange={() => toggle(rol.slug, c.modulo)} />

@@ -169,7 +169,7 @@ export default function InventarioPage() {
                 y puedes ver cuándo un producto está por agotarse.
               </p>
               {hayProductos === false && !activado && (
-                <p className="mt-ds-1.5 max-w-md font-ds-body text-ds-caption text-ds-text/60">
+                <p className="mt-ds-1.5 max-w-md font-ds-body text-ds-caption text-ds-text-secondary">
                   Todavía no tienes productos en Catálogo — crea al menos uno antes de activar el control de inventario.
                 </p>
               )}
@@ -222,7 +222,7 @@ export default function InventarioPage() {
         <div className="mt-ds-5 flex items-start justify-between gap-ds-4 border-t border-ds-divider pt-ds-5">
           <div>
             <p className="font-ds-body text-ds-small font-medium text-ds-text">Permitir stock negativo</p>
-            <p className="mt-ds-1 max-w-md font-ds-body text-ds-caption text-ds-text/60">
+            <p className="mt-ds-1 max-w-md font-ds-body text-ds-caption text-ds-text-secondary">
               Si lo desactivás, el sistema igual descuenta el stock (no bloquea la OS) pero te avisa cuando no había
               suficiente.
             </p>
@@ -245,7 +245,7 @@ export default function InventarioPage() {
         <div className="mt-ds-5 flex items-start justify-between gap-ds-4 border-t border-ds-divider pt-ds-5">
           <div>
             <p className="font-ds-body text-ds-small font-medium text-ds-text">Descontar solo una vez por OS</p>
-            <p className="mt-ds-1 max-w-md font-ds-body text-ds-caption text-ds-text/60">
+            <p className="mt-ds-1 max-w-md font-ds-body text-ds-caption text-ds-text-secondary">
               Evita que una OS descuente stock dos veces si vuelve a pasar por el estado configurado (ej. se edita y se
               vuelve a guardar). Recomendado dejarlo activado.
             </p>
@@ -326,7 +326,7 @@ export default function InventarioPage() {
           error={errorUnidades}
           columns={[
             { header: "Nombre", cell: (u) => <span className="font-medium text-ds-text">{u.nombre}</span> },
-            { header: "Abreviatura", cell: (u) => <span className="text-ds-text/60">{u.abreviatura ?? "—"}</span> },
+            { header: "Abreviatura", cell: (u) => <span className="text-ds-text-secondary">{u.abreviatura ?? "—"}</span> },
           ]}
           actions={[
             { label: "Editar", onClick: abrirEdicionUnidad, variant: "brand" },

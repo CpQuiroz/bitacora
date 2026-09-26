@@ -122,7 +122,7 @@ function EditorEncabezado({
         ))}
       </div>
       {bloques.length === 0 ? (
-        <p className="font-ds-body text-ds-caption text-ds-text/50">Sin bloques todavía — agregá uno de arriba.</p>
+        <p className="font-ds-body text-ds-caption text-ds-text-secondary">Sin bloques todavía — agregá uno de arriba.</p>
       ) : (
         <div className="flex flex-col gap-ds-2">
           {bloques.map((b, i) => (
@@ -138,7 +138,7 @@ function EditorEncabezado({
                   type="button"
                   onClick={() => mover(i, -1)}
                   disabled={i === 0}
-                  className="rounded-ds-md border border-ds-divider px-1.5 py-1 text-ds-text/60 disabled:opacity-30"
+                  className="rounded-ds-md border border-ds-divider px-1.5 py-1 text-ds-text-secondary disabled:opacity-30"
                   title="Subir"
                 >
                   ↑
@@ -147,7 +147,7 @@ function EditorEncabezado({
                   type="button"
                   onClick={() => mover(i, 1)}
                   disabled={i === bloques.length - 1}
-                  className="rounded-ds-md border border-ds-divider px-1.5 py-1 text-ds-text/60 disabled:opacity-30"
+                  className="rounded-ds-md border border-ds-divider px-1.5 py-1 text-ds-text-secondary disabled:opacity-30"
                   title="Bajar"
                 >
                   ↓
@@ -180,7 +180,7 @@ function ChipsVariables({ variables, onInsertar }: { variables: VariablePlantill
           type="button"
           title={v.etiqueta}
           onClick={() => onInsertar(v.clave)}
-          className="rounded-ds-pill border border-ds-divider px-2 py-0.5 font-mono text-[11px] text-ds-text/60 hover:border-ds-brand hover:text-ds-brand"
+          className="rounded-ds-pill border border-ds-divider px-2 py-0.5 font-mono text-[11px] text-ds-text-secondary hover:border-ds-brand hover:text-ds-brand"
         >
           {`{${v.clave}}`}
         </button>
@@ -309,7 +309,7 @@ export default function PlantillasPage() {
             type="button"
             onClick={() => setTab(t.valor)}
             className={`shrink-0 whitespace-nowrap px-ds-3 py-2 font-ds-body text-ds-small font-medium transition-colors ${
-              tab === t.valor ? "border-b-2 border-ds-brand text-ds-brand" : "text-ds-text/60 hover:text-ds-brand"
+              tab === t.valor ? "border-b-2 border-ds-brand text-ds-brand" : "text-ds-text-secondary hover:text-ds-brand"
             }`}
           >
             {t.etiqueta}
@@ -399,7 +399,7 @@ export default function PlantillasPage() {
               {tab === "orden_servicio" ? (
                 <Card>
                   <p className="mb-ds-1 font-ds-body text-ds-small font-semibold text-ds-text">Secciones del informe de OS</p>
-                  <p className="mb-ds-4 font-ds-body text-ds-caption text-ds-text/60">
+                  <p className="mb-ds-4 font-ds-body text-ds-caption text-ds-text-secondary">
                     Elegí qué secciones se muestran en el PDF/informe que recibe el cliente.
                   </p>
                   <div className="grid gap-ds-3 sm:grid-cols-3">
@@ -426,7 +426,7 @@ export default function PlantillasPage() {
             </div>
 
             <div>
-              <p className="mb-ds-2 font-ds-body text-ds-caption font-medium uppercase tracking-wide text-ds-text/60">Vista previa en vivo</p>
+              <p className="mb-ds-2 font-ds-body text-ds-caption font-medium uppercase tracking-wide text-ds-text-secondary">Vista previa en vivo</p>
               <div className="rounded-2xl border border-ds-divider bg-white p-5 text-[#16161f] shadow-sm">
                 {mostrarLogo && (
                   <div className={`mb-3 flex ${justify}`}>
@@ -484,7 +484,7 @@ export default function PlantillasPage() {
                 )}
                 {textoPie && <p className="mt-4 text-center text-[10px] text-gray-400">{sustituirVariables(textoPie, DATOS_EJEMPLO)}</p>}
               </div>
-              <p className="mt-ds-2 font-ds-body text-ds-caption text-ds-text/60">Así se ve con los cambios sin guardar todavía.</p>
+              <p className="mt-ds-2 font-ds-body text-ds-caption text-ds-text-secondary">Así se ve con los cambios sin guardar todavía.</p>
             </div>
           </div>
         )

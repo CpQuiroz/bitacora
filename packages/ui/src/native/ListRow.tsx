@@ -45,7 +45,7 @@ export function ListRow({ icono, titulo, subtitulo, trailing, onPress }: PropsLi
           {titulo}
         </Texto>
         {subtitulo ? (
-          <Texto tamano={tokens.size.small} color={`${tokens.color.text}99`}>
+          <Texto tamano={tokens.size.small} color={tokens.color.textSecondary}>
             {subtitulo}
           </Texto>
         ) : null}

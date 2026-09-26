@@ -72,7 +72,7 @@ export function AsistenteScreen({ navigation }: { navigation: NavConOpciones }) 
       headerRight: () =>
         mensajes && mensajes.length > 0 ? (
           <Pressable onPress={limpiar} hitSlop={10}>
-            <Trash2 size={20} color={`${tokens.color.text}99`} />
+            <Trash2 size={20} color={tokens.color.textSecondary} />
           </Pressable>
         ) : null,
     });
@@ -175,8 +175,8 @@ export function AsistenteScreen({ navigation }: { navigation: NavConOpciones }) 
           if (item.contenido === "__pensando__") {
             return (
               <View style={{ flexDirection: "row", alignItems: "center", gap: tokens.space["2"], alignSelf: "flex-start" }}>
-                <ActivityIndicator size="small" color={`${tokens.color.text}99`} />
-                <Texto tamano={tokens.size.caption} color={`${tokens.color.text}99`}>
+                <ActivityIndicator size="small" color={tokens.color.textSecondary} />
+                <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary}>
                   Pensando…
                 </Texto>
               </View>
@@ -204,7 +204,7 @@ export function AsistenteScreen({ navigation }: { navigation: NavConOpciones }) 
       {aviso ? (
         <Texto
           tamano={tokens.size.caption}
-          color={`${tokens.color.text}99`}
+          color={tokens.color.textSecondary}
           style={{ textAlign: "center", paddingHorizontal: tokens.space["4"], paddingBottom: tokens.space["1"] }}
         >
           {aviso}
@@ -226,7 +226,7 @@ export function AsistenteScreen({ navigation }: { navigation: NavConOpciones }) 
           value={texto}
           onChangeText={setTexto}
           placeholder="Escribe tu pregunta…"
-          placeholderTextColor={`${tokens.color.text}66`}
+          placeholderTextColor={tokens.color.textSecondary}
           multiline
           editable={!enviando}
           style={{
@@ -255,7 +255,7 @@ export function AsistenteScreen({ navigation }: { navigation: NavConOpciones }) 
             backgroundColor: enviando || !texto.trim() ? tokens.color.neutral["200"] : marca.base,
           }}
         >
-          <ArrowUp size={20} color={enviando || !texto.trim() ? `${tokens.color.text}66` : marca.foreground} />
+          <ArrowUp size={20} color={enviando || !texto.trim() ? tokens.color.textSecondary : marca.foreground} />
         </Pressable>
       </View>
     </KeyboardAvoidingView>

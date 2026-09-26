@@ -114,7 +114,7 @@ export function RendicionesListScreen({ navigation }: NativeStackScreenProps<Mas
               trailing={
                 <View style={{ alignItems: "flex-end", gap: 4 }}>
                   <StatusBadge estado={item.estado} etiqueta={ETIQUETA_ESTADO[item.estado]} tonoForzado={TONO_ESTADO[item.estado]} />
-                  <Texto tamano={tokens.size.caption} color={`${tokens.color.text}66`} style={{ fontVariant: ["tabular-nums"] }}>
+                  <Texto tamano={tokens.size.caption} color={tokens.color.textSecondary} style={{ fontVariant: ["tabular-nums"] }}>
                     Saldo: ${item.saldo.toLocaleString("es-CL")}
                   </Texto>
                 </View>

@@ -127,7 +127,7 @@ export default function ParametrosPage() {
                       <div className="w-28">
                         <Input tipo="numero" valor={afpForm[a.afp] ?? ""} onCambio={(v) => setAfpForm((f) => ({ ...f, [a.afp]: v }))} />
                       </div>
-                      <span className="font-ds-body text-ds-caption text-ds-text/60">= {((Number(afpForm[a.afp]) || 0) * 100).toFixed(2)}%</span>
+                      <span className="font-ds-body text-ds-caption text-ds-text-secondary">= {((Number(afpForm[a.afp]) || 0) * 100).toFixed(2)}%</span>
                     </div>
                   </div>
                 ))}
