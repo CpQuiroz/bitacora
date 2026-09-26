@@ -7,12 +7,12 @@ import { useParams, useRouter } from "next/navigation";
 import type { AnalisisFoto, Anexo, ItemChecklist, OrdenServicio, Trabajo, TipoOsTrabajo } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch, exigirOk } from "@/lib/api";
-import { reponer } from "@/lib/reponer";
 import { useDeshacer } from "@bitacora/ui/web";
 import { comprimirImagen } from "@/lib/comprimirImagen";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Badge, Button, Card, ErrorText, PageHeader } from "@/components/ui";
 import { IconCamera, IconChevronLeft, IconClipboardCheck } from "@/components/icons";
+import { useOcultos } from "@/lib/useOcultos";
 
 type TrabajoConTipo = Trabajo & { tipo: TipoOsTrabajo | null };
 type AnalisisFotoConUrl = AnalisisFoto & { url: string };
@@ -34,6 +34,7 @@ export default function TrabajoDetallePage() {
   const [subiendo, setSubiendo] = useState(false);
   const [subiendoAnexo, setSubiendoAnexo] = useState(false);
   const conDeshacer = useDeshacer();
+  const ocultos = useOcultos();
 
   const cargar = useCallback(async () => {
     const { data } = await supabase.auth.getSession();
@@ -93,13 +94,12 @@ export default function TrabajoDetallePage() {
   }
 
   function onEliminarFoto(foto: AnalisisFotoConUrl) {
-    const indice = fotos.findIndex((f) => f.id === foto.id);
     conDeshacer({
       mensaje: "Foto eliminada",
-      ocultar: () => setFotos((l) => l.filter((f) => f.id !== foto.id)),
-      restaurar: () => setFotos((l) => reponer(l, foto, indice)),
+      ocultar: () => ocultos.ocultar(foto.id),
+      restaurar: () => ocultos.mostrar(foto.id),
       ejecutar: async () => exigirOk(await apiFetch(`/api/trabajos/${params.id}/fotos/${foto.id}`, { method: "DELETE" }), "No se pudo eliminar la foto"),
-      alTerminar: () => void cargar(),
+      alTerminar: () => void cargar().then(() => ocultos.mostrar(foto.id)),
     });
   }
 
@@ -221,11 +221,11 @@ export default function TrabajoDetallePage() {
               </div>
             )}
 
-            {fotos.length === 0 ? (
+            {ocultos.filtrar(fotos).length === 0 ? (
               <p className="mt-4 text-sm text-muted">Todavía no hay fotos de este trabajo.</p>
             ) : (
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                {fotos.map((f) => (
+                {ocultos.filtrar(fotos).map((f) => (
                   <div key={f.id} className="overflow-hidden rounded-xl border border-border">
                     <div className="relative h-48 w-full">
                       {/* URL firmada (vence) — sin optimizer, con lazy-load igual. */}

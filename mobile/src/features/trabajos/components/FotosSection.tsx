@@ -46,7 +46,6 @@ export function FotosSection({
   const [ocupado, setOcupado] = useState(false);
   const [abierta, setAbierta] = useState<FotoConUrl | null>(null);
   const [categoria, setCategoria] = useState<CategoriaFotoOS | null>(null);
-  const [eliminando, setEliminando] = useState(false);
   const [descripcion, setDescripcion] = useState("");
   const [guardandoDesc, setGuardandoDesc] = useState(false);
 
@@ -62,18 +61,14 @@ export function FotosSection({
     setAbierta(null);
   }
 
-  async function eliminar() {
-    if (!abierta || !onEliminar) return;
-    setEliminando(true);
-    await onEliminar(abierta.id);
-    setEliminando(false);
-    setAbierta(null);
-  }
-
   async function confirmarEliminar() {
-    if (await confirmar({ titulo: "¿Eliminar esta foto?", mensaje: "Se quita de la orden de servicio.", accion: "Eliminar", destructivo: true })) {
-      void eliminar();
-    }
+    if (!abierta || !onEliminar) return;
+    const foto = abierta;
+    // En iOS un Modal no se presenta encima de otro: se cierra el visor
+    // antes de abrir la confirmación.
+    setAbierta(null);
+    if (!(await confirmar({ titulo: "¿Eliminar esta foto?", mensaje: "Se quita de la orden de servicio.", accion: "Eliminar", destructivo: true }))) return;
+    await onEliminar(foto.id);
   }
 
   async function procesar(assets: ImagePicker.ImagePickerAsset[]) {
@@ -325,7 +320,6 @@ export function FotosSection({
                     e.stopPropagation();
                     confirmarEliminar();
                   }}
-                  disabled={eliminando}
                   style={{
                     marginTop: 16,
                     flexDirection: "row",
@@ -335,7 +329,6 @@ export function FotosSection({
                     paddingVertical: 10,
                     borderRadius: tokens.radius.pill,
                     backgroundColor: tokens.color.neutral["100"],
-                    opacity: eliminando ? 0.6 : 1,
                   }}
                 >
                   <Trash2 size={16} strokeWidth={2.5} color={tokens.color.accentRamp["700"]} />

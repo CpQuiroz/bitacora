@@ -13,7 +13,7 @@ export { ErrorState } from "./ErrorState";
 export { Table, type ColumnaTabla, type AccionFila, type PropsTable } from "./Table";
 export { Dialog } from "./Dialog";
 export { ToastProvider, useToast, useDeshacer } from "./Toast";
-export { ConfirmarProvider, useConfirmar } from "./Confirmar";
+export { ConfirmarProvider, useConfirmar, useCancelarConfirmacion } from "./Confirmar";
 export { Cifra } from "./Cifra";
 export type {
   PropsBoton,

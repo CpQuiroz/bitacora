@@ -38,7 +38,10 @@ function ConTema({ children }: { children: React.ReactNode }) {
         colorForeground={empresa?.color_primario_foreground}
         colorSecundario={empresa?.color_secundario}
       >
-        {children}
+        {/* Otro ConfirmarProvider acá adentro, para que el botón del
+            diálogo lleve la marca de la empresa; el de la raíz queda para
+            el modo Super-Admin. */}
+        <ConfirmarProvider>{children}</ConfirmarProvider>
       </ProveedorMarca>
     </ThemeProvider>
   );

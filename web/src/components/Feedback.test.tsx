@@ -74,3 +74,22 @@ describe("useToast y useDeshacer", () => {
     vi.useRealTimers();
   });
 });
+
+describe("Escape con diálogos apilados", () => {
+  test("cierra solo la confirmación, no el diálogo de abajo", async () => {
+    const { Dialog } = await import("@bitacora/ui/web");
+    const cerrarDetalle = vi.fn();
+    const alResponder = vi.fn();
+    montar(
+      <Dialog abierto onCerrar={cerrarDetalle} titulo="Detalle">
+        <BotonEliminar alResponder={alResponder} />
+      </Dialog>
+    );
+    fireEvent.click(screen.getByText("Eliminar viaje"));
+    await screen.findByRole("dialog", { name: "¿Eliminar este viaje?" });
+    await act(async () => fireEvent.keyDown(document, { key: "Escape" }));
+    expect(alResponder).toHaveBeenCalledWith(false);
+    expect(cerrarDetalle).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog", { name: "Detalle" })).toBeTruthy();
+  });
+});

@@ -116,7 +116,7 @@ export default function ClientesPage() {
       nuevo.geocodificado
         ? "Cliente creado y ubicado en el mapa."
         : "Cliente creado, pero no encontramos esa dirección en el mapa — revisa que esté bien escrita.",
-      { tono: nuevo.geocodificado ? "exito" : "info" }
+      nuevo.geocodificado ? { tono: "exito" } : { tono: "info", duracionMs: 8000 }
     );
     setNombre("");
     setRut("");

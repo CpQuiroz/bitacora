@@ -6,12 +6,12 @@ import { ChevronDown, Camera, Eye, Plus, Receipt, Truck, X } from "lucide-react"
 import type { Equipo, Proveedor, RegistroMantencionEquipo, RespuestaChecklistMantencion } from "@bitacora/shared";
 import { MANTENCION_EXIGE_FOTO_EN_NO } from "@bitacora/shared";
 import { apiFetch, exigirOk } from "@/lib/api";
-import { reponer } from "@/lib/reponer";
 import { comprimirImagen } from "@/lib/comprimirImagen";
 import { abrirPdfRegistroMantencion } from "@/lib/descargarPdf";
 import { Button, Cifra, DatePicker, EmptyState, ErrorState, LoadingState, Select, Textarea, useDeshacer } from "@bitacora/ui/web";
 import { Modal } from "@/components/Modal";
 import { SelectCrear } from "@/components/SelectCrear";
+import { useOcultos } from "@/lib/useOcultos";
 
 type PlantillaSeccion = { nombre: string; preguntas: { texto: string; obligatorio: boolean }[] };
 type Plantilla = { nombre: string; secciones: PlantillaSeccion[] };
@@ -239,6 +239,7 @@ function DetalleRegistro({ equipoId, registroId, onCambio }: { equipoId: string;
   const [error, setError] = useState<string | null>(null);
   const [subiendo, setSubiendo] = useState(false);
   const conDeshacer = useDeshacer();
+  const ocultos = useOcultos();
   const fileRef = useRef<HTMLInputElement>(null);
 
   const cargar = useCallback(async () => {
@@ -272,18 +273,17 @@ function DetalleRegistro({ equipoId, registroId, onCambio }: { equipoId: string;
   }
 
   function eliminarFoto(foto: FotoDetalle) {
-    const indice = datos?.fotos.findIndex((f) => f.id === foto.id) ?? 0;
     conDeshacer({
       mensaje: "Foto eliminada",
-      ocultar: () => setDatos((d) => (d ? { ...d, fotos: d.fotos.filter((f) => f.id !== foto.id) } : d)),
-      restaurar: () => setDatos((d) => (d ? { ...d, fotos: reponer(d.fotos, foto, indice) } : d)),
+      ocultar: () => ocultos.ocultar(foto.id),
+      restaurar: () => ocultos.mostrar(foto.id),
       ejecutar: async () =>
         exigirOk(
           await apiFetch(`/api/equipos/${equipoId}/registros-mantencion/${registroId}/fotos/${foto.id}`, { method: "DELETE" }),
           "No se pudo eliminar la foto"
         ),
       alTerminar: () => {
-        cargar();
+        void cargar().then(() => ocultos.mostrar(foto.id));
         onCambio();
       },
     });
@@ -372,9 +372,9 @@ function DetalleRegistro({ equipoId, registroId, onCambio }: { equipoId: string;
             Agregar foto
           </Button>
         </div>
-        {datos.fotos.length > 0 ? (
+        {ocultos.filtrar(datos.fotos).length > 0 ? (
           <div className="grid grid-cols-3 gap-ds-3 sm:grid-cols-4">
-            {datos.fotos.map((f) => (
+            {ocultos.filtrar(datos.fotos).map((f) => (
               <div key={f.id} className="group relative">
                 <a href={f.url} target="_blank" rel="noopener noreferrer" className="relative block aspect-square w-full">
                   {/* URL firmada (vence) — sin optimizer de Next, pero con lazy-load y sin layout shift igual. */}

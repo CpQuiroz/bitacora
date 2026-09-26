@@ -5,13 +5,13 @@ import { useRouter } from "next/navigation";
 import { CIUDADES_CHILE, ROLES_SUPERVISION, type Cliente, type TarifaKm, type TarifaTramo } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch, exigirOk } from "@/lib/api";
-import { reponer } from "@/lib/reponer";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { Button, Card, Dialog, ErrorState, LoadingState, StatusBadge, Table, useDeshacer, useToast } from "@bitacora/ui/web";
 import { InputMonto } from "@/components/InputMonto";
 import { Combobox } from "@/components/Combobox";
 import { ComboboxCliente } from "@/components/ComboboxCliente";
+import { useOcultos } from "@/lib/useOcultos";
 
 // Viajes › Tarifas (tarea 135): precio por tramo (vale en ambos sentidos) y
 // precio por km, generales o por cliente. Solo Admin y Supervisor (el
@@ -27,6 +27,7 @@ export default function TarifasViajesPage() {
   const [error, setError] = useState<string | null>(null);
   const toast = useToast();
   const conDeshacer = useDeshacer();
+  const ocultos = useOcultos();
   const [editandoPrecio, setEditandoPrecio] = useState<{ tramo: TarifaTramo; precio: string } | null>(null);
 
   const [origen, setOrigen] = useState("");
@@ -43,8 +44,9 @@ export default function TarifasViajesPage() {
   const [errorKm, setErrorKm] = useState<string | null>(null);
 
   const opcionesCiudad = useMemo(() => [...CIUDADES_CHILE, ...ciudadesLibres].map((c) => ({ id: c, label: c })), [ciudadesLibres]);
-  const kmGeneral = km.find((t) => t.cliente_id === null) ?? null;
-  const kmPorCliente = km.filter((t) => t.cliente_id !== null);
+  const kmVisibles = ocultos.filtrar(km);
+  const kmGeneral = kmVisibles.find((t) => t.cliente_id === null) ?? null;
+  const kmPorCliente = kmVisibles.filter((t) => t.cliente_id !== null);
 
   async function cargarTarifas() {
     const res = await apiFetch("/api/viajes/tarifas");
@@ -136,13 +138,12 @@ export default function TarifasViajesPage() {
   }
 
   function eliminarTramo(t: ConCliente<TarifaTramo>) {
-    const indice = tramos?.findIndex((x) => x.id === t.id) ?? 0;
     conDeshacer({
       mensaje: `Tarifa ${t.origen} ↔ ${t.destino} eliminada`,
-      ocultar: () => setTramos((l) => l?.filter((x) => x.id !== t.id) ?? l),
-      restaurar: () => setTramos((l) => (l ? reponer(l, t, indice) : l)),
+      ocultar: () => ocultos.ocultar(t.id),
+      restaurar: () => ocultos.mostrar(t.id),
       ejecutar: async () => exigirOk(await apiFetch(`/api/viajes/tarifas/tramos/${t.id}`, { method: "DELETE" }), "No se pudo eliminar el tramo"),
-      alTerminar: () => void cargarTarifas(),
+      alTerminar: () => void cargarTarifas().then(() => ocultos.mostrar(t.id)),
     });
   }
 
@@ -161,13 +162,12 @@ export default function TarifasViajesPage() {
   }
 
   function eliminarKm(t: ConCliente<TarifaKm>) {
-    const indice = km.findIndex((x) => x.id === t.id);
     conDeshacer({
       mensaje: "Precio por km quitado",
-      ocultar: () => setKm((l) => l.filter((x) => x.id !== t.id)),
-      restaurar: () => setKm((l) => reponer(l, t, indice)),
+      ocultar: () => ocultos.ocultar(t.id),
+      restaurar: () => ocultos.mostrar(t.id),
       ejecutar: async () => exigirOk(await apiFetch(`/api/viajes/tarifas/km/${t.id}`, { method: "DELETE" }), "No se pudo eliminar"),
-      alTerminar: () => void cargarTarifas(),
+      alTerminar: () => void cargarTarifas().then(() => ocultos.mostrar(t.id)),
     });
   }
 
@@ -219,7 +219,7 @@ export default function TarifasViajesPage() {
             {errorTramo ? <p className="mt-ds-2 font-ds-body text-ds-small text-ds-accent-700">{errorTramo}</p> : null}
             <div className="mt-ds-4">
               <Table<ConCliente<TarifaTramo>>
-                filas={tramos}
+                filas={ocultos.filtrar(tramos)}
                 claveFila={(t) => t.id}
                 vacio={{ titulo: "Sin tramos todavía", mensaje: "Agrega el primero arriba (por ejemplo Santiago ↔ Concepción)." }}
                 // Convención (tarea 149): la fila edita el precio; el resto en el menú ⋯.

@@ -8,13 +8,13 @@ import type { CategoriaGasto, EstadoRendicion, Gasto, MetodoEntregaRendicion, Pe
 import { formatearFolio } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch, exigirOk } from "@/lib/api";
-import { reponer } from "@/lib/reponer";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
 import { SelectCrear } from "@/components/SelectCrear";
 import { InputMonto } from "@/components/InputMonto";
 import { Button, Card, DatePicker, Input, Select, StatusBadge, Table, Textarea, useConfirmar, useDeshacer, type TonoEstado } from "@bitacora/ui/web";
 import { PanelAcciones } from "@/components/PanelAcciones";
+import { useOcultos } from "@/lib/useOcultos";
 
 type GastoConDatos = Gasto & {
   categoria_info: { id: string; nombre: string; color: string } | null;
@@ -76,6 +76,7 @@ export default function DetalleRendicionPage() {
   const [errorAccion, setErrorAccion] = useState<string | null>(null);
   const confirmar = useConfirmar();
   const conDeshacer = useDeshacer();
+  const ocultos = useOcultos();
 
   const [editando, setEditando] = useState(false);
   const [edColaboradorId, setEdColaboradorId] = useState("");
@@ -333,13 +334,12 @@ export default function DetalleRendicionPage() {
   }
 
   function onEliminarItem(gasto: GastoConDatos) {
-    const indice = detalle?.gastos.findIndex((g) => g.id === gasto.id) ?? 0;
     conDeshacer({
       mensaje: "Gasto quitado de la rendición",
-      ocultar: () => setDetalle((d) => (d ? { ...d, gastos: d.gastos.filter((g) => g.id !== gasto.id) } : d)),
-      restaurar: () => setDetalle((d) => (d ? { ...d, gastos: reponer(d.gastos, gasto, indice) } : d)),
+      ocultar: () => ocultos.ocultar(gasto.id),
+      restaurar: () => ocultos.mostrar(gasto.id),
       ejecutar: async () => exigirOk(await apiFetch(`/api/rendiciones/${params.id}/items/${gasto.id}`, { method: "DELETE" }), "No se pudo quitar el gasto"),
-      alTerminar: () => void cargar(),
+      alTerminar: () => void cargar().then(() => ocultos.mostrar(gasto.id)),
     });
   }
 
@@ -560,7 +560,7 @@ export default function DetalleRendicionPage() {
               </div>
             )}
 
-            {detalle.gastos.length === 0 ? (
+            {ocultos.filtrar(detalle.gastos).length === 0 ? (
               <Card>
                 <p className="font-ds-body text-ds-small text-ds-text-secondary">
                   {permisoEditar ? "Todavía no se agregó ningún gasto." : "Todavía no se agregó ningún gasto (se hace desde el celular)."}
@@ -568,7 +568,7 @@ export default function DetalleRendicionPage() {
               </Card>
             ) : (
               <Table<GastoConDatos>
-                filas={detalle.gastos}
+                filas={ocultos.filtrar(detalle.gastos)}
                 claveFila={(g) => g.id}
                 vacio={{ titulo: "Sin gastos" }}
                 // Convención (tarea 149): la fila edita el gasto (o muestra el

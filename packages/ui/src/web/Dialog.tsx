@@ -4,8 +4,14 @@ import { useEffect, useRef } from "react";
 import { X } from "lucide-react";
 import type { PropsDialog } from "../tipos";
 
+const PILA: symbol[] = [];
+
 export function Dialog({ abierto, onCerrar, titulo, children }: PropsDialog) {
   const cajaRef = useRef<HTMLDivElement>(null);
+  const onCerrarRef = useRef(onCerrar);
+  useEffect(() => {
+    onCerrarRef.current = onCerrar;
+  });
 
   // Al abrir, el foco entra al diálogo (teclado y lector de pantalla); al
   // cerrar vuelve a donde estaba.
@@ -16,14 +22,24 @@ export function Dialog({ abierto, onCerrar, titulo, children }: PropsDialog) {
     return () => previo?.focus?.();
   }, [abierto]);
 
+  // Escape cierra solo el diálogo de arriba (ej. la confirmación abierta
+  // desde un modal no cierra también el modal): pila de abiertos y
+  // listener en captura que corta la propagación.
   useEffect(() => {
     if (!abierto) return;
+    const token = Symbol();
+    PILA.push(token);
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") onCerrar();
+      if (e.key !== "Escape" || PILA[PILA.length - 1] !== token) return;
+      e.stopImmediatePropagation();
+      onCerrarRef.current();
     }
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [abierto, onCerrar]);
+    document.addEventListener("keydown", onKeyDown, true);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown, true);
+      PILA.splice(PILA.indexOf(token), 1);
+    };
+  }, [abierto]);
 
   if (!abierto) return null;
 

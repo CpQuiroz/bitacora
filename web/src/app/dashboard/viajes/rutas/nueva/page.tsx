@@ -182,7 +182,7 @@ export default function NuevaRutaPage() {
       nueva.geocodificado
         ? "Ruta creada — punto base ubicado en el mapa."
         : "Ruta creada, pero no encontramos el punto base en el mapa — revisa la dirección.",
-      { tono: nueva.geocodificado ? "exito" : "info" }
+      nueva.geocodificado ? { tono: "exito" } : { tono: "info", duracionMs: 8000 }
     );
     setRuta(nueva);
     setTareas([]);
