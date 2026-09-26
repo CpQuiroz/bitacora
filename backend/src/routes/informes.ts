@@ -132,6 +132,8 @@ informesRouter.get(
     res.json({
       periodo: { desde, hasta },
       kpis: resultado.kpis,
+      top_clientes: resultado.top_clientes,
+      // Vacíos: compatibilidad con apps mobile anteriores (tarea 145).
       distribucion_tipo: resultado.distribucion_tipo,
       ranking_tipos: resultado.ranking_tipos,
       top_clientes_por_tipo: resultado.top_clientes_por_tipo,

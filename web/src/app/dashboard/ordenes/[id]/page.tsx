@@ -627,12 +627,6 @@ export default function DetalleOrdenServicioPage() {
                     <p className="text-ds-text">{detalle.descripcion}</p>
                   </div>
                 ) : null}
-                {detalle.tipo ? (
-                  <div>
-                    <p className="text-ds-caption text-ds-text/60">Tipo de servicio</p>
-                    <p className="font-medium text-ds-text">{detalle.tipo.nombre}</p>
-                  </div>
-                ) : null}
                 {detalle.orden?.orden_compra_cliente ? (
                   <div>
                     <p className="text-ds-caption text-ds-text/60">Orden de compra del cliente</p>

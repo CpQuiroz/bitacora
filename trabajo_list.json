@@ -1911,9 +1911,9 @@
       "id": 145,
       "name": "tipo_os_selector",
       "title": "Tipo de OS: volver a poner el selector en Nueva OS (opción A) o quitarlo (opción B)",
-      "status": "pending",
-      "description": "Diagnóstico PASO 0 A6 (25-sep): tipos_os_trabajo configurables pero la Nueva OS no permite elegir tipo desde commit 2d926e2, así que checklist/color/campos por tipo e informe por tipo no funcionan. Recomendado A. Esperando decisión de la usuaria.",
-      "resolution": ""
+      "status": "done",
+      "description": "Diagnóstico PASO 0 A6 (25-sep): tipos_os_trabajo configurables pero la Nueva OS no permite elegir tipo desde commit 2d926e2, así que checklist/color/campos por tipo e informe por tipo no funcionan. Recomendado A. Esperando decisión de la usuaria. | 26-sep: la usuaria elige opción B (quitarlo de la interfaz; no se borran tablas ni datos).",
+      "resolution": "26-sep, opción B: TIPOS_OS_VISIBLES=false (shared/funcionalidades.ts); Configuración › Tipos de OS/Trabajo oculta (la URL redirige); sin 'Tipo de servicio' en la ficha web de la OS ni en mobile ni en el PDF; informe Servicios sin tipos (KPIs + clientes con más OS; campos viejos vacíos para apps instaladas). OS antiguas conservan sus datos medidos. Tabla y API se mantienen. E2E 145-1; total 181/181; verificar verde."
     },
     {
       "id": 146,

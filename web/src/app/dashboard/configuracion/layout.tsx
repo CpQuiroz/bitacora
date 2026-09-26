@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Bell, Box, Briefcase, Calendar, ClipboardCheck, CreditCard, Flag, Layers, Paperclip, Plug, Share2, Shield, Tag, Truck, User, Users, Wallet, LayoutGrid } from "lucide-react";
 import type { Modulo } from "@bitacora/shared";
-import { INTEGRACIONES_VISIBLES, puedeVerModulo } from "@bitacora/shared";
+import { INTEGRACIONES_VISIBLES, TIPOS_OS_VISIBLES, puedeVerModulo } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { DashboardShell } from "@/components/DashboardShell";
@@ -25,7 +25,8 @@ const SECCIONES: { valor: string; label: string; icon: typeof User; modulo: Modu
   { valor: "modulos", label: "Módulos", icon: LayoutGrid, modulo: "configuracion" },
   { valor: "plantillas", label: "Plantillas", icon: Paperclip, modulo: "configuracion" },
   { valor: "checklists", label: "Checklists", icon: ClipboardCheck, modulo: "configuracion" },
-  { valor: "tipos-os-trabajo", label: "Tipos de OS/Trabajo", icon: Tag, modulo: "configuracion" },
+  // Tarea 145 (opción B): oculto mientras TIPOS_OS_VISIBLES sea false.
+  ...(TIPOS_OS_VISIBLES ? [{ valor: "tipos-os-trabajo", label: "Tipos de OS/Trabajo", icon: Tag, modulo: "configuracion" as Modulo }] : []),
   // Tarea 144: oculta mientras INTEGRACIONES_VISIBLES sea false.
   ...(INTEGRACIONES_VISIBLES ? [{ valor: "integraciones", label: "Integraciones", icon: Plug, modulo: "configuracion" as Modulo }] : []),
   { valor: "inventario", label: "Inventario", icon: Box, modulo: "configuracion" },

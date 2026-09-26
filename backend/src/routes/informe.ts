@@ -240,9 +240,8 @@ export async function agregarDatosSeccion(seccion: SeccionInforme, empresaId: st
       const resultado = await kpisYDistribucionServicios(empresaId, desde, hasta);
       return {
         datos: {
-          kpis: resultado.kpis,
-          distribucion_tipo: resultado.distribucion_tipo,
-          ranking_tipos: resultado.ranking_tipos,
+          kpis: { total_os: resultado.kpis.total_os, completadas: resultado.kpis.completadas, tasa_promedio: resultado.kpis.tasa_promedio },
+          top_clientes: resultado.top_clientes,
         },
         hayDatos: resultado.kpis.total_os > 0,
       };

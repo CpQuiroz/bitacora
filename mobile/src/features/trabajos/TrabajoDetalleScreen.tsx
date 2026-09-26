@@ -360,7 +360,7 @@ export function TrabajoDetalleScreen({ route, navigation }: NativeStackScreenPro
 
         {/* Datos de contacto/servicio — contexto visible en los 3 pasos. */}
         <View style={{ borderTopWidth: 1, borderTopColor: tokens.color.divider }}>
-          <Fila etiqueta="Servicio" valor={trabajo.tipo?.nombre ?? trabajo.descripcion ?? "—"} />
+          <Fila etiqueta="Servicio" valor={trabajo.descripcion ?? "—"} />
           {direccion ? <Fila etiqueta="Dirección" valor={direccion} onPress={abrirMapa} Icono={Navigation} /> : null}
           {cli?.telefono ? (
             <Fila

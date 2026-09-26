@@ -89,13 +89,11 @@ export function obtenerOperaciones(desde: string, hasta: string) {
 }
 
 // --- Servicios ---
-export type ServiciosKpis = { total_os: number; completadas: number; tipos_utilizados: number; tasa_promedio: number };
-export type TopClientePorTipo = { cliente: string; tipo: string; cantidad: number };
+// Tarea 145 (opción B): sin "Tipo de OS"; clientes con más OS del período.
+export type ServiciosKpis = { total_os: number; completadas: number; tasa_promedio: number };
 export type Servicios = Periodo & {
   kpis: ServiciosKpis;
-  distribucion_tipo: PuntoDistribucion[];
-  ranking_tipos: PuntoRanking[];
-  top_clientes_por_tipo: TopClientePorTipo[];
+  top_clientes?: { cliente: string; cantidad: number }[];
 };
 export function obtenerServicios(desde: string, hasta: string) {
   return obtener<Servicios>("servicios", desde, hasta);

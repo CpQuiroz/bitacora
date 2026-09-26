@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { TIPOS_OS_VISIBLES } from "@bitacora/shared";
 import { Plus, Wrench } from "lucide-react";
 import type { CampoTipoTrabajo, ChecklistTemplate, SugerenciaRubro, TipoOsTrabajo } from "@bitacora/shared";
 import { apiFetch } from "@/lib/api";
@@ -51,7 +53,17 @@ const CAMPO_VACIO: CampoTipoTrabajo = { clave: "", etiqueta: "", tipo: "texto" }
 // estimado) — en un solo catálogo (migración 115, 21-sep-2026): en
 // Nueva OS aparecían 2 selectores casi idénticos uno debajo del otro.
 // PASO 6 (sistema de diseño) — migrado. Ver docs/design-system.md.
+// Tarea 145 (opción B): sección oculta (TIPOS_OS_VISIBLES = false); quien
+// entre por la URL vuelve a Configuración. El contenido queda por si vuelve.
 export default function TiposOsTrabajoPage() {
+  const router = useRouter();
+  useEffect(() => {
+    if (!TIPOS_OS_VISIBLES) router.replace("/dashboard/configuracion/cuenta");
+  }, [router]);
+  return TIPOS_OS_VISIBLES ? <TiposOsTrabajoContenido /> : null;
+}
+
+function TiposOsTrabajoContenido() {
   const [tipos, setTipos] = useState<TipoConChecklist[] | null>(null);
   const [checklists, setChecklists] = useState<ChecklistTemplate[]>([]);
   // Bloque E: sugerencias según el rubro de la empresa — se anteponen

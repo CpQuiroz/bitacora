@@ -468,59 +468,45 @@ export async function tiempoPromedioConclusion(empresaId: string) {
   return meses;
 }
 
-type TipoOsEmbed = { nombre: string } | { nombre: string }[] | null;
-function normalizarTipoOs(tipo: TipoOsEmbed): { nombre: string } | null {
-  return (Array.isArray(tipo) ? tipo[0] : tipo) ?? null;
-}
-
-// Pestaña Servicios de Informes — KPIs + distribución por Tipo de OS
-// comparten la misma consulta. Solo cuenta trabajos con OS
-// eager-creada, mismo filtro que Operaciones.
+// Pestaña Servicios de Informes — KPIs y clientes con más OS. Solo cuenta
+// trabajos con OS eager-creada, mismo filtro que Operaciones. Tarea 145
+// (opción B, 26-sep-2026): el "Tipo de OS" salió de la app, así que ya no
+// hay distribución por tipo. Los campos viejos (tipos_utilizados,
+// distribucion_tipo, ranking_tipos, top_clientes_por_tipo) se siguen
+// devolviendo vacíos para no romper las apps mobile ya instaladas.
 export async function kpisYDistribucionServicios(empresaId: string, desde: string, hasta: string) {
   const { data } = await supabase
     .from("trabajos")
-    .select("estado, tipo_id, cliente, orden:ordenes_servicio(estado_os), tipo:tipos_os_trabajo(nombre)")
+    .select("estado, cliente, orden:ordenes_servicio(estado_os)")
     .eq("empresa_id", empresaId)
     .gte("fecha", desde)
     .lte("fecha", hasta);
 
-  type Fila = { estado: string; tipo_id: string | null; cliente: string; orden: OrdenEmbed; tipo: TipoOsEmbed };
-  const filas = ((data ?? []) as unknown as Fila[])
-    .map((t) => ({ ...t, orden: normalizarOrden(t.orden), tipo: normalizarTipoOs(t.tipo) }))
-    .filter((t) => t.orden !== null);
+  type Fila = { estado: string; cliente: string; orden: OrdenEmbed };
+  const filas = ((data ?? []) as unknown as Fila[]).map((t) => ({ ...t, orden: normalizarOrden(t.orden) })).filter((t) => t.orden !== null);
 
   const total = filas.length;
   const completadas = filas.filter(
     (t) => t.estado === "completado" || t.orden?.estado_os === "completada" || t.orden?.estado_os === "firmada"
   ).length;
-  const tiposUtilizados = new Set(filas.filter((t) => t.tipo_id).map((t) => t.tipo_id)).size;
 
-  const porTipo = new Map<string, { nombre: string; cantidad: number }>();
-  const porClienteTipo = new Map<string, { cliente: string; tipo: string; cantidad: number }>();
-  for (const t of filas) {
-    if (!t.tipo_id || !t.tipo) continue;
-    const actual = porTipo.get(t.tipo_id) ?? { nombre: t.tipo.nombre, cantidad: 0 };
-    actual.cantidad += 1;
-    porTipo.set(t.tipo_id, actual);
-
-    const claveCT = `${t.cliente}::${t.tipo_id}`;
-    const filaCT = porClienteTipo.get(claveCT) ?? { cliente: t.cliente, tipo: t.tipo.nombre, cantidad: 0 };
-    filaCT.cantidad += 1;
-    porClienteTipo.set(claveCT, filaCT);
-  }
+  const porCliente = new Map<string, number>();
+  for (const t of filas) porCliente.set(t.cliente, (porCliente.get(t.cliente) ?? 0) + 1);
 
   return {
     kpis: {
       total_os: total,
       completadas,
-      tipos_utilizados: tiposUtilizados,
       tasa_promedio: total > 0 ? (completadas / total) * 100 : 0,
+      tipos_utilizados: 0,
     },
-    distribucion_tipo: Array.from(porTipo.values()).map((t) => ({ estado: t.nombre, cantidad: t.cantidad })),
-    ranking_tipos: Array.from(porTipo.values())
-      .map((t) => ({ nombre: t.nombre, valor: t.cantidad }))
-      .sort((a, b) => b.valor - a.valor),
-    top_clientes_por_tipo: Array.from(porClienteTipo.values()).sort((a, b) => b.cantidad - a.cantidad).slice(0, 10),
+    top_clientes: Array.from(porCliente.entries())
+      .map(([cliente, cantidad]) => ({ cliente, cantidad }))
+      .sort((a, b) => b.cantidad - a.cantidad)
+      .slice(0, 10),
+    distribucion_tipo: [] as { estado: string; cantidad: number }[],
+    ranking_tipos: [] as { nombre: string; valor: number }[],
+    top_clientes_por_tipo: [] as { cliente: string; tipo: string; cantidad: number }[],
   };
 }
 

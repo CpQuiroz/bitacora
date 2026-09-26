@@ -108,4 +108,12 @@ export async function equiposDocumentos(ctx: Ctx): Promise<void> {
   check("146-18 el chofer no edita los datos del vehículo", editarChofer.s === 403, `${editarChofer.s}`);
   const editarAdmin = await api(admin, "PATCH", `/api/equipos/${propio}`, { marca: "Volvo", anio: 2021 });
   check("146-19 el Admin edita los datos del vehículo", editarAdmin.s === 200, `${editarAdmin.s}`);
+
+  // Tarea 145 (opción B): informe Servicios sin "Tipo de OS"; campos viejos vacíos para apps instaladas.
+  const serv = await api(admin, "GET", `/api/informes/servicios?periodo=personalizado&desde=2026-01-01&hasta=${hoy}`);
+  check(
+    "145-1 informe Servicios: KPIs y clientes con más OS, sin tipos",
+    serv.s === 200 && typeof serv.j?.kpis?.total_os === "number" && Array.isArray(serv.j?.top_clientes) && serv.j?.ranking_tipos?.length === 0 && serv.j?.distribucion_tipo?.length === 0,
+    JSON.stringify(serv.j)?.slice(0, 200)
+  );
 }

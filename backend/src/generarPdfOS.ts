@@ -208,7 +208,7 @@ export async function generarPdfOS(datos: DatosOSPdf): Promise<Buffer> {
     [
       { etiqueta: "Fecha", valor: datos.fecha },
       { etiqueta: "Hora programada", valor: datos.horaProgramada },
-      { etiqueta: "Tipo de trabajo", valor: datos.tipoTrabajoNombre },
+      // Tarea 145 (opción B): el tipo de OS ya no se muestra en el PDF.
       { etiqueta: "Realizado por", valor: datos.colaboradorNombre },
       { etiqueta: "Ubicación", valor: datos.direccion },
       { etiqueta: "Orden de compra", valor: datos.ordenCompraCliente },
