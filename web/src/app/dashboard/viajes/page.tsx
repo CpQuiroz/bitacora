@@ -775,8 +775,18 @@ export default function ViajesPage() {
                   const esBorrador = v.estado === "borrador";
                   return (
                     <Fragment key={v.id}>
-                      <tr id={`viaje-${v.id}`} className={`border-b border-ds-text/[0.08] last:border-0 hover:bg-ds-text/[0.04] ${esBorrador ? "bg-ds-accent-100/60" : ""}`}>
-                        <td className="px-ds-4 py-ds-3">
+                      <tr
+                        id={`viaje-${v.id}`}
+                        // Convención (tarea 149): clic o Enter en la fila abre la edición
+                        // (un viaje facturado no se edita). Los controles de la fila frenan el clic.
+                        onClick={v.estado !== "facturado" ? (e) => e.detail <= 1 && abrirEdicion(v) : undefined}
+                        onKeyDown={v.estado !== "facturado" ? (e) => e.key === "Enter" && e.target === e.currentTarget && abrirEdicion(v) : undefined}
+                        tabIndex={v.estado !== "facturado" ? 0 : undefined}
+                        className={`border-b border-ds-text/[0.08] last:border-0 hover:bg-ds-text/[0.04] ${esBorrador ? "bg-ds-accent-100/60" : ""} ${
+                          v.estado !== "facturado" ? "cursor-pointer focus-visible:bg-ds-text/[0.06] focus-visible:outline-none" : ""
+                        }`}
+                      >
+                        <td className="px-ds-4 py-ds-3" onClick={(e) => e.stopPropagation()}>
                           <input
                             type="checkbox"
                             checked={seleccionados.has(v.id)}
@@ -799,6 +809,7 @@ export default function ViajesPage() {
                               href={`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(v.origen)}&destination=${encodeURIComponent(v.destino)}&travelmode=driving`}
                               target="_blank"
                               rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
                               className="ml-ds-2 font-ds-body text-ds-caption font-medium text-ds-brand hover:underline"
                               title="Ver la ruta en Google Maps"
                             >
@@ -824,7 +835,7 @@ export default function ViajesPage() {
                             </span>
                           )}
                         </td>
-                        <td className="px-ds-4 py-ds-3">
+                        <td className="px-ds-4 py-ds-3" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
                           <div className="flex items-center gap-ds-3">
                             {v.estado !== "facturado" && (
                               <button type="button" onClick={() => abrirEdicion(v)} className="font-ds-body text-ds-caption font-medium text-ds-brand hover:underline">

@@ -166,6 +166,9 @@ function ServiciosCard({ servicios, onCambio }: { servicios: Servicio[] | null; 
             { encabezado: "Duración sugerida", celda: (s) => <span className="text-ds-text/60">{s.duracion_sugerida_min} min</span> },
             { encabezado: "Estado", celda: (s) => <StatusBadge estado={s.activo ? "activo" : "inactivo"} /> },
           ]}
+          // Convención (tarea 149): la fila abre la edición; el resto en el menú ⋯.
+          onFilaClick={abrirEdicion}
+          accionesEnMenu
           acciones={[
             { etiqueta: "Editar", onPress: abrirEdicion, tono: "brand" },
             { etiqueta: (s) => (s.activo ? "Descontinuar" : "Reactivar"), onPress: alternarActivo, tono: "muted" },
@@ -368,6 +371,9 @@ function TiposPackCard({ servicios }: { servicios: Servicio[] | null }) {
             { encabezado: "Vigencia", celda: (t) => <span className="text-ds-text/60">{t.vigencia_dias !== null ? `${t.vigencia_dias} días` : "No vence"}</span> },
             { encabezado: "Estado", celda: (t) => <StatusBadge estado={t.activo ? "activo" : "inactivo"} /> },
           ]}
+          // Convención (tarea 149): la fila abre la edición; el resto en el menú ⋯.
+          onFilaClick={abrirEdicion}
+          accionesEnMenu
           acciones={[
             { etiqueta: "Editar", onPress: abrirEdicion, tono: "brand" },
             { etiqueta: (t) => (t.activo ? "Descontinuar" : "Reactivar"), onPress: alternarActivo, tono: "muted" },

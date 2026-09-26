@@ -94,7 +94,10 @@ tiene acción al tocarlo**.
   como botones sueltos en la fila. Controles dentro de la fila deben frenar
   la propagación.
 - **Mobile:** tocar la fila abre el detalle (ListRow `onPress` / `Pressable`).
-- Las tablas que aún no cumplen están en la tarea 149.
+- Excepciones (no son objetos con ficha o edición propia): registros o
+  bitácoras (historial del plan, accesos de Seguridad), resúmenes agregados
+  (Viáticos por chofer y período) y líneas de un documento (ítems de una OS).
+- Aplicado a todas las tablas web en la tarea 149 (26-sep-2026).
 
 ## Tests
 

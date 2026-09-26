@@ -1943,9 +1943,9 @@
       "id": 149,
       "name": "fila_clicable_todas_tablas",
       "title": "Aplicar la regla 'toda fila abre su objeto' a las tablas web que no la cumplen",
-      "status": "pending",
+      "status": "done",
       "description": "Seguimiento de la tarea 148 (aprobado 25-sep-2026). Tablas sin onFilaClick: catálogo, proveedores, viajes/tarifas, ordenes/[id], viajes/rutas, configuracion/plan, viajes, configuracion/seguridad, configuracion/agenda-pro, rendiciones, rendiciones/[id], agenda/paquetes, viáticos, gastos. Usar onFilaClick + accionesEnMenu del Table de @bitacora/ui/web.",
-      "resolution": ""
+      "resolution": "26-sep: aplicado en Catálogo, Proveedores, Tarifas, Rutas, Rendiciones (lista y gastos del detalle), Paquetes (abre la ficha del cliente), Agenda Pro (servicios y tipos de pack), Gastos y Viajes (tabla propia: clic/Enter edita, facturados no). Excepciones documentadas en convenciones.md: historial del plan, accesos de Seguridad, resumen de Viáticos, ítems de una OS. Test proveedores/page.test.tsx; verificar verde."
     }
   ]
 }

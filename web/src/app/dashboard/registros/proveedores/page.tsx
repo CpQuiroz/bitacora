@@ -303,19 +303,13 @@ export default function ProveedoresPage() {
                 ),
             },
             { encabezado: "Estado", celda: (p) => <StatusBadge estado={p.activo ? "activo" : "inactivo"} /> },
-            {
-              encabezado: "Acciones",
-              celda: (p) => (
-                <div className="flex gap-ds-2">
-                  <Button variante="secundario" onPress={() => abrirEdicion(p)}>
-                    Editar
-                  </Button>
-                  <Button variante="ghost" onPress={() => onAlternarActivo(p)}>
-                    {p.activo ? "Desactivar" : "Activar"}
-                  </Button>
-                </div>
-              ),
-            },
+          ]}
+          // Convención (tarea 149): la fila abre la edición; el resto en el menú ⋯.
+          onFilaClick={(p) => abrirEdicion(p)}
+          accionesEnMenu
+          acciones={[
+            { etiqueta: "Editar", onPress: (p) => abrirEdicion(p) },
+            { etiqueta: (p) => (p.activo ? "Desactivar" : "Activar"), onPress: (p) => onAlternarActivo(p), tono: "muted" },
           ]}
         />
       )}

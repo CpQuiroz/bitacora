@@ -611,19 +611,13 @@ export default function CatalogoPage() {
               },
             },
             { encabezado: "Estado", celda: (i) => <StatusBadge estado={i.activo ? "activo" : "inactivo"} /> },
-            {
-              encabezado: "Acciones",
-              celda: (i) => (
-                <div className="flex gap-ds-2">
-                  <Button variante="secundario" onPress={() => abrirEdicion(i)}>
-                    Editar
-                  </Button>
-                  <Button variante="ghost" onPress={() => onAlternarActivo(i)}>
-                    {i.activo ? "Desactivar" : "Activar"}
-                  </Button>
-                </div>
-              ),
-            },
+          ]}
+          // Convención (tarea 149): la fila abre la edición; el resto en el menú ⋯.
+          onFilaClick={(i) => abrirEdicion(i)}
+          accionesEnMenu
+          acciones={[
+            { etiqueta: "Editar", onPress: (i) => abrirEdicion(i) },
+            { etiqueta: (i) => (i.activo ? "Desactivar" : "Activar"), onPress: (i) => onAlternarActivo(i), tono: "muted" },
           ]}
         />
       )}

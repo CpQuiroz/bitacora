@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { HandCoins, Plus } from "lucide-react";
 import type { EstadoRendicion, MetodoEntregaRendicion, PeriodoRendicion, Rendicion, Usuario } from "@bitacora/shared";
@@ -280,15 +279,10 @@ export default function RendicionesPage() {
           filas={filtradas}
           claveFila={(r) => r.id}
           vacio={{ titulo: "Ninguna rendición coincide con el filtro" }}
+          // Convención (tarea 149): la fila abre la rendición.
+          onFilaClick={(r) => router.push(`/dashboard/rendiciones/${r.id}`)}
           columnas={[
-            {
-              encabezado: "Folio",
-              celda: (r) => (
-                <Link href={`/dashboard/rendiciones/${r.id}`} className="font-medium text-ds-text hover:text-ds-brand hover:underline">
-                  {formatearFolio("REND", r.folio) ?? "—"}
-                </Link>
-              ),
-            },
+            { encabezado: "Folio", celda: (r) => <span className="font-medium text-ds-text">{formatearFolio("REND", r.folio) ?? "—"}</span> },
             { encabezado: "Colaborador", celda: (r) => r.colaborador?.nombre ?? "—" },
             { encabezado: "Período", celda: (r) => `${ETIQUETA_PERIODO[r.periodo] ?? r.periodo} · ${r.fecha_inicio} a ${r.fecha_termino}` },
             { encabezado: "Entrega", celda: (r) => ETIQUETA_METODO_ENTREGA[r.metodo_entrega] ?? r.metodo_entrega },

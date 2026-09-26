@@ -566,6 +566,15 @@ export default function DetalleRendicionPage() {
                 filas={detalle.gastos}
                 claveFila={(g) => g.id}
                 vacio={{ titulo: "Sin gastos" }}
+                // Convención (tarea 149): la fila edita el gasto (o muestra el
+                // comprobante si no se puede editar); el resto en el menú ⋯.
+                onFilaClick={(g) => (permisoEditar ? abrirEdicionItem(g) : g.comprobante_url ? verComprobante(g.id) : undefined)}
+                accionesEnMenu
+                acciones={[
+                  { etiqueta: "Editar", onPress: (g) => abrirEdicionItem(g), oculta: () => !permisoEditar },
+                  { etiqueta: "Ver comprobante", onPress: (g) => verComprobante(g.id), oculta: (g) => !g.comprobante_url },
+                  { etiqueta: "Quitar", onPress: (g) => onEliminarItem(g.id), tono: "peligro", oculta: () => !permisoEditar },
+                ]}
                 columnas={[
                   { encabezado: "Fecha", celda: (g) => g.fecha },
                   {
@@ -587,7 +596,14 @@ export default function DetalleRendicionPage() {
                     encabezado: "Comprobante",
                     celda: (g) =>
                       g.comprobante_url ? (
-                        <button type="button" onClick={() => verComprobante(g.id)} className="inline-flex items-center gap-1 font-ds-body text-ds-caption font-medium text-ds-brand hover:underline">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            verComprobante(g.id);
+                          }}
+                          className="inline-flex items-center gap-1 font-ds-body text-ds-caption font-medium text-ds-brand hover:underline"
+                        >
                           <Paperclip size={14} strokeWidth={2.75} />
                           Ver
                         </button>
@@ -595,23 +611,6 @@ export default function DetalleRendicionPage() {
                         <span className="text-ds-text/60">—</span>
                       ),
                   },
-                  ...(permisoEditar
-                    ? [
-                        {
-                          encabezado: "Acciones",
-                          celda: (g: GastoConDatos) => (
-                            <div className="flex items-center gap-ds-3">
-                              <button type="button" onClick={() => abrirEdicionItem(g)} className="font-ds-body text-ds-caption font-medium text-ds-brand hover:underline">
-                                Editar
-                              </button>
-                              <button type="button" onClick={() => onEliminarItem(g.id)} className="font-ds-body text-ds-caption font-medium text-ds-accent-700 hover:underline">
-                                Quitar
-                              </button>
-                            </div>
-                          ),
-                        },
-                      ]
-                    : []),
                 ]}
               />
             )}

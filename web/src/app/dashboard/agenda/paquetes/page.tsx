@@ -178,6 +178,21 @@ export default function PaquetesSesionesPage() {
           filas={filtrados}
           claveFila={(p) => p.id}
           vacio={{ titulo: "Ningún paquete coincide con la búsqueda" }}
+          // Convención (tarea 149): la fila abre la ficha del cliente (donde vive el
+          // detalle y el uso del paquete); renovar va en el menú ⋯.
+          onFilaClick={(p) => p.cliente_id && router.push(`/dashboard/registros/clientes/${p.cliente_id}`)}
+          accionesEnMenu
+          acciones={[
+            { etiqueta: "Ver cliente", onPress: (p) => p.cliente_id && router.push(`/dashboard/registros/clientes/${p.cliente_id}`), oculta: (p) => !p.cliente_id },
+            {
+              etiqueta: "Renovar",
+              onPress: (p) => {
+                setAviso(null);
+                setRenovando(p);
+              },
+              oculta: (p) => p.saldo > 0 || Boolean(renovando) || formAbierto,
+            },
+          ]}
           columnas={[
             { encabezado: "Folio", celda: (p) => formatearFolio("PACK", p.folio) ?? "—" },
             { encabezado: "Cliente", celda: (p) => p.cliente?.nombre ?? "—" },
@@ -190,25 +205,7 @@ export default function PaquetesSesionesPage() {
             { encabezado: "Fecha de compra", celda: (p) => new Date(`${p.fecha_compra}T00:00:00`).toLocaleDateString("es-CL") },
             { encabezado: "Vence", celda: (p) => (p.vence_el ? new Date(`${p.vence_el}T00:00:00`).toLocaleDateString("es-CL") : "No vence") },
             { encabezado: "Notas", celda: (p) => p.notas || "—" },
-            {
-              encabezado: "Estado",
-              celda: (p) => (
-                <div className="flex items-center gap-ds-2">
-                  <StatusBadge estado={p.saldo <= 0 ? "agotado" : "disponible"} />
-                  {p.saldo <= 0 && !renovando && !formAbierto && (
-                    <Button
-                      variante="secundario"
-                      onPress={() => {
-                        setAviso(null);
-                        setRenovando(p);
-                      }}
-                    >
-                      Renovar
-                    </Button>
-                  )}
-                </div>
-              ),
-            },
+            { encabezado: "Estado", celda: (p) => <StatusBadge estado={p.saldo <= 0 ? "agotado" : "disponible"} /> },
           ]}
         />
       )}

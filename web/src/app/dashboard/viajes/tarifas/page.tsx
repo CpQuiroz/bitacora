@@ -7,7 +7,7 @@ import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { formatMoneda } from "@/lib/formatMoneda";
 import { DashboardShell, type UsuarioShell } from "@/components/DashboardShell";
-import { Button, Card, ErrorState, LoadingState, Table } from "@bitacora/ui/web";
+import { Button, Card, ErrorState, LoadingState, StatusBadge, Table } from "@bitacora/ui/web";
 import { InputMonto } from "@/components/InputMonto";
 import { Combobox } from "@/components/Combobox";
 import { ComboboxCliente } from "@/components/ComboboxCliente";
@@ -124,6 +124,11 @@ export default function TarifasViajesPage() {
     await cargarTarifas();
   }
 
+  function editarPrecioTramo(t: TarifaTramo) {
+    const nuevo = window.prompt(`Nuevo precio para ${t.origen} ↔ ${t.destino}`, String(Math.round(Number(t.precio))));
+    if (nuevo) void cambiarTramo(t, { precio: nuevo.replace(/[^\d,]/g, "").replace(",", ".") });
+  }
+
   async function eliminarTramo(t: TarifaTramo) {
     if (!window.confirm(`¿Eliminar la tarifa ${t.origen} ↔ ${t.destino}? Los viajes ya calculados no cambian.`)) return;
     const res = await apiFetch(`/api/viajes/tarifas/tramos/${t.id}`, { method: "DELETE" });
@@ -205,39 +210,19 @@ export default function TarifasViajesPage() {
                 filas={tramos}
                 claveFila={(t) => t.id}
                 vacio={{ titulo: "Sin tramos todavía", mensaje: "Agrega el primero arriba (por ejemplo Santiago ↔ Concepción)." }}
+                // Convención (tarea 149): la fila edita el precio; el resto en el menú ⋯.
+                onFilaClick={(t) => editarPrecioTramo(t)}
+                accionesEnMenu
+                acciones={[
+                  { etiqueta: "Cambiar precio", onPress: (t) => editarPrecioTramo(t) },
+                  { etiqueta: (t) => (t.activo ? "Desactivar" : "Activar"), onPress: (t) => void cambiarTramo(t, { activo: !t.activo }), tono: "muted" },
+                  { etiqueta: "Eliminar", onPress: (t) => void eliminarTramo(t), tono: "peligro" },
+                ]}
                 columnas={[
                   { encabezado: "Tramo", celda: (t) => `${t.origen} ↔ ${t.destino}` },
                   { encabezado: "Cliente", celda: (t) => t.cliente?.nombre ?? "General" },
-                  {
-                    encabezado: "Precio",
-                    clase: "text-right",
-                    celda: (t) => (
-                      <button
-                        type="button"
-                        className="font-ds-body text-ds-small font-medium text-ds-text tabular-nums hover:text-ds-brand hover:underline"
-                        onClick={() => {
-                          const nuevo = window.prompt(`Nuevo precio para ${t.origen} ↔ ${t.destino}`, String(Math.round(Number(t.precio))));
-                          if (nuevo) void cambiarTramo(t, { precio: nuevo.replace(/[^\d,]/g, "").replace(",", ".") });
-                        }}
-                      >
-                        {formatMoneda(Number(t.precio), usuario.moneda)}
-                      </button>
-                    ),
-                  },
-                  {
-                    encabezado: "Activo",
-                    celda: (t) => (
-                      <input type="checkbox" aria-label={`Activo ${t.origen} ↔ ${t.destino}`} checked={t.activo} onChange={(e) => void cambiarTramo(t, { activo: e.target.checked })} className="accent-[var(--ds-brand)]" />
-                    ),
-                  },
-                  {
-                    encabezado: "",
-                    celda: (t) => (
-                      <button type="button" onClick={() => void eliminarTramo(t)} className="font-ds-body text-ds-caption font-medium text-ds-accent-700 hover:underline">
-                        Eliminar
-                      </button>
-                    ),
-                  },
+                  { encabezado: "Precio", clase: "text-right tabular-nums", celda: (t) => formatMoneda(Number(t.precio), usuario.moneda) },
+                  { encabezado: "Estado", celda: (t) => <StatusBadge estado={t.activo ? "activo" : "inactivo"} /> },
                 ]}
               />
             </div>

@@ -3,7 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Paperclip, Plus, Wallet } from "lucide-react";
+import { Plus, Wallet } from "lucide-react";
 import type { CategoriaGasto, CentroCosto, EstadoGasto, Gasto, Proveedor, Trabajo } from "@bitacora/shared";
 import { formatearFolio } from "@bitacora/shared";
 import { supabase } from "@/lib/supabase";
@@ -431,27 +431,14 @@ export default function GastosPage() {
                 </div>
               ),
             },
-            {
-              encabezado: "Acciones",
-              celda: (g) => (
-                <div className="flex items-center gap-ds-3">
-                  <button type="button" onClick={() => abrirEdicion(g)} className="font-ds-body text-ds-caption font-medium text-ds-brand hover:underline">
-                    Editar
-                  </button>
-                  {g.estado === "pendiente" && (
-                    <button type="button" onClick={() => marcarPagado(g.id)} className="font-ds-body text-ds-caption font-medium text-ds-brand hover:underline">
-                      Marcar pagado
-                    </button>
-                  )}
-                  {g.comprobante_url && (
-                    <button type="button" onClick={() => verComprobante(g.id)} className="inline-flex items-center gap-1 font-ds-body text-ds-caption font-medium text-ds-text/60 hover:text-ds-brand">
-                      <Paperclip size={14} strokeWidth={2.75} />
-                      Comprobante
-                    </button>
-                  )}
-                </div>
-              ),
-            },
+          ]}
+          // Convención (tarea 149): la fila abre la edición del gasto; el resto en el menú ⋯.
+          onFilaClick={(g) => abrirEdicion(g)}
+          accionesEnMenu
+          acciones={[
+            { etiqueta: "Editar", onPress: (g) => abrirEdicion(g) },
+            { etiqueta: "Marcar pagado", onPress: (g) => marcarPagado(g.id), oculta: (g) => g.estado !== "pendiente" },
+            { etiqueta: "Ver comprobante", onPress: (g) => verComprobante(g.id), oculta: (g) => !g.comprobante_url, tono: "muted" },
           ]}
         />
       )}

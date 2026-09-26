@@ -119,14 +119,12 @@ export default function RutasPage() {
             filas={rutasGuardadas}
             claveFila={(r) => r.id}
             vacio={{ titulo: "Sin rutas guardadas" }}
+            // Convención (tarea 149): la fila abre la ruta.
+            onFilaClick={(r) => router.push(`/dashboard/viajes/rutas/${r.id}`)}
             columnas={[
               {
                 encabezado: "Ruta",
-                celda: (r) => (
-                  <Link href={`/dashboard/viajes/rutas/${r.id}`} className="font-medium text-ds-brand hover:underline">
-                    {r.nombre || equipo.find((u) => u.id === r.responsable_id)?.nombre || "Ruta"}
-                  </Link>
-                ),
+                celda: (r) => <span className="font-medium text-ds-brand">{r.nombre || equipo.find((u) => u.id === r.responsable_id)?.nombre || "Ruta"}</span>,
               },
               { encabezado: "Fecha", celda: (r) => r.fecha_inicio },
               {
